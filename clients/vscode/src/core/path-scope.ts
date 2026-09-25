@@ -7,7 +7,7 @@
  * named). Node's own `path.matchesGlob` is not in the Node the editor runs, hence this.
  * Declared by `interfaces/path-scope-interface.ts`.
  */
-import type { PathScopeInterface } from './interfaces/path-scope-interface';
+import type { PathScopeInterface } from '@vibey/core';
 
 export class PathScope implements PathScopeInterface {
   private readonly patterns: readonly RegExp[];

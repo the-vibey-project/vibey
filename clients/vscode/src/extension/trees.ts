@@ -7,9 +7,9 @@
  * Declared by `interfaces/trees-interface.ts`.
  */
 import * as vscode from 'vscode';
-import type { BudgetCaps } from '../core/interfaces/budgets-interface';
-import type { RunStatus } from '../core/interfaces/run-interface';
-import { VibeyCliError } from '../core/vibey-cli';
+import type { BudgetCaps } from '@vibey/core';
+import type { RunStatus } from '@vibey/core';
+import { VibeyCliError } from '@vibey/core';
 import type { VibeyController } from './controller';
 import type { TreeElement, TreeItemsInterface, TreeSourceInterface, VibeyTreeInterface } from './interfaces/trees-interface';
 

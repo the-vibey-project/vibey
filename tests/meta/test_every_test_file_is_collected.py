@@ -64,7 +64,7 @@ def suites() -> list[tuple[PurePosixPath, list[PurePosixPath], tuple[str, ...]]]
     projects = [ROOT]
     for pattern in root_config["tool"]["uv"]["workspace"]["members"]:
         projects += sorted(p for p in ROOT.glob(pattern) if (p / "pyproject.toml").is_file())
-    # The Python clients outside the workspace (clients/krypton-app, ADR-0067) run their own
+    # The Python clients outside the workspace (clients/krypton-app, ADR-0068) run their own
     # suite from their own workflow (krypton-app.yml), so they are suites too.
     projects += sorted(p for p in ROOT.glob("clients/*") if (p / "pyproject.toml").is_file())
     out = []

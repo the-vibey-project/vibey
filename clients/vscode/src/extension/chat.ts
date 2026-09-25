@@ -8,8 +8,8 @@
  * `interfaces/chat-interface.ts`.
  */
 import * as vscode from 'vscode';
-import { Presenter } from '../core/cli-support';
-import { SlashCommands } from '../core/commands';
+import { Presenter } from '@vibey/core';
+import { SlashCommands } from '@vibey/core';
 import type { VibeyController } from './controller';
 import type { CommandActionsInterface } from './interfaces/actions-interface';
 import type { VibeyChatInterface } from './interfaces/chat-interface';

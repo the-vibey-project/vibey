@@ -838,16 +838,18 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p tsconfig.json && node scripts/sync-manifest.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-    "test": "vitest run",
-    "coverage": "vitest run --coverage",
+    "compile": "npm run core && tsc -p tsconfig.json && node scripts/sync-manifest.js && node scripts/vendor-core.js",
+    "typecheck": "npm run core && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "npm run core && vitest run",
+    "coverage": "npm run core && vitest run --coverage",
     "smoke": "node test/smoke/run.js",
-    "package": "vsce package"
+    "package": "vsce package",
+    "core": "npm run build --prefix ../../packages/vibey-core"
   },
   "devDependencies": {
     "@types/node": "22.20.4",
     "@types/vscode": "1.90.0",
+    "@vibey/core": "0.1.0",
     "@vitest/coverage-v8": "5.0.1",
     "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "4.0.0",

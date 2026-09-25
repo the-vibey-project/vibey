@@ -2,7 +2,7 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# krypton-app: the apps' package (sub-doctrine 9.e, ADR-0067). Every app and interface a
+# krypton-app: the apps' package (sub-doctrine 9.e, ADR-0068). Every app and interface a
 # person uses is krypton; this package carries them and the `krypton` command. It is
 # published by its own workflow, .github/workflows/krypton-app.yml, and by no other.
 [project]

@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 # One package ships the whole engine family: `vibey-engine` (ADR-0037, renamed by
-# ADR-0067; the apps publish separately as `krypton-app`), so this is the union of every
+# ADR-0068; the apps publish separately as `krypton-app`), so this is the union of every
 # bundled package's runtime requirements -- not the conductor's alone. The engine SDKs
 # are here rather than behind an extra because `pip install vibey-engine` installs the
 # engine binaries themselves: `vibey doctor` resolves them with `shutil.which`, and an
@@ -129,7 +129,7 @@ azure = [
 bootstrap-all = [
     # The Azure set is spelled out rather than referenced as `vibey-engine[azure]`. A
     # self-requirement names THIS distribution by the name it had when it was written, and
-    # this project has been renamed before (`vibey` to `vibey-engine`, ADR-0067); on the
+    # this project has been renamed before (`vibey` to `vibey-engine`, ADR-0068); on the
     # index where the old name is somebody else's, the self-reference would resolve to
     # their package. An extra that resolves to somebody else's package is worse than one
     # that does not resolve at all.

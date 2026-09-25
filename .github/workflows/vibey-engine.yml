@@ -60,7 +60,7 @@ jobs:
             python -m pip install --quiet -e "$self"
           else
             # `vibey-engine`, not `vibey-gh`: `vibey_gh` ships inside the engine's package
-            # (ADR-0037, ADR-0067). Unpinned because this branch is hand-written rather
+            # (ADR-0037, ADR-0068). Unpinned because this branch is hand-written rather
             # than rendered -- a version here would be a number nobody re-renders, and
             # this repository takes the branch above in any case.
             python -m pip install --quiet vibey-engine
@@ -73,7 +73,7 @@ jobs:
       - name: The project is vibey-engine
         # Both indexes carry this package as `vibey-engine` (sub-doctrine 9.e): its trusted
         # publishers are registered for this workflow file, `vibey-engine.yml`, in the
-        # environments `pypi` and `testpypi`. pyproject.toml names it so itself (ADR-0067),
+        # environments `pypi` and `testpypi`. pyproject.toml names it so itself (ADR-0068),
         # so nothing is renamed here; this only refuses to publish anything else under
         # these publishers. The importable packages and the commands keep their names.
         run: grep -qx 'name = "vibey-engine"' pyproject.toml
@@ -138,7 +138,7 @@ jobs:
             sleep 30
           done
           # The package is vibey-engine; what it installs is the whole engine family
-          # (ADR-0037, ADR-0067). This is the ONLY place the artifact is proven against a
+          # (ADR-0037, ADR-0068). This is the ONLY place the artifact is proven against a
           # real index before PyPI, so it exercises the contract the distribution now
           # makes -- twelve console scripts -- rather than the one it used to make. A
           # wheel that silently lost a tenant's `packages` entry passed the old
@@ -226,7 +226,7 @@ jobs:
             python -m pip install --quiet -e "$self"
           else
             # `vibey-engine`, not `vibey-gh`: `vibey_gh` ships inside the engine's package
-            # (ADR-0037, ADR-0067). Unpinned because this branch is hand-written rather
+            # (ADR-0037, ADR-0068). Unpinned because this branch is hand-written rather
             # than rendered -- a version here would be a number nobody re-renders, and
             # this repository takes the branch above in any case.
             python -m pip install --quiet vibey-engine
@@ -281,13 +281,13 @@ jobs:
       - uses: actions/setup-node@v4
         if: env.OVSX_PAT != ''
         with:
-          node-version-file: clients/vscode/.node-version
+          node-version-file: .node-version
           cache: npm
-          cache-dependency-path: clients/vscode/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Build and package
         if: env.OVSX_PAT != ''
         run: |
-          npm ci
+          npm ci --prefix ../..
           npm run compile
           npx vsce package --no-dependencies --out vibey.vsix
       - name: Publish, once per version

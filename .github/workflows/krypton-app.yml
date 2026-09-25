@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: krypton-app
 
-# The apps' package, `krypton-app` (sub-doctrine 9.e, ADR-0067), from clients/krypton-app.
+# The apps' package, `krypton-app` (sub-doctrine 9.e, ADR-0068), from clients/krypton-app.
 # It mirrors vibey-engine.yml: develop publishes a uniquely versioned dev build to TestPyPI
 # and proves it installs from there; main publishes the release to PyPI. The trusted
 # publishers are registered for THIS file name in the environments `testpypi` and `pypi`,
