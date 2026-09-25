@@ -1,6 +1,6 @@
 # vibey-gh
 
-> **Now part of the vibey monorepo.** `vibey-gh` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey-engine` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `vibey-gh` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 Shipping a change safely through review, merge, versioning, and release usually means
 hand-wiring a dozen GitHub Actions steps — and they drift out of sync, silently skip a

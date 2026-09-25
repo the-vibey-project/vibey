@@ -9,7 +9,7 @@ to install and import it.
 
 | | 3.x | 4.0.0 |
 |---|---|---|
-| PyPI distribution | `azure-bootstrap` | `vibey-bootstrap`, and from vibey 1.0.0 the `vibey` distribution that carries it (vibey ADR-0037) |
+| PyPI distribution | `azure-bootstrap` | `vibey-bootstrap`, and from vibey 1.0.0 the `vibey-engine` package that carries it (vibey ADR-0037) |
 | Import package | `azure_bootstrap` | `vibey_bootstrap` |
 | Console script | `azbootstrap` | `vibey-bootstrap` (`azbootstrap` kept as a deprecated alias) |
 | GitHub | `TheViziusGroup/azure-bootstrap` | `adammatthewsteinberger/vibey-bootstrap` |

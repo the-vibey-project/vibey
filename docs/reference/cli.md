@@ -811,9 +811,9 @@ container of the worker and the operator, the only place the owner's DSN is moun
 ## `vibey operator`
 
 Run the Kubernetes operator, reconciling `VibeyProject` custom resources
-(ADR-0025). Requires the optional extra, `pip install 'vibey[operator]'`;
+(ADR-0025). Requires the optional extra, `pip install 'vibey-engine[operator]'`;
 without it the command prints
-`operator support is not installed: pip install 'vibey[operator]'` and exits 1.
+`operator support is not installed: pip install 'vibey-engine[operator]'` and exits 1.
 
 | Option | Default | What it does |
 |---|---|---|

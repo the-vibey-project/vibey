@@ -14,7 +14,7 @@ flowchart TB
         CLI["cli/main.py<br/>vibey new · answer · work · design · visual ·<br/>watch · recover · status · engines · cost ·<br/>ledger · deploy · doctor · operator · worker<br/>(+ cli/early_signals.py SIGTERM latch, ADR-0026)"]
         TUI["tui/dashboard.py<br/>live dashboard + ledger replay"]
         TomlCfg["vibey.toml<br/>domain/config.py schema + infrastructure/config_loader.py<br/>[features] local engines read by doctor/worker; [notifications] + [telemetry]<br/>copied into project config by vibey new<br/>(see docs/reference/configuration.md)"]
-        K8sCRD["VibeyProject CRD (vibey.dev/v1alpha1)<br/>reconciled by infrastructure/operator/<br/>(pip install 'vibey[operator]')"]
+        K8sCRD["VibeyProject CRD (vibey.dev/v1alpha1)<br/>reconciled by infrastructure/operator/<br/>(pip install 'vibey-engine[operator]')"]
         SkillsFlags["vibey new<br/>--skills-context-mode off / shadow / inject<br/>--skills-context-budget N<br/>recorded into project config at creation,<br/>not a vibey.toml table (ADR-0031)"]
     end
 

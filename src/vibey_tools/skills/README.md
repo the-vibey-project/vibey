@@ -1,17 +1,17 @@
 # vibey-skills
 
-> **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey-engine` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 > **135 Claude Code plugins. 710 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
 > engineering, process, and technical writing. Install as a marketplace, or from the
-> `vibey` distribution that carries the CLI.
+> `vibey-engine` package that carries the CLI.
 
 Formerly **vibe-engineering-skills** — see [NOTICE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/NOTICE.md).
 
-[![Ships in vibey](https://img.shields.io/pypi/v/vibey?label=ships%20in%20vibey)](https://pypi.org/project/vibey/)
+[![Ships in vibey](https://img.shields.io/pypi/v/vibey-engine?label=ships%20in%20vibey)](https://pypi.org/project/vibey-engine/)
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/LICENSE)
 
@@ -52,7 +52,7 @@ the packaged manifest it printed now ships inside `vibey` and is what the root m
 rendered from.
 
 **With the CLI instead** — same skills, any agent that reads `SKILL.md`. The
-`vibey-skills` command ships in the `vibey` distribution:
+`vibey-skills` command ships in the `vibey-engine` package:
 
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
@@ -275,14 +275,14 @@ documentation.
 ## Docs & links
 
 - **[Documentation](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/index.md)** — [Installation](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/installation.md) · [Usage](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/usage.md) · [Plugin sources](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins) (the skills reference is generated from them, one page per plugin and per skill)
-- **[PyPI (`vibey`)](https://pypi.org/project/vibey/)** · **[Releases](https://github.com/the-vibey-project/vibey/releases)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)**
+- **[PyPI (`vibey`)](https://pypi.org/project/vibey-engine/)** · **[Releases](https://github.com/the-vibey-project/vibey/releases)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)**
 - **[CONTRIBUTING.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CONTRIBUTING.md)** · **[SECURITY.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/SECURITY.md)** · **[CODE_OF_CONDUCT.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CODE_OF_CONDUCT.md)** · **[CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CLAUDE.md)** (conventions and the `SKILL.md` format)
 - Claude Code docs: [Plugins](https://code.claude.com/docs/en/plugins) · [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) · [Agent Skills](https://code.claude.com/docs/en/skills)
 
 ## Related projects
 
 Part of the same open-source family — MIT, and all shipping inside the one
-[`vibey`](https://pypi.org/project/vibey/) distribution (vibey ADR-0037):
+[`vibey-engine`](https://pypi.org/project/vibey-engine/) package (vibey ADR-0037):
 
 - **[claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude)** · **[codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex)** · **[cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor)** · **[agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy)** — autonomous coding-session runners with the same contract, different vendor
 - **[vibey](https://github.com/the-vibey-project/vibey)** — six-phase queue conductor over the loop runners — background reading: the [vibey research paper](https://the-vibey-project.github.io/vibey/main/paper/) ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)) and the vibey book ([PDF](https://the-vibey-project.github.io/vibey/main/book.pdf), [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub), [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html)).
@@ -313,7 +313,7 @@ This package has had no release pipeline of its own since it was absorbed into
 [vibey](https://github.com/the-vibey-project/vibey) (vibey ADR-0021). The fingerprint check,
 version derivation, the merge train, promotion, and branch realignment are the monorepo's,
 run by [`vibey-gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh)
-from the repository root, and this package ships inside the one `vibey` distribution (vibey
+from the repository root, and this package ships inside the one `vibey-engine` package (vibey
 ADR-0037). The sections below describe that automation as it applies here, for whoever next
 touches it — not the marketplace itself, covered above.
 

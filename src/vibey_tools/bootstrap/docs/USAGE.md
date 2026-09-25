@@ -74,7 +74,7 @@ pip install 'vibey-engine[bootstrap-all]'    # every optional dependency any ext
 
 **Extra names.** The matrix below lists the extras as this package's own
 `pyproject.toml` declares them, and they still select what each feature needs when you
-install this package from the tree. On the `vibey` distribution there is no per-feature
+install this package from the tree. On the `vibey-engine` package there is no per-feature
 successor spelling — one distribution cannot carry forty names that only ever described
 one package — so the replacements are two aggregates: `vibey[azure]` for the App
 Configuration / Key Vault / App Insights core, and `vibey[bootstrap-all]` for every

@@ -43,7 +43,7 @@ Each of the four session runners — `claudeloop`, `codexloop`,
 
 - All five are workspace members of this repository, share vibey's onion
   layout (`domain/application/infrastructure/cli`), and ship inside the one
-  `vibey` distribution rather than publishing as their own projects (ADR-0037).
+  `vibey-engine` package rather than publishing as their own projects (ADR-0037).
 - **No runner has a `deploy/` directory.** qwenloop's
   `deploy/docker/Dockerfile` was deleted on 2026-09-18: its runtime layer
   kept `pip`, had no fixed uid, copied the whole tenant with `COPY . .`, and

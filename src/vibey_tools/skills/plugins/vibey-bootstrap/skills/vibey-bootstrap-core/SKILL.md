@@ -38,7 +38,7 @@ pip install 'vibey-engine[bootstrap-all]'    # every optional dependency any ext
 
 **Extra names.** The matrix below lists the extras as `vibey-bootstrap`'s own
 `pyproject.toml` declares them, and they still select what each feature needs when the
-package is installed from the tree. On the `vibey` distribution there is no per-feature
+package is installed from the tree. On the `vibey-engine` package there is no per-feature
 successor spelling: the replacements are the two aggregates above (vibey ADR-0037).
 
 ### Core dependencies (always installed)

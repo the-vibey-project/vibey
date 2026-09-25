@@ -1,8 +1,8 @@
 # vibey
 
-[![PyPI](https://img.shields.io/pypi/v/vibey)](https://pypi.org/project/vibey/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/vibey)](https://pypi.org/project/vibey/)
-[![Python versions](https://img.shields.io/pypi/pyversions/vibey)](https://pypi.org/project/vibey/)
+[![PyPI](https://img.shields.io/pypi/v/vibey-engine)](https://pypi.org/project/vibey-engine/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/vibey-engine)](https://pypi.org/project/vibey-engine/)
+[![Python versions](https://img.shields.io/pypi/pyversions/vibey-engine)](https://pypi.org/project/vibey-engine/)
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/the-vibey-project/vibey/blob/develop/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-read-blue.svg)](https://the-vibey-project.github.io/vibey/main/)
@@ -61,7 +61,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All five runners ship inside the `vibey` distribution (ADR-0037). |
+| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All five runners ship inside the `vibey-engine` package (ADR-0037). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |

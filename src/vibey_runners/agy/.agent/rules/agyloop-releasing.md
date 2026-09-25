@@ -6,7 +6,7 @@
 > **Superseded — this describes a process that no longer runs.** agyloop was released
 > from its own repository under its own name on PyPI. Since vibey ADR-0021 the source
 > lives in the vibey monorepo, and since vibey ADR-0037 it is not published separately at
-> all: the whole tree ships as the single `vibey` distribution, released by the monorepo's
+> all: the whole tree ships as the single `vibey-engine` package, released by the monorepo's
 > own `release.yml`. `publish-to-pypi.yml` and release-please are inert here, and the
 > TestPyPI command below cannot resolve. For the live process read the monorepo's
 > `CONTRIBUTING.md` and its `vibey-releasing` skill.

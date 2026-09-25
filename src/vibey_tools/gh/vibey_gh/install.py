@@ -36,7 +36,7 @@ HOOKS_DIR = ".githooks"
 GITATTRIBUTES = ".gitattributes"
 UNION_MARKER = "# vibey-gh: append-only files merge instead of conflicting"
 # What a repository without its own copy of the tooling installs it from. `vibey_gh` is a
-# PACKAGE inside the `vibey` distribution, never a project of its own (ADR-0037), so the
+# PACKAGE inside the `vibey-engine` package, never a project of its own (ADR-0037), so the
 # fallback names the distribution and gets `vibey-gh` on PATH out of it. The version that
 # may be pinned to it is that distribution's -- never `vibey_gh.__version__`, which
 # numbers the package and names no release any index can serve.

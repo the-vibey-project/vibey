@@ -30,7 +30,7 @@ integration never download model weights.
 
 ## Install
 
-`qwenloop` ships inside the `vibey` distribution (vibey ADR-0037); there is no
+`qwenloop` ships inside the `vibey-engine` package (vibey ADR-0037); there is no
 separate `qwenloop` project to install:
 
 ```bash

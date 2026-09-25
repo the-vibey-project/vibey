@@ -5,7 +5,7 @@ Guidance for Claude Code when working in this repository.
 ## What this repo is
 
 This is a **Claude Code plugin marketplace**: 135 plugins composed of 710 Agent Skills,
-shipped inside the `vibey` distribution under the MIT license — `vibey-skills` is a
+shipped inside the `vibey-engine` package under the MIT license — `vibey-skills` is a
 workspace tenant, not a separate PyPI project (vibey ADR-0037). The application code is the
 packaging CLI plus the retrieval context engine (`src/vibey_skills/context_engine.py`,
 behind `vibey-skills index / search / packet / evaluate`) — but the deliverable is still
@@ -112,7 +112,7 @@ three different base URLs:
 | Surface | Base | Relative links |
 |---|---|---|
 | GitHub repo view | the repo root | work |
-| PyPI project page | `https://pypi.org/project/vibey/` (the root README is the long description; this one is not rendered there) | **break** |
+| PyPI project page | `https://pypi.org/project/vibey-engine/` (the root README is the long description; this one is not rendered there) | **break** |
 | Pages site | `https://the-vibey-project.github.io/vibey-skills/` | work only inside `docs/` |
 
 - **Root Markdown** (`README.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `SECURITY.md`,

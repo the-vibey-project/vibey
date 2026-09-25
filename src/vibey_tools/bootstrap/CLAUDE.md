@@ -743,7 +743,7 @@ def hello(req):
 - **Repository**: https://github.com/the-vibey-project/vibey (this tree lives at
   `src/vibey_tools/bootstrap`)
 - **Issues**: https://github.com/the-vibey-project/vibey/issues
-- **PyPI**: https://pypi.org/project/vibey/ (the distribution that carries it)
+- **PyPI**: https://pypi.org/project/vibey-engine/ (the distribution that carries it)
 
 ---
 
@@ -901,9 +901,9 @@ Reads like a permissions bug; it is almost always a claim mismatch:
 
 #### Package Not Found After Publishing
 - PyPI indexing is usually instant, but wait a few seconds and retry
-- Verify package at https://pypi.org/project/vibey/ (stable) or
+- Verify package at https://pypi.org/project/vibey-engine/ (stable) or
   https://test.pypi.org/project/vibey-dev/ (dev builds) — since vibey ADR-0037
-  `vibey_bootstrap` ships inside the one `vibey` distribution and has no project
+  `vibey_bootstrap` ships inside the one `vibey-engine` package and has no project
   page of its own
 
 #### Workflow Not Running

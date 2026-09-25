@@ -32,7 +32,7 @@ In ADR-0019's order (reach per unit of effort):
 
 The loop runners and the family tools are workspace members of this repository
 (ADR-0021) and are **not** published as their own projects: since ADR-0037 they ship
-inside the one `vibey` distribution. Every channel below therefore carries one
+inside the one `vibey-engine` package. Every channel below therefore carries one
 artifact, not ten, and `vibey doctor` works from a single install in each of them.
 
 ## Design
