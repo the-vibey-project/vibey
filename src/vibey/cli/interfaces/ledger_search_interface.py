@@ -19,7 +19,7 @@ if TYPE_CHECKING:
         LedgerQueryInterface,
         LedgerSearchResultInterface,
     )
-    from vibey.domain.ledger import LedgerEventKind
+    from vibey.domain.ledger import LedgerEvent, LedgerEventKind
 
 
 @runtime_checkable
@@ -41,6 +41,10 @@ class LedgerSearchPresenterInterface(Protocol):
 
     def machine(self, project_id: UUID, result: LedgerSearchResultInterface) -> str:
         """The same result as a JSON document, every field of every event."""
+        ...
+
+    def record(self, event: LedgerEvent) -> dict[str, object]:
+        """One event as `--json` and the hub's live feed both carry it."""
         ...
 
     def kind_notes(self, kinds: Iterable[LedgerEventKind]) -> list[str]:

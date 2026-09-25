@@ -175,6 +175,15 @@ class Ledger:
         return "result"
 
 
+class Range:
+    def __init__(self, world: World) -> None:
+        self._world = world
+
+    async def range(self, project_id: UUID, *, from_seq: int, to_seq: int) -> Any:
+        self._world.asked.append(("range", (from_seq, to_seq)))
+        return ()
+
+
 class Documents:
     """Renders each record as a tagged tuple, so a test sees what was rendered."""
 
@@ -199,6 +208,9 @@ class Documents:
     def ledger(self, project_id: UUID, result: Any) -> Any:
         return ("ledger", result)
 
+    def events(self, project_id: UUID, events: Any) -> Any:
+        return ("events", project_id)
+
 
 class Probes:
     async def status(self, project_id: UUID) -> Any:
@@ -213,6 +225,9 @@ class Probes:
     async def doctor(self) -> Any:
         return ("doctor",)
 
+    def lane_tail(self, events_path: str, after: int) -> Any:
+        return ("tail", events_path, after)
+
 
 def _service(world: World) -> HubService:
     return HubService(
@@ -223,6 +238,7 @@ def _service(world: World) -> HubService:
         budgets=Budgets(world),
         queue=Queue(world),
         ledger=Ledger(world),
+        ledger_range=Range(world),
         documents=Documents(),
         probes=Probes(),
     )
@@ -415,3 +431,22 @@ async def test_view_cannot_answer_or_bump() -> None:
     with pytest.raises(HubForbidden):
         await service.bump(viewer, project.project_id, uuid4())
     assert world.asked == []
+
+
+async def test_the_live_feed_reads_by_position_after_the_last_seq() -> None:
+    world = World()
+    project = _project()
+    world.projects = [project]
+    service = _service(world)
+    assert await service.ledger_after(EVERYTHING, project.project_id, after=41, limit=10) == (
+        "events",
+        project.project_id,
+    )
+    assert ("range", (42, 51)) in world.asked
+    assert service.lane_tail(EVERYTHING, "/x/events.jsonl", 7) == ("tail", "/x/events.jsonl", 7)
+    with pytest.raises(HubForbidden):
+        await service.ledger_after(NOTHING, project.project_id, after=0, limit=1)
+    with pytest.raises(HubForbidden):
+        service.lane_tail(NOTHING, "/x", 0)
+    with pytest.raises(UnknownProject):
+        await service.ledger_after(EVERYTHING, uuid4(), after=0, limit=1)

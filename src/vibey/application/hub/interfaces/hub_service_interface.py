@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     )
     from vibey.domain.interfaces.ledger_query_interface import LedgerSearchResultInterface
     from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
+    from vibey.domain.ledger import LedgerEvent
 
 type HubDocument = object
 """JSON-able data: what a route returns."""
@@ -68,6 +69,11 @@ class HubDocumentsInterface(Protocol):
         """`vibey ledger search --json`."""
         ...
 
+    def events(self, project_id: UUID, events: Sequence[LedgerEvent]) -> HubDocument:
+        """A page of the live feed: `{"project_id", "events", "last_seq"}`, each event as
+        `vibey ledger search --json` carries it."""
+        ...
+
 
 @runtime_checkable
 class HubProbesInterface(Protocol):
@@ -88,6 +94,11 @@ class HubProbesInterface(Protocol):
 
     async def doctor(self) -> HubDocument:
         """The checks the hub runs itself; `vibey doctor` on the host is the full check."""
+        ...
+
+    def lane_tail(self, events_path: str, after: int) -> HubDocument:
+        """A listed lane's complete lines after byte `after`, and the offset to resume
+        from. Raises `UnknownLane` for a path that is not a listed lane."""
         ...
 
 
@@ -156,4 +167,15 @@ class HubServiceInterface(Protocol):
 
     async def doctor(self, principal: HubPrincipal) -> HubDocument:
         """The hub's own checks. Needs `view`."""
+        ...
+
+    async def ledger_after(
+        self, principal: HubPrincipal, project_id: UUID, *, after: int, limit: int
+    ) -> HubDocument:
+        """Up to `limit` events with seq greater than `after`, oldest first -- the live
+        feed's catch-up and every page after it. A position, never a time. Needs `view`."""
+        ...
+
+    def lane_tail(self, principal: HubPrincipal, events_path: str, after: int) -> HubDocument:
+        """A lane's lines after byte `after`. Needs `view`."""
         ...

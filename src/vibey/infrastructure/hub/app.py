@@ -31,11 +31,22 @@ Every route is versioned under `/api/v1`, and the OpenAPI 3.1 document is served
 the two differ.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Annotated, Any, Final
+from urllib.parse import urlsplit
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Security
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    Query,
+    Request,
+    Security,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
@@ -52,6 +63,7 @@ from vibey.domain.errors import (
     PriorityRefused,
     ReorderRefused,
     UnknownGate,
+    UnknownLane,
     UnknownProject,
     VibeyError,
 )
@@ -63,6 +75,7 @@ from vibey.infrastructure.hub.authenticator import HubRequest
 from vibey.infrastructure.hub.interfaces.authenticator_interface import (
     HubAuthenticatorInterface,
 )
+from vibey.infrastructure.hub.interfaces.live_interface import LedgerAnnouncementsInterface
 
 MAX_BODY_BYTES: Final = 64 * 1024
 """The largest request body the hub reads. A gate answer is a few hundred bytes."""
@@ -76,6 +89,20 @@ HUB_API_VERSION: Final = "1"
 
 MAX_SEARCH_LIMIT: Final = 500
 """The most ledger events one search returns."""
+
+LIVE_PAGE: Final = 200
+"""The most events one live-feed message carries; a feed behind by more sends pages."""
+
+HEARTBEAT_SECONDS: Final = 25.0
+"""How long a quiet feed waits before it says it is still there (and notices a client
+that went away)."""
+
+LANE_POLL_SECONDS: Final = 1.0
+"""How often a lane feed looks for new bytes."""
+
+POLICY_VIOLATION: Final = 1008
+"""The WebSocket close code for a refused connection: it proves nothing, names a Host
+or Origin this hub does not answer, or may not read what it asked for."""
 
 SECURITY_HEADERS: Final[Mapping[str, str]] = {
     "content-security-policy": (
@@ -94,6 +121,7 @@ ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (HubForbidden, 403),
     (UnknownProject, 404),
     (UnknownGate, 404),
+    (UnknownLane, 404),
     (GateAlreadyAnswered, 409),
     (PriorityRefused, 403),
     (ReorderRefused, 409),
@@ -152,6 +180,7 @@ class HubAppFactory:
         authenticator: HubAuthenticatorInterface,
         allowed_hosts: frozenset[str],
         ready: Callable[[], Awaitable[bool]],
+        live: LedgerAnnouncementsInterface,
     ) -> FastAPI:
         buckets: dict[str, TokenBucket] = {}
 
@@ -203,7 +232,7 @@ class HubAppFactory:
         v1 = f"/api/v{HUB_API_VERSION}"
 
         @app.get("/health/live", tags=["health"], summary="The process is up.")
-        async def live() -> dict[str, str]:
+        async def live_probe() -> dict[str, str]:
             return {"status": "live"}
 
         @app.get(
@@ -339,6 +368,111 @@ class HubAppFactory:
         )
         async def doctor(caller: who) -> JSONResponse:
             return JSONResponse(await service.doctor(caller))
+
+        @app.get(
+            f"{v1}/projects/{{project_id}}/ledger/after",
+            tags=["live"],
+            summary="Events after a seq, oldest first: the live feed, for a client that polls.",
+            responses=REFUSED,
+        )
+        async def ledger_after(
+            caller: who,
+            project_id: UUID,
+            seq: Annotated[int, Query(ge=0)] = 0,
+            limit: Annotated[int, Query(ge=1, le=LIVE_PAGE)] = LIVE_PAGE,
+        ) -> JSONResponse:
+            return JSONResponse(
+                await service.ledger_after(caller, project_id, after=seq, limit=limit)
+            )
+
+        @app.get(
+            f"{v1}/lanes/tail",
+            tags=["live"],
+            summary="A listed lane's complete lines after a byte offset.",
+            responses=REFUSED,
+        )
+        async def lane_tail(
+            caller: who, path: str, after: Annotated[int, Query(ge=0)] = 0
+        ) -> JSONResponse:
+            return JSONResponse(service.lane_tail(caller, path, after))
+
+        async def admitted(socket: WebSocket) -> HubRequest | None:
+            """The socket's request, when its Host and Origin are ones this hub answers.
+            A browser always sends Origin on a WebSocket, and a page on another origin must
+            never ride the user's credentials in (cross-site WebSocket hijacking)."""
+            origin = socket.headers.get("origin")
+            if not self._binding.admits(socket.headers.get("host"), allowed_hosts) or (
+                origin is not None and urlsplit(origin).netloc.lower() not in allowed_hosts
+            ):
+                return None
+            return HubRequest(
+                method="GET",
+                path=socket.url.path,
+                query=socket.url.query,
+                headers={name.lower(): value for name, value in socket.headers.items()},
+                body=b"",
+            )
+
+        @app.websocket(f"{v1}/projects/{{project_id}}/live")
+        async def project_live(socket: WebSocket, project_id: UUID, after: int = 0) -> None:
+            request = await admitted(socket)
+            if request is None or (await authenticator.authenticate(request)) is None:
+                await socket.close(code=POLICY_VIOLATION)
+                return
+            with live.subscribe(project_id) as wake:
+                last = max(after, 0)
+                try:
+                    while True:
+                        # Authenticated again for every page: a principal revoked while
+                        # the socket is open is refused at the next event, not the next
+                        # connection.
+                        caller = await authenticator.authenticate(request)
+                        if caller is None:
+                            raise HubForbidden("the principal no longer proves itself")
+                        page = await service.ledger_after(
+                            caller, project_id, after=last, limit=LIVE_PAGE
+                        )
+                        if socket.client_state.name == "CONNECTING":
+                            await socket.accept()
+                        body = page if isinstance(page, dict) else {}
+                        events = body.get("events") or []
+                        if events:
+                            await socket.send_json(body)
+                            last = int(body["last_seq"])
+                            if len(events) == LIVE_PAGE:
+                                continue
+                        try:
+                            await asyncio.wait_for(wake.get(), timeout=HEARTBEAT_SECONDS)
+                        except TimeoutError:
+                            await socket.send_json({"heartbeat": last})
+                except (HubForbidden, UnknownProject):
+                    await socket.close(code=POLICY_VIOLATION)
+                except WebSocketDisconnect:
+                    return
+
+        @app.websocket(f"{v1}/lanes/live")
+        async def lane_live(socket: WebSocket, path: str, after: int = 0) -> None:
+            request = await admitted(socket)
+            if request is None or (await authenticator.authenticate(request)) is None:
+                await socket.close(code=POLICY_VIOLATION)
+                return
+            offset = max(after, 0)
+            try:
+                while True:
+                    caller = await authenticator.authenticate(request)
+                    if caller is None:
+                        raise HubForbidden("the principal no longer proves itself")
+                    chunk = service.lane_tail(caller, path, offset)
+                    if socket.client_state.name == "CONNECTING":
+                        await socket.accept()
+                    if isinstance(chunk, dict) and chunk.get("lines"):
+                        await socket.send_json(chunk)
+                    offset = int(chunk["offset"]) if isinstance(chunk, dict) else offset
+                    await asyncio.sleep(LANE_POLL_SECONDS)
+            except (HubForbidden, UnknownLane):
+                await socket.close(code=POLICY_VIOLATION)
+            except WebSocketDisconnect:
+                return
 
         return app
 

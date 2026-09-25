@@ -32,7 +32,7 @@ from vibey.application.hub.interfaces.hub_service_interface import (
 )
 from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
 from vibey.application.interfaces.gates import GateLookup, HumanGateRepository
-from vibey.application.interfaces.ledger import LedgerSearch
+from vibey.application.interfaces.ledger import LedgerRangeReader, LedgerSearch
 from vibey.application.interfaces.project_budget import ProjectBudgetServiceInterface
 from vibey.application.interfaces.projects import ProjectReader
 from vibey.application.interfaces.queue_priority import QueuePriorityServiceInterface
@@ -63,6 +63,7 @@ class HubService:
         budgets: ProjectBudgetServiceInterface,
         queue: QueuePriorityServiceInterface,
         ledger: LedgerSearch,
+        ledger_range: LedgerRangeReader,
         documents: HubDocumentsInterface,
         probes: HubProbesInterface,
         policy: HubScopePolicyInterface = HUB_SCOPES,
@@ -76,6 +77,7 @@ class HubService:
         self._budgets = budgets
         self._queue = queue
         self._ledger = ledger
+        self._range = ledger_range
         self._documents = documents
         self._probes = probes
         self._policy = policy
@@ -177,6 +179,18 @@ class HubService:
     async def doctor(self, principal: HubPrincipal) -> HubDocument:
         self._authorise(principal, HubAction.READ)
         return await self._probes.doctor()
+
+    async def ledger_after(
+        self, principal: HubPrincipal, project_id: UUID, *, after: int, limit: int
+    ) -> HubDocument:
+        self._authorise(principal, HubAction.READ)
+        await self._project(project_id)
+        events = await self._range.range(project_id, from_seq=after + 1, to_seq=after + limit)
+        return self._documents.events(project_id, events)
+
+    def lane_tail(self, principal: HubPrincipal, events_path: str, after: int) -> HubDocument:
+        self._authorise(principal, HubAction.READ)
+        return self._probes.lane_tail(events_path, after)
 
     def _authorise(self, principal: HubPrincipal, action: HubAction) -> None:
         if not self._policy.permits(principal.scopes, action):

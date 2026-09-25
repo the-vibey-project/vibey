@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Final, cast
 from uuid import UUID
 
+import asyncpg
 import typer
 
 from vibey.application.dto import (
@@ -42,7 +43,7 @@ from vibey.application.hub.interfaces.hub_service_interface import (
     HubDocument,
     HubServiceInterface,
 )
-from vibey.bootstrap import AppResources, build_app
+from vibey.bootstrap import AppResources, build_app, database_url
 from vibey.cli.budget import BUDGET_PRESENTER
 from vibey.cli.errors import EXIT_USAGE
 from vibey.cli.gates import GATES_PRESENTER
@@ -64,6 +65,7 @@ from vibey.domain.hub_binding import HUB_BINDING, UndeclaredExposure
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
 from vibey.domain.interfaces.ledger_query_interface import LedgerSearchResultInterface
 from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
+from vibey.domain.ledger import LedgerEvent
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
@@ -73,12 +75,14 @@ from vibey.infrastructure.hub.interfaces.app_interface import HubAppFactoryInter
 from vibey.infrastructure.hub.interfaces.authenticator_interface import HubAuthenticatorInterface
 from vibey.infrastructure.hub.interfaces.exposure_interface import HubExposureCheckInterface
 from vibey.infrastructure.hub.interfaces.lanes_interface import LaneScannerInterface
+from vibey.infrastructure.hub.interfaces.live_interface import LedgerAnnouncementsInterface
 from vibey.infrastructure.hub.interfaces.server_interface import (
     HubServerInterface,
     LocalNamesInterface,
 )
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.lanes import LaneEngine, LaneScanner
+from vibey.infrastructure.hub.live import LedgerAnnouncements
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.server import HUB_SERVER, LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
@@ -144,6 +148,13 @@ class CliHubDocuments:
     def ledger(self, project_id: UUID, result: LedgerSearchResultInterface) -> HubDocument:
         return json.loads(self._ledger.machine(project_id, result))
 
+    def events(self, project_id: UUID, events: Sequence[LedgerEvent]) -> HubDocument:
+        return {
+            "project_id": str(project_id),
+            "events": [self._ledger.record(event) for event in events],
+            "last_seq": events[-1].seq if events else None,
+        }
+
 
 class CliHubProbes:
     """The reads composed above the application layer: status through the TUI's
@@ -189,6 +200,9 @@ class CliHubProbes:
     def lanes(self) -> HubDocument:
         return {"lanes": self._lanes.lanes()}
 
+    def lane_tail(self, events_path: str, after: int) -> HubDocument:
+        return self._lanes.tail(events_path, after)
+
     async def doctor(self) -> HubDocument:
         database = await self.ready()
         exposure = self._exposure.run(self._settings, self._store)
@@ -230,11 +244,16 @@ class DeferredHubAppFactory:
         authenticator: HubAuthenticatorInterface,
         allowed_hosts: frozenset[str],
         ready: Callable[[], Awaitable[bool]],
+        live: LedgerAnnouncementsInterface,
     ) -> "FastAPI":
         from vibey.infrastructure.hub.app import HUB_APP
 
         return HUB_APP.build(
-            service, authenticator=authenticator, allowed_hosts=allowed_hosts, ready=ready
+            service,
+            authenticator=authenticator,
+            allowed_hosts=allowed_hosts,
+            ready=ready,
+            live=live,
         )
 
 
@@ -257,6 +276,9 @@ class ServeCommand:
         names: LocalNamesInterface = LOCAL_NAMES,
         config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
         now: Callable[[], float] = time.time,
+        announcements: Callable[[], LedgerAnnouncementsInterface] = (
+            lambda: LedgerAnnouncements(lambda: asyncpg.connect(database_url()))
+        ),
         exposure: HubExposureCheckInterface = HUB_EXPOSURE,
     ) -> None:
         self._exposure = exposure
@@ -268,6 +290,7 @@ class ServeCommand:
         self._names = names
         self._config_path = config_path
         self._now = now
+        self._announcements = announcements
 
     def openapi(self) -> str:
         """The OpenAPI 3.1 document, with no database: building the app calls no route,
@@ -277,6 +300,7 @@ class ServeCommand:
             authenticator=LocalTokenAuthenticator("unused"),
             allowed_hosts=frozenset(),
             ready=self._never_ready,
+            live=LedgerAnnouncements(self._never_connect),
         )
         return json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
 
@@ -301,7 +325,9 @@ class ServeCommand:
             roots=settings.lane_roots or (self._config_path().parent,),
             now=self._now,
         )
+        live = self._announcements()
         async with self._open_app() as resources:
+            await live.start()
             probes = CliHubProbes(
                 resources=resources, settings=settings, store=store, lanes=scanner
             )
@@ -313,6 +339,7 @@ class ServeCommand:
                 budgets=resources.project_budgets,
                 queue=resources.queue_priority,
                 ledger=PostgresLedgerSearchRepository(resources.ledger._pool),
+                ledger_range=resources.ledger,
                 documents=CliHubDocuments(),
                 probes=probes,
             )
@@ -321,6 +348,7 @@ class ServeCommand:
                 authenticator=LocalTokenAuthenticator(token),
                 allowed_hosts=allowed,
                 ready=probes.ready,
+                live=live,
             )
             typer.echo(f"vibey hub on http://{self._shown(bound)}:{listen}/api/v1")
             typer.echo(f"host token: {settings.state_dir / 'token'} (owner-only)")
@@ -329,6 +357,7 @@ class ServeCommand:
                 await self._server.serve(app, host=bound, port=listen)
             finally:
                 store.clear_serving(os.getpid())
+                await live.stop()
 
     def exposure_line(self) -> bool:
         """`vibey doctor`'s `hub-exposure` line, printed; False only on FAIL. A `[hub]`
@@ -349,6 +378,10 @@ class ServeCommand:
     @staticmethod
     async def _never_ready() -> bool:
         return False
+
+    @staticmethod
+    async def _never_connect() -> None:
+        raise RuntimeError("the OpenAPI-only app never listens")
 
 
 SERVE: Final[ServeCommandInterface] = ServeCommand()

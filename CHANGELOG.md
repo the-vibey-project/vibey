@@ -225,6 +225,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **hub:** the live feed. Migration 0019 announces every ledger append on
+  `vibey_ledger_appended` (additive). `WS /api/v1/projects/{id}/live?after=N` resumes after a
+  seq and pages until caught up; `WS /api/v1/lanes/live` tails a listed lane by byte offset;
+  each has an HTTP polling twin. Sockets check Host and Origin and re-authenticate every page.
 * **hub:** `vibey serve`, the one HTTP API every Krypton client reaches
   ([ADR-0068](docs/architecture/decisions/0068-the-hub.md)), behind the new `hub` extra
   (`pip install 'vibey[hub]'`). Projects, status, gates (list and answer, through the

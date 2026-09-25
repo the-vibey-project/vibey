@@ -95,6 +95,11 @@ class UnknownProject(VibeyError):
     """No project exists with the given id."""
 
 
+class UnknownLane(VibeyError, LookupError):
+    """No listed lane has the given events file. The hub reads only files it found as
+    lanes, so a path that is not one is refused rather than opened (ADR-0067)."""
+
+
 class WrongPhase(VibeyError):
     """The project is not in a phase the requested command applies to."""
 

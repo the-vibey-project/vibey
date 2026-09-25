@@ -18,6 +18,9 @@ if TYPE_CHECKING:
     from vibey.infrastructure.hub.interfaces.authenticator_interface import (
         HubAuthenticatorInterface,
     )
+    from vibey.infrastructure.hub.interfaces.live_interface import (
+        LedgerAnnouncementsInterface,
+    )
 
 
 @runtime_checkable
@@ -31,6 +34,7 @@ class HubAppFactoryInterface(Protocol):
         authenticator: HubAuthenticatorInterface,
         allowed_hosts: frozenset[str],
         ready: Callable[[], Awaitable[bool]],
+        live: LedgerAnnouncementsInterface,
     ) -> FastAPI:
         """The app: Host allowlist, security headers, no CORS, principal before route."""
         ...

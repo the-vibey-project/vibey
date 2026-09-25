@@ -8,6 +8,9 @@ the service raises reads over HTTP. The use cases themselves are tested in
 tests/application/test_hub_service.py, and end to end in tests/cli/test_serve_cli.py.
 """
 
+import asyncio
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
@@ -103,6 +106,30 @@ class Service:
     async def doctor(self, principal: HubPrincipal) -> Any:
         return self._done("doctor")
 
+    async def ledger_after(
+        self, principal: HubPrincipal, project_id: UUID, *, after: int, limit: int
+    ) -> Any:
+        return self._done("ledger_after", project_id, after, limit)
+
+    def lane_tail(self, principal: HubPrincipal, events_path: str, after: int) -> Any:
+        return self._done("lane_tail", events_path, after)
+
+
+class Quiet:
+    """A live feed nobody announces on."""
+
+    def __init__(self) -> None:
+        self.subscribed: list[UUID] = []
+
+    async def start(self) -> None: ...
+
+    async def stop(self) -> None: ...
+
+    @contextmanager
+    def subscribe(self, project_id: UUID) -> Iterator[asyncio.Queue[int]]:
+        self.subscribed.append(project_id)
+        yield asyncio.Queue(maxsize=1)
+
 
 class Nobody:
     """Names a principal with no scopes for any request."""
@@ -126,6 +153,7 @@ def _app(
         authenticator=authenticator or LocalTokenAuthenticator(TOKEN),
         allowed_hosts=HUB_BINDING.allowed_hosts(8765, frozenset()),
         ready=readiness,
+        live=Quiet(),
     )
 
 
@@ -152,6 +180,8 @@ def test_the_factory_meets_its_declared_seam() -> None:
         ("GET", "/api/v1/loops", "loops", None),
         ("GET", "/api/v1/lanes", "lanes", None),
         ("GET", "/api/v1/doctor", "doctor", None),
+        ("GET", f"/api/v1/projects/{PID}/ledger/after?seq=4&limit=9", "ledger_after", None),
+        ("GET", "/api/v1/lanes/tail?path=/x/events.jsonl&after=3", "lane_tail", None),
     ],
 )
 async def test_every_route_runs_its_use_case_for_the_host(
