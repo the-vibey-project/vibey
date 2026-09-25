@@ -1,6 +1,6 @@
 # cursorloop
 
-> **Now part of the vibey monorepo.** `cursorloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/cursor`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `cursorloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/cursor`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 [![Ships in vibey](https://img.shields.io/pypi/v/vibey?label=ships%20in%20vibey)](https://pypi.org/project/vibey/)
 [![Python versions](https://img.shields.io/pypi/pyversions/vibey)](https://pypi.org/project/vibey/)
@@ -38,7 +38,7 @@ Requires **Python 3.12+**, **macOS or Linux**, and a Cursor account with
 `CURSOR_API_KEY` set for live runs. Windows is not a supported target.
 
 ```bash
-pipx install vibey      # or: uv tool install vibey / pip install vibey
+pipx install vibey-engine      # or: uv tool install vibey-engine / pip install vibey-engine
                         # the whole family; cursorloop is one of its console scripts
 cursorloop doctor            # --offline skips the live me / models calls
 ```
@@ -176,7 +176,7 @@ layout — pick the one that matches the agent you pay for:
 | [agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | Google Antigravity / Gemini | `agyloop` |
 
 All four ship inside the [`vibey`](https://pypi.org/project/vibey/) distribution: one
-`pip install vibey` puts every command above on `PATH` (vibey ADR-0037).
+`pip install vibey-engine` puts every command above on `PATH` (vibey ADR-0037).
 
 Around them:
 

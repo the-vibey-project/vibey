@@ -19,11 +19,11 @@ every command with a worked example, and every setting with its default.
 - **Ollama**: the app on a Mac, from [ollama.com/download](https://ollama.com/download); on
   Linux, `curl -fsSL https://ollama.com/install.sh | sh`. Windows is not supported yet
   ([#1097](https://github.com/the-vibey-project/vibey/issues/1097)).
-- **vibey**, which brings `gptossloop`, `qwenloop` and `vibey-skills`: `pip install vibey`
+- **vibey**, which brings `gptossloop`, `qwenloop` and `vibey-skills`: `pip install vibey-engine`
   (Python 3.12+). The loop, effort and engine pickers read `vibey loops --json`, which ships in
   vibey 3.0.0. Without it the extension says so, and runs sovereignloop with gptossloop alone.
   gptossloop ships in the same release as `vibey loops`, so with an older vibey the fix for
-  both is `pip install --upgrade vibey`.
+  both is `pip install --upgrade vibey-engine`.
 - **The model**, gpt-oss:20b, about 14 GB. The extension can download it for you, and asks
   first. [Local models on Ollama](local-models-ollama.md) covers the server's settings.
 

@@ -1,6 +1,6 @@
 # vibey-gh
 
-> **Now part of the vibey monorepo.** `vibey-gh` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `vibey-gh` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 Shipping a change safely through review, merge, versioning, and release usually means
 hand-wiring a dozen GitHub Actions steps — and they drift out of sync, silently skip a
@@ -109,7 +109,7 @@ pinned to immutable action revisions and run in GitHub-hosted jobs.
 ## Quick start
 
 ```bash
-pip install vibey          # vibey-gh ships inside it (vibey ADR-0037)
+pip install vibey-engine          # vibey-gh ships inside it (vibey ADR-0037)
 vibey-gh install
 ```
 
@@ -156,7 +156,7 @@ release-site assets used by the dual-channel Pages deployment. Existing hooks ar
 changes; opt out of individual workflows with `[install].workflows` rather than editing a
 generated copy that the next installation will overwrite.
 
-Every managed workflow installs this tooling with `pip install vibey` — the distribution
+Every managed workflow installs this tooling with `pip install vibey-engine` — the distribution
 that carries `vibey-gh` — floating on whatever the latest published release is, by
 default, so upgrading changes nothing until you ask. Set `[install].pin_version = true` to
 pin that install to the exact version that rendered the file (`vibey==X.Y.Z`) instead;
@@ -1026,7 +1026,7 @@ workflow and asset differences. Never hand-copy only one generated workflow: tem
 configuration rendering, tests, and the dogfood copies form one versioned contract.
 
 ```bash
-python -m pip install --upgrade vibey
+python -m pip install --upgrade vibey-engine
 vibey-gh install
 vibey-gh check --ci
 git diff -- .github .githooks
@@ -1130,7 +1130,7 @@ forever — and a check that cannot pass is a check people route around.
 
 ### Pinning the tooling version
 
-By default every managed workflow installs this tooling with `pip install vibey` — the one
+By default every managed workflow installs this tooling with `pip install vibey-engine` — the one
 distribution that carries `vibey-gh` — which floats to whatever the latest published
 release is on every run. Pin it instead:
 

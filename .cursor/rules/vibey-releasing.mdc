@@ -251,7 +251,7 @@ After `main` builds:
 ```bash
 uv venv --python 3.12
 source .venv/bin/activate
-pip install vibey==x.y.z
+pip install vibey-engine==x.y.z
 vibey --version
 # the bundle is the contract now (ADR-0037): every console script must be there
 for c in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap azbootstrap \

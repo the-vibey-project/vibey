@@ -46,7 +46,7 @@ UNION_MARKER = "# vibey-gh: append-only files merge instead of conflicting"
 # fallback and the pre-push hook's recovery advice render from that one key: they used to
 # be two literals in two files, and the hook went on naming a retired distribution for as
 # long as nobody happened to read it.
-FALLBACK_DISTRIBUTION = "vibey"
+FALLBACK_DISTRIBUTION = "vibey-engine"
 FALLBACK_PLACEHOLDER = "__VIBEY_GH_FALLBACK_PACKAGE__"
 FALLBACK_INSTALL = f"python -m pip install --quiet {FALLBACK_DISTRIBUTION}\n"
 

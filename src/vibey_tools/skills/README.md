@@ -1,6 +1,6 @@
 # vibey-skills
 
-> **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 > **135 Claude Code plugins. 710 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
@@ -55,7 +55,7 @@ rendered from.
 `vibey-skills` command ships in the `vibey` distribution:
 
 ```bash
-uv tool install vibey                      # or: pipx install vibey / pip install vibey
+uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
 vibey-skills install --all                 # copy all 710 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
@@ -90,7 +90,7 @@ ai-and-data  (0.2.0, ai, 4 skills)
 
 | | 1.x (`vibe-engineering-skills`) | 2.0.0 (`vibey-skills`) |
 |---|---|---|
-| PyPI package | `pip install vibe-engineering-skills` | `pip install vibey` (it carries `vibey_skills`; there is no separate `vibey-skills` project — vibey ADR-0037) |
+| PyPI package | `pip install vibe-engineering-skills` | `pip install vibey-engine` (it carries `vibey_skills`; there is no separate `vibey-skills` project — vibey ADR-0037) |
 | Python import | `import vibe_engineering_skills` | `import vibey_skills` |
 | CLI | `vibe-engineering-skills`, `vibe-skills` | `vibey-skills` (`vibe-skills` kept as a deprecated alias; the long form is gone) |
 | Marketplace | `/plugin marketplace add TheViziusGroup/vibe-engineering-skills` | `/plugin marketplace add the-vibey-project/vibey` |
@@ -333,7 +333,7 @@ admin role are already configured, along with GitHub Pages deploying from Action
 ### Commands
 
 ```bash
-pip install -e ../gh             # vibey-gh from the tree; or: pip install vibey
+pip install -e ../gh             # vibey-gh from the tree; or: pip install vibey-engine
 vibey-gh install                 # writes the hooks and the managed workflow files
 vibey-gh check --ci              # exactly what CI runs
 vibey-gh version --since origin/main --explain

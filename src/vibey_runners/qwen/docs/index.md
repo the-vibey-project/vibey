@@ -34,7 +34,7 @@ integration never download model weights.
 separate `qwenloop` project to install:
 
 ```bash
-uv tool install vibey    # or: pipx install vibey / pip install vibey
+uv tool install vibey-engine    # or: pipx install vibey-engine / pip install vibey-engine
 ```
 
 The Python package never bundles model weights.

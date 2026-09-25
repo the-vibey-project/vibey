@@ -1,6 +1,6 @@
 # vibey-bootstrap
 
-> **Now part of the vibey monorepo.** `vibey-bootstrap` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `vibey-bootstrap` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 > The cross-cutting layer for Azure Functions, FastAPI services, and AKS workers.
 > One call bootstraps logging → App Configuration + Key Vault → Application Insights
@@ -40,7 +40,7 @@ and use a bounded buffer. `USE_MOCK_BOOTSTRAP=true` runs everything without Azur
 ## Quick start
 
 ```bash
-pip install vibey      # vibey_bootstrap ships inside it (vibey ADR-0037)
+pip install vibey-engine      # vibey_bootstrap ships inside it (vibey ADR-0037)
 ```
 
 ```python
@@ -91,8 +91,8 @@ rate-limiting, and escalation. Runnable version:
 
 ```bash
 # On the vibey distribution the extras below are reached through two aggregates:
-pip install 'vibey[azure]'           # the App Config / Key Vault / App Insights core
-pip install 'vibey[bootstrap-all]'   # everything any extra below needs, in one
+pip install 'vibey-engine[azure]'           # the App Config / Key Vault / App Insights core
+pip install 'vibey-engine[bootstrap-all]'   # everything any extra below needs, in one
 ```
 
 The full extras matrix (40+ extras, what each pulls in, when you need it) is in

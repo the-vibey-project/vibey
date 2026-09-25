@@ -185,7 +185,7 @@ of all of that — `tools/check_fingerprints.py`, `tools/next_version.py`,
 gone; the behaviour is unchanged.
 
 ```bash
-pip install -e ../gh      # from the tree; or `pip install vibey`, which carries it
+pip install -e ../gh      # from the tree; or `pip install vibey-engine`, which carries it
 vibey-gh install          # hooks + the merge-train workflow, and points core.hooksPath
 vibey-gh check            # are the fingerprints intact?
 vibey-gh version --since origin/main --explain
@@ -318,7 +318,7 @@ Install the tooling and its hooks once per clone, so the trailer is added for yo
 push without the fingerprints is refused:
 
 ```bash
-pip install -e ../gh      # from the tree; or `pip install vibey`, which carries it
+pip install -e ../gh      # from the tree; or `pip install vibey-engine`, which carries it
 vibey-gh install
 ```
 

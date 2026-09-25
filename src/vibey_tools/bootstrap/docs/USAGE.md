@@ -47,7 +47,7 @@ a v2.1 logging-transport layer (console / App Insights / Sumo Logic).
 >    token bucket, **HMAC action tokens that interoperate byte-for-byte** with Python).
 
 **Compatibility:** the source and distribution support Python **≥ 3.12**. Distribution:
-`pip install vibey` (PyPI, MIT) — there is no separate
+`pip install vibey-engine` (PyPI, MIT) — there is no separate
 `vibey-bootstrap` project (vibey ADR-0037). Every v1 public symbol is preserved byte-identical across v2.
 
 ### Table of contents
@@ -67,9 +67,9 @@ a v2.1 logging-transport layer (console / App Insights / Sumo Logic).
 ## 1. Installation & extras
 
 ```bash
-pip install vibey                     # the whole family; vibey_bootstrap importable
-pip install 'vibey[azure]'            # App Configuration + Key Vault + App Insights
-pip install 'vibey[bootstrap-all]'    # every optional dependency any extra below needs
+pip install vibey-engine                     # the whole family; vibey_bootstrap importable
+pip install 'vibey-engine[azure]'            # App Configuration + Key Vault + App Insights
+pip install 'vibey-engine[bootstrap-all]'    # every optional dependency any extra below needs
 ```
 
 **Extra names.** The matrix below lists the extras as this package's own
@@ -145,8 +145,8 @@ dependencies where a third-party package is genuinely required.
 
 ```bash
 # Common combinations
-pip install 'vibey[azure]'
-pip install 'vibey[bootstrap-all]'
+pip install 'vibey-engine[azure]'
+pip install 'vibey-engine[bootstrap-all]'
 ```
 
 ---
@@ -657,7 +657,7 @@ configure_transports(
 ```
 
 See [examples/39_v3_transports.py](../examples/39_v3_transports.py). Install all deps
-with `pip install 'vibey[bootstrap-all]'`.
+with `pip install 'vibey-engine[bootstrap-all]'`.
 
 ### v3.0.0 runtime modules (non-transport)
 

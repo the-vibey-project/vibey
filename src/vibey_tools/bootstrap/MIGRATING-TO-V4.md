@@ -21,12 +21,12 @@ to install and import it.
 
    ```bash
    pip uninstall azure-bootstrap
-   pip install vibey        # carries vibey_bootstrap 4.x (vibey ADR-0037)
+   pip install vibey-engine        # carries vibey_bootstrap 4.x (vibey ADR-0037)
    ```
 
    Extras keep their names in this package's own `pyproject.toml`; on the vibey
    distribution they are reached through two aggregates,
-   `pip install 'vibey[azure]'` and `pip install 'vibey[bootstrap-all]'`.
+   `pip install 'vibey-engine[azure]'` and `pip install 'vibey-engine[bootstrap-all]'`.
 
 2. Rename the imports (a mechanical find-and-replace):
 

@@ -7,7 +7,7 @@ codexloop, cursorloop, agyloop, and the local runner that ships as two engines:
 Qwen), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
 an optional visual-design interstitial, plus an opt-in Azure deployment stage
-set. One distribution — `pip install vibey` delivers the whole family,
+set. One distribution — `pip install vibey-engine` delivers the whole family,
 engines and tools included (ADR-0037). Python 3.12+.
 
 **This file is deliberately short — it holds facts, not procedures.** Every

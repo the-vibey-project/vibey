@@ -18,7 +18,7 @@ In ADR-0019's order (reach per unit of effort):
 
 | # | Channel | Artifact | Status |
 |---|---|---|---|
-| 0 | PyPI (`pip install vibey`, `uv tool install vibey`), pipx/uvx | sdist + wheel | Done (`release.yml`) |
+| 0 | PyPI (`pip install vibey-engine`, `uv tool install vibey-engine`), pipx/uvx | sdist + wheel | Done (`release.yml`) |
 | 1 | OCI image on `ghcr.io` | the image from workstream 05 | Image is built and contract-tested in CI; not pushed. `release-surfaces.yml` pushes only the Python distribution to `ghcr.io/<repo>/python` as an OCI artifact |
 | 2 | Single-file executable (shiv, pex or PyInstaller) | release asset | Open; unblocks 3–8 |
 | 3 | Homebrew | formula in the existing, empty `the-vibey-project/homebrew-tap` | Open |

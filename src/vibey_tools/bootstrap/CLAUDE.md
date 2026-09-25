@@ -865,10 +865,10 @@ This part is still live, and it is the one thing in this section that changed sh
 
 ```bash
 # Install from PyPI (no extra config needed)
-pip install vibey
+pip install vibey-engine
 
 # Install specific version
-pip install vibey==1.0.0
+pip install vibey-engine==1.0.0
 
 # Install a dev build. These live on TestPyPI as `vibey-dev`, NOT PyPI — `--pre`
 # against PyPI finds nothing, because PyPI now only ever holds real releases.
@@ -880,8 +880,8 @@ pip install \
 
 # Install with optional extras. On the vibey distribution the per-feature extras are
 # reached through two aggregates rather than by name.
-pip install 'vibey[azure]'
-pip install 'vibey[bootstrap-all]'
+pip install 'vibey-engine[azure]'
+pip install 'vibey-engine[bootstrap-all]'
 ```
 
 ### CI/CD Troubleshooting
@@ -928,7 +928,7 @@ GitHub Pages must be enabled once, by hand, before the first deploy:
 
 #### Version Conflicts
 - Clear pip cache: `pip cache purge`
-- Install specific version: `pip install vibey==1.0.0` (the distribution that carries it)
+- Install specific version: `pip install vibey-engine==1.0.0` (the distribution that carries it)
 
 ---
 

@@ -26,7 +26,7 @@ distribution installs — there is no separate `vibey-skills` package any more
 
 ```bash
 # Install the family, then use the CLI
-uv tool install vibey          # or: pipx install vibey / pip install vibey
+uv tool install vibey-engine          # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills install --all
 
 # ...or run it once without installing anything permanently

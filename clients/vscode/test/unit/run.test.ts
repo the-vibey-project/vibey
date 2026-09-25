@@ -888,7 +888,7 @@ describe('TaskRun', () => {
   it('reports an engine that cannot run before anything starts, and shows a catalogue notice first', async () => {
     const h = harness({
       services: {
-        command: () => 'gptossloop cannot run: not found on PATH. It ships with vibey (pip install vibey), or set vibey.gptossloopPath.',
+        command: () => 'gptossloop cannot run: not found on PATH. It ships with vibey (pip install vibey-engine), or set vibey.gptossloopPath.',
         catalogue: { ...CATALOGUE, notice: 'vibey loops is not available, so the picker is limited.' },
       },
     });

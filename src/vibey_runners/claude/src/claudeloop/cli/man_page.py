@@ -12,7 +12,7 @@ from claudeloop import __version__
 
 # claudeloop's own repository and its own PyPI project are both retired: the source was
 # absorbed into the vibey monorepo (ADR-0021) and the distribution folded into `vibey`
-# (ADR-0037). These four render into `claudeloop --man`, which `pip install vibey` puts on
+# (ADR-0037). These four render into `claudeloop --man`, which `pip install vibey-engine` puts on
 # everyone's PATH, so they name where the code and the artifact actually are.
 _DOCS = "https://the-vibey-project.github.io/vibey/main/"
 _REPO = "https://github.com/the-vibey-project/vibey"

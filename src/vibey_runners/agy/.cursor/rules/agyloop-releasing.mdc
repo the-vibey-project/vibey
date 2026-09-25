@@ -36,7 +36,7 @@ then `publish-to-pypi.yml` (filename load-bearing) with OIDC environments
 
 Today a change here is released by the monorepo: it reaches an installed user
 through the `vibey` wheel, `vibey-gh` derives the version from the range, and
-`pip install vibey` puts `agyloop` on PATH.
+`pip install vibey-engine` puts `agyloop` on PATH.
 
 See `docs/contributing/release-process.md` (also superseded, kept as the record of
 why each gate existed) and the monorepo's `vibey-releasing` skill for the live one.

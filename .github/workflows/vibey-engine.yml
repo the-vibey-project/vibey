@@ -59,23 +59,24 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            # `vibey`, not `vibey-gh`: ADR-0037 leaves one published distribution and
-            # `vibey_gh` ships inside it. Unpinned because this branch is hand-written
-            # rather than rendered -- a version here would be a number nobody re-renders,
-            # and this repository takes the branch above in any case.
-            python -m pip install --quiet vibey
+            # `vibey-engine`, not `vibey-gh`: `vibey_gh` ships inside the engine's package
+            # (ADR-0037, ADR-0067). Unpinned because this branch is hand-written rather
+            # than rendered -- a version here would be a number nobody re-renders, and
+            # this repository takes the branch above in any case.
+            python -m pip install --quiet vibey-engine
           fi
           # An index version is immutable, so a develop build cannot reuse the release
           # version; the dev suffix makes each push distinct and sorts it BEFORE the
           # release it anticipates, which is the correct relationship.
           vibey-gh version --dev "${GITHUB_RUN_NUMBER}" --apply
 
-      - name: Publish as vibey-engine
-        # Both indexes carry this distribution as `vibey-engine` (sub-doctrine 9.e): its
-        # trusted publishers are registered for this workflow file, `vibey-engine.yml`, in
-        # the environments `pypi` and `testpypi`. Renamed in the runner only; the
-        # importable package and the commands keep their names.
-        run: sed -i 's/^name = "vibey"$/name = "vibey-engine"/' pyproject.toml
+      - name: The project is vibey-engine
+        # Both indexes carry this package as `vibey-engine` (sub-doctrine 9.e): its trusted
+        # publishers are registered for this workflow file, `vibey-engine.yml`, in the
+        # environments `pypi` and `testpypi`. pyproject.toml names it so itself (ADR-0067),
+        # so nothing is renamed here; this only refuses to publish anything else under
+        # these publishers. The importable packages and the commands keep their names.
+        run: grep -qx 'name = "vibey-engine"' pyproject.toml
 
       - id: v
         # Indented inside the block scalar on purpose: a heredoc body written at column 0
@@ -136,8 +137,8 @@ jobs:
             echo "not indexed yet (attempt $i); waiting"
             sleep 30
           done
-          # The distribution is vibey-engine; the packages it installs are the whole
-          # family (ADR-0037). This is the ONLY place the artifact is proven against a
+          # The package is vibey-engine; what it installs is the whole engine family
+          # (ADR-0037, ADR-0067). This is the ONLY place the artifact is proven against a
           # real index before PyPI, so it exercises the contract the distribution now
           # makes -- twelve console scripts -- rather than the one it used to make. A
           # wheel that silently lost a tenant's `packages` entry passed the old
@@ -224,11 +225,11 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            # `vibey`, not `vibey-gh`: ADR-0037 leaves one published distribution and
-            # `vibey_gh` ships inside it. Unpinned because this branch is hand-written
-            # rather than rendered -- a version here would be a number nobody re-renders,
-            # and this repository takes the branch above in any case.
-            python -m pip install --quiet vibey
+            # `vibey-engine`, not `vibey-gh`: `vibey_gh` ships inside the engine's package
+            # (ADR-0037, ADR-0067). Unpinned because this branch is hand-written rather
+            # than rendered -- a version here would be a number nobody re-renders, and
+            # this repository takes the branch above in any case.
+            python -m pip install --quiet vibey-engine
           fi
 
       # main is rebase-merged, so its commits are rewritten copies with new SHAs and
