@@ -17,10 +17,12 @@ from vibey.domain.engine import (
     EngineId,
     EngineTier,
     IsolationLevel,
+    JobRequirement,
     Loop,
     StoredEngineId,
 )
 from vibey.domain.failover import FailoverStatus
+from vibey.domain.handoff import GateResult, HandoffBrief
 from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.budget_caps_interface import (
     CapChangeInterface,
@@ -532,3 +534,15 @@ class DriverOutcome:
     detail: str = ""
     brief_path: str | None = None
     status: FailoverStatus | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EngineFailoverDecision:
+    """What engine-level failover or handback decided (ADR-0070)."""
+
+    result: str
+    """`failed_over`, `already`, `not_capacity`, `parked` or `handed_back`."""
+    next_engine: EngineId | None = None
+    requirement: JobRequirement | None = None
+    gate: GateResult | None = None
+    brief: HandoffBrief | None = None

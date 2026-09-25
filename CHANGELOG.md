@@ -21,6 +21,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `EngineFailedOver` is recorded, and gptossloop starts at ULTRA. `vibey driver probe`, on the
   launchd or systemd timer `vibey driver timer` writes, hands back to the same session with
   `claude -p --resume` only after a recorded successful probe. `[failover]` holds every key.
+  `EngineFailoverService` and `PostgresFailoverStore` apply the same policy to a project's jobs
+  (built and tested; not yet wired into the worker).
 
 * **ultra:** ULTRA, effort without a ceiling
   ([ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md)). `Effort` gains

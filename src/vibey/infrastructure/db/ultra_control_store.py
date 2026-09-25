@@ -11,7 +11,7 @@ because only vibey's own host command writes these kinds.
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Final
+from typing import ClassVar, Final
 from uuid import UUID
 
 import asyncpg
@@ -37,6 +37,10 @@ ULTRA_CONTROL_KINDS: Final = frozenset(
 class PostgresUltraControlStore:
     """Declared by `interfaces/ultra_control_store_interface.py`."""
 
+    KINDS: ClassVar[frozenset[EventKind]] = ULTRA_CONTROL_KINDS
+    """The kinds this store writes; `PostgresFailoverStore` names its own (ADR-0070)."""
+    WHAT: ClassVar[str] = "an ULTRA control"
+
     def __init__(
         self,
         pool: asyncpg.Pool,
@@ -58,8 +62,8 @@ class PostgresUltraControlStore:
         *,
         at: datetime,
     ) -> None:
-        if kind not in ULTRA_CONTROL_KINDS:
-            raise ValueError(f"{kind.value} is not an ULTRA control")
+        if kind not in self.KINDS:
+            raise ValueError(f"{kind.value} is not {self.WHAT}")
         async with self._pool.acquire() as conn, conn.transaction():
             row = await conn.fetchrow(_LOCK_PROJECT, project_id)
             if row is None:
@@ -68,7 +72,7 @@ class PostgresUltraControlStore:
             if not isinstance(project.phase, Phase):
                 raise WrongPhase(
                     f"project {project_id} is in phase {project.phase.value!r}, which this "
-                    "vibey does not know; it will not record an ULTRA control there"
+                    f"vibey does not know; it will not record {self.WHAT} there"
                 )
             body = dict(payload)
             await self._appender.append(

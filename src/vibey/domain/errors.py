@@ -215,3 +215,8 @@ class PriorityRefused(ReorderRefused):
         self.requested_by = requested_by
         self.reason = reason
         super().__init__(f"refused: {reason}")
+
+
+class HandbackRefused(VibeyError):
+    """A handback was asked for with no successful probe recorded after the latest
+    failover, or with a failover that names no known engine (ADR-0070)."""

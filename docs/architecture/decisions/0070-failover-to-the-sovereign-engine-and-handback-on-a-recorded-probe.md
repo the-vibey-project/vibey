@@ -86,10 +86,14 @@ non-interactively with `claude -p --resume <session-id> "<prompt>"`.
 - A reset time the operator knows but Claude Code does not expose cannot be read; the
   probe interval stands in, and costs one one-word paid call per interval while a
   failover is active.
-- The engine level shares the policy, the gate modes and the ledger kinds. Its BUILD
-  path already rotates on a capacity rejection through `RotationRecordingHandler` and
-  `SelectingEngineProvider` (ADR-0005); routing that rotation to `target_engine` at
-  `target_effort` and recording the three kinds in the Postgres ledger is the follow-up
-  this record names, not something this change claims.
+- **The engine level** is `EngineFailoverService` (`vibey/application/engine_failover.py`)
+  with `PostgresFailoverStore`: the same policy, the project's own `HandoffBrief` gate
+  (`produce_and_verify_handoff`), the three kinds in the Postgres ledger, and a decision
+  carrying the requirement the next selection honours -- `target_effort`, the exhausted
+  engine excluded -- for `SelectingEngineProvider`. A handback without a recorded ok
+  probe raises `HandbackRefused`. This change builds and tests it; it does not yet
+  construct it in `bootstrap.py` or call it from `RotationRecordingHandler`, whose
+  capacity rotation (ADR-0005) is unchanged. That wiring is the named follow-up, not
+  something this change claims.
 - `StopFailure`'s payload beyond the documented fields is not relied on; if Claude Code
   later exposes a reset time, it may schedule the probe and nothing more.
