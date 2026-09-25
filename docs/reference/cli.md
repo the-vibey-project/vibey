@@ -52,6 +52,7 @@ with payloads.
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
+| `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
 
 ### Guarded and unguarded commands
 
@@ -144,8 +145,36 @@ one the hub answers is refused with 421 (the DNS-rebinding defence), and no resp
 carries a CORS header. The routes, scopes and refusals are in the
 [hub API reference](hub-api.md).
 
-While it runs it keeps `<state_dir>/serving.json` (address, port, process id), which
-`vibey doctor`'s `hub-exposure` line reads.
+While it runs it keeps `<state_dir>/serving.json` (address, port, process id, and whether
+it serves TLS), which `vibey doctor`'s `hub-exposure` line and `vibey hub` read.
+
+With `[hub] lan = true` the hub serves its own self-signed certificate (made on first run
+in `<state_dir>`, owner-only), prints its SHA-256 fingerprint, and advertises itself on
+the LAN as `_vibey._tcp` (mDNS/DNS-SD) with that fingerprint. On loopback it serves plain
+HTTP and announces nothing.
+
+## `vibey hub`
+
+The host's side of pairing devices with the running hub (ADR-0068). Each subcommand
+reads `<state_dir>/serving.json`, presents the host token, and -- when the hub serves
+TLS -- trusts only the hub's own certificate. With no hub running they exit 3.
+
+| Command | What it does |
+|---|---|
+| `vibey hub pair --scope SCOPE [--scope SCOPE ...]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
+| `vibey hub devices` | Lists the paired devices: id, name, scopes. Never a key. |
+| `vibey hub revoke DEVICE_ID` | Revokes a device. It is refused from its very next request. |
+
+## `vibey sabbath`
+
+Print the Sabbath window on this host (sub-doctrine 8.i,
+[ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)):
+whether it is enabled, the zone, where the location came from and how accurate it is, and
+when the current or next rest ends. It only reads, and is never held. From sundown Friday
+to sundown Saturday `vibey new` and `vibey work` decline with exit code `75`, the worker
+claims no lease, and `vibey doctor` reports the location source (FAIL when no source could
+place the host). See [`[sabbath]`](configuration.md#sabbath) and the
+[guide](../guides/sabbath.md).
 
 ## `vibey projects`
 
@@ -651,6 +680,30 @@ declaration in one command: it records `UltraNoCapChanged` with `enabled:
 false`, and sets the key to `false` when the file exists. The worker reads only
 the ledger event. The file records the declaration.
 
+
+## `vibey driver`
+
+The driver's failover and handback ([ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)).
+The driver is the Claude Code session steering the work. When it hits a usage
+limit or runs out of credit, the work continues on `[failover] target_engine`
+(gptossloop) at `target_effort` (ULTRA). When a probe of the paid model is
+recorded as successful, the work goes back to the same session.
+
+| Subcommand | Option | What it does |
+|---|---|---|
+| `driver hook` | `--config PATH` | The command Claude Code's `StopFailure` hook runs; reads the hook's JSON on stdin. On `error` `rate_limit` or `billing_error` it gates a brief into `<cwd>/.vibey/driver/`, appends `EngineFailedOver` and starts the sovereign engine detached. Any other error is ignored. A second hook for an active failover does nothing. Prints the outcome as JSON; exit 3 when the gate parked it (Claude Code ignores this hook's exit code). |
+| `driver probe` | `--cwd PATH`, `--config PATH` | Run by the timer. When a failover is active and its probe is due, runs `probe_argv` and appends `EngineProbed` (`ok` or not). Only after a recorded `ok` probe: winds the sovereign engine down, gates the return brief (it lists the commits made meanwhile), appends `EngineHandedBack` and resumes the session with `resume_argv` (`claude -p --resume <session-id>`). |
+| `driver status` | `--cwd PATH`, `--config PATH` | The state, read from `<cwd>/.vibey/driver/ledger.jsonl`, as JSON. |
+| `driver timer` | `--out DIR`, `--platform launchd\|systemd`, `--cwd PATH` | Writes a launchd agent (macOS default) or a systemd user service and timer that run `vibey driver probe --cwd <worktree>` every `probe_interval_seconds`, and prints the `launchctl` / `systemctl --user` command that loads it. vibey never loads it for you. |
+| `driver hook-config` | | Prints the `settings.json` block that runs `vibey driver hook` on `StopFailure`, with no matcher. |
+
+Both directions pass the no-loss gate: STRICT up to three times (the brief's
+transcript SHA-256 must equal the transcript's now), then FULL_TRANSCRIPT (the
+transcript is copied into the worktree), then HUMAN: a `PARKED-*.md` brief is
+left in `.vibey/driver/` and nothing is started. `CreditsExhausted` has no
+reset time; a window's reset only schedules the probe, and only a recorded
+successful probe hands back.
+
 ## `vibey ledger`
 
 Bare `vibey ledger` prints help. Subcommand:
@@ -739,6 +792,20 @@ This is a `vibey-gh` command, part of the same distribution:
 | `vibey-gh slots allowed` | Print the number a queue may run at once here, with the reason on stderr. Missing or stale evidence prints `1` and requests a calibration. |
 
 Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
+
+## `vibey-gh sabbath`
+
+The Sabbath as the release tooling keeps it (sub-doctrine 8.i,
+[ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
+`vibey-gh merge-train` and `vibey-gh promote` stand down inside the window: they print
+the hold, write it to the job summary, and exit 0. `vibey-gh sovereign --beat` keeps
+beating, recording "resting until ...".
+
+| Subcommand | What it does |
+|---|---|
+| `vibey-gh sabbath status` | The window, the zone, the location source, and every lane paused for the Sabbath. |
+| `vibey-gh sabbath register-lane --name NAME [--cwd DIR] -- COMMAND ...` | Pause a lane for the Sabbath. The heartbeat runs COMMAND after sundown Saturday and forgets the lane once it succeeds. |
+| `vibey-gh sabbath resume [--dispatch]` | Outside the window, resume paused lanes now. `--dispatch` also re-fires the held merge train and promotion. |
 
 ## `vibey deploy`
 

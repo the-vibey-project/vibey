@@ -9,16 +9,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _ultra(mode: str) -> str:
-    """`themes.<mode>.state.ultra` from the generated TypeScript tokens (resolved values)."""
+def _state(mode: str, name: str) -> str:
+    """`themes.<mode>.state.<name>` from the generated TypeScript tokens (resolved values)."""
     text = (ROOT / "design/dist/ts/tokens.ts").read_text("utf-8")
     themes = text[text.index("export const themes") :]
     dark, light = themes.split('"light": {', 1)
     section = dark if mode == "dark" else light
     state = section[section.index('"state": {') :]
-    found = re.search(r'"ultra":\s*"(#[0-9a-fA-F]{6})"', state)
-    assert found, f"no state.ultra in the {mode} theme"
+    found = re.search(rf'"{re.escape(name)}":\s*"(#[0-9a-fA-F]{{6}})"', state)
+    assert found, f"no state.{name} in the {mode} theme"
     return found.group(1).lower()
+
+
+def _ultra(mode: str) -> str:
+    return _state(mode, "ultra")
 
 
 def test_the_extension_contributes_ultra_in_the_tokens_colours() -> None:
@@ -32,3 +36,21 @@ def test_the_core_constant_is_the_tokens_colour() -> None:
     source = (ROOT / "packages/vibey-core/src/catalogue.ts").read_text("utf-8")
     assert f"dark: '{_ultra('dark')}'" in source
     assert f"light: '{_ultra('light')}'" in source
+
+
+STATE_COLOURS = {
+    "vibey.stateRunning": "running",
+    "vibey.stateQueued": "queued",
+    "vibey.stateSucceeded": "succeeded",
+    "vibey.stateFailed": "failed",
+    "vibey.stateAwaitingHuman": "awaiting-human",
+}
+
+
+def test_the_extension_state_colours_are_the_tokens() -> None:
+    """The live lanes' and tasks' colours in the views are `color.state.*` (ADR-0066)."""
+    manifest = json.loads((ROOT / "clients/vscode/package.json").read_text("utf-8"))
+    contributed = {c["id"]: c["defaults"] for c in manifest["contributes"]["colors"]}
+    for colour_id, state in STATE_COLOURS.items():
+        assert contributed[colour_id]["dark"].lower() == _state("dark", state), colour_id
+        assert contributed[colour_id]["light"].lower() == _state("light", state), colour_id

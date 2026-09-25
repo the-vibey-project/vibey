@@ -11,6 +11,7 @@ export type * from './interfaces/engine-command-interface';
 export type * from './interfaces/environment-interface';
 export type * from './interfaces/git-interface';
 export type * from './interfaces/http-client-interface';
+export type * from './interfaces/hub-interface';
 export type * from './interfaces/jsonl-interface';
 export type * from './interfaces/lanes-interface';
 export type * from './interfaces/local-runner-interface';

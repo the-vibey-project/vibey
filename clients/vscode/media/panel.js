@@ -12,6 +12,8 @@
   const completions = $('completions');
   const statusLine = $('status');
   const title = $('title');
+  const banner = $('banner');
+  const effortPill = $('effort');
   const composer = $('composer');
   const buttons = {
     start: $('start'),
@@ -123,7 +125,10 @@
     status = next;
     takesFollowUps = followUps === true;
     statusLine.textContent = WORDS[next] || next;
+    statusLine.dataset.state = next;
     const active = ['queued', 'preparing', 'waiting', 'running', 'stopping', 'finishing'].includes(next);
+    // The atom's electrons and the state's dot move only while work is really running.
+    document.body.dataset.live = String(['preparing', 'waiting', 'running', 'finishing', 'lane'].includes(next));
     buttons.start.hidden = active || next === 'lane';
     buttons.stop.hidden = !active || next === 'finishing';
     buttons.stop.disabled = next === 'stopping';
@@ -236,6 +241,17 @@
   buttons.review.addEventListener('click', () => vscode.postMessage({ type: 'button', command: 'vibey.reviewRun' }));
   buttons.apply.addEventListener('click', () => vscode.postMessage({ type: 'button', command: 'vibey.applyRun' }));
   buttons.discard.addEventListener('click', () => vscode.postMessage({ type: 'button', command: 'vibey.discardRun' }));
+  $('endNoCap').addEventListener('click', () => vscode.postMessage({ type: 'button', command: 'vibey.endNoCap' }));
+
+  /** Light, Dark or System, resolved by the extension; ULTRA and UNLIMITED SPEND are never hidden. */
+  function look(message) {
+    const root = document.documentElement;
+    root.dataset.theme = message.theme === 'light' ? 'light' : 'dark';
+    root.dataset.surface = message.surface === 'krypton' ? 'krypton' : 'editor';
+    document.body.dataset.ultra = String(message.ultra === true);
+    effortPill.hidden = message.ultra !== true;
+    banner.hidden = message.unlimited !== true;
+  }
 
   document.addEventListener('paste', (event) => {
     if (!canPasteImage || !event.clipboardData) {
@@ -278,6 +294,9 @@
         break;
       case 'note':
         note(message.level, message.text);
+        break;
+      case 'look':
+        look(message);
         break;
     }
   });

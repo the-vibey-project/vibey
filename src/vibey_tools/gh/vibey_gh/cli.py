@@ -222,8 +222,76 @@ def _summary_rows(rows: list[tuple[int, str, str]], merged: int, skipped: int) -
     return "\n".join(lines) + "\n"
 
 
+def _sabbath_guard(cfg):
+    """This host's Sabbath guard. A module function because argparse dispatches to
+    functions and every writer below builds the guard the same way."""
+    from vibey_gh.sabbath_guard import SabbathGuard
+
+    return SabbathGuard(cfg.sabbath, home=Path.home())
+
+
+def _sabbath_lanes(cfg):
+    from vibey_gh.sabbath_guard import SabbathLanes
+
+    declared = cfg.sabbath.lanes_dir
+    return SabbathLanes(Path(os.path.expanduser(declared)))
+
+
+def _sabbath_resume(cfg, cwd: str | None, *, ended: bool) -> list[str]:
+    """What the heartbeat re-arms outside the window. `ended` marks the first beat after
+    one: that beat writes the SabbathEnded line and re-fires the held workflows."""
+    from vibey_gh.sabbath_guard import resume_dispatch
+
+    lines: list[str] = []
+    if ended:
+        lines.append("SabbathEnded: the window has closed; re-arming what it held")
+        if cfg.sabbath.resume_dispatch:
+            lines += resume_dispatch(cfg, cwd=cwd)
+    resumed: list[str] = _sabbath_lanes(cfg).resume()
+    return lines + resumed
+
+
+def _sabbath(args) -> int:
+    """`vibey-gh sabbath status|register-lane|resume` (sub-doctrine 8.i)."""
+    cfg = load_config()
+    if args.action == "status":
+        for line in _sabbath_guard(cfg).describe():
+            print(line)
+        for name, command, _cwd in _sabbath_lanes(cfg).pending():
+            print(f"paused lane: {name}: {' '.join(command) or '(unreadable)'}")
+        return 0
+    if args.action == "register-lane":
+        if not args.name or not args.resume_command:
+            print(
+                "vibey-gh sabbath: register-lane needs --name and a resume command", file=sys.stderr
+            )
+            return 2
+        path = _sabbath_lanes(cfg).register(args.name, args.resume_command, args.cwd)
+        print(f"vibey-gh sabbath: lane {args.name} paused; resumes at sundown ({path})")
+        return 0
+    if _sabbath_guard(cfg).hold() is not None:
+        print("vibey-gh sabbath: still resting; nothing resumes until the window closes")
+        return 0
+    for line in _sabbath_resume(cfg, None, ended=args.dispatch):
+        print(f"vibey-gh sabbath: {line}")
+    return 0
+
+
+def _held_for_the_sabbath(args, cfg) -> bool:
+    """Sub-doctrine 8.i: stand down, visibly. A held run prints the hold, writes it to the
+    job summary and returns 0 -- paused, not failed, not silently skipped (10.f)."""
+    held = _sabbath_guard(cfg).hold()
+    if held is None:
+        return False
+    print(f"vibey-gh: {held.report()}")
+    _write_summary(args, held.summary())
+    return True
+
+
 def _merge_train(args) -> int:
     cfg = load_config()
+    if _held_for_the_sabbath(args, cfg):
+        return 0
     prs = (
         merge_train.open_pull_requests(cfg, number=args.pr)
         if args.pr is not None
@@ -456,9 +524,12 @@ def _promote(args) -> int:
         # accepted and silently ignored -- refused instead, so nobody believes it applied.
         print("vibey-gh: --admin-fallback only applies with --wait", file=sys.stderr)
         return 2
+    cfg = load_config()
+    if _held_for_the_sabbath(args, cfg):
+        return 0
     try:
         result = promote.promote(
-            load_config(),
+            cfg,
             dry_run=args.dry_run,
             method=args.method,
             wait=args.wait,
@@ -754,8 +825,27 @@ def _sovereign(args) -> int:
 
     cfg = load_config()
     fallback = cfg.pr_automation.fallback
+    held = _sabbath_guard(cfg).hold()
     if args.beat:
+        from vibey_gh.heartbeat_timer import BeatRecord
+
+        now = datetime.now(UTC).timestamp()
+        if held is not None:
+            # 8.i: the heartbeat keeps beating through the window -- publishing nothing,
+            # but recording that it rests and until when, so a liveness check reads rest
+            # rather than death (10.f), and exiting 0 so the unit is never marked failed.
+            reason = f"resting for the Sabbath until {held.resumes.isoformat()} ({held.basis})"
+            if args.record:
+                BeatRecord(now, False, reason, held.resumes.timestamp()).write(Path(args.record))
+            print(f"vibey-gh sovereign: {reason}")
+            return 0
         clone, problem = _heartbeat_timer(cfg).clone_dir()
+        previous = BeatRecord.read(Path(args.record)) if args.record else None
+        ended = previous is not None and previous.resting_until is not None
+        # Re-arm what the window held: the workflows once, on the first beat after it; the
+        # paused lanes on every beat until each one's resume has succeeded.
+        for line in _sabbath_resume(cfg, None if clone is None else str(clone), ended=ended):
+            print(f"vibey-gh sabbath: {line}")
         if clone is None:
             result = sovereign.Readiness(False, f"heartbeat withheld: {problem}")
         else:
@@ -766,10 +856,16 @@ def _sovereign(args) -> int:
                 cwd=str(clone),
             )
         if args.record:
-            from vibey_gh.heartbeat_timer import BeatRecord
-
-            now = datetime.now(UTC).timestamp()
             BeatRecord(now, result.ready, result.reason).write(Path(args.record))
+    elif held is not None:
+        result = sovereign.Readiness(
+            False, f"resting for the Sabbath until {held.resumes.isoformat()}"
+        )
+        output = os.environ.get("GITHUB_OUTPUT")
+        if output:
+            with open(output, "a", encoding="utf-8") as handle:
+                handle.write("ready=false\n")
+                handle.write(f"reason={' '.join(result.reason.split())}\n")
     else:
         result = sovereign.probe(
             fallback.heartbeat_ref,
@@ -1594,6 +1690,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     conventional_check.add_argument("--commits", required=True, metavar="RANGE")
     conventional_check.set_defaults(func=_conventional_check)
+
+    sab = sub.add_parser("sabbath", help="the Sabbath window on this host (sub-doctrine 8.i)")
+    sab.add_argument("action", choices=("status", "register-lane", "resume"))
+    sab.add_argument("--name", help="register-lane: the paused lane's name")
+    sab.add_argument("--cwd", help="register-lane: where its resume command runs")
+    sab.add_argument(
+        "--dispatch",
+        action="store_true",
+        help="resume: also re-fire the held merge train and promotion",
+    )
+    sab.add_argument(
+        "resume_command",
+        nargs="*",
+        help="register-lane: the command that resumes the lane, after --",
+    )
+    sab.set_defaults(func=_sabbath)
 
     m = sub.add_parser("merge-train", help="merge every ready pull request")
     m.add_argument("--method", default="squash", choices=("squash", "rebase", "merge"))

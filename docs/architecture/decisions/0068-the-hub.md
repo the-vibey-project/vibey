@@ -91,10 +91,16 @@ on every install.
 The hub arrives in three changes, each reviewable alone:
 
 - **Core (this ADR's first change):** everything above.
-- **Live:** an additive migration adding `NOTIFY vibey_ledger_appended` on ledger append,
-  and a WebSocket per project that resumes "after seq N" -- a position, never a timestamp
-  (10.g). Lane events tailed by byte offset.
-- **Pairing and trust:** mDNS/DNS-SD advertisement of `_vibey._tcp` (the `zeroconf`
+- **Live (the second change):** migration 0019 adds an `AFTER INSERT` trigger on `event`
+  that `NOTIFY`s `vibey_ledger_appended` with the project and seq -- additive, the
+  append-only guard untouched, delivered on commit. One `LISTEN` connection fans wake-ups
+  out per project; a WebSocket per project resumes "after seq N" and reads by position
+  through a new `LedgerRangeReader` port, so a lost wake-up costs latency, never an event
+  (10.g). The principal is re-authenticated before every page, and a socket's `Host` and
+  `Origin` are checked (cross-site WebSocket hijacking). Lanes are tailed by byte offset,
+  only for files the lane scan lists. HTTP polling twins exist for each. The TUI does not
+  move to the feed in this change; that is the TUI's own.
+- **Pairing and trust (the third change, decided in ADR-0071):** mDNS/DNS-SD advertisement of `_vibey._tcp` (the `zeroconf`
   package), a self-signed certificate made on first run and stored through `SecretsPort`,
   pairing by QR and 6-digit code (2 minutes), per-device keys, signed requests with nonce
   and timestamp, pairing/grant/revocation as ledger events, revocation immediate, CSRF for

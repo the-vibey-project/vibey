@@ -31,11 +31,22 @@ Every route is versioned under `/api/v1`, and the OpenAPI 3.1 document is served
 the two differ.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Annotated, Any, Final
+from urllib.parse import urlsplit
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Security
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    Query,
+    Request,
+    Security,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
@@ -52,17 +63,21 @@ from vibey.domain.errors import (
     PriorityRefused,
     ReorderRefused,
     UnknownGate,
+    UnknownLane,
     UnknownProject,
     VibeyError,
 )
 from vibey.domain.hub_binding import HUB_BINDING
-from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden
+from vibey.domain.hub_pairing import CODE_DIGITS, PairingRefused
+from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden, HubScope
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
 from vibey.domain.ledger_query import DEFAULT_SEARCH_LIMIT, InvalidLedgerQuery
-from vibey.infrastructure.hub.authenticator import HubRequest
+from vibey.infrastructure.hub.authenticator import HOST_PRINCIPAL, HubRequest
 from vibey.infrastructure.hub.interfaces.authenticator_interface import (
     HubAuthenticatorInterface,
 )
+from vibey.infrastructure.hub.interfaces.live_interface import LedgerAnnouncementsInterface
+from vibey.infrastructure.hub.interfaces.pairing_interface import HubPairingInterface
 
 MAX_BODY_BYTES: Final = 64 * 1024
 """The largest request body the hub reads. A gate answer is a few hundred bytes."""
@@ -76,6 +91,20 @@ HUB_API_VERSION: Final = "1"
 
 MAX_SEARCH_LIMIT: Final = 500
 """The most ledger events one search returns."""
+
+LIVE_PAGE: Final = 200
+"""The most events one live-feed message carries; a feed behind by more sends pages."""
+
+HEARTBEAT_SECONDS: Final = 25.0
+"""How long a quiet feed waits before it says it is still there (and notices a client
+that went away)."""
+
+LANE_POLL_SECONDS: Final = 1.0
+"""How often a lane feed looks for new bytes."""
+
+POLICY_VIOLATION: Final = 1008
+"""The WebSocket close code for a refused connection: it proves nothing, names a Host
+or Origin this hub does not answer, or may not read what it asked for."""
 
 SECURITY_HEADERS: Final[Mapping[str, str]] = {
     "content-security-policy": (
@@ -92,8 +121,10 @@ SECURITY_HEADERS: Final[Mapping[str, str]] = {
 
 ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (HubForbidden, 403),
+    (PairingRefused, 403),
     (UnknownProject, 404),
     (UnknownGate, 404),
+    (UnknownLane, 404),
     (GateAlreadyAnswered, 409),
     (PriorityRefused, 403),
     (ReorderRefused, 409),
@@ -129,6 +160,27 @@ class GateAnswerBody(BaseModel):
     )
 
 
+class OfferBody(BaseModel):
+    """The body of `POST /api/v1/pairing/offers` (the host only)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    scopes: list[HubScope] = Field(
+        min_length=1, description="What a device claiming the code may do; never empty."
+    )
+
+
+class ClaimBody(BaseModel):
+    """The body of `POST /api/v1/pairing/claim` (a device, before it holds a key)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(
+        min_length=CODE_DIGITS, max_length=CODE_DIGITS, description="The code the host shows."
+    )
+    name: str = Field(min_length=1, max_length=64, description="What the device calls itself.")
+
+
 class HubAppFactory:
     """Builds the hub's FastAPI app.
 
@@ -152,6 +204,8 @@ class HubAppFactory:
         authenticator: HubAuthenticatorInterface,
         allowed_hosts: frozenset[str],
         ready: Callable[[], Awaitable[bool]],
+        live: LedgerAnnouncementsInterface,
+        pairing: HubPairingInterface | None = None,
     ) -> FastAPI:
         buckets: dict[str, TokenBucket] = {}
 
@@ -203,7 +257,7 @@ class HubAppFactory:
         v1 = f"/api/v{HUB_API_VERSION}"
 
         @app.get("/health/live", tags=["health"], summary="The process is up.")
-        async def live() -> dict[str, str]:
+        async def live_probe() -> dict[str, str]:
             return {"status": "live"}
 
         @app.get(
@@ -339,6 +393,173 @@ class HubAppFactory:
         )
         async def doctor(caller: who) -> JSONResponse:
             return JSONResponse(await service.doctor(caller))
+
+        @app.get(
+            f"{v1}/projects/{{project_id}}/ledger/after",
+            tags=["live"],
+            summary="Events after a seq, oldest first: the live feed, for a client that polls.",
+            responses=REFUSED,
+        )
+        async def ledger_after(
+            caller: who,
+            project_id: UUID,
+            seq: Annotated[int, Query(ge=0)] = 0,
+            limit: Annotated[int, Query(ge=1, le=LIVE_PAGE)] = LIVE_PAGE,
+        ) -> JSONResponse:
+            return JSONResponse(
+                await service.ledger_after(caller, project_id, after=seq, limit=limit)
+            )
+
+        @app.get(
+            f"{v1}/lanes/tail",
+            tags=["live"],
+            summary="A listed lane's complete lines after a byte offset.",
+            responses=REFUSED,
+        )
+        async def lane_tail(
+            caller: who, path: str, after: Annotated[int, Query(ge=0)] = 0
+        ) -> JSONResponse:
+            return JSONResponse(service.lane_tail(caller, path, after))
+
+        def paired() -> HubPairingInterface:
+            if pairing is None:
+                raise HTTPException(status_code=503, detail="pairing is not enabled on this hub")
+            return pairing
+
+        def host_only(caller: HubPrincipal) -> None:
+            # Only the host pairs, lists and revokes: a device can never widen its own
+            # grant, pair another device, or revoke one (SD-01, 12.j).
+            if caller.name != HOST_PRINCIPAL.name:
+                raise HubForbidden(f"{caller.name} may not manage pairings; only the host may")
+
+        @app.post(
+            f"{v1}/pairing/offers",
+            tags=["pairing"],
+            summary="Offer a 6-digit pairing code for two minutes (the host only).",
+            responses={**REFUSED, 503: {"description": "Pairing is not enabled."}},
+        )
+        async def offer(caller: who, body: OfferBody) -> JSONResponse:
+            host_only(caller)
+            return JSONResponse(paired().offer(frozenset(body.scopes)))
+
+        @app.post(
+            f"{v1}/pairing/claim",
+            tags=["pairing"],
+            summary="Claim a pairing code: a device's key, shown once.",
+            responses={**REFUSED, 503: {"description": "Pairing is not enabled."}},
+        )
+        async def claim(request: Request, body: ClaimBody) -> JSONResponse:
+            # No principal yet: this is how a device gets one. Every claim draws from the
+            # small per-address bucket, right or wrong, so guessing is slow as well as
+            # capped (`MAX_WRONG_CLAIMS`).
+            address = request.client.host if request.client else "unknown"
+            if not spend(f"claim:{address}", FAILED_BURST, FAILED_PER_SECOND):
+                raise HTTPException(status_code=429)
+            return JSONResponse(await paired().claim(body.code, body.name))
+
+        @app.get(
+            f"{v1}/devices",
+            tags=["pairing"],
+            summary="The paired devices, without their keys (the host only).",
+            responses={**REFUSED, 503: {"description": "Pairing is not enabled."}},
+        )
+        async def devices(caller: who) -> JSONResponse:
+            host_only(caller)
+            return JSONResponse(paired().devices())
+
+        @app.delete(
+            f"{v1}/devices/{{device_id}}",
+            tags=["pairing"],
+            summary="Revoke a device: refused from its next request (the host only).",
+            responses={
+                **REFUSED,
+                404: {"description": "No such paired device."},
+                503: {"description": "Pairing is not enabled."},
+            },
+        )
+        async def revoke(caller: who, device_id: str) -> JSONResponse:
+            host_only(caller)
+            if not await paired().revoke(device_id):
+                raise HTTPException(status_code=404, detail=f"no paired device {device_id}")
+            return JSONResponse({"revoked": device_id})
+
+        async def admitted(socket: WebSocket) -> HubRequest | None:
+            """The socket's request, when its Host and Origin are ones this hub answers.
+            A browser always sends Origin on a WebSocket, and a page on another origin must
+            never ride the user's credentials in (cross-site WebSocket hijacking)."""
+            origin = socket.headers.get("origin")
+            if not self._binding.admits(socket.headers.get("host"), allowed_hosts) or (
+                origin is not None and urlsplit(origin).netloc.lower() not in allowed_hosts
+            ):
+                return None
+            return HubRequest(
+                method="GET",
+                path=socket.url.path,
+                query=socket.url.query,
+                headers={name.lower(): value for name, value in socket.headers.items()},
+                body=b"",
+            )
+
+        @app.websocket(f"{v1}/projects/{{project_id}}/live")
+        async def project_live(socket: WebSocket, project_id: UUID, after: int = 0) -> None:
+            request = await admitted(socket)
+            if request is None or (await authenticator.authenticate(request)) is None:
+                await socket.close(code=POLICY_VIOLATION)
+                return
+            with live.subscribe(project_id) as wake:
+                last = max(after, 0)
+                try:
+                    while True:
+                        # Authenticated again for every page: a principal revoked while
+                        # the socket is open is refused at the next event, not the next
+                        # connection.
+                        caller = await authenticator.authenticate(request)
+                        if caller is None:
+                            raise HubForbidden("the principal no longer proves itself")
+                        page = await service.ledger_after(
+                            caller, project_id, after=last, limit=LIVE_PAGE
+                        )
+                        if socket.client_state.name == "CONNECTING":
+                            await socket.accept()
+                        body = page if isinstance(page, dict) else {}
+                        events = body.get("events") or []
+                        if events:
+                            await socket.send_json(body)
+                            last = int(body["last_seq"])
+                            if len(events) == LIVE_PAGE:
+                                continue
+                        try:
+                            await asyncio.wait_for(wake.get(), timeout=HEARTBEAT_SECONDS)
+                        except TimeoutError:
+                            await socket.send_json({"heartbeat": last})
+                except (HubForbidden, UnknownProject):
+                    await socket.close(code=POLICY_VIOLATION)
+                except WebSocketDisconnect:
+                    return
+
+        @app.websocket(f"{v1}/lanes/live")
+        async def lane_live(socket: WebSocket, path: str, after: int = 0) -> None:
+            request = await admitted(socket)
+            if request is None or (await authenticator.authenticate(request)) is None:
+                await socket.close(code=POLICY_VIOLATION)
+                return
+            offset = max(after, 0)
+            try:
+                while True:
+                    caller = await authenticator.authenticate(request)
+                    if caller is None:
+                        raise HubForbidden("the principal no longer proves itself")
+                    chunk = service.lane_tail(caller, path, offset)
+                    if socket.client_state.name == "CONNECTING":
+                        await socket.accept()
+                    if isinstance(chunk, dict) and chunk.get("lines"):
+                        await socket.send_json(chunk)
+                    offset = int(chunk["offset"]) if isinstance(chunk, dict) else offset
+                    await asyncio.sleep(LANE_POLL_SECONDS)
+            except (HubForbidden, UnknownLane):
+                await socket.close(code=POLICY_VIOLATION)
+            except WebSocketDisconnect:
+                return
 
         return app
 

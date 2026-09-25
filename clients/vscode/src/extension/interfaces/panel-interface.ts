@@ -10,8 +10,20 @@ export type PanelRequest =
   | { readonly type: 'button'; readonly command: string }
   | { readonly type: 'pasteImage'; readonly dataUrl: string };
 
+/** How the page looks: the resolved theme, whose surfaces it sits on, and the two states it must never hide. */
+export interface PanelLook {
+  readonly theme: 'light' | 'dark';
+  /** `editor`: the editor's own surfaces (System mode); `krypton`: krypton's palette (Light or Dark). */
+  readonly surface: 'editor' | 'krypton';
+  /** ULTRA effort is chosen: shown with its own colour and motion (ADR-0063). */
+  readonly ultra: boolean;
+  /** paidloop stands declared with no cap: the UNLIMITED SPEND banner shows (ADR-0063). */
+  readonly unlimited: boolean;
+}
+
 /** What the page is sent. Every string in it is shown as text, never as markup. */
 export type PanelUpdate =
+  | ({ readonly type: 'look' } & PanelLook)
   | {
       readonly type: 'init';
       readonly title: string;
@@ -47,6 +59,6 @@ export interface TaskPanelInterface {
 
 export interface PanelHtmlInterface {
   /** The page, with a content security policy that runs only this nonce's script. */
-  page(title: string, script: string, style: string, nonce: string, cspSource: string): string;
+  page(title: string, script: string, style: string, nonce: string, cspSource: string, tokens?: string, look?: PanelLook): string;
   nonce(): string;
 }

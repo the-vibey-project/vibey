@@ -804,11 +804,41 @@ jobs:
       - name: Unit tests, at 100% of lines, branches, functions and statements
         run: npm run coverage
 
+  app:
+    # Krypton for iOS, Android and the web (clients/app, ADR-0068): one Expo app over the hub. It
+    # keeps its own lockfile, outside the npm workspace, so Expo's tree never enters the
+    # extension's or @vibey/core's install; it reads @vibey/core and the design tokens from
+    # source. Its core is held to 100%; the screens run under React Native Testing Library;
+    # the web build (react-native-web) is exported to prove it bundles. Native builds are EAS,
+    # declared only (eas.json).
+    name: Krypton app (mobile and web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: clients/app/package-lock.json
+      - name: Install from the app's own lockfile
+        run: npm ci
+      - name: No known high-severity advisory in any dependency
+        run: npm audit --audit-level=high
+      - name: Type-check, strict
+        run: npm run typecheck
+      - name: Unit and screen tests, with the core at 100% of lines, branches, functions and statements
+        run: npm run coverage
+      - name: The web build bundles
+        run: npm run export:web
+
   vscode-extension:
     # The VS Code extension (clients/vscode, ADR-0059): its own Node toolchain and checks. It
     # has no runtime dependency, and none of it enters the image: @vibey/core travels inside
-    # the .vsix, copied into out/node_modules at compile (ADR-0067). Not a required check yet: it
-    # becomes one once it has run green on develop (#290).
+    # the .vsix, copied into out/node_modules at compile (ADR-0067). Both rows are required
+    # checks in .vibey-gh.toml since they ran green on develop (ADR-0059, #290).
     name: VS Code extension (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -1149,8 +1179,13 @@ jobs:
           test "$restarts" = "0"
 
       - name: Contract - the worker picks up a project created in-cluster
+        # The smoke fixture declares the Sabbath off for this one process
+        # (VIBEY_SABBATH_ENABLED=false): without it `vibey new` lawfully declines
+        # with exit 75 every Friday evening to Saturday evening, and the contract
+        # below would fail on a schedule rather than on a defect.
         run: |
           kubectl exec -n vibey deploy/vibey-vibey-worker -- \
+            env VIBEY_SABBATH_ENABLED=false \
             vibey new demo --repo /work/demo --max-cycles 1
           for _ in $(seq 1 24); do
             kubectl logs -n vibey deployment/vibey-vibey-worker > /tmp/log 2>&1 || true

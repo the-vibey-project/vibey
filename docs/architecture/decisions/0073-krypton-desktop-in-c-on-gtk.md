@@ -1,4 +1,4 @@
-# 0070 — Krypton desktop in C, on GTK 4 and libadwaita
+# 0073 — Krypton desktop in C, on GTK 4 and libadwaita
 
 **Status:** accepted · **Date:** 2026-09-25 · **Supersedes in part:** runbook 08-clients (its Tauri desktop) · **Cites:** sub-doctrine 9.b, 12.c, SD-01 v1.0 · **Related:** ADR-0016, ADR-0062, ADR-0065, ADR-0066, ADR-0068 · **Evidence:** `develop` at `0823cdfd`, read 2026-09-25
 

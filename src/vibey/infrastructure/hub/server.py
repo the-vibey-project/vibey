@@ -18,13 +18,15 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
+    from vibey.infrastructure.hub.tls import HubTls
+
 
 class UvicornServer:
     """Serves an app on one address until stopped.
 
     Declared by `interfaces/server_interface.py::HubServerInterface`."""
 
-    async def serve(self, app: FastAPI, *, host: str, port: int) -> None:
+    async def serve(self, app: FastAPI, *, host: str, port: int, tls: HubTls | None = None) -> None:
         # Imported here, not at module level: uvicorn ships in the optional `hub` extra, and
         # `vibey serve` imports this module, so a top-level import would break every `vibey`
         # command on an install without the extra (the container image is one).
@@ -39,6 +41,9 @@ class UvicornServer:
             proxy_headers=False,
             server_header=False,
             date_header=False,
+            # The hub's own certificate on a declared LAN (`tls.py`); none on loopback.
+            ssl_certfile=str(tls.cert_path) if tls is not None else None,
+            ssl_keyfile=str(tls.key_path) if tls is not None else None,
         )
         await uvicorn.Server(config).serve()
 

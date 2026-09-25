@@ -17,7 +17,7 @@ import type {
 } from './interfaces/commands-interface';
 
 export class CommandTable {
-  static readonly GROUPS: readonly CommandGroup[] = ['Run', 'Loop & model', 'Lanes', 'Projects & gates', 'Budgets', 'Ollama', 'Doctor'];
+  static readonly GROUPS: readonly CommandGroup[] = ['Run', 'Loop & model', 'Lanes', 'Projects & gates', 'Budgets', 'Connect & look', 'Ollama', 'Doctor'];
 
   static readonly ALL: readonly CommandSpec[] = [
     {
@@ -358,6 +358,45 @@ export class CommandTable {
       description: 'Raise a used-up budget, or answer a parked budget_exhausted gate with more dollars or turns.',
       example: '/budget grant 3f2a9c1e-0b7d-4c55-9a51-2b1f0e8d7c6a $10',
       wraps: 'vibey answer --raw \'{"max_dollars": N}\'',
+    },
+    {
+      id: 'vibey.endNoCap',
+      title: 'End unlimited spend (put a cap back)',
+      group: 'Budgets',
+      icon: 'shield',
+      slash: 'cap',
+      description: 'One action ends a no-cap paidloop declaration at once; paidloop then needs a cap again.',
+      example: '/cap',
+    },
+    {
+      id: 'vibey.connectHub',
+      title: 'Connect to vibey on this network',
+      group: 'Connect & look',
+      icon: 'plug',
+      slash: 'connect',
+      usage: '[address]',
+      description: 'Find a vibey hub here or at an address, pair once with its key, and read projects, gates and budgets through it.',
+      example: '/connect studio.local',
+      wraps: 'the hub API (vibey serve, ADR-0068)',
+    },
+    {
+      id: 'vibey.disconnectHub',
+      title: 'Disconnect from the hub',
+      group: 'Connect & look',
+      icon: 'debug-disconnect',
+      slash: 'disconnect',
+      description: "Forget the hub's key on this device and go back to the local vibey command line.",
+      example: '/disconnect',
+    },
+    {
+      id: 'vibey.chooseTheme',
+      title: 'Choose the theme (Light, Dark or System)',
+      group: 'Connect & look',
+      icon: 'color-mode',
+      slash: 'theme',
+      usage: 'system|light|dark',
+      description: "System follows the editor's colour theme and switches live; Light and Dark keep krypton's own palette.",
+      example: '/theme system',
     },
     {
       id: 'vibey.startOllama',

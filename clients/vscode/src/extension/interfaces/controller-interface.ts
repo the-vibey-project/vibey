@@ -21,6 +21,12 @@ export interface VibeyControllerInterface {
   /** Fires whenever a view should show something new. */
   readonly onDidChange: vscode.Event<void>;
   changed(): void;
+  /** The paired hub's address, when vibey is reached through one (ADR-0068). */
+  readonly hubUrl: string | undefined;
+  /** Keep a checked key in secret storage and switch to the hub. */
+  pairHub(url: string, key: string): Promise<void>;
+  /** Forget the hub's key and go back to the local command line. */
+  unpairHub(): Promise<void>;
   /** The repository folder a new task works in, or undefined when no folder is open. */
   folder(): string | undefined;
   /** Which extra menus the engine the next task would run on earns (images only where the model sees). */

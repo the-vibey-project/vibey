@@ -154,9 +154,16 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         EventKind.ULTRA_STOPPED,
         EventKind.ULTRA_PASS_COMPLETED,
         EventKind.ULTRA_NO_CAP_CHANGED,
+        # Failover and handback name the operator's engines, accounts and probes.
+        EventKind.ENGINE_FAILED_OVER,
+        EventKind.ENGINE_PROBED,
+        EventKind.ENGINE_HANDED_BACK,
         # Who answered a gate, from which account, and what they answered: the answer
         # can carry anything a person typed, and the account is the operator's.
         EventKind.GATE_ANSWERED,
+        # Which devices could reach the hub, and which scopes the host granted them.
+        EventKind.HUB_DEVICE_PAIRED,
+        EventKind.HUB_DEVICE_REVOKED,
         # Queue operations: who reordered which job, and what the reaper did.
         EventKind.JOB_PRIORITY_BUMPED,
         EventKind.JOB_PRIORITY_UNBUMPED,
