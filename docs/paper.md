@@ -2804,10 +2804,28 @@ Where the evidence is missing or stale, fall back to $N = 1$, and recalibrate
 automatically. And amend 8.c to rule the method, not a number, ratified by the
 operator's merge like every sub-doctrine. The single slot the audit found binding is
 therefore not treated as a law of this host but as the default an unmeasured device
-gets. At the cutoff the sweep for the 24 GB host had not finished and no figure from it
-is claimed.
+gets.
 
-<!-- TODO(3.0.0-pending: feat/local-slot-benchmark) the sweep's curve for this host (throughput, latency, wired memory and fidelity against N, with the overshoot), the ideal N and its device fingerprint, the tracked evidence file, the ADR number, and the 8.c amendment as ratified -->
+The sweep for the 24 GB host ran on 2026-09-24 from 15:11 to 15:42Z, before the cutoff
+(ADR-0058; evidence tracked as `docs/architecture/evidence/slots-2026-09-24-mac17-2.md` and
+`.json`). The device is an Apple M5 with 24 GiB under macOS 26.6.2, running ollama 0.34.4 with
+gpt-oss:20b at a 65,536-token context per run, fingerprint `f99b07f610204948`. Each step
+replayed 60 storm-shaped turns in 20 segments, drawn from 1,096 turns in 40 runs. At
+$N = 1$, run twice, the host completed 98.2 and 112.7 turns an hour, with a median turn of
+16.5 and 12.9 s, a 95th percentile of 112.6 and 102.8 s, and peak wired memory of 18.4 and
+18.1 GB. The two runs agreed with each other exactly (structural and exact fidelity 1.0
+over 55 turns). Their throughput differed by 14.8%, so a smaller difference between steps
+is noise, not a finding. At $N = 2$ the host completed 111.9 turns an hour, within that
+noise, while the median turn rose to 29.8 s, the 95th percentile to 189.9 s and peak wired
+memory to 20.2 GB. The replies at $N = 2$ matched the single run's structure in only 81.8% of
+turns (exact: 74.5%), below the 95% floor. That was the overshoot, and the sweep stopped
+there. The ideal for this device is therefore $N = 1$: a second concurrent run bought no
+throughput and cost fidelity. One step was recorded but not judged: at a 32,768-token
+context, two runs reached 172.7 turns an hour, with structural fidelity still only 88.9%.
+The evidence does not cover other models, context windows or devices, tool execution
+between turns, whole runs, thermals, or long-horizon stability. The amendment to 8.c that
+sets the method, not a number, was proposed for the operator's ratification (#1141) and
+was not ratified at the cutoff.
 
 ### Field data
 
