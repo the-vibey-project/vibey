@@ -85,6 +85,20 @@ export class BudgetStore implements BudgetStoreInterface {
     return declaration;
   }
 
+  /**
+   * Ends a no-cap declaration in one action, binding at once (ADR-0063, step 6): paidloop is
+   * undeclared again and needs a cap before it runs. False when no no-cap declaration stood.
+   */
+  endNoCap(): boolean {
+    const { paid, ...rest } = this.read();
+    if (paid?.no_cap_confirmed !== true) {
+      return false;
+    }
+    this.write(rest);
+    this.note('paid.no-cap-ended', paid, null);
+    return true;
+  }
+
   private note(action: string, old: unknown, next: unknown): void {
     this.journal.append({ at: this.clock.now().toISOString(), actor: this.actor, action, old, new: next });
   }

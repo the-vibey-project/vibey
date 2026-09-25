@@ -6,8 +6,12 @@
  * Everything shown came from a model, a tool, or vibey, so it is data: the page renders it
  * with `textContent` only (media/panel.js), and the one string placed into its HTML, the
  * title, is escaped. The content security policy allows no inline script and nothing from
- * the network: only this page's own script, by nonce, and its own stylesheet. Declared by
- * `interfaces/panel-interface.ts`.
+ * the network: only this page's own script, by nonce, and its own stylesheets.
+ *
+ * Its look is the design system's (ADR-0066, the Beauty Law's bar): `media/tokens.css` is the
+ * generated token sheet, and `media/panel.css` builds on it. In System mode the page sits on
+ * the editor's own surfaces and follows its colour theme live; Light and Dark keep krypton's
+ * own palette. Declared by `interfaces/panel-interface.ts`.
  */
 import { randomBytes } from 'node:crypto';
 import * as fs from 'node:fs';
@@ -18,24 +22,30 @@ import type { RunStatus, TaskRunInterface } from '@vibey/core';
 import { HtmlText } from '../core/support';
 import type { VibeyController } from './controller';
 import type { CommandActionsInterface } from './interfaces/actions-interface';
-import type { PanelHtmlInterface, PanelRequest, PanelUpdate, TaskPanelInterface } from './interfaces/panel-interface';
+import type { PanelHtmlInterface, PanelLook, PanelRequest, PanelUpdate, TaskPanelInterface } from './interfaces/panel-interface';
 
 export class PanelHtml implements PanelHtmlInterface {
   private readonly html = new HtmlText();
 
-  page(title: string, script: string, style: string, nonce: string, cspSource: string): string {
+  page(title: string, script: string, style: string, nonce: string, cspSource: string, tokens = '', look: PanelLook = PanelHtml.LOOK): string {
     const safe = this.html.escape(title);
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="${look.theme}" data-surface="${look.surface}">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource} data:; style-src ${cspSource}; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="${style}">
+${tokens === '' ? '' : `<link rel="stylesheet" href="${tokens}">\n`}<link rel="stylesheet" href="${style}">
 <title>${safe}</title>
 </head>
 <body>
-<header><h1 id="title">${safe}</h1><span id="status" role="status"></span></header>
+<div id="banner" role="alert" hidden><span class="banner-text"><strong>UNLIMITED SPEND</strong> paidloop is declared with no dollar cap.</span><button id="endNoCap" type="button" class="quiet">End unlimited spend</button></div>
+<header>
+  <span class="mark" aria-hidden="true"><span class="nucleus"></span><span class="orbit one"></span><span class="orbit two"></span></span>
+  <h1 id="title">${safe}</h1>
+  <span id="effort" class="pill ultra" hidden title="ULTRA: effort without a ceiling. It stops only at Stop or a declared budget cap.">ULTRA</span>
+  <span id="status" class="pill state" data-state="idle" role="status"></span>
+</header>
 <main id="items" aria-live="polite"></main>
 <footer id="composer">
   <ul id="completions" role="listbox" aria-label="Commands" hidden></ul>
@@ -54,6 +64,9 @@ export class PanelHtml implements PanelHtmlInterface {
 </html>`;
   }
 
+  /** Before the editor says otherwise: dark, on the editor's own surfaces. */
+  static readonly LOOK: PanelLook = { theme: 'dark', surface: 'editor', ultra: false, unlimited: false };
+
   nonce(): string {
     return randomBytes(18).toString('base64').replace(/[^A-Za-z0-9]/g, '');
   }
@@ -63,6 +76,7 @@ export class TaskPanel implements TaskPanelInterface {
   static readonly VIEW_TYPE = 'vibey.task';
   private readonly panel: vscode.WebviewPanel;
   private readonly watching: vscode.Disposable[] = [];
+  private readonly watchingLook: vscode.Disposable[] = [];
   private readonly slash = new SlashCommands();
   private runId: string | undefined;
   private laneTimer: NodeJS.Timeout | undefined;
@@ -78,7 +92,7 @@ export class TaskPanel implements TaskPanelInterface {
     private readonly lane?: { readonly eventsPath: string; readonly label: string },
   ) {
     const media = vscode.Uri.joinPath(extensionUri, 'media');
-    this.panel = vscode.window.createWebviewPanel(TaskPanel.VIEW_TYPE, lane?.label ?? 'Vibey task', vscode.ViewColumn.Beside, {
+    this.panel = vscode.window.createWebviewPanel(TaskPanel.VIEW_TYPE, lane?.label ?? 'krypton task', vscode.ViewColumn.Beside, {
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [media],
@@ -87,15 +101,25 @@ export class TaskPanel implements TaskPanelInterface {
     const html = new PanelHtml();
     const webview = this.panel.webview;
     webview.html = html.page(
-      lane?.label ?? 'Vibey task',
+      lane?.label ?? 'krypton task',
       webview.asWebviewUri(vscode.Uri.joinPath(media, 'panel.js')).toString(),
       webview.asWebviewUri(vscode.Uri.joinPath(media, 'panel.css')).toString(),
       html.nonce(),
       webview.cspSource,
+      webview.asWebviewUri(vscode.Uri.joinPath(media, 'tokens.css')).toString(),
+      this.look(),
+    );
+    // The look follows the editor's theme live in System mode, and the settings in every mode.
+    this.watchingLook.push(
+      vscode.window.onDidChangeActiveColorTheme(() => this.post({ type: 'look', ...this.look() })),
+      controller.onDidChange(() => this.post({ type: 'look', ...this.look() })),
     );
     webview.onDidReceiveMessage((message: PanelRequest) => void this.receive(message));
     this.panel.onDidDispose(() => {
       this.disposed = true;
+      for (const subscription of this.watchingLook.splice(0)) {
+        subscription.dispose();
+      }
       this.unwatch();
       this.closed.fire();
     });
@@ -112,7 +136,7 @@ export class TaskPanel implements TaskPanelInterface {
     this.unwatch();
     this.runId = runId;
     const run = this.controller.runs.get(runId);
-    this.panel.title = run?.request.title ?? 'Vibey task';
+    this.panel.title = run?.request.title ?? 'krypton task';
     if (run !== undefined) {
       this.watching.push(
         run.onPatch((patch) => this.post({ type: 'patch', patch })),
@@ -206,7 +230,7 @@ export class TaskPanel implements TaskPanelInterface {
     const status = this.mode === 'lane' ? 'lane' : run === undefined ? (this.runId === undefined ? 'idle' : 'finished') : run.status;
     const update: PanelUpdate = {
       type: 'init',
-      title: this.lane?.label ?? run?.request.title ?? 'Vibey task',
+      title: this.lane?.label ?? run?.request.title ?? 'krypton task',
       mode: this.mode,
       items: run?.items() ?? [],
       status,
@@ -217,9 +241,33 @@ export class TaskPanel implements TaskPanelInterface {
       takesFollowUps: run?.takesFollowUps ?? false,
     };
     this.post(update);
+    this.post({ type: 'look', ...this.look() });
     if (this.mode === 'lane') {
       void this.refreshLane();
     }
+  }
+
+  /**
+   * Light, Dark or System (the Beauty Bar, item 2). System takes the editor's own theme kind
+   * and its surfaces; Light and Dark take krypton's palette and surfaces whatever the editor uses.
+   */
+  private look(): PanelLook {
+    const services = this.controller.services;
+    let unlimited = false;
+    try {
+      unlimited = services.budgets.paid()?.no_cap_confirmed === true;
+    } catch {
+      unlimited = false;
+    }
+    const chosen = services.settings.theme;
+    const kind = vscode.window.activeColorTheme.kind;
+    const editorIsLight = kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight;
+    return {
+      theme: chosen === 'system' ? (editorIsLight ? 'light' : 'dark') : chosen,
+      surface: chosen === 'system' ? 'editor' : 'krypton',
+      ultra: services.settings.effort === 'ULTRA',
+      unlimited,
+    };
   }
 
   private status(run: TaskRunInterface, status: RunStatus): PanelUpdate {

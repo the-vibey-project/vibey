@@ -1,6 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { HubTransport } from '@vibey/core';
 import { describe, expect, it } from 'vitest';
 import { CatalogueParser, DegradedCatalogue } from '@vibey/core';
 import { Doctor, type DoctorDependencies } from '@vibey/core';
@@ -280,6 +281,22 @@ describe('CoreServices', () => {
     core.history.applied('r1', 'merged into main');
     const line = fs.readFileSync(path.join(core.settings.stateDir, 'runs.jsonl'), 'utf8');
     expect(JSON.parse(line)).toMatchObject({ type: 'run.applied', run_id: 'r1', detail: 'merged into main' });
+  });
+
+  it('reaches vibey through a paired hub when one is given, and the local command line otherwise', () => {
+    const home = durable('hub-');
+    const local = new CoreServices({ raw: { stormHome: home }, environ: { PATH: '' }, platform: 'linux', actor: 'test', workspaceRoots: () => [] });
+    expect(local.vibey).toBeUndefined();
+    const hub = new CoreServices({
+      raw: { stormHome: home },
+      environ: { PATH: '' },
+      platform: 'linux',
+      actor: 'test',
+      workspaceRoots: () => [],
+      hub: { url: 'http://studio.local:8765', key: 'k' },
+    });
+    expect(hub.vibey?.kind).toBe('hub');
+    expect(hub.vibey).toBeInstanceOf(HubTransport);
   });
 
   it('reads vibey loops once until asked again, and says plainly when there is no vibey', async () => {

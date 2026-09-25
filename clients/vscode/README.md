@@ -1,4 +1,8 @@
-# Vibey for VS Code
+# krypton for VS Code
+
+**krypton** is vibey's face in your editor: the display name of this extension, and of every
+vibey app (sub-doctrine 9.e). The engine underneath is still **vibey**, and the extension's
+id, settings (`vibey.*`) and commands (`vibey.*`) keep their names.
 
 Ask a model that runs **on your own computer** to make a change in your project, and watch
 every step it takes. There is no account and no cloud: the model is **gpt-oss:20b**, running in
@@ -52,11 +56,11 @@ top, choose **Install from VSIX…**, and pick the file.
    repository with at least one commit. The task will work on a copy of it.
 2. **Open Vibey.** Click the **V** icon in the activity bar on the left.
 3. **Check your setup.** Open the Command Palette (**Cmd+Shift+P** on a Mac, **Ctrl+Shift+P**
-   elsewhere), type **Vibey: Check my setup**, and press Enter. Each line says `ok`, `warn` or
+   elsewhere), type **krypton: Check my setup**, and press Enter. Each line says `ok`, `warn` or
    `FAIL`. Every `FAIL` comes with a line that says what to do.
-4. **Start Ollama and fetch the model**, if the check asked you to. Run **Vibey: Start Ollama**,
-   then **Vibey: Download the model**. It asks before it downloads anything.
-5. **Ask.** Run **Vibey: Ask the model to do a task**, type what you want, for example
+4. **Start Ollama and fetch the model**, if the check asked you to. Run **krypton: Start Ollama**,
+   then **krypton: Download the model**. It asks before it downloads anything.
+5. **Ask.** Run **krypton: Ask the model to do a task**, type what you want, for example
    `add a line to README.md that says how to run the tests`, and press Enter.
 6. **Watch.** The task panel opens beside your editor and shows the model's words, each tool
    it runs, and each turn. A turn can take a minute or more on a laptop; a long quiet spell is
@@ -96,6 +100,13 @@ top, choose **Install from VSIX…**, and pick the file.
 - **Running in place.** With `vibey.runInPlace` on, the task edits your open folder directly,
   on your current branch. There is then no Apply or Discard; review and undo with git.
 
+## The first minute
+
+On first install, VS Code opens **Get started with krypton**, a five-step tour (it is also
+under **Help: Welcome** and in the Tasks view). It checks your setup, lets you pick a look, and
+asks for your first result, with a button on every step, so the first finished task is under a
+minute away once the model is downloaded.
+
 ## The task panel
 
 - **Enter** sends; **Shift+Enter** starts a new line. Typing in Japanese, Chinese or Korean
@@ -107,6 +118,10 @@ top, choose **Install from VSIX…**, and pick the file.
   until it does. If it has not stopped after `vibey.forceStopAfterSeconds` (two minutes by
   default), a separate **Force stop** button appears. It asks you first, and the task's journal
   records it.
+- **Its look** is krypton's design system: the colours, spacing, shapes and motion all come
+  from vibey's design tokens (ADR-0066). The atom beside the title turns while work runs, the
+  state is a coloured pill, and new lines ease in. With reduced motion on (your system's, or
+  `workbench.reduceMotion` in VS Code), nothing moves.
 - **Pasting an image** works only when the engine takes images and the model can see them.
   gpt-oss:20b cannot, so for it the extension offers no image menu at all.
 
@@ -121,10 +136,41 @@ top, choose **Install from VSIX…**, and pick the file.
 | **Gates** | Questions vibey has parked for you. Click one to answer it. |
 | **Budgets** | vibey projects' cycle caps, and this computer's own lane budgets, with what each has spent. |
 
+## Light, Dark or System
+
+**krypton: Choose the theme** (or `/theme`) sets `vibey.theme`:
+
+- **System**, the default, follows VS Code's own colour theme, and switches live when it changes.
+  The panel sits on the editor's own surfaces, so it looks native in any theme.
+- **Light** and **Dark** keep krypton's own palette and surfaces, whatever the editor uses.
+
+The Lanes and Tasks views colour each state from the same tokens: running, waiting, finished,
+failed, and ULTRA in its own magenta. A running lane's icon spins; with reduced motion it holds
+still.
+
+## Connect to vibey on this network
+
+By default krypton drives the `vibey` command line on this computer, exactly as before. If a
+vibey hub runs on your network (`vibey serve` on another machine, ADR-0068), **krypton: Connect
+to vibey on this network** (or `/connect studio.local`) uses it instead:
+
+1. It looks for a hub on this computer, then at the address you give, on port 8765 unless you
+   name another.
+2. You pair once. Being on the same network proves nothing, so krypton asks for the key the
+   host gave you (the host's token, or a device key) and checks it against the hub before it
+   keeps it.
+3. The key goes in VS Code's secret storage, never in settings; `vibey.hubUrl` holds only the
+   address. Projects, gates and budgets then come from the hub, and the status bar says
+   **hub**. Tasks you start still run on this computer's model.
+
+What the hub never allows from the network, krypton never asks it for: no key can change a
+budget cap or declare paid use. **krypton: Disconnect from the hub** (or `/disconnect`) forgets
+the key and goes back to the local command line at once.
+
 ## One menu for everything
 
-Click **✨ vibey** in the status bar for every command, in groups. The same commands are in the
-Command Palette under **Vibey:**, and in the task panel after a `/`.
+Click **✨ krypton** in the status bar for every command, in groups. The same commands are in the
+Command Palette under **krypton:**, and in the task panel after a `/`.
 
 In VS Code's chat, type `@vibey` and your task to run one there, or a command, for example
 `@vibey /lanes` or `@vibey /budget add scope=day loop=paidloop dollars=5`.
@@ -133,11 +179,19 @@ In VS Code's chat, type `@vibey` and your task to run one there, or a command, f
 
 - **sovereignloop** (the default) runs everything on your computer.
 - **paidloop** runs vendors' engines (Claude, through claudeloop, by default), which bill your
-  own accounts with them. It runs only after you *declare* it: **Vibey: Choose the loop**,
+  own accounts with them. It runs only after you *declare* it: **krypton: Choose the loop**,
   then **paidloop**. You declare it with a daily or monthly dollar cap, or with no cap, which
   asks you twice.
 - **Effort** `auto` starts low and, when an attempt fails, tries again one rung higher on
   vibey's ladder, in the same copy. You can also fix one level, from TRIVIAL to MAX.
+- **ULTRA** is effort without a ceiling (ADR-0063): no turn limit, and a finished pass is a
+  checkpoint before the next improvement pass. It stops only when you press **Stop** or a
+  budget you declared is reached. It is shown with a flame, in its own colour, in the picker,
+  the status bar, the panel and the views.
+- **No cap** on paidloop is possible only the long way: a warning with the engine's measured
+  cost per hour, the typed phrase `I accept unlimited spending`, and a second warning whose
+  default keeps a cap. While it stands, the status bar and every panel say **UNLIMITED
+  SPEND**. **krypton: End unlimited spend** (or `/cap`) ends it in one action, at once.
 - **Engines and models** are listed by `vibey loops --json`. The extension knows none of them
   by itself. An engine the canon has repealed (by 8.b) while vibey still carries its code is
   shown, greyed out, and never runs. With a vibey older than 3.0.0 there is no `vibey loops`. The extension then says so,
@@ -179,7 +233,7 @@ Rewrite docs/guides/install.md for someone who has never used a terminal.
 - `paths` limits what the task may change, as globs (`*`, `?` and `**`). Its commit holds only
   the matching changes. Anything else it changed is left uncommitted and named.
 
-Run the folder with **Vibey: Run a folder of tasks**. To resume a batch that stopped, run it
+Run the folder with **krypton: Run a folder of tasks**. To resume a batch that stopped, run it
 again. Tasks that ended `completed`, `completed-no-change`, `completed-commit-refused`,
 `completed-out-of-scope` or `failed` are skipped. A stopped or interrupted task runs again on a
 new branch. Every step is written to the batch's journal as it happens.
@@ -276,6 +330,15 @@ force.
 | `vibey.editBudget` | Edit a budget | `/budget edit <budget id> dollars=N turns=N minutes=N` | `/budget edit 1a2b3c4d dollars=10` |
 | `vibey.removeBudget` | Remove a budget | `/budget remove <budget id>` | `/budget remove 1a2b3c4d` |
 | `vibey.grantBudget` | Grant more budget | `/budget grant <gate or budget id> $N | N turns` | `/budget grant 3f2a9c1e-0b7d-4c55-9a51-2b1f0e8d7c6a $10` |
+| `vibey.endNoCap` | End unlimited spend (put a cap back) | `/cap` | `/cap` |
+
+### Connect & look
+
+| Command | Palette title | In the panel or after @vibey | Example |
+|---|---|---|---|
+| `vibey.connectHub` | Connect to vibey on this network | `/connect [address]` | `/connect studio.local` |
+| `vibey.disconnectHub` | Disconnect from the hub | `/disconnect` | `/disconnect` |
+| `vibey.chooseTheme` | Choose the theme (Light, Dark or System) | `/theme system|light|dark` | `/theme system` |
 
 ### Ollama
 
@@ -297,7 +360,7 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `vibey.cliPath` | `""` | The `vibey` program to run. Empty: the first `vibey` on your PATH. **Vibey: Check my setup** prints the one it found and its version. |
+| `vibey.cliPath` | `""` | The `vibey` program to run. Empty: the first `vibey` on your PATH. **krypton: Check my setup** prints the one it found and its version. |
 | `vibey.gptossloopPath` | `""` | The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey-engine`). |
 | `vibey.qwenloopPath` | `""` | The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0064). Empty: the first `qwenloop` on your PATH. |
 | `vibey.ollamaPath` | `""` | The `ollama` program, used only to start a server with `ollama serve` and to show a download command. Empty: the first `ollama` on your PATH. |
@@ -307,7 +370,7 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | `vibey.ollamaAppPath` | `"/Applications/Ollama.app"` | macOS only: the Ollama app **Start Ollama** opens when it exists. Otherwise `ollama serve` is started. |
 | `vibey.model` | `""` | The model gptossloop tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. qwenloop is not handed this: its own config chooses (`qwen3:14b`), unless you name a model with the engine, `qwenloop/qwen3:14b`. |
 | `vibey.loop` | `"sovereignloop"` | Which loop runs tasks. `paidloop` works only after you declare it once (**Choose the loop**), with a daily or monthly dollar budget. |
-| `vibey.effort` | `"auto"` | How hard the engine works (vibey's own effort levels). `auto` starts at **Base effort** and climbs one step each time a task fails, as vibey's escalation ladder does, never past a budget. |
+| `vibey.effort` | `"auto"` | How hard the engine works (vibey's own effort levels). `auto` starts at **Base effort** and climbs one step each time a task fails, as vibey's escalation ladder does, never past a budget. `ULTRA` has no turn limit and is shown in its own colour with a flame. |
 | `vibey.baseEffort` | `"LOW"` | Where `auto` effort starts: vibey's BUILD phase starts at `LOW`. |
 | `vibey.engine` | `"auto"` | `auto` picks within the loop by effort (preferring a model already loaded). Or name an engine, `gptossloop`, or an engine and model, `gptossloop/gpt-oss:20b`. The engines come from `vibey loops`. |
 | `vibey.maxTurns` | `0` | The most model turns one task may take, used only when neither the task file (`max_turns`) nor the effort sets one. `0`: none from here. |
@@ -327,13 +390,15 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | `vibey.budgetOutputTokensPerTurn` | `2000` | Output tokens per turn assumed when projecting a paid run's cost, until this machine has measured the engine's own. |
 | `vibey.desktopNotifications` | `false` | Let the local runner (gptossloop or qwenloop) send its own desktop notification at every turn. Off: the editor shows progress instead. |
 | `vibey.environment.allow` | `[]` | Extra environment variables (a name, or a prefix ending in `*`) passed to the engine and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says. |
+| `vibey.theme` | `"system"` | How krypton's panels are coloured. **System** follows the editor's colour theme, live; **Light** and **Dark** keep krypton's own palette from the design tokens (ADR-0066). Remembered on this device. |
+| `vibey.hubUrl` | `""` | The vibey hub (`vibey serve`, ADR-0068) this device is paired with, like `http://studio.local:8765`. Empty: the local `vibey` command line, the default. Set it with **krypton: Connect to vibey on this network**, which also keeps the hub's key in the editor's secret storage, never in settings. |
 
 ## When something is wrong
 
 - **"vibey was not found", or an older vibey is used.** Another vibey on your PATH may come
   first. Point `vibey.cliPath` and `vibey.gptossloopPath` (or `vibey.qwenloopPath`) at the
-  ones you want. **Vibey: Check my setup** prints the path and version of every program it uses.
-- **"Ollama is not answering".** Run **Vibey: Start Ollama**. It never starts a second server.
+  ones you want. **krypton: Check my setup** prints the path and version of every program it uses.
+- **"Ollama is not answering".** Run **krypton: Start Ollama**. It never starts a second server.
 - **The context window is "unknown".** It is known only once the model is loaded, at the first
   task. If the check later says it is too small, it names the setting to raise.
 - **"refused: this work would be kept on storage the operating system empties".** Choose a

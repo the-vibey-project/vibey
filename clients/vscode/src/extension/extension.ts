@@ -46,13 +46,30 @@ export function activate(context: vscode.ExtensionContext): { readonly commands:
   const label = (): void => {
     const running = [...controller.runs.values()].filter((run) => run.status !== 'finished' && run.status !== 'queued').length;
     const waiting = [...controller.runs.values()].filter((run) => run.status === 'queued').length;
-    // ULTRA is shown distinctly, in its own colour from the design tokens (ADR-0063).
-    const ultra = controller.services.settings.effort === 'ULTRA';
-    status.text = `$(sparkle) vibey${ultra ? ' · $(flame) ULTRA' : ''}${running > 0 ? ` · ${running} running` : ''}${waiting > 0 ? ` · ${waiting} waiting` : ''}`;
+    // ULTRA is shown distinctly, in its own colour from the design tokens (ADR-0063), and a
+    // standing no-cap declaration says UNLIMITED SPEND for as long as it stands.
+    const services = controller.services;
+    const ultra = services.settings.effort === 'ULTRA';
+    let unlimited = false;
+    try {
+      unlimited = services.budgets.paid()?.no_cap_confirmed === true;
+    } catch {
+      unlimited = false;
+    }
+    const hub = controller.hubUrl;
+    status.text =
+      `$(sparkle) krypton${hub === undefined ? '' : ' · $(radio-tower) hub'}${ultra ? ' · $(flame) ULTRA' : ''}` +
+      `${unlimited ? ' · $(warning) UNLIMITED SPEND' : ''}${running > 0 ? ` · ${running} running` : ''}${waiting > 0 ? ` · ${waiting} waiting` : ''}`;
     status.color = ultra ? new vscode.ThemeColor('vibey.ultraEffort') : undefined;
-    status.tooltip = ultra
-      ? 'Vibey: ULTRA effort, with no turn limit. Every command'
-      : 'Vibey: every command';
+    status.backgroundColor = unlimited ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined;
+    status.tooltip = [
+      ultra ? 'ULTRA effort, with no turn limit.' : undefined,
+      unlimited ? 'paidloop is declared with no dollar cap. krypton: End unlimited spend puts a cap back at once.' : undefined,
+      hub === undefined ? undefined : `Connected to the vibey hub at ${hub}.`,
+      'krypton: every command',
+    ]
+      .filter((line) => line !== undefined)
+      .join('\n');
   };
   label();
   status.show();

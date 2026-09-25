@@ -354,6 +354,19 @@ describe('budgets', () => {
     expect(actions).toEqual(['add', 'paid.declared', 'paid.declared']);
   });
 
+  it('ends a no-cap declaration in one action, and only a no-cap one', () => {
+    const { store, directory } = setup();
+    expect(store.endNoCap()).toBe(false);
+    store.declarePaid({ scope: 'day', dollars: 5 });
+    expect(store.endNoCap()).toBe(false);
+    store.declarePaid({ noCap: true, phrase: NoCapPath.PHRASE });
+    expect(store.endNoCap()).toBe(true);
+    expect(store.paid()).toBeUndefined();
+    expect(store.list()).toHaveLength(1);
+    const actions = new JsonlJournal(path.join(directory, 'budget-journal.jsonl')).readAll().records.map((line) => line.action);
+    expect(actions).toEqual(['add', 'paid.declared', 'paid.declared', 'paid.no-cap-ended']);
+  });
+
   it('sums spend from a byte-offset watermark, and knows tokens per turn', () => {
     const { spend, directory } = setup();
     expect(spend.perTurn('claudeloop')).toBeUndefined();

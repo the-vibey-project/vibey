@@ -40,7 +40,8 @@ import { ExecutableLocator, SettingsResolver } from './settings';
 import { DurabilityGate, PlatformStorage, VolatileLocations } from './storage';
 import { HtmlText, RandomIds, SystemClock, TaskNaming } from './support';
 import { TaskFolder } from './task-file';
-import { GateAnswerPlanner, LocalProcessTransport } from '@vibey/core';
+import { GateAnswerPlanner, HubTransport, LocalProcessTransport } from '@vibey/core';
+import type { VibeyTransportInterface } from '@vibey/core';
 
 export class CoreServices implements ServicesInterface {
   readonly settings: ResolvedSettings;
@@ -63,8 +64,11 @@ export class CoreServices implements ServicesInterface {
   readonly startPlanner = new OllamaStartPlanner();
   readonly startFacts: OllamaStartFactsReader;
   readonly git: GitClient;
-  /** Undefined when no `vibey` can be found: the views say so. */
-  readonly vibey: LocalProcessTransport | undefined;
+  /**
+   * How vibey is reached: a paired hub when one is given (ADR-0068), else the local command
+   * line. Undefined when neither is there: the views say so.
+   */
+  readonly vibey: VibeyTransportInterface | undefined;
   readonly history: RunHistory;
   readonly budgets: BudgetStore;
   readonly spend: SpendLedger;
@@ -99,7 +103,12 @@ export class CoreServices implements ServicesInterface {
     this.startFacts = new OllamaStartFactsReader(this.platform, fs.existsSync, this.processes);
     this.git = new GitClient(this.processes, this.locator.locate('git', this.settings.raw.gitPath).path ?? 'git', this.toolEnvironment);
     const vibey = this.locator.locate('vibey', this.settings.raw.cliPath).path;
-    this.vibey = vibey === undefined ? undefined : new LocalProcessTransport(this.processes, vibey, this.toolEnvironment);
+    this.vibey =
+      options.hub !== undefined
+        ? new HubTransport(options.hub.url, this.http, options.hub.key)
+        : vibey === undefined
+          ? undefined
+          : new LocalProcessTransport(this.processes, vibey, this.toolEnvironment);
     const state = this.settings.stateDir;
     this.history = new RunHistory(new JsonlJournal(path.join(state, 'runs.jsonl')), () => this.clock.now());
     this.budgets = new BudgetStore(state, new JsonlJournal(path.join(state, 'budget-journal.jsonl')), this.clock, this.ids, options.actor);

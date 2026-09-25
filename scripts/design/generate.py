@@ -71,6 +71,9 @@ class DesignGenerator(DesignGeneratorInterface):
         ):
             out.update(emitter.outputs())
         out[Path("design/dist/icons/favicon.svg")] = mark.encode()
+        sheet = out[CssTokens.PATH]
+        for target in self.config.get("token_sheet_copies", {}).get("targets", []):
+            out[Path(target)] = sheet
         return out
 
     def _manifest(self) -> dict[str, dict[str, object]]:

@@ -12,7 +12,7 @@ const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
 manifest.contributes.commands = CommandTable.ALL.map((spec) => ({
   command: spec.id,
   title: spec.title,
-  category: 'Vibey',
+  category: 'krypton',
   icon: `$(${spec.icon})`,
 }));
 manifest.contributes.chatParticipants[0].commands = new SlashCommands().firstWords().map((word) => ({

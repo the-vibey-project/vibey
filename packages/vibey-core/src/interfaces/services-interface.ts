@@ -20,6 +20,8 @@ export interface ServicesOptions {
   readonly clock?: ClockInterface;
   readonly ids?: IdSourceInterface;
   readonly isExecutable?: (candidate: string) => boolean;
+  /** A paired hub and this device's key for it: then vibey is reached through the hub, not the local command line. */
+  readonly hub?: { readonly url: string; readonly key: string };
 }
 
 export interface ServicesInterface {

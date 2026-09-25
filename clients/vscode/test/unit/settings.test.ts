@@ -76,6 +76,11 @@ describe('SettingsResolver', () => {
     const resolver = new SettingsResolver({ HOME: home }, new MacStorage());
     expect(resolver.resolve({ loop: ' paidloop ' }).loop).toBe('paidloop');
     expect(resolver.resolve({ loop: 'cheaploop' }).loop).toBe('sovereignloop');
+    expect(resolver.resolve({}).theme).toBe('system');
+    expect(resolver.resolve({ theme: ' Light ' }).theme).toBe('light');
+    expect(resolver.resolve({ theme: 'DARK' }).theme).toBe('dark');
+    expect(resolver.resolve({ theme: 'purple' }).theme).toBe('system');
+    expect(resolver.resolve({ hubUrl: ' http://studio.local:8765 ' }).hubUrl).toBe('http://studio.local:8765');
     expect(resolver.resolve({ effort: 'High' }).effort).toBe('HIGH');
     expect(resolver.resolve({ effort: 'AUTO' }).effort).toBe('auto');
     expect(resolver.resolve({ effort: 'lots' }).effort).toBe('auto');

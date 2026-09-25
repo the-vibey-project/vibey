@@ -44,7 +44,18 @@ exports.run = async function run() {
     }
   });
 
-  for (const id of ['vibey.refresh', 'vibey.showLoops', 'vibey.doctor', 'vibey.showLanes', 'vibey.showProjects', 'vibey.showGates', 'vibey.showBudgets']) {
+  await check('it is krypton, with a first-run walkthrough whose every page is there', async () => {
+    assert.strictEqual(manifest.displayName, 'krypton');
+    const [tour] = manifest.contributes.walkthroughs;
+    assert.strictEqual(tour.id, 'krypton.firstRun');
+    const fs = require('node:fs');
+    for (const step of tour.steps) {
+      assert.ok(fs.existsSync(path.join(root, step.media.markdown)), `${step.media.markdown} is missing`);
+    }
+    await vscode.commands.executeCommand('workbench.action.openWalkthrough', `${manifest.publisher}.${manifest.name}#krypton.firstRun`, false);
+  });
+
+  for (const id of ['vibey.refresh', 'vibey.showLoops', 'vibey.doctor', 'vibey.showLanes', 'vibey.showProjects', 'vibey.showGates', 'vibey.showBudgets', 'vibey.endNoCap', 'vibey.disconnectHub']) {
     await check(`${id} runs`, () => vscode.commands.executeCommand(id));
   }
 };

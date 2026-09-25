@@ -14,6 +14,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **vscode:** krypton 0.2.0, raised to the Beauty Law (12.k): the display name krypton (9.e),
+  the task panel on the design tokens with Light, Dark and System, a first-run walkthrough,
+  live lanes with motion that respects reduced motion, ULTRA and UNLIMITED SPEND shown
+  everywhere with a one-action way out, and **Connect to vibey on this network** through
+  `@vibey/core`'s `HubTransport`, which now speaks the hub's routes. The two `VS Code extension`
+  CI rows are required checks (ADR-0059).
 * **failover:** the driver hands off to gptossloop at ULTRA and back after a recorded probe
   ([ADR-0070](docs/architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)).
   Claude Code's `StopFailure` hook (`rate_limit`, `billing_error`) runs `vibey driver hook`: a

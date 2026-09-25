@@ -1,5 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** Every declared setting, as the editor (or the headless CLI's flags) hands it over, and resolved. */
+import type { ThemeMode } from '../tokens';
 import type { Effort, EffortSetting, LoopName } from './catalogue-interface';
 import type { OllamaEndpointInterface } from './ollama-interface';
 import type { ResolvedHome } from './storage-interface';
@@ -36,6 +37,10 @@ export interface RawSettings {
   readonly budgetOutputTokensPerTurn: number;
   readonly desktopNotifications: boolean;
   readonly environmentAllow: readonly string[];
+  /** `system` (the default: follow the editor's colour theme, live), `light` or `dark` (krypton's own palette). */
+  readonly theme: string;
+  /** The vibey hub this device is paired with (ADR-0068); empty: the local command line. Its key is never a setting. */
+  readonly hubUrl: string;
 }
 
 export interface ResolvedSettings {
@@ -69,6 +74,10 @@ export interface ResolvedSettings {
   readonly budgetPerTurn: { readonly input: number; readonly output: number };
   readonly desktopNotifications: boolean;
   readonly environmentAllow: readonly string[];
+  /** Light, Dark or System (the Beauty Bar, item 2): System follows the host, live. */
+  readonly theme: ThemeMode;
+  /** The paired hub's address, or '' for the local command line. */
+  readonly hubUrl: string;
 }
 
 export interface SettingsResolverInterface {

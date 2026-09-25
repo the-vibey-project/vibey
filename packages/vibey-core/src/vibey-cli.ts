@@ -51,7 +51,11 @@ export class VibeyCli implements VibeyCliInterface {
   }
 
   async projects(): Promise<readonly VibeyProject[]> {
-    const parsed = VibeyCli.json(await this.must(['projects', '--json'], 'projects'), 'vibey projects --json');
+    return VibeyCli.readProjects(VibeyCli.json(await this.must(['projects', '--json'], 'projects'), 'vibey projects --json'));
+  }
+
+  /** `vibey projects --json`'s document (the hub's `GET /api/v1/projects` is the same one). */
+  static readProjects(parsed: unknown): readonly VibeyProject[] {
     if (!Array.isArray(parsed)) {
       throw new VibeyCliError('vibey projects --json did not print a list', 'bad-output');
     }
@@ -60,7 +64,11 @@ export class VibeyCli implements VibeyCliInterface {
 
   async gates(projectId?: string): Promise<readonly VibeyGate[]> {
     const args = projectId === undefined ? ['gates', '--json'] : ['gates', projectId, '--json'];
-    const parsed = VibeyCli.json(await this.must(args, 'gates'), 'vibey gates --json');
+    return VibeyCli.readGates(VibeyCli.json(await this.must(args, 'gates'), 'vibey gates --json'));
+  }
+
+  /** `vibey gates --json`'s document, `{"gates": [...]}`. */
+  static readGates(parsed: unknown): readonly VibeyGate[] {
     const gates = VibeyCli.field(parsed, 'gates');
     if (!Array.isArray(gates)) {
       throw new VibeyCliError('vibey gates --json did not print {"gates": [...]}', 'bad-output');
@@ -73,7 +81,11 @@ export class VibeyCli implements VibeyCliInterface {
 
   async status(projectId?: string): Promise<VibeyStatus> {
     const args = projectId === undefined ? ['status', '--json'] : ['status', '--json', projectId];
-    const parsed = VibeyCli.json(await this.must(args), 'vibey status --json');
+    return VibeyCli.readStatus(VibeyCli.json(await this.must(args), 'vibey status --json'));
+  }
+
+  /** `vibey status --json`'s document. */
+  static readStatus(parsed: unknown): VibeyStatus {
     if (!VibeyCli.isRecord(parsed) || typeof parsed.project_id !== 'string' || typeof parsed.phase !== 'string') {
       throw new VibeyCliError('vibey status --json did not print a project', 'bad-output');
     }
@@ -116,7 +128,11 @@ export class VibeyCli implements VibeyCliInterface {
   }
 
   async budgets(): Promise<readonly VibeyBudget[]> {
-    const parsed = VibeyCli.json(await this.must(['budget', '--all', '--json'], 'budget'), 'vibey budget --all --json');
+    return VibeyCli.readBudgets(VibeyCli.json(await this.must(['budget', '--all', '--json'], 'budget'), 'vibey budget --all --json'));
+  }
+
+  /** `vibey budget --all --json`'s list, each entry the document `vibey budget show --json` prints. */
+  static readBudgets(parsed: unknown): readonly VibeyBudget[] {
     if (!Array.isArray(parsed)) {
       throw new VibeyCliError('vibey budget --all --json did not print a list', 'bad-output');
     }
@@ -206,7 +222,7 @@ export class VibeyCli implements VibeyCliInterface {
     );
   }
 
-  private static json(text: string, what: string): unknown {
+  static json(text: string, what: string): unknown {
     try {
       return JSON.parse(text);
     } catch {

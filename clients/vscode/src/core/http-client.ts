@@ -22,12 +22,12 @@ export class NodeHttpClient implements HttpClientInterface {
     },
   ) {}
 
-  get(url: string, timeoutMs: number): Promise<HttpResponse> {
-    return this.request('GET', url, undefined, timeoutMs);
+  get(url: string, timeoutMs: number, headers: Readonly<Record<string, string>> = {}): Promise<HttpResponse> {
+    return this.request('GET', url, undefined, timeoutMs, headers);
   }
 
-  post(url: string, body: unknown, timeoutMs: number): Promise<HttpResponse> {
-    return this.request('POST', url, body, timeoutMs);
+  post(url: string, body: unknown, timeoutMs: number, headers: Readonly<Record<string, string>> = {}): Promise<HttpResponse> {
+    return this.request('POST', url, body, timeoutMs, headers);
   }
 
   postLines(
@@ -81,6 +81,7 @@ export class NodeHttpClient implements HttpClientInterface {
     url: string,
     body: unknown,
     timeoutMs: number,
+    headers: Readonly<Record<string, string>>,
   ): Promise<HttpResponse> {
     return new Promise((resolve, reject) => {
       const request = this.open(method, url, (response) => {
@@ -91,7 +92,7 @@ export class NodeHttpClient implements HttpClientInterface {
         });
         response.on('end', () => resolve({ status: NodeHttpClient.status(response), body: text }));
         response.on('error', reject);
-      });
+      }, headers);
       request.setTimeout(timeoutMs, () => {
         request.destroy(new Error(`no answer from ${url} within ${timeoutMs} ms`));
       });
@@ -104,6 +105,7 @@ export class NodeHttpClient implements HttpClientInterface {
     method: string,
     url: string,
     onResponse: (response: http.IncomingMessage) => void,
+    headers: Readonly<Record<string, string>> = {},
   ): http.ClientRequest {
     const target = new URL(url);
     const request = this.transports[target.protocol];
@@ -112,7 +114,7 @@ export class NodeHttpClient implements HttpClientInterface {
     }
     return request(
       target,
-      { method, headers: { 'content-type': 'application/json', accept: 'application/json' } },
+      { method, headers: { 'content-type': 'application/json', accept: 'application/json', ...headers } },
       onResponse,
     );
   }

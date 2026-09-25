@@ -2,8 +2,10 @@
 /**
  * One window's state: the core (built from the `vibey.*` settings, and built again when they
  * change), the tasks this window started, and what the next task takes with it. Views, the
- * task panel, the command menu and `@vibey` all read it, so they always agree. Declared by
- * `interfaces/controller-interface.ts`.
+ * task panel, the command menu and `@vibey` all read it, so they always agree. A paired hub's
+ * key lives in the editor's secret storage, never in settings: with it and `vibey.hubUrl`,
+ * vibey is reached through the hub (ADR-0068); without either, through the local command
+ * line, exactly as before. Declared by `interfaces/controller-interface.ts`.
  */
 import * as os from 'node:os';
 import * as vscode from 'vscode';
@@ -25,13 +27,19 @@ export class VibeyController implements VibeyControllerInterface {
   private core: CoreServices;
   private tracker: Promise<LaneTracker> | undefined;
   private timer: NodeJS.Timeout | undefined;
+  private hubKey: string | undefined;
+  private readonly secrets: vscode.SecretStorage;
+  /** Where a paired hub's key is kept, in the editor's secret storage. */
+  static readonly HUB_KEY_SECRET = 'vibey.hubKey';
 
   constructor(
     context: vscode.ExtensionContext,
     private readonly settings: EditorSettings,
   ) {
-    this.output = vscode.window.createOutputChannel('Vibey');
+    this.output = vscode.window.createOutputChannel('krypton');
+    this.secrets = context.secrets;
     this.core = this.build();
+    void this.loadHubKey();
     context.subscriptions.push(
       this.output,
       this.changes,
@@ -39,6 +47,7 @@ export class VibeyController implements VibeyControllerInterface {
         // Runs already going keep the core they started with; new ones get the new settings.
         this.core = this.build();
         this.tracker = undefined;
+        this.flags();
         this.schedule();
         this.changed();
       }),
@@ -57,7 +66,35 @@ export class VibeyController implements VibeyControllerInterface {
   }
 
   changed(): void {
+    this.flags();
     this.changes.fire();
+  }
+
+  /** The paired hub's address, when vibey is reached through one. */
+  get hubUrl(): string | undefined {
+    return this.core.vibey?.kind === 'hub' ? this.core.settings.hubUrl : undefined;
+  }
+
+  /** Keep a checked key and the hub's address; the settings change rebuilds the core onto the hub. */
+  async pairHub(url: string, key: string): Promise<void> {
+    await this.secrets.store(VibeyController.HUB_KEY_SECRET, key);
+    this.hubKey = key;
+    if (this.settings.raw().hubUrl === url) {
+      this.rebuild();
+    } else {
+      await this.settings.set('hubUrl', url);
+    }
+  }
+
+  /** Forget the key and the address: the local command line again, at once. */
+  async unpairHub(): Promise<void> {
+    await this.secrets.delete(VibeyController.HUB_KEY_SECRET);
+    this.hubKey = undefined;
+    if ((this.settings.raw().hubUrl ?? '') === '') {
+      this.rebuild();
+    } else {
+      await this.settings.set('hubUrl', '');
+    }
   }
 
   folder(): string | undefined {
@@ -164,8 +201,35 @@ export class VibeyController implements VibeyControllerInterface {
     return this.tracker;
   }
 
+  private async loadHubKey(): Promise<void> {
+    this.hubKey = await this.secrets.get(VibeyController.HUB_KEY_SECRET);
+    if (this.hubKey !== undefined) {
+      this.rebuild();
+    }
+  }
+
+  private rebuild(): void {
+    this.core = this.build();
+    this.tracker = undefined;
+    this.changed();
+  }
+
+  /** What menus show: whether a hub is paired, and whether a no-cap declaration stands (ADR-0063). */
+  private flags(): void {
+    void vscode.commands.executeCommand('setContext', 'vibey.hubConnected', this.hubUrl !== undefined);
+    let unlimited = false;
+    try {
+      unlimited = this.core.budgets.paid()?.no_cap_confirmed === true;
+    } catch {
+      unlimited = false;
+    }
+    void vscode.commands.executeCommand('setContext', 'vibey.unlimitedSpend', unlimited);
+  }
+
   private build(): CoreServices {
+    const url = (this.settings.raw().hubUrl ?? '').trim();
     return new CoreServices({
+      ...(url !== '' && this.hubKey !== undefined ? { hub: { url, key: this.hubKey } } : {}),
       raw: this.settings.raw(),
       environ: process.env,
       platform: process.platform,

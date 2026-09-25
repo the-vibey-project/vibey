@@ -1,6 +1,7 @@
 # VS Code extension
 
-The Vibey extension lets you drive vibey, and a model on your own computer, from VS Code:
+The extension is called **krypton**, the name every vibey app carries (sub-doctrine 9.e); its
+commands and settings keep their `vibey.*` names. It lets you drive vibey, and a model on your own computer, from VS Code:
 describe a task, watch the model work on a copy of your project, and apply the result when
 you are happy with it. It needs no account and no cloud. Everything on the default loop,
 sovereignloop, runs on your machine: gptossloop, vibey's local agent, drives **gpt-oss:20b**
@@ -115,6 +116,11 @@ panel's page runs no script but its own.
   declare it, with a daily or monthly dollar cap or a no-cap declaration you confirm twice. An
   engine canon 8.b repeals while vibey still carries its code is shown and never runs.
 - **Effort** `auto` climbs vibey's ladder, one rung per failed attempt, in the same copy.
+  **ULTRA** ([ADR-0063](../architecture/decisions/0063-ultra-effort-without-a-ceiling.md)) has
+  no turn limit and stops only at **Stop** or a declared cap; it is shown with a flame in its
+  own colour. A no-cap paidloop declaration takes the whole warned path, shows **UNLIMITED
+  SPEND** everywhere while it stands, and **krypton: End unlimited spend** (`/cap`) ends it in
+  one action.
 - **Budgets**: a vibey project's cycle caps go through `vibey budget`. This computer's own
   lanes have per-run, daily or monthly caps in dollars, turns or minutes, kept in the storm
   home and journaled.
@@ -122,3 +128,26 @@ panel's page runs no script but its own.
   gpt-oss:20b on a 24 GB Mac ([ADR-0058](../architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md)).
   The lock is the family's own `mkdir` lock: set `VIBEY_OLLAMA_LOCK` to share one lock with
   storm tooling and vibey-gh.
+
+## 7. The look, the tour and the hub
+
+- **The tour.** On first install VS Code opens **Get started with krypton**: five steps (check
+  the setup, pick a theme, ask for a first result, choose the effort, connect), each with its
+  button, so the first result is under a minute away once the model is downloaded
+  ([the Beauty Bar](../design/beauty-bar.md), item 4).
+- **Light, Dark or System.** `vibey.theme`, or **krypton: Choose the theme** (`/theme`).
+  System, the default, follows VS Code's colour theme live and sits on the editor's own
+  surfaces; Light and Dark keep krypton's palette. Colours, spacing, shapes and motion come
+  from the design tokens ([ADR-0066](../architecture/decisions/0066-one-design-system-for-every-surface.md));
+  `scripts/design/generate.py` copies the token sheet into the extension's `media/tokens.css`.
+- **Live lanes.** Running lanes and tasks spin in the tokens' state colours, the panel's atom
+  turns while work runs, and everything holds still under reduced motion (the system's, or
+  `workbench.reduceMotion`).
+- **Connect to vibey on this network.** **krypton: Connect to vibey on this network**
+  (`/connect studio.local`) looks for a hub (`vibey serve`,
+  [ADR-0068](../architecture/decisions/0068-the-hub.md)) on this computer and at the address
+  you give, on port 8765 by default, and pairs once: the key you paste is checked against the
+  hub before it is kept, in VS Code's secret storage. Projects, gates and budgets then come
+  from the hub through `@vibey/core`'s `HubTransport`; tasks still run on this computer. No key
+  can change a cap from the network. **krypton: Disconnect from the hub** (`/disconnect`) goes
+  back to the local command line at once, which is the default and needs no hub.

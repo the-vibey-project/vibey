@@ -90,5 +90,7 @@ answers is where the extension's own code stops.
 - **Owed:** Open VSX publishing is declared in the release workflow and runs only when an
   `OVSX_PAT` secret exists. Creating that token needs the operator's Open VSX account; using
   the extension needs no account.
-- **Owed:** the `vscode-extension` CI job is not a required check yet. It becomes one once it
-  has run green on develop.
+- **Discharged (2026-09-25):** the `vscode-extension` CI job was not a required check at
+  first; it was to become one once it had run green on develop. It did (develop `0823cdfd`),
+  and both rows, `VS Code extension (ubuntu-latest)` and `VS Code extension (macos-latest)`,
+  are now required in `.vibey-gh.toml` for `develop` and `main`.
