@@ -216,3 +216,30 @@ is installed:
   record.
 - *Reviewer:* the sounds are reviewed by ear, and the notifications appear in the release
   gallery.
+
+## BB-11 — Stable and nightly channels, side by side
+
+**Rule.** Every GUI platform (the desktop app, the mobile apps, the web app and the VS Code
+extension) ships two channels:
+
+- **stable,** built from `main`;
+- **nightly** (the dev channel), built from `develop`.
+
+**Stable is always the default:** every install link, store listing, package-manager
+command and guide leads to stable unless a person asks for nightly by name. The two
+channels install **side by side** on the same device, with distinct application IDs (bundle
+ID, package name, extension ID, desktop file ID) and distinct icons: nightly's icon carries a
+nightly badge. Installing, updating or removing one never touches the other.
+
+**Check.**
+
+- *Machine:* the release pipeline builds stable only from `main` and nightly only from
+  `develop`, and fails on a build from any other ref.
+- *Machine:* a test reads each platform's packaging and confirms that the two channels'
+  application IDs differ, that nightly's icon set carries the badge, and that every default
+  install path (links, listings, package-manager commands, the docs' install steps) names
+  stable.
+- *Machine:* an install test puts both channels on one machine or simulator, launches each,
+  and confirms that removing one leaves the other working.
+- *Reviewer:* both icons appear in the release gallery (BB-8), and a person can tell them
+  apart at a glance.

@@ -46,8 +46,8 @@ machine, and a machine cannot make that judgement. 12.e forbids exactly that.
    machine owes the person in front of it, which is 12's subject, while 9 is about
    momentum in the work itself.
 2. **The bar is a document, and every item is checkable.**
-   [`docs/design/beauty-bar.md`](../../design/beauty-bar.md) states ten items, BB-1 to
-   BB-10. Each has a rule and a check, and each check is marked *machine*, *reviewer*, or
+   [`docs/design/beauty-bar.md`](../../design/beauty-bar.md) states eleven items, BB-1 to
+   BB-11. Each has a rule and a check, and each check is marked *machine*, *reviewer*, or
    both:
    - BB-1 one token-based design system;
    - BB-2 dark and light themes, with Light, Dark and System modes (System by default,
@@ -59,7 +59,10 @@ machine, and a machine cannot make that judgement. 12.e forbids exactly that.
    - BB-7 the parity matrix;
    - BB-8 a release gallery signed off by the operator;
    - BB-9 dependency and platform currency checked by CI;
-   - BB-10 notifications and sounds as one system.
+   - BB-10 notifications and sounds as one system;
+   - BB-11 a stable channel from `main` and a nightly channel from `develop` on every GUI
+     platform, installed side by side with distinct IDs and icons, stable always the
+     default: an addition the operator made the same day.
 
    The canon cites the bar rather than restating it, so the bar can be refined in a pull
    request without a new ratification. What cannot move without one is the rule that
