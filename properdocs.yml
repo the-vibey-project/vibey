@@ -53,6 +53,7 @@ nav:
   - Reference:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
+      - Hub API: reference/hub-api.md
   - Design:
       - The design system: design/README.md
       - Motion: design/motion.md
@@ -126,4 +127,5 @@ nav:
           - "0065 — vibey and krypton": architecture/decisions/0065-vibey-and-krypton.md
           - "0066 — One design system for every surface": architecture/decisions/0066-one-design-system-for-every-surface.md
           - "0067 — One TypeScript core for every krypton client": architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md
+          - "0068 — The hub: vibey serve": architecture/decisions/0068-the-hub.md
   - Research paper: paper.md
