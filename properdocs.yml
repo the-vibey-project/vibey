@@ -54,6 +54,8 @@ nav:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
   - Design:
+      - The design system: design/README.md
+      - Motion: design/motion.md
       - The Beauty Bar: design/beauty-bar.md
   - Architecture:
       - Decision records:
@@ -122,4 +124,5 @@ nav:
           - "0063 — ULTRA: effort without a ceiling": architecture/decisions/0063-ultra-effort-without-a-ceiling.md
           - "0064 — gptossloop is the sovereign engine, and qwenloop is its opt-in Qwen twin": architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md
           - "0065 — vibey and krypton": architecture/decisions/0065-vibey-and-krypton.md
+          - "0066 — One design system for every surface": architecture/decisions/0066-one-design-system-for-every-surface.md
   - Research paper: paper.md

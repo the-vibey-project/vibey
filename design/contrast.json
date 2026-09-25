@@ -1,0 +1,54 @@
+{
+  "$description": "Every foreground/background pair a vibey surface may draw, and the WCAG 2.2 contrast each must reach. Checked in both themes by tests/meta/test_design_tokens_generated.py. 4.5 is SC 1.4.3 (text); 3.0 is SC 1.4.11 (UI components and graphical objects).",
+  "themes": ["dark", "light"],
+  "rules": [
+    {
+      "name": "body and link text on every surface",
+      "minimum": 4.5,
+      "foreground": ["text.primary", "text.secondary", "text.tertiary", "text.link", "text.link-hover"],
+      "background": ["bg.canvas", "bg.surface", "bg.raised", "bg.overlay"]
+    },
+    {
+      "name": "status text on the surfaces it appears on",
+      "minimum": 4.5,
+      "foreground": ["status.success", "status.warning", "status.danger", "status.info", "status.ultra"],
+      "background": ["bg.canvas", "bg.surface", "bg.raised"]
+    },
+    {
+      "name": "lane and job state labels",
+      "minimum": 4.5,
+      "foreground": ["state.queued", "state.running", "state.awaiting-human", "state.parked", "state.succeeded", "state.failed", "state.cancelled", "state.ultra"],
+      "background": ["bg.canvas", "bg.surface"]
+    },
+    {
+      "name": "text on an accent fill",
+      "minimum": 4.5,
+      "foreground": ["text.on-accent"],
+      "background": ["accent.default", "accent.hover"]
+    },
+    {
+      "name": "accent text on its own tint",
+      "minimum": 4.5,
+      "foreground": ["text.primary", "text.link"],
+      "background": ["accent.subtle"]
+    },
+    {
+      "name": "code on the code block",
+      "minimum": 4.5,
+      "foreground": ["syntax.text", "syntax.string", "syntax.keyword", "syntax.number", "syntax.title", "syntax.attr", "syntax.builtin", "syntax.comment", "syntax.punct", "syntax.deletion", "syntax.addition"],
+      "background": ["bg.code"]
+    },
+    {
+      "name": "controls, focus rings and strong borders",
+      "minimum": 3.0,
+      "foreground": ["border.strong", "focus.ring", "accent.default"],
+      "background": ["bg.canvas", "bg.surface", "bg.raised"]
+    },
+    {
+      "name": "lane colours as chart marks",
+      "minimum": 3.0,
+      "foreground": ["lane.1", "lane.2", "lane.3", "lane.4", "lane.5", "lane.6", "lane.7", "lane.8"],
+      "background": ["bg.canvas", "bg.surface"]
+    }
+  ]
+}
