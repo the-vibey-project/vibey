@@ -215,7 +215,8 @@ option a declaration reaches.
 
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
 carried this entry; its two loops and two layers, and its one instance per model,
-set by the merge that carried them)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
+set by the merge that carried them; its capacity on the operator's own hardware made
+the number measured on each device by the merge that carried that sentence)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
 becomes — drives the models and tools that run on the operator's own hardware;
 **`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
 `cursorloop` and `agyloop` as its adapters. Each loop runs as
@@ -225,11 +226,17 @@ a second instance of a loop to go faster, and nothing spawns a loop directly:
 vibey's workers, storms and the command line put work on the loop's queue, and
 the one instance is shared by all of them.
 
-The instance takes on as much work at once as its capacity allows — for a model
-running on the operator's own hardware, one run at a time — and no more.
-Everything else waits in the queue, where waiting is ordered, visible and safe.
-Throughput is raised by giving the one instance more capacity, never by starting
-another.
+The instance takes on as much work at once as its capacity allows, and no more. For
+a model running on the operator's own hardware, that capacity is **the number of
+concurrent runs measured on that device and recorded as evidence** (8.j) — measured
+against the loop's own work, keyed to the device, the runner, the model and its context
+window, and held to the bounds 8.j names: wired memory within its ceiling, swap not
+rising, no prompt refused or cut that one run would have served, and every answer as
+faithful as one run's. **Unmeasured or stale means one.** A number the evidence does not
+support is never run, however it is declared, and the operator may always declare fewer
+(12.c). Everything else waits in the queue, where waiting is ordered, visible and safe.
+Throughput is raised by giving the one instance more capacity — measured capacity —
+never by starting another.
 
 **Rotation has two layers, and both run on the bus.** The outer layer chooses the
 loop: `sovereignloop` by default, always (8.a), and `paidloop` only when the
