@@ -1623,7 +1623,7 @@ def operator(
     try:
         from vibey.infrastructure.operator import run as run_operator
     except ImportError as exc:
-        typer.echo("operator support is not installed: pip install 'vibey[operator]'")
+        typer.echo("operator support is not installed: pip install 'vibey-engine[operator]'")
         raise typer.Exit(1) from exc
 
     run_operator(namespace=namespace)

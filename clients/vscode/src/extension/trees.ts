@@ -163,7 +163,7 @@ class VibeyMissing {
     return {
       kind: 'info',
       label: 'vibey was not found',
-      description: 'install it (pip install vibey) or set vibey.cliPath',
+      description: 'install it (pip install vibey-engine) or set vibey.cliPath',
       icon: 'warning',
       command: { command: 'vibey.doctor', title: 'Check my setup' },
     };

@@ -204,7 +204,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
           # PyMuPDF turns each compiled page into an SVG; pinned, and with no dependencies.
           python -m pip install --quiet 'pymupdf==1.28.2'
@@ -451,7 +451,7 @@ jobs:
             if [ -n "$self" ]; then
               python -m pip install --quiet -e "$self"
             else
-              python -m pip install --quiet vibey
+              python -m pip install --quiet vibey-engine
             fi
           fi
           if [ "__VIBEY_GH_DOC_BOOK__" = "true" ]; then
@@ -737,7 +737,7 @@ jobs:
           # Self-hosting-aware: this repository IS vibey-gh when the import already
           # resolves from source; every adopter installs it from `vibey`, the
           # distribution `vibey_gh` ships inside (ADR-0037).
-          python - <<'PY' || python -m pip install --quiet vibey
+          python - <<'PY' || python -m pip install --quiet vibey-engine
           import vibey_gh  # noqa: F401
           PY
           python - <<'PY'
@@ -1355,7 +1355,7 @@ jobs:
               if [ -n "$self" ]; then
                 python -m pip install --quiet -e "$self"
               else
-                python -m pip install --quiet vibey
+                python -m pip install --quiet vibey-engine
               fi
             ) || echo "::warning::announce: vibey-gh could not be installed and the deploy stands"
           fi

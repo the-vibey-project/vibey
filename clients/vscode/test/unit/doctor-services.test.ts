@@ -171,7 +171,7 @@ describe('Doctor', () => {
       name: 'vibey commands',
       status: 'warn',
       detail: 'this vibey lacks projects, budget; they ship in vibey 3.0.0 (added after 2.1.0)',
-      fix: ['Point vibey.cliPath at a newer vibey, or install one: pip install --upgrade vibey'],
+      fix: ['Point vibey.cliPath at a newer vibey, or install one: pip install --upgrade vibey-engine'],
     });
   });
 
@@ -206,7 +206,7 @@ describe('Doctor', () => {
       name: 'gptossloop',
       status: 'fail',
       detail: 'gptossloop was not found on PATH (looked in PATH)',
-      fix: ['gptossloop ships with vibey: pip install vibey', 'Or point the vibey.gptossloopPath setting at it.'],
+      fix: ['gptossloop ships with vibey: pip install vibey-engine', 'Or point the vibey.gptossloopPath setting at it.'],
     });
     // A runner named as another default is the one checked, under its own setting.
     const qwen = await doctor({ runner: LocalRunners.QWENLOOP }, ['git', 'qwenloop', 'vibey', 'vibey-skills'], versions().on(['/opt/bin/qwenloop', '--version'], { stdout: 'qwenloop 0.3.0\n' })).run();
@@ -320,10 +320,10 @@ describe('CoreServices', () => {
     // Each runner's program is named by its own setting; vibey.qwenloopPath still finds qwenloop.
     const declared = await build({ raw: { gptossloopPath: '/opt/g/gptossloop', qwenloopPath: '/opt/q/qwenloop' } }).core.runServices();
     expect(declared.command(gptossloop)).toBe(
-      'gptossloop cannot run: /opt/g/gptossloop is not an executable file. It ships with vibey (pip install vibey), or set vibey.gptossloopPath.',
+      'gptossloop cannot run: /opt/g/gptossloop is not an executable file. It ships with vibey (pip install vibey-engine), or set vibey.gptossloopPath.',
     );
     expect(declared.command(qwenloop)).toBe(
-      'qwenloop cannot run: /opt/q/qwenloop is not an executable file. It ships with vibey (pip install vibey), or set vibey.qwenloopPath.',
+      'qwenloop cannot run: /opt/q/qwenloop is not an executable file. It ships with vibey (pip install vibey-engine), or set vibey.qwenloopPath.',
     );
     expect(services.runners).toBe(LocalRunners.FAMILY);
     expect(services.userConfig(LocalRunners.GPTOSSLOOP)).toBeUndefined();

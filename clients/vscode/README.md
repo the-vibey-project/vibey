@@ -22,7 +22,7 @@ Tick these off once, in this order.
    - On Linux, run `curl -fsSL https://ollama.com/install.sh | sh`.
    - Windows is not supported yet ([#1097](https://github.com/the-vibey-project/vibey/issues/1097)).
 4. **vibey**, which brings the two programs the extension drives, `gptossloop` (the local agent)
-   and `vibey-skills` (context for plugins): `pip install vibey`. It needs Python 3.12 or newer.
+   and `vibey-skills` (context for plugins): `pip install vibey-engine`. It needs Python 3.12 or newer.
    The same install brings `qwenloop`, the same agent on a Qwen model, which runs only once you
    switch it on in vibey
    ([ADR-0064](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0064-gptossloop-is-the-sovereign-engine/)).
@@ -298,7 +298,7 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | Setting | Default | What it does |
 |---|---|---|
 | `vibey.cliPath` | `""` | The `vibey` program to run. Empty: the first `vibey` on your PATH. **Vibey: Check my setup** prints the one it found and its version. |
-| `vibey.gptossloopPath` | `""` | The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey`). |
+| `vibey.gptossloopPath` | `""` | The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey-engine`). |
 | `vibey.qwenloopPath` | `""` | The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0064). Empty: the first `qwenloop` on your PATH. |
 | `vibey.ollamaPath` | `""` | The `ollama` program, used only to start a server with `ollama serve` and to show a download command. Empty: the first `ollama` on your PATH. |
 | `vibey.gitPath` | `""` | The `git` program. Empty: the first `git` on your PATH. |

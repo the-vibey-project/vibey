@@ -7,8 +7,8 @@ codexloop, cursorloop, agyloop, and the local runner that ships as two engines:
 Qwen), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
 an optional visual-design interstitial, plus an opt-in Azure deployment stage
-set. One distribution — `pip install vibey` delivers the whole family,
-engines and tools included (ADR-0037). Python 3.12+.
+set. One package — `pip install vibey-engine` delivers the whole engine family,
+engines and tools included (ADR-0037, ADR-0069); the apps are `krypton-app`. Python 3.12+.
 
 **This file is deliberately short — it holds facts, not procedures.** Every
 "how do I..." lives in a skill below; every "why was it built this way"
@@ -133,8 +133,9 @@ lives in `docs/architecture/decisions/`.
 - **Never implement on `main`.** Feature PRs squash into `develop` through the
   merge train (`vibey-gh merge-train`); `develop` is promoted to `main` by
   `vibey-gh promote` as a **rebase** merge, keeping history linear
-  (`.vibey-gh.toml [branches]`). A push to `develop` publishes `vibey-dev` to
-  TestPyPI; a push to `main` publishes `vibey` to PyPI. ADR-0028.
+  (`.vibey-gh.toml [branches]`). A push to `develop` publishes `vibey-engine`
+  and `krypton-app` dev builds to TestPyPI; a push to `main` publishes both to PyPI,
+  each by its own workflow (`vibey-engine.yml`, `krypton-app.yml`). ADR-0028, ADR-0069.
 - **Sovereign self-hosted free is the only default on every surface; paid is
   declared-only.** Each operational surface has one vibey-owned protocol and a
   sovereign default adapter that is always on: engine `gptossloop`,
@@ -179,7 +180,7 @@ uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
 Each tenant keeps its own `pyproject.toml`, version, Python floor (3.12+ for
 every library), test suite and gates (ADR-0022). The old sibling GitHub
 repositories are gone, and so are the old PyPI names: the whole tree ships as
-the single `vibey` distribution (ADR-0037).
+the single `vibey-engine` package (ADR-0037, ADR-0069).
 
 ## The six-phase model
 
@@ -285,7 +286,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (68 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (69 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

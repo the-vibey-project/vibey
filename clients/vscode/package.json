@@ -511,7 +511,7 @@
         "vibey.gptossloopPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey`)."
+          "markdownDescription": "The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey-engine`)."
         },
         "vibey.qwenloopPath": {
           "type": "string",

@@ -86,4 +86,4 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/the-vibey-project/vibey-skills
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/vibey/
+      link: https://pypi.org/project/vibey-engine/

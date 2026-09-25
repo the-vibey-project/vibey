@@ -167,7 +167,7 @@ The PR-review gate schedules the sovereign review only while
 machine that serves the lane (vibey ADR-0060).
 
 **Stand it up** from the repository's main checkout, with a `vibey-gh` installed outside any
-checkout and outside any temporary directory (for example `uv tool install vibey`):
+checkout and outside any temporary directory (for example `uv tool install vibey-engine`):
 
 ```bash
 vibey-gh heartbeat install          # writes the unit, loads nothing, prints the next commands

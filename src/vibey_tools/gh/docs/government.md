@@ -63,6 +63,6 @@ are in [the research paper](paper.md) with proofs or proof sketches.
 
 An institution that adopts this gets what the opening promised: attributable artifacts,
 reconstructible decisions, continuity under denial, and an exit that never closes. The
-concrete next step is one command — `pip install vibey`, the distribution that carries
+concrete next step is one command — `pip install vibey-engine`, the distribution that carries
 `vibey-gh` — followed by
 [the adoption guide](adoption.md) on a repository that matters to the mission.

@@ -22,7 +22,7 @@ case "$DRIVER" in
   *) echo "unknown driver: $DRIVER" >&2; exit 1 ;;
 esac
 if ! command -v "$DRIVER" >/dev/null 2>&1; then
-  echo "driver '$DRIVER' is not on PATH — every runner ships in the one vibey distribution now (ADR-0037): \`uv tool install vibey\`, or \`uv tool install --editable \"$VIBEY_ROOT\"\` from this checkout" >&2
+  echo "driver '$DRIVER' is not on PATH — every runner ships in the one vibey distribution now (ADR-0037): \`uv tool install vibey-engine\`, or \`uv tool install --editable \"$VIBEY_ROOT\"\` from this checkout" >&2
   exit 1
 fi
 

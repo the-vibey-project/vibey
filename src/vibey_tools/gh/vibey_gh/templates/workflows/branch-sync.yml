@@ -64,7 +64,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Reconcile every open branch
@@ -115,7 +115,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Refill and re-dispatch

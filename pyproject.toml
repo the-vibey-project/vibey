@@ -3,19 +3,20 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vibey"
+name = "vibey-engine"
 version = "2.1.0"
 description = "A queue-based, six-phase conductor with optional visual design and Azure deployment."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-# One distribution ships the whole family (ADR-0037), so this is the union of every
+# One package ships the whole engine family: `vibey-engine` (ADR-0037, renamed by
+# ADR-0069; the apps publish separately as `krypton-app`), so this is the union of every
 # bundled package's runtime requirements -- not the conductor's alone. The engine SDKs
-# are here rather than behind an extra because `pip install vibey` now installs the
+# are here rather than behind an extra because `pip install vibey-engine` installs the
 # engine binaries themselves: `vibey doctor` resolves them with `shutil.which`, and an
 # engine on PATH that raises ImportError on its first line is worse than one that is
 # absent. vibey-bootstrap's Azure stack is the one runtime block that stayed an extra
-# (`vibey[azure]`, below) for exactly the reason `operator` is an extra.
+# (`vibey-engine[azure]`, below) for exactly the reason `operator` is an extra.
 dependencies = [
     # the conductor
     "typer>=0.15",
@@ -88,7 +89,7 @@ azbootstrap = "vibey_bootstrap.contrib.scaffold:main_azbootstrap"
 [project.optional-dependencies]
 # kopf pulls the whole Kubernetes client stack. Nobody running `vibey
 # worker` on a laptop needs it, so the operator is an extra rather than a
-# base dependency: `pip install vibey[operator]`.
+# base dependency: `pip install vibey-engine[operator]`.
 operator = [
     "kopf>=1.37",
     "kubernetes>=31.0",
@@ -98,7 +99,7 @@ operator = [
 # vibey_skills.cli`, the same interpreter -- so the extra has nothing left to install. It
 # stays as a compatibility alias because removing a key is a less-configurable state
 # (sub-doctrine 12.c) and because `uv sync --extra skills` errors on an extra that is not
-# declared, where `pip install 'vibey[skills]'` would only warn.
+# declared, where `pip install 'vibey-engine[skills]'` would only warn.
 skills = []
 # vibey-bootstrap's Azure stack. An extra for the same reason `operator` is one: nobody
 # running `vibey worker` on a laptop needs the Azure SDK, App Insights and OpenTelemetry,
@@ -123,14 +124,15 @@ azure = [
 ]
 # Every third-party package any vibey-bootstrap extra named while it was published
 # separately, in one extra. `pip install vibey-bootstrap[scheduler]` has no successor
-# spelling per-feature -- there is one distribution now -- so the replacement is one
+# spelling per-feature -- the engine is one package now -- so the replacement is one
 # aggregate that makes every guarded optional import in vibey_bootstrap resolve.
 bootstrap-all = [
-    # The Azure set is spelled out rather than referenced as `vibey[azure]`. A
-    # self-requirement names THIS distribution, and release.yml renames the project to
-    # `vibey-dev` for TestPyPI -- so `vibey-dev[bootstrap-all]` would ask the index for
-    # `vibey[azure]`, a name this project does not own there. An extra that resolves to
-    # somebody else's package is worse than one that does not resolve at all.
+    # The Azure set is spelled out rather than referenced as `vibey-engine[azure]`. A
+    # self-requirement names THIS distribution by the name it had when it was written, and
+    # this project has been renamed before (`vibey` to `vibey-engine`, ADR-0069); on the
+    # index where the old name is somebody else's, the self-reference would resolve to
+    # their package. An extra that resolves to somebody else's package is worse than one
+    # that does not resolve at all.
     "azure-appconfiguration-provider>=1.0.0",
     "azure-appconfiguration>=1.9.0",
     "azure-keyvault-secrets>=4.7.0",

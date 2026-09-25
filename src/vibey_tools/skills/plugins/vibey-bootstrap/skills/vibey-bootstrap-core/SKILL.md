@@ -24,21 +24,21 @@ governance, and an `vibey-bootstrap` scaffold CLI — all opt-in behind pip extr
 > integration with a Python backend, and porting the patterns to TypeScript.)
 
 **Compatibility:** the source and the distribution that ships it support Python **≥ 3.12**.
-Distribution: `pip install vibey` (PyPI, MIT) — there is no separate
+Distribution: `pip install vibey-engine` (PyPI, MIT) — there is no separate
 `vibey-bootstrap` project (vibey ADR-0037). v4.0.0 is **additive** — every v1/v2 import path, symbol, signature, and
 default is unchanged; opt into new extras and env flags. See `MIGRATING-TO-V3.md`.
 
 ## 1. Installation & extras
 
 ```bash
-pip install vibey                     # the whole family; vibey_bootstrap importable
-pip install 'vibey[azure]'            # App Configuration + Key Vault + App Insights
-pip install 'vibey[bootstrap-all]'    # every optional dependency any extra below needs
+pip install vibey-engine                     # the whole family; vibey_bootstrap importable
+pip install 'vibey-engine[azure]'            # App Configuration + Key Vault + App Insights
+pip install 'vibey-engine[bootstrap-all]'    # every optional dependency any extra below needs
 ```
 
 **Extra names.** The matrix below lists the extras as `vibey-bootstrap`'s own
 `pyproject.toml` declares them, and they still select what each feature needs when the
-package is installed from the tree. On the `vibey` distribution there is no per-feature
+package is installed from the tree. On the `vibey-engine` package there is no per-feature
 successor spelling: the replacements are the two aggregates above (vibey ADR-0037).
 
 ### Core dependencies (always installed)
