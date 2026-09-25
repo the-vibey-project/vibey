@@ -497,6 +497,8 @@ A tool that would put such work on volatile storage refuses, and says which key 
 
 Durable storage is necessary and not sufficient, because one disk is one failure away from nothing. Work is committed as soon as it is coherent rather than when it is finished, and pushed to where others can see it often enough that an unrecoverable machine costs minutes of work and never hours — a draft is fine; an hour of work that exists nowhere else is not. A long measurement records each step as it finishes and resumes from the last one, so an interruption costs a step and never the run.
 
+**10.i — the signal is read before it is sent** *(ratified by the merge that carried this entry)*: a signal that tells others something is ready — a heartbeat, a status, a readiness flag that work will be routed on — is published only after what it claims has been read true, from the thing that knows, at the moment it is sent. A read that fails, or cannot be made, withholds the signal, and the silence is the honest message: a missing signal costs one lane, a false one costs everyone who trusted it. The same holds for the gates that judge work. A gate that exempts anything decides so itself, by a rule anyone can read, over the very objects it is judging, and exactly as wide as the one thing the rule was written for — never on a caller's flag, a variable, or a request to look away. An exemption a caller can ask for is a bypass with better manners (12.d).
+
 ## 11 — The living roadmap
 
 Every project keeps an active, living roadmap until its goal is achieved and its
