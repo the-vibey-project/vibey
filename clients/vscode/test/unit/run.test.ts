@@ -722,7 +722,7 @@ describe('TaskRun', () => {
     );
   });
 
-  it('binds qwenloop through its own QWENLOOP_* settings and config, and hands it a model only when one is named (ADR-0062)', async () => {
+  it('binds qwenloop through its own QWENLOOP_* settings and config, and hands it a model only when one is named (ADR-0064)', async () => {
     const asked: string[] = [];
     const run = async (model: string | null) => {
       const h = harness({

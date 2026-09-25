@@ -44,7 +44,7 @@ class LocalEngineSettingsInterface(Protocol):
 
     def enabled(self, engine_id: EngineId) -> bool:
         """The environment switch when it is set at all, else `[features]`, else the
-        engine's own default (on for gptossloop, ADR-0062)."""
+        engine's own default (on for gptossloop, ADR-0064)."""
         ...
 
     @property

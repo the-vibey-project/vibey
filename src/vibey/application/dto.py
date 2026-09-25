@@ -133,6 +133,18 @@ class HumanGateRecord:
     timeout_at: datetime | None
     answered_at: datetime | None
     answered_by: str | None
+    answer_request_id: str | None = None
+    """The id of the request that answered the gate; `None` while open, and for a gate
+    answered before answers carried one. The same id replayed is a no-op."""
+
+
+@dataclass(frozen=True, slots=True)
+class GateAnswerOutcome:
+    """What answering a gate did: the gate as it now stands, and whether this request
+    had already answered it (`replayed`), in which case nothing was written."""
+
+    record: HumanGateRecord
+    replayed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -370,7 +382,7 @@ class EngineContext:
     run: tuple[str, ...]
     switch: str | None = None
     model: str | None = None
-    # Whether the switch is on when nothing sets it: gptossloop's is (ADR-0062).
+    # Whether the switch is on when nothing sets it: gptossloop's is (ADR-0064).
     on_by_default: bool = False
 
 

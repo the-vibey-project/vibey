@@ -5,14 +5,14 @@
 # This attaches qwenloop to a locally running Ollama OpenAI-compatible endpoint.
 #
 # qwenloop reads only QWENLOOP_* and its own config file. gptossloop -- the same
-# runner on gpt-oss:20b, the sovereign default (ADR-0062) -- takes the same keys
+# runner on gpt-oss:20b, the sovereign default (ADR-0064) -- takes the same keys
 # from ~/.config/gptossloop/config.toml (or GPTOSSLOOP_CONFIG) and GPTOSSLOOP_*,
 # so this file never changes the model gptossloop runs.
 
 backend = "openai-compat"
 base_url = "http://127.0.0.1:11434/v1"
 # qwen3 emits native tool calls reliably on Ollama's OpenAI-compatible endpoint.
-# It is qwenloop's default since ADR-0062; the line keeps the choice explicit.
+# It is qwenloop's default since ADR-0064; the line keeps the choice explicit.
 model = "qwen3:14b"
 
 # Full local context and a generous turn budget for storm work.

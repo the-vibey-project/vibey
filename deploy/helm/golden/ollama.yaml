@@ -3666,7 +3666,7 @@ spec:
             - name: VIBEY_OLLAMA_MODEL
               value: "gpt-oss:20b"
             # gptossloop, the sovereign default engine and on without a switch
-            # (ADR-0062): its openai-compat backend wants the OpenAI base URL, /v1
+            # (ADR-0064): its openai-compat backend wants the OpenAI base URL, /v1
             # included; a base URL alone is what makes `auto` select it.
             - name: GPTOSSLOOP_BASE_URL
               value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434/v1"

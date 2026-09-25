@@ -2,7 +2,7 @@
 """The sovereign DECOMPOSE provider: BUILD's plan without paid credentials (8.a).
 
 With DESIGN sovereign (ADR-0027), `vibey worker --provider qwenloop` (now `gptossloop`,
-ADR-0062) still handed the accepted spec to `ScriptedWorkPlanProducer` -- the test fake,
+ADR-0064) still handed the accepted spec to `ScriptedWorkPlanProducer` -- the test fake,
 whose items carry no verification commands, so every verify gate after it ran nothing
 and passed. A project
 could be specified without paid credit and then not honestly planned.

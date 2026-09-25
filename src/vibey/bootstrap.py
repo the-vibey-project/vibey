@@ -43,6 +43,7 @@ from vibey.application.engine_selection import (
     SpendMeteringLedger,
 )
 from vibey.application.engine_selector import EngineSelector
+from vibey.application.gate_answer import GateAnswerService
 from vibey.application.interfaces import (
     AzureClientPort,
     BlobPort,
@@ -57,6 +58,7 @@ from vibey.application.interfaces import (
     EmailPort,
     EngineAdapter,
     FilesPort,
+    GateAnswerServiceInterface,
     IssueTrackerPort,
     JobHandler,
     MessagingPort,
@@ -197,6 +199,9 @@ class AppResources:
     # Project budgets (`vibey budget`). Only the service: the store that writes a
     # project's caps and their ledger events is built here and handed to nothing else.
     project_budgets: ProjectBudgetServiceInterface
+    # Answering gates (`vibey answer`, the operator). The service names who answered and
+    # which request; the repository answers each gate once and records it on the ledger.
+    gate_answers: GateAnswerServiceInterface
     integration_lock: PostgresAdvisoryLock | None = None
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
@@ -1033,6 +1038,7 @@ async def build_app(
                 caller=ProcessCaller(),
                 clock=clock,
             ),
+            gate_answers=GateAnswerService(gates=gates, caller=ProcessCaller()),
             integration_lock=PostgresAdvisoryLock(pool),
             ledger_guard=guard,
             queue_reaper=queue_reaper,

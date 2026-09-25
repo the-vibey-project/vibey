@@ -23,6 +23,7 @@ import typer
 from vibey.domain.errors import (
     BudgetExceeded,
     EscalationExhausted,
+    GateAlreadyAnswered,
     HandoffRejected,
     IllegalTransitionError,
     InvalidPhaseError,
@@ -30,6 +31,7 @@ from vibey.domain.errors import (
     NoEligibleEngine,
     NotReorderable,
     PriorityRefused,
+    UnknownGate,
     VibeyError,
 )
 
@@ -79,6 +81,14 @@ _NEXT_STEP: dict[type[BaseException], str] = {
         "in a reviewed change, and running it as that account (ADR-0054)."
     ),
     NotReorderable: "Nothing moved. `vibey queue list` shows the jobs that can still be moved.",
+    GateAlreadyAnswered: (
+        "A gate is answered once, and the first answer stands. The answer that landed\n"
+        "is on the ledger:\n"
+        "  vibey ledger search --kind GateAnswered\n"
+        "To retry an answer safely, give it a --request-id: the same id with the same\n"
+        "answer is a no-op once it has landed."
+    ),
+    UnknownGate: _FINDING_A_GATE,
 }
 
 

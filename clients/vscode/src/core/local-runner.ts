@@ -1,6 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * The family's local runner, under both names it ships as (ADR-0062). One package
+ * The family's local runner, under both names it ships as (ADR-0064). One package
  * (src/vibey_runners/qwen) installs two programs that differ only in who they are:
  *
  *   gptossloop  GPTOSSLOOP_* settings, `<user config dir>/gptossloop/config.toml`, asks for

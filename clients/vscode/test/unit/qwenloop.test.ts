@@ -11,7 +11,7 @@ const engines = new CatalogueParser().parse(JSON.parse(fixture('vibey-loops.json
 const engine = (id: string): CatalogueEngine => engines.find((candidate) => candidate.engine_id === id) as CatalogueEngine;
 
 describe('LocalRunners', () => {
-  it('knows the runner under both names it ships as, each with its own settings (ADR-0062)', () => {
+  it('knows the runner under both names it ships as, each with its own settings (ADR-0064)', () => {
     const runners = LocalRunners.FAMILY;
     expect(runners.default).toBe(LocalRunners.GPTOSSLOOP);
     expect(runners.all.map((runner) => runner.name)).toEqual(['gptossloop', 'qwenloop']);

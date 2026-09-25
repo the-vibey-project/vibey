@@ -163,7 +163,7 @@ spec:
           done
           {{- if .Values.ollama.qwenloopFeature }}
           ollama pull "$OLLAMA_PULL_MODEL"
-          # qwenloop's Qwen model, beside the default (ADR-0062).
+          # qwenloop's Qwen model, beside the default (ADR-0064).
           exec ollama pull "$OLLAMA_PULL_QWEN_MODEL"
           {{- else }}
           exec ollama pull "$OLLAMA_PULL_MODEL"

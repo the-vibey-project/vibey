@@ -156,7 +156,7 @@ uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
 
 - `src/vibey_runners/{claude,codex,cursor,agy,qwen}` — claudeloop, codexloop,
   cursorloop, agyloop, gptossloop and qwenloop (one package, two engines —
-  ADR-0062); `src/vibey_runners/common` — vibey-runners-common.
+  ADR-0064); `src/vibey_runners/common` — vibey-runners-common.
 - `src/vibey_tools/gh` — vibey-gh (provenance, merge train, promotion, release,
   and the governance canon under `docs/`); `src/vibey_tools/skills` —
   vibey-skills; `src/vibey_tools/bootstrap` — vibey-bootstrap.
@@ -196,12 +196,12 @@ explicit opt-in; declining deployment records a successful local completion.
   (`VIBEY_FEATURE_QWENLOOP=1` or `[features] qwenloop = true`); and
   `claudeloop-local` — the claudeloop binary on a local backend profile, off by
   default (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features] claudeloop_local`).
-  ADR-0062. Under sub-doctrine 8.a local engines are **preferred first**:
+  ADR-0064. Under sub-doctrine 8.a local engines are **preferred first**:
   BUILD selection runs SWRR within the LOCAL tier and falls back to PAID only when
   no local engine is eligible (ADR-0038, amending ADR-0015's standby). With no
   `--provider`, DESIGN and DECOMPOSE run on the sovereign providers
   (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`; ADR-0027, ADR-0038,
-  ADR-0062). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
+  ADR-0064). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Rotation:** `domain/rotation.py::select()` implements smooth-weighted
   round-robin selection (ADR-0005) and is wired in production: `bootstrap.py`
   builds `EngineSelector`, and BUILD jobs pick their engine per job through
@@ -269,7 +269,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (62 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (64 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

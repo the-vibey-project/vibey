@@ -292,7 +292,7 @@ def test_cursorloop_unknown_event_returns_none() -> None:
 
 
 def test_gptossloop_reads_through_qwenloops_one_map() -> None:
-    """ADR-0062: one runner, one map -- an alias, not a copy that could drift from it."""
+    """ADR-0064: one runner, one map -- an alias, not a copy that could drift from it."""
     assert LOOP_EVENT_MAP[EngineId.GPTOSSLOOP] is LOOP_EVENT_MAP[EngineId.QWENLOOP]
 
 

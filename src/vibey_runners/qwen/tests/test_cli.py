@@ -294,7 +294,7 @@ def test_remove_existing_profile_is_recoverable(
 
 
 def test_entry_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Each console script runs the one command line as its own engine (ADR-0062)."""
+    """Each console script runs the one command line as its own engine (ADR-0064)."""
     import qwenloop.cli.app as module
 
     called: list[tuple[str, str]] = []
@@ -732,7 +732,7 @@ def test_run_attaches_to_the_endpoint_named_by_flag(
 def test_gptossloop_asks_for_gpt_oss_and_reads_only_its_own_settings(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, recording_runner: list[dict[str, object]]
 ) -> None:
-    """ADR-0062: the same runner as gptossloop asks an endpoint for gpt-oss:20b and reads
+    """ADR-0064: the same runner as gptossloop asks an endpoint for gpt-oss:20b and reads
     GPTOSSLOOP_*; a QWENLOOP_MODEL set for qwenloop never changes what gptossloop runs."""
     import qwenloop.cli.app as module
     from qwenloop.domain.config import GPTOSSLOOP

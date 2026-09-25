@@ -8,7 +8,7 @@
 > sibling GitHub repositories no longer exist, so the `~/git/<repo>` checkouts,
 > `git fetch origin` steps and per-repo PR flow below point at nothing. A fifth
 > runner, `qwenloop`, was an opt-in engine (ADR-0015) and the sovereign DESIGN
-> provider (ADR-0027); since ADR-0062 it ships as two engines, `gptossloop` (the
+> provider (ADR-0027); since ADR-0064 it ships as two engines, `gptossloop` (the
 > sovereign default on GPT-OSS 20B, and the sovereign DESIGN provider) and
 > `qwenloop` (opt-in, on Qwen). This runbook does not cover either.
 >

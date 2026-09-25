@@ -49,7 +49,7 @@ export interface CatalogueEngine {
   readonly repealed: boolean;
   readonly switch: string | null;
   /**
-   * Whether vibey switches it on unless its switch says otherwise (gptossloop, ADR-0062). A
+   * Whether vibey switches it on unless its switch says otherwise (gptossloop, ADR-0064). A
    * producer from before the key existed switched nothing on by default: false.
    */
   readonly on_by_default: boolean;

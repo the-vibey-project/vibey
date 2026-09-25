@@ -80,7 +80,7 @@ class FailoverConfig:
     interval_seconds: int = 300
     seats: tuple[Seat, ...] = field(
         # The sovereign default engine on GPT-OSS; qwenloop, its opt-in Qwen twin, is a
-        # seat an operator names in the config file (vibey ADR-0062).
+        # seat an operator names in the config file (vibey ADR-0064).
         default_factory=lambda: (Seat(name="gptossloop", launch="gptossloop run"),)
     )
 

@@ -22,7 +22,7 @@ from vibey.domain.queue_reap import (
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-# The sovereign default (on without declaration; ADR-0062 made it gptossloop, the local
+# The sovereign default (on without declaration; ADR-0064 made it gptossloop, the local
 # runner on GPT-OSS)
 DEFAULT_ENGINES = ("gptossloop",)
 # Local engines, each behind its own `[features]` switch (ADR-0015, ADR-0038). The
@@ -32,7 +32,7 @@ LOCAL_ENGINE_FEATURES = {
     "qwenloop": "qwenloop",
     "claudeloop-local": "claudeloop_local",
 }
-# The local engines whose switch is on when nothing sets it (ADR-0062): the sovereign
+# The local engines whose switch is on when nothing sets it (ADR-0064): the sovereign
 # default, which a project switches off only by saying so -- `[features] gptossloop =
 # false` or `VIBEY_FEATURE_GPTOSSLOOP=0`. Every other local engine is opt-in.
 LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})
@@ -46,10 +46,10 @@ KNOWN_ENGINES = (
     "claudeloop-local",
 )
 # Said beside a refused request for an engine whose meaning changed, so the operator who
-# configured the old one learns what it became (ADR-0062).
+# configured the old one learns what it became (ADR-0064).
 _SWITCH_HINTS = {
     "qwenloop": (
-        " -- qwenloop runs a Qwen model since ADR-0062; the gpt-oss engine it used to be is "
+        " -- qwenloop runs a Qwen model since ADR-0064; the gpt-oss engine it used to be is "
         "gptossloop, on by default"
     ),
 }
@@ -194,7 +194,7 @@ class TelemetryConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
-    # On unless switched off: the sovereign default engine (ADR-0062).
+    # On unless switched off: the sovereign default engine (ADR-0064).
     gptossloop: bool = True
     # The same runner on a Qwen model; opt-in.
     qwenloop: bool = False

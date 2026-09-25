@@ -409,7 +409,7 @@ def test_the_controls_each_runner_defines() -> None:
 
 
 def test_gptossloop_is_the_qwenloop_runner_under_its_own_name_and_settings() -> None:
-    """ADR-0062: gptossloop differs from qwenloop in its id, its binary, the runner version
+    """ADR-0064: gptossloop differs from qwenloop in its id, its binary, the runner version
     that first shipped it and the settings it reads -- never in how a run is laid out."""
     gptoss = BY_ENGINE_ID[EngineId.GPTOSSLOOP]
     assert (gptoss.binary, gptoss.min_version, gptoss.env_passthrough) == (

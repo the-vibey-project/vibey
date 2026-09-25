@@ -1762,7 +1762,7 @@ def test_worker_provider_gptossloop_constructs_live_providers(tmp_path: Path) ->
 def test_worker_provider_qwenloop_picks_up_evidence_dir(tmp_path: Path) -> None:
     """VIBEY_EVIDENCE_DIR is how the operator hands the sovereign research stage its
     reading; --provider qwenloop must actually read it rather than ignore it. `qwenloop`
-    is the provider's old name, read as gptossloop and said so (ADR-0062)."""
+    is the provider's old name, read as gptossloop and said so (ADR-0064)."""
 
     async def seed() -> None:
         async with build_app() as resources:
@@ -1783,7 +1783,7 @@ def test_worker_provider_qwenloop_picks_up_evidence_dir(tmp_path: Path) -> None:
         res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
     assert res.exit_code == 0, res.output
     assert "provider=gptossloop" in res.output
-    assert "--provider qwenloop is now --provider gptossloop (ADR-0062)" in res.output
+    assert "--provider qwenloop is now --provider gptossloop (ADR-0064)" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1866,7 +1866,7 @@ def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
             assert all(not r.conformance_ok for r in records)
             return len(records)
 
-    # The four paid engines, and gptossloop, the local engine on by default (ADR-0062).
+    # The four paid engines, and gptossloop, the local engine on by default (ADR-0064).
     assert asyncio.run(check()) == 5
 
 
@@ -1880,7 +1880,7 @@ def test_worker_stays_quiet_when_every_engine_has_conformance(tmp_path: Path) ->
                 "quiet-sweep-proj", tmp_path, max_cycles=1, config={}
             )
             good = PreflightResult(installed=True, version="1.0.0", auth_ok=True)
-            # Every engine this worker runs: the defaults, and gptossloop (ADR-0062).
+            # Every engine this worker runs: the defaults, and gptossloop (ADR-0064).
             for engine_id in (*resources.engine_adapters, EngineId.GPTOSSLOOP):
                 await resources.engine_health_service.update_from_preflight(
                     project.project_id, engine_id, good, conformance_ok=True

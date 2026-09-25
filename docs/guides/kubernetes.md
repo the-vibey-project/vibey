@@ -391,7 +391,7 @@ forbidden entry (`VIBEY_*`, `PG*`, a DSN) is refused before the project is creat
 (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop`,
 `qwenloop`, `claudeloop-local`). The worker accepts
 `--provider gptossloop` (chart value `worker.provider`; `qwenloop` is still
-read as gptossloop, ADR-0062) for the sovereign DESIGN provider. That
+read as gptossloop, ADR-0064) for the sovereign DESIGN provider. That
 provider talks to a local Ollama over HTTP rather than running the
 `gptossloop` binary (which the image does ship), so it needs a model server
 the pod can reach: `ollama.enabled` runs one in the release and points the

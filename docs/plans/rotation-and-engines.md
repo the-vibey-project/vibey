@@ -16,7 +16,7 @@
 >   `gptossloop` (the local runner on GPT-OSS 20B, the sovereign default and on
 >   unless switched off), `qwenloop` (the same runner on a Qwen model, opt-in) and
 >   `claudeloop-local` (the claudeloop binary on a local backend profile, opt-in)
->   are local engines, **preferred first** (ADR-0015, ADR-0038, ADR-0062); gptossloop's
+>   are local engines, **preferred first** (ADR-0015, ADR-0038, ADR-0064); gptossloop's
 >   model is also the sovereign DESIGN/DECOMPOSE provider (ADR-0027).
 > - Engine selection (SWRR) runs only for `build.implement` and `build.verify`.
 >   Every other job kind runs on a single injected provider or on no engine
@@ -67,7 +67,7 @@ engine except `agyloop`, whose container and VM levels map to `--safe`. The
 other isolation flags the original plan assumed do not exist on the runners'
 `run` verbs.
 
-`gptossloop` and `qwenloop` are one runner under two names (ADR-0062): the
+`gptossloop` and `qwenloop` are one runner under two names (ADR-0064): the
 same verbs, run directory (`.qwenloop/runs/`), done marker and verdict fence,
 each with its own settings and default model. `gptossloop` is on unless
 `[features] gptossloop = false` or `VIBEY_FEATURE_GPTOSSLOOP=0`; `qwenloop`
@@ -434,8 +434,8 @@ circuit half-opens; half-open is evaluated lazily at the next selection.
 
 The local engines each sit behind their own switch: `gptossloop`
 (`[features] gptossloop` / `VIBEY_FEATURE_GPTOSSLOOP`), on when nothing sets it
-(ADR-0062); `qwenloop` (`[features] qwenloop` / `VIBEY_FEATURE_QWENLOOP`,
-ADR-0015, ADR-0062) and `claudeloop-local` (`[features] claudeloop_local` /
+(ADR-0064); `qwenloop` (`[features] qwenloop` / `VIBEY_FEATURE_QWENLOOP`,
+ADR-0015, ADR-0064) and `claudeloop-local` (`[features] claudeloop_local` /
 `VIBEY_FEATURE_CLAUDELOOP_LOCAL`, ADR-0038), off when nothing sets them. The
 environment variable, when set, overrides the flag. One resolver,
 `infrastructure/engines/local_engines.py::LocalEngineSettings`, answers for
@@ -461,7 +461,7 @@ provider passes its pool as the allow-list, so a stale health row for a local
 engine switched off since can never be preferred.
 
 Separately, gptossloop's model is the sovereign DESIGN and DECOMPOSE provider
-(ADR-0027, ADR-0062): `vibey work` and `vibey worker` use it when no `--provider`
+(ADR-0027, ADR-0064): `vibey work` and `vibey worker` use it when no `--provider`
 is given (sub-doctrine 8.b, #322) or `--provider gptossloop` is; `--provider
 qwenloop` is read as gptossloop.
 

@@ -5,7 +5,7 @@
 Vibey drives five autonomous session runners through seven engine ids:
 `claudeloop`, `codexloop`, `cursorloop` and `agyloop` (tier PAID) make up the
 default pool, `DEFAULT_DESCRIPTORS`; three local engines (tier LOCAL,
-`LOCAL_DESCRIPTORS`) join them, each behind its own switch (ADR-0062):
+`LOCAL_DESCRIPTORS`) join them, each behind its own switch (ADR-0064):
 `gptossloop` — the local runner on GPT-OSS 20B, the sovereign default, **on**
 unless `VIBEY_FEATURE_GPTOSSLOOP=0` / `[features] gptossloop = false`; `qwenloop`
 — the same runner on a Qwen model (`qwen3:14b`), opt-in by

@@ -28,7 +28,7 @@ export interface DoctorDependencies {
   readonly environ: SourceEnvironment;
   readonly forbidden: ForbiddenEnvironmentInterface;
   readonly paidDeclared: () => boolean;
-  /** The local runner that runs when nothing chooses another (gptossloop, ADR-0062): its program is checked. */
+  /** The local runner that runs when nothing chooses another (gptossloop, ADR-0064): its program is checked. */
   readonly runner: RunnerIdentity;
 }
 

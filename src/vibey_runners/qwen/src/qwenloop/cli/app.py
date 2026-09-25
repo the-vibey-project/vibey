@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The command line of this runner package's two engines (ADR-0062).
+"""The command line of this runner package's two engines (ADR-0064).
 
 `gptossloop` and `qwenloop` are the same commands over the same runner. They differ in who
 they are -- the name they print, the settings they read (`GPTOSSLOOP_*` or `QWENLOOP_*`, and
@@ -805,12 +805,12 @@ async def _wait_until_ready(
 
 
 def main() -> None:
-    """`qwenloop`: this runner on a Qwen model (ADR-0062)."""
+    """`qwenloop`: this runner on a Qwen model (ADR-0064)."""
     _run_as(QWENLOOP)
 
 
 def gptoss_main() -> None:
-    """`gptossloop`: this runner on GPT-OSS, the sovereign default engine (ADR-0062)."""
+    """`gptossloop`: this runner on GPT-OSS, the sovereign default engine (ADR-0064)."""
     _run_as(GPTOSSLOOP)
 
 

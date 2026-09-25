@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
  * The family's local agent runner (src/vibey_runners/qwen, the `qwenloop` package), which
- * ships as two programs since ADR-0062: `gptossloop`, the default, and `qwenloop`. The
+ * ships as two programs since ADR-0064: `gptossloop`, the default, and `qwenloop`. The
  * extension drives either and writes no agent loop of its own (ADR-0017's dogfood rule).
  * Both take the same commands, as `qwenloop/cli/app.py` declares them:
  *   run PLAN --run-id --cwd --backend --base-url --model --effort --[no-]desktop-notifications

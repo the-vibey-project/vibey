@@ -154,7 +154,7 @@ kind: Job
 metadata:
   # Named after its own pod template (see vibey.ollamaPullTemplate), and
   # truncated so the hash always survives inside the 63-character limit.
-  name: vibey-vibey-ollama-pull-8975829cb8
+  name: vibey-vibey-ollama-pull-a887f5f535
   labels:
     app.kubernetes.io/name: vibey
     app.kubernetes.io/instance: vibey
@@ -198,7 +198,7 @@ spec:
                 sleep 5
               done
               ollama pull "$OLLAMA_PULL_MODEL"
-              # qwenloop's Qwen model, beside the default (ADR-0062).
+              # qwenloop's Qwen model, beside the default (ADR-0064).
               exec ollama pull "$OLLAMA_PULL_QWEN_MODEL"
           env:
             - name: OLLAMA_HOST
@@ -370,13 +370,13 @@ spec:
             - name: VIBEY_OLLAMA_MODEL
               value: "gpt-oss:20b"
             # gptossloop, the sovereign default engine and on without a switch
-            # (ADR-0062): its openai-compat backend wants the OpenAI base URL, /v1
+            # (ADR-0064): its openai-compat backend wants the OpenAI base URL, /v1
             # included; a base URL alone is what makes `auto` select it.
             - name: GPTOSSLOOP_BASE_URL
               value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434/v1"
             - name: GPTOSSLOOP_MODEL
               value: "gpt-oss:20b"
-            # qwenloop, the same runner on a Qwen model, opt-in (ADR-0062). The
+            # qwenloop, the same runner on a Qwen model, opt-in (ADR-0064). The
             # one qwenloop switch that reaches a worker (ADR-0015): a project's
             # [features] table never makes it into the record.
             - name: QWENLOOP_BASE_URL

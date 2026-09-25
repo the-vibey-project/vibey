@@ -208,7 +208,7 @@ class LocalEngineSwitchInterface(Protocol):
 
 @runtime_checkable
 class LocalRunnerVariablesInterface(Protocol):
-    """The variables one local runner reads for its endpoint (ADR-0062)."""
+    """The variables one local runner reads for its endpoint (ADR-0064)."""
 
     @property
     def base_url(self) -> str: ...

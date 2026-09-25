@@ -87,7 +87,7 @@ def test_config_path_expands_the_home_directory(
 
 
 def test_each_engine_reads_only_its_own_settings(tmp_path: Path) -> None:
-    """ADR-0062: gptossloop reads GPTOSSLOOP_* and asks for gpt-oss:20b; qwenloop reads
+    """ADR-0064: gptossloop reads GPTOSSLOOP_* and asks for gpt-oss:20b; qwenloop reads
     QWENLOOP_* and asks for qwen3:14b. A model named for one never reaches the other."""
     from qwenloop.domain.config import GPTOSSLOOP, QWENLOOP
 

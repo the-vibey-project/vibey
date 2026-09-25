@@ -22,7 +22,7 @@ import typer
 
 from vibey import __version__
 from vibey.application.design_acceptance import DesignAcceptanceService
-from vibey.application.dto import ProjectRecord
+from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
@@ -395,6 +395,24 @@ def answer(
             "(combinable with positional pairs, which win)",
         ),
     ] = False,
+    by: Annotated[
+        str | None,
+        typer.Option(
+            "--by",
+            help="The name this answer is recorded under, for a tool that runs the command "
+            "(the VS Code extension says vibey-vscode). Defaults to the account running it. "
+            "A label for the record, not a permission: the account is recorded beside it.",
+        ),
+    ] = None,
+    request_id: Annotated[
+        str | None,
+        typer.Option(
+            "--request-id",
+            help="Name this request so a retry is safe: the same id with the same answer "
+            "is a no-op once it has landed. Without one, every run is a new request, and "
+            "a gate already answered refuses it.",
+        ),
+    ] = None,
 ) -> None:
     """Answer a parked gate: QUESTION_ID=ANSWER pairs, --choice, --verdict, or --raw.
 
@@ -402,6 +420,9 @@ def answer(
     are model-minted and vary per run; --defaults needs none); review gates
     take --verdict (accept/changes/cancel/approve/request_changes);
     deployment and triage gates take --choice; --raw covers any other shape.
+
+    A gate is answered once. A second answer is refused (exit 3) and the
+    first stands; `--request-id` makes a retry of the same answer a no-op.
     """
     modes = [m for m in (answers, choice, verdict, raw) if m]
     if defaults and (choice or verdict or raw):
@@ -431,12 +452,18 @@ def answer(
         if defaults:
             payload["accept_defaults"] = True
 
-    async def submit() -> None:
+    async def submit() -> GateAnswerOutcome:
         async with build_app() as resources:
-            await resources.gates.answer(gate_id, answer=payload, answered_by="cli")
+            return await resources.gate_answers.answer(
+                gate_id, payload, by=by, request_id=request_id
+            )
 
-    asyncio.run(submit())
-    typer.echo(f"answered {gate_id}")
+    with guard():
+        outcome = asyncio.run(submit())
+    if outcome.replayed:
+        typer.echo(f"already answered {gate_id} by this request; nothing changed")
+    else:
+        typer.echo(f"answered {gate_id} as {outcome.record.answered_by}")
 
 
 # One sentence for both commands' --ollama-model, so `work` and `worker` cannot drift.
@@ -446,7 +473,7 @@ _OLLAMA_MODEL_HELP = (
 )
 _PROVIDERS = ("scripted", "claudeloop", "gptossloop")
 # Old provider names still accepted, each read as the provider it became. `qwenloop` was
-# the sovereign provider on this era's default model, GPT-OSS; since ADR-0062 that is
+# the sovereign provider on this era's default model, GPT-OSS; since ADR-0064 that is
 # gptossloop, and the qwenloop engine runs a Qwen model the provider never did.
 _PROVIDER_ALIASES = {"qwenloop": "gptossloop"}
 # Built from _PROVIDERS so the message both commands print cannot fall behind the list.
@@ -459,7 +486,7 @@ _UNKNOWN_PROVIDER = (
 _PROVIDER_HELP = (
     "DESIGN/DECOMPOSE provider: scripted, claudeloop, or gptossloop (the sovereign one, on "
     "Ollama). Default: gptossloop -- the sovereign default is always on (sub-doctrine 8.b). "
-    "An explicit value always wins; 'qwenloop' is read as gptossloop (ADR-0062)."
+    "An explicit value always wins; 'qwenloop' is read as gptossloop (ADR-0064)."
 )
 
 
@@ -468,7 +495,7 @@ def _resolve_provider(explicit: str | None) -> str:
 
     Sub-doctrine 8.b keeps the sovereign default always on, never needing declaration, so
     with no `--provider` DESIGN and DECOMPOSE run on gptossloop (#322; qwenloop until
-    ADR-0062). Before, they fell back to the scripted fake unless a local engine was
+    ADR-0064). Before, they fell back to the scripted fake unless a local engine was
     switched on. Paid (`claudeloop`) is always a stated choice. An old name is read as the
     provider it became, and said so on stderr. Module-level, like the typer commands that
     share it, so `work` and `worker` cannot disagree.
@@ -479,7 +506,7 @@ def _resolve_provider(explicit: str | None) -> str:
     if renamed is None:
         return explicit
     typer.echo(
-        f"--provider {explicit} is now --provider {renamed} (ADR-0062): the sovereign "
+        f"--provider {explicit} is now --provider {renamed} (ADR-0064): the sovereign "
         f"provider on {DEFAULT_OLLAMA_MODEL}; running {renamed}",
         err=True,
     )

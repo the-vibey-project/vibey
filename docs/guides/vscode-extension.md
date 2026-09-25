@@ -7,7 +7,7 @@ sovereignloop, runs on your machine: gptossloop, vibey's local agent, drives **g
 through [Ollama](https://ollama.com). The design behind it is
 [ADR-0059](../architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md); the
 engine it runs is set out in
-[ADR-0062](../architecture/decisions/0062-gptossloop-is-the-sovereign-engine.md).
+[ADR-0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md).
 
 The extension's own
 [README](https://github.com/the-vibey-project/vibey/blob/main/clients/vscode/README.md) lists

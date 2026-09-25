@@ -21,7 +21,7 @@
 > `qwenloop`, joined as an opt-in local standby
 > ([ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)) and as the sovereign DESIGN
 > provider ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Since
-> [ADR-0062](../architecture/decisions/0062-gptossloop-is-the-sovereign-engine.md) that local
+> [ADR-0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md) that local
 > runner ships as two engines: `gptossloop` on GPT-OSS 20B, the sovereign default and on
 > without a switch, and `qwenloop` on a Qwen model, opt-in.
 > Where this document and the code disagree, the code and `docs/reference/` win.
@@ -43,7 +43,7 @@ ships as two engines: `gptossloop` (GPT-OSS 20B, the sovereign default, on unles
 `VIBEY_FEATURE_QWENLOOP`); see
 [ADR-0015](../architecture/decisions/0015-qwenloop-standby.md),
 [ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md) and
-[ADR-0062](../architecture/decisions/0062-gptossloop-is-the-sovereign-engine.md). When this document was written
+[ADR-0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md). When this document was written
 the first four were separate repositories; they were absorbed with history in
 September 2026 ([ADR-0021](../architecture/decisions/0021-one-tree-history-preserved.md)). Each drives one vendor's coding agent
 through an unattended run: it distinguishes a waitable rate-limit window from
@@ -812,7 +812,7 @@ amending [ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)'s standb
 `qwenloop` and `claudeloop-local` are local, zero-dollar engines, each behind its
 `[features]` key or `VIBEY_FEATURE_*` switch: `gptossloop` is on unless switched off,
 the other two are off unless switched on
-([ADR-0062](../architecture/decisions/0062-gptossloop-is-the-sovereign-engine.md)). When enabled they are
+([ADR-0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)). When enabled they are
 preferred: `EngineSelector` runs SWRR within the LOCAL tier and a paid engine is
 selected only when no local engine is eligible. Separately, DESIGN and DECOMPOSE run
 on a local model — `--provider gptossloop`, the default on `vibey work` and `vibey
