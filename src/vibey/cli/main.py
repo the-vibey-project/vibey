@@ -34,6 +34,7 @@ from vibey.bootstrap import (
     build_visual_worker,
 )
 from vibey.cli.budget import budget_app
+from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.gates import GATES
 from vibey.cli.hub_pair import hub_app
@@ -104,6 +105,7 @@ ledger_app.command("site")(ledger_site)
 app.add_typer(queue_app, name="queue")
 app.add_typer(budget_app, name="budget")
 app.add_typer(ultra_app, name="ultra")
+app.add_typer(driver_app, name="driver")
 
 
 def _version_callback(value: bool) -> None:

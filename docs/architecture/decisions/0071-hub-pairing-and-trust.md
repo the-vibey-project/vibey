@@ -1,4 +1,4 @@
-# 0070 — Hub pairing and trust: signed requests, a pinned certificate, `_vibey._tcp`
+# 0071 — Hub pairing and trust: signed requests, a pinned certificate, `_vibey._tcp`
 
 **Status:** proposed · **Date:** 2026-09-25 · **Cites:** SD-01 v1.0; sub-doctrines 10.c, 10.f, 10.g, 12.c, 12.f, 12.j · **Related:** ADR-0016, ADR-0017, ADR-0018, ADR-0068 · **Evidence:** `develop` at `0823cdfd` plus the live feed (#1163), read 2026-09-25 · **Delivers:** ADR-0068's third change, "Pairing and trust"
 

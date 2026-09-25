@@ -110,6 +110,13 @@ class EventKind(StrEnum):
     # device registry is what authentication reads; these events are the history.
     HUB_DEVICE_PAIRED = "HubDevicePaired"
     HUB_DEVICE_REVOKED = "HubDeviceRevoked"
+    # Failover and handback (ADR-0070). A paid engine ran out of capacity and the work
+    # moved to the sovereign engine at ULTRA; a probe of the paid engine was recorded
+    # (ok or not); the work went back after a successful probe. Trusted only: no engine's
+    # output maps onto these kinds, and a handback is allowed only after an ok probe.
+    ENGINE_FAILED_OVER = "EngineFailedOver"
+    ENGINE_PROBED = "EngineProbed"
+    ENGINE_HANDED_BACK = "EngineHandedBack"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)
