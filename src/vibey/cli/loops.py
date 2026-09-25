@@ -251,17 +251,21 @@ class LoopsCommand:
         self._endpoint = endpoint
 
     def run(self, *, as_json: bool) -> None:
+        report = self.report()
+        if as_json:
+            typer.echo(self._presenter.json(report))
+        else:
+            typer.echo("\n".join(self._presenter.lines(report)))
+
+    def report(self) -> LoopsReport:
+        """The loops as the catalog assembles them from this process's resolvers."""
         try:
             contexts = self._contexts()
         except ConfigError as exc:
             # Named, never shown: the setting's value can carry a credential, and this
             # message reaches a terminal. `from None` keeps the original out of a traceback.
             raise ConfigError(exc.path, MALFORMED_SETTING) from None
-        report = self._catalog.report(contexts)
-        if as_json:
-            typer.echo(self._presenter.json(report))
-        else:
-            typer.echo("\n".join(self._presenter.lines(report)))
+        return self._catalog.report(contexts)
 
     def _contexts(self) -> list[EngineContext]:
         """Every engine as `vibey doctor` would resolve it here: a local engine through its

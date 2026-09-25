@@ -1,8 +1,14 @@
 # Runbook: clients — mobile, web, desktop, and a finished TUI
 
-> **Status (2026-09-15):** not started. The current-state bullets still hold:
-> the TUI is one dashboard with 5 tests, and the conductor has no HTTP API
-> (hard dependency on 12).
+> **Status (2026-09-25):** the server side has started. The hard dependency on 12 is met
+> for reads, gate answers and bumps: the hub, `vibey serve`
+> ([ADR-0067](../../architecture/decisions/0067-the-hub.md)), serves the CLI's own `--json`
+> documents under `/api/v1`, with an OpenAPI 3.1 document to generate clients from. Still
+> owed to the clients: the live feed (the hub's next change) and device pairing (the one
+> after), without which no device off the host can hold a principal. The desktop app is
+> now C on GTK 4 + libadwaita (the operator's decision, 2026-09-25), which supersedes the
+> Tauri design below; the client-suite plan is the current source for the apps. The TUI
+> bullets below still hold.
 
 ## Goal
 

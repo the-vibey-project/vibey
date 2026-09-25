@@ -32,3 +32,7 @@ class LoopsCommandInterface(Protocol):
     """Runs `vibey loops`, with no database and no network."""
 
     def run(self, *, as_json: bool) -> None: ...
+
+    def report(self) -> LoopsReport:
+        """The report `run` prints; the hub's loops route returns it too."""
+        ...

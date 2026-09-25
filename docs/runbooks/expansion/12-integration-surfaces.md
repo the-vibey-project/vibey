@@ -1,12 +1,18 @@
 # Runbook: integration surfaces — MCP, API, webhooks, skills, SDKs (all repos)
 
-> **Status (2026-09-15):** partial. `vibey-gh` (in-tree at `src/vibey_tools/gh`)
-> ships the five-surface projection — `vibey_gh/surfaces.py` projects one
-> capability contract through `mcp`, `api`, `cli`, `sdk` and `webhook`, with
-> a parity test (`test/test_surfaces.py`) — and is the in-family reference
-> implementation. The conductor has a signed outbound `WebhookPublisher`
-> (`infrastructure/notify/webhook.py`). Not started: `vibey server`
-> (FastAPI), `vibey-mcp`, the inbound webhook router, SDKs, runner MCPs.
+> **Status (2026-09-25):** work item 1 delivered by the hub, `vibey serve`
+> ([ADR-0067](../../architecture/decisions/0067-the-hub.md)): the FastAPI server on
+> `vibey_bootstrap`, scoped auth, the resource routes over the same application services the
+> CLI calls, and the OpenAPI freeze test (`docs/reference/hub-api.json`). Two things changed
+> from the design below: the scopes are `view`, `answer`, `spend`, `run` and `bump` (not
+> `read`/`answer`/`conduct`/`admin`), with nothing that declares paid use, caps, the DSN,
+> migrations or canon under any scope; and there is **no** localhost-no-auth mode -- the
+> host presents an owner-only token, because loopback is not an identity. Work item 2's
+> stream arrives with the hub's live change (a WebSocket resuming after a ledger `seq`).
+> `vibey-gh` (in-tree at `src/vibey_tools/gh`) still ships the five-surface projection
+> (`vibey_gh/surfaces.py`, with its parity test) as the in-family reference; the signed
+> outbound `WebhookPublisher` (`infrastructure/notify/webhook.py`) is unchanged. Not
+> started: `vibey-mcp`, the inbound webhook router, SDKs, runner MCPs.
 
 ## Goal
 

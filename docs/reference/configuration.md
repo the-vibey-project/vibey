@@ -411,6 +411,24 @@ them into `VibeyConfig`, but nothing passes them to the runner.
 | `startup_timeout_seconds` | integer | `180` | Must be positive. |
 | `context_window` | integer | `32768` | Must be positive. |
 
+## `[hub]` { #hub }
+
+The hub, `vibey serve` (ADR-0067). Every key is optional, and the defaults are the closed
+ones: with no `[hub]` table the hub listens on loopback only. An unknown key, or a key of
+the wrong type, is refused rather than ignored, so a misspelt `lan` can never silently
+mean "not declared".
+
+| Key | Default | Meaning |
+|---|---|---|
+| `lan` | `false` | `true` declares that `vibey serve --host <LAN address>` may listen off loopback. Without it such an address is refused (exit 2), and `vibey doctor` fails a hub found listening on one. |
+| `port` | `8765` | The port `vibey serve` listens on when `--port` is not given. |
+| `names` | `[]` | Extra names a request may carry in `Host` when the LAN is declared, e.g. `"studio.local"`. The computer's own host name, its `.local` name and its addresses are always admitted then. |
+| `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600) and the runtime record (`serving.json`) live. |
+| `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
+
+A bump from the hub is requested as the queue source `vibey-hub`; it lands only when
+[`[queue.priority]`](#queuepriority) `sources` names it.
+
 ## `[queue.priority]` { #queuepriority }
 
 Who besides the operator may move a job to the front of the queue
