@@ -51,7 +51,8 @@ non-interactively with `claude -p --resume <session-id> "<prompt>"`.
    probe.
 3. **Handback only after a recorded successful probe.** The probe is recorded first,
    and the handback is allowed only when an `ok` probe is recorded after the latest
-   failover. A probe that exits non-zero, prints no JSON, or reports `is_error` is a
+   failover -- and, when the failover names the engine that ran out, a probe of *that*
+   engine. A probe that exits non-zero, prints no JSON, or reports `is_error` is a
    failed probe, recorded as one.
 4. **The no-loss gate in both directions** (`vibey/domain/driver_brief.py`). The driver's
    brief names the whole transcript -- path, line count, SHA-256 -- and the repository
@@ -65,7 +66,8 @@ non-interactively with `claude -p --resume <session-id> "<prompt>"`.
    detached, and a second hook for an active failover records and starts nothing.
    `vibey driver probe`, run by a launchd agent or a systemd user timer that
    `vibey driver timer` writes (and the operator loads), probes when due, and on a
-   recorded success winds gptossloop down, gates the return brief -- listing the commits
+   recorded success winds gptossloop down (a failed wind-down resumes nothing and is
+   retried on the next tick, so two engines never share a worktree), gates the return brief -- listing the commits
    made while the driver was away -- appends `EngineHandedBack`, and resumes the same
    session with `claude -p --resume <session-id>`. The driver is a Claude Code session,
    not a vibey project, so its records live beside its worktree, not in Postgres.
@@ -94,6 +96,9 @@ non-interactively with `claude -p --resume <session-id> "<prompt>"`.
   probe raises `HandbackRefused`. This change builds and tests it; it does not yet
   construct it in `bootstrap.py` or call it from `RotationRecordingHandler`, whose
   capacity rotation (ADR-0005) is unchanged. That wiring is the named follow-up, not
-  something this change claims.
+  something this change claims; the wiring must also open a `human_gate` row when the
+  gate parks, as every parked handoff does.
+- A driver handback that parks is retried on the next tick with a fresh brief; a
+  recorded park that stops the timer until a person clears it is a follow-up.
 - `StopFailure`'s payload beyond the documented fields is not relied on; if Claude Code
   later exposes a reset time, it may schedule the probe and nothing more.

@@ -186,3 +186,11 @@ def test_rows_read_into_records_and_skip_what_is_unknown() -> None:
         FailoverRecord(FailoverKind.FAILED_OVER, NOW, {"a": 1}, True),
         FailoverRecord(FailoverKind.PROBED, NOW, {}, False),
     )
+
+
+def test_only_a_probe_of_the_exhausted_engine_counts() -> None:
+    failover = _rec(FailoverKind.FAILED_OVER, 0, from_engine="claudeloop")
+    wrong = _rec(FailoverKind.PROBED, 1, ok=True, engine="gptossloop")
+    assert not FAILOVER_POLICY.status([failover, wrong]).may_hand_back
+    right = _rec(FailoverKind.PROBED, 2, ok=True, engine="claudeloop")
+    assert FAILOVER_POLICY.status([failover, wrong, right]).probe_ok == right

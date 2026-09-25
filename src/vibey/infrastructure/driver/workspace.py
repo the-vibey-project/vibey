@@ -61,6 +61,11 @@ class LocalDriverWorkspace:
     def _dir(self, cwd: str) -> Path:
         target = Path(cwd) / DRIVER_DIR
         target.mkdir(parents=True, exist_ok=True)
+        # Never committed: the sovereign engine commits unattended, and this holds the
+        # transcript copy, the ledger and the logs.
+        ignore = target / ".gitignore"
+        if not ignore.exists():
+            ignore.write_text("*\n", encoding="utf-8")
         return target
 
     def _git_out(self, cwd: str, *args: str) -> str:

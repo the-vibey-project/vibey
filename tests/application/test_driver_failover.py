@@ -308,3 +308,15 @@ def test_argv_templates_pass_other_braces_through() -> None:
     service, _, _, processes, _ = _service(settings=settings)
     service.fail_over(SIGNAL)
     assert processes.spawned == [("run", CWD, "{literal}", "")]
+
+
+def test_a_failed_wind_down_resumes_nothing_and_retries_next_tick() -> None:
+    clock = Clock()
+    results = [ProcessResult(0, '{"is_error": false}'), ProcessResult(124, "")]
+    service, _, ledger, processes, _ = _service(clock=clock, processes=Processes(results=results))
+    service.fail_over(SIGNAL)
+    clock.at = T0 + timedelta(hours=1)
+    outcome = service.probe(CWD)
+    assert outcome.result == "wind_down_failed" and outcome.detail == "exit 124"
+    assert [r.kind for r in ledger.rows] == [FailoverKind.FAILED_OVER, FailoverKind.PROBED]
+    assert len(processes.spawned) == 1

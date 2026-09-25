@@ -185,7 +185,7 @@ async def test_handback_only_after_a_recorded_ok_probe() -> None:
 async def test_a_handback_whose_gate_parks_records_nothing() -> None:
     service, ledger, _ = _service()
     ledger.add(EventKind.ENGINE_FAILED_OVER, {"from_engine": "claudeloop"}, T0)
-    ledger.add(EventKind.ENGINE_PROBED, {"ok": True}, T0)
+    ledger.add(EventKind.ENGINE_PROBED, {"ok": True, "engine": "claudeloop"}, T0)
     parked = EngineFailoverService(
         settings=FailoverSettings(),
         ledger=ledger,
@@ -201,7 +201,7 @@ async def test_a_handback_whose_gate_parks_records_nothing() -> None:
 async def test_a_failover_naming_no_known_engine_cannot_hand_back() -> None:
     service, ledger, _ = _service()
     ledger.add(EventKind.ENGINE_FAILED_OVER, {"from_engine": "martian"}, T0)
-    ledger.add(EventKind.ENGINE_PROBED, {"ok": True}, T0)
+    ledger.add(EventKind.ENGINE_PROBED, {"ok": True, "engine": "martian"}, T0)
     with pytest.raises(HandbackRefused, match="no known engine"):
         await _back(service)
 
@@ -211,3 +211,12 @@ async def test_untrusted_and_unrelated_events_are_ignored() -> None:
     ledger.add(EventKind.ENGINE_FAILED_OVER, {"from_engine": "claudeloop"}, T0, trusted=False)
     ledger.add(EventKind.GATE_ANSWERED, {}, T0)
     assert not (await service.status(PROJECT)).active
+
+
+async def test_a_probe_of_another_engine_does_not_authorise_handback() -> None:
+    service, _, _ = _service()
+    await _fail(service)
+    status = await service.record_probe(PROJECT, engine=EngineId.GPTOSSLOOP, ok=True)
+    assert not status.may_hand_back
+    with pytest.raises(HandbackRefused):
+        await _back(service)

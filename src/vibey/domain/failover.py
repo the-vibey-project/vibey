@@ -194,7 +194,11 @@ class FailoverPolicy:
             elif failover is None:
                 continue
             elif record.kind is FailoverKind.PROBED:
-                if probe_ok is None and record.payload.get("ok") is True:
+                if (
+                    probe_ok is None
+                    and record.payload.get("ok") is True
+                    and self._probed_the_exhausted_engine(failover, record)
+                ):
                     probe_ok = record
             else:
                 handed_back = True
@@ -203,6 +207,13 @@ class FailoverPolicy:
             failover=failover,
             probe_ok=probe_ok,
         )
+
+    @staticmethod
+    def _probed_the_exhausted_engine(failover: FailoverRecord, probe: FailoverRecord) -> bool:
+        """When the failover names the engine that ran out, only a probe of that
+        engine is evidence it answers again."""
+        exhausted = failover.payload.get("from_engine")
+        return exhausted is None or probe.payload.get("engine") == exhausted
 
     def outranks_completion(self, capacity: CapacityState) -> bool:
         """Whether this state overrides any completion claim made in the same turn:

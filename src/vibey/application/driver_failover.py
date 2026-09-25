@@ -228,6 +228,12 @@ class DriverFailoverService:
             cwd=cwd,
             timeout=WIND_DOWN_TIMEOUT_SECONDS,
         )
+        if wind_down.exit_code != 0:
+            # The sovereign engine may still be running: never start a second engine
+            # on the same worktree. The next tick tries again.
+            return DriverOutcome(
+                "wind_down_failed", f"exit {wind_down.exit_code}", status=self.status()
+            )
         text = self._renderer.render(brief)
         path = self._workspace.write_brief(cwd, f"handback-{stamp}.md", text)
         self._ledger.append(

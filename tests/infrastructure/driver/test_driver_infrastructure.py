@@ -108,6 +108,10 @@ def test_the_workspace_reads_git_and_the_transcript(tmp_path: Path) -> None:
     assert workspace.digest(copy) == digest
     brief = workspace.write_brief(str(tmp_path), "b.md", "hello")
     assert Path(brief).read_text() == "hello"
+    ignore = tmp_path / ".vibey" / "driver" / ".gitignore"
+    assert ignore.read_text() == "*\n"
+    workspace.write_brief(str(tmp_path), "b2.md", "again")
+    assert ignore.read_text() == "*\n"
     dirty = workspace.repo(str(tmp_path)).dirty_paths
     assert "work.py" in dirty and "t.jsonl" in dirty
     assert not any(p.startswith(".vibey/driver") for p in dirty)
