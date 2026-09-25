@@ -8,6 +8,7 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from vibey.application.dto import (
+    GateAnswerOutcome,
     HumanGateRecord,
     HumanGateRequest,
 )
@@ -20,8 +21,34 @@ class HumanGateRepository(Protocol):
     ) -> HumanGateRecord: ...
 
     async def answer(
-        self, gate_id: UUID, *, answer: Mapping[str, object], answered_by: str
-    ) -> HumanGateRecord: ...
+        self,
+        gate_id: UUID,
+        *,
+        answer: Mapping[str, object],
+        answered_by: str,
+        account: str | None = None,
+        request_id: str | None = None,
+    ) -> HumanGateRecord:
+        """`answer_once`'s record. With no `request_id` the call is a new request, so a
+        gate already answered is refused (`GateAlreadyAnswered`)."""
+        ...
+
+    async def answer_once(
+        self,
+        gate_id: UUID,
+        *,
+        answer: Mapping[str, object],
+        answered_by: str,
+        account: str | None,
+        request_id: str,
+    ) -> GateAnswerOutcome:
+        """Answers an open gate, once: a compare-and-set on `answered_at IS NULL`, with its
+        `GateAnswered` event in the same transaction, and the gate's job made ready.
+
+        A gate already answered by this `request_id` with this `answer` is a no-op
+        (`replayed`); any other answer to an answered gate raises `GateAlreadyAnswered`,
+        and a gate that does not exist `UnknownGate`. Refused, nothing is written."""
+        ...
 
     async def latest_for_job(
         self, job_id: UUID, *, include_queue_gates: bool = False

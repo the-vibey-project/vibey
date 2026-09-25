@@ -13,6 +13,7 @@ from tests.application.fakes import (
 )
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
 from vibey.application.deploy_design_handler import DeployInterviewHandler, DeploySynthesizeHandler
+from vibey.application.dto import HumanGateRequest
 from vibey.application.worker import Failure, Park, Success
 from vibey.domain.deployment import (
     AzureTargetScope,
@@ -274,9 +275,14 @@ async def test_deploy_acceptance_handler_rejections() -> None:
     outcome_reject = await handler.handle(job)
     assert isinstance(outcome_reject, Failure)
 
-    # Missing spec with accept verdict
+    # Missing spec with accept verdict. A gate is answered once, so this answers a second.
+    regate = await gates.raise_gate(
+        job.project_id,
+        job.id,
+        HumanGateRequest(kind=gate.kind, prompt=gate.prompt, options=gate.options),
+    )
     await gates.answer(
-        gate.gate_id,
+        regate.gate_id,
         answer={"verdict": "accept", "explicit_mutation_authorized": True},
         answered_by="user",
     )

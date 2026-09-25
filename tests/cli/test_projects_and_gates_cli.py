@@ -448,7 +448,7 @@ def test_the_printed_command_answers_its_gate_as_written(
     answered = _run(*arguments)
 
     assert answered.exit_code == 0, answered.output
-    assert answered.stdout == f"answered {gate.gate_id}\n"
+    assert answered.stdout.startswith(f"answered {gate.gate_id} as ")
     settled = asyncio.run(_gate(gate.gate_id))
     assert settled.answer == answer
     assert json.loads(_run("gates", "--json").stdout) == {"gates": []}

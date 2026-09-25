@@ -913,7 +913,20 @@ CREATE TABLE human_gate (
 
 CREATE INDEX human_gate_open ON human_gate (project_id, raised_at)
     WHERE answered_at IS NULL;
+
+-- 0018_human_gate_answer_once.sql
+ALTER TABLE human_gate ADD COLUMN answer_request_id text;
+ALTER TABLE human_gate ADD CONSTRAINT human_gate_request_id_with_answer
+    CHECK (answer_request_id IS NULL OR answered_at IS NOT NULL);
 ```
+
+**A gate is answered once.** The answer is a compare-and-set on
+`answered_at IS NULL` (`PostgresHumanGateRepository.answer_once`), in one transaction
+that also appends a `GateAnswered` event and returns the gate's job to `ready`. Of two
+answers racing for one gate exactly one lands. `answer_request_id` names the request
+that landed: the same request replayed with the same answer is a no-op, and any other
+answer is refused (`GateAlreadyAnswered`) and writes nothing. A gate answered before
+0018 has no request id, so every later answer to it is refused.
 
 `kind` is unconstrained text. Values raised by handlers today include `question`,
 `choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,

@@ -8,6 +8,10 @@ from vibey.infrastructure.db.interfaces.database_setup_interface import (
 from vibey.infrastructure.db.interfaces.engine_health_repository_interface import (
     EngineHealthRowMapperInterface,
 )
+from vibey.infrastructure.db.interfaces.human_gate_repository_interface import (
+    GateAnsweredDraftBuilderInterface,
+    PostgresHumanGateRepositoryInterface,
+)
 from vibey.infrastructure.db.interfaces.job_priority_repository_interface import (
     PriorityEventDraftBuilderInterface,
 )
@@ -46,6 +50,8 @@ from vibey.infrastructure.db.interfaces.rotation_cursor_repository_interface imp
 )
 
 __all__ = [
+    "GateAnsweredDraftBuilderInterface",
+    "PostgresHumanGateRepositoryInterface",
     "BudgetCapDraftBuilderInterface",
     "PostgresProjectBudgetStoreInterface",
     "DatabaseEndpointsInterface",

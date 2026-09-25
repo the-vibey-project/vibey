@@ -149,6 +149,9 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         # spend, and it reads no caps.
         EventKind.BUDGET_SPENT,
         EventKind.BUDGET_CAP_CHANGED,
+        # Who answered a gate, from which account, and what they answered: the answer
+        # can carry anything a person typed, and the account is the operator's.
+        EventKind.GATE_ANSWERED,
         # Queue operations: who reordered which job, and what the reaper did.
         EventKind.JOB_PRIORITY_BUMPED,
         EventKind.JOB_PRIORITY_UNBUMPED,

@@ -4,11 +4,19 @@ without a database (real-DB behavior is covered separately against
 Postgres in tests/infrastructure/db/)."""
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from vibey.application.dto import EnqueueRequest, HumanGateRecord, HumanGateRequest, JobRecord
+from vibey.application.dto import (
+    EnqueueRequest,
+    GateAnswerOutcome,
+    HumanGateRecord,
+    HumanGateRequest,
+    JobRecord,
+)
 from vibey.domain.engine import EngineId
+from vibey.domain.errors import GateAlreadyAnswered, UnknownGate
 from vibey.domain.job import QUEUE_GATE_KINDS, JobState
 from vibey.domain.phase import Phase
 
@@ -217,6 +225,7 @@ class FakeHumanGateRepository:
     def __init__(self) -> None:
         self.raised: list[HumanGateRecord] = []
         self.calls: list[str] = []
+        self.accounts: dict[UUID, str | None] = {}
 
     async def raise_gate(
         self, project_id: UUID, job_id: UUID | None, request: HumanGateRequest
@@ -240,26 +249,58 @@ class FakeHumanGateRepository:
         return record
 
     async def answer(
-        self, gate_id: UUID, *, answer: Mapping[str, object], answered_by: str
+        self,
+        gate_id: UUID,
+        *,
+        answer: Mapping[str, object],
+        answered_by: str,
+        account: str | None = None,
+        request_id: str | None = None,
     ) -> HumanGateRecord:
+        outcome = await self.answer_once(
+            gate_id,
+            answer=answer,
+            answered_by=answered_by,
+            account=account,
+            request_id=request_id if request_id is not None else str(uuid4()),
+        )
+        return outcome.record
+
+    async def answer_once(
+        self,
+        gate_id: UUID,
+        *,
+        answer: Mapping[str, object],
+        answered_by: str,
+        account: str | None,
+        request_id: str,
+    ) -> GateAnswerOutcome:
+        """The Postgres repository's compare-and-set, in memory: an open gate is answered
+        once; the same request and answer again is a replay; anything else is refused."""
         self.calls.append("answer")
-        existing = next(r for r in self.raised if r.gate_id == gate_id)
-        answered = HumanGateRecord(
-            gate_id=existing.gate_id,
-            project_id=existing.project_id,
-            job_id=existing.job_id,
-            kind=existing.kind,
-            prompt=existing.prompt,
-            options=existing.options,
-            default_answer=existing.default_answer,
+        existing = next((r for r in self.raised if r.gate_id == gate_id), None)
+        if existing is None:
+            raise UnknownGate(f"no gate {gate_id}")
+        if existing.answered_at is not None:
+            same_request = existing.answer_request_id == request_id
+            if same_request and existing.answer == dict(answer):
+                return GateAnswerOutcome(record=existing, replayed=True)
+            raise GateAlreadyAnswered(
+                gate_id,
+                answered_by=existing.answered_by,
+                answered_at=existing.answered_at,
+                same_request=same_request,
+            )
+        answered = replace(
+            existing,
             answer=dict(answer),
-            raised_at=existing.raised_at,
-            timeout_at=existing.timeout_at,
             answered_at=datetime.now(UTC),
             answered_by=answered_by,
+            answer_request_id=request_id,
         )
+        self.accounts[gate_id] = account
         self.raised = [answered if r.gate_id == gate_id else r for r in self.raised]
-        return answered
+        return GateAnswerOutcome(record=answered)
 
     async def latest_for_job(
         self, job_id: UUID, *, include_queue_gates: bool = False

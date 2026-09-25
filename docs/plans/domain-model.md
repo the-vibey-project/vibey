@@ -524,6 +524,8 @@ class EventKind(StrEnum):
     QUEUE_REAPED = "QueueReaped"
     # `vibey budget set`/`clear`: field, old, new, by, account; with the config write
     BUDGET_CAP_CHANGED = "BudgetCapChanged"
+    # A gate answered once: gate, kind, answer, request id, by, account; with the answer
+    GATE_ANSWERED = "GateAnswered"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({

@@ -84,6 +84,13 @@ class EventKind(StrEnum):
     # same transaction as the project config it describes, so the config is the cap the
     # brake enforces and these events are its history. Not spend: nothing counts it.
     BUDGET_CAP_CHANGED = "BudgetCapChanged"
+    # A human gate was answered (`vibey answer`, the Kubernetes operator, any client): the
+    # gate, its kind, the answer, the request that answered it, who named themselves and
+    # which account ran it. Written in the same transaction as the compare-and-set that
+    # records the answer on the gate, so a gate is never answered without its event and a
+    # refused or replayed answer writes none. Not a design answer: `AnswerGiven` closes a
+    # question the design phase asked, and is written by the phase that asked it.
+    GATE_ANSWERED = "GateAnswered"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)

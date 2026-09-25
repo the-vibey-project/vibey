@@ -97,7 +97,7 @@ async def test_answer_nonexistent_gate_raises_lookup_error(
     from uuid import uuid4
 
     gates = PostgresHumanGateRepository(migrated_pool)
-    with pytest.raises(LookupError, match="expected a row"):
+    with pytest.raises(LookupError, match="no gate"):
         await gates.answer(uuid4(), answer={"choice": "yes"}, answered_by="test")
 
 
