@@ -8,7 +8,11 @@
       "@vibey/core": [
         "../../packages/vibey-core/src/index.ts"
       ]
-    }
+    },
+    "types": [
+      "jest",
+      "node"
+    ]
   },
   "include": [
     "**/*.ts",
