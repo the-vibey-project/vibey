@@ -10,11 +10,13 @@ resolves to. With the LAN declared these join the loopback names on the allowlis
 it undeclared they are never consulted, and only loopback names are answered.
 """
 
-import socket
-from typing import Final
+from __future__ import annotations
 
-import uvicorn
-from fastapi import FastAPI
+import socket
+from typing import TYPE_CHECKING, Final
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
 class UvicornServer:
@@ -23,6 +25,11 @@ class UvicornServer:
     Declared by `interfaces/server_interface.py::HubServerInterface`."""
 
     async def serve(self, app: FastAPI, *, host: str, port: int) -> None:
+        # Imported here, not at module level: uvicorn ships in the optional `hub` extra, and
+        # `vibey serve` imports this module, so a top-level import would break every `vibey`
+        # command on an install without the extra (the container image is one).
+        import uvicorn
+
         config = uvicorn.Config(
             app,
             host=host,

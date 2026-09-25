@@ -22,10 +22,10 @@ import asyncio
 import json
 import os
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from pathlib import Path
-from typing import Annotated, Final, cast
+from typing import TYPE_CHECKING, Annotated, Final, cast
 from uuid import UUID
 
 import typer
@@ -67,10 +67,10 @@ from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInter
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
-from vibey.infrastructure.hub.app import HUB_APP
 from vibey.infrastructure.hub.authenticator import LocalTokenAuthenticator
 from vibey.infrastructure.hub.exposure import HUB_EXPOSURE
 from vibey.infrastructure.hub.interfaces.app_interface import HubAppFactoryInterface
+from vibey.infrastructure.hub.interfaces.authenticator_interface import HubAuthenticatorInterface
 from vibey.infrastructure.hub.interfaces.exposure_interface import HubExposureCheckInterface
 from vibey.infrastructure.hub.interfaces.lanes_interface import LaneScannerInterface
 from vibey.infrastructure.hub.interfaces.server_interface import (
@@ -83,6 +83,9 @@ from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.server import HUB_SERVER, LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.tui.dashboard import fetch_dashboard_state
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 DOCTOR_SCOPE: Final = "the checks the hub runs itself; `vibey doctor` on the host is the full check"
 """What the hub's doctor document says about its own reach (10.f)."""
@@ -212,6 +215,32 @@ class CliHubProbes:
         return True
 
 
+class DeferredHubAppFactory:
+    """Builds the hub app, importing FastAPI only when an app is actually built.
+
+    FastAPI ships in the optional `hub` extra, and every `vibey` command imports this
+    module, so `vibey --version` must not need it (the container image installs no extras).
+
+    Declared by `infrastructure/hub/interfaces/app_interface.py::HubAppFactoryInterface`."""
+
+    def build(
+        self,
+        service: HubServiceInterface,
+        *,
+        authenticator: HubAuthenticatorInterface,
+        allowed_hosts: frozenset[str],
+        ready: Callable[[], Awaitable[bool]],
+    ) -> "FastAPI":
+        from vibey.infrastructure.hub.app import HUB_APP
+
+        return HUB_APP.build(
+            service, authenticator=authenticator, allowed_hosts=allowed_hosts, ready=ready
+        )
+
+
+DEFERRED_HUB_APP: Final = DeferredHubAppFactory()
+
+
 class ServeCommand:
     """Resolves where to listen, opens vibey, builds the hub, serves until stopped.
 
@@ -222,7 +251,7 @@ class ServeCommand:
         *,
         open_app: Callable[[], AbstractAsyncContextManager[AppResources]] = build_app,
         settings: HubSettingsLoaderInterface = HUB_SETTINGS,
-        factory: HubAppFactoryInterface = HUB_APP,
+        factory: HubAppFactoryInterface = DEFERRED_HUB_APP,
         binding: HubBindingPolicyInterface = HUB_BINDING,
         server: HubServerInterface = HUB_SERVER,
         names: LocalNamesInterface = LOCAL_NAMES,

@@ -81,6 +81,25 @@ def test_the_command_meets_its_declared_seam() -> None:
     assert isinstance(SERVE, ServeCommandInterface)
 
 
+def test_the_cli_imports_without_the_hub_extra() -> None:
+    """FastAPI and uvicorn ship only in the `hub` extra; the container image installs no
+    extras, so every other command must run without them (its `--version` contract did not)."""
+    import subprocess
+    import sys
+
+    probe = (
+        "import sys\n"
+        "sys.modules['fastapi'] = None\n"
+        "sys.modules['uvicorn'] = None\n"
+        "import vibey.cli.main\n"
+        "assert 'vibey.infrastructure.hub.app' not in sys.modules\n"
+    )
+    result = subprocess.run(  # noqa: S603 - fixed argv, this interpreter
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_the_committed_openapi_document_is_what_serve_prints() -> None:
     printed = runner.invoke(app, ["serve", "--openapi"])
     assert printed.exit_code == 0, printed.output
