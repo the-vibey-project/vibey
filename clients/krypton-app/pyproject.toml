@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# krypton-app: the apps' package (sub-doctrine 9.e, ADR-0069). Every app and interface a
+# person uses is krypton; this package carries them and the `krypton` command. It is
+# published by its own workflow, .github/workflows/krypton-app.yml, and by no other.
+[project]
+name = "krypton-app"
+version = "0.1.0"
+description = "krypton, the apps of vibey: launches the local vibey hub and opens it."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+# The launcher starts `vibey serve`, so the engine is what makes it useful. Unpinned: the
+# two packages release on their own cadences, and the launcher checks what the installed
+# engine can do at run time rather than trusting a version number to say it.
+dependencies = ["vibey-engine"]
+
+[project.urls]
+Homepage = "https://the-vibey-project.github.io/vibey/"
+Source = "https://github.com/the-vibey-project/vibey/tree/main/clients/krypton-app"
+Issues = "https://github.com/the-vibey-project/vibey/issues"
+
+[project.scripts]
+krypton = "krypton_app.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pytest-cov>=6.0", "ruff>=0.8", "mypy>=1.13"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/krypton_app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+strict = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

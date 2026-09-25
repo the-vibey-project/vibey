@@ -20,6 +20,7 @@ from vibey.domain.engine import (
     Loop,
     StoredEngineId,
 )
+from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.budget_caps_interface import (
     CapChangeInterface,
     CapHistoryEntryInterface,
@@ -476,3 +477,13 @@ class LoopsReport:
     paid_default_engine: EngineId
     ladder: EffortLadder
     loops: tuple[LoopView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class HubPrincipal:
+    """Who is asking the hub (ADR-0067): the name its actions are recorded under, and the
+    scopes it holds. The host's own local token is one principal; each paired device is
+    another. Holding no scope is the default and permits nothing."""
+
+    name: str
+    scopes: frozenset[HubScope] = frozenset()

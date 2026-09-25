@@ -256,7 +256,7 @@ export class CoreServices implements ServicesInterface {
     }
     const fix = runner === undefined
       ? 'Install it, or choose another engine.'
-      : `It ships with vibey (pip install vibey), or set vibey.${runner.pathSetting}.`;
+      : `It ships with vibey (pip install vibey-engine), or set vibey.${runner.pathSetting}.`;
     return `${engine.engine_id} cannot run: ${located.error}. ${fix}`;
   }
 

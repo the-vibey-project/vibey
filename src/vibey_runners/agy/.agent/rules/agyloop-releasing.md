@@ -6,7 +6,7 @@
 > **Superseded — this describes a process that no longer runs.** agyloop was released
 > from its own repository under its own name on PyPI. Since vibey ADR-0021 the source
 > lives in the vibey monorepo, and since vibey ADR-0037 it is not published separately at
-> all: the whole tree ships as the single `vibey` distribution, released by the monorepo's
+> all: the whole tree ships as the single `vibey-engine` package, released by the monorepo's
 > own `release.yml`. `publish-to-pypi.yml` and release-please are inert here, and the
 > TestPyPI command below cannot resolve. For the live process read the monorepo's
 > `CONTRIBUTING.md` and its `vibey-releasing` skill.
@@ -32,7 +32,7 @@ then `publish-to-pypi.yml` (filename load-bearing) with OIDC environments
 
 Today a change here is released by the monorepo: it reaches an installed user
 through the `vibey` wheel, `vibey-gh` derives the version from the range, and
-`pip install vibey` puts `agyloop` on PATH.
+`pip install vibey-engine` puts `agyloop` on PATH.
 
 See `docs/contributing/release-process.md` (also superseded, kept as the record of
 why each gate existed) and the monorepo's `vibey-releasing` skill for the live one.

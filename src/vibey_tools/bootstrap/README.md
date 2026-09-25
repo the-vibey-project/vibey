@@ -1,6 +1,6 @@
 # vibey-bootstrap
 
-> **Now part of the vibey monorepo.** `vibey-bootstrap` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `vibey-bootstrap` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 > The cross-cutting layer for Azure Functions, FastAPI services, and AKS workers.
 > One call bootstraps logging → App Configuration + Key Vault → Application Insights
@@ -10,8 +10,8 @@
 
 Formerly **azure-bootstrap** — see [NOTICE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/NOTICE.md).
 
-[![Ships in vibey](https://img.shields.io/pypi/v/vibey?label=ships%20in%20vibey)](https://pypi.org/project/vibey/)
-[![Python](https://img.shields.io/pypi/pyversions/vibey.svg)](https://pypi.org/project/vibey/)
+[![Ships in vibey](https://img.shields.io/pypi/v/vibey-engine?label=ships%20in%20vibey)](https://pypi.org/project/vibey-engine/)
+[![Python](https://img.shields.io/pypi/pyversions/vibey-engine.svg)](https://pypi.org/project/vibey-engine/)
 [![CI/CD](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-usage%20guide-blue.svg)](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/docs/USAGE.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/LICENSE)
@@ -40,7 +40,7 @@ and use a bounded buffer. `USE_MOCK_BOOTSTRAP=true` runs everything without Azur
 ## Quick start
 
 ```bash
-pip install vibey      # vibey_bootstrap ships inside it (vibey ADR-0037)
+pip install vibey-engine      # vibey_bootstrap ships inside it (vibey ADR-0037)
 ```
 
 ```python
@@ -91,8 +91,8 @@ rate-limiting, and escalation. Runnable version:
 
 ```bash
 # On the vibey distribution the extras below are reached through two aggregates:
-pip install 'vibey[azure]'           # the App Config / Key Vault / App Insights core
-pip install 'vibey[bootstrap-all]'   # everything any extra below needs, in one
+pip install 'vibey-engine[azure]'           # the App Config / Key Vault / App Insights core
+pip install 'vibey-engine[bootstrap-all]'   # everything any extra below needs, in one
 ```
 
 The full extras matrix (40+ extras, what each pulls in, when you need it) is in
@@ -155,12 +155,12 @@ Reading order and per-example extras:
 - **[Usage Guide](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/docs/USAGE.md)** — installation & extras matrix, every subpackage, three end-to-end recipes, TypeScript/Next.js integration
 - **API Reference** — rendered from docstrings and signatures at docs-build time by [`docs/gen_pages.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/docs/gen_pages.py); the standalone Pages site that hosted it has been retired
 - **[CHANGELOG](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/CHANGELOG.md)** · **[v1 → v2](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/MIGRATING-FROM-V1.md)** · **[v2 → v3](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/MIGRATING-TO-V3.md)** (additive) · **[v3 → v4](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/MIGRATING-TO-V4.md)** (rename only; pin `vibey-bootstrap>=4,<5`)
-- **[PyPI (`vibey`)](https://pypi.org/project/vibey/)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)** · **[Security policy](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/SECURITY.md)**
+- **[PyPI (`vibey`)](https://pypi.org/project/vibey-engine/)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)** · **[Security policy](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/bootstrap/SECURITY.md)**
 
 ## Related projects
 
 Part of the same open-source family — MIT, and all shipping inside the one
-[`vibey`](https://pypi.org/project/vibey/) distribution (vibey ADR-0037):
+[`vibey-engine`](https://pypi.org/project/vibey-engine/) package (vibey ADR-0037):
 
 - **[claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude)** · **[codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex)** · **[cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor)** · **[agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy)** — autonomous coding-session runners with the same contract, different vendor
 - **[vibey](https://github.com/the-vibey-project/vibey)** — six-phase queue conductor over the loop runners — background reading: the [vibey research paper](https://the-vibey-project.github.io/vibey/main/paper/) ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)) and the vibey book ([PDF](https://the-vibey-project.github.io/vibey/main/book.pdf), [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub), [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html)).

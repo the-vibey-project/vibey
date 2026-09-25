@@ -1,0 +1,898 @@
+{
+  "components": {
+    "schemas": {
+      "GateAnswerBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/gates/{gate_id}/answer`.",
+        "properties": {
+          "answer": {
+            "additionalProperties": true,
+            "description": "The answer, as `vibey answer --raw` takes it, e.g. {\"choice\": \"yes\"}.",
+            "title": "Answer",
+            "type": "object"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Names this request so a retry of the same answer is a no-op.",
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "GateAnswerBody",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "description": "The host's token, or a device's key.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "summary": "The one HTTP surface every Krypton client reaches (ADR-0067).",
+    "title": "vibey hub",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/metrics": {
+      "get": {
+        "operationId": "metrics_api_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "vibey_bootstrap's metrics snapshot.",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/doctor": {
+      "get": {
+        "operationId": "doctor_api_v1_doctor_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The checks the hub runs itself.",
+        "tags": [
+          "doctor"
+        ]
+      }
+    },
+    "/api/v1/gates": {
+      "get": {
+        "operationId": "gates_api_v1_gates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Open gates, oldest first; one project's with project_id.",
+        "tags": [
+          "gates"
+        ]
+      }
+    },
+    "/api/v1/gates/{gate_id}/answer": {
+      "post": {
+        "operationId": "answer_api_v1_gates__gate_id__answer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gate_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Gate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GateAnswerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Answer a gate once.",
+        "tags": [
+          "gates"
+        ]
+      }
+    },
+    "/api/v1/lanes": {
+      "get": {
+        "operationId": "lanes_api_v1_lanes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The lanes running on this computer.",
+        "tags": [
+          "lanes"
+        ]
+      }
+    },
+    "/api/v1/loops": {
+      "get": {
+        "operationId": "loops_api_v1_loops_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The loops, their engines and efforts.",
+        "tags": [
+          "loops"
+        ]
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "operationId": "projects_api_v1_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Every project, newest first.",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/budget": {
+      "get": {
+        "operationId": "budget_api_v1_projects__project_id__budget_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A project's caps and spend (read only).",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/ledger": {
+      "get": {
+        "operationId": "ledger_api_v1_projects__project_id__ledger_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "text",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Text"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search a project's ledger.",
+        "tags": [
+          "ledger"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/queue": {
+      "get": {
+        "operationId": "queue_api_v1_projects__project_id__queue_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A project's queue, in claim order.",
+        "tags": [
+          "queue"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/queue/{job_id}/bump": {
+      "post": {
+        "operationId": "bump_api_v1_projects__project_id__queue__job_id__bump_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Move a queued job to the front, as the declared source vibey-hub.",
+        "tags": [
+          "queue"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/status": {
+      "get": {
+        "operationId": "status_api_v1_projects__project_id__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "One project's phase, queue depth and engine circuits.",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Live Health Live Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The process is up.",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "ready_probe_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "Not ready."
+          }
+        },
+        "summary": "The database answers.",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

@@ -81,6 +81,7 @@ name = Interfaces declare seams, never consume them
 type = forbidden
 source_modules =
     vibey.application.interfaces
+    vibey.application.hub.interfaces
 forbidden_modules =
     vibey.application.*
     vibey.infrastructure
@@ -90,6 +91,7 @@ forbidden_modules =
 ignore_imports =
     vibey.application.interfaces.** -> vibey.application.design
     vibey.application.interfaces.** -> vibey.application.dto
+    vibey.application.hub.interfaces.** -> vibey.application.dto
 
     # The same rule, one layer down. `vibey.infrastructure.db.interfaces` and
     # The same rule, one layer down. `vibey.infrastructure.db.interfaces`,
@@ -133,6 +135,7 @@ source_modules =
     vibey.infrastructure.siem.interfaces
     vibey.infrastructure.sms.interfaces
     vibey.infrastructure.tracker.interfaces
+    vibey.infrastructure.hub.interfaces
 forbidden_modules =
     vibey.cli
     vibey.tui

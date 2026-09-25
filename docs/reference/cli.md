@@ -125,6 +125,28 @@ Prints `project <id>` and `design job <id>`. The project id is the
 `PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
 prints it again later.
 
+## `vibey serve`
+
+The hub (ADR-0067): the HTTP API every Krypton client reaches, built on
+`vibey_bootstrap`. Install it with `pip install 'vibey[hub]'`. It serves until stopped.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--host ADDRESS` | `127.0.0.1` | Address to listen on. Any address that is not loopback needs `[hub] lan = true` in `vibey.toml`; without it the command prints why and exits 2 before opening anything. |
+| `--port PORT` | `[hub] port`, else `8765` | Port to listen on. |
+| `--openapi` | off | Print the OpenAPI 3.1 document and exit. Needs no database. The committed copy is [`hub-api.json`](hub-api.md). |
+
+At start it prints the API's address and where the host token is. Every route is under
+`/api/v1` and needs `Authorization: Bearer <token>`, where the token is the content of
+`<state_dir>/token` (owner-only; `state_dir` defaults to the platform's state directory,
+e.g. `~/Library/Application Support/vibey/hub` on macOS). A request whose `Host` is not
+one the hub answers is refused with 421 (the DNS-rebinding defence), and no response ever
+carries a CORS header. The routes, scopes and refusals are in the
+[hub API reference](hub-api.md).
+
+While it runs it keeps `<state_dir>/serving.json` (address, port, process id), which
+`vibey doctor`'s `hub-exposure` line reads.
+
 ## `vibey projects`
 
 List every project, newest first (by creation time, then id), with its phase,
@@ -814,6 +836,12 @@ Each prints `PASS`, `FAIL` or `UNKNOWN`, and doctor exits 1 if either fails:
 
 With `VIBEY_PG_URL` unset, `ledger-guard` prints `UNKNOWN` and nothing is checked.
 
+The last line, `hub-exposure`, asks whether a running hub (`vibey serve`) listens where
+`vibey.toml` says it may: `PASS` on loopback or on a LAN address `[hub] lan = true`
+declares, `FAIL` on an undeclared one (the exit is then 1), and `UNKNOWN` when no hub is
+running or its runtime record names a process that is gone. A `[hub]` table that cannot be
+read is a `FAIL`.
+
 `--cluster` ignores `--conformance`, `--engine`, `--record` and `--project`,
 runs up to eight checks, and exits 1 if any fails: the DSN host resolves beyond
 its own namespace, the process is not root, the workspace (current directory)
@@ -854,9 +882,9 @@ container of the worker and the operator, the only place the owner's DSN is moun
 ## `vibey operator`
 
 Run the Kubernetes operator, reconciling `VibeyProject` custom resources
-(ADR-0025). Requires the optional extra, `pip install 'vibey[operator]'`;
+(ADR-0025). Requires the optional extra, `pip install 'vibey-engine[operator]'`;
 without it the command prints
-`operator support is not installed: pip install 'vibey[operator]'` and exits 1.
+`operator support is not installed: pip install 'vibey-engine[operator]'` and exits 1.
 
 | Option | Default | What it does |
 |---|---|---|

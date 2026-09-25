@@ -1,6 +1,6 @@
 # qwenloop
 
-> **Now part of the vibey monorepo.** `qwenloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `qwenloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![Provenance](https://github.com/the-vibey-project/vibey/actions/workflows/provenance.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/provenance.yml)
@@ -38,11 +38,11 @@ integration never download model weights.
 
 ## Install
 
-`qwenloop` ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution
+`qwenloop` ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package
 (vibey ADR-0037):
 
 ```bash
-uv tool install vibey    # or: pipx install vibey / pip install vibey
+uv tool install vibey-engine    # or: pipx install vibey-engine / pip install vibey-engine
 ```
 
 That installs both commands. In vibey, `gptossloop` is on by default (switched off

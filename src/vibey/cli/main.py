@@ -41,6 +41,9 @@ from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
+from vibey.cli.serve import SERVE
+from vibey.cli.serve import serve as serve_command
+from vibey.cli.status import STATUS_PRESENTER
 from vibey.cli.ultra import ultra_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -255,6 +258,9 @@ def new_project(
     with guard():
         project_id, job_id = asyncio.run(create())
     typer.echo(f"project {project_id}\ndesign job {job_id}")
+
+
+app.command("serve")(serve_command)
 
 
 @app.command("projects")
@@ -847,35 +853,7 @@ def status(
             )
 
             if as_json:
-                data = {
-                    "project_id": str(state.project_id),
-                    "name": state.project_name,
-                    "phase": state.phase.value,
-                    "cycle": state.cycle,
-                    "max_cycles": state.max_cycles,
-                    "repo_path": str(state.repo_path),
-                    "visual_decision": state.visual_decision,
-                    "deployment_decision": state.deployment_decision,
-                    "queue_depth": {k.value: v for k, v in state.queue_depth.items()},
-                    "circuits": [
-                        {
-                            "engine_id": c.engine_id.value,
-                            "installed": c.installed,
-                            "version": c.version,
-                            "conformance_ok": c.conformance_ok,
-                            "circuit": (
-                                c.circuit.value if hasattr(c.circuit, "value") else str(c.circuit)
-                            ),
-                            "capacity_state": str(c.capacity_state) if c.capacity_state else None,
-                            "consecutive_fail": c.consecutive_fail,
-                            "cost_usd_cycle": c.cost_usd_cycle,
-                            "selected_count": c.selected_count,
-                        }
-                        for c in state.circuits
-                    ],
-                    "active_worktrees": list(state.active_worktrees),
-                }
-                typer.echo(json.dumps(data, indent=2))
+                typer.echo(json.dumps(STATUS_PRESENTER.document(state), indent=2))
             else:
                 vis = f" | Visual: {state.visual_decision}" if state.visual_decision else ""
                 dep = f" | Deploy: {state.deployment_decision}" if state.deployment_decision else ""
@@ -1491,7 +1469,9 @@ def doctor(
         # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above); both
         # now FAIL (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
         reach_ok = await _passwordless_reach_section()
-        if (conformance and not all_ok) or not database_ok or not reach_ok:
+        # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
+        hub_ok = SERVE.exposure_line()
+        if (conformance and not all_ok) or not database_ok or not reach_ok or not hub_ok:
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:
@@ -1645,7 +1625,7 @@ def operator(
     try:
         from vibey.infrastructure.operator import run as run_operator
     except ImportError as exc:
-        typer.echo("operator support is not installed: pip install 'vibey[operator]'")
+        typer.echo("operator support is not installed: pip install 'vibey-engine[operator]'")
         raise typer.Exit(1) from exc
 
     run_operator(namespace=namespace)

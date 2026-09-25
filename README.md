@@ -1,8 +1,8 @@
 # vibey
 
-[![PyPI](https://img.shields.io/pypi/v/vibey)](https://pypi.org/project/vibey/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/vibey)](https://pypi.org/project/vibey/)
-[![Python versions](https://img.shields.io/pypi/pyversions/vibey)](https://pypi.org/project/vibey/)
+[![PyPI](https://img.shields.io/pypi/v/vibey-engine)](https://pypi.org/project/vibey-engine/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/vibey-engine)](https://pypi.org/project/vibey-engine/)
+[![Python versions](https://img.shields.io/pypi/pyversions/vibey-engine)](https://pypi.org/project/vibey-engine/)
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/the-vibey-project/vibey/blob/develop/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-read-blue.svg)](https://the-vibey-project.github.io/vibey/main/)
@@ -61,7 +61,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All five runners ship inside the `vibey` distribution (ADR-0037). |
+| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All five runners ship inside the `vibey-engine` package (ADR-0037). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
@@ -81,7 +81,7 @@ needs separately is its own vendor CLI and credentials — which is what
 `vibey doctor` checks.
 
 ```bash
-uv tool install vibey          # or: pipx install vibey / pip install vibey
+uv tool install vibey-engine          # or: pipx install vibey-engine / pip install vibey-engine
 vibey install --postgres       # install/start local PostgreSQL 18 when needed, then set
                                # the scram-sha-256 pg_hba.conf lines in SECURITY.md §7
 export VIBEY_PG_URL=postgresql://vibey_app:change-me@localhost:5432/vibey # the application
@@ -197,7 +197,7 @@ Every command's flags and defaults are in the
 | `vibey budget` / `budget set` / `budget clear` | A project's per-cycle caps and spend, and changing the caps after creation (`--json` for scripting). |
 | `vibey deploy status/inspect/plan/cancel/rollback` | Inspect and control Phases ④–⑥. |
 | `vibey recover` | Recover jobs stuck under a dead worker's lease. |
-| `vibey operator` | Run the Kubernetes operator (`pip install 'vibey[operator]'`; ADR-0025). |
+| `vibey operator` | Run the Kubernetes operator (`pip install 'vibey-engine[operator]'`; ADR-0025). |
 
 ## Configuration
 
@@ -331,7 +331,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (67 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (69 ADRs) |
 
 ## Status
 
@@ -353,7 +353,7 @@ test — the no-loss handoff gate is deterministic code, not a model's opinion.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `vibey doctor` reports an engine `NOT INSTALLED` | The `*loop` binaries ship with `vibey`, so this is a `PATH` problem, not a missing package: `vibey` is being run from one environment while `PATH` points at another (a venv whose `bin/` is not exported, a shadowing `uv tool` shim, a system `python` install). | `python -c 'import shutil; print(shutil.which("claudeloop"))'` in the same environment that runs `vibey`; if it prints nothing, put that environment's `bin/` on `PATH` (or reinstall with `uv tool install vibey`), then re-run `vibey doctor`. |
+| `vibey doctor` reports an engine `NOT INSTALLED` | The `*loop` binaries ship with `vibey`, so this is a `PATH` problem, not a missing package: `vibey` is being run from one environment while `PATH` points at another (a venv whose `bin/` is not exported, a shadowing `uv tool` shim, a system `python` install). | `python -c 'import shutil; print(shutil.which("claudeloop"))'` in the same environment that runs `vibey`; if it prints nothing, put that environment's `bin/` on `PATH` (or reinstall with `uv tool install vibey-engine`), then re-run `vibey doctor`. |
 | `VIBEY_PG_URL is not set` | No database connection string in the environment. | `export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey`, pointing at a database you own. |
 | `vibey doctor` reports `auth FAIL` | The engine's own vendor credentials aren't configured. | Run that engine's own login/auth flow, then re-run `vibey doctor --conformance`. |
 | `vibey worker` logs `no recorded conformance for ...` | `vibey doctor --conformance --record` has never passed for that engine on this project. | Run it before starting the worker; engine-driven jobs won't select an unrecorded engine. |
@@ -376,12 +376,14 @@ Before upgrading:
    (`infrastructure/db/migrator.py`); no manual migration step is needed.
 
 Every push to `develop` publishes a uniquely versioned dev build (`X.Y.Z.devN`)
-to TestPyPI as `vibey-dev`; every push to `main` publishes `vibey` to PyPI.
+to TestPyPI; every push to `main` publishes to PyPI. Two packages publish, each by its own
+workflow (ADR-0069): `vibey-engine`, the engine family (`vibey-engine.yml`), and
+`krypton-app`, the apps and the `krypton` command (`krypton-app.yml`).
 After a successful `main` release, `github-release.yml` tags that exact commit
 and creates the matching GitHub Release. Versioning and release are owned by
 the in-tree `vibey-gh`; release-please is retired (ADR-0028). `uv tool install
-vibey` (or `pipx install vibey` / `pip install vibey`) tracks stable releases —
-and it is the family's only install instruction (ADR-0037).
+vibey-engine` (or `pipx install vibey-engine` / `pip install vibey-engine`) tracks stable
+releases of the engine family (ADR-0037, ADR-0069); `pip install krypton-app` adds the apps.
 
 ## Formal notes
 
@@ -457,7 +459,7 @@ spec to deployed software, without losing a single open question.
 **Your next step**: install it and let it interview you —
 
 ```bash
-uv tool install vibey && vibey doctor
+uv tool install vibey-engine && vibey doctor
 ```
 
 **Prefer to read first?** The design is a [research paper](https://the-vibey-project.github.io/vibey/main/paper/)

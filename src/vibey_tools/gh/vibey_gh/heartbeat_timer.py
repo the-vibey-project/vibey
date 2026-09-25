@@ -67,7 +67,7 @@ _LINUX_STATE_DIR = "~/.local/state/vibey-gh"
 # What each placement refusal tells the operator to change, by the key that moves it (10.h).
 _MOVE_IT = {
     "heartbeat_python": (
-        "install vibey-gh outside any checkout (`uv tool install vibey` puts it where the"
+        "install vibey-gh outside any checkout (`uv tool install vibey-engine` puts it where the"
         " default [runners] heartbeat_python looks) or set [runners] heartbeat_python"
     ),
     "heartbeat_log_dir": "set [runners] heartbeat_log_dir somewhere durable",

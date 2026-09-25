@@ -87,6 +87,7 @@ from vibey.application.interfaces.engines import (
 from vibey.application.interfaces.files import FilesPort
 from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
 from vibey.application.interfaces.gates import (
+    GateLookup,
     HumanGateRepository,
 )
 from vibey.application.interfaces.ledger import (
@@ -236,6 +237,7 @@ __all__ = [
     "GateResult",
     "GateRunner",
     "HandoffStore",
+    "GateLookup",
     "HumanGateRepository",
     "IntegrationBranch",
     "IntegrationLock",

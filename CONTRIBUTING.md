@@ -109,11 +109,11 @@ Durable storage alone is not enough. A disk fails and a laptop goes missing, so:
 ## The branch model
 
 ```
-main         ← always releasable; every push publishes to PyPI (release.yml)
+main         ← always releasable; every push publishes to PyPI (vibey-engine.yml)
   ▲ rebase merge — main's ruleset permits only rebase. The promotion PR is
   │ opened by `vibey-gh promote` (promote-to-main.yml); after a release,
   │ develop is realigned to main's tree.
-develop      ← integration branch; every push publishes a vibey-dev build to TestPyPI
+develop      ← integration branch; every push publishes dev builds to TestPyPI
   ▲ squash merge — develop's ruleset permits only squash
 feature/*    ← your work
 ```
@@ -128,7 +128,7 @@ feature/*    ← your work
    train. To see why a PR is not moving:
    `gh workflow run merge-train.yml -f pr=<N> -f dry_run=true`.
 5. `vibey-gh promote` opens the promotion PR from `develop` into `main`; it is
-   rebase-merged, `release.yml` publishes, and `develop` is realigned.
+   rebase-merged, `vibey-engine.yml` publishes, and `develop` is realigned.
 
 Never implement on `main`.
 
@@ -240,7 +240,7 @@ This repository is a uv workspace (ADR-0021). `src/vibey` is the conductor;
 `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}` are the `*loop`
 runners; `src/vibey_tools/{gh,skills,bootstrap}` are vibey-gh, vibey-skills
 and vibey-bootstrap. Each was imported with its history, and each ships inside
-the `vibey` distribution rather than under its own PyPI name (ADR-0037).
+the `vibey-engine` package rather than under its own PyPI name (ADR-0037, ADR-0069).
 
 The root gates above cover `src/vibey` only. A tenant keeps every gate it was
 already held to (ADR-0022), run from its own directory with its own command,

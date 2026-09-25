@@ -30,11 +30,11 @@ integration never download model weights.
 
 ## Install
 
-`qwenloop` ships inside the `vibey` distribution (vibey ADR-0037); there is no
+`qwenloop` ships inside the `vibey-engine` package (vibey ADR-0037); there is no
 separate `qwenloop` project to install:
 
 ```bash
-uv tool install vibey    # or: pipx install vibey / pip install vibey
+uv tool install vibey-engine    # or: pipx install vibey-engine / pip install vibey-engine
 ```
 
 The Python package never bundles model weights.

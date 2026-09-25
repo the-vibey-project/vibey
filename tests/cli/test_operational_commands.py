@@ -2252,7 +2252,7 @@ def test_operator_command_explains_itself_when_the_extra_is_not_installed() -> N
         res = runner.invoke(app, ["operator"])
 
     assert res.exit_code == 1
-    assert "vibey[operator]" in res.output
+    assert "vibey-engine[operator]" in res.output
 
 
 async def test_recorded_spend_is_visible_to_the_budget_brake(tmp_path: Path) -> None:

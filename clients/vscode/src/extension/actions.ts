@@ -1107,7 +1107,7 @@ export class CommandActions implements CommandActionsInterface {
   private vibey(invocation: Invocation): NonNullable<typeof this.controller.services.vibey> | undefined {
     const vibey = this.controller.services.vibey;
     if (vibey === undefined) {
-      invocation.say('vibey was not found. Install it (pip install vibey), or point the vibey.cliPath setting at it.');
+      invocation.say('vibey was not found. Install it (pip install vibey-engine), or point the vibey.cliPath setting at it.');
     }
     return vibey;
   }

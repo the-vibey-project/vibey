@@ -12,11 +12,11 @@ from claudeloop import __version__
 
 # claudeloop's own repository and its own PyPI project are both retired: the source was
 # absorbed into the vibey monorepo (ADR-0021) and the distribution folded into `vibey`
-# (ADR-0037). These four render into `claudeloop --man`, which `pip install vibey` puts on
+# (ADR-0037). These four render into `claudeloop --man`, which `pip install vibey-engine` puts on
 # everyone's PATH, so they name where the code and the artifact actually are.
 _DOCS = "https://the-vibey-project.github.io/vibey/main/"
 _REPO = "https://github.com/the-vibey-project/vibey"
-_PYPI = "https://pypi.org/project/vibey/"
+_PYPI = "https://pypi.org/project/vibey-engine/"
 _TESTPYPI = "https://test.pypi.org/project/vibey-dev/"
 
 
@@ -398,7 +398,7 @@ EXAMPLES
 SEE ALSO
        Documentation (github.io): {_DOCS}
        Repository: {_REPO}
-       PyPI: {_PYPI} (claudeloop ships inside the `vibey` distribution)
+       PyPI: {_PYPI} (claudeloop ships inside the `vibey-engine` package)
        TestPyPI: {_TESTPYPI}
        Guides: autonomous runs, run resources and chat ops, rate limits vs
        credits, never-blocking, live testing, configuration — under {_DOCS}
