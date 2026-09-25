@@ -20,7 +20,7 @@ async function check(name, body) {
 exports.run = async function run() {
   const root = path.resolve(__dirname, '..', '..');
   const manifest = require(path.join(root, 'package.json'));
-  const table = require(path.join(root, 'out', 'core', 'commands.js')).CommandTable.ALL.map((spec) => spec.id);
+  const table = require('@vibey/core').CommandTable.ALL.map((spec) => spec.id);
   const extension = vscode.extensions.getExtension(`${manifest.publisher}.${manifest.name}`);
 
   await check('the extension is installed and activates', async () => {

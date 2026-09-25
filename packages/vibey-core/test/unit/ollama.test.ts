@@ -1,8 +1,8 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import { describe, expect, it } from 'vitest';
-import type { OllamaStatus } from '../../src/core/interfaces/ollama-interface';
-import { ModelName, OllamaAdvice, OllamaEndpoint, OllamaProbe } from '../../src/core/ollama';
-import { ModelPuller, OllamaStartFactsReader, OllamaStartPlanner, PullProgress } from '../../src/core/ollama-lifecycle';
+import type { OllamaStatus } from '../../src/interfaces/ollama-interface';
+import { ModelName, OllamaAdvice, OllamaEndpoint, OllamaProbe } from '../../src/ollama';
+import { ModelPuller, OllamaStartFactsReader, OllamaStartPlanner, PullProgress } from '../../src/ollama-lifecycle';
 import { FakeHttp, FakeProcessRunner, json } from './helpers';
 
 const root = 'http://127.0.0.1:11434';

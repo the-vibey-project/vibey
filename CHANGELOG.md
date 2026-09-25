@@ -211,6 +211,21 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **clients:** `@vibey/core`, the pure TypeScript every krypton client shares, in
+  `packages/vibey-core/` ([ADR-0067](docs/architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md)).
+  It holds the engine catalogue, run events, the one command table, the gate-answer planner, the
+  budget rules, the doctor and every interface, taken from the VS Code extension's core. It also
+  re-exports the generated design tokens, and it builds against no platform types.
+  `VibeyTransportInterface` has two transports: `LocalProcessTransport` (the `vibey … --json` command
+  line, which the extension uses) and `HubTransport`, a declared stub until the hub's
+  `docs/reference/hub-api.json` lands.
+  - **npm workspace.** The repository root now holds an npm workspace (`package.json`,
+    `package-lock.json`) with the package and the extension.
+  - **Packaging.** The extension carries the package inside its `.vsix` and behaves as before.
+  - **CI.** The new `@vibey/core` job holds the package at 100% coverage, and
+    `tests/meta/test_clients_have_ci.py` fails when a `clients/*` or `packages/*` directory has no
+    CI job.
+
 * **design:** one design system for every surface
   ([ADR-0066](docs/architecture/decisions/0066-one-design-system-for-every-surface.md)).
   `design/tokens/` (DTCG 2025.10) is the single source of colour, type, space, radius,
@@ -578,8 +593,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **canon:** sub-doctrine 9.e, for the operator's ratification: the project and its engine are
   **vibey**, and every app and interface a person uses is **krypton**, with the krypton-84 atom
-  as its emblem (ADR-0065). Package and command names are unchanged; the apps publish as their own
-  distribution, `krypton-app` (PyPI from `main`, TestPyPI from `develop`, trusted publishing).
+  as its emblem (ADR-0065). The canon names exactly four names: `vibey`, `vibey-engine`, `krypton` and
+  `krypton-app`. Two packages publish, `vibey-engine` and `krypton-app`, each from its own workflow.
 
 ## [2.0.0] (2026-09-21)
 

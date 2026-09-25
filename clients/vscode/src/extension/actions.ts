@@ -9,16 +9,14 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { NoCapPath } from '../core/budgets';
-import { Efforts } from '../core/catalogue';
-import { CommandTable, SlashArguments, SlashCommands } from '../core/commands';
-import { Doctor } from '../core/doctor';
-import type { Budget, BudgetCaps, BudgetLoop, BudgetScope } from '../core/interfaces/budgets-interface';
-import type { EffortSetting, LoopName } from '../core/interfaces/catalogue-interface';
-import type { Lane } from '../core/interfaces/lanes-interface';
-import type { RunRecord, TaskRunInterface } from '../core/interfaces/run-interface';
-import type { GateAnswer, VibeyBudget, VibeyGate, VibeyProject } from '../core/interfaces/vibey-cli-interface';
-import { ModelPuller } from '../core/ollama-lifecycle';
+import { CommandTable, Efforts, NoCapPath, SlashArguments, SlashCommands } from '@vibey/core';
+import { Doctor } from '@vibey/core';
+import type { Budget, BudgetCaps, BudgetLoop, BudgetScope } from '@vibey/core';
+import type { EffortSetting, LoopName } from '@vibey/core';
+import type { Lane } from '@vibey/core';
+import type { RunRecord, TaskRunInterface } from '@vibey/core';
+import type { GateAnswer, VibeyBudget, VibeyGate, VibeyProject } from '@vibey/core';
+import { ModelPuller } from '@vibey/core';
 import type { VibeyController } from './controller';
 import type { CommandActionsInterface, Invocation } from './interfaces/actions-interface';
 import type { TreeElement } from './interfaces/trees-interface';
@@ -924,29 +922,16 @@ export class CommandActions implements CommandActionsInterface {
       // Sub-doctrine 8.b's path (ADR-0063): a warning with the measured cost, the typed
       // phrase, and a second warning whose default keeps a cap.
       const rate = this.controller.services.spend.perHour({ loop: 'paidloop' });
-      const first = await vscode.window.showWarningMessage(
-        'UNLIMITED SPEND',
-        { modal: true, detail: NoCapPath.warning(rate) },
-        'I understand',
-      );
+      const first = await vscode.window.showWarningMessage('UNLIMITED SPEND', { modal: true, detail: NoCapPath.warning(rate) }, 'I understand');
       if (first !== 'I understand') {
         return false;
       }
-      const typed = await vscode.window.showInputBox({
-        title: 'Declare no cap',
-        prompt: `Type "${NoCapPath.PHRASE}" to continue`,
-        ignoreFocusOut: true,
-      });
+      const typed = await vscode.window.showInputBox({ title: 'Declare no cap', prompt: `Type "${NoCapPath.PHRASE}" to continue`, ignoreFocusOut: true });
       if (!NoCapPath.matches(typed)) {
         void vscode.window.showInformationMessage('The phrase did not match. Kept the cap.');
         return false;
       }
-      const again = await vscode.window.showWarningMessage(
-        NoCapPath.LAST_CHANCE,
-        { modal: true },
-        NoCapPath.KEEP,
-        NoCapPath.DECLARE,
-      );
+      const again = await vscode.window.showWarningMessage(NoCapPath.LAST_CHANCE, { modal: true }, NoCapPath.KEEP, NoCapPath.DECLARE);
       if (again !== NoCapPath.DECLARE) {
         return false;
       }

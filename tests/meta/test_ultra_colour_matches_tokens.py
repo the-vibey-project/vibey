@@ -29,6 +29,6 @@ def test_the_extension_contributes_ultra_in_the_tokens_colours() -> None:
 
 
 def test_the_core_constant_is_the_tokens_colour() -> None:
-    source = (ROOT / "clients/vscode/src/core/catalogue.ts").read_text("utf-8")
+    source = (ROOT / "packages/vibey-core/src/catalogue.ts").read_text("utf-8")
     assert f"dark: '{_ultra('dark')}'" in source
     assert f"light: '{_ultra('light')}'" in source

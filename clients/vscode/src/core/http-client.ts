@@ -5,7 +5,7 @@
  */
 import * as http from 'node:http';
 import * as https from 'node:https';
-import type { HttpClientInterface, HttpResponse } from './interfaces/http-client-interface';
+import type { HttpClientInterface, HttpResponse } from '@vibey/core';
 
 /** One protocol's request function: `http.request`, `https.request`, or a test's stand-in. */
 export type RequestFunction = (

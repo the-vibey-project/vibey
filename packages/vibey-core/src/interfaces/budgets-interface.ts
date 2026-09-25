@@ -64,6 +64,8 @@ export interface SpendLedgerInterface {
   /** Mean tokens per turn this machine measured for an engine, when it measured any. */
   /** Measured dollars per hour of run time; null when nothing has been measured. */
   perHour(filter: { readonly loop?: string; readonly engineId?: string }): number | null;
+  /** Measured dollars per hour of run time; null when nothing has been measured. */
+  perHour(filter: { readonly loop?: string; readonly engineId?: string }): number | null;
   perTurn(engineId: string): { readonly input: number; readonly output: number } | undefined;
 }
 

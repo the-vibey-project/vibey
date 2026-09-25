@@ -1,9 +1,9 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import { describe, expect, it } from 'vitest';
-import { DegradedCatalogue, CatalogueParser } from '../../src/core/catalogue';
+import { DegradedCatalogue, CatalogueParser } from '@vibey/core';
 import { EngineCommand } from '../../src/core/engine-command';
-import type { CatalogueEngine } from '../../src/core/interfaces/catalogue-interface';
-import { LocalRunners } from '../../src/core/local-runner';
+import type { CatalogueEngine } from '@vibey/core';
+import { LocalRunners } from '@vibey/core';
 import { QwenloopCommand, QwenloopRunConfig } from '../../src/core/qwenloop';
 import { fixture } from './helpers';
 

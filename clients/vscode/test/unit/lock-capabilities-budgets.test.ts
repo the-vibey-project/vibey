@@ -2,10 +2,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BudgetError, BudgetGuard, BudgetStore, NoCapPath, SpendLedger } from '../../src/core/budgets';
+import { BudgetError, BudgetGuard, BudgetStore, SpendLedger } from '../../src/core/budgets';
+import { NoCapPath } from '@vibey/core';
 import { Capabilities, SkillsContext, SkillsMarketplace } from '../../src/core/capabilities';
-import type { EngineCapabilities } from '../../src/core/interfaces/catalogue-interface';
-import type { HostFacts } from '../../src/core/interfaces/model-lock-interface';
+import type { EngineCapabilities } from '@vibey/core';
+import type { HostFacts } from '@vibey/core';
 import { JsonlJournal, JsonlTail } from '../../src/core/jsonl';
 import { LocalHost, ModelSlotLock } from '../../src/core/model-lock';
 import { FakeClock, FakeProcessRunner, SequentialIds, scratch } from './helpers';
@@ -351,24 +352,6 @@ describe('budgets', () => {
     expect(store.paid()).toEqual(uncapped);
     const actions = new JsonlJournal(path.join(directory, 'budget-journal.jsonl')).readAll().records.map((line) => line.action);
     expect(actions).toEqual(['add', 'paid.declared', 'paid.declared']);
-  });
-
-  it('shows the no-cap path the same everywhere: the measured rate, or unknown', () => {
-    expect(NoCapPath.matches(undefined)).toBe(false);
-    expect(NoCapPath.matches('i accept unlimited spending')).toBe(false);
-    expect(NoCapPath.matches(NoCapPath.PHRASE)).toBe(true);
-    expect(NoCapPath.warning(null)).toContain('Measured cost: unknown (nothing measured yet)');
-    expect(NoCapPath.warning(12.5)).toContain('Measured cost: $12.50/h');
-    expect(NoCapPath.REFUSED).toContain('vibey budget no-cap');
-  });
-
-  it('measures dollars per hour of run time, or says it has not', () => {
-    const { spend } = setup();
-    expect(spend.perHour({})).toBeNull();
-    spend.record(entry({ dollars: 0, minutes: 30 }));
-    expect(spend.perHour({})).toBeNull();
-    spend.record(entry({ run_id: 'r2', dollars: 3, minutes: 30 }));
-    expect(spend.perHour({ engineId: 'claudeloop' })).toBe(3);
   });
 
   it('sums spend from a byte-offset watermark, and knows tokens per turn', () => {
