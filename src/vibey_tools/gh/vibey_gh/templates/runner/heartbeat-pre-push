@@ -1,7 +1,7 @@
 #!/bin/sh
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 # Rendered by `vibey-gh heartbeat install` into the repository the heartbeat timer owns
-# (vibey ADR-0059). Do not edit: re-install, and `vibey-gh heartbeat status` reports drift.
+# (vibey ADR-0060). Do not edit: re-install, and `vibey-gh heartbeat status` reports drift.
 #
 # THE GATE, in a repository that exists to publish one thing. The timer pushes the sovereign
 # heartbeat from here -- an empty tree with no parents, to the declared heartbeat ref -- and

@@ -276,7 +276,7 @@ repository = "the-vibey-project/vibey"
 # `<prefix>-vibey` in place and cleanup finds the agents of the absorbed repositories.
 unit_prefix = "com.adammatthewsteinberger.vibey-runner"
 # The interpreter the heartbeat timer runs, and the one its clone's pre-push gate asks for
-# the scope decision (ADR-0059): the tool install `uv tool install --force --from . vibey`
+# the scope decision (ADR-0060): the tool install `uv tool install --force --from . vibey`
 # makes, outside every checkout. Declared rather than defaulted so the runbook's
 # `uv run vibey-gh runner install` -- whose own interpreter is this checkout's .venv, which
 # the timer refuses -- installs the heartbeat with it. Re-run that tool install after pulling

@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The repository the heartbeat timer owns and pushes from (vibey ADR-0059).
+"""The repository the heartbeat timer owns and pushes from (vibey ADR-0060).
 
 The heartbeat used to be pushed from the operator's own checkout, through whatever pre-push
 hook that checkout's branch happened to carry. On a branch without the scope rule that hook

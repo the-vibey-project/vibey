@@ -145,6 +145,21 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **vscode:** a VS Code extension, under `clients/vscode`, that drives vibey and a model on your
+  own computer from the editor, with no account and no cloud
+  ([ADR-0059](docs/architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md),
+  #290). A task runs on a copy of the folder (a worktree on a branch of its own, in the durable
+  storm home), through qwenloop on gpt-oss:20b by default, and a person Reviews, Applies or
+  Discards it. The loops, efforts, engines and capabilities all come from `vibey loops --json`.
+  Views show the model, tasks, every lane on the computer, vibey projects, gates and budgets. A
+  task panel streams each task and takes follow-ups; Force stop opens only after a fair wait,
+  and is journaled. One command table serves the palette, the menus, the panel's `/` commands
+  and `@vibey`. `vibey-vscode batch` runs a folder of task files one at a time, resumably, from
+  a terminal, and a task file's `paths:` keeps its commit to its scope. No `VIBEY_*`, `PG*`,
+  credential or `postgres://` value reaches a model. The core is tested to 100% of lines,
+  branches, functions and statements; a smoke test runs it in a real VS Code. Its CI job is not
+  a required check yet, and Open VSX publishing is declared only, waiting on the operator's
+  `OVSX_PAT`.
 * **cli:** finding a project or an open gate no longer takes SQL. `vibey projects` lists every
   project, newest first, with its id, phase, cycle and open-gate count; `vibey gates
   [PROJECT_ID]` lists every open gate, oldest first, with its project, kind and prompt, and
@@ -157,6 +172,32 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   test fails when a gate kind is raised without an entry there. The repositories gain
   `list_all()` and `open_all()`, and the next-step hints, the README, the CLI reference and
   the greeter runbook point at `vibey gates` instead of a `human_gate` query
+* **cli:** `vibey loops [--json]` lists the family's two loops (sub-doctrines 8.b and 8.c):
+  `sovereignloop` (tier local; the default by canon 8.b) and `paidloop` (tier paid; declared
+  only by canon 8.b, with claudeloop as its default). The canon is reported as the canon: the
+  selector does not read a paid declaration yet. For each engine it shows all five efforts:
+  the argv, the effort really achieved, and the model or what chooses it. It also gives the
+  escalation ladder and a by-effort view. qwenloop's model is the one that actually reaches
+  it: `QWENLOOP_MODEL`, else vibey's model only while `VIBEY_OLLAMA_URL` is set, else none.
+  Each engine reports what it can take: images, files, pasted text or images, plugins and
+  MCP. A value is `null` where the runner's own code shows nothing, and `evidence` names the
+  proof wherever it shows something. Each engine also reports its `run` argv template and its
+  `stop`, `wind_down` and `prompt` verbs. A prompt verb is listed only where the runner acts
+  on it, so cursorloop lists none. Tests hold the template to `build_argv`, and
+  read it and every effort flag and control against the runner's own Typer definition. The
+  report adds where the events land, their envelope (one of three), and the environment
+  names the engine reads (names only). The command needs no database and no network. A
+  malformed setting exits 3, naming the setting and never its value. `EngineDescriptor` gains
+  `affordances`, `controls` and `events`, all unknown by default. OpenCode is listed under its
+  descriptor's tier with `repealed: true`, because 8.b repeals it, and is left out of every
+  by-effort view. The document for one fixed environment is committed as
+  `tests/cli/golden/vibey-loops.json`, and the suite fails when the output drifts from it
+* **engines:** capabilities agree with what each runner's code backs, and a test ties them
+  to the facts `vibey loops` shows. codexloop and agyloop claim a mid-run prompt, which they
+  act on. qwenloop declares its `prompt` control, which its runner reads since #1133, and no
+  longer claims attachments or web search. agyloop no longer claims web search. cursorloop no longer declares a `prompt` control, because its
+  runner drops one unread. No job requires these capabilities, so engine selection is
+  unchanged. A refused `VIBEY_OLLAMA_URL` is named without echoing its value
 
 * **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
   model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
@@ -325,6 +366,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **qwenloop:** a follow-up sent with `qwenloop prompt` now reaches the model: the runner takes
+  it at the next turn boundary, once and in the order sent, records `prompt.received`, and moves
+  it to `control/ack`. It was written to the control inbox and never read, and control files are
+  now named by the time they were sent, so they are read in order (#290).
 * **ci:** the delivery estimate refreshes once an hour, and by hand, instead of on every push,
   pull request and issue event. Its pull request now runs every CI gate: the `[skip ci]` that
   let #1125 merge a ledger record, and break develop's paper-figure check with no check run,
@@ -377,7 +422,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   with the project's `engine_environment`, so a credential the project declares for opencode
   or agyloop reaches the auth check and the conformance run, not only the session
 * **vibey_gh:** the sovereign heartbeat is honest and no longer skips the pre-push gate
-  (ADR-0059). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
+  (ADR-0060). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
   lane's label as online (read with the runner's own login) and the model endpoint answers;
   otherwise it pushes nothing, says why, and the heartbeat goes stale so the gate falls back
   honestly. It no longer pushes with `--no-verify` or a bare `--force`: the pre-push hook now

@@ -164,7 +164,7 @@ signal to still fix the primary path's root cause, not as a fully reviewed pass.
 The PR-review gate schedules the sovereign review only while
 `[pr_automation.fallback] heartbeat_ref` is younger than `heartbeat_max_age_minutes`
 (default 15); otherwise it asks a human. The heartbeat is published by a timer on the
-machine that serves the lane (vibey ADR-0059).
+machine that serves the lane (vibey ADR-0060).
 
 **Stand it up** from the repository's main checkout, with a `vibey-gh` installed outside any
 checkout and outside any temporary directory (for example `uv tool install vibey`):

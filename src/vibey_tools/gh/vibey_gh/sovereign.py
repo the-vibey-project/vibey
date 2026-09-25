@@ -26,7 +26,7 @@ commit to a ref outside `refs/heads/` — no branch, nothing for doctrine 9.a's 
 pass to find. Any job with ordinary `contents: read` fetches that ref and reads its
 timestamp. Fresh means ready.
 
-**A heartbeat is a claim, so it is published only when it is true** (ADR-0059). The machine
+**A heartbeat is a claim, so it is published only when it is true** (ADR-0060). The machine
 that publishes it CAN ask GitHub, with the runner's own credential, and does: `beat()` takes
 a `LaneReadinessInterface` and pushes nothing unless the runner is registered and online and
 the model endpoint answers. A read that fails is a refusal, never an assumed "up". Withheld,

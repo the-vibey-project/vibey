@@ -11,7 +11,7 @@
   machine that cannot serve the lane lets the heartbeat go stale on its own. Each run
   records what it did in the record file below, which `heartbeat status` reads.
 
-  It pushes from the repository the timer owns (vibey ADR-0059), never from a checkout:
+  It pushes from the repository the timer owns (vibey ADR-0060), never from a checkout:
   a clone with no working tree, whose own pre-push gate asks this same interpreter whether a
   push carries code and refuses anything that is not a heartbeat. Nothing here skips it.
 -->

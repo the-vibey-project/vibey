@@ -140,7 +140,7 @@ env -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR=$HOME/.config/gh-runner \
 
 The workflow schedules the sovereign job only while the heartbeat is fresh. The heartbeat is
 published by a timer that `runner install` installs beside the runner (`vibey-gh heartbeat`,
-ADR-0059): `<unit_prefix>-heartbeat-vibey`, a LaunchAgent here. Each beat publishes only while
+ADR-0060): `<unit_prefix>-heartbeat-vibey`, a LaunchAgent here. Each beat publishes only while
 GitHub lists a runner labelled `vibey-local-vibey` as online and Ollama answers with the model,
 and it goes through the pre-push gate, which lets an empty parentless commit on a non-branch
 ref through by its own rule. The timer must run a `vibey-gh` installed outside any checkout, so

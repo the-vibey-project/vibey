@@ -35,6 +35,7 @@ from vibey_gh.config import (
     load_config,
 )
 from vibey_gh.doctor import _check_unknown_keys
+from vibey_gh.heartbeat_clone import GATE_PASSED, HeartbeatClone
 from vibey_gh.heartbeat_timer import HeartbeatTimer
 from vibey_gh.interfaces import RunnersConfigInterface
 from vibey_gh.interfaces.sovereign_runner_interface import (
@@ -705,7 +706,10 @@ def _repo(tmp_path: Path, monkeypatch, extra: str = "") -> Path:
 
     `runner install` also installs the heartbeat timer, which refuses an interpreter under a
     temporary directory -- where the suite's scratch tree lives -- so that refusal is turned
-    off here and tested on its own in `test_heartbeat_timer`."""
+    off here and tested on its own in `test_heartbeat_timer`. The timer also asks its own
+    clone's pre-push gate to pass a synthetic heartbeat, and the stand-in interpreter here
+    cannot answer it, so the gate answers "passed" here; `test_heartbeat_timer` drives the
+    real gate."""
     repo = tmp_path / "repo"
     (repo / ".git").mkdir(parents=True)
     python = tmp_path / "tool" / "bin" / "python"
@@ -722,6 +726,9 @@ def _repo(tmp_path: Path, monkeypatch, extra: str = "") -> Path:
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.chdir(repo)
     monkeypatch.setattr(HeartbeatTimer, "temp_roots", staticmethod(lambda: ()))
+    monkeypatch.setattr(
+        HeartbeatClone, "_run_hook", lambda self, argv, cwd, stdin, env: (0, f"{GATE_PASSED}\n")
+    )
     return home
 
 
@@ -740,6 +747,21 @@ def test_cli_install_writes_files_and_prints_the_next_commands(tmp_path, monkeyp
     heartbeat = home / "Library/LaunchAgents/org.vibey.runner-heartbeat-r.plist"
     assert "the heartbeat timer:" in out and f"wrote {heartbeat}" in out
     assert heartbeat.is_file()
+
+
+def test_cli_install_reports_a_heartbeat_that_could_not_be_installed(tmp_path, monkeypatch, capsys):
+    """The runner is written whatever happens, but a heartbeat its gate refuses is reported on
+    its own, with the command to run next, and the exit status says the lane is not offered."""
+    home = _repo(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        HeartbeatClone, "_run_hook", lambda self, argv, cwd, stdin, env: (1, "refused\n")
+    )
+    assert main(["runner", "install"]) == 1
+    captured = capsys.readouterr()
+    assert (home / "Library/LaunchAgents/org.vibey.runner-r.plist").is_file()
+    assert "the heartbeat timer:" in captured.out
+    assert "the runner is installed, but its heartbeat timer is not" in captured.err
+    assert "`vibey-gh heartbeat install`" in captured.err
 
 
 def _fake_gh_on_path(tmp_path: Path, monkeypatch, code: int) -> None:

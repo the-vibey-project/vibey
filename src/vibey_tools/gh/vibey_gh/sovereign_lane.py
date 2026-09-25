@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Can the sovereign lane serve right now? Read, never assumed (ADR-0059).
+"""Can the sovereign lane serve right now? Read, never assumed (ADR-0060).
 
 The heartbeat tells the PR-review gate it may schedule the sovereign review. That is a claim
 about two things this machine can check before it makes it:

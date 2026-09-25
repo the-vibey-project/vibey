@@ -307,7 +307,7 @@ container entrypoint from this table and the templates in `vibey_gh/templates/ru
 `vibey-gh runner check` reconciles the host against them; `vibey-gh runner cleanup` finds
 agents under `unit_prefix` that the tree no longer declares. `runner install` also installs
 the heartbeat timer that tells the gate the runner is there (`vibey-gh heartbeat`, vibey
-ADR-0059): each beat publishes only while a runner with the label is registered and online
+ADR-0060): each beat publishes only while a runner with the label is registered and online
 and the model endpoint answers, and goes through the pre-push gate like any other push. The
 runner label is
 `[pr_automation.fallback] runner_label` and the host-side model URL is its `base_url`; neither
@@ -332,6 +332,7 @@ operator's steps are in the vibey repository's `docs/runbooks/sovereign-review-r
 | `heartbeat_scheduler` | `""`, `"launchd"` or `"systemd"` / `""` | What runs the heartbeat timer (`vibey-gh heartbeat install`, also installed by `runner install`). Empty picks by platform: a launchd agent on macOS, a systemd user service and timer on Linux. |
 | `heartbeat_interval_minutes` | integer 0–720 / `0` | Minutes between beats. `0` takes half of `[pr_automation.fallback] heartbeat_max_age_minutes` (7 for the default 15). More than half is refused at install, so one missed beat never stales the lane. |
 | `heartbeat_python` | path / `""` | The interpreter the timer runs `python -m vibey_gh.cli sovereign --beat` with. Empty is the one running the install. It, and the `vibey_gh` it imports (asked of it at install), must live outside any temporary directory and any git work tree — install vibey-gh as a tool (for example `uv tool install vibey`) rather than into a checkout's virtualenv. |
+| `heartbeat_clone_dir` | path / `""` | The repository the heartbeat timer owns and pushes from: a clone with no working tree, its own pre-push gate, and a credential helper that uses only the runner's login. Empty is `<install_dir>/heartbeat-<repository name>`. It must live outside any temporary directory and any git work tree. |
 | `heartbeat_log_dir` | path / `""` | Where the timer logs (`<label>.log`) and records each beat (`<label>.last.json`, read by `heartbeat status`). Empty is `log_dir` under launchd and `~/.local/state/vibey-gh` under systemd. Refused under a temporary directory or inside a git work tree. |
 | `systemd_user_dir` | path / `"~/.config/systemd/user"` | Where the heartbeat's systemd user units are written. |
 

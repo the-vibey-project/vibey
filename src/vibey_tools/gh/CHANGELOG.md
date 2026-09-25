@@ -30,7 +30,7 @@ This file follows Keep a Changelog and semantic versioning conventions.
   not fitting it. A model-server error whose body breaks off mid-read (`IncompleteRead`) is
   still a clean refusal in the status line's words.
 - **Fix:** an honest sovereign heartbeat that passes the pre-push gate by the gate's own rule
-  (vibey ADR-0059). `sovereign --beat` publishes only while a runner carrying `runner_label` is
+  (vibey ADR-0060). `sovereign --beat` publishes only while a runner carrying `runner_label` is
   registered and online and `base_url` answers with `model`, and says `heartbeat withheld: …`
   otherwise; `--record FILE` writes what it did. It pushes without `--no-verify` and replaces
   the previous heartbeat by `--force-with-lease` on the exact value read. New `push-scope`
