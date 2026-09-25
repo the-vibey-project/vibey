@@ -22,7 +22,7 @@ import typer
 
 from vibey import __version__
 from vibey.application.design_acceptance import DesignAcceptanceService
-from vibey.application.dto import ProjectRecord
+from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
@@ -395,6 +395,24 @@ def answer(
             "(combinable with positional pairs, which win)",
         ),
     ] = False,
+    by: Annotated[
+        str | None,
+        typer.Option(
+            "--by",
+            help="The name this answer is recorded under, for a tool that runs the command "
+            "(the VS Code extension says vibey-vscode). Defaults to the account running it. "
+            "A label for the record, not a permission: the account is recorded beside it.",
+        ),
+    ] = None,
+    request_id: Annotated[
+        str | None,
+        typer.Option(
+            "--request-id",
+            help="Name this request so a retry is safe: the same id with the same answer "
+            "is a no-op once it has landed. Without one, every run is a new request, and "
+            "a gate already answered refuses it.",
+        ),
+    ] = None,
 ) -> None:
     """Answer a parked gate: QUESTION_ID=ANSWER pairs, --choice, --verdict, or --raw.
 
@@ -402,6 +420,9 @@ def answer(
     are model-minted and vary per run; --defaults needs none); review gates
     take --verdict (accept/changes/cancel/approve/request_changes);
     deployment and triage gates take --choice; --raw covers any other shape.
+
+    A gate is answered once. A second answer is refused (exit 3) and the
+    first stands; `--request-id` makes a retry of the same answer a no-op.
     """
     modes = [m for m in (answers, choice, verdict, raw) if m]
     if defaults and (choice or verdict or raw):
@@ -431,12 +452,18 @@ def answer(
         if defaults:
             payload["accept_defaults"] = True
 
-    async def submit() -> None:
+    async def submit() -> GateAnswerOutcome:
         async with build_app() as resources:
-            await resources.gates.answer(gate_id, answer=payload, answered_by="cli")
+            return await resources.gate_answers.answer(
+                gate_id, payload, by=by, request_id=request_id
+            )
 
-    asyncio.run(submit())
-    typer.echo(f"answered {gate_id}")
+    with guard():
+        outcome = asyncio.run(submit())
+    if outcome.replayed:
+        typer.echo(f"already answered {gate_id} by this request; nothing changed")
+    else:
+        typer.echo(f"answered {gate_id} as {outcome.record.answered_by}")
 
 
 # One sentence for both commands' --ollama-model, so `work` and `worker` cannot drift.

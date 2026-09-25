@@ -287,3 +287,64 @@ def test_run_scoped_to_one_namespace_is_not_cluster_wide() -> None:
     with patch.object(kopf, "run") as kopf_run:
         handlers.run(namespace="vibey")
     kopf_run.assert_called_once_with(namespace="vibey", clusterwide=False)
+
+
+async def test_a_gate_answered_elsewhere_mid_reconcile_is_reported_not_overwritten(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The compare-and-set, seen from the operator: it lists a gate as open, someone
+    answers it first, and the operator's answer is refused and reported as ignored --
+    the first answer stands."""
+    async with build_app() as resources:
+        project = await handlers.ensure_project(
+            resources, name="demo", spec={"repo": str(tmp_path)}, known_project_id=None
+        )
+        gate = await resources.gates.raise_gate(
+            project.project_id, None, HumanGateRequest(kind="question", prompt="q", options=())
+        )
+        stale = await resources.gates.open_for_project(project.project_id)
+        await resources.gate_answers.answer(gate.gate_id, {"choice": "human"}, by="adam")
+
+        async def _stale_listing(_project_id: object) -> object:
+            return stale
+
+        monkeypatch.setattr(resources.gates, "open_for_project", _stale_listing)
+        plan = await handlers.apply_answers(
+            resources,
+            project_id=project.project_id,
+            spec_answers={str(gate.gate_id): {"choice": "operator"}},
+        )
+        settled = await resources.gates.get(gate.gate_id)
+
+    assert plan.apply == ()
+    assert plan.ignored == ((str(gate.gate_id), "answered elsewhere first, by adam"),)
+    assert settled is not None
+    assert settled.answer == {"choice": "human"}
+
+
+async def test_the_operator_s_replay_of_an_answer_that_landed_is_a_no_op(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Its request id is derived from the gate and the answer, so a reconcile that saw
+    the gate open while its own earlier pass was landing replays, and is not refused."""
+    async with build_app() as resources:
+        project = await handlers.ensure_project(
+            resources, name="demo", spec={"repo": str(tmp_path)}, known_project_id=None
+        )
+        gate = await resources.gates.raise_gate(
+            project.project_id, None, HumanGateRequest(kind="question", prompt="q", options=())
+        )
+        stale = await resources.gates.open_for_project(project.project_id)
+        answers = {str(gate.gate_id): {"choice": "a"}}
+        await handlers.apply_answers(resources, project_id=project.project_id, spec_answers=answers)
+
+        async def _stale_listing(_project_id: object) -> object:
+            return stale
+
+        monkeypatch.setattr(resources.gates, "open_for_project", _stale_listing)
+        again = await handlers.apply_answers(
+            resources, project_id=project.project_id, spec_answers=answers
+        )
+
+    assert again.apply == ((gate.gate_id, {"choice": "a"}),)
+    assert again.ignored == ()

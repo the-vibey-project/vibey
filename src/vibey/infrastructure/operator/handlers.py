@@ -31,6 +31,7 @@ from vibey.application.operator_projection import (
 )
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.bootstrap import AppResources, build_app
+from vibey.domain.errors import GateAlreadyAnswered
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 
@@ -120,12 +121,28 @@ async def apply_answers(
     project_id: UUID,
     spec_answers: Mapping[str, object],
 ) -> AnswerPlan:
-    """Apply `spec.answers` through the same service `vibey answer` uses."""
+    """Apply `spec.answers` through the same service `vibey answer` uses.
+
+    Each answer's request id is derived from the gate and the answer, so every reconcile
+    of an unchanged spec is the same request: a replay that already landed is a no-op.
+    A gate someone else answered between the listing and the answer is refused by the
+    compare-and-set, and reported with the other ignored answers rather than dropped.
+    """
     open_gates = await resources.gates.open_for_project(project_id)
     plan = plan_answers(spec_answers, open_gates)
+    applied: list[tuple[UUID, Mapping[str, object]]] = []
+    refused: list[tuple[str, str]] = []
     for gate_id, payload in plan.apply:
-        await resources.gates.answer(gate_id, answer=payload, answered_by=ANSWERED_BY)
-    return plan
+        request_id = resources.gate_answers.derived_request_id(ANSWERED_BY, gate_id, payload)
+        try:
+            await resources.gate_answers.answer(
+                gate_id, payload, by=ANSWERED_BY, request_id=request_id
+            )
+        except GateAlreadyAnswered as exc:
+            refused.append((str(gate_id), f"answered elsewhere first, by {exc.answered_by}"))
+            continue
+        applied.append((gate_id, payload))
+    return AnswerPlan(apply=tuple(applied), ignored=plan.ignored + tuple(refused))
 
 
 async def build_status(resources: AppResources, *, project_id: UUID) -> dict[str, object]:
