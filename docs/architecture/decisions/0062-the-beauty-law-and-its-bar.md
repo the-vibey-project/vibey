@@ -50,7 +50,8 @@ machine, and a machine cannot make that judgement. 12.e forbids exactly that.
    BB-10. Each has a rule and a check, and each check is marked *machine*, *reviewer*, or
    both:
    - BB-1 one token-based design system;
-   - BB-2 dark and light themes;
+   - BB-2 dark and light themes, with Light, Dark and System modes (System by default,
+     live, and kept per device), an addition the operator made the same day;
    - BB-3 WCAG 2.2 AA, screen readers, keyboard, reduced motion and dynamic type;
    - BB-4 under 60 seconds from install to first result, with a guided first run;
    - BB-5 purposeful motion at 60 fps;

@@ -46,15 +46,26 @@ a value of its own.
   scans for literals.
 - *Reviewer:* a new visual or sonic value arrives as a token change, not as a literal.
 
-## BB-2 — Dark and light themes
+## BB-2 — Dark and light themes, and three theme modes
 
 **Rule.** Every surface ships a dark theme and a light theme, both designed on purpose.
-It follows the system setting by default and lets the person choose.
+Every GUI platform (the desktop app, the mobile apps, the web app, the VS Code extension's
+own views and the docs site) offers **three theme modes: Light, Dark and System.**
+
+- **System is the default.** It follows the operating system's appearance and switches
+  live when the operating system switches, with no restart and no reload.
+- **The choice persists per device.** A choice made on one device is kept on that device
+  across restarts, and does not change any other device.
+- **The choice is in each client's settings,** under the same name on every client.
 
 **Check.**
 
 - *Machine:* every colour token has a value in both themes. A test fails on a token with
   only one.
+- *Machine:* on each GUI platform, a test confirms that the three modes exist, that a fresh
+  install starts in System, that switching the emulated operating-system appearance while
+  in System re-themes the open screen live, and that a chosen mode survives a restart.
+- *Machine:* the parity meta test (BB-7) finds the theme setting on every client.
 - *Machine:* screenshot tests capture every screen in both themes (BB-8).
 - *Reviewer:* neither theme is an automatic inversion of the other.
 
