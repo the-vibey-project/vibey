@@ -149,6 +149,11 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         # spend, and it reads no caps.
         EventKind.BUDGET_SPENT,
         EventKind.BUDGET_CAP_CHANGED,
+        # ULTRA's operator controls and no-cap declarations name the account and device.
+        EventKind.ULTRA_STARTED,
+        EventKind.ULTRA_STOPPED,
+        EventKind.ULTRA_PASS_COMPLETED,
+        EventKind.ULTRA_NO_CAP_CHANGED,
         # Who answered a gate, from which account, and what they answered: the answer
         # can carry anything a person typed, and the account is the operator's.
         EventKind.GATE_ANSWERED,

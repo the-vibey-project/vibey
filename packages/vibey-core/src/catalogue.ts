@@ -47,7 +47,26 @@ export class SelectionError extends Error {
 }
 
 export class Efforts {
-  static readonly ALL: readonly Effort[] = ['TRIVIAL', 'LOW', 'STANDARD', 'HIGH', 'MAX'];
+  static readonly ALL: readonly Effort[] = ['TRIVIAL', 'LOW', 'STANDARD', 'HIGH', 'MAX', 'ULTRA'];
+  /** Effort without a ceiling (ADR-0063): no turn limit, and never reached by the ladder. */
+  static readonly ULTRA: Effort = 'ULTRA';
+  /** ULTRA's colour, from the design tokens (`color.state.ultra`, dark then light). */
+  static readonly ULTRA_COLOUR = { dark: '#ff6ad5', light: '#b0268f' } as const;
+
+  /** A picker's line for an effort: ULTRA says what it costs, every other level what it runs. */
+  static describe(effort: Effort): { readonly label: string; readonly detail: string } {
+    return effort === Efforts.ULTRA
+      ? {
+          label: `$(flame) ${effort}`,
+          detail: 'Effort without a ceiling: no turn limit; pass after pass until you stop it or a cap binds.',
+        }
+      : { label: effort, detail: `Every attempt at ${effort}.` };
+  }
+
+  /** The effort a picker's label names, with ULTRA's icon taken off. */
+  static fromLabel(label: string): string {
+    return label.replace(/^\$\(flame\) /, '');
+  }
 
   static is(value: unknown): value is Effort {
     return typeof value === 'string' && (Efforts.ALL as readonly string[]).includes(value);
@@ -564,6 +583,12 @@ export class LoopSelector implements LoopSelectorInterface {
         continue;
       }
       withoutFlag.push(argv[index] as string);
+    }
+    if (request.effort === Efforts.ULTRA) {
+      // Unbounded (ADR-0063): no limit from the effort or the setting; only a task's own.
+      if (request.taskMaxTurns === undefined) {
+        return { argv: withoutFlag, source: 'unbounded' };
+      }
     }
     const chosen: [number, Selection['maxTurnsSource']] | undefined =
       request.taskMaxTurns !== undefined

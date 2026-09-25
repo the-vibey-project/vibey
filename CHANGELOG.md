@@ -12,6 +12,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **ultra:** ULTRA, effort without a ceiling
+  ([ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md)). `Effort` gains
+  `ULTRA` after `MAX`; no ladder reaches it. `vibey ultra start|stop|status` runs a project's BUILD
+  passes at ULTRA with no `--max-turns`, never parked for length. Each done pass records
+  `UltraPassCompleted` and enqueues the next pass after the checks under its own job key. Stop
+  and the budget brake end it. `vibey budget no-cap` declares no cap through 8.b's warned, typed
+  path, and `vibey budget cap` withdraws it in one command. `vibey loops --json` lists ULTRA.
+
 ### BREAKING CHANGES
 
 * **packaging:** the engine's package is `vibey-engine`, and the apps' package is

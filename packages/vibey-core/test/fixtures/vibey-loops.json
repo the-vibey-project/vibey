@@ -4,7 +4,8 @@
     "LOW",
     "STANDARD",
     "HIGH",
-    "MAX"
+    "MAX",
+    "ULTRA"
   ],
   "default_loop": "sovereignloop",
   "paid_default_engine": "claudeloop",
@@ -97,6 +98,13 @@
                 "96"
               ],
               "achieved": "MAX",
+              "model": "gpt-oss:20b",
+              "notes": ""
+            },
+            {
+              "effort": "ULTRA",
+              "argv": [],
+              "achieved": "ULTRA",
               "model": "gpt-oss:20b",
               "notes": ""
             }
@@ -223,6 +231,13 @@
                 "96"
               ],
               "achieved": "MAX",
+              "model": null,
+              "notes": "qwenloop's own configuration chooses the model"
+            },
+            {
+              "effort": "ULTRA",
+              "argv": [],
+              "achieved": "ULTRA",
               "model": null,
               "notes": "qwenloop's own configuration chooses the model"
             }
@@ -354,6 +369,18 @@
             },
             {
               "effort": "MAX",
+              "argv": [
+                "--profile",
+                "local",
+                "--preset",
+                "high"
+              ],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "a local model's honest ceiling is STANDARD; runs the top tier; claudeloop profile local, preset high"
+            },
+            {
+              "effort": "ULTRA",
               "argv": [
                 "--profile",
                 "local",
@@ -519,6 +546,23 @@
             "model": null,
             "achieved": "STANDARD"
           }
+        ],
+        "ULTRA": [
+          {
+            "engine_id": "gptossloop",
+            "model": "gpt-oss:20b",
+            "achieved": "ULTRA"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": null,
+            "achieved": "ULTRA"
+          },
+          {
+            "engine_id": "claudeloop-local",
+            "model": null,
+            "achieved": "STANDARD"
+          }
         ]
       }
     },
@@ -597,6 +641,18 @@
                 "max"
               ],
               "achieved": "MAX",
+              "model": null,
+              "notes": "claudeloop preset high"
+            },
+            {
+              "effort": "ULTRA",
+              "argv": [
+                "--preset",
+                "high",
+                "--effort",
+                "max"
+              ],
+              "achieved": "ULTRA",
               "model": null,
               "notes": "claudeloop preset high"
             }
@@ -713,6 +769,13 @@
             },
             {
               "effort": "MAX",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "codexloop has no CLI-level effort control; codexloop's own configuration chooses the model"
+            },
+            {
+              "effort": "ULTRA",
               "argv": [],
               "achieved": "STANDARD",
               "model": null,
@@ -842,6 +905,16 @@
               "achieved": "MAX",
               "model": "grok-xhigh",
               "notes": ""
+            },
+            {
+              "effort": "ULTRA",
+              "argv": [
+                "--model",
+                "grok-xhigh"
+              ],
+              "achieved": "MAX",
+              "model": "grok-xhigh",
+              "notes": "cursorloop has no unbounded tier; runs its top model"
             }
           ],
           "capabilities": {
@@ -973,6 +1046,18 @@
                 "max"
               ],
               "achieved": "MAX",
+              "model": null,
+              "notes": "agyloop preset high"
+            },
+            {
+              "effort": "ULTRA",
+              "argv": [
+                "--preset",
+                "high",
+                "--effort",
+                "max"
+              ],
+              "achieved": "ULTRA",
               "model": null,
               "notes": "agyloop preset high"
             }
@@ -1154,6 +1239,28 @@
             "engine_id": "codexloop",
             "model": null,
             "achieved": "STANDARD"
+          }
+        ],
+        "ULTRA": [
+          {
+            "engine_id": "agyloop",
+            "model": null,
+            "achieved": "ULTRA"
+          },
+          {
+            "engine_id": "claudeloop",
+            "model": null,
+            "achieved": "ULTRA"
+          },
+          {
+            "engine_id": "codexloop",
+            "model": null,
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "cursorloop",
+            "model": "grok-xhigh",
+            "achieved": "MAX"
           }
         ]
       }

@@ -325,6 +325,24 @@ class QueueReapReport:
 
 
 @dataclass(frozen=True, slots=True)
+class UltraStatus:
+    """A project's ULTRA run as its ledger records it (`vibey ultra status`, ADR-0063).
+
+    `rate_per_hour` is measured from recorded spend, `None` when nothing has been
+    measured (shown as "unknown", 8.g).
+    """
+
+    project_id: UUID
+    name: str
+    active: bool
+    no_cap_declared: bool
+    passes_completed: int
+    max_dollars: float | None
+    dollars_spent: float
+    rate_per_hour: float | None
+
+
+@dataclass(frozen=True, slots=True)
 class ProjectBudget:
     """A project's caps, its current cycle's spend against them, and every change to
     the caps (`vibey budget`).

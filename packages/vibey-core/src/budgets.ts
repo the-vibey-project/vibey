@@ -107,6 +107,12 @@ export class SpendLedger implements SpendLedgerInterface {
     return { ...totals, runs: runs.size };
   }
 
+  /** Measured dollars per hour of run time, or null when nothing has been measured (8.g). */
+  perHour(filter: { readonly loop?: string; readonly engineId?: string }): number | null {
+    const totals = this.totals(filter);
+    return totals.minutes > 0 && totals.dollars > 0 ? totals.dollars / (totals.minutes / 60) : null;
+  }
+
   perTurn(engineId: string): { readonly input: number; readonly output: number } | undefined {
     const totals = this.totals({ engineId });
     if (totals.turns === 0) {
@@ -230,5 +236,36 @@ export class BudgetGuard implements BudgetGuardInterface {
 
   private static amount(cap: keyof BudgetCaps, value: number): string {
     return cap === 'dollars' ? `$${value.toFixed(2)}` : `${Math.round(value * 100) / 100} ${cap}`;
+  }
+}
+
+/**
+ * Sub-doctrine 8.b's no-cap path (ADR-0063), as every surface shows it: a warning with the
+ * measured cost per hour ("unknown" when unmeasured), the typed phrase, and a second warning
+ * whose default keeps a cap. Flags alone never declare it.
+ */
+export class NoCapPath {
+  static readonly PHRASE = 'I accept unlimited spending';
+  static readonly KEEP = 'Keep a cap';
+  static readonly DECLARE = 'Declare no cap';
+  static readonly LAST_CHANCE =
+    'Last chance: this removes the only limit on spend. Keep a cap (the default) unless you mean it.';
+  static readonly REFUSED =
+    'declare-paid --no-cap is refused: no cap is declared only through the warned, typed path ' +
+    "(`vibey budget no-cap` in a terminal on the host, or the extension's Declare paid command). ADR-0063.";
+
+  static matches(typed: string | undefined): boolean {
+    return typed !== undefined && typed.trim() === NoCapPath.PHRASE;
+  }
+
+  static rate(dollarsPerHour: number | null): string {
+    return dollarsPerHour === null ? 'unknown (nothing measured yet)' : `$${dollarsPerHour.toFixed(2)}/h`;
+  }
+
+  static warning(dollarsPerHour: number | null): string {
+    return (
+      `UNLIMITED SPEND. Measured cost: ${NoCapPath.rate(dollarsPerHour)}. With no cap, paid engines keep ` +
+      'spending until you stop them; nothing else ends it. There is no ceiling on what this can cost.'
+    );
   }
 }

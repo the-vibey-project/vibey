@@ -86,6 +86,7 @@ EVERY_KIND: list[tuple[str, tuple[str, ...], str | None, str]] = [
     ("delivery_exhausted", (), None, "--raw '{}'"),
     ("research_evidence", (), None, "--raw '{}'"),
     ("engine_misconfigured", (), None, "--raw '{}'"),
+    ("ultra_needs_cap", (), None, "--raw '{}'"),
     ("handoff_gate_failed", (), None, "--raw '<json>'"),
     ("too_many_wind_downs", (), None, "--raw '<json>'"),
 ]

@@ -2,6 +2,7 @@
 """Composition root: the only module that wires concrete adapters to ports."""
 
 import os
+import platform
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -71,6 +72,7 @@ from vibey.application.interfaces import (
     VisualInventoryProducer,
     WorkPlanProducer,
 )
+from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
 from vibey.application.project_budget import ProjectBudgetService
@@ -81,6 +83,7 @@ from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
 from vibey.application.review_triage_handler import ReviewTriageHandler
 from vibey.application.rotation_handoff import RotationHandoffService
+from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
@@ -115,6 +118,7 @@ from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 from vibey.infrastructure.db.queue_reap_store import PostgresQueueReapStore
 from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
+from vibey.infrastructure.db.ultra_control_store import PostgresUltraControlStore
 from vibey.infrastructure.db.visual_inventory_repository import FileVisualInventoryRepository
 from vibey.infrastructure.deploy.state_repository import FileDeploymentStateRepository
 from vibey.infrastructure.docs.bookstack import BookStackDocsAdapter
@@ -130,6 +134,7 @@ from vibey.infrastructure.engines.local_engines import (
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.files.in_memory import InMemoryFiles
 from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
+from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
@@ -199,6 +204,7 @@ class AppResources:
     # Project budgets (`vibey budget`). Only the service: the store that writes a
     # project's caps and their ledger events is built here and handed to nothing else.
     project_budgets: ProjectBudgetServiceInterface
+    ultra: UltraControlServiceInterface
     # Answering gates (`vibey answer`, the operator). The service names who answered and
     # which request; the repository answers each gate once and records it on the ledger.
     gate_answers: GateAnswerServiceInterface
@@ -494,6 +500,8 @@ def build_full_worker(
             budget_source=budget_source,
             skills_context=skills_context,
             tracer=tracer,
+            ultra_ledger=resources.ledger,
+            checkpoint=GitCheckpoint(),
         )
         return _recording(handler, adapter, meter)
 
@@ -1037,6 +1045,14 @@ async def build_app(
                 gates=gates,
                 caller=ProcessCaller(),
                 clock=clock,
+            ),
+            ultra=UltraControlService(
+                projects=projects,
+                ledger=ledger,
+                store=PostgresUltraControlStore(pool),
+                caller=ProcessCaller(),
+                clock=clock,
+                device=platform.node() or "unknown host",
             ),
             gate_answers=GateAnswerService(gates=gates, caller=ProcessCaller()),
             integration_lock=PostgresAdvisoryLock(pool),

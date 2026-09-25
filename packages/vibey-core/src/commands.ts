@@ -181,7 +181,7 @@ export class CommandTable {
       group: 'Loop & model',
       icon: 'dashboard',
       slash: 'effort',
-      usage: 'auto|TRIVIAL|LOW|STANDARD|HIGH|MAX',
+      usage: 'auto|TRIVIAL|LOW|STANDARD|HIGH|MAX|ULTRA',
       description: 'How hard the engine works; auto starts low and climbs one step each time a task fails.',
       example: '/effort auto',
     },
