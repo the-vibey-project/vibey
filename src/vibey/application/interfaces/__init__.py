@@ -109,6 +109,7 @@ from vibey.application.interfaces.ledger_publication_interface import (
     ShardHeaderInterface,
     ShardHoldingInterface,
 )
+from vibey.application.interfaces.loops import LoopCatalogInterface
 from vibey.application.interfaces.messaging import MessagingPort
 from vibey.application.interfaces.observability import (
     Logger,
@@ -256,6 +257,7 @@ __all__ = [
     "LedgerSiteBuilderInterface",
     "LedgerSitePlanInterface",
     "LedgerSiteWriter",
+    "LoopCatalogInterface",
     "MergeOutcome",
     "Outcome",
     "Park",

@@ -38,6 +38,7 @@ from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.gates import GATES
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.domain.engine import EngineId
@@ -910,6 +911,26 @@ def engines(
                 )
 
     asyncio.run(list_engines())
+
+
+@app.command("loops")
+def loops(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print the full JSON document instead: every engine's efforts, "
+            "capabilities, run, control and event facts, and environment names.",
+        ),
+    ] = False,
+) -> None:
+    """List the two loops, their engines at every effort, and what each engine can do.
+
+    Needs no database and no network: the local switches are read as `vibey doctor`
+    reads them, from the environment and then ./vibey.toml.
+    """
+    with guard():
+        LOOPS.run(as_json=as_json)
 
 
 @app.command("cost")

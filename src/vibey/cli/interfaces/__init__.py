@@ -24,6 +24,10 @@ from vibey.cli.interfaces.ledger_search_interface import (
     LedgerSearchPresenterInterface,
     TimeBoundParserInterface,
 )
+from vibey.cli.interfaces.loops_interface import (
+    LoopsCommandInterface,
+    LoopsPresenterInterface,
+)
 from vibey.cli.interfaces.projects_interface import (
     ProjectsCommandInterface,
     ProjectsPresenterInterface,
@@ -42,6 +46,8 @@ __all__ = [
     "LedgerSearchCommandInterface",
     "LedgerSearchPresenterInterface",
     "LedgerSiteCommandInterface",
+    "LoopsCommandInterface",
+    "LoopsPresenterInterface",
     "ProjectsCommandInterface",
     "ProjectsPresenterInterface",
     "PublicationPresenterInterface",

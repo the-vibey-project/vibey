@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Seams the engine adapters declare. Interfaces declare; they never consume."""
 
+from vibey.infrastructure.engines.interfaces.argv_interface import RunArgvTemplateInterface
 from vibey.infrastructure.engines.interfaces.descriptors_interface import (
     ClaudeloopLocalDescriptorsInterface,
 )
@@ -34,5 +35,6 @@ __all__ = [
     "OllamaTransportInterface",
     "QwenloopDesignProviderInterface",
     "QwenloopWorkPlanProducerInterface",
+    "RunArgvTemplateInterface",
     "WorkPlanDecoderInterface",
 ]

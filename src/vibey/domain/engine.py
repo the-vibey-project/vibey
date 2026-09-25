@@ -1,7 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
+from types import MappingProxyType
 from typing import ClassVar, Final
 
 from vibey.domain.effort import Effort
@@ -49,6 +50,93 @@ class EngineTier(StrEnum):
 # preference, not the fallback -- a paid engine is chosen only when no local
 # engine is eligible (ADR-0038, amending ADR-0015's standby rule).
 TIER_PREFERENCE: tuple[EngineTier, ...] = (EngineTier.LOCAL, EngineTier.PAID)
+
+
+class Loop(StrEnum):
+    """The family's two loops, exactly two (sub-doctrine 8.c)."""
+
+    SOVEREIGN = "sovereignloop"
+    PAID = "paidloop"
+
+
+LOOP_BY_TIER: Final[Mapping[EngineTier, Loop]] = MappingProxyType(
+    {EngineTier.LOCAL: Loop.SOVEREIGN, EngineTier.PAID: Loop.PAID}
+)
+"""The loop that drives an engine of each tier (8.c): the sovereign loop what runs on the
+operator's own hardware, the paid loop every paid engine."""
+
+DEFAULT_LOOP: Final = Loop.SOVEREIGN
+"""The canon's default loop (8.a, 8.b); every other loop is reached only by declaration. This
+states the rule. The selector does not read a paid declaration yet: it prefers the local tier
+(`TIER_PREFERENCE`) and falls back to a paid engine whenever no local engine is eligible."""
+
+PAID_DEFAULT_ENGINE: Final = EngineId.CLAUDELOOP
+"""The canon's paid default (8.b): Claude, through claudeloop, the paid engine a paid
+declaration reaches unless it names another. It never makes paid a default over sovereign.
+The selector does not act on it yet: within the paid tier it rotates by weight."""
+
+REPEALED_FROM_LOOPS: Final[frozenset[EngineId]] = frozenset({EngineId.OPENCODE})
+"""Engines 8.b repeals from both loops. Their descriptors are not changed by being named
+here: anything that reports one reports it as the code says, and says the canon differs."""
+
+
+class PluginSystem(StrEnum):
+    """How a loop takes extensions beyond its plan."""
+
+    SKILLS_CONTEXT = "skills-context"
+    """vibey-skills context packets: text vibey writes into the plan, so any loop takes them."""
+    CLAUDE_PLUGINS = "claude-plugins"
+    """Claude Code's own plugin system, where a loop runs it."""
+
+
+@dataclass(frozen=True, slots=True)
+class EngineAffordances:
+    """What a person can hand a loop besides its plan -- the menus an editor may offer.
+
+    `None` is unknown: nothing in the tree shows it either way, and no menu is offered for
+    it. A value is set on a descriptor only where the runner's own code or `--help` shows it,
+    and `evidence` names where, by the field it proves. Never from memory or a vendor's
+    marketing.
+    """
+
+    images: bool | None = None
+    files: bool | None = None
+    paste_text: bool | None = None
+    paste_images: bool | None = None
+    plugins: PluginSystem | None = None
+    mcp: bool | None = None
+    evidence: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class EngineControls:
+    """A runner's own verbs for a run in flight, as the argv after its binary. `{run_id}`,
+    `{cwd}` and, for `prompt`, `{text}` are filled in by the caller. `None` is unverified:
+    the runner's CLI definition in this tree does not show that verb."""
+
+    stop: tuple[str, ...] | None = None
+    wind_down: tuple[str, ...] | None = None
+    prompt: tuple[str, ...] | None = None
+
+
+class EventEnvelope(StrEnum):
+    """How a runner shapes one line of its events.jsonl."""
+
+    TYPE = "type"
+    """A top-level `"type"` key, the fields beside it."""
+    EVENT_TYPE_PAYLOAD = "event_type+payload"
+    """`{"event_type": ..., "payload": {...}}`."""
+    EVENT_TYPE = "event_type"
+    """A top-level `"event_type"` key, the fields beside it, and no payload wrapper."""
+
+
+@dataclass(frozen=True, slots=True)
+class EventLog:
+    """Where a runner writes a run's events, as a template over `{cwd}`, `{state_dir}` and
+    `{run_id}`, and how each line is shaped. `None` is unverified."""
+
+    path: str | None = None
+    envelope: EventEnvelope | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,6 +239,15 @@ class EngineDescriptor:
     # unless the project declares it, and vibey's own variables never can
     # (infrastructure/engines/engine_environment.py).
     env_passthrough: tuple[str, ...] = ()
+    # What a person can hand this loop besides its plan (images, files, pasted text or
+    # images, plugins, MCP), each proven from the runner's own code or `--help` and the
+    # proof named in `evidence`; unknown until then. `vibey loops` reports them.
+    affordances: EngineAffordances = EngineAffordances()
+    # The runner's own CLI verbs for a run in flight, from its CLI definition; unverified
+    # until then. vibey's adapter itself steers a run through files in its run directory.
+    controls: EngineControls = EngineControls()
+    # Where the runner writes a run's events and how each line is shaped, from its writer.
+    events: EventLog = EventLog()
 
     def invoke(self, effort: Effort) -> EngineInvocation:
         try:

@@ -112,3 +112,61 @@ def test_a_misconfigured_backend_exits_ex_config() -> None:
 
     assert EXIT_CODE_BACKEND_MISCONFIGURED == 78
     assert EXIT_CODE_BACKEND_MISCONFIGURED != EXIT_CODE_WIND_DOWN
+
+
+# -- the two loops and what a descriptor declares about running one ----------------------------
+
+
+def test_the_family_runs_exactly_two_loops_one_per_tier() -> None:
+    from vibey.domain.engine import LOOP_BY_TIER, EngineTier, Loop
+
+    assert [loop.value for loop in Loop] == ["sovereignloop", "paidloop"]
+    assert dict(LOOP_BY_TIER) == {EngineTier.LOCAL: Loop.SOVEREIGN, EngineTier.PAID: Loop.PAID}
+
+
+def test_sovereign_is_the_default_and_claude_the_paid_default() -> None:
+    from vibey.domain.engine import DEFAULT_LOOP, PAID_DEFAULT_ENGINE, EngineId, Loop
+
+    assert DEFAULT_LOOP is Loop.SOVEREIGN
+    assert PAID_DEFAULT_ENGINE is EngineId.CLAUDELOOP
+
+
+def test_the_canon_repeals_opencode_from_both_loops() -> None:
+    from vibey.domain.engine import REPEALED_FROM_LOOPS, EngineId
+
+    assert frozenset({EngineId.OPENCODE}) == REPEALED_FROM_LOOPS
+
+
+def test_a_descriptor_declares_nothing_it_has_not_shown() -> None:
+    """Every new fact defaults to unknown, so an engine nobody has checked shows no menu,
+    no control and no event log."""
+    from vibey.domain.engine import EngineAffordances, EngineControls, EventLog
+
+    unknown = _descriptor({})
+    assert unknown.affordances == EngineAffordances()
+    assert unknown.controls == EngineControls()
+    assert unknown.events == EventLog()
+    affordances = EngineAffordances()
+    assert (
+        affordances.images,
+        affordances.files,
+        affordances.paste_text,
+        affordances.paste_images,
+        affordances.plugins,
+        affordances.mcp,
+    ) == (None, None, None, None, None, None)
+    assert affordances.evidence == {}
+    assert (EventLog().path, EventLog().envelope) == (None, None)
+    controls = EngineControls()
+    assert (controls.stop, controls.wind_down, controls.prompt) == (None, None, None)
+
+
+def test_the_plugin_systems_and_event_envelopes_are_named_as_the_contract_names_them() -> None:
+    from vibey.domain.engine import EventEnvelope, PluginSystem
+
+    assert [system.value for system in PluginSystem] == ["skills-context", "claude-plugins"]
+    assert [envelope.value for envelope in EventEnvelope] == [
+        "type",
+        "event_type+payload",
+        "event_type",
+    ]
