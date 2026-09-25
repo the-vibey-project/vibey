@@ -1217,6 +1217,53 @@ class BranchSyncConfig:
             raise ValueError("branch_sync.max_self_heals must be between 0 and 10")
 
 
+_WALL_CLOCK = re.compile(r"([01]\d|2[0-3]):([0-5]\d)")
+_IANA_ZONE = re.compile(r"[A-Za-z0-9_+\-]+(/[A-Za-z0-9_+\-]+)*")
+
+
+@dataclass(frozen=True)
+class SabbathConfig:
+    """Sub-doctrine 8.i, fitted to the machine it runs on (vibey ADR-0072).
+
+    The window is sundown Friday to sundown Saturday wherever this host stands; see
+    `vibey_gh.sabbath` for the formula and `vibey_gh.sabbath_location` for how the host is
+    found. Nothing here names a place: coordinates are per host and never committed, so
+    they live in `local_config` (a TOML file with `latitude` and `longitude`) or the
+    `VIBEY_SABBATH_LATITUDE`/`VIBEY_SABBATH_LONGITUDE` environment.
+
+    `enabled` defaults to true: 8.i has no exception, and turning it off is a declared
+    act, never a missing key. An unresolvable host is not "not the Sabbath": the window
+    falls back to `fallback_opens`/`fallback_closes` in the host's zone, and says so.
+    """
+
+    enabled: bool = True
+    # The IANA zone the civil day is read in; empty reads the host's own zone.
+    timezone: str = ""
+    local_config: str = "~/.config/vibey/sabbath.toml"
+    # Widens every window toward rest, both edges. Never narrows one.
+    offset_minutes: int = 0
+    # Extra widening when the location is only a time zone's reference city.
+    coarse_margin_minutes: int = 45
+    fallback_opens: str = "18:00"
+    fallback_closes: str = "19:00"
+    # Ask CoreLocation (macOS) or GeoClue (Linux) when their helpers are installed.
+    location_service: bool = True
+    # At the first beat after the window closes, re-fire the held merge train and promotion.
+    resume_dispatch: bool = True
+    # Where lanes register "paused for the Sabbath, resume with X" (one JSON file each).
+    lanes_dir: str = "~/.local/state/vibey/sabbath-lanes"
+
+    def __post_init__(self) -> None:
+        for key in ("fallback_opens", "fallback_closes"):
+            if _WALL_CLOCK.fullmatch(getattr(self, key)) is None:
+                raise ValueError(f"sabbath.{key} must be a 24-hour HH:MM wall clock")
+        for key in ("offset_minutes", "coarse_margin_minutes"):
+            if not 0 <= getattr(self, key) <= 240:
+                raise ValueError(f"sabbath.{key} must be between 0 and 240")
+        if self.timezone and _IANA_ZONE.fullmatch(self.timezone) is None:
+            raise ValueError("sabbath.timezone must be an IANA zone name such as Europe/London")
+
+
 @dataclass(frozen=True)
 class RealignConfig:
     """What happens to open topic branches when realign rewrites the integration branch.
@@ -2233,6 +2280,7 @@ class GhConfig:
     issue_automation: IssueAutomationConfig = IssueAutomationConfig()
     realign: RealignConfig = RealignConfig()
     branch_sync: BranchSyncConfig = BranchSyncConfig()
+    sabbath: SabbathConfig = SabbathConfig()
     conversation: ConversationConfig = ConversationConfig()
     github_release: GithubReleaseConfig = GithubReleaseConfig()
     announce: AnnounceConfig = AnnounceConfig()
@@ -2477,6 +2525,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     issues = data.get("issue_automation", {})
     realigning = data.get("realign", {})
     syncing = data.get("branch_sync", {})
+    resting = data.get("sabbath", {})
     talking = data.get("conversation", {})
     release = data.get("github_release", {})
     yanking = data.get("yank", {})
@@ -2592,6 +2641,13 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             enabled=syncing.get("enabled", True),
             update_contributor_branches=syncing.get("update_contributor_branches", True),
             max_self_heals=syncing.get("max_self_heals", 2),
+        ),
+        sabbath=SabbathConfig(
+            **{
+                field.name: resting[field.name]
+                for field in dataclasses.fields(SabbathConfig)
+                if field.name in resting
+            }
         ),
         realign=RealignConfig(
             reconcile_branches=realigning.get("reconcile_branches", True),
