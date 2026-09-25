@@ -8,8 +8,8 @@
  * Each lane is read by byte offset (sub-doctrine 10.g) and folded into what a person wants
  * at a glance: running, quiet or finished, its turn, the tool it is running, its tokens and
  * how long it has run. A lane with no event for a while is quiet; nothing here ever stops
- * one. qwenloop's final snapshot says how a lane ended when its events do not. Declared by
- * `interfaces/lanes-interface.ts`.
+ * one. The local runner's final snapshot (gptossloop's or qwenloop's) says how a lane ended
+ * when its events do not. Declared by `interfaces/lanes-interface.ts`.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -157,7 +157,7 @@ export class LaneTracker implements LaneTrackerInterface {
     }
   }
 
-  /** qwenloop writes its last snapshot when a run ends; its status says how. */
+  /** The local runner writes its last snapshot when a run ends; its status says how. */
   private static snapshot(runDirectory: string): string | undefined {
     try {
       const snapshot: unknown = JSON.parse(fs.readFileSync(path.join(runDirectory, 'snapshots', 'latest.json'), 'utf8'));

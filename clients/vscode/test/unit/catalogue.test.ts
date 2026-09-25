@@ -9,6 +9,8 @@ import {
   LoopSelector,
   SelectionError,
 } from '../../src/core/catalogue';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { Catalogue, SelectionRequest } from '../../src/core/interfaces/catalogue-interface';
 import { fixture } from './helpers';
 
@@ -32,6 +34,11 @@ function variant(change: (value: Record<string, any>) => void): Record<string, u
   return copy;
 }
 
+/** The fixture's engine `id` in loop `loop`, to change in a variant. */
+function engineIn(value: Record<string, any>, id: string, loop = 0): Record<string, any> {
+  return value.loops[loop].engines.find((engine: Record<string, any>) => engine.engine_id === id);
+}
+
 describe('Efforts', () => {
   it('knows the five levels in order', () => {
     expect(Efforts.is('HIGH')).toBe(true);
@@ -44,24 +51,73 @@ describe('Efforts', () => {
 });
 
 describe('CatalogueParser', () => {
+  it("is vibey's own golden `vibey loops --json`, byte for byte", () => {
+    const golden = path.resolve(__dirname, '..', '..', '..', '..', 'tests', 'cli', 'golden', 'vibey-loops.json');
+    expect(fixture('vibey-loops.json')).toBe(fs.readFileSync(golden, 'utf8'));
+  });
+
   it('reads the fixture of `vibey loops --json`', () => {
     const catalogue = parse();
     expect(catalogue.source).toBe('vibey');
     expect(catalogue.default_loop).toBe('sovereignloop');
     expect(catalogue.paid_default_engine).toBe('claudeloop');
     expect(catalogue.ladder.build_attempts).toEqual(['LOW', 'LOW', 'STANDARD', 'STANDARD', 'HIGH', 'HIGH']);
-    const qwenloop = catalogue.loops[0]?.engines[0];
-    expect(qwenloop?.engine_id).toBe('qwenloop');
-    expect(qwenloop?.turns_flag).toBe('--max-turns');
-    expect(qwenloop?.capabilities.images).toBe(false);
-    expect(qwenloop?.capabilities.evidence.images).toContain('read_file');
+    expect(catalogue.loops[0]?.engines.map((engine) => engine.engine_id)).toEqual(['opencode', 'gptossloop', 'qwenloop', 'claudeloop-local']);
+    const gptossloop = catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'gptossloop');
+    expect(gptossloop?.turns_flag).toBe('--max-turns');
+    expect(gptossloop?.capabilities.images).toBe(false);
+    expect(gptossloop?.capabilities.evidence.images).toContain('read_file');
     const codex = catalogue.loops[1]?.engines.find((engine) => engine.engine_id === 'codexloop');
     expect(codex?.turns_flag).toBeUndefined();
     expect(codex?.supports_cwd_flag).toBe(false);
     const opencode = catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'opencode');
     expect(opencode?.notes?.join(' ')).toContain('repeals');
     expect(opencode).toMatchObject({ repealed: true, events: { envelope: 'event_type' } });
-    expect(catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'qwenloop')).toMatchObject({ repealed: false, controls: { prompt: null } });
+    expect(opencode?.on_by_default).toBe(false);
+    // ADR-0060: gptossloop is the sovereign default, on unless switched off; qwenloop is its
+    // opt-in Qwen twin, same runner and protocol, its own settings, and no model from vibey.
+    expect(gptossloop).toMatchObject({
+      binary: 'gptossloop',
+      state_dir: '.qwenloop',
+      enabled: true,
+      on_by_default: true,
+      switch: 'VIBEY_FEATURE_GPTOSSLOOP',
+      repealed: false,
+      default_model: 'gpt-oss:20b',
+      done_marker: 'QWENLOOP_TASK_FULLY_COMPLETE',
+      controls: { prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'] },
+      env: { passthrough: ['GPTOSSLOOP_*'] },
+    });
+    expect(catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'qwenloop')).toMatchObject({
+      binary: 'qwenloop',
+      state_dir: '.qwenloop',
+      enabled: false,
+      on_by_default: false,
+      switch: 'VIBEY_FEATURE_QWENLOOP',
+      default_model: null,
+      done_marker: 'QWENLOOP_TASK_FULLY_COMPLETE',
+      env: { passthrough: ['QWENLOOP_*'] },
+      notes: [expect.stringContaining('the gpt-oss engine it used to be is gptossloop') as unknown as string],
+    });
+    expect(catalogue.loops[0]?.by_effort.LOW?.map((choice) => [choice.engine_id, choice.model])).toEqual([
+      ['claudeloop-local', null],
+      ['gptossloop', 'gpt-oss:20b'],
+      ['qwenloop', null],
+    ]);
+  });
+
+  it('reads on_by_default, and an engine a producer from before ADR-0060 lists as not on by default', () => {
+    const older = parse(
+      variant((value) => {
+        for (const engine of value.loops[0].engines) {
+          delete engine.on_by_default;
+        }
+      }),
+    );
+    expect(older.loops[0]?.engines.every((engine) => !engine.on_by_default)).toBe(true);
+    expect(() => parse(variant((value) => (engineIn(value, 'gptossloop').on_by_default = 'yes')))).toThrow(
+      'loops[0].engines[1].on_by_default: is not true or false',
+    );
   });
 
   it('accepts paid_default in place of paid_default_engine, and missing optional fields', () => {
@@ -123,7 +179,7 @@ describe('the #1131 review amendments', () => {
         value.loops[0].engines[2].notes = null;
       }),
     );
-    expect(catalogue.loops[0]?.engines.map((engine) => engine.notes)).toEqual([['first', 'second'], ['one line'], undefined]);
+    expect(catalogue.loops[0]?.engines.map((engine) => engine.notes)).toEqual([['first', 'second'], ['one line'], undefined, undefined]);
   });
 
   it('reads an engine a producer from before the repeals lists as not repealed', () => {
@@ -146,16 +202,16 @@ describe('the #1131 review amendments', () => {
         opencode.efforts[1].achieved = 'LOW';
         value.loops[0].by_effort.LOW = [
           { engine_id: 'opencode', model: null, achieved: 'LOW' },
-          { engine_id: 'qwenloop', model: 'gpt-oss:20b', achieved: 'LOW' },
+          { engine_id: 'gptossloop', model: 'gpt-oss:20b', achieved: 'LOW' },
         ];
       }),
     );
     const selector = new LoopSelector(catalogue);
     const picks = [1, 2, 3, 4].map(() => selector.select(request()).engine.engine_id);
-    expect(picks).toEqual(['qwenloop', 'qwenloop', 'qwenloop', 'qwenloop']);
+    expect(picks).toEqual(['gptossloop', 'gptossloop', 'gptossloop', 'gptossloop']);
   });
 
-  it("still works with a vibey that has no `vibey loops`: sovereignloop, qwenloop, and no prompt box", async () => {
+  it('still works with a vibey that has no `vibey loops`: sovereignloop, gptossloop, and its prompt box', async () => {
     const older = await new CatalogueSource(
       async () => {
         throw new Error('vibey 2.1.0 (/usr/local/bin/vibey) has no "vibey loops" command. It ships in vibey 3.0.0.');
@@ -167,22 +223,36 @@ describe('the #1131 review amendments', () => {
     expect(older.notice).toContain('has no "vibey loops" command');
     const selection = new LoopSelector(older).select(request({ effort: 'auto', attempt: 1 }));
     expect(selection).toMatchObject({ loop: 'sovereignloop', tier: 'local', model: 'gpt-oss:20b' });
-    expect(selection.engine).toMatchObject({ engine_id: 'qwenloop', repealed: false, controls: { prompt: null } });
+    expect(selection.engine).toMatchObject({ engine_id: 'gptossloop', repealed: false, controls: { prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'] } });
     expect(selection.engine.notes).toHaveLength(1);
   });
 });
 
 describe('DegradedCatalogue', () => {
-  it('is sovereignloop with qwenloop on the configured model, a notice, and no ladder', () => {
+  it('is sovereignloop with gptossloop, the default runner, on the configured model, a notice, and no ladder', () => {
     const catalogue = DegradedCatalogue.sovereign('gpt-oss:20b', 'vibey is too old');
     expect(catalogue.source).toBe('degraded');
     expect(catalogue.notice).toBe('vibey is too old');
     expect(catalogue.loops).toHaveLength(1);
+    // Only gptossloop: qwenloop runs only once vibey switches it on, and there is no vibey here.
+    expect(catalogue.loops[0]?.engines.map((engine) => engine.engine_id)).toEqual(['gptossloop']);
     const engine = catalogue.loops[0]?.engines[0];
+    expect(engine).toMatchObject({
+      binary: 'gptossloop',
+      state_dir: '.qwenloop',
+      enabled: true,
+      on_by_default: true,
+      switch: null,
+      done_marker: 'QWENLOOP_TASK_FULLY_COMPLETE',
+      env: { auth: [], passthrough: ['GPTOSSLOOP_*'] },
+    });
     expect(engine?.default_model).toBe('gpt-oss:20b');
+    expect(engine?.efforts.every((entry) => entry.model === 'gpt-oss:20b')).toBe(true);
+    expect(engine?.notes?.[0]).toContain("else gptossloop's own");
     expect(engine?.capabilities.plugins).toBeNull();
     expect(engine?.turns_flag).toBe('--max-turns');
-    expect(catalogue.loops[0]?.by_effort.HIGH?.[0]?.engine_id).toBe('qwenloop');
+    expect(catalogue.loops[0]?.by_effort.HIGH).toEqual([{ engine_id: 'gptossloop', model: 'gpt-oss:20b', achieved: 'STANDARD' }]);
+    expect(DegradedCatalogue.sovereign('qwen3:14b', 'n').loops[0]?.engines[0]?.default_model).toBe('qwen3:14b');
   });
 });
 
@@ -203,7 +273,7 @@ describe('CatalogueSource', () => {
       new CatalogueParser(),
       'gpt-oss:20b',
     ).load();
-    expect(failing.notice).toBe('vibey 2.0.0 has no "vibey loops" command. The extension runs sovereignloop with gpt-oss:20b and effort auto.');
+    expect(failing.notice).toBe('vibey 2.0.0 has no "vibey loops" command. The extension runs sovereignloop with gptossloop on gpt-oss:20b and effort auto.');
   });
 });
 
@@ -222,9 +292,9 @@ describe('LoopSelector', () => {
     expect(new LoopSelector(DegradedCatalogue.sovereign('m', 'n')).effortForAttempt('HIGH', 1)).toBe('HIGH');
   });
 
-  it('on auto picks qwenloop for sovereignloop, with the effort projection as the turn limit', () => {
+  it('on auto picks gptossloop for sovereignloop, with the effort projection as the turn limit', () => {
     const selection = new LoopSelector(parse()).select(request());
-    expect(selection.engine.engine_id).toBe('qwenloop');
+    expect(selection.engine.engine_id).toBe('gptossloop');
     expect(selection.effort).toBe('LOW');
     expect(selection.effortSource).toBe('auto');
     expect(selection.model).toBe('gpt-oss:20b');
@@ -291,12 +361,13 @@ describe('LoopSelector', () => {
     const catalogue = parse(
       variant((value) => {
         const local = value.loops[0];
-        local.engines[1].enabled = true;
-        local.engines[1].base_weight = 2;
-        local.engines[1].efforts[1].achieved = 'LOW';
-        local.engines[1].efforts[1].model = 'qwen3:14b';
+        const claude = engineIn(value, 'claudeloop-local');
+        claude.enabled = true;
+        claude.base_weight = 2;
+        claude.efforts[1].achieved = 'LOW';
+        claude.efforts[1].model = 'qwen3:14b';
         local.by_effort.LOW = [
-          { engine_id: 'qwenloop', model: 'gpt-oss:20b', achieved: 'LOW' },
+          { engine_id: 'gptossloop', model: 'gpt-oss:20b', achieved: 'LOW' },
           { engine_id: 'claudeloop-local', model: 'qwen3:14b', achieved: 'LOW' },
           { engine_id: 'missing-engine', model: null, achieved: 'LOW' },
         ];
@@ -304,19 +375,17 @@ describe('LoopSelector', () => {
     );
     const selector = new LoopSelector(catalogue);
     const resident = selector.select(request({ resident: ['gpt-oss:20b'] }));
-    expect(resident.engine.engine_id).toBe('qwenloop');
+    expect(resident.engine.engine_id).toBe('gptossloop');
     expect(resident.reason).toContain('already loaded');
     const picks = [1, 2, 3].map(() => selector.select(request()).engine.engine_id);
-    expect(picks).toEqual(['claudeloop-local', 'qwenloop', 'claudeloop-local']);
+    expect(picks).toEqual(['claudeloop-local', 'gptossloop', 'claudeloop-local']);
   });
 
   it('skips an engine with no model when it looks for a resident one', () => {
     const catalogue = parse(
       variant((value) => {
-        value.loops[0].engines[0].default_model = null;
-        for (const entry of value.loops[0].engines[0].efforts) {
-          entry.model = null;
-        }
+        // qwenloop as vibey lists it, switched on: no model from vibey, its own config chooses.
+        engineIn(value, 'qwenloop').enabled = true;
         value.loops[0].by_effort.LOW = [{ engine_id: 'qwenloop', model: null, achieved: 'LOW' }];
       }),
     );
@@ -329,27 +398,38 @@ describe('LoopSelector', () => {
     const catalogue = parse(
       variant((value) => {
         const local = value.loops[0];
-        local.engines[1].enabled = true;
+        engineIn(value, 'claudeloop-local').enabled = true;
         local.by_effort.STANDARD = [
-          { engine_id: 'qwenloop', model: 'gpt-oss:20b', achieved: 'STANDARD' },
+          { engine_id: 'gptossloop', model: 'gpt-oss:20b', achieved: 'STANDARD' },
           { engine_id: 'claudeloop-local', model: null, achieved: 'STANDARD' },
         ];
       }),
     );
     const selector = new LoopSelector(catalogue);
-    const rose = selector.select(request({ attempt: 3, previousEngine: 'qwenloop' }));
+    const rose = selector.select(request({ attempt: 3, previousEngine: 'gptossloop' }));
     expect(rose.engine.engine_id).toBe('claudeloop-local');
-    expect(rose.reason).toContain('rotates away from qwenloop');
+    expect(rose.reason).toContain('rotates away from gptossloop');
     const steady = selector.select(request({ attempt: 4, previousEngine: 'claudeloop-local' }));
     expect(steady.reason).not.toContain('rotates');
   });
 
   it('names an engine, or an engine and model, and refuses what it cannot run', () => {
     const selector = new LoopSelector(parse());
-    const local = selector.select(request({ engine: 'qwenloop/qwen3:14b', effort: 'STANDARD' }));
-    expect(local.model).toBe('qwen3:14b');
-    expect(local.reason).toContain('on qwen3:14b as you chose');
-    expect(selector.select(request({ engine: 'qwenloop/' })).model).toBe('gpt-oss:20b');
+    const local = selector.select(request({ engine: 'gptossloop/gpt-oss:120b', effort: 'STANDARD' }));
+    expect(local.model).toBe('gpt-oss:120b');
+    expect(local.reason).toContain('on gpt-oss:120b as you chose');
+    expect(selector.select(request({ engine: 'gptossloop/' })).model).toBe('gpt-oss:20b');
+    expect(selector.select(request({ engine: 'gptossloop' })).engine.engine_id).toBe('gptossloop');
+    // qwenloop is opt-in: named while vibey has it off, it says which switch turns it on.
+    expect(() => selector.select(request({ engine: 'qwenloop' }))).toThrow(/^qwenloop is switched off; switch it on with VIBEY_FEATURE_QWENLOOP$/);
+    const qwen = new LoopSelector(parse(variant((value) => (engineIn(value, 'qwenloop').enabled = true))));
+    expect(qwen.select(request({ engine: 'qwenloop' })).model).toBeNull();
+    expect(qwen.select(request({ engine: 'qwenloop/qwen3:14b' })).model).toBe('qwen3:14b');
+    // gptossloop is on by default, so off means something switched it off.
+    const gptossOff = new LoopSelector(parse(variant((value) => (engineIn(value, 'gptossloop').enabled = false))));
+    expect(() => gptossOff.select(request({ engine: 'gptossloop' }))).toThrow(
+      /^gptossloop is switched off; it is on by default, so VIBEY_FEATURE_GPTOSSLOOP or vibey's \[features\] table switched it off$/,
+    );
     const cursor = selector.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'cursorloop/grok', effort: 'LOW' }));
     expect(cursor.effort).toBe('HIGH');
     expect(cursor.effortSource).toBe('model');
@@ -360,14 +440,14 @@ describe('LoopSelector', () => {
     expect(() => selector.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'claudeloop/opus' }))).toThrow(
       'does not take a model by name',
     );
-    expect(() => selector.select(request({ engine: 'nosuch' }))).toThrow('its engines are qwenloop, claudeloop-local, opencode');
+    expect(() => selector.select(request({ engine: 'nosuch' }))).toThrow('its engines are opencode, gptossloop, qwenloop, claudeloop-local');
     expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow('switch it on with VIBEY_FEATURE_CLAUDELOOP_LOCAL');
     expect(() => selector.select(request({ engine: 'opencode' }))).toThrow('opencode is repealed by the canon (8.b): it is listed, but it never runs');
     expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow(/switched off; switch it on with /);
     const noSwitch = new LoopSelector(
       parse(
         variant((value) => {
-          value.loops[0].engines[1].switch = null;
+          engineIn(value, 'claudeloop-local').switch = null;
         }),
       ),
     );
@@ -385,7 +465,7 @@ describe('LoopSelector', () => {
     expect(() => new LoopSelector(empty).select(request())).toThrow(SelectionError);
     const gap = parse(variant((value) => delete value.loops[0].by_effort.LOW));
     expect(() => new LoopSelector(gap).select(request())).toThrow('can run at LOW');
-    const noEntry = parse(variant((value) => value.loops[0].engines[0].efforts.splice(1, 1)));
-    expect(() => new LoopSelector(noEntry).select(request())).toThrow('qwenloop lists no LOW effort');
+    const noEntry = parse(variant((value) => engineIn(value, 'gptossloop').efforts.splice(1, 1)));
+    expect(() => new LoopSelector(noEntry).select(request())).toThrow('gptossloop lists no LOW effort');
   });
 });

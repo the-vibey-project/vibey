@@ -1,15 +1,16 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * qwenloop is the family's local agent runner (src/vibey_runners/qwen); the extension drives
- * it and writes no agent loop of its own (ADR-0017's dogfood rule).
- *
- * Its commands, as `qwenloop/cli/app.py` declares them:
+ * The family's local agent runner (src/vibey_runners/qwen, the `qwenloop` package), which
+ * ships as two programs since ADR-0060: `gptossloop`, the default, and `qwenloop`. The
+ * extension drives either and writes no agent loop of its own (ADR-0017's dogfood rule).
+ * Both take the same commands, as `qwenloop/cli/app.py` declares them:
  *   run PLAN --run-id --cwd --backend --base-url --model --effort --[no-]desktop-notifications
  *   prompt RUN_ID TEXT --cwd     (a follow-up; files a `prompt` control)
  *   stop RUN_ID --cwd            (files a `stop` control; the run winds down, exit 75)
- * `--effort` is accepted and not used by qwenloop 0.2.0. There is no `--context-window`
- * flag: the window comes only from qwenloop's config file (`context_window`, default
- * 32768), which QWENLOOP_CONFIG names, so every run gets a config file of its own.
+ * `--effort` is accepted and not used by the runner. There is no `--context-window` flag:
+ * the window comes only from the runner's config file (`context_window`, default 32768),
+ * which its own `<PREFIX>_CONFIG` names (GPTOSSLOOP_CONFIG, QWENLOOP_CONFIG), so every run
+ * gets a config file of its own.
  * Declared by `interfaces/qwenloop-interface.ts`.
  */
 import type {
@@ -19,12 +20,13 @@ import type {
   QwenloopRunConfigInterface,
   RunConfigValues,
 } from './interfaces/qwenloop-interface';
+import { LocalRunners } from './local-runner';
 
 export class QwenloopCommand implements QwenloopCommandInterface {
-  /** The line qwenloop's run prints when it finished the task. */
-  static readonly DONE_MARKER = 'QWENLOOP_TASK_FULLY_COMPLETE';
+  /** The line a run prints when it finished the task, whichever name runs it. */
+  static readonly DONE_MARKER = LocalRunners.PROTOCOL.doneMarker;
   /** `EXIT_CODE_WIND_DOWN`: the run stopped at a turn boundary because it was asked to. */
-  static readonly EXIT_WOUND_DOWN = 75;
+  static readonly EXIT_WOUND_DOWN = LocalRunners.PROTOCOL.exitWoundDown;
 
   constructor(private readonly executable: string) {}
 
@@ -80,7 +82,7 @@ export class QwenloopRunConfig implements QwenloopRunConfigInterface {
       lines.push(`max_turns = ${Math.floor(values.maxTurns)}`);
     }
     if (userConfig !== undefined) {
-      lines.push('', '# The rest is the user\'s own qwenloop config, unchanged.');
+      lines.push('', '# The rest is the user\'s own runner config, unchanged.');
       const owned = values.maxTurns === undefined ? QwenloopRunConfig.WINDOW : QwenloopRunConfig.OWNED;
       let topLevel = true;
       for (const line of userConfig.split(/\r?\n/)) {

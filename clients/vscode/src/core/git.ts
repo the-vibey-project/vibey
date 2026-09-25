@@ -13,6 +13,7 @@ import type {
   MergeOutcome,
 } from './interfaces/git-interface';
 import type { CompletedProcess, Environment, ProcessRunnerInterface } from './interfaces/process-runner-interface';
+import { LocalRunners } from './local-runner';
 import { PathScope } from './path-scope';
 
 export class GitError extends Error {
@@ -26,8 +27,11 @@ export class GitError extends Error {
 }
 
 export class GitClient implements GitClientInterface {
-  /** Where qwenloop keeps its run records, in the worktree it runs in: never the work. */
-  static readonly RUN_RECORDS = '.qwenloop';
+  /**
+   * Where the local runner keeps its run records, in the worktree it runs in: never the work.
+   * gptossloop and qwenloop share it (ADR-0060).
+   */
+  static readonly RUN_RECORDS = LocalRunners.PROTOCOL.stateDir;
 
   constructor(
     private readonly runner: ProcessRunnerInterface,

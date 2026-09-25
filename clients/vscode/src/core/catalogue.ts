@@ -29,6 +29,7 @@ import type {
   Selection,
   SelectionRequest,
 } from './interfaces/catalogue-interface';
+import { LocalRunners } from './local-runner';
 import { ModelName } from './ollama';
 
 export class CatalogueError extends Error {
@@ -216,6 +217,8 @@ export class CatalogueParser implements CatalogueParserInterface {
       // A producer from before the canon's repeals says nothing: nothing it lists is repealed.
       repealed: Shape.optionalBoolean(engine.repealed, `${where}.repealed`) ?? false,
       switch: Shape.optionalString(engine.switch, `${where}.switch`),
+      // A producer from before ADR-0060 says nothing: then no engine was on by default.
+      on_by_default: Shape.optionalBoolean(engine.on_by_default, `${where}.on_by_default`) ?? false,
       cost_per_mtok_in: Shape.number(engine.cost_per_mtok_in, `${where}.cost_per_mtok_in`),
       cost_per_mtok_out: Shape.number(engine.cost_per_mtok_out, `${where}.cost_per_mtok_out`),
       default_model: Shape.optionalString(engine.default_model, `${where}.default_model`),
@@ -276,28 +279,43 @@ export class CatalogueParser implements CatalogueParserInterface {
 
 /**
  * What the extension runs when vibey cannot say: an older vibey without `vibey loops`, or
- * none at all. sovereignloop with qwenloop on the configured model, effort auto with no
- * ladder, and only the capabilities qwenloop's own CLI shows. The run and control shapes
- * are qwenloop's own (`qwenloop/cli/app.py`), the only engine it knows without vibey.
+ * none at all. sovereignloop with the family's default local runner, gptossloop (ADR-0060),
+ * on the configured model, effort auto with no ladder, and only the capabilities the
+ * runner's own CLI shows. The run and control shapes are the runner's own
+ * (`qwenloop/cli/app.py`), the only engine it knows without vibey.
+ *
+ * qwenloop is deliberately not listed. It is the same runner on a Qwen model, and it runs
+ * only once vibey switches it on (VIBEY_FEATURE_QWENLOOP=1); with no vibey to read that
+ * switch, listing it would offer an engine nothing here can say is on, or one a switch the
+ * person sets would never turn on. Naming it (`vibey.engine`) says it is not an engine here.
+ *
+ * gptossloop ships in the same vibey release as `vibey loops`, so behind a vibey too old
+ * for `vibey loops` there is no gptossloop either: the run then says gptossloop cannot be
+ * found and that it ships with vibey, which is the whole fix. The older `qwenloop` that
+ * ran gpt-oss there is not offered in its place: it reads QWENLOOP_*, and since ADR-0060 a
+ * program by that name means the Qwen engine.
  */
 export class DegradedCatalogue {
   static readonly TURNS_FLAG = '--max-turns';
 
   static sovereign(model: string, notice: string): Catalogue {
-    const note = 'vibey loops is not available: the turn limit is the task\'s max_turns or vibey.maxTurns when set, else qwenloop\'s own';
-    const qwenloop: CatalogueEngine = {
-      engine_id: 'qwenloop',
-      binary: 'qwenloop',
-      state_dir: '.qwenloop',
+    const runners = LocalRunners.FAMILY;
+    const runner = runners.default;
+    const note = `vibey loops is not available: the turn limit is the task's max_turns or vibey.maxTurns when set, else ${runner.name}'s own`;
+    const local: CatalogueEngine = {
+      engine_id: runner.name,
+      binary: runner.name,
+      state_dir: runners.protocol.stateDir,
       enabled: true,
       repealed: false,
       switch: null,
+      on_by_default: runner.onByDefault,
       cost_per_mtok_in: 0,
       cost_per_mtok_out: 0,
       default_model: model,
       efforts: Efforts.ALL.map((effort) => ({ effort, argv: [], achieved: 'STANDARD' as Effort, model, notes: note })),
       capabilities: { images: null, files: true, paste_text: true, paste_images: null, plugins: null, mcp: null, evidence: {} },
-      done_marker: 'QWENLOOP_TASK_FULLY_COMPLETE',
+      done_marker: runners.protocol.doneMarker,
       plan_flag: null,
       supports_cwd_flag: true,
       base_weight: 1,
@@ -305,12 +323,12 @@ export class DegradedCatalogue {
       controls: {
         stop: ['stop', '{run_id}', '--cwd', '{cwd}'],
         wind_down: ['wind-down', '{run_id}', '--cwd', '{cwd}'],
-        // A qwenloop released before vibey 3.0.0 reads no follow-up, so without vibey's
-        // word that this one does, there is no prompt box.
-        prompt: null,
+        // A runner released before vibey 3.0.0 reads no follow-up, and gptossloop is the
+        // runner's name only since ADR-0060, so every gptossloop does: it gets a prompt box.
+        prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'],
       },
       events: { path: '{cwd}/{state_dir}/runs/{run_id}/events.jsonl', envelope: 'type' },
-      env: { auth: [], passthrough: ['QWENLOOP_*'] },
+      env: { auth: [], passthrough: [runners.passthrough(runner)] },
       notes: [note],
       turns_flag: DegradedCatalogue.TURNS_FLAG,
     };
@@ -325,9 +343,9 @@ export class DegradedCatalogue {
           tier: 'local',
           default: true,
           declared_only: false,
-          engines: [qwenloop],
+          engines: [local],
           by_effort: Object.fromEntries(
-            Efforts.ALL.map((effort) => [effort, [{ engine_id: 'qwenloop', model, achieved: 'STANDARD' as Effort }]]),
+            Efforts.ALL.map((effort) => [effort, [{ engine_id: runner.name, model, achieved: 'STANDARD' as Effort }]]),
           ),
         },
       ],
@@ -439,9 +457,7 @@ export class LoopSelector implements LoopSelectorInterface {
       throw new SelectionError(`${engineId} is repealed by the canon (8.b): it is listed, but it never runs`);
     }
     if (!engine.enabled) {
-      throw new SelectionError(
-        `${engineId} is switched off${engine.switch === null ? '' : `; switch it on with ${engine.switch}`}`,
-      );
+      throw new SelectionError(`${engineId} is switched off${LoopSelector.switchAdvice(engine)}`);
     }
     return engine;
   }
@@ -509,6 +525,16 @@ export class LoopSelector implements LoopSelectorInterface {
     return best;
   }
 
+  /** How to switch an engine back on: an on-by-default engine is off only because its switch says so. */
+  private static switchAdvice(engine: CatalogueEngine): string {
+    if (engine.switch === null) {
+      return '';
+    }
+    return engine.on_by_default
+      ? `; it is on by default, so ${engine.switch} or vibey's [features] table switched it off`
+      : `; switch it on with ${engine.switch}`;
+  }
+
   private static entry(engine: CatalogueEngine, effort: Effort): EngineEffort {
     const entry = engine.efforts.find((candidate) => candidate.effort === effort);
     if (entry === undefined) {
@@ -566,7 +592,7 @@ export class CatalogueSource {
   ) {}
 
   async load(): Promise<Catalogue> {
-    const fallback = `The extension runs sovereignloop with ${this.model} and effort auto.`;
+    const fallback = `The extension runs sovereignloop with ${LocalRunners.FAMILY.default.name} on ${this.model} and effort auto.`;
     if (this.loops === undefined) {
       return DegradedCatalogue.sovereign(this.model, `vibey was not found, so the loop and model picker is limited. ${fallback} Install vibey, or set vibey.cliPath.`);
     }

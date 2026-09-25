@@ -19,6 +19,7 @@ import { GitClient } from './git';
 import { NodeHttpClient } from './http-client';
 import type { Catalogue, CatalogueEngine, LoopName } from './interfaces/catalogue-interface';
 import type { HttpClientInterface } from './interfaces/http-client-interface';
+import type { RunnerIdentity } from './interfaces/local-runner-interface';
 import type { Platform } from './interfaces/ollama-interface';
 import type { ProcessRunnerInterface } from './interfaces/process-runner-interface';
 import type { RunRequest, RunServices } from './interfaces/run-interface';
@@ -27,6 +28,7 @@ import type { RawSettings, ResolvedSettings } from './interfaces/settings-interf
 import type { ClockInterface, IdSourceInterface } from './interfaces/support-interface';
 import { JsonlJournal, JsonlTail } from './jsonl';
 import { LaneTracker } from './lanes';
+import { LocalRunners } from './local-runner';
 import { ModelSlotLock } from './model-lock';
 import { ModelPuller, OllamaStartFactsReader, OllamaStartPlanner } from './ollama-lifecycle';
 import { OllamaAdvice, OllamaProbe } from './ollama';
@@ -74,6 +76,8 @@ export class CoreServices implements ServicesInterface {
   readonly answers = new GateAnswerPlanner();
   readonly slash = new SlashCommands();
   readonly slashArguments = new SlashArguments();
+  /** The family's local runner under each of its names: gptossloop by default, and qwenloop (ADR-0060). */
+  readonly runners = LocalRunners.FAMILY;
   private readonly catalogueSource: CatalogueSource;
   private catalogueLoad: Promise<Catalogue> | undefined;
   private selector: { catalogue: Catalogue; selector: LoopSelector } | undefined;
@@ -136,7 +140,8 @@ export class CoreServices implements ServicesInterface {
       git: this.git,
       processes: this.processes,
       runConfig: new QwenloopRunConfig(),
-      userConfig: () => this.userConfig(),
+      runners: this.runners,
+      userConfig: (runner) => this.userConfig(runner),
       gate: this.gate,
       tail: this.tail,
       lockFor: (engine, tier) =>
@@ -205,6 +210,7 @@ export class CoreServices implements ServicesInterface {
       environ: this.options.environ,
       forbidden: ForbiddenEnvironment.MODEL_SESSION,
       paidDeclared: () => this.paidDeclared(),
+      runner: this.runners.default,
     });
   }
 
@@ -240,16 +246,23 @@ export class CoreServices implements ServicesInterface {
     return new CoreServices({ ...this.options, raw: { ...this.options.raw, ...raw } });
   }
 
+  /** An engine's command lines; a local runner's program may be named by its own setting. */
   private command(engine: CatalogueEngine): EngineCommand | string {
-    const declared = engine.engine_id === 'qwenloop' ? this.settings.raw.qwenloopPath : '';
+    const runner = this.runners.identify(engine.engine_id);
+    const declared = runner === undefined ? '' : this.settings.raw[runner.pathSetting];
     const located = this.locator.locate(engine.binary, declared);
-    return located.path === undefined
-      ? `${engine.engine_id} cannot run: ${located.error}. ${engine.engine_id === 'qwenloop' ? 'It ships with vibey (pip install vibey), or set vibey.qwenloopPath.' : 'Install it, or choose another engine.'}`
-      : new EngineCommand(engine, located.path);
+    if (located.path !== undefined) {
+      return new EngineCommand(engine, located.path);
+    }
+    const fix = runner === undefined
+      ? 'Install it, or choose another engine.'
+      : `It ships with vibey (pip install vibey), or set vibey.${runner.pathSetting}.`;
+    return `${engine.engine_id} cannot run: ${located.error}. ${fix}`;
   }
 
-  private userConfig(): { readonly path: string; readonly text: string } | undefined {
-    const file = this.options.environ.QWENLOOP_CONFIG || this.storage.qwenloopConfigPath(this.options.environ);
+  /** The runner's own config file: its `<PREFIX>_CONFIG` when set, else where it looks by default. */
+  private userConfig(runner: RunnerIdentity): { readonly path: string; readonly text: string } | undefined {
+    const file = this.options.environ[this.runners.variable(runner, 'CONFIG')] || this.storage.runnerConfigPath(runner.name, this.options.environ);
     try {
       return { path: file, text: fs.readFileSync(file, 'utf8') };
     } catch {
