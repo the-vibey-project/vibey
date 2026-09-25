@@ -1,17 +1,17 @@
 # 0060 — The heartbeat tells the truth, and passes the gate by the gate's own rule
 
-**Status:** proposed · **Date:** 2026-09-24 · **Cites:** the CLAUDE.md non-negotiables "Unattended authority is bounded by a gate, never by judgement" (12.d), "Everything-as-code" (12.c), "Toil that can be fully automated is" (12.e), "Status is evidence-bounded" (10.f) and "Code lives in classes" (9.b); doctrine 8.a · **Related:** ADR-0016, ADR-0018, ADR-0042, ADR-0046, ADR-0047, ADR-0050 · **Evidence:** `develop` at `e89818ce`, read 2026-09-24; pre-commit 4.6.2 `commands/hook_impl.py::_pre_push_ns`; git's pre-push stdin as observed against a local bare remote
+**Status:** proposed · **Date:** 2026-09-24 · **Cites:** sub-doctrine 10.i, drafted after this record merged (#1121) and awaiting the operator's ratifying merge; the CLAUDE.md non-negotiables "Unattended authority is bounded by a gate, never by judgement" (12.d), "Everything-as-code" (12.c), "Toil that can be fully automated is" (12.e), "Status is evidence-bounded" (10.f) and "Code lives in classes" (9.b); doctrine 8.a · **Related:** ADR-0016, ADR-0018, ADR-0042, ADR-0046, ADR-0047, ADR-0050 · **Evidence:** `develop` at `e89818ce`, read 2026-09-24; pre-commit 4.6.2 `commands/hook_impl.py::_pre_push_ns`; git's pre-push stdin as observed against a local bare remote
 
 **Owes:**
 
 - the advertised ADR count in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `README.md` and
   `docs/index.md`, and a nav entry in `properdocs.yml` (done in the change that carries this);
 - **a sub-doctrine.** Two rules here bind future decisions and are conduct, so under ADR-0020
-  they belong in the canon. This record applies them; it does not ratify them. Proposed text,
-  for the operator to file under 10 or 12: *"A signal that something is up is published only
-  after what it claims has been read true, and a read that fails withholds it. A gate that
-  exempts anything does so by its own rule over the objects it judges, never on a caller's
-  flag."*
+  they belong in the canon. This record applies them; it does not ratify them. #1121 merged
+  this record without them; they are drafted as sub-doctrine **10.i — the signal is read
+  before it is sent** in `src/vibey_tools/gh/docs/doctrines.md` by the pull request that
+  follows it, and become law only when the operator's merge of that pull request ratifies them
+  (Article II.3).
 
 ## Context
 
