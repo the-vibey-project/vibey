@@ -14,6 +14,37 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
+* **engines:** the local engine that runs GPT-OSS is `gptossloop`, and it ships on; `qwenloop`
+  runs Qwen and is off until switched on
+  ([ADR-0060](docs/architecture/decisions/0060-gptossloop-is-the-sovereign-engine.md)).
+  The engine called `qwenloop` ran `gpt-oss:20b` by default. The runner package now carries two
+  console scripts that differ only in who they are: `gptossloop` (GPT-OSS 20B, reads
+  `GPTOSSLOOP_BASE_URL`/`_MODEL`/`_API_KEY`/`_CONFIG` and its own config file) and `qwenloop`
+  (`qwen3:14b`, reads `QWENLOOP_*`). Run records (`.qwenloop/runs/`), the done marker and the
+  verdict fence stay shared. Runner 0.3.0.
+  - **On by default.** gptossloop joins the local tier with no switch; `[features] gptossloop =
+    false` or `VIBEY_FEATURE_GPTOSSLOOP=0` switches it off. The sovereign pair is now
+    `gptossloop` and `opencode`.
+  - **qwenloop is opt-in.** `VIBEY_FEATURE_QWENLOOP` / `[features] qwenloop` now switch on the
+    Qwen engine, and `[engines].enabled` or `[phases.*].engines` naming qwenloop need that
+    switch (the refusal says what qwenloop became). `vibey worker` and `vibey doctor` print a
+    note when it is on; `vibey loops` notes it too.
+  - **Migrate.** Run `gptossloop` where you ran `qwenloop` for gpt-oss, or set
+    `QWENLOOP_MODEL=gpt-oss:20b`; move `QWENLOOP_*` settings meant for the gpt-oss engine to
+    `GPTOSSLOOP_*` (vibey's own `VIBEY_OLLAMA_URL` path does this for you: it hands gptossloop
+    `GPTOSSLOOP_BASE_URL` and `GPTOSSLOOP_MODEL`, and qwenloop only `QWENLOOP_BASE_URL`); drop
+    `VIBEY_FEATURE_QWENLOOP=1` unless you want Qwen as well.
+  - **Providers.** The sovereign DESIGN/DECOMPOSE providers are `GptossloopDesignProvider` and
+    `GptossloopWorkPlanProducer` and record `gptossloop` in the ledger. `--provider gptossloop`
+    is the default; `--provider qwenloop` is still read, as gptossloop, and says so on stderr.
+  - **`vibey loops --json`.** Lists gptossloop in sovereignloop, and every engine gains
+    `on_by_default`.
+  - **Helm.** With `ollama.enabled` the worker gets `GPTOSSLOOP_BASE_URL`/`GPTOSSLOOP_MODEL`.
+    `ollama.qwenloopFeature` now defaults to `false`; turning it on hands qwenloop the new
+    `ollama.qwenModel` (`qwen3:14b`) and has the pull Job fetch it. The `ollama-gpu-qwenloop`
+    golden profile is `ollama-gpu-gptossloop`, and the CRD's engine enum lists gptossloop.
+  - **Canon.** An amendment to sub-doctrine 8.c (`sovereignloop` is what gptossloop and
+    qwenloop become) is carried here for the operator's ratification (Article II.3).
 * **vibey_gh:** the sovereign review never returns a verdict on a prompt the model did not
   read in full, and names a model that ran out of room (#1090). #1090 read its whole
   31,765-token prompt and ran out of generation room in the 1,004 tokens a 32,768 window left

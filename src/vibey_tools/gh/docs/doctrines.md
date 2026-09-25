@@ -215,8 +215,10 @@ option a declaration reaches.
 
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
 carried this entry; its two loops and two layers, and its one instance per model,
-set by the merge that carried them)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
-becomes — drives the models and tools that run on the operator's own hardware;
+set by the merge that carried them; its sovereign runners named by the merge that
+carries ADR-0060 — under Article II.3 a ratification-ready draft until the
+operator's merge carries it)*: the family runs **exactly two loops**. **`sovereignloop`** — what `gptossloop`
+and `qwenloop` become — drives the models and tools that run on the operator's own hardware;
 **`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
 `cursorloop` and `agyloop` as its adapters. Each loop runs as
 **a single instance per model**, and that
