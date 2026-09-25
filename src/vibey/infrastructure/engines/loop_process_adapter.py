@@ -511,6 +511,20 @@ class LoopProcessAdapter:
                             and "success" in payload
                         ):
                             payload["complete"] = payload.get("success") is True
+                        # qwenloop and gptossloop end a run with a bare
+                        # {"type": "completed"} or {"type": "failed"} (qwenloop
+                        # application/runner.py): the event's name is the verdict.
+                        # Without this every sovereign BUILD session read as "did
+                        # not report completion" -- caught by the ULTRA proof run.
+                        raw_type = raw.get("type")
+                        if (
+                            kind == EventKind.VERDICT_RENDERED
+                            and "complete" not in payload
+                            and raw_type in {"completed", "failed"}
+                        ):
+                            payload["complete"] = raw_type == "completed"
+                            if payload["complete"]:
+                                payload.setdefault("done_marker", self.descriptor.done_marker)
 
                         # Yield translated event
                         yield EngineEvent(
