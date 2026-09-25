@@ -75,6 +75,12 @@ from vibey.application.interfaces.design import (
     SpecSynthesizer,
 )
 from vibey.application.interfaces.docs import DocsPort
+from vibey.application.interfaces.driver import (
+    DriverFailoverServiceInterface,
+    DriverLedgerPort,
+    DriverWorkspacePort,
+    ProcessPort,
+)
 from vibey.application.interfaces.email import EmailPort
 from vibey.application.interfaces.engines import (
     EngineAdapter,
@@ -83,6 +89,10 @@ from vibey.application.interfaces.engines import (
     EngineProvider,
     EngineSelectorInterface,
     RotationCursorRepository,
+)
+from vibey.application.interfaces.failover import (
+    EngineFailoverServiceInterface,
+    FailoverEventStore,
 )
 from vibey.application.interfaces.files import FilesPort
 from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
@@ -95,6 +105,7 @@ from vibey.application.interfaces.ledger import (
     BuildLedger,
     DesignLedger,
     HandoffStore,
+    LedgerRangeReader,
     LedgerReader,
     LedgerSearch,
     LedgerShardStore,
@@ -259,6 +270,7 @@ __all__ = [
     "LedgerExporterInterface",
     "InvalidLedgerShardInterface",
     "LedgerBudgetSourceInterface",
+    "LedgerRangeReader",
     "LedgerReader",
     "LedgerSearch",
     "LedgerShardInterface",
@@ -275,6 +287,12 @@ __all__ = [
     "ProjectBudgetServiceInterface",
     "GateAnswerServiceInterface",
     "ProjectBudgetStore",
+    "DriverFailoverServiceInterface",
+    "DriverLedgerPort",
+    "DriverWorkspacePort",
+    "EngineFailoverServiceInterface",
+    "FailoverEventStore",
+    "ProcessPort",
     "UltraControlServiceInterface",
     "UltraControlStore",
     "ProjectLookup",

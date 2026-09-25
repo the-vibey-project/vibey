@@ -17,3 +17,7 @@ class LaneScannerInterface(Protocol):
     def lanes(self) -> list[dict[str, object]]:
         """Every recent lane, newest first, each with its byte offset."""
         ...
+
+    def tail(self, events_path: str, after: int, *, max_bytes: int = ...) -> dict[str, object]:
+        """A listed lane's complete lines after byte `after`; `UnknownLane` otherwise."""
+        ...

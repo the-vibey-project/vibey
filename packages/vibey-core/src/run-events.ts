@@ -109,7 +109,7 @@ export class RunTranscript implements RunTranscriptInterface {
             kind: 'tool-call',
             ...(turn === undefined ? {} : { turn }),
             name: RunTranscript.name(record.name ?? record.tool ?? record.item_type),
-            detail: RunTranscript.clip(RunTranscript.arguments(record.arguments ?? record.input ?? record.args)),
+            detail: RunTranscript.clip(RunTranscript.argumentsLine(record.arguments ?? record.input ?? record.args)),
           }),
         ];
       case 'tool_result':
@@ -268,7 +268,7 @@ export class RunTranscript implements RunTranscriptInterface {
   }
 
   /** A tool call's arguments as one short line: `path=docs/a.md content=(1,234 chars)`. */
-  private static arguments(value: unknown): string {
+  private static argumentsLine(value: unknown): string {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       return '';
     }
