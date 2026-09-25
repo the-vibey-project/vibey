@@ -322,3 +322,7 @@ async def test_a_database_that_does_not_answer_is_not_ready(tmp_path: Path) -> N
     doctor = await probes.doctor()
     assert isinstance(doctor, dict)
     assert doctor["checks"][0]["mark"] == "FAIL"
+
+
+async def test_the_openapi_only_app_is_never_ready() -> None:
+    assert await ServeCommand._never_ready() is False
