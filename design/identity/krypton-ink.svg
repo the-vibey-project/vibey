@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1510 542" width="1510" height="542" role="img" aria-label="Krypton">
-<title>Krypton</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1510 542" width="1510" height="542" role="img" aria-label="krypton">
+<title>krypton</title>
 <line x1="47" y1="65" x2="47" y2="375" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>
-<line x1="191" y1="65" x2="59" y2="227" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>
-<line x1="103" y1="187" x2="199" y2="375" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>
+<line x1="183" y1="175" x2="59" y2="287" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>
+<line x1="107" y1="245" x2="191" y2="375" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>
 <line x1="271" y1="175" x2="271" y2="375" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>
 <path d="M271 253A76 76 0 0 1 375.47 182.534" fill="none" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>
 <line x1="431" y1="175" x2="511" y2="375" stroke="#17324d" stroke-width="47" stroke-linecap="round"/>

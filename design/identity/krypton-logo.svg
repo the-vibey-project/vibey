@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1722.5 520" width="1722.5" height="520" role="img" aria-label="Krypton">
-<title>Krypton</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1722.5 520" width="1722.5" height="520" role="img" aria-label="krypton">
+<title>krypton</title>
 <defs>
 <linearGradient id="vibey-krypton-logo-g0" x1="0" y1="0" x2="520" y2="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
 <radialGradient id="vibey-krypton-logo-g1" cx="145.6" cy="114.4" r="322.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
@@ -248,8 +248,8 @@
 <circle cx="260" cy="54.959" r="3.485" fill="#f7f8ff"/>
 <circle cx="404.986" cy="115.014" r="3.485" fill="#f7f8ff"/>
 <line x1="625.25" y1="125.5" x2="625.25" y2="358" stroke="url(#vibey-krypton-logo-g128)" stroke-width="35.25" stroke-linecap="round"/>
-<line x1="733.25" y1="125.5" x2="634.25" y2="247" stroke="url(#vibey-krypton-logo-g129)" stroke-width="35.25" stroke-linecap="round"/>
-<line x1="667.25" y1="217" x2="739.25" y2="358" stroke="url(#vibey-krypton-logo-g130)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="727.25" y1="208" x2="634.25" y2="292" stroke="url(#vibey-krypton-logo-g129)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="670.25" y1="260.5" x2="733.25" y2="358" stroke="url(#vibey-krypton-logo-g130)" stroke-width="35.25" stroke-linecap="round"/>
 <line x1="793.25" y1="208" x2="793.25" y2="358" stroke="url(#vibey-krypton-logo-g131)" stroke-width="35.25" stroke-linecap="round"/>
 <path d="M793.25 266.5A57 57 0 0 1 871.603 213.651" fill="none" stroke="url(#vibey-krypton-logo-g132)" stroke-width="35.25" stroke-linecap="round"/>
 <line x1="913.25" y1="208" x2="973.25" y2="358" stroke="url(#vibey-krypton-logo-g133)" stroke-width="35.25" stroke-linecap="round"/>

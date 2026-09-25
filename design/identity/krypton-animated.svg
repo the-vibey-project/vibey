@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1510 542" width="1510" height="542" role="img" aria-label="Krypton">
-<title>Krypton</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1510 542" width="1510" height="542" role="img" aria-label="krypton">
+<title>krypton</title>
 <defs>
 <style>.vibey-krypton-e{animation:vibey-krypton-orbit 9.6s linear infinite}@keyframes vibey-krypton-orbit{to{offset-distance:100%}}@media (prefers-reduced-motion:reduce){.vibey-krypton-e{animation:none}}</style>
 <linearGradient id="vibey-krypton-g0" x1="47" y1="175" x2="1387" y2="375" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
@@ -29,8 +29,8 @@
 <linearGradient id="vibey-krypton-g24" x1="1109.914" y1="269.934" x2="1120.046" y2="280.066" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
 </defs>
 <line x1="47" y1="65" x2="47" y2="375" stroke="url(#vibey-krypton-g0)" stroke-width="47" stroke-linecap="round"/>
-<line x1="191" y1="65" x2="59" y2="227" stroke="url(#vibey-krypton-g1)" stroke-width="47" stroke-linecap="round"/>
-<line x1="103" y1="187" x2="199" y2="375" stroke="url(#vibey-krypton-g2)" stroke-width="47" stroke-linecap="round"/>
+<line x1="183" y1="175" x2="59" y2="287" stroke="url(#vibey-krypton-g1)" stroke-width="47" stroke-linecap="round"/>
+<line x1="107" y1="245" x2="191" y2="375" stroke="url(#vibey-krypton-g2)" stroke-width="47" stroke-linecap="round"/>
 <line x1="271" y1="175" x2="271" y2="375" stroke="url(#vibey-krypton-g3)" stroke-width="47" stroke-linecap="round"/>
 <path d="M271 253A76 76 0 0 1 375.47 182.534" fill="none" stroke="url(#vibey-krypton-g4)" stroke-width="47" stroke-linecap="round"/>
 <line x1="431" y1="175" x2="511" y2="375" stroke="url(#vibey-krypton-g5)" stroke-width="47" stroke-linecap="round"/>

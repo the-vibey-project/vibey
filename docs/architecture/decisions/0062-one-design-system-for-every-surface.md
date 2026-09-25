@@ -55,7 +55,7 @@ tier-2 roles only.
    "generated, do not edit" header, and the meta test fails on drift (12.e).
 5. **Identity from the same tokens: the mark is a krypton atom** (operator, 2026-09-25).
    The extension's V glyph was the starting point; the operator replaced it with the atom
-   alone. Krypton (Z = 36) has exactly four electron shells; the mark is its most abundant
+   alone. krypton (Z = 36) has exactly four electron shells; the mark is its most abundant
    isotope, Kr-84: a nucleus of 36 protons and 48 neutrons packed as small lit spheres in two
    token colours (protons interleaved evenly among neutrons on a sunflower spiral), and four
    concentric circular shells carrying the Bohr counts 2, 8, 18 and 8. Radii grow as n²

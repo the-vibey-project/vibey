@@ -374,7 +374,7 @@ class Palette:
     halo: RGBA
 
 
-#: Krypton-84: Z = 36 protons, N = 48 neutrons, and 36 electrons in four Bohr shells.
+#: krypton-84: Z = 36 protons, N = 48 neutrons, and 36 electrons in four Bohr shells.
 PROTONS, NEUTRONS = 36, 48
 SHELLS = (2, 8, 18, 8)
 
@@ -523,7 +523,7 @@ class Identity:
         palette: Palette | None = None,
         mono: RGBA | None = None,
     ) -> list[Shape]:
-        """Krypton: a nucleus of packed nucleons, four concentric shells, electrons on each."""
+        """krypton: a nucleus of packed nucleons, four concentric shells, electrons on each."""
         if detail not in ATOM_DETAIL:
             raise ValueError(f"atom detail is one of {tuple(ATOM_DETAIL)}, not {detail}")
         spec = ATOM_DETAIL[detail]
@@ -647,7 +647,7 @@ class Identity:
     def krypton(
         self, *, palette: Palette | None = None, mono: RGBA | None = None, k: float = 20.0
     ) -> Scene:
-        """`Krypton`, the apps' name, in the same monoline stroke; its o is the atom."""
+        """`krypton`, the apps' name, in the same monoline stroke; its o is the atom."""
         pal = palette or self.dark
         w = 2.35 * k
         pad = w
@@ -660,10 +660,10 @@ class Identity:
             p(0, 0), p(67, 10), (pal.shell_from, pal.shell_to, pal.word_to)
         )
         shapes = [
-            # K
+            # k: an ascender stem, an arm from the x-height, a leg to the baseline
             Shape("capsule", paint, (p(0, -5.5), p(0, 10)), width=w),
-            Shape("capsule", paint, (p(7.2, -5.5), p(0.6, 2.6)), width=w),
-            Shape("capsule", paint, (p(2.8, 0.6), p(7.6, 10)), width=w),
+            Shape("capsule", paint, (p(6.8, 0), p(0.6, 5.6)), width=w),
+            Shape("capsule", paint, (p(3.0, 3.5), p(7.2, 10)), width=w),
             # r
             Shape("capsule", paint, (p(11.2, 0), p(11.2, 10)), width=w),
             Shape(
@@ -704,10 +704,10 @@ class Identity:
             )
         )
         shapes += self.atom(p(53.2, 5), 2.75 * k, detail="small", palette=pal, mono=mono)
-        return Scene(70.8 * k + 2 * pad, 22.4 * k + 2 * pad, shapes, title="Krypton")
+        return Scene(70.8 * k + 2 * pad, 22.4 * k + 2 * pad, shapes, title="krypton")
 
     def krypton_lockup(self, *, palette: Palette | None = None) -> Scene:
-        """The apps' logo: the Krypton icon tile beside the Krypton wordmark."""
+        """The apps' logo: the krypton icon tile beside the krypton wordmark."""
         tile_size = 520.0
         tile = _clip_glows(self._tile(tile_size, tile_size * 0.223), tile_size, tile_size * 0.223)
         mark = self._mark(tile_size / 2, tile_size / 2, 205)
@@ -715,7 +715,7 @@ class Identity:
         dx = tile_size + 70
         dy = (tile_size - word.height) / 2 + 20
         moved = [_translate(s, dx, dy) for s in word.shapes]
-        return Scene(dx + word.width, tile_size, tile + mark + moved, title="Krypton")
+        return Scene(dx + word.width, tile_size, tile + mark + moved, title="krypton")
 
     def lockup(self, *, palette: Palette | None = None) -> Scene:
         """Mark tile and wordmark side by side: the logo. The tile is always night."""
@@ -864,7 +864,7 @@ class IdentityEmitter(EmitterInterface):
         for name, scene in scenes.items():
             scene.key = f"vibey-{name}"
             if name.startswith(("icon", "android")):
-                scene.title = "Krypton"  # the app icons are the apps', and the apps are Krypton
+                scene.title = "krypton"  # the app icons are the apps', and the apps are krypton
         return scenes
 
     #: Scenes that also ship animated: the electrons orbit, and rest under reduced motion.

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Krypton">
-<title>Krypton</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="krypton">
+<title>krypton</title>
 <defs>
 <linearGradient id="vibey-icon-small-g0" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
 <radialGradient id="vibey-icon-small-g1" cx="286.72" cy="225.28" r="634.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>

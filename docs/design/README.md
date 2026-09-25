@@ -3,15 +3,15 @@
 
 Every colour, face, size, space, radius, shadow, curve and sound cue that a vibey surface
 uses comes from one place: `design/tokens/`. The docs sites, the paper, the VS Code
-extension and every Krypton app read generated forms of those tokens and add no colour of
+extension and every krypton app read generated forms of those tokens and add no colour of
 their own. The decision is [ADR-0062](../architecture/decisions/0062-one-design-system-for-every-surface.md).
 
 ## Two names, one atom
 
 - **vibey** is the project, the engine and its documentation. Its wordmark is `vibey` in a
   monoline stroke, with the atom as the dot on the i.
-- **Krypton** is every app and UI: the desktop app, the mobile and web app, and the editor.
-  Its wordmark is `Krypton`, with the atom inside the o, and the app icons are Krypton's.
+- **krypton** is every app and UI: the desktop app, the mobile and web app, and the editor.
+  Its wordmark is `krypton`, with the atom inside the o, and the app icons are krypton's.
 
 ## The tokens
 
@@ -100,7 +100,7 @@ detail, and the spacing is relaxed toward even as it shrinks:
 |---|---|---|---|
 | full | 128 px and up | all 84 nucleons | four shells, 2/8/18/8 |
 | medium | 48 to 64 px | a dozen nucleons | four shells, 2/4/6/4 |
-| small | 22 to 32 px, the dot on the i, the o of Krypton | a blob with five nucleons | four shells, one or two electrons each |
+| small | 22 to 32 px, the dot on the i, the o of krypton | a blob with five nucleons | four shells, one or two electrons each |
 | tiny | 16 px | a blob with three nucleons | **two** shells: four circles a pixel apart alias into a moiré |
 
 ## Generated outputs
