@@ -26,7 +26,7 @@ describe('VibeyCli', () => {
     expect(runner.calls.at(-1)?.args).toEqual(['gates', '7d1c', '--json']);
     const status = await vibey.status();
     expect(status.queue_depth).toEqual({ ready: 2, leased: 1, succeeded: 7 });
-    expect(status.circuits[0]?.engine_id).toBe('qwenloop');
+    expect(status.circuits.map((circuit) => circuit.engine_id)).toEqual(['gptossloop', 'qwenloop']);
     await vibey.status('7d1c');
     expect(runner.calls.at(-1)?.args).toEqual(['status', '--json', '7d1c']);
     expect(runner.calls[0]?.options.env).toEqual({ PATH: '/usr/bin' });

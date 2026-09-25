@@ -1,4 +1,4 @@
-# 0062 — vibey and Krypton
+# 0065 — vibey and krypton
 
 **Status:** proposed · **Date:** 2026-09-25 · **Cites:** sub-doctrine 9.e, drafted in the change that carries this record and awaiting the operator's ratifying merge (Constitution Article II.3) · **Related:** ADR-0020 · **Evidence:** `develop` at `0a2f856e`, read 2026-09-25
 
@@ -23,14 +23,14 @@ belongs in the canon, not only in a design file.
 
 1. **The name is canon.** Sub-doctrine 9.e, filed under 9 (*The vibe*) beside the other
    entries on the project's identity and craft, says that the project and its
-   engine are **vibey**, and every app and interface a person uses is **Krypton**.
+   engine are **vibey**, and every app and interface a person uses is **krypton**.
 2. **The emblem is the krypton atom** (Z = 36, four shells), and the logo mark draws it.
 3. **"vibey" stays the name of what ships.** The distribution, the command and the
    repository keep their names. The ruling adds a name and renames nothing.
 4. **Nothing beyond the ruling is decided here.** The operator did not say whether
    releases, branches or builds carry either name, so this record leaves that open.
 5. **The name appears where the project describes itself.** `README.md` and
-   `docs/index.md` each gain one line naming vibey and Krypton and citing 9.e.
+   `docs/index.md` each gain one line naming vibey and krypton and citing 9.e.
 
 ## Consequences
 
@@ -44,7 +44,7 @@ belongs in the canon, not only in a design file.
 
 ## Revision before merge
 
-The operator clarified the ruling on 2026-09-25: *"the PROJECT and ENGINE are called \"vibey\", all apps/uis are called \"krypton\""*. Sub-doctrine 9.e states that: vibey names the project and engine, Krypton names every app and interface, and package and command names are unchanged. The VS Code extension's display name changes from "Vibey" to "Krypton" in the client-suite lane that raises the extension to the Beauty Law.
+The operator clarified the ruling on 2026-09-25: *"the PROJECT and ENGINE are called \"vibey\", all apps/uis are called \"krypton\""*. Sub-doctrine 9.e states that: vibey names the project and engine, krypton names every app and interface, and package and command names are unchanged. The VS Code extension's display name changes from "Vibey" to "krypton" in the client-suite lane that raises the extension to the Beauty Law.
 
 ## The `krypton-app` distribution
 
@@ -53,3 +53,7 @@ On 2026-09-25 the operator registered **`krypton-app`** as a trusted publisher o
 - nightly from `develop` to TestPyPI.
 
 `vibey` stays the one distribution of the project and engine (ADR-0037). The client-suite release lane adds the `krypton-app` build and publish jobs to `release.yml`, using the two environments above. Until something is built there is nothing to publish, and no job claims otherwise.
+
+## Always lowercase
+
+The operator ruled on 2026-09-25 that krypton is always fully lowercase: exactly `krypton` or `krypton-app`, never capitalised. 9.e states it for both names.

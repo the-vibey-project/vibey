@@ -33,7 +33,7 @@ way a project manager runs a team — asking you questions up front, checking
 the work, and only interrupting you when a decision is truly yours.
 
 The project and its engine are **vibey**; every app and interface a person uses is
-**Krypton** (sub-doctrine 9.e), whose emblem is the krypton atom: krypton-84, four shells.
+**krypton** (sub-doctrine 9.e), whose emblem is the krypton atom: krypton-84, four shells.
 
 For the precise version: a queue-based, six-phase conductor for autonomous
 software delivery — with an optional visual-design interstitial and opt-in
@@ -61,7 +61,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy) — plus the opt-in [`qwenloop`](src/vibey_runners/qwen) — a local engine and the sovereign DESIGN provider — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038). All five runners ship inside the `vibey` distribution (ADR-0037). |
+| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All five runners ship inside the `vibey` distribution (ADR-0037). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
@@ -104,14 +104,17 @@ the same explicit installation before checking. `--record` also writes engine
 results to the database for a project, and `--cluster` runs the in-cluster
 preflight (DSN, workspace, secrets, database, migrations) instead.
 
-`qwenloop` installs with everything else; what is opt-in is the *feature*, not
-the install. Two local engines have a switch each: `VIBEY_FEATURE_QWENLOOP=1`
-and `VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` (claudeloop on a local backend profile).
-A switched-on local engine is **preferred first** for BUILD — a paid engine runs
-only when no local one is eligible — and `vibey doctor` lists it; `vibey doctor`
-also honours `[features] qwenloop = true` / `claudeloop_local = true` in a
-`./vibey.toml`. With a local engine on and no `--provider`, `vibey work` and
-`vibey worker` run DESIGN and DECOMPOSE on the sovereign providers too (ADR-0038).
+`gptossloop` and `qwenloop` install with everything else; what is opt-in is the
+*feature*, not the install. Each local engine has a switch: `gptossloop` — the
+sovereign default on GPT-OSS 20B — is on unless `VIBEY_FEATURE_GPTOSSLOOP=0`;
+`qwenloop` — the same runner on `qwen3:14b` — needs `VIBEY_FEATURE_QWENLOOP=1`;
+and `claudeloop-local` (claudeloop on a local backend profile) needs
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` (ADR-0064). A switched-on local engine is
+**preferred first** for BUILD — a paid engine runs only when no local one is
+eligible — and `vibey doctor` lists it; `vibey doctor` also honours
+`[features] gptossloop = false` / `qwenloop = true` / `claudeloop_local = true`
+in a `./vibey.toml`. With no `--provider`, `vibey work` and `vibey worker` run
+DESIGN and DECOMPOSE on the sovereign gptossloop providers too (ADR-0038).
 `VIBEY_OLLAMA_URL` is the one endpoint setting; the
 [local models guide](docs/guides/local-models-ollama.md) has the Ollama recipe.
 
@@ -163,10 +166,11 @@ vibey answer <gate-id> --choice local_only   # decline deployment → DONE (loca
 ```
 
 `vibey doctor --record` needs a project to record against, so run it after
-`vibey new`. `vibey worker` defaults to `--provider scripted`, a test double —
-or to `--provider qwenloop` when a local engine is switched on; pass
-`--provider claudeloop` for a live, paid DESIGN interview and BUILD
-decomposition, or `--provider qwenloop` for the same on a local model.
+`vibey new`. `vibey worker` defaults to `--provider gptossloop`, the sovereign
+DESIGN interview and BUILD decomposition on a local model; pass
+`--provider claudeloop` for the same on a paid engine, or `--provider scripted`
+for the test double. `--provider qwenloop` is still accepted and read as
+gptossloop (ADR-0064).
 `vibey gates` lists every open gate with its id, its prompt, and the exact
 `vibey answer` command that answers it (`vibey gates <project-id>` for one
 project); `vibey projects` lists your projects, their ids, and how many gates
@@ -184,7 +188,7 @@ Every command's flags and defaults are in the
 |---|---|
 | `vibey doctor` | Pre-flight: engine install state, versions, auth; `--conformance` runs the 9-check suite, `--record` persists health, `--cluster` runs the in-cluster preflight. |
 | `vibey new` | Create a project and enqueue its first DESIGN interview. |
-| `vibey worker` | Long-running worker: dispatches jobs across every phase (`--provider scripted\|claudeloop\|qwenloop`, `--engines`, `-j`, `--azure memory\|az`). |
+| `vibey worker` | Long-running worker: dispatches jobs across every phase (`--provider scripted\|claudeloop\|gptossloop`, `--engines`, `-j`, `--azure memory\|az`). |
 | `vibey work` | Process one ready DESIGN or VISUAL_DESIGN job for a project (foreground, capped). |
 | `vibey answer` | Answer a parked human gate. |
 | `vibey design resume/accept` / `vibey visual accept/waive` | Resume or accept DESIGN; accept or waive VISUAL_DESIGN. |
@@ -202,11 +206,13 @@ Every command's flags and defaults are in the
 `[qwenloop]`, `[notifications]`, and `[telemetry]` — is fully implemented and unit-tested in
 `domain/config.py`/`infrastructure/config_loader.py`, with defaults and an
 example file in the [configuration reference](docs/reference/configuration.md).
-The local-engine keys are read at runtime today: `[features] qwenloop`,
-`[features] claudeloop_local` and `[engines.claudeloop_local]`. `vibey doctor`
+The local-engine keys are read at runtime today: `[features] gptossloop`,
+`[features] qwenloop`, `[features] claudeloop_local` and
+`[engines.claudeloop_local]`. `vibey doctor`
 reads them from `./vibey.toml` in the current directory, and the worker reads the
 same keys from the project's stored config (which no CLI flag sets yet);
-`VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL` and
+`VIBEY_FEATURE_GPTOSSLOOP`, `VIBEY_FEATURE_QWENLOOP`,
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL` and
 `VIBEY_CLAUDELOOP_LOCAL_PROFILE` override them. `[notifications]` and
 `[telemetry]` are copied from the repository's `vibey.toml` into the stored
 project config by `vibey new`; the worker and lifecycle repository then use
@@ -325,7 +331,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (62 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (65 ADRs) |
 
 ## Status
 
@@ -433,7 +439,7 @@ PyPI projects no longer exist.
 | codexloop | [`src/vibey_runners/codex`](src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
 | cursorloop | [`src/vibey_runners/cursor`](src/vibey_runners/cursor) | The same design retargeted onto Cursor |
 | agyloop | [`src/vibey_runners/agy`](src/vibey_runners/agy) | The same design retargeted onto Google Antigravity / Gemini |
-| qwenloop | [`src/vibey_runners/qwen`](src/vibey_runners/qwen) | The same design on a local Qwen 2.5 Coder model (llama.cpp or vLLM) — an opt-in local engine, preferred first when switched on, and the sovereign DESIGN provider |
+| gptossloop, qwenloop | [`src/vibey_runners/qwen`](src/vibey_runners/qwen) | The same design on a local model, as two engines over Ollama, llama.cpp or vLLM: `gptossloop` on GPT-OSS 20B — the sovereign default, on by default, and the sovereign DESIGN provider — and the opt-in `qwenloop` on Qwen (`qwen3:14b`); both preferred first when switched on (ADR-0064) |
 | vibey-skills | [`src/vibey_tools/skills`](src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) and its context packets |
 | vibey-gh | [`src/vibey_tools/gh`](src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
 | vibey-bootstrap | [`src/vibey_tools/bootstrap`](src/vibey_tools/bootstrap) | Azure bootstrap library for App Configuration, Key Vault, and App Insights integration |

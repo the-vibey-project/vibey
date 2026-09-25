@@ -5,7 +5,8 @@ Every `vibey` command and subcommand, written by hand against
 and checked against it as of 2026-09-20. Nothing generates this page. If it
 and the code disagree, the code wins. `vibey <command> --help` prints the
 code's own help text, which is shorter than this page and in places less
-complete (for example, `vibey work --help` does not list `qwenloop`).
+complete (for example, `vibey work --help` does not say that `qwenloop` is still
+accepted as the old name of `gptossloop`).
 
 Top-level commands, in `vibey --help` order: `new`, `projects`, `gates`,
 `answer`, `work`, `watch`, `recover`, `status`, `engines`, `loops`, `cost`,
@@ -104,6 +105,8 @@ exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 | `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | |
 | `InvalidSpecError` | Run `vibey design` to finish the spec before building. | |
 | `InvalidPhaseError` | Likely a bug in vibey rather than the project. | |
+| `GateAlreadyAnswered` | A gate is answered once and the first answer stands; the hint names `vibey ledger search --kind GateAnswered` and says a `--request-id` makes a retry of the same answer a no-op. | |
+| `UnknownGate` | No gate has that id; the hint names [`vibey gates`](#vibey-gates-project_id). | |
 
 ## `vibey new NAME`
 
@@ -261,16 +264,15 @@ Answer a parked human gate. Exactly one of the following modes is required
 | `--verdict VALUE` | Review gates: sends `{"verdict": VALUE}` — `accept`, `changes`, `cancel`, `approve`, or `request_changes`. |
 | `--raw JSON` | Any other gate shape, e.g. raising a tripped budget cap: `--raw '{"max_dollars": 25}'` or `--raw '{"max_turns": 50}'`. |
 
+| Option | What it does |
+|---|---|
+| `--by NAME` | the name the answer is recorded under, for a tool that runs the command (the VS Code extension says `vibey-vscode`). Defaults to the account running the command. It is a label for the record, not a permission: the account is always recorded beside it. |
+| `--request-id ID` | names this request so a retry is safe. The same id with the same answer is a no-op once it has landed. Without one, every run is a new request. |
+
 [`vibey gates`](#vibey-gates-project_id) prints, beside each open gate, the
 form that answers it.
 
-Prints `answered <gate_id>`. These exit 2 with a one-line message:
-combining `--defaults` with `--choice`, `--verdict`, or `--raw`; giving no
-mode or more than one; `--raw` that is not valid JSON or not a JSON object.
-A positional item without `=` (`InvalidAnswer`) and an unknown gate id
-(`LookupError`) currently surface as tracebacks, because `answer` is not
-guarded.
-
+Prints `answered <gate_id> as <name>`. The answer is written in a transaction that sets `answered_at` only if it was NULL; of two answers racing for one gate exactly one lands, the first answer stands, and the answer and its `GateAnswered` ledger event are written together. If the same request-id is used again with the same answer it prints `already answered <gate_id> by this request; nothing changed` and exits 0. The command exits 2 with a one-line message when `--defaults` is combined with `--choice`, `--verdict`, or `--raw`; when no mode is given or more than one is given; or when `--raw` is not valid JSON or not a JSON object. Exit 3 produces `Error: …` and a hint, never a traceback: the gate was already answered (`GateAlreadyAnswered`); the same `--request-id` was used with a different answer (also `GateAlreadyAnswered`); no gate exists (`UnknownGate`); the `--by` label is invalid (`InvalidActorLabel`); or the `--request-id` is invalid (`InvalidAnswer`). A positional argument without `=` raises `InvalidAnswer` before connection (this is still exit 3).
 ### Finding a gate id
 
 [`vibey gates`](#vibey-gates-project_id) lists every open gate with its id,
@@ -287,7 +289,7 @@ visual-inventory job. Live engine use is explicit and capped. Prints
 
 | Option | Default | What it does |
 |---|---|---|
-| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | `scripted` needs no live engine. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `qwenloop` runs the sovereign local DESIGN provider (ADR-0015, ADR-0027) and reads research material from `$VIBEY_EVIDENCE_DIR`; with that unset, research refuses rather than inventing a source, and DESIGN stops there. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'qwenloop'`. |
+| `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | `gptossloop` runs the sovereign local DESIGN provider on Ollama (ADR-0015, ADR-0027, ADR-0064) and reads research material from `$VIBEY_EVIDENCE_DIR`; with that unset, research refuses rather than inventing a source, and DESIGN stops there. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `scripted` needs no live engine. `qwenloop` is still accepted: it is read as `gptossloop`, with `--provider qwenloop is now --provider gptossloop (ADR-0064) ...` on stderr. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'gptossloop'`. |
 | `--max-turns N` | `1` | Turn cap for this one job (min 1). |
 | `--max-dollars F` | `0.25` | Dollar cap for this one job (0.01–10). |
 
@@ -406,7 +408,9 @@ see `default_model` below), and one row per effort. An effort's row shows the
 flags the engine is passed, without their dashes. It is followed by
 `-> STANDARD` (or the level it really reaches) when the engine runs at a
 different effort. After each table come the variable that switches each local
-engine on, and any notes.
+engine — `gptossloop is on unless switched off by VIBEY_FEATURE_GPTOSSLOOP=0, or
+by its key under [features] in vibey.toml` for the on-by-default one, `<engine>
+is switched on by <VARIABLE>=1, ...` for the others — and any notes.
 
 `--json` prints one object:
 
@@ -426,10 +430,11 @@ Each engine object has these keys:
 |---|---|
 | `engine_id`, `binary`, `state_dir`, `done_marker`, `plan_flag`, `supports_cwd_flag`, `base_weight`, `cost_per_mtok_in`, `cost_per_mtok_out` | The engine's descriptor, as declared. |
 | `enabled` | Whether the engine would run right now. A local engine follows its switch. An engine with no switch is `true`: the selector may pick it whenever it is eligible. Being listed is not being selected. |
-| `switch` | The variable that switches a local engine on (`VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL`), or `null`. |
+| `switch` | The variable that switches a local engine (`VIBEY_FEATURE_GPTOSSLOOP`, `VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL`), or `null`. |
+| `on_by_default` | `true` for a local engine that is on when neither its variable nor `[features]` sets its switch: gptossloop, the sovereign default (ADR-0064). `false` for every other engine. |
 | `repealed` | `true` for an engine canon 8.b repeals from both loops while vibey still carries its code; none today, since OpenCode's engine was deleted. Such an engine stays listed, and is left out of `by_effort`, so nothing that selects from `by_effort` picks it. `false` for every other engine. |
-| `default_model` | The model vibey hands the engine, or `null`. For qwenloop this follows how the model actually reaches it. It is `QWENLOOP_MODEL` when set. Otherwise it is vibey's model (`VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), but only while `VIBEY_OLLAMA_URL` is set, because that is the only path by which vibey's model reaches the session. A worker started with `--ollama-model` hands that model instead, which this command cannot see. Otherwise it is `null`, and qwenloop's own configuration chooses the model. |
-| `efforts` | All five levels, in order. Each has `effort`, `argv` (from the descriptor's projection), `achieved` (the level it really reaches), and `model`. `model` is the value of a `--model` the level passes, else `default_model`, else `null`. `notes` gives the descriptor's own note and, when `model` is `null`, what chooses the model instead (`claudeloop preset high`, `qwenloop's own configuration chooses the model`). |
+| `default_model` | The model vibey hands the engine, or `null`. For gptossloop this follows how the model actually reaches it. It is `GPTOSSLOOP_MODEL` when set. Otherwise it is vibey's model (`VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), but only while `VIBEY_OLLAMA_URL` is set, because that is the only path by which vibey's model reaches the session. A worker started with `--ollama-model` hands that model instead, which this command cannot see. Otherwise it is `null`, and gptossloop's own configuration chooses the model. For qwenloop it is `QWENLOOP_MODEL` when set, else `null`: vibey hands qwenloop only its endpoint, and qwenloop runs the Qwen model it names itself (`qwen3:14b` unless its configuration names another). |
+| `efforts` | All five levels, in order. Each has `effort`, `argv` (from the descriptor's projection), `achieved` (the level it really reaches), and `model`. `model` is the value of a `--model` the level passes, else `default_model`, else `null`. `notes` gives the descriptor's own note and, when `model` is `null`, what chooses the model instead (`claudeloop preset high`, `qwenloop's own configuration chooses the model`). qwenloop's `notes` also say what it became: `since ADR-0064 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop`. |
 | `capabilities` | `images`, `files`, `paste_text`, `paste_images`, `plugins` (`skills-context` or `claude-plugins`), and `mcp`. Each is `true`, `false`, or `null` for unknown, and a menu belongs only beside a value that is not `null`. `evidence` names, for each value that is set, where the runner's own code shows it. `skills-context` applies when the project sets `skills_context.mode = inject`: vibey then appends the vibey-skills context packet to the plan. A local model's own abilities come from Ollama at run time, so an image menu needs both this loop's `images` and the model's `vision`. |
 | `run` | The argv template `build_argv` fills for a run: `{binary}`, `run`, `{plan_flag?}` (only when `plan_flag` is set: put that flag there), `{plan}`, `--run-id`, `{run_id}`, `{effort_argv...}`, and `--cwd {cwd}` when `supports_cwd_flag`. Tests compare it with `build_argv` for every engine at every effort. They also read it, filled in at every effort, against the runner's own `run` definition. |
 | `controls` | `stop`, `wind_down`, and `prompt`: argv templates after the binary, with `{run_id}`, `{cwd}` and `{text}` to fill in. Each is `null` where the runner has no such verb, or does not act on it: cursorloop takes no mid-run prompt, whatever its CLI accepts. A test reads each template against the runner's own Typer definition. |
@@ -444,8 +449,9 @@ Ties go to the lower output price, then to the engine id.
 
 The document for one fixed environment is committed as
 `tests/cli/golden/vibey-loops.json`. In that environment every variable the
-command reads is cleared, then `VIBEY_FEATURE_QWENLOOP=1` and
-`VIBEY_OLLAMA_URL=http://127.0.0.1:11434` are set. The test suite produces the
+command reads is cleared, then `VIBEY_OLLAMA_URL=http://127.0.0.1:11434` is set,
+so gptossloop (on by default) runs vibey's model and qwenloop (off) reports its
+own. The test suite produces the
 document and fails when the command's output drifts from the file, so a parser
 tested against the file reads what the command prints. After an intended change,
 regenerate it with
@@ -460,7 +466,7 @@ What the runners' own code shows today:
 | `codexloop` | files, pasted text, `skills-context`; images and MCP unknown | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
 | `cursorloop` | files, pasted text, `skills-context`; images and MCP unknown | `stop` and `wind-down` with `--run-id` and `--cwd`. Both act only while the run waits between turns. No prompt: its runner reads its inbox only while it waits, acts on stop and wind-down alone, and drops a prompt unread | `event_type+payload` |
 | `agyloop` | files, pasted text, `skills-context`; no MCP (`mcp_servers=[]`); images unknown | `stop` and `prompt TEXT --now` with `--run-id` and `--cwd`; no wind-down verb | `event_type+payload` |
-| `qwenloop` | files, pasted text, `skills-context`; no images, no pasted images, no MCP (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
+| `gptossloop`, `qwenloop` | files, pasted text, `skills-context`; no images, no pasted images, no MCP (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
 
 ## `vibey cost [PROJECT_ID]`
 
@@ -695,20 +701,24 @@ PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 | Option | Default | What it does |
 |---|---|---|
 | `--conformance` | off | Run the 9-check conformance suite against each checked engine that is installed. |
-| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, or `qwenloop`. An unknown name prints `Unknown engine: <name>` and exits 1. |
+| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop`, `qwenloop`, or `claudeloop-local`. An unknown name prints `Unknown engine: <name>` and exits 1. |
 | `--record` | off | Persist preflight (and conformance, with `--conformance`) results to `engine_health`. Exits 1 if no project exists. |
 | `--project ID` | latest | Project to record health for, with `--record`. |
 | `--cluster` | off | Run the in-cluster preflight instead of the engine checks — see [Kubernetes guide](../guides/kubernetes.md). |
 | `--engines LIST` | unset | With `--cluster`: the worker's own `--engines` allow-list (chart value `worker.engines`). `engine-auth` requires exactly these. Parsed as the worker parses it; empty means unset. |
-| `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, or `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
+| `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, `gptossloop`, or the old name `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
 | `--install-postgres` | off | Install and start local PostgreSQL when it is missing or stopped. This is explicit; the default doctor never changes the host. It cannot be combined with `--cluster`. |
 
 With `--engine` unset, doctor checks the four paid engines (`claudeloop`,
 `codexloop`, `cursorloop`, `agyloop`) whether or not they are installed —
-missing ones print `NOT INSTALLED` — and adds `qwenloop` when
-`VIBEY_FEATURE_QWENLOOP` is truthy or, if that variable is unset,
-`./vibey.toml` in the current directory has `[features] qwenloop = true`.
-`--engine qwenloop` works regardless of the flag.
+missing ones print `NOT INSTALLED` — and adds each local engine that is switched
+on: `gptossloop` unless `VIBEY_FEATURE_GPTOSSLOOP` is set to anything but a truthy
+value or, if that variable is unset, `./vibey.toml` in the current directory has
+`[features] gptossloop = false`; `qwenloop` and `claudeloop-local` when their
+variable is truthy or, if it is unset, `./vibey.toml` sets `[features] qwenloop`
+/ `claudeloop_local = true`. `--engine gptossloop` and `--engine qwenloop` work
+regardless of the switch. When qwenloop is switched on, doctor first prints
+`note: qwenloop is switched on, and since ADR-0064 it runs a Qwen model ...`.
 
 Each engine line shows install state, version, and auth. Auth is the exit
 status of `<binary> doctor`; if that command cannot run, doctor falls back
@@ -773,7 +783,7 @@ The engine check (`engine-auth`) judges what the worker was told to run, not
 what is on `PATH` — every runner ships in the image since ADR-0037, so a
 binary's presence says nothing. It requires each engine in `--engines`, plus
 claudeloop under `--provider claudeloop`, to be on `PATH` with one of its
-API-key variables set (qwenloop takes none). With neither, nothing is
+API-key variables set (gptossloop and qwenloop take none). With neither, nothing is
 required: the check passes and reports which engines in the worker's default
 pool have a key, so a default install says plainly when no engine-driven job
 can run. `--engines` and `--provider` without `--cluster` exit 2.
@@ -816,10 +826,10 @@ every phase for one project.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
+| `--engines LIST` | the four paid engines plus every local engine switched on (`gptossloop` by default) | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop`, `qwenloop`, `claudeloop-local`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. A local engine joins the pool only while its switch is on (see below): `gptossloop` unless switched off, `qwenloop` and `claudeloop-local` only when switched on. A list that matches none of the worker's engines — `--engines qwenloop` with its switch off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
 | `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed engines and to the CPU count, and is never below 1. |
 | `--once` | off | Process one job and exit (`processed one job` or `no ready job`), instead of running forever. |
-| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local DESIGN provider (reads `$VIBEY_EVIDENCE_DIR`) with scripted decomposition. Any other value exits 2. |
+| `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | DESIGN and decomposition providers. `gptossloop` uses the sovereign local DESIGN and decomposition providers on Ollama (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`; reads `$VIBEY_EVIDENCE_DIR`), recorded in the ledger as `gptossloop`. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `scripted` is fully offline. `qwenloop` is still accepted and read as `gptossloop`, with a notice on stderr (ADR-0064). Any other value exits 2. |
 | `--max-turns N` | `25` | Turn cap per claudeloop DESIGN or decomposition session (min 1). |
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
 | `--project ID` | latest | Project to work on. |
@@ -828,18 +838,26 @@ every phase for one project.
 
 The VISUAL_DESIGN stage always uses the scripted visual provider.
 
-On start the worker preflights every allowed engine — including `qwenloop`
-when the feature is on, so the standby engine is visible in `vibey engines`
+On start the worker preflights every allowed engine — including each local
+engine that is switched on, so a local engine is visible in `vibey engines`
 like every other. Engines with no passing recorded conformance produce
 ``warning: no recorded conformance for <names> -- engine-driven jobs will not select them until `vibey doctor --conformance --record` passes``.
 It then prints
 `worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`.
 
-qwenloop as a standby engine (ADR-0015): the worker enables it only when
-`VIBEY_FEATURE_QWENLOOP` is truthy. Unlike `doctor`, the worker does not
-read `[features] qwenloop` from `vibey.toml`; it falls back to a `features`
-table in the project's stored config, which no creation path writes today.
-In practice the environment variable is the only switch for the worker.
+Local engines (ADR-0015, ADR-0038, ADR-0064): the worker runs `gptossloop`
+unless `VIBEY_FEATURE_GPTOSSLOOP` is set to a value that is not truthy, and
+`qwenloop` or `claudeloop-local` only when `VIBEY_FEATURE_QWENLOOP` or
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL` is truthy. Unlike `doctor`, the worker does not
+read `[features]` from `vibey.toml`; it falls back to a `features` table in the
+project's stored config, which no creation path writes today, and then to each
+engine's default. In practice the environment variables are the only switches
+for the worker. When qwenloop is switched on the worker prints
+`note: qwenloop is switched on, and since ADR-0064 it runs a Qwen model ...` at
+start. With `VIBEY_OLLAMA_URL` set, the worker hands gptossloop
+`GPTOSSLOOP_BASE_URL=<url>/v1` and `GPTOSSLOOP_MODEL` (`--ollama-model`, else
+`VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), and qwenloop `QWENLOOP_BASE_URL`
+only — never a model; a variable the operator set already is left alone.
 
 The queue reaper (ADR-0056) runs in the same idle iterations: after the lease reap, at
 most once per `[queue.reap] interval_seconds` across all of the worker's loops, the
@@ -862,8 +880,9 @@ Variables read by code under `src/vibey`:
 |---|---|---|
 | `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor`; `migrate` | The application role's PostgreSQL 14+ DSN ([database roles](configuration.md#database-roles)). There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server but does not set this variable for the parent shell. |
 | `VIBEY_PG_MIGRATE_URL` | `migrate` only | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it. |
-| `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
-| `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop; any other set value disables it. When set it overrides config. When unset, `doctor` falls back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config. |
+| `VIBEY_EVIDENCE_DIR` | `work --provider gptossloop`, `worker --provider gptossloop` | Directory of reading material for the gptossloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
+| `VIBEY_FEATURE_GPTOSSLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables gptossloop; any other set value, `0` included, disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] gptossloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, gptossloop is on (ADR-0064). |
+| `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop, the runner on a Qwen model; any other set value disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config; with neither, qwenloop is off. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
 | `CURSOR_API_KEY` | `doctor` auth fallback; `doctor --cluster` | cursorloop credentials. |

@@ -39,11 +39,13 @@
       "declared_only": false,
       "engines": [
         {
-          "engine_id": "qwenloop",
-          "binary": "qwenloop",
+          "engine_id": "gptossloop",
+          "binary": "gptossloop",
           "state_dir": ".qwenloop",
           "enabled": true,
-          "switch": "VIBEY_FEATURE_QWENLOOP",
+          "switch": "VIBEY_FEATURE_GPTOSSLOOP",
+          "on_by_default": true,
+          "repealed": false,
           "cost_per_mtok_in": 0.0,
           "cost_per_mtok_out": 0.0,
           "default_model": "gpt-oss:20b",
@@ -105,9 +107,14 @@
             "paste_text": true,
             "paste_images": false,
             "plugins": "skills-context",
-            "mcp": null,
+            "mcp": false,
             "evidence": {
-              "images": "qwenloop's tools are read_file, search, write_file, edit_file and shell; a plan is text"
+              "images": "its model-facing tools are read_file, write_file, edit_file, shell, search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and every message it sends is text (`ChatMessage.content: str`, same module)",
+              "files": "its file tools read and write paths inside the worktree (qwenloop infrastructure/tools.py)",
+              "paste_text": "the plan is text, and is the first message it sends",
+              "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
+              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
+              "mcp": "the model is offered only its own fixed tools (qwenloop infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` and `skill` commands only echo (qwenloop cli/app.py)"
             }
           },
           "done_marker": "QWENLOOP_TASK_FULLY_COMPLETE",
@@ -117,7 +124,6 @@
           "run": [
             "{binary}",
             "run",
-            "{plan_flag?}",
             "{plan}",
             "--run-id",
             "{run_id}",
@@ -138,7 +144,139 @@
               "--cwd",
               "{cwd}"
             ],
-            "prompt": null
+            "prompt": [
+              "prompt",
+              "{run_id}",
+              "{text}",
+              "--cwd",
+              "{cwd}"
+            ]
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "type"
+          },
+          "env": {
+            "auth": [],
+            "passthrough": [
+              "GPTOSSLOOP_*"
+            ]
+          },
+          "notes": []
+        },
+        {
+          "engine_id": "qwenloop",
+          "binary": "qwenloop",
+          "state_dir": ".qwenloop",
+          "enabled": false,
+          "switch": "VIBEY_FEATURE_QWENLOOP",
+          "on_by_default": false,
+          "repealed": false,
+          "cost_per_mtok_in": 0.0,
+          "cost_per_mtok_out": 0.0,
+          "default_model": null,
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [
+                "--max-turns",
+                "8"
+              ],
+              "achieved": "TRIVIAL",
+              "model": null,
+              "notes": "qwenloop's own configuration chooses the model"
+            },
+            {
+              "effort": "LOW",
+              "argv": [
+                "--max-turns",
+                "16"
+              ],
+              "achieved": "LOW",
+              "model": null,
+              "notes": "qwenloop's own configuration chooses the model"
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [
+                "--max-turns",
+                "40"
+              ],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "qwenloop's own configuration chooses the model"
+            },
+            {
+              "effort": "HIGH",
+              "argv": [
+                "--max-turns",
+                "64"
+              ],
+              "achieved": "HIGH",
+              "model": null,
+              "notes": "qwenloop's own configuration chooses the model"
+            },
+            {
+              "effort": "MAX",
+              "argv": [
+                "--max-turns",
+                "96"
+              ],
+              "achieved": "MAX",
+              "model": null,
+              "notes": "qwenloop's own configuration chooses the model"
+            }
+          ],
+          "capabilities": {
+            "images": false,
+            "files": true,
+            "paste_text": true,
+            "paste_images": false,
+            "plugins": "skills-context",
+            "mcp": false,
+            "evidence": {
+              "images": "its model-facing tools are read_file, write_file, edit_file, shell, search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and every message it sends is text (`ChatMessage.content: str`, same module)",
+              "files": "its file tools read and write paths inside the worktree (qwenloop infrastructure/tools.py)",
+              "paste_text": "the plan is text, and is the first message it sends",
+              "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
+              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
+              "mcp": "the model is offered only its own fixed tools (qwenloop infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` and `skill` commands only echo (qwenloop cli/app.py)"
+            }
+          },
+          "done_marker": "QWENLOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": null,
+          "supports_cwd_flag": true,
+          "base_weight": 1,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}",
+            "--cwd",
+            "{cwd}"
+          ],
+          "controls": {
+            "stop": [
+              "stop",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "wind_down": [
+              "wind-down",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "prompt": [
+              "prompt",
+              "{run_id}",
+              "{text}",
+              "--cwd",
+              "{cwd}"
+            ]
           },
           "events": {
             "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
@@ -150,8 +288,9 @@
               "QWENLOOP_*"
             ]
           },
-          "notes": [],
-          "repealed": false
+          "notes": [
+            "since ADR-0064 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop"
+          ]
         },
         {
           "engine_id": "claudeloop-local",
@@ -159,6 +298,8 @@
           "state_dir": ".claudeloop",
           "enabled": false,
           "switch": "VIBEY_FEATURE_CLAUDELOOP_LOCAL",
+          "on_by_default": false,
+          "repealed": false,
           "cost_per_mtok_in": 0.0,
           "cost_per_mtok_out": 0.0,
           "default_model": null,
@@ -173,7 +314,7 @@
               ],
               "achieved": "TRIVIAL",
               "model": null,
-              "notes": "the local profile's model_low"
+              "notes": "claudeloop profile local, preset low"
             },
             {
               "effort": "LOW",
@@ -185,7 +326,7 @@
               ],
               "achieved": "LOW",
               "model": null,
-              "notes": "the local profile's model_low"
+              "notes": "claudeloop profile local, preset low"
             },
             {
               "effort": "STANDARD",
@@ -197,7 +338,7 @@
               ],
               "achieved": "STANDARD",
               "model": null,
-              "notes": "the local profile's model_medium"
+              "notes": "claudeloop profile local, preset medium"
             },
             {
               "effort": "HIGH",
@@ -209,7 +350,7 @@
               ],
               "achieved": "STANDARD",
               "model": null,
-              "notes": "the local profile's model_high; a local model's ceiling is STANDARD"
+              "notes": "a local model's honest ceiling is STANDARD; runs the top tier; claudeloop profile local, preset high"
             },
             {
               "effort": "MAX",
@@ -221,7 +362,7 @@
               ],
               "achieved": "STANDARD",
               "model": null,
-              "notes": "the local profile's model_high; a local model's ceiling is STANDARD"
+              "notes": "a local model's honest ceiling is STANDARD; runs the top tier; claudeloop profile local, preset high"
             }
           ],
           "capabilities": {
@@ -230,8 +371,13 @@
             "paste_text": true,
             "paste_images": null,
             "plugins": "claude-plugins",
-            "mcp": null,
-            "evidence": {}
+            "mcp": true,
+            "evidence": {
+              "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and `--attach` take more (claudeloop cli/commands/run.py)",
+              "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); the plan itself is text",
+              "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)"
+            }
           },
           "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
           "plan_flag": null,
@@ -240,7 +386,6 @@
           "run": [
             "{binary}",
             "run",
-            "{plan_flag?}",
             "{plan}",
             "--run-id",
             "{run_id}",
@@ -256,8 +401,22 @@
               "--cwd",
               "{cwd}"
             ],
-            "wind_down": null,
-            "prompt": null
+            "wind_down": [
+              "wind-down",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "prompt": [
+              "prompt",
+              "{text}",
+              "--now",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ]
           },
           "events": {
             "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
@@ -268,11 +427,11 @@
             "passthrough": [
               "CLAUDELOOP_*",
               "CLAUDE_CODE_*",
-              "CLAUDE_CONFIG_DIR"
+              "CLAUDE_CONFIG_DIR",
+              "ANTHROPIC_*"
             ]
           },
-          "notes": [],
-          "repealed": false
+          "notes": []
         }
       ],
       "by_effort": {
@@ -283,8 +442,13 @@
             "achieved": "TRIVIAL"
           },
           {
-            "engine_id": "qwenloop",
+            "engine_id": "gptossloop",
             "model": "gpt-oss:20b",
+            "achieved": "TRIVIAL"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": null,
             "achieved": "TRIVIAL"
           }
         ],
@@ -295,8 +459,13 @@
             "achieved": "LOW"
           },
           {
-            "engine_id": "qwenloop",
+            "engine_id": "gptossloop",
             "model": "gpt-oss:20b",
+            "achieved": "LOW"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": null,
             "achieved": "LOW"
           }
         ],
@@ -307,15 +476,25 @@
             "achieved": "STANDARD"
           },
           {
-            "engine_id": "qwenloop",
+            "engine_id": "gptossloop",
             "model": "gpt-oss:20b",
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": null,
             "achieved": "STANDARD"
           }
         ],
         "HIGH": [
           {
-            "engine_id": "qwenloop",
+            "engine_id": "gptossloop",
             "model": "gpt-oss:20b",
+            "achieved": "HIGH"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": null,
             "achieved": "HIGH"
           },
           {
@@ -326,8 +505,13 @@
         ],
         "MAX": [
           {
-            "engine_id": "qwenloop",
+            "engine_id": "gptossloop",
             "model": "gpt-oss:20b",
+            "achieved": "MAX"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": null,
             "achieved": "MAX"
           },
           {
@@ -350,6 +534,8 @@
           "state_dir": ".claudeloop",
           "enabled": true,
           "switch": null,
+          "on_by_default": false,
+          "repealed": false,
           "cost_per_mtok_in": 3.0,
           "cost_per_mtok_out": 15.0,
           "default_model": null,
@@ -421,8 +607,13 @@
             "paste_text": true,
             "paste_images": null,
             "plugins": "claude-plugins",
-            "mcp": null,
-            "evidence": {}
+            "mcp": true,
+            "evidence": {
+              "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and `--attach` take more (claudeloop cli/commands/run.py)",
+              "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); the plan itself is text",
+              "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)"
+            }
           },
           "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
           "plan_flag": null,
@@ -431,7 +622,6 @@
           "run": [
             "{binary}",
             "run",
-            "{plan_flag?}",
             "{plan}",
             "--run-id",
             "{run_id}",
@@ -447,8 +637,22 @@
               "--cwd",
               "{cwd}"
             ],
-            "wind_down": null,
-            "prompt": null
+            "wind_down": [
+              "wind-down",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "prompt": [
+              "prompt",
+              "{text}",
+              "--now",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ]
           },
           "events": {
             "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
@@ -465,8 +669,7 @@
               "ANTHROPIC_*"
             ]
           },
-          "notes": [],
-          "repealed": false
+          "notes": []
         },
         {
           "engine_id": "codexloop",
@@ -474,6 +677,8 @@
           "state_dir": ".codexloop",
           "enabled": true,
           "switch": null,
+          "on_by_default": false,
+          "repealed": false,
           "cost_per_mtok_in": 2.0,
           "cost_per_mtok_out": 8.0,
           "default_model": null,
@@ -483,35 +688,35 @@
               "argv": [],
               "achieved": "STANDARD",
               "model": null,
-              "notes": ""
+              "notes": "codexloop's own configuration chooses the model"
             },
             {
               "effort": "LOW",
               "argv": [],
               "achieved": "STANDARD",
               "model": null,
-              "notes": ""
+              "notes": "codexloop's own configuration chooses the model"
             },
             {
               "effort": "STANDARD",
               "argv": [],
               "achieved": "STANDARD",
               "model": null,
-              "notes": ""
+              "notes": "codexloop's own configuration chooses the model"
             },
             {
               "effort": "HIGH",
               "argv": [],
               "achieved": "STANDARD",
               "model": null,
-              "notes": ""
+              "notes": "codexloop's own configuration chooses the model"
             },
             {
               "effort": "MAX",
               "argv": [],
               "achieved": "STANDARD",
               "model": null,
-              "notes": "codexloop has no CLI-level effort control"
+              "notes": "codexloop has no CLI-level effort control; codexloop's own configuration chooses the model"
             }
           ],
           "capabilities": {
@@ -521,7 +726,11 @@
             "paste_images": null,
             "plugins": "skills-context",
             "mcp": null,
-            "evidence": {}
+            "evidence": {
+              "files": "it runs in the worktree as its working directory, and its exec argv carries `--add-dir` (codexloop infrastructure/agent/argv.py)",
+              "paste_text": "`prompt TEXT --now|--next-turn` (codexloop cli/commands/prompt.py); the plan itself is text",
+              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it"
+            }
           },
           "done_marker": "CODEXLOOP_TASK_FULLY_COMPLETE",
           "plan_flag": null,
@@ -530,16 +739,29 @@
           "run": [
             "{binary}",
             "run",
-            "{plan_flag?}",
             "{plan}",
             "--run-id",
             "{run_id}",
             "{effort_argv...}"
           ],
           "controls": {
-            "stop": null,
-            "wind_down": null,
-            "prompt": null
+            "stop": [
+              "stop",
+              "--run-id",
+              "{run_id}"
+            ],
+            "wind_down": [
+              "wind-down",
+              "--run-id",
+              "{run_id}"
+            ],
+            "prompt": [
+              "prompt",
+              "{text}",
+              "--now",
+              "--run-id",
+              "{run_id}"
+            ]
           },
           "events": {
             "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
@@ -557,8 +779,7 @@
               "AZURE_OPENAI_ENDPOINT"
             ]
           },
-          "notes": [],
-          "repealed": false
+          "notes": []
         },
         {
           "engine_id": "cursorloop",
@@ -566,6 +787,8 @@
           "state_dir": ".cursorloop",
           "enabled": true,
           "switch": null,
+          "on_by_default": false,
+          "repealed": false,
           "cost_per_mtok_in": 2.5,
           "cost_per_mtok_out": 10.0,
           "default_model": null,
@@ -628,7 +851,11 @@
             "paste_images": null,
             "plugins": "skills-context",
             "mcp": null,
-            "evidence": {}
+            "evidence": {
+              "files": "it runs in the worktree (`run --cwd`, cursorloop cli/commands/run.py)",
+              "paste_text": "the plan is text (`run --plan`, cursorloop cli/commands/run.py), and it is the run's first message",
+              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it"
+            }
           },
           "done_marker": "CURSORLOOP_TASK_FULLY_COMPLETE",
           "plan_flag": "--plan",
@@ -653,7 +880,13 @@
               "--cwd",
               "{cwd}"
             ],
-            "wind_down": null,
+            "wind_down": [
+              "wind-down",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
             "prompt": null
           },
           "events": {
@@ -669,8 +902,7 @@
               "CURSOR_*"
             ]
           },
-          "notes": [],
-          "repealed": false
+          "notes": []
         },
         {
           "engine_id": "agyloop",
@@ -678,6 +910,8 @@
           "state_dir": ".agyloop",
           "enabled": true,
           "switch": null,
+          "on_by_default": false,
+          "repealed": false,
           "cost_per_mtok_in": 0.5,
           "cost_per_mtok_out": 2.0,
           "default_model": null,
@@ -749,8 +983,13 @@
             "paste_text": true,
             "paste_images": null,
             "plugins": "skills-context",
-            "mcp": null,
-            "evidence": {}
+            "mcp": false,
+            "evidence": {
+              "files": "it runs in the worktree (`run --cwd`), and `run --add-dir` and `attach PATH` take more (agyloop cli/commands/run.py, attach_cmd.py)",
+              "paste_text": "`prompt TEXT --now|--at-break` (agyloop cli/commands/prompt.py); the plan itself is text",
+              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
+              "mcp": "its agent options are built with `mcp_servers=[]`, always (agyloop infrastructure/agent/options.py)"
+            }
           },
           "done_marker": "AGYLOOP_TASK_FULLY_COMPLETE",
           "plan_flag": null,
@@ -759,7 +998,6 @@
           "run": [
             "{binary}",
             "run",
-            "{plan_flag?}",
             "{plan}",
             "--run-id",
             "{run_id}",
@@ -776,7 +1014,15 @@
               "{cwd}"
             ],
             "wind_down": null,
-            "prompt": null
+            "prompt": [
+              "prompt",
+              "{text}",
+              "--now",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ]
           },
           "events": {
             "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
@@ -796,8 +1042,7 @@
               "GOOGLE_CLOUD_LOCATION"
             ]
           },
-          "notes": [],
-          "repealed": false
+          "notes": []
         }
       ],
       "by_effort": {

@@ -92,7 +92,12 @@ class LoopsPresenter:
         lines = [line.rstrip() for line in lines]
         for engine in view.engines:
             name = engine.descriptor.engine_id.value
-            if engine.switch is not None:
+            if engine.switch is not None and engine.on_by_default:
+                lines.append(
+                    f"  {name} is on unless switched off by {engine.switch}=0, or by its key "
+                    "under [features] in vibey.toml"
+                )
+            elif engine.switch is not None:
                 lines.append(
                     f"  {name} is switched on by {engine.switch}=1, or by its key under "
                     "[features] in vibey.toml"
@@ -152,6 +157,7 @@ class LoopsPresenter:
             "state_dir": descriptor.state_dir,
             "enabled": engine.enabled,
             "switch": engine.switch,
+            "on_by_default": engine.on_by_default,
             "repealed": engine.repealed,
             "cost_per_mtok_in": descriptor.cost_per_mtok_in,
             "cost_per_mtok_out": descriptor.cost_per_mtok_out,
@@ -281,6 +287,7 @@ class LoopsCommand:
                     run=self._templates.template(descriptor),
                     switch=switch,
                     model=endpoint.model_for(declared.engine_id),
+                    on_by_default=settings.on_by_default(declared.engine_id),
                 )
             )
         return contexts

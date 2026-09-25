@@ -14,6 +14,45 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
+* **engines:** the local engine that runs GPT-OSS is `gptossloop`, and it ships on; `qwenloop`
+  runs Qwen and is off until switched on
+  ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)).
+  The engine called `qwenloop` ran `gpt-oss:20b` by default. The runner package now carries two
+  console scripts that differ only in who they are: `gptossloop` (GPT-OSS 20B, reads
+  `GPTOSSLOOP_BASE_URL`/`_MODEL`/`_API_KEY`/`_CONFIG` and its own config file) and `qwenloop`
+  (`qwen3:14b`, reads `QWENLOOP_*`). Run records (`.qwenloop/runs/`), the done marker and the
+  verdict fence stay shared. Runner 0.3.0.
+  - **On by default.** gptossloop joins the local tier with no switch; `[features] gptossloop =
+    false` or `VIBEY_FEATURE_GPTOSSLOOP=0` switches it off. The sovereign default is now
+    `gptossloop`.
+  - **qwenloop is opt-in.** `VIBEY_FEATURE_QWENLOOP` / `[features] qwenloop` now switch on the
+    Qwen engine, and `[engines].enabled` or `[phases.*].engines` naming qwenloop need that
+    switch (the refusal says what qwenloop became). `vibey worker` and `vibey doctor` print a
+    note when it is on; `vibey loops` notes it too.
+  - **Migrate.** Run `gptossloop` where you ran `qwenloop` for gpt-oss, or set
+    `QWENLOOP_MODEL=gpt-oss:20b`; move `QWENLOOP_*` settings meant for the gpt-oss engine to
+    `GPTOSSLOOP_*` (vibey's own `VIBEY_OLLAMA_URL` path does this for you: it hands gptossloop
+    `GPTOSSLOOP_BASE_URL` and `GPTOSSLOOP_MODEL`, and qwenloop only `QWENLOOP_BASE_URL`); drop
+    `VIBEY_FEATURE_QWENLOOP=1` unless you want Qwen as well.
+  - **Providers.** The sovereign DESIGN/DECOMPOSE providers are `GptossloopDesignProvider` and
+    `GptossloopWorkPlanProducer` and record `gptossloop` in the ledger. `--provider gptossloop`
+    is the default; `--provider qwenloop` is still read, as gptossloop, and says so on stderr.
+  - **`vibey loops --json`.** Lists gptossloop in sovereignloop, and every engine gains
+    `on_by_default`.
+  - **Helm.** With `ollama.enabled` the worker gets `GPTOSSLOOP_BASE_URL`/`GPTOSSLOOP_MODEL`.
+    `ollama.qwenloopFeature` now defaults to `false`; turning it on hands qwenloop the new
+    `ollama.qwenModel` (`qwen3:14b`) and has the pull Job fetch it. The `ollama-gpu-qwenloop`
+    golden profile is `ollama-gpu-gptossloop`, and the CRD's engine enum lists gptossloop.
+  - **Canon.** An amendment to sub-doctrine 8.c (`sovereignloop` is what gptossloop and
+    qwenloop become) is carried here for the operator's ratification (Article II.3).
+* **gates:** a human gate is answered once (compare-and-set on `answered_at IS NULL`).
+  * `vibey answer` on an answered gate exits 3 with `GateAlreadyAnswered` instead of
+    overwriting the first answer; `--request-id` makes a retry of the same answer a no-op.
+  * It records the account that ran it, or `--by NAME`, instead of the literal `cli`, and
+    prints `answered <gate_id> as <name>`.
+  * Each answer appends a `GateAnswered` ledger event (withheld from publication);
+    migration 0018 adds `human_gate.answer_request_id`.
+  * The Kubernetes operator reports a gate answered elsewhere first under `ignoredAnswers`.
 * **db:** every PostgreSQL connection the project configures, documents or installs
   authenticates with scram-sha-256, local and remote alike: never `trust`, `peer`,
   `ident`, `md5` or a password in clear. This is sub-doctrine 10.j, drafted for the
@@ -161,6 +200,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   CLI's configuration variables (`AZURE_CONFIG_DIR`, `AZURE_CORE_*`, ...)
 
 ### Added
+
+* **canon:** two drafts for the operator's ratification (Article II.3).
+  * Sub-doctrine **12.k**, *beauty is the first measure*, under 12 (*Humans first*): the
+    operator's ruling, verbatim, makes beauty and user-friendliness the first measure of
+    every surface a person touches. Nothing ships to a person that is not fully
+    comprehensive, current and a joy to use, and the operator's sign-off closes the gate.
+    Its checkable bar is [the Beauty Bar](docs/design/beauty-bar.md), and the rationale is
+    [ADR-0062](docs/architecture/decisions/0062-the-beauty-law-and-its-bar.md).
+  * Sub-doctrine **8.b** gains *the cap, and the one path to no cap*: paid use carries a
+    cap, and a no-cap declaration is lawful only through six warned, typed and recorded
+    steps, never from a phone or the web app, and is withdrawn by one action.
+    [ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md) records
+    ULTRA, a sixth effort level with no ceiling, as a design for the ULTRA lane.
 
 * **vscode:** a VS Code extension, under `clients/vscode`, that drives vibey and a model on your
   own computer from the editor, with no account and no cloud
@@ -400,6 +452,9 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **ci:** the minikube smoke's ledger-guard probe passes each role's password to `psql`
+  inside the postgres pod. Local connections authenticate with scram-sha-256 since #1142
+  (sub-doctrine 10.j, ADR-0061), so the passwordless probe failed there and on every PR after it.
 * **tests:** a test session whose database lock is lost no longer loses its databases to another
   session's reaper. Each test database's mark now names the process that created it and its
   machine, and the reaper keeps the database while that process is alive on this machine,
@@ -503,8 +558,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Documentation
 
 * **canon:** sub-doctrine 9.e, for the operator's ratification: the project and its engine are
-  **vibey**, and every app and interface a person uses is **Krypton**, with the krypton-84 atom
-  as its emblem (ADR-0062). Package and command names are unchanged; the apps publish as their own
+  **vibey**, and every app and interface a person uses is **krypton**, with the krypton-84 atom
+  as its emblem (ADR-0065). Package and command names are unchanged; the apps publish as their own
   distribution, `krypton-app` (PyPI from `main`, TestPyPI from `develop`, trusted publishing).
 
 ## [2.0.0] (2026-09-21)

@@ -20,11 +20,14 @@
  * produces a hint. A graceful Stop asks the engine to end at a turn boundary; Force stop is a
  * separate act, open only once a graceful stop has had its fair time, and it is journaled.
  *
- * The one engine this knows by name is qwenloop, the family's local agent, and only for the
- * binding the family documents (docs/guides/local-models-ollama.md): QWENLOOP_BASE_URL and
- * QWENLOOP_MODEL name the Ollama endpoint and model, QWENLOOP_CONFIG carries the run's
- * context window, and its per-turn desktop notification follows the setting. Declared by
- * `interfaces/run-interface.ts`.
+ * The engines this knows by name are the family's local runner under each name it ships as
+ * (ADR-0064: gptossloop, the default, and qwenloop), and only for the binding the family
+ * documents (docs/guides/local-models-ollama.md), each in its own settings' prefix:
+ * `<PREFIX>_BASE_URL` names the Ollama endpoint, `<PREFIX>_MODEL` the model (only when one
+ * is named, or the runner takes vibey.model: qwenloop's own config chooses its model),
+ * `<PREFIX>_CONFIG` carries the run's context window over the person's own config for that
+ * runner, and its per-turn desktop notification follows the setting. The names come from
+ * `LocalRunners`, never from here. Declared by `interfaces/run-interface.ts`.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -34,6 +37,7 @@ import type { BudgetBreach } from './interfaces/budgets-interface';
 import type { EventEnvelope, Selection } from './interfaces/catalogue-interface';
 import type { EngineCommandInterface } from './interfaces/engine-command-interface';
 import type { ChangedFile } from './interfaces/git-interface';
+import type { RunnerIdentity } from './interfaces/local-runner-interface';
 import type { ChildHandle, ProcessExit } from './interfaces/process-runner-interface';
 import type { Invocation } from './interfaces/qwenloop-interface';
 import type { RunItem, RunPatch } from './interfaces/run-events-interface';
@@ -51,7 +55,6 @@ import type {
 } from './interfaces/run-interface';
 import type { Disposable } from './interfaces/support-interface';
 import { JsonlJournal } from './jsonl';
-import { QwenloopCommand } from './qwenloop';
 import { RunTranscript } from './run-events';
 import { Emitter } from './support';
 
@@ -327,14 +330,14 @@ export class TaskRun implements TaskRunInterface {
       throw new SelectionError(command);
     }
     const runId = number === 1 ? this.runId : this.services.ids.uuid();
-    const qwenloop = selection.engine.engine_id === 'qwenloop';
+    const runner = this.services.runners.identify(selection.engine.engine_id);
     const effortArgv = [...selection.argv];
-    if (qwenloop) {
+    if (runner !== undefined) {
       effortArgv.push(settings.desktopNotifications ? '--desktop-notifications' : '--no-desktop-notifications');
     }
     const invocation = command.run({ plan: this.planPath, runId, cwd: space.cwd, effortArgv });
     const eventsPath = command.eventsPath(space.cwd, runId);
-    const environment = this.environmentFor(selection, qwenloop);
+    const environment = this.environmentFor(selection, runner);
     this.attempting = {
       number,
       runId,
@@ -454,9 +457,10 @@ export class TaskRun implements TaskRunInterface {
 
   /**
    * The engine's allow-listed environment: the basics, the vibey.environment.allow setting,
-   * and the names its descriptor declares. qwenloop also gets the family's local binding.
+   * and the names its descriptor declares. A local runner also gets the family's local
+   * binding, in its own settings' prefix.
    */
-  private environmentFor(selection: Selection, qwenloop: boolean): Record<string, string> {
+  private environmentFor(selection: Selection, runner: RunnerIdentity | undefined): Record<string, string> {
     const { settings } = this.services;
     const engine = selection.engine;
     const allow = EnvironmentAllowList.MODEL_BASICS.extended(
@@ -467,16 +471,22 @@ export class TaskRun implements TaskRunInterface {
     if (selection.tier === 'local') {
       overlay.OLLAMA_HOST = settings.ollama.root;
     }
-    if (qwenloop) {
-      this.configPath = this.path('qwenloop.toml');
-      const user = this.services.userConfig();
+    if (runner !== undefined) {
+      const { runners } = this.services;
+      this.configPath = this.path(`${runner.name}.toml`);
+      const user = this.services.userConfig(runner);
       fs.writeFileSync(this.configPath, this.services.runConfig.compose(user?.text, { contextWindow: this.request.contextWindow }));
-      overlay.QWENLOOP_BASE_URL = settings.ollama.v1;
-      overlay.QWENLOOP_MODEL = selection.model ?? settings.model;
-      overlay.QWENLOOP_CONFIG = this.configPath;
+      overlay[runners.variable(runner, 'BASE_URL')] = settings.ollama.v1;
+      overlay[runners.variable(runner, 'CONFIG')] = this.configPath;
+      // vibey.model is gptossloop's model; a runner with no default of its own (qwenloop)
+      // gets a model only when one is named, else its own config chooses (ADR-0064).
+      const model = selection.model ?? (runner.defaultModel === null ? undefined : settings.model);
+      if (model !== undefined) {
+        overlay[runners.variable(runner, 'MODEL')] = model;
+      }
       this.say(
         'info',
-        `qwenloop plans for a ${this.request.contextWindow.toLocaleString('en-US')}-token window on ${overlay.QWENLOOP_MODEL}` +
+        `${runner.name} plans for a ${this.request.contextWindow.toLocaleString('en-US')}-token window on ${model ?? 'the model its own config chooses'}` +
           (user === undefined ? '.' : `, over your own config at ${user.path}.`),
       );
     }
@@ -601,7 +611,7 @@ export class TaskRun implements TaskRunInterface {
     if (exit.error !== undefined) {
       return ['error', `${selection.engine.engine_id} could not be started: ${exit.error}`];
     }
-    if (this.forcedAt !== undefined || exit.code === QwenloopCommand.EXIT_WOUND_DOWN) {
+    if (this.forcedAt !== undefined || exit.code === this.services.runners.protocol.exitWoundDown) {
       return ['wound-down', undefined];
     }
     if (exit.code === 0) {

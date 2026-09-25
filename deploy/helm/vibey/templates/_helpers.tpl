@@ -106,8 +106,9 @@ SQL is the bare 32 hex digits, which PostgreSQL's uuid input reads as-is.
 The in-cluster Ollama endpoint, fully qualified for the same reason the DSN
 is: a bare Service name resolves only inside this namespace, and nothing
 guarantees every reader lives here. Root form, no path -- vibey's own
-client wants the server root; qwenloop's OpenAI-compatible backend appends
-/v1 where it is wired, in worker.yaml.
+client wants the server root; the local runner's OpenAI-compatible backend
+(gptossloop, and qwenloop when on) appends /v1 where it is wired, in
+worker.yaml.
 */}}
 {{- define "vibey.ollamaURL" -}}
 {{- printf "http://%s-ollama.%s.svc.%s:%v" (include "vibey.fullname" .) .Release.Namespace .Values.clusterDomain .Values.ollama.service.port -}}
@@ -160,12 +161,22 @@ spec:
             echo "waiting for ollama at $OLLAMA_HOST"
             sleep 5
           done
+          {{- if .Values.ollama.qwenloopFeature }}
+          ollama pull "$OLLAMA_PULL_MODEL"
+          # qwenloop's Qwen model, beside the default (ADR-0064).
+          exec ollama pull "$OLLAMA_PULL_QWEN_MODEL"
+          {{- else }}
           exec ollama pull "$OLLAMA_PULL_MODEL"
+          {{- end }}
       env:
         - name: OLLAMA_HOST
           value: {{ include "vibey.ollamaURL" . | quote }}
         - name: OLLAMA_PULL_MODEL
           value: {{ required "ollama.model is required when ollama.pull.enabled" .Values.ollama.model | quote }}
+        {{- if .Values.ollama.qwenloopFeature }}
+        - name: OLLAMA_PULL_QWEN_MODEL
+          value: {{ required "ollama.qwenModel is required when ollama.qwenloopFeature" .Values.ollama.qwenModel | quote }}
+        {{- end }}
         # The client never needs a home of its own; point it somewhere a
         # non-root uid can write rather than at an unwritable "/".
         - name: HOME

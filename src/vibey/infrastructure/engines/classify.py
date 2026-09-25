@@ -167,6 +167,8 @@ _CLASSIFIERS = {
     EngineId.CODEXLOOP: _classify_codexloop,
     EngineId.CURSORLOOP: _classify_cursorloop,
     EngineId.AGYLOOP: _classify_agyloop,
+    # The same runner, so the same lifecycle states (ADR-0064).
+    EngineId.GPTOSSLOOP: _classify_qwenloop,
     EngineId.QWENLOOP: _classify_qwenloop,
     EngineId.CLAUDELOOP_LOCAL: _classify_claudeloop,
 }
@@ -189,6 +191,7 @@ CREDITS_FIXTURES: dict[EngineId, dict[str, object]] = {
         "quota_metric": "billing.generate_content",
         "billing_exhausted": True,
     },
+    EngineId.GPTOSSLOOP: {"local_state": "credits_exhausted"},
     EngineId.QWENLOOP: {"local_state": "credits_exhausted"},
     # The class-name shape claudeloop really writes; claudeloop-local's runtime
     # never emits it, like qwenloop's, but the shared conformance check does.
@@ -212,6 +215,7 @@ WINDOW_FIXTURES: dict[EngineId, dict[str, object]] = {
         "quota_metric": "generate_content_free_tier_requests",
         "retry_after": "30s",
     },
+    EngineId.GPTOSSLOOP: {"local_state": "busy", "retry_at": "2026-01-01T00:05:00+00:00"},
     EngineId.QWENLOOP: {"local_state": "busy", "retry_at": "2026-01-01T00:05:00+00:00"},
     # A local server answering 503 (busy loading a model): claudeloop waits on it.
     EngineId.CLAUDELOOP_LOCAL: {
@@ -228,6 +232,7 @@ AUTH_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {"error": {"code": "invalid_api_key", "message": "bad key"}},
     EngineId.CURSORLOOP: {"status": 401, "type": "unauthorized", "message": "bad token"},
     EngineId.AGYLOOP: {"grpc_status": "UNAUTHENTICATED", "detail": "adc not found"},
+    EngineId.GPTOSSLOOP: {"local_state": "configuration_error", "detail": "model missing"},
     EngineId.QWENLOOP: {"local_state": "configuration_error", "detail": "model missing"},
     EngineId.CLAUDELOOP_LOCAL: {"capacity": "BackendMisconfigured"},
 }
@@ -237,6 +242,7 @@ AVAILABLE_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {},
     EngineId.CURSORLOOP: {"status": 200},
     EngineId.AGYLOOP: {"grpc_status": "OK"},
+    EngineId.GPTOSSLOOP: {"local_state": "available"},
     EngineId.QWENLOOP: {"local_state": "available"},
     EngineId.CLAUDELOOP_LOCAL: {"capacity": "Available"},
 }

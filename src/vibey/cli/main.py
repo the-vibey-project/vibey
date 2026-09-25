@@ -22,7 +22,7 @@ import typer
 
 from vibey import __version__
 from vibey.application.design_acceptance import DesignAcceptanceService
-from vibey.application.dto import ProjectRecord
+from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
@@ -71,6 +71,7 @@ from vibey.infrastructure.engines.claudeloop_process import (
 )
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
@@ -78,7 +79,6 @@ from vibey.infrastructure.engines.ollama_chat import (
     OLLAMA_URL_ENV,
     OllamaChatClient,
 )
-from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.logging import configure_logging
@@ -395,6 +395,24 @@ def answer(
             "(combinable with positional pairs, which win)",
         ),
     ] = False,
+    by: Annotated[
+        str | None,
+        typer.Option(
+            "--by",
+            help="The name this answer is recorded under, for a tool that runs the command "
+            "(the VS Code extension says vibey-vscode). Defaults to the account running it. "
+            "A label for the record, not a permission: the account is recorded beside it.",
+        ),
+    ] = None,
+    request_id: Annotated[
+        str | None,
+        typer.Option(
+            "--request-id",
+            help="Name this request so a retry is safe: the same id with the same answer "
+            "is a no-op once it has landed. Without one, every run is a new request, and "
+            "a gate already answered refuses it.",
+        ),
+    ] = None,
 ) -> None:
     """Answer a parked gate: QUESTION_ID=ANSWER pairs, --choice, --verdict, or --raw.
 
@@ -402,6 +420,9 @@ def answer(
     are model-minted and vary per run; --defaults needs none); review gates
     take --verdict (accept/changes/cancel/approve/request_changes);
     deployment and triage gates take --choice; --raw covers any other shape.
+
+    A gate is answered once. A second answer is refused (exit 3) and the
+    first stands; `--request-id` makes a retry of the same answer a no-op.
     """
     modes = [m for m in (answers, choice, verdict, raw) if m]
     if defaults and (choice or verdict or raw):
@@ -431,20 +452,30 @@ def answer(
         if defaults:
             payload["accept_defaults"] = True
 
-    async def submit() -> None:
+    async def submit() -> GateAnswerOutcome:
         async with build_app() as resources:
-            await resources.gates.answer(gate_id, answer=payload, answered_by="cli")
+            return await resources.gate_answers.answer(
+                gate_id, payload, by=by, request_id=request_id
+            )
 
-    asyncio.run(submit())
-    typer.echo(f"answered {gate_id}")
+    with guard():
+        outcome = asyncio.run(submit())
+    if outcome.replayed:
+        typer.echo(f"already answered {gate_id} by this request; nothing changed")
+    else:
+        typer.echo(f"answered {gate_id} as {outcome.record.answered_by}")
 
 
 # One sentence for both commands' --ollama-model, so `work` and `worker` cannot drift.
 _OLLAMA_MODEL_HELP = (
-    "Local model for --provider qwenloop; ignored by the other providers. Default: "
+    "Local model for --provider gptossloop; ignored by the other providers. Default: "
     f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
 )
-_PROVIDERS = ("scripted", "claudeloop", "qwenloop")
+_PROVIDERS = ("scripted", "claudeloop", "gptossloop")
+# Old provider names still accepted, each read as the provider it became. `qwenloop` was
+# the sovereign provider on this era's default model, GPT-OSS; since ADR-0064 that is
+# gptossloop, and the qwenloop engine runs a Qwen model the provider never did.
+_PROVIDER_ALIASES = {"qwenloop": "gptossloop"}
 # Built from _PROVIDERS so the message both commands print cannot fall behind the list.
 _UNKNOWN_PROVIDER = (
     "provider must be "
@@ -453,9 +484,9 @@ _UNKNOWN_PROVIDER = (
 )
 # The same for --provider: its default is the one decision both commands must share.
 _PROVIDER_HELP = (
-    "DESIGN/DECOMPOSE provider: scripted, claudeloop, or qwenloop (the sovereign one, on "
-    "Ollama). Default: qwenloop -- the sovereign default is always on (sub-doctrine 8.b). "
-    "An explicit value always wins."
+    "DESIGN/DECOMPOSE provider: scripted, claudeloop, or gptossloop (the sovereign one, on "
+    "Ollama). Default: gptossloop -- the sovereign default is always on (sub-doctrine 8.b). "
+    "An explicit value always wins; 'qwenloop' is read as gptossloop (ADR-0064)."
 )
 
 
@@ -463,12 +494,23 @@ def _resolve_provider(explicit: str | None) -> str:
     """The provider to run: the operator's explicit choice, else the sovereign default.
 
     Sub-doctrine 8.b keeps the sovereign default always on, never needing declaration, so
-    with no `--provider` DESIGN and DECOMPOSE run on qwenloop (#322). Before, they fell
-    back to the scripted fake unless a local engine was switched on. Paid (`claudeloop`)
-    is always a stated choice. Module-level, like the typer commands that share it, so
-    `work` and `worker` cannot disagree.
+    with no `--provider` DESIGN and DECOMPOSE run on gptossloop (#322; qwenloop until
+    ADR-0064). Before, they fell back to the scripted fake unless a local engine was
+    switched on. Paid (`claudeloop`) is always a stated choice. An old name is read as the
+    provider it became, and said so on stderr. Module-level, like the typer commands that
+    share it, so `work` and `worker` cannot disagree.
     """
-    return explicit if explicit is not None else "qwenloop"
+    if explicit is None:
+        return "gptossloop"
+    renamed = _PROVIDER_ALIASES.get(explicit)
+    if renamed is None:
+        return explicit
+    typer.echo(
+        f"--provider {explicit} is now --provider {renamed} (ADR-0064): the sovereign "
+        f"provider on {DEFAULT_OLLAMA_MODEL}; running {renamed}",
+        err=True,
+    )
+    return renamed
 
 
 async def _work_once(
@@ -522,7 +564,7 @@ async def _work_once(
                 process=claude_process,
                 worktree_path=project.repo_path,
             )
-        elif provider == "qwenloop":
+        elif provider == "gptossloop":
             # Doctrine 8.a: the sovereign path is the preferred way to run, so it has to
             # be selectable here rather than reachable only through a paid engine.
             # VIBEY_OLLAMA_URL / VIBEY_OLLAMA_MODEL (or --ollama-model) choose the local
@@ -530,7 +572,7 @@ async def _work_once(
             # for the research stage; without it research parks a `research_evidence`
             # gate rather than inventing a source. `work` runs DESIGN only, so it has no
             # decomposer to choose -- `worker` does.
-            design_provider = QwenloopDesignProvider.from_environment(
+            design_provider = GptossloopDesignProvider.from_environment(
                 os.environ, chat=OllamaChatClient.from_environment(os.environ, model=ollama_model)
             )
         else:
@@ -1343,8 +1385,10 @@ def doctor(
         # operator is actually depending on stayed invisible unless they knew to ask
         # for it by name. A preferred path you cannot inspect is not a preferred path.
         # The same resolver builds claudeloop-local from its configured profile and
-        # gives qwenloop the endpoint the worker would, so doctor probes what runs.
+        # gives each local runner the endpoint the worker would, so doctor probes what runs.
         local = _local_engines_from_toml()
+        for notice in local.notices:
+            typer.echo(f"note: {notice}")
         endpoint = LocalEndpointEnvironment(os.environ)
         if engine is not None:
             from vibey.domain.engine import EngineId
@@ -1666,7 +1710,9 @@ def worker(
         except ValueError as exc:
             typer.echo(f"Invalid engine: {exc}")
             raise typer.Exit(2) from exc
-    if provider_opt is not None and provider_opt not in _PROVIDERS:
+    if provider_opt is not None and _PROVIDER_ALIASES.get(provider_opt, provider_opt) not in (
+        _PROVIDERS
+    ):
         typer.echo(_UNKNOWN_PROVIDER)
         raise typer.Exit(2)
     if azure not in ("memory", "az"):
@@ -1793,20 +1839,20 @@ def worker(
                     process=claude_process,
                     worktree_path=project.repo_path,
                 )
-            elif provider == "qwenloop":
+            elif provider == "gptossloop":
                 # Doctrine 8.a: the sovereign path is the preferred way to run, so the
                 # long-running worker has to be able to select it too, not just the
                 # one-shot `vibey work` -- and for DECOMPOSE as well as DESIGN. This used
                 # to hand BUILD's plan to ScriptedWorkPlanProducer, the test fake, whose
                 # items carry no verification commands. One client, so both providers
                 # talk to the same server and model.
-                from vibey.infrastructure.engines.qwenloop_decompose import (
-                    QwenloopWorkPlanProducer,
+                from vibey.infrastructure.engines.gptossloop_decompose import (
+                    GptossloopWorkPlanProducer,
                 )
 
                 chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
-                design_provider = QwenloopDesignProvider.from_environment(os.environ, chat=chat)
-                decomposer = QwenloopWorkPlanProducer(chat=chat)
+                design_provider = GptossloopDesignProvider.from_environment(os.environ, chat=chat)
+                decomposer = GptossloopWorkPlanProducer(chat=chat)
             else:
                 design_provider = ScriptedDesignProvider()
                 decomposer = ScriptedWorkPlanProducer()
@@ -1816,9 +1862,11 @@ def worker(
             # Without this a local engine was the one engine the startup sweep could
             # not see: it ran, but its conformance warning never appeared, so an
             # operator depending on it had no way to learn it would never be selected.
-            # `--ollama-model` reaches qwenloop's process as QWENLOOP_MODEL too, so the
-            # BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
+            # `--ollama-model` reaches gptossloop's process as GPTOSSLOOP_MODEL too, so
+            # the BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
             local = LocalEngineSettings(environ=os.environ, config=project.config)
+            for notice in local.notices:
+                typer.echo(f"note: {notice}")
             adapters = dict(resources.engine_adapters)
             endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
             for engine_id, local_adapter in local.adapters(endpoint).items():
@@ -1844,9 +1892,10 @@ def worker(
                     typer.echo(
                         f"--engines {engines_opt} matches none of this worker's engines "
                         f"({available}); a local engine joins them only with its switch "
-                        "on -- VIBEY_FEATURE_QWENLOOP=1 or VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, "
-                        "or [features] qwenloop / claudeloop_local in the project's config "
-                        "when that environment override is unset."
+                        "on -- gptossloop unless VIBEY_FEATURE_GPTOSSLOOP=0, qwenloop with "
+                        "VIBEY_FEATURE_QWENLOOP=1, claudeloop-local with "
+                        "VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, or the same keys under [features] "
+                        "in the project's config when that environment override is unset."
                     )
                     raise typer.Exit(EXIT_USAGE)
                 adapters = allowed

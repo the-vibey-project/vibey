@@ -1,6 +1,12 @@
 # qwenloop
 
-An onion-architected autonomous local Qwen runner. Domain code is pure. The
+An onion-architected autonomous local-model runner, installed as two engines
+that share one runner (vibey ADR-0064): `gptossloop` (entry point
+`qwenloop.cli.app:gptoss_main`; `GPTOSSLOOP_*` settings; default model
+`gpt-oss:20b`) and `qwenloop` (`qwenloop.cli.app:main`; `QWENLOOP_*`; default
+`qwen3:14b`). Both write `.qwenloop/runs/`, end on
+`QWENLOOP_TASK_FULLY_COMPLETE` and answer in a `qwenloop-verdict` fence; the
+identity lives in `domain/config.py::RunnerIdentity`. Domain code is pure. The
 runner never blocks on a human, capacity rejection outranks completion, and
 model downloads are explicit only. Use Conventional Commits and never develop
 on `main`.

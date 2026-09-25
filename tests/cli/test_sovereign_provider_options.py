@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""`--provider qwenloop` end to end through the CLI, with no paid credential in reach.
+"""`--provider gptossloop` end to end through the CLI, with no paid credential in reach.
 
 The local model is a real HTTP server on 127.0.0.1 that answers like Ollama's chat API,
 so these exercise the shared client's actual transport, the environment it is configured
@@ -132,6 +132,7 @@ def _sovereign_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "VIBEY_OLLAMA_MODEL",
         "VIBEY_OLLAMA_TIMEOUT",
         "VIBEY_EVIDENCE_DIR",
+        "VIBEY_FEATURE_GPTOSSLOOP",
         "VIBEY_FEATURE_QWENLOOP",
         "VIBEY_FEATURE_CLAUDELOOP_LOCAL",
     ):
@@ -215,7 +216,7 @@ async def _rows(query: str, *args: object) -> list[asyncpg.Record]:
 
 @pytest.mark.usefixtures("_sovereign_env", "_quiet_worker")
 def test_the_worker_decomposes_on_the_local_model(tmp_path: Path) -> None:
-    """DECOMPOSE on `--provider qwenloop` asks the local model, under the spec's own
+    """DECOMPOSE on `--provider gptossloop` asks the local model, under the spec's own
     criterion ids as a grammar, and fans out items whose verify gates have something to
     run -- where the scripted fake it replaces left every command list empty."""
     project_id = asyncio.run(_seed_decompose(tmp_path))
@@ -223,7 +224,7 @@ def test_the_worker_decomposes_on_the_local_model(tmp_path: Path) -> None:
     with FakeOllama(PLAN) as ollama, patch.dict(os.environ, {"VIBEY_OLLAMA_URL": ollama.url + "/"}):
         res = runner.invoke(
             app,
-            ["worker", "--once", "--provider", "qwenloop", "--ollama-model", "sovereign:test"],
+            ["worker", "--once", "--provider", "gptossloop", "--ollama-model", "sovereign:test"],
         )
 
     assert res.exit_code == 0, res.output
@@ -255,7 +256,7 @@ def test_an_invalid_plan_leaves_nothing_enqueued(tmp_path: Path) -> None:
     partial = {"items": [PLAN["items"][0]]}  # type: ignore[index]
 
     with FakeOllama(partial) as ollama, patch.dict(os.environ, {"VIBEY_OLLAMA_URL": ollama.url}):
-        res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
+        res = runner.invoke(app, ["worker", "--once", "--provider", "gptossloop"])
 
     assert res.exit_code == 0, res.output
     assert ollama.requests[0]["model"] == "gpt-oss:20b"
@@ -275,7 +276,7 @@ def test_research_without_evidence_parks_a_research_evidence_gate(tmp_path: Path
     a gate that asks for the reading by name, and no retry loop behind it."""
     project_id = asyncio.run(_seed_research(tmp_path))
 
-    res = runner.invoke(app, ["work", str(project_id), "--provider", "qwenloop"])
+    res = runner.invoke(app, ["work", str(project_id), "--provider", "gptossloop"])
 
     assert res.exit_code == 0, res.output
     assert "processed one job" in res.output
@@ -314,7 +315,7 @@ def test_research_without_evidence_parks_a_research_evidence_gate(tmp_path: Path
             os.environ, {"VIBEY_OLLAMA_URL": ollama.url, "VIBEY_EVIDENCE_DIR": str(evidence)}
         ),
     ):
-        rerun = runner.invoke(app, ["work", str(project_id), "--provider", "qwenloop"])
+        rerun = runner.invoke(app, ["work", str(project_id), "--provider", "gptossloop"])
 
     assert rerun.exit_code == 0, rerun.output
     assert "processed one job" in rerun.output
@@ -328,7 +329,7 @@ def test_research_without_evidence_parks_a_research_evidence_gate(tmp_path: Path
             job["id"],
         )
     )
-    assert recorded["engine_id"] == "qwenloop"
+    assert recorded["engine_id"] == "gptossloop"
     assert recorded["provenance"] == "untrusted"
     assert json.loads(recorded["payload"])["source"] == "https://example.test/greeters"
 
@@ -371,7 +372,7 @@ def test_the_deleted_opencode_provider_is_refused_on_work(tmp_path: Path) -> Non
     project_id = asyncio.run(_seed_research(tmp_path))
     res = runner.invoke(app, ["work", str(project_id), "--provider", "opencode"])
     assert res.exit_code != 0
-    assert "provider must be 'scripted', 'claudeloop', or 'qwenloop'" in res.output
+    assert "provider must be 'scripted', 'claudeloop', or 'gptossloop'" in res.output
 
 
 @pytest.mark.usefixtures("_sovereign_env")
@@ -399,7 +400,7 @@ def test_the_visual_phase_keeps_the_scripted_default_when_local_engines_are_on(
 def test_work_refuses_a_non_http_ollama_endpoint(tmp_path: Path) -> None:
     project_id = asyncio.run(_seed_research(tmp_path))
     with patch.dict(os.environ, {"VIBEY_OLLAMA_URL": "file:///etc/passwd"}):
-        res = runner.invoke(app, ["work", str(project_id), "--provider", "qwenloop"])
+        res = runner.invoke(app, ["work", str(project_id), "--provider", "gptossloop"])
     assert res.exit_code == 3, res.output
     assert "VIBEY_OLLAMA_URL" in res.output
     assert "http(s) URL with a host" in res.output
@@ -409,7 +410,7 @@ def test_work_refuses_a_non_http_ollama_endpoint(tmp_path: Path) -> None:
 def test_worker_refuses_a_non_http_ollama_endpoint(tmp_path: Path) -> None:
     asyncio.run(_seed_decompose(tmp_path))
     with patch.dict(os.environ, {"VIBEY_OLLAMA_URL": "ftp://127.0.0.1:11434"}):
-        res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
+        res = runner.invoke(app, ["worker", "--once", "--provider", "gptossloop"])
     assert res.exit_code == 3, res.output
     assert "VIBEY_OLLAMA_URL" in res.output
 
@@ -436,7 +437,7 @@ def test_work_passes_the_chosen_model_to_the_design_provider(tmp_path: Path) -> 
     with FakeOllama(answer) as ollama, patch.dict(os.environ, {"VIBEY_OLLAMA_URL": ollama.url}):
         res = runner.invoke(
             app,
-            ["work", str(project_id), "--provider", "qwenloop", "--ollama-model", "picked:1"],
+            ["work", str(project_id), "--provider", "gptossloop", "--ollama-model", "picked:1"],
         )
 
     assert res.exit_code == 0, res.output
@@ -470,7 +471,7 @@ def test_work_is_sovereign_by_default_with_no_local_switch(tmp_path: Path) -> No
 def test_the_unknown_provider_message_names_every_provider() -> None:
     from vibey.cli.main import _PROVIDERS, _UNKNOWN_PROVIDER
 
-    assert _UNKNOWN_PROVIDER == "provider must be 'scripted', 'claudeloop', or 'qwenloop'"
+    assert _UNKNOWN_PROVIDER == "provider must be 'scripted', 'claudeloop', or 'gptossloop'"
     assert all(f"'{name}'" in _UNKNOWN_PROVIDER for name in _PROVIDERS)
 
 
@@ -480,4 +481,4 @@ def test_work_names_every_provider_when_the_provider_is_unknown(tmp_path: Path) 
     res = runner.invoke(app, ["work", str(project_id), "--provider", "bogus"])
 
     assert res.exit_code != 0
-    assert "provider must be 'scripted', 'claudeloop', or 'qwenloop'" in res.output
+    assert "provider must be 'scripted', 'claudeloop', or 'gptossloop'" in res.output

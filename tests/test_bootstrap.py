@@ -26,7 +26,7 @@ from vibey.domain.phase import Phase
 from vibey.domain.verbosity import LogPlan
 from vibey.infrastructure.db.migrator import InvalidMigrationLockTimeout, PostgresMigrator
 from vibey.infrastructure.engines.claudeloop_design import ClaudeLoopDesignProvider
-from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
+from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
@@ -48,7 +48,7 @@ class FakeLedger:
 class SovereignDesignProvider(ScriptedDesignProvider):
     """A stand-in for the sovereign provider: same answers, different actor."""
 
-    engine_id: EngineId | None = EngineId.QWENLOOP
+    engine_id: EngineId | None = EngineId.GPTOSSLOOP
 
 
 def test_qwenloop_feature_resolution(monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -319,7 +319,7 @@ async def test_design_ledger_names_the_engine_that_actually_interviewed(tmp_path
     )
 
     assert await worker.run_once(project_id)
-    assert ledger.engines == [EngineId.QWENLOOP]
+    assert ledger.engines == [EngineId.GPTOSSLOOP]
 
 
 async def test_a_scripted_design_names_no_engine_rather_than_borrowing_one(
@@ -344,7 +344,7 @@ def test_every_design_provider_declares_the_engine_it_speaks_for() -> None:
     """One declaration each, beside the implementation -- the single source the
     composition root reads instead of repeating a literal per wiring site."""
     assert ClaudeLoopDesignProvider.engine_id is EngineId.CLAUDELOOP
-    assert QwenloopDesignProvider.engine_id is EngineId.QWENLOOP
+    assert GptossloopDesignProvider.engine_id is EngineId.GPTOSSLOOP
     assert ScriptedDesignProvider.engine_id is None
 
 

@@ -133,6 +133,18 @@ class HumanGateRecord:
     timeout_at: datetime | None
     answered_at: datetime | None
     answered_by: str | None
+    answer_request_id: str | None = None
+    """The id of the request that answered the gate; `None` while open, and for a gate
+    answered before answers carried one. The same id replayed is a no-op."""
+
+
+@dataclass(frozen=True, slots=True)
+class GateAnswerOutcome:
+    """What answering a gate did: the gate as it now stands, and whether this request
+    had already answered it (`replayed`), in which case nothing was written."""
+
+    record: HumanGateRecord
+    replayed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,7 +374,7 @@ class BudgetChange:
 class EngineContext:
     """One engine as vibey's own resolvers see it right now: its descriptor, whether it
     would run, the variable that switches it (a local engine has one), the model it runs
-    when vibey chooses that model itself (qwenloop's `VIBEY_OLLAMA_MODEL`), and the argv
+    when vibey chooses that model itself (gptossloop's `VIBEY_OLLAMA_MODEL`), and the argv
     template its `run` is built from (infrastructure/engines/argv.py)."""
 
     descriptor: EngineDescriptor
@@ -370,6 +382,8 @@ class EngineContext:
     run: tuple[str, ...]
     switch: str | None = None
     model: str | None = None
+    # Whether the switch is on when nothing sets it: gptossloop's is (ADR-0064).
+    on_by_default: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -408,6 +422,7 @@ class LoopEngine:
     run: tuple[str, ...]
     repealed: bool = False
     notes: tuple[str, ...] = ()
+    on_by_default: bool = False
 
 
 @dataclass(frozen=True, slots=True)

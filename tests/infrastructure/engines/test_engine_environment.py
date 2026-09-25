@@ -107,6 +107,7 @@ _DECLARED: dict[EngineId, tuple[str, ...]] = {
         "AGYLOOP_*",
         "ANTIGRAVITY_*",
     ),
+    EngineId.GPTOSSLOOP: ("GPTOSSLOOP_*",),
     EngineId.QWENLOOP: ("QWENLOOP_*",),
 }
 

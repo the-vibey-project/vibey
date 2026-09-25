@@ -596,6 +596,7 @@ async def test_an_answered_gate_grants_integrate_repair_rounds_too(tmp_path: Pat
     assert "repair enqueued" in retried.detail
 
     # A grant at or below the burned rounds still parks.
-    await gates.answer(gate.gate_id, answer={"max_rounds": 2}, answered_by="operator")
+    regate = await gates.raise_gate(job.project_id, job.id, parked.request)
+    await gates.answer(regate.gate_id, answer={"max_rounds": 2}, answered_by="operator")
     still_parked = await _handler().handle(job)
     assert isinstance(still_parked, Park)

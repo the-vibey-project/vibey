@@ -140,7 +140,8 @@ and what 10.b already settled for money. 8.a settles it for everything else.
 **8.b — sovereign self-hosted defaults, paid declared-only** *(ratified by the
 merge that carried this entry; its list clarified and extended by the merge that
 carried 8.c; its paid defaults set, and OpenCode repealed in favour of VS Code, by
-the merge that carried them)*: every operational surface of vibey defaults to
+the merge that carried them; its cap, and the one path to no cap, set by the merge
+that carried that paragraph)*: every operational surface of vibey defaults to
 the freest, most sovereign, self-hosted, free option — and never, ever, to a paid
 platform. This is specific and enumerated, because a preference without a
 concrete default is a platitude:
@@ -213,11 +214,41 @@ is the default paid cloud; **GitHub** is the default paid forge. A default among
 options never makes paid a default over sovereign (8.a): it only settles which paid
 option a declaration reaches.
 
+**The cap, and the one path to no cap.** A declaration of paid use carries a budget
+cap, and the brake stops paid work when the ledger's own tally of spend reaches it:
+budgets bound every loop (Constitution, Article III.2). A declaration with **no cap** is
+lawful by exactly one path, and every step of it is required:
+
+1. a full-screen warning that shows the chosen engine's cost per hour, as measured
+   (8.g), with an unmeasured cost shown as unknown and never as an estimate;
+2. the operator typing a stated phrase of acceptance, never a click;
+3. a second warning whose default answer is to keep a cap;
+4. the declaration written into the repository's declared configuration (12.c), and a
+   ledger event naming who made it, when, and from which device;
+5. made on the host that runs the work, and never from a phone or a web client;
+6. withdrawn by one action, binding at once, whatever is in flight.
+
+A no-cap declaration that did not come through every step is no declaration at all, and
+paid work waits. No agent, delegated approver or paired device may make one or widen one
+(12.d, 12.f), and while one stands every surface a person uses shows it, plainly. Declaring is
+deliberate and withdrawing is immediate; the asymmetry is the protection (12.f). Effort
+without a ceiling ends only when the operator stops it or a declared cap is reached, and
+no cap is ever a reason it cannot be stopped. Credits exhausted is still a handoff to
+the next engine, never a stop and never a rate limit.
+
+This is how "budgets bound every loop" reads for a loop with no cap: the declaration made
+through every step is its budget, chosen aloud by the operator, and the operator's Stop,
+always in reach, is its bound. Before this paragraph a no-cap declaration took one flag
+and the canon said nothing of it; six required steps, a record and an instant withdrawal
+add protection and take none away (Constitution, Article IV).
+
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
 carried this entry; its two loops and two layers, and its one instance per model,
 set by the merge that carried them; its capacity on the operator's own hardware made
-the number measured on each device by the merge that carried that sentence)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
-becomes — drives the models and tools that run on the operator's own hardware;
+the number measured on each device by the merge that carried that sentence; its
+sovereign runners named by the merge that carries ADR-0064 — under Article II.3 a
+ratification-ready draft until the operator's merge carries it)*: the family runs **exactly two loops**. **`sovereignloop`** — what `gptossloop`
+and `qwenloop` become — drives the models and tools that run on the operator's own hardware;
 **`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
 `cursorloop` and `agyloop` as its adapters. Each loop runs as
 **a single instance per model**, and that
@@ -430,7 +461,7 @@ not an externally adjudicated worldwide priority claim. This terminology is
 included as a clarification of 9.d, and any ratification of this corpus remains
 subject to the human merge required by Article II.3.
 
-**9.e — vibey and Krypton** *(ratified by the merge that carried this entry)*: the project and its engine are **vibey**. Every app and every interface a person uses is **Krypton** — the desktop app, the mobile and web app, the VS Code extension as a person sees it, and every interface after them. Krypton's emblem is the krypton atom, krypton-84: a nucleus of 36 protons and 48 neutrons, and 36 electrons in four shells of 2, 8, 18 and 8. The names are what a person reads. vibey's distribution, its packages and its commands keep the names they have, and the apps are published as their own distribution, **`krypton-app`**, on PyPI from `main` and on TestPyPI from `develop`, by the same release workflow and trusted publishing as `vibey`. Anything more — whether releases or builds carry either name — is the operator's to rule, and until the operator rules it stays unruled.
+**9.e — vibey and krypton** *(ratified by the merge that carried this entry)*: the project and its engine are **vibey**. Every app and every interface a person uses is **krypton** — the desktop app, the mobile and web app, the VS Code extension as a person sees it, and every interface after them. krypton's emblem is the krypton atom, krypton-84: a nucleus of 36 protons and 48 neutrons, and 36 electrons in four shells of 2, 8, 18 and 8. The names are what a person reads. vibey's distribution, its packages and its commands keep the names they have, and the apps are published as their own distribution, **`krypton-app`**, on PyPI from `main` and on TestPyPI from `develop`, by the same release workflow and trusted publishing as `vibey`. Both names are always written in lowercase, exactly `vibey`, `krypton` or `krypton-app`, never capitalised, at the start of a sentence as anywhere else. Anything more — whether releases or builds carry either name — is the operator's to rule, and until the operator rules it stays unruled.
 
 ## 10 — No guarantees
 
@@ -713,6 +744,38 @@ direction (SD-01 §7).
 These three stand under humans first because each is a way the machine comes to speak for a
 person who never spoke: a constant nobody chose, a record nobody corrected, a stranger nobody
 admitted.
+
+**12.k — beauty is the first measure** *(ratified by the merge that carried this entry)*:
+the operator ruled, in their words, that every surface vibey puts before a person is
+"ALWAYS FULLY COMPREHENSIVE, FULLY UP TO DATE, INSANELY BEAUTIFUL, INSANELY
+SOPHISTICATED, INSANELY GORGEOUS, INSANELY WOW-FACTOR PRODUCING and INSANELY POWERFUL
+AND FUN FOREVER AMEN!" Beauty and user-friendliness come first: the intuitive surface,
+the one a person understands without being taught, is the first measure of anything a
+person touches — every client app, the VS Code extension, the documentation site, and
+every notification and sound. Nothing ships to a person that is not fully
+comprehensive, fully current, and a joy to use. A surface that is correct and ugly, or
+complete and confusing, is not finished; it is a defect, and it is repaired like any
+other.
+
+The measure is written down so that it can be held: the Beauty Bar
+(`docs/design/beauty-bar.md`) states each item so that a test or a reviewer can check
+it, and a bar that got easier to pass by measuring less is 12.g's weaker gate wearing
+the old gate's name. "Fully up to date" is part of the bar, not an aspiration: a stale
+dependency or a superseded platform interface is found by the machinery, never by a
+person noticing.
+
+The judgement of beauty stays with a human (12.e). A machine can measure contrast, frame
+rate, the seconds from install to first result, and the age of a dependency; it cannot
+say whether a thing is gorgeous, and a gate that declares so on its own authority is a
+decision nobody made. So automation surrounds the judgement — it runs the checks,
+gathers every screen into a gallery, and narrows the question — and a person answers it:
+the operator's sign-off of each release's gallery closes the gate, and nothing else
+does.
+
+This stands under humans first because a surface is where the machine meets a person. A
+confusing screen spends a person's attention the way a slow harness spends their time
+(12.g), and a dull one wastes the one thing this whole machine exists to serve: the
+delight of the human it serves.
 
 ---
 
