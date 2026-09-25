@@ -68,14 +68,16 @@ from vibey.domain.errors import (
     VibeyError,
 )
 from vibey.domain.hub_binding import HUB_BINDING
-from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden
+from vibey.domain.hub_pairing import CODE_DIGITS, PairingRefused
+from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden, HubScope
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
 from vibey.domain.ledger_query import DEFAULT_SEARCH_LIMIT, InvalidLedgerQuery
-from vibey.infrastructure.hub.authenticator import HubRequest
+from vibey.infrastructure.hub.authenticator import HOST_PRINCIPAL, HubRequest
 from vibey.infrastructure.hub.interfaces.authenticator_interface import (
     HubAuthenticatorInterface,
 )
 from vibey.infrastructure.hub.interfaces.live_interface import LedgerAnnouncementsInterface
+from vibey.infrastructure.hub.interfaces.pairing_interface import HubPairingInterface
 
 MAX_BODY_BYTES: Final = 64 * 1024
 """The largest request body the hub reads. A gate answer is a few hundred bytes."""
@@ -119,6 +121,7 @@ SECURITY_HEADERS: Final[Mapping[str, str]] = {
 
 ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (HubForbidden, 403),
+    (PairingRefused, 403),
     (UnknownProject, 404),
     (UnknownGate, 404),
     (UnknownLane, 404),
@@ -157,6 +160,27 @@ class GateAnswerBody(BaseModel):
     )
 
 
+class OfferBody(BaseModel):
+    """The body of `POST /api/v1/pairing/offers` (the host only)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    scopes: list[HubScope] = Field(
+        min_length=1, description="What a device claiming the code may do; never empty."
+    )
+
+
+class ClaimBody(BaseModel):
+    """The body of `POST /api/v1/pairing/claim` (a device, before it holds a key)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(
+        min_length=CODE_DIGITS, max_length=CODE_DIGITS, description="The code the host shows."
+    )
+    name: str = Field(min_length=1, max_length=64, description="What the device calls itself.")
+
+
 class HubAppFactory:
     """Builds the hub's FastAPI app.
 
@@ -181,6 +205,7 @@ class HubAppFactory:
         allowed_hosts: frozenset[str],
         ready: Callable[[], Awaitable[bool]],
         live: LedgerAnnouncementsInterface,
+        pairing: HubPairingInterface | None = None,
     ) -> FastAPI:
         buckets: dict[str, TokenBucket] = {}
 
@@ -395,6 +420,68 @@ class HubAppFactory:
             caller: who, path: str, after: Annotated[int, Query(ge=0)] = 0
         ) -> JSONResponse:
             return JSONResponse(service.lane_tail(caller, path, after))
+
+        def paired() -> HubPairingInterface:
+            if pairing is None:
+                raise HTTPException(status_code=503, detail="pairing is not enabled on this hub")
+            return pairing
+
+        def host_only(caller: HubPrincipal) -> None:
+            # Only the host pairs, lists and revokes: a device can never widen its own
+            # grant, pair another device, or revoke one (SD-01, 12.j).
+            if caller.name != HOST_PRINCIPAL.name:
+                raise HubForbidden(f"{caller.name} may not manage pairings; only the host may")
+
+        @app.post(
+            f"{v1}/pairing/offers",
+            tags=["pairing"],
+            summary="Offer a 6-digit pairing code for two minutes (the host only).",
+            responses={**REFUSED, 503: {"description": "Pairing is not enabled."}},
+        )
+        async def offer(caller: who, body: OfferBody) -> JSONResponse:
+            host_only(caller)
+            return JSONResponse(paired().offer(frozenset(body.scopes)))
+
+        @app.post(
+            f"{v1}/pairing/claim",
+            tags=["pairing"],
+            summary="Claim a pairing code: a device's key, shown once.",
+            responses={**REFUSED, 503: {"description": "Pairing is not enabled."}},
+        )
+        async def claim(request: Request, body: ClaimBody) -> JSONResponse:
+            # No principal yet: this is how a device gets one. Every claim draws from the
+            # small per-address bucket, right or wrong, so guessing is slow as well as
+            # capped (`MAX_WRONG_CLAIMS`).
+            address = request.client.host if request.client else "unknown"
+            if not spend(f"claim:{address}", FAILED_BURST, FAILED_PER_SECOND):
+                raise HTTPException(status_code=429)
+            return JSONResponse(await paired().claim(body.code, body.name))
+
+        @app.get(
+            f"{v1}/devices",
+            tags=["pairing"],
+            summary="The paired devices, without their keys (the host only).",
+            responses={**REFUSED, 503: {"description": "Pairing is not enabled."}},
+        )
+        async def devices(caller: who) -> JSONResponse:
+            host_only(caller)
+            return JSONResponse(paired().devices())
+
+        @app.delete(
+            f"{v1}/devices/{{device_id}}",
+            tags=["pairing"],
+            summary="Revoke a device: refused from its next request (the host only).",
+            responses={
+                **REFUSED,
+                404: {"description": "No such paired device."},
+                503: {"description": "Pairing is not enabled."},
+            },
+        )
+        async def revoke(caller: who, device_id: str) -> JSONResponse:
+            host_only(caller)
+            if not await paired().revoke(device_id):
+                raise HTTPException(status_code=404, detail=f"no paired device {device_id}")
+            return JSONResponse({"revoked": device_id})
 
         async def admitted(socket: WebSocket) -> HubRequest | None:
             """The socket's request, when its Host and Origin are ones this hub answers.

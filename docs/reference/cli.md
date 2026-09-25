@@ -144,8 +144,25 @@ one the hub answers is refused with 421 (the DNS-rebinding defence), and no resp
 carries a CORS header. The routes, scopes and refusals are in the
 [hub API reference](hub-api.md).
 
-While it runs it keeps `<state_dir>/serving.json` (address, port, process id), which
-`vibey doctor`'s `hub-exposure` line reads.
+While it runs it keeps `<state_dir>/serving.json` (address, port, process id, and whether
+it serves TLS), which `vibey doctor`'s `hub-exposure` line and `vibey hub` read.
+
+With `[hub] lan = true` the hub serves its own self-signed certificate (made on first run
+in `<state_dir>`, owner-only), prints its SHA-256 fingerprint, and advertises itself on
+the LAN as `_vibey._tcp` (mDNS/DNS-SD) with that fingerprint. On loopback it serves plain
+HTTP and announces nothing.
+
+## `vibey hub`
+
+The host's side of pairing devices with the running hub (ADR-0068). Each subcommand
+reads `<state_dir>/serving.json`, presents the host token, and -- when the hub serves
+TLS -- trusts only the hub's own certificate. With no hub running they exit 3.
+
+| Command | What it does |
+|---|---|
+| `vibey hub pair --scope SCOPE [--scope SCOPE ...]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
+| `vibey hub devices` | Lists the paired devices: id, name, scopes. Never a key. |
+| `vibey hub revoke DEVICE_ID` | Revokes a device. It is refused from its very next request. |
 
 ## `vibey projects`
 

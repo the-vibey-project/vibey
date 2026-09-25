@@ -12,12 +12,14 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
+    from vibey.infrastructure.hub.tls import HubTls
+
 
 @runtime_checkable
 class HubServerInterface(Protocol):
     """Serves an ASGI app on one address until stopped."""
 
-    async def serve(self, app: FastAPI, *, host: str, port: int) -> None:
+    async def serve(self, app: FastAPI, *, host: str, port: int, tls: HubTls | None = None) -> None:
         """Returns when the server stops."""
         ...
 
