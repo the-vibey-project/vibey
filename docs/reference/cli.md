@@ -586,6 +586,47 @@ longer than 200 characters or holds control or formatting characters, or
 does not know, because nothing can be recorded under it. Showing that project
 still works.
 
+## `vibey ultra`
+
+ULTRA is effort without a ceiling ([ADR-0063](../architecture/decisions/0063-ultra-effort-without-a-ceiling.md)).
+While a project's ULTRA run is on, every BUILD pass runs at `ULTRA`: the attempt
+ladder is not consulted, so a pass never parks for running long, and qwenloop,
+gptossloop and claudeloop get no `--max-turns`. A pass that ends with a done
+verdict is a checkpoint. The checks (`build.verify`) are enqueued as always, an
+`UltraPassCompleted` event is recorded, and the next pass is enqueued after the
+checks, under its own job key. Two things end the run: the operator's Stop, and
+the budget brake at a declared cap. A run with no dollar cap parks an
+`ultra_needs_cap` gate unless no cap was declared (`vibey budget no-cap`).
+
+| Subcommand | Option | What it does |
+|---|---|---|
+| `ultra start [PROJECT_ID]` | `--by NAME` | Starts the run: records a trusted `UltraStarted` event. |
+| `ultra stop [PROJECT_ID]` | `--by NAME` | Stops it: records `UltraStopped`. No further pass starts; a queued pass ends without running. |
+| `ultra status [PROJECT_ID]` | `--json` | Running or stopped, passes completed, the dollar cap, this cycle's spend and the measured cost per hour (`null`, shown as "unknown", when nothing has been measured). |
+
+Each event records `by`, `account` and `device` (the host's name). These
+commands run only on the host.
+
+### `vibey budget no-cap` and `vibey budget cap`
+
+`no-cap` declares no cap for ULTRA runs through sub-doctrine 8.b's whole path,
+in a terminal on the host:
+
+1. a full-screen warning with the measured cost per hour ("unknown" when
+   nothing has been measured);
+2. the typed phrase `I accept unlimited spending`;
+3. a second warning, whose default answer keeps a cap;
+4. the declaration: `[budget] ultra_no_cap = true` in `--toml` (default
+   `./vibey.toml`), and a trusted `UltraNoCapChanged` ledger event naming who,
+   when and which device.
+
+Run off a terminal it refuses with exit 2 and records nothing. A wrong phrase
+exits 1. The default answer to the second warning prints `Kept the cap` and
+exits 0. No environment variable can declare it. `cap` withdraws the
+declaration in one command: it records `UltraNoCapChanged` with `enabled:
+false`, and sets the key to `false` when the file exists. The worker reads only
+the ledger event. The file records the declaration.
+
 ## `vibey ledger`
 
 Bare `vibey ledger` prints help. Subcommand:
