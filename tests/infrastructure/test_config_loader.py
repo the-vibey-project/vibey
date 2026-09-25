@@ -258,8 +258,8 @@ def test_the_child_environment_tables_are_runtime_tables(tmp_path: Path) -> None
         ("[gates]\ntimeout_seconds = -1\n", "gates.timeout_seconds"),
         ('[engine_environment]\nallow = ["PGPASSWORD"]\n', "engine_environment.allow: PG"),
         (
-            '[engine_environment.engines]\nopencode = ["APP_DATABASE_URL"]\n',
-            "engine_environment.engines.opencode: APP_DATABASE_URL",
+            '[engine_environment.engines]\ncodexloop = ["APP_DATABASE_URL"]\n',
+            "engine_environment.engines.codexloop: APP_DATABASE_URL",
         ),
         (
             '[engine_environment.engines]\nnot-an-engine = ["X"]\n',

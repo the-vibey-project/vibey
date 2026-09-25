@@ -44,6 +44,7 @@ from vibey.domain.engine import (
     RENAMED_ENGINES,
     REPEALED_FROM_LOOPS,
     EngineDescriptor,
+    EngineId,
     Loop,
 )
 from vibey.domain.phase import Phase
@@ -66,8 +67,12 @@ class LoopCatalog:
         phase_base: Mapping[Phase, Effort] = PHASE_BASE_EFFORT,
         build_ladder: Sequence[Effort] = BUILD_LADDER,
         exhausted_after: int = BUILD_LADDER_EXHAUSTED,
+        repealed: frozenset[EngineId] = REPEALED_FROM_LOOPS,
+        renamed: Mapping[EngineId, str] = RENAMED_ENGINES,
     ) -> None:
         self._efforts = tuple(efforts)
+        self._repealed = repealed
+        self._renamed = renamed
         self._phase_base = phase_base
         self._build_ladder = tuple(build_ladder)
         self._exhausted_after = exhausted_after
@@ -111,14 +116,14 @@ class LoopCatalog:
 
     def _engine(self, context: EngineContext) -> LoopEngine:
         descriptor = context.descriptor
-        repealed = descriptor.engine_id in REPEALED_FROM_LOOPS
+        repealed = descriptor.engine_id in self._repealed
         notes: tuple[str, ...] = ()
         if repealed:
             notes = (
                 f"sub-doctrine 8.b repeals {descriptor.engine_id.value} from both loops; "
                 f"reported here as its descriptor says, tier {descriptor.tier.value}",
             )
-        renamed = RENAMED_ENGINES.get(descriptor.engine_id)
+        renamed = self._renamed.get(descriptor.engine_id)
         if renamed is not None:
             notes = (*notes, renamed)
         return LoopEngine(

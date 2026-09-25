@@ -62,7 +62,7 @@ describe('CatalogueParser', () => {
     expect(catalogue.default_loop).toBe('sovereignloop');
     expect(catalogue.paid_default_engine).toBe('claudeloop');
     expect(catalogue.ladder.build_attempts).toEqual(['LOW', 'LOW', 'STANDARD', 'STANDARD', 'HIGH', 'HIGH']);
-    expect(catalogue.loops[0]?.engines.map((engine) => engine.engine_id)).toEqual(['opencode', 'gptossloop', 'qwenloop', 'claudeloop-local']);
+    expect(catalogue.loops[0]?.engines.map((engine) => engine.engine_id)).toEqual(['gptossloop', 'qwenloop', 'claudeloop-local']);
     const gptossloop = catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'gptossloop');
     expect(gptossloop?.turns_flag).toBe('--max-turns');
     expect(gptossloop?.capabilities.images).toBe(false);
@@ -70,11 +70,8 @@ describe('CatalogueParser', () => {
     const codex = catalogue.loops[1]?.engines.find((engine) => engine.engine_id === 'codexloop');
     expect(codex?.turns_flag).toBeUndefined();
     expect(codex?.supports_cwd_flag).toBe(false);
-    const opencode = catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'opencode');
-    expect(opencode?.notes?.join(' ')).toContain('repeals');
-    expect(opencode).toMatchObject({ repealed: true, events: { envelope: 'event_type' } });
-    expect(opencode?.on_by_default).toBe(false);
-    // ADR-0060: gptossloop is the sovereign default, on unless switched off; qwenloop is its
+    expect(catalogue.loops.flatMap((loop) => loop.engines).some((engine) => engine.repealed)).toBe(false);
+    // ADR-0061: gptossloop is the sovereign default, on unless switched off; qwenloop is its
     // opt-in Qwen twin, same runner and protocol, its own settings, and no model from vibey.
     expect(gptossloop).toMatchObject({
       binary: 'gptossloop',
@@ -106,7 +103,7 @@ describe('CatalogueParser', () => {
     ]);
   });
 
-  it('reads on_by_default, and an engine a producer from before ADR-0060 lists as not on by default', () => {
+  it('reads on_by_default, and an engine a producer from before ADR-0061 lists as not on by default', () => {
     const older = parse(
       variant((value) => {
         for (const engine of value.loops[0].engines) {
@@ -116,7 +113,7 @@ describe('CatalogueParser', () => {
     );
     expect(older.loops[0]?.engines.every((engine) => !engine.on_by_default)).toBe(true);
     expect(() => parse(variant((value) => (engineIn(value, 'gptossloop').on_by_default = 'yes')))).toThrow(
-      'loops[0].engines[1].on_by_default: is not true or false',
+      'loops[0].engines[0].on_by_default: is not true or false',
     );
   });
 
@@ -176,10 +173,11 @@ describe('the #1131 review amendments', () => {
       variant((value) => {
         value.loops[0].engines[0].notes = ['first', '  ', 'second'];
         value.loops[0].engines[1].notes = 'one line';
-        value.loops[0].engines[2].notes = null;
+        value.loops[1].engines[0].notes = null;
       }),
     );
-    expect(catalogue.loops[0]?.engines.map((engine) => engine.notes)).toEqual([['first', 'second'], ['one line'], undefined, undefined]);
+    expect(catalogue.loops[0]?.engines.map((engine) => engine.notes)).toEqual([['first', 'second'], ['one line'], undefined]);
+    expect(catalogue.loops[1]?.engines[0]?.notes).toBeUndefined();
   });
 
   it('reads an engine a producer from before the repeals lists as not repealed', () => {
@@ -196,12 +194,12 @@ describe('the #1131 review amendments', () => {
   it('never chooses a repealed engine in auto mode, even where by_effort lists it', () => {
     const catalogue = parse(
       variant((value) => {
-        const opencode = value.loops[0].engines.find((engine: Record<string, any>) => engine.engine_id === 'opencode');
-        opencode.enabled = true;
-        opencode.base_weight = 100;
-        opencode.efforts[1].achieved = 'LOW';
+        const repealed = value.loops[0].engines.find((engine: Record<string, any>) => engine.engine_id === 'claudeloop-local');
+        repealed.enabled = true;
+        repealed.repealed = true;
+        repealed.base_weight = 100;
         value.loops[0].by_effort.LOW = [
-          { engine_id: 'opencode', model: null, achieved: 'LOW' },
+          { engine_id: 'claudeloop-local', model: null, achieved: 'LOW' },
           { engine_id: 'gptossloop', model: 'gpt-oss:20b', achieved: 'LOW' },
         ];
       }),
@@ -440,9 +438,18 @@ describe('LoopSelector', () => {
     expect(() => selector.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'claudeloop/opus' }))).toThrow(
       'does not take a model by name',
     );
-    expect(() => selector.select(request({ engine: 'nosuch' }))).toThrow('its engines are opencode, gptossloop, qwenloop, claudeloop-local');
+    expect(() => selector.select(request({ engine: 'nosuch' }))).toThrow('its engines are gptossloop, qwenloop, claudeloop-local');
     expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow('switch it on with VIBEY_FEATURE_CLAUDELOOP_LOCAL');
-    expect(() => selector.select(request({ engine: 'opencode' }))).toThrow('opencode is repealed by the canon (8.b): it is listed, but it never runs');
+    const repealed = new LoopSelector(
+      parse(
+        variant((value) => {
+          engineIn(value, 'claudeloop-local').repealed = true;
+        }),
+      ),
+    );
+    expect(() => repealed.select(request({ engine: 'claudeloop-local' }))).toThrow(
+      'claudeloop-local is repealed by the canon (8.b): it is listed, but it never runs',
+    );
     expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow(/switched off; switch it on with /);
     const noSwitch = new LoopSelector(
       parse(

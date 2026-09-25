@@ -21,7 +21,14 @@ model and deadline fixed, successful throughput stayed between 0.99 and 2.00
 generations per minute while offered concurrency rose sixteen-fold. The regularity
 yields a zero-shortfall time-to-completion as a testable prediction. We state what
 would falsify it and what it does not cover, and we argue from the same records that
-the scarce inputs were governance and correct judgment, not production.
+the scarce inputs were governance and correct judgment, not production. For the 3.0.0
+release we add the database's own enforcement of the ledger invariant, with what it
+does not cover; a priority lane, derived rather than remembered, that orders both
+queues without preempting or admitting past any gate; an engine environment built from
+an allow-list; and a local reviewer that refuses a verdict on a prompt it did not read
+in full. We also report an audit of a local storm in which one model slot took 96.7%
+of lane time and no lane reached the integration branch without a human step, and in
+which adversarial verifiers refuted 16 of the audit's 18 leading claims.
 
 *Artifacts.* This paper is typeset from `docs/paper.md` and published as
 [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf),
@@ -67,9 +74,10 @@ merging and release; `vibey-skills`, a retrieval engine over a skill library; an
 own paper. This paper consolidates them. [Fig. 1](#fig:family-tree) shows the family as
 one distribution, with the Python floor each tenant keeps. Its contributions are:
 
-- the ledger invariant, the no-loss handoff gate, the queue semantics and the gated six-phase machine, with their soundness arguments;
-- a session-runner core shared by six engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks;
-- the exact-head release calculus, with a termination bound and a recorded production counterexample;
+- the ledger invariant, the no-loss handoff gate, the queue semantics and the gated six-phase machine, with their soundness arguments, and the database's enforcement of the first, stated with what it does not cover;
+- a priority lane shared by both queues whose contents are derived rather than remembered, which orders work without preempting it or admitting it past any gate, and reapers that decide a hang by measurement;
+- a session-runner core shared by six engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks, and an environment every engine starts from by allow-list;
+- the exact-head release calculus, with a termination bound and a recorded production counterexample, and its extension from the revision a verdict evaluated to the input the evaluating model actually read;
 - Convergence-Driven Development (CDD), an enclosing loop above Specification-Driven
   Development and Test-Driven Development that measures convergence at nested delivery
   scopes, models project atoms and chemical structures, and recognizes a suite of
@@ -77,7 +85,8 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
 - deterministic, fail-closed retrieval and bootstrap components built on the same append-before-act discipline;
 - Biodigitology, a name for the study of digital life, with operational criteria
   that distinguish software organisms from biological organisms or sentient minds;
-- a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it.
+- a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it;
+- an audit of a local storm that locates its binding constraint, its conversion losses and its unenforced controls, and a factual account of merges that ran ahead of review, both read as evidence that the scarce input is judgment.
 
 ```latex
 \begin{figure*}[!t]
@@ -162,10 +171,10 @@ the five layers fail the build under 100% branch coverage.
   \node[vibeylanelabel] at (0.05,5.9) {cli and tui};
   \node[vibeylanelabel] at (0.55,4.85) {infrastructure};
   \node[vibeylanelabel] at (1.05,3.8) {application};
-  \node[vibeypill,anchor=north east] at (8.15,5.85) {2,677 + 590 lines $\cdot$ cli 100\% floor $\cdot$ tui exempt};
-  \node[vibeypill,anchor=north east] at (7.65,4.8) {15,296 lines $\cdot$ 100\% branch floor};
-  \node[vibeypill,anchor=north east] at (7.15,3.75) {10,276 lines $\cdot$ 100\% branch floor};
-  \node[vibeypill,anchor=north] at (4.1,1.85) {8,341 lines $\cdot$ 100\% branch floor};
+  \node[vibeypill,anchor=north east] at (8.15,5.85) {3,159 + 590 lines $\cdot$ cli 100\% floor $\cdot$ tui exempt};
+  \node[vibeypill,anchor=north east] at (7.65,4.8) {16,842 lines $\cdot$ 100\% branch floor};
+  \node[vibeypill,anchor=north east] at (7.15,3.75) {10,562 lines $\cdot$ 100\% branch floor};
+  \node[vibeypill,anchor=north] at (4.1,1.85) {9,296 lines $\cdot$ 100\% branch floor};
   \node[vibeynote,anchor=west,align=left] at (1.1,4.35) {PostgreSQL, the bus, telemetry};
   \node[vibeynote,anchor=west,align=left] at (1.6,3.3) {services, handoff, wind-down};
   \node[vibeynote,anchor=west,align=left] at (0.6,5.4) {the command line and the terminal UI};
@@ -195,12 +204,91 @@ pure $f$, independent of any vendor session.
 \end{invariant}
 ```
 
-The invariant is enforced, not conventional: the event relation carries database
-rules that turn every `UPDATE` and `DELETE` into a no-op, and the per-project sequence
-number is claimed inside the same transaction as the insert, so every ledger range
-has a well-defined digest. Corrections are new events that supersede prior ones. The
-function $f$ is a set of pure projections (open items, the decision log, the cost
-report) computed from the event sequence alone.
+The per-project sequence number is claimed inside the same transaction as the insert,
+so every ledger range has a well-defined digest. Corrections are new events that
+supersede prior ones. The function $f$ is a set of pure projections (open items, the
+decision log, the cost report) computed from the event sequence alone.
+
+**Enforcement, and what it does not cover.** Until 3.0.0 the invariant held against
+vibey's own queries and against little else. It rested on two `DO INSTEAD NOTHING`
+rules on the partitioned parent `event`, and ADR-0055 records what a scratch database
+with every migration applied (PostgreSQL 18) did on 2026-09-24 when addressed as the
+role vibey connected as: an `UPDATE` of `event` changed nothing, silently; an `UPDATE`
+and a `DELETE` addressed to the default partition changed and deleted rows, because a
+rule on a partitioned parent does not fire for a statement addressed to a partition;
+`TRUNCATE event` emptied the ledger, because rules never fire on `TRUNCATE`; and after
+`DISABLE RULE` an update went through. That role owned the table, and in the Helm
+chart it was also the image's superuser. The same DSN had reached every engine session
+(see *What an engine may see*), so a session steered by text a model read held the
+means to erase the ledger unrecorded.
+
+The fix (#1100, ADR-0055) has two parts, because neither alone is a boundary. First,
+triggers replace the rules (migration 0016): a `BEFORE UPDATE OR DELETE` row trigger
+and a `BEFORE TRUNCATE` statement trigger refuse every rewrite, the owner's included,
+with an error rather than a silent no-op. PostgreSQL clones the row trigger onto every
+partition, present and future, but not the statement trigger, so a function attaches
+the `TRUNCATE` guard to every partition on every migration run. Second, the roles
+split. The owner's DSN runs migrations and nothing else; the application role, which
+every worker, command, operator and scaler connects as, owns nothing and holds on
+`event` only `SELECT` and `INSERT`, with no `DELETE` or `TRUNCATE` anywhere. The grants
+are declared in code, derived from the application's own queries, and reconciled on
+every migration run, so a grant added by hand does not survive the next migration run. An
+install still on one role is reported rather than stranded: `vibey doctor` fails its
+`ledger-guard` check, the worker says so on every start, and `vibey migrate` exits 1.
+The whole test suite now runs as a restricted application role; its first run found
+35 failures, none a missing grant in application code: all were test setup doing
+owner-only work, or tests that had asserted the old silent no-op (#1100).
+
+The guard's reach is narrower than the word *append-only* suggests, and we state it.
+As the application role, the independent review of #1100 tried updates, deletes and
+truncations of the parent and of partitions, disabling, re-enabling as replica and
+dropping the triggers, detaching and attaching partitions, and switching the session
+to replica mode, and every one was refused (review probes of 2026-09-24; the merged
+tests pin the same refusals). The triggers refuse the owner's rewrites of rows, not
+the owner's schema changes: the owner can still disable a trigger, drop a partition,
+detach one and delete from it, or truncate a partition created since the last
+`vibey migrate`, so the owner's DSN is the thing to guard. Event triggers that would
+refuse such schema changes are future work, because installing them needs a
+superuser. A superuser can do anything. The application role cannot rewrite what is
+there, but it can still insert into `event` directly, so it can forge an event's
+provenance, sequence number or production time, and it can update the sequence
+counter `event_seq`; an append function running with the owner's rights, as the only
+write path, would close that, and it is the next step, not a done one (ADR-0055,
+*Not closed*). And the split protects the ledger only once the owner and every
+superuser need a password: a local PostgreSQL that trusts its socket, the common
+developer default, lets any process running as the right operating-system user
+connect as a superuser with no DSN at all. ADR-0055 records exactly that on the
+operator's machine, and #1100 shipped with a `local-auth` check in `vibey doctor`
+that fails when such a connection is let in, passes only when every attempt is
+refused and the authentication rules read clean, and otherwise reports unknown,
+never a pass; changing the server's authentication rules is left to the operator
+(`SECURITY.md` §7). Same user, same authority: no grant separates processes of one
+operating-system account.
+
+The same review found the design sound and five defects in its first implementation,
+two of them rated high, and #1100 had merged while it said *not yet* (#1112's
+description). #1112 closed all five and merged at 15:18Z on 2026-09-24 (ADR-0055, its
+amendment; `CHANGELOG.md`). The worst: where the application role may create objects in
+the `public` schema, the PostgreSQL 14 default and that of any database upgraded from
+it, it could plant an operator that the owner's unqualified catalog query resolved
+during `vibey migrate`, run code as the owner, and leave a backdoor that erased the
+ledger while `migrate` reported the guard in force; ADR-0055, as first merged, had
+judged that privilege harmless to the ledger. Now migration 0017 pins both guard
+functions to `search_path = pg_catalog, pg_temp`, the owner's session is pinned the
+same way and names every catalog operator by schema, `vibey migrate` takes `CREATE` on
+`public` away from every role but its owner before any migration runs, and
+`ledger-guard` fails when the application role may create objects, owns any, may call
+a `SECURITY DEFINER` function that runs as the owner or a superuser, or may set
+`session_replication_role`. The second: the owner's DSN reached any process whose
+shell exported it, because `build_app()` read it and the README exported it; now only
+`vibey migrate` reads it, given for that one command. The other three: the Helm chart
+gave the owner's credentials to Plane and Infisical, which now connect as roles of
+their own; an install with an existing Secret could be stranded on upgrade, and is now
+unchanged until it names an owner key; and concurrent reconciles failed, and now take
+the migration lock. Migration 0017 is new rather than an edit of 0016, because a
+migration that may already have been applied is never rewritten. #1112's description
+promised an independent re-review before the operator's merge; no verdict on the
+merged result is recorded in a tracked source, so we report the fix, not a review of it.
 
 Crash recovery and engine handoff follow as corollaries: a successor engine
 re-derives context from the ledger alone, so a credit exhaustion on $e_i$ between
@@ -208,7 +296,7 @@ turns of an item reschedules the item onto $e_j$ with the open-question set inta
 
 ```latex
 \begin{plainwords}
-The ledger is a diary written in pen. You can add a page, but you can never tear one out or rub anything out. If you made a mistake, you write a new page that says so. Because the diary is the only source of truth, any helper can read it and know exactly what is going on, even a helper that has never seen the project before.
+The ledger is a diary written in pen. You can add a page, but you can never tear one out or rub anything out. If you made a mistake, you write a new page that says so. Because the diary is the only source of truth, any helper can read it and know exactly what is going on, even a helper that has never seen the project before. For a long time the promise that pages could not be torn out was kept by good manners: anyone holding the main key could still tear them out. Now the database itself refuses, the helpers are given a key that can only read and add pages, and the one key that could switch the refusal off is kept away from them. A helper holding the add-only key can still add a page that lies about who wrote it, and closing that is the next job. It is still not magic: someone logged in as the owner of the computer can do almost anything, and the paper says so.
 \end{plainwords}
 ```
 
@@ -322,25 +410,154 @@ which yields two properties without any global lock: *mutual exclusion per item*
 worker never waits on a peer's claim, so throughput scales as
 $\min(|Q|, |\mathrm{workers}|)$).
 
-Within a project, claims are ordered by priority descending, then by the earliest
-permitted run time, then by id, and they exclude items whose dependencies have not
-succeeded. Within one priority class an item can be bypassed only while it is held,
-and every hold is bounded by a lease: a claim sets the lease expiry to
-$\mathrm{now} + L$, a live worker renews it, and a reaper returns an expired lease to
-the ready state while the item's attempts remain, and parks it for a person once they
-are spent (ADR-0056). A crashed worker therefore costs at most $L$ of delay and never a
-lost item, and an item that crashes every worker it reaches is bounded rather than
-retried forever. Across priority classes the discipline is strict priority, not arrival
-order. Above every class sits the bump (ADR-0054): the operator -- the account owning
-the project's reviewed configuration -- or a source that configuration declares, may
-move a waiting item to the front, where bumped items are claimed first-in-first-out by
-a sequence drawn at the bump, ahead of all un-bumped work. A bump orders and never
-admits: it neither preempts a held lease nor lets an item past a dependency that has
-not succeeded, whose own dependencies it pulls forward instead. Because workers die and leases expire, every job is idempotent under replay.
+Within a project, claims exclude items whose dependencies have not succeeded, and are
+ordered first by the priority lane described below, then by the earliest permitted run
+time, then by id. (A `priority` column keeps its place in the order, but since 3.0.0
+no request can set it, so it is zero for every job and orders nothing; ADR-0054.) An
+item can be bypassed only while it is held, and every hold is bounded by a lease: a
+claim sets the lease expiry to $\mathrm{now} + L$, a live worker renews it, and a reaper
+returns an expired lease to the ready state while the item's attempts remain, and parks
+it for a person once they are spent (ADR-0056). A crashed worker therefore costs at most
+$L$ of delay and never a lost item, and an item that crashes every worker it reaches is
+bounded rather than retried forever. Because workers die and leases expire, every job is
+idempotent under replay.
+
+**The priority lane.** The operator asked that an item pushed into the queue run next
+rather than wait behind the work in front of it, and that both of the family's queues
+do so: vibey's PostgreSQL job queue and the storm's lane queue
+(`docs/plans/qwenstorm-3.0.0/tools/storm_queue.py`). ADR-0054 states one contract for
+both (#1089 and #1092 for the storm, #1091 and #1095 for the job queue, with follow-ups
+#1102, #1103, #1111 and #1122). *Next* means next after whatever is running: a bump
+never preempts a claimed or leased item and never touches its lease, as 8.c requires. It
+never admits either. Phases, human gates, admission, a capacity deferral, the budget
+brake and the handoff gate still decide whether an item may run; a bump decides only
+which runnable item runs first, and it never makes an item runnable before its
+dependencies finish. The lane's contents are not remembered but derived.
+
+```latex
+\begin{invariant}[Derived priority lane]
+Let $B$ be the unfinished items bumped, or enqueued prioritised, by name and not since
+un-bumped. The lane is exactly $B$ together with every unfinished transitive dependency
+of a member of $B$, ordered first-in-first-out by when each item first entered the lane.
+Un-bumping $x$ removes $x$ from $B$, and is refused, naming them, while another member
+of $B$ depends on $x$.
+\end{invariant}
+```
+
+A named item that ends cancelled or failed therefore leaves $B$ by the derivation
+itself, since only an unfinished named item is live. The one exception to the
+invariant is a job this vibey cannot write, because a newer vibey wrote its phase or its
+state: it is left in the lane unwritten, together with every job it still needs, and
+named in the request's record rather than cleared, and an un-bump is refused while such
+a job needs its target, as it is while a named item does (ADR-0054, item 6).
+
+The derived form replaced a first rule, *un-bump undoes what that bump moved*, after an
+independent review of #1091 found it could leave an orphan: with $x$, $d$, and $a$ and
+$b$ both needing $d$, bumping $a$ and $b$ and then un-bumping both left $d$ in the lane
+with nothing needing it. Under the invariant nothing this vibey can write remains that
+no named item needs: every admitted request re-derives the lane and sweeps what is no
+longer derived, including what a named job left behind when it was cancelled or failed
+(#1103), while a refused request changes nothing but its own record. In the job queue
+the lane is a column set from a sequence drawn at the bump, not a timestamp, because one
+bump moves several rows in one transaction and `now()` is a single instant for all of
+them (10.g), and not a large priority value, because first-in-first-out would then need
+a counter disguised as a weight.
+
+Only two callers may bump or un-bump: the operator, meaning the operating-system
+account that owns the queue's reviewed declaration, checked by the process's user id
+against that file's owner rather than by a name typed on a command line; and an
+automation that names itself with a source the reviewed declaration lists, running as
+that same account, since a declared name is not a credential. Nothing reads the forge
+to decide priority, so no label, issue or comment from anyone can move work forward
+(12.j). The grant separates operating-system accounts, not the processes of the
+operator's own account, and ADR-0054 says so: a process running as that account
+reaches the queue below the grant whenever it can reach the database. Since #1093 an
+engine's own environment no longer carries the means, but a process of that account can
+still reach a local server that trusts its socket (see *What an engine may see*). Every
+request is recorded whatever became of it, whether it moved something, moved nothing or
+was refused, and authorisation comes before any lookup, so a stranger asking about any
+item, real or not, is refused and recorded without learning anything about it. In vibey
+the record is a ledger event written in the same transaction as the row change. In the
+storm it is an append-only priority log whose replay is the lane order, and after its
+post-merge review (#1092, #1102) that log is loss-evident, not tamper-evident
+(`storm_queue.py`, lines 343--376): a witness outside the log records its length, and a
+log found shorter than its witness, or a witness that is empty or corrupt, makes the
+order *unknown* rather than silently falling back to no priority. A refused request can
+no longer append to such a log and re-witness the loss as normal, and a deliberate reset
+keeps the old file under an abandoned name rather than deleting it. The same account can
+still rewrite the log and its witness together, and the code says so.
+
+The rule was tested adversarially as well as by unit tests. A Hypothesis state machine
+runs random, overlapping bumps and un-bumps with jobs finishing, failing or being
+cancelled part-way, and moved into phases and states a newer vibey wrote, and asserts
+after every step that the stored lane equals the derivation, except the jobs this vibey
+cannot write and what they still need, and that un-bumping every named job clears the
+rest; breaking the derivation on purpose makes it fail (#1095, #1103). In the job queue,
+five workers claiming at once under `SKIP LOCKED` take exactly the first five in order
+(the merged repository tests). The reviewers' own probes, which are review records
+rather than tracked tests, found no double claim with five workers claiming while three
+reorderers made 450 random bumps and un-bumps against a real database (review of
+#1095), and no false *order unknown* in more than 9,000 concurrent reads of the storm's
+log (review of #1102).
+
+**Reapers by measured rule.** The lease reaper is the queue's oldest reaper; 3.0.0
+extends the idea on the rule that a hang is decided by measurement and that evidence
+is kept before anything is killed. The motivating incident: one pre-push test run of
+the storm sat at 0% CPU for 39 minutes, every worker asleep, while it held the storm's
+shared push lock, and every other push queued behind it; a human-approved kill released
+it, and nothing recorded which test had hung (#1105; `CHANGELOG.md`). The push-gate
+reaper now acts only on one of three measured conditions: the lock's holder and its
+process group are gone; the holder's own process group used less than a declared number
+of CPU-seconds over a declared window, measured from samples kept across passes and
+never from a single snapshot, with an unreadable process table reported as unknown
+rather than idle; or the push has held the lock past a declared ceiling. Holds and idle
+windows are counted in awake time, with the boot identifier, so a laptop's sleep is
+never taken for a hang (#1120). Before it signals anything it writes the owner record,
+the decision, the process tree, the log's tail and the stacks to an evidence directory,
+and it appends one line per reap to an append-only log. It is designed to signal only
+the push's own process group, but that is not yet what it guarantees: for a lock taken
+without an owner record, which #1107 traces to its push by process, the independent
+re-review of #1120 found that a reap can signal processes other than the push. Inside
+the suite, `pytest-timeout` with a `faulthandler` dump makes a hung test dump every
+thread's stack and then fail by name, so the next such hang names itself. Wall time
+alone is not the rule, because a slow test that is still computing is not a hung one.
+The reaper's own schedule and the trace of locks without an owner record (#1107) and
+the fixes from its first independent review (#1120) are merged. The re-review of #1120
+then found seven more defects, the ownerless-lock signal the worst, and at the cutoff
+their fixes were saved on a branch and not merged
+(`docs/architecture/evidence/release-gate-2026-09-24.md`).
+
+The same rule now covers everything a queue guards (#1108, with the post-merge review
+fixes of #1119; ADR-0056, whose status is *proposed*). ADR-0056 began with an inventory
+at its commit. The bus port was wired but idle, and it acknowledges a message as it is
+taken, so a consumer that dies after taking one loses it; no reaper can recover that,
+and the record states it rather than fixing it. Plane's task broker on the same RabbitMQ
+was live. The RabbitMQ job-queue dispatch and loop-service queues of ADR-0044 were
+declared and not wired. And the PostgreSQL job queue was live, with a reaper that
+re-readied an expired lease forever. Five conditions are each a measurement against a
+declared threshold, judged alike for both backends: a hung handler, meaning a delivery
+held past the broker's consumer timeout (30 minutes broker-wide, six hours by policy on
+vibey's own queues) or a lease past its expiry, which is requeued; work held with
+nobody holding it, which is surfaced; a poison item, handed out as often as its limit
+allows (by default seven attempts in PostgreSQL, and a delivery limit of 20 set by
+policy on the broker), which is parked behind a person's gate with one attempt
+refunded; ready work nobody has taken for 900 s, which is surfaced; and a dead letter on
+a queue vibey owns, which becomes a parked job and a gate whose answer replays or
+dismisses it, and is never deleted, while one on a queue vibey does not own is only
+surfaced. Every reap is a `QueueReaped` ledger event, and a lease reap writes it in the
+same transaction as the row it moves. The requirement behind this, that everything a
+queue holds has a reaper, is conduct, so ADR-0056 owes a sub-doctrine; the text it
+proposes had not been ratified at the cutoff. Nor had the second independent review of
+#1108 and #1119 been answered. At the cutoff its findings were open: one bad lease row
+halts every reap, and the broker policy is reported as verified when it is not in force,
+both rated high; the reaper also ignores `enabled = false`, a gate lookup breaks the
+BUILD budget loop, and a password can reach a log (the review record, not tracked;
+`docs/architecture/evidence/release-gate-2026-09-24.md`). No commit after #1119 changed
+the reaper's code on `develop` up to `6c38daf9`.
 
 ```latex
 \begin{plainwords}
-Jobs wait in a line inside a database. A helper takes the job at the front and gets a timer with it, like a library book with a due date. A working helper keeps renewing the timer. If a helper crashes, the timer runs out and the job goes back into the line, so it is never lost. Helpers never wait for each other, so adding helpers makes the line move faster.
+Jobs wait in a line inside a database. A helper takes the job at the front and gets a timer with it, like a library book with a due date. A working helper keeps renewing the timer. If a helper crashes, the timer runs out and the job goes back into the line, so it is never lost, and a job that has crashed its helpers too many times goes to a person instead of round and round. Helpers never wait for each other, so adding helpers makes the line move faster. The owner can now also say ``do this one next''. That job goes to the front, together with anything it needs done first, but it never pulls a job out of a helper's hands and never skips a checkpoint, and only the owner, or a helper the owner has named in writing, may ask. Every such request is written down, even the refused ones. And when a job seems stuck, a caretaker measures whether it is really doing nothing before stepping in, and writes down what it saw first. Some of those caretakers still have known faults, and this paper lists them.
 \end{plainwords}
 ```
 
@@ -1069,6 +1286,107 @@ Every turn, verdict and spend entry of a run is one line of JSON in an append-on
 trail under the run directory, so the runner obeys the same write-ahead discipline
 as the orchestrator, at the scale of one session.
 
+### What an engine may see
+
+A bound on what a run may spend is not a bound on what it may reach. Until 3.0.0 every
+engine process started from a copy of the worker's whole environment with four
+Python variables removed; the DESIGN and DECOMPOSE executors of two engines passed no
+environment at all and so inherited everything; and gate commands, which run
+engine-written code, got the same copy without git's variables (#1093). What reached
+processes that run model-chosen shell commands unattended therefore included the queue
+and ledger DSN, every other `VIBEY_*` secret, libpq's `PG*` variables, GitHub tokens
+and any cloud credential the worker held. With the DSN a session could rewrite queue
+rows, and, before the ledger guard above, the ledger, and nothing would record it.
+ADR-0054 records the same gap from the other side: the bump's grant separates
+operating-system accounts, and an engine holding the DSN could reach the queue below
+it.
+
+The change (#1093) builds every child's environment from an allow-list and never from a
+copy. Every child starts from the system basics only: the path with vibey's own
+virtual environment removed, the home directory and user, the shell, the temporary
+directory, locale, time zone, terminal, certificate bundle, proxy and the XDG
+directories. An engine adds the variables its descriptor declares for its runner and
+vendor CLI and its own credential; anything else reaches an engine or a gate only when
+the project declares it in reviewed configuration. Some names can never be declared by
+anyone: `VIBEY_*` and `PG*` for every child, `GIT_*` for gates, and for engines any name
+containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`; a declaration that tries is
+refused before the project exists and again when the worker is built. The same builder
+now starts the engines' probes, the gates, vibey's own git calls, the desktop notifier,
+the Azure CLI and the skills helper. vibey's own git calls also run with no hook at
+all, with the file-system monitor switched off, and against a repository whose local
+configuration declares a filter or merge driver they refuse to check out or merge,
+because an engine writes to a linked worktree of the repository vibey then runs git
+in, and a planted hook, monitor or driver would run inside vibey's call. A review found
+that planted programs ran with the DSN in hand before this, and that the notifier could
+be made to run injected shell commands; both are reproduced in tests that failed
+before the fix (#1093, review round 2).
+
+This control keeps secrets out of a child's *environment*. It is not a boundary
+between the worker and the processes it starts, because they are the same
+operating-system user, and the security policy that ships with #1093 says so in so
+many words. A local PostgreSQL with `trust` or `peer` authentication needs no DSN at
+all, so on such a machine the allow-list does not stop an engine reaching the queue,
+and `vibey doctor` warns of it. A process running as the worker's user can also read
+the worker's environment through the operating system and any file the worker can
+read. The container boundary that would separate them is implemented but not wired in.
+Running sessions as a separate low-privilege user is the containment that would close
+this, and it is not in 3.0.0.
+
+#1093 merged at 14:37Z on 2026-09-24 (`351c10c4`). Its independent review had found
+six defects, among them vibey's own git calls running programs planted in the
+repository with the DSN in hand (rated critical), the notifier's command injection, and
+engine credentials a project declared never reaching the startup preflight, and each
+was reproduced in a test before it was fixed (#1093's description). A re-review then
+found the skills helper running with the full environment and loading code from the
+working directory; the merged change starts that helper from the system basics as well,
+with Python isolated so that the working directory is not on its import path
+(`src/vibey/infrastructure/skills_context.py`). No verdict on the merged result is
+recorded in a tracked source.
+
+Two allow-lists sit beside it. qwenloop's own `shell` tool, which runs the commands the
+model chooses, has run since #1100 with the system basics only, and never with
+`VIBEY_*`, `PG*`, or a name containing `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD`,
+`CREDENTIAL`, `DSN` or `DATABASE_URL`. Before, it passed everything but names
+containing `KEY` and `TOKEN`, so `VIBEY_PG_URL` and `PGPASSWORD` reached commands a
+model chose (`CHANGELOG.md`). ADR-0055 calls this hygiene rather than a boundary, for
+the reason given above. And what a project adds is declared in reviewed configuration:
+`vibey.toml`'s `[engine_environment]` `allow` for every engine and
+`[engine_environment.engines]` for one, and `[gates]` `env_allow` for gate commands,
+which `vibey new` copies into the project record and the `VibeyProject` spec declares
+as `engineEnvironment` and `gates`; nobody edits the record by hand. 3.0.0 therefore
+asks a project to declare what it used to inherit: agyloop's Vertex credentials, a
+provider key OpenCode reads from the environment, a GitHub token for claudeloop's issue
+import, and any toolchain variable a gate needs (`CHANGELOG.md`).
+
+### The sovereign driver, in progress
+
+The operator asked for an editor that drives the local model directly (#290), with
+`gpt-oss:20b` as the main driver. At the cutoff this was in progress, not delivered.
+Its core merged as #1127, marked as work in progress, and the extension as #1133 at
+22:25Z on 2026-09-24, but it had not been released, #290 was open, and the release-gate
+record lists a follow-up pull request still to come and each of the operator's
+additions still to be verified against the merged code
+(`docs/architecture/evidence/release-gate-2026-09-24.md`). What the merged code does
+(`clients/vscode/`): it runs a task through qwenloop on the local model, by default in
+a separate git worktree on a branch of its own, and it reads projects and open gates
+through `vibey projects --json` and `vibey gates --json`, a contract those commands
+declare for it (#1128; `CHANGELOG.md`), so it needs no SQL. It keeps one queue per
+model and by default lets one run use a model at a time, citing the measurement in
+*How many runs at once, per device* (`src/core/run-queue.ts`), and across processes it
+takes the same directory lock the family's other tools take, so a run started from a
+terminal waits in the same line (`src/core/model-lock.ts`). It never passes
+`VIBEY_*`, `PG*` or a name like a database credential to the model's commands, whatever
+its settings say.
+
+Two of its defaults disagree with evidence in this paper, and we say so rather than
+settle them here. Its `vibey.contextWindow` setting defaults to 32,768 tokens, while
+this host was calibrated at 65,536 tokens per slot, and a 32,768-token window refused
+24 of the 60 storm-shaped turns in that calibration (ADR-0058). And its settings text
+says that Ollama drops the start of a long prompt it cannot fit, while the one tracked
+canary result echoed the code placed at the start and not the one at the end
+(`src/vibey_tools/gh/vibey_gh/local_review.py`); which end the server cuts remains
+disputed, as the exact-head section records.
+
 ### Windows versus credits
 
 The discrimination the family is built around separates a *window*, a rate limit that
@@ -1279,7 +1597,7 @@ every handoff has a well-defined ledger range $\rho$, shown in [Fig. 13](#fig:en
 
 ```latex
 \begin{plainwords}
-A runner is a program that lets one robot helper work by itself, safely. Every run has limits: how many turns, how much money, how much time. The runners never sit waiting for a person to type. They also know the difference between ``come back in ten minutes'' and ``you have no money left'', and they never mistake one for the other. A fair rotation shares jobs among the helpers, and a helper that says ``I am out'' is never believed when it also says ``I finished''.
+A runner is a program that lets one robot helper work by itself, safely. Every run has limits: how many turns, how much money, how much time. The runners never sit waiting for a person to type. They also know the difference between ``come back in ten minutes'' and ``you have no money left'', and they never mistake one for the other. A fair rotation shares jobs among the helpers, and a helper that says ``I am out'' is never believed when it also says ``I finished''. Each helper is also handed only the keys its job needs, never the whole key ring, although a helper running as the same computer user could still go looking, and the paper says so.
 \end{plainwords}
 ```
 
@@ -1482,9 +1800,69 @@ it. Handoffs between seats stay lossless because pushes use a compare-and-swap o
 remote ref whose lease is captured before any fetch; fetching first would silently
 re-arm the lease and reduce the swap to an overwrite.
 
+**A verdict binds to what the model read.** The exact-head invariant binds a claim to
+the revision it evaluated. A reviewer running on a local model needs a second binding:
+the claim must be about the input the model actually read, and a local server can read
+less than it was sent without saying so. In 3.0.0 the review lane became sovereign by
+declaration (#1087, #1088): paid review, repair and conflict resolution are declared
+off, and the self-hosted runner, restored at 08:41Z on 2026-09-24 and declared as code
+(#1086), answers the whole review. Its first review, of #1090, failed with an
+unparseable answer. The first diagnosis, carried in #1094's description, was silent
+truncation: at an estimated three characters per token the prompt came to about 41,000
+tokens against a 32,768-token window. That diagnosis was wrong, and #1101 restates it.
+The server's own counters show 31,765 prompt tokens read and 1,004 generated, 32,769 in
+all, which is the whole window: the model read its entire prompt and ran out of room to
+answer (`done_reason=length`). The error was in the estimate, not the server. The
+prompt, about 124,000 characters, ran at about 3.95 characters per token, and the ratio
+is a property of the text, not a constant of the model:
+
+| Text | Characters per token |
+|---|---:|
+| #1090's review prompt | 3.95 |
+| a lockfile | about 2.1 |
+| hexadecimal | about 1.9 |
+| base64 | about 1.5 |
+| CJK prose | about 1.4 |
+| emoji | about 0.7 |
+
+The first row is #1090's own ratio as #1101 records it; the others are recorded,
+rounded, in the configuration reference beside the `chars_per_token` setting
+(`src/vibey_tools/gh/docs/configuration.md`). A fixed estimate of three over-counts
+prose and code, the safe direction, and under-counts dense text by up to a factor of
+four, so the estimate now decides only what to trim, and the request itself refuses to
+be cut.
+
+Real truncation looks different, and #1101 reproduced it on the storm's host with
+Ollama 0.34.2 and `gpt-oss:20b` at a 32,768-token window. A lockfile-style prompt of
+80,060 characters, which the server counted as 36,798 tokens, was answered with HTTP
+200 and `prompt_eval_count` 16,386: no error, and about half the window, which is
+$32768 - (32768 - 4)/2$. The same request sent with `truncate: false` and
+`shift: false` was refused with HTTP 400 in 0.3 s. A reviewer that reads only the
+upper bound on the server's count cannot see this cut, since 16,386 is far under any
+bound. Which end of the prompt the server discards is disputed. A reading of the
+server's source put the cut at the front, where the review rules and the start of the
+diff sit (the throughput audit's record); one canary run on the cut prompt echoed the
+code placed at the start of the system prompt but not the one after the diff, which
+suggests the tail (#1101). One run does not settle it, and the design does not need it
+settled.
+
+The fixes refuse a verdict on a cut prompt four ways (#1094, #1101). Every request asks
+the server to refuse rather than truncate, and a refusal is reported in the server's
+own words. Every request carries a fresh random check code at the start of the system
+prompt and another after the diff, and the answer must echo both, so a cut at either
+end is caught whichever end the server chooses. A diff too large for the window is
+refused before anything is sent, never cut, and the gate asks a person. And when a
+supporting document had to be cut or left out, the verdict claims only the half of the
+review the diff alone can ground, so the composer refuses it as the whole review. The
+upper-bound check on the server's count stays. What is not yet known is the check
+code's false-refusal rate on live reviews: at the cutoff no live review had exercised
+it, an availability fix (a budget for supporting documents) was still to come, and no
+pull request had yet passed the review gate on the sovereign reviewer's verdict alone
+(the 3.0.0 release-gate record, 2026-09-24 12:22Z).
+
 ```latex
 \begin{plainwords}
-A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot loop forever. And the key that grades a change is never the key that publishes it, so no single stolen key can both cheat and ship.
+A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot loop forever. And the key that grades a change is never the key that publishes it, so no single stolen key can both cheat and ship. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer.
 \end{plainwords}
 ```
 
@@ -1599,17 +1977,23 @@ Two smaller tools follow the same rule of writing things down before acting. One
 ## Production rate and governance
 
 The components above make engines substitutable and human decisions explicit. This
-section asks what, given that, bounds the rate of delivery. It uses three tracked
-sources and nothing else: the sovereignty stress record
+section asks what, given that, bounds the rate of delivery. Its tracked sources are the
+sovereignty stress record
 (`src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`), the cutoff-bounded local
 Qwen storm record
-(`src/vibey_tools/gh/docs/qwenloop-storm-2026-09-20.json`), and this repository's git
-history, which is field data. The stress record is a controlled escalation of the local
-review lane; the Qwen record is an operational reliability observation, not another
-throughput experiment.
-`scripts/paper_evidence.py` recomputes every figure in this section from those three
-sources; history figures are stated at revision `842db09d2e61`, which the script's
-`--rev 842db09d2e61` reproduces.
+(`src/vibey_tools/gh/docs/qwenloop-storm-2026-09-20.json`), the QwenStorm 3.0.0
+evidence ledger and host benchmark under `docs/plans/qwenstorm-3.0.0/`, the
+delivery-estimate ledger, and this repository's git history, which is field data. The
+stress record is a controlled escalation of the local review lane; the Qwen record is an
+operational reliability observation, not another throughput experiment.
+`scripts/paper_evidence.py` recomputes the stress, Qwen and history figures, and
+`scripts/paper_figures.py` redraws every computed figure from the tracked records;
+history figures are stated at revision `600f3db2883d`, which `--rev 600f3db2883d`
+reproduces. Two further sources are not tracked, and we name them where we use them:
+the storm throughput audit of 2026-09-23, whose record is a page kept outside the
+repository and whose inputs are local run logs, and the forge's own records of pull
+requests and their merge times. Where we could recompute an audit figure from the local
+logs we did, on 2026-09-24, and say so.
 
 ### The stress record
 
@@ -1619,7 +2003,7 @@ deadline per generation. Each generation was a real unit of work, an issue triag
 a pull-request diff reviewed, drawn from a pool of seven artifacts of 2 to 22 KB.
 Throughput is successful generations per minute of rung wall clock, reported across four views in [Fig. 18](#fig:stress-rate).
 
-<!-- BEGIN GENERATED figure:stress-dashboard rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:stress-dashboard rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -1681,7 +2065,7 @@ In all, 243 of 444 generations succeeded over 2.18 hours. Every failure was a cl
 timeout; not one response was malformed or corrupt. The cumulative progression of attempts
 and successes across the 14 rungs is plotted in [Fig. 19](#fig:stress-cumulative).
 
-<!-- BEGIN GENERATED figure:stress-cumulative rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:stress-cumulative rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -1731,7 +2115,7 @@ file-write calls totalling 32,073 bytes, as detailed across each run in [Fig. 20
 Thus the accepted completion rate at the cutoff was 4/13, or 30.8%, while a verdict alone
 would have suggested 6/13, or 46.2%.
 
-<!-- BEGIN GENERATED figure:qwen-runs rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:qwen-runs rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -1944,7 +2328,7 @@ in the consumed span.
 \label{fig:evidence-watermark}
 \end{figure*}
 ```
-<!-- BEGIN GENERATED figure:storm-lanes rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:storm-lanes rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2101,7 +2485,7 @@ overlapped in time. The timeline in [Fig. 24](#fig:storm-timeline) shows the lan
 the progress log recorded them; the bars never overlap, and the blank stretches between
 them are the reviewer's and the operator's time, not the machine's.
 
-<!-- BEGIN GENERATED figure:storm-timeline rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:storm-timeline rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2226,6 +2610,88 @@ them are the reviewer's and the operator's time, not the machine's.
 ```
 <!-- END GENERATED figure:storm-timeline -->
 
+### The storm throughput audit
+
+The operator wanted far more concurrent lanes. An audit on 2026-09-23 asked first why
+the storm could not simply run more, what would raise the yield of the lanes it
+already ran, and which safety controls had to hold before any scale-up. Its record is
+the page *QwenStorm throughput audit* (audit run of 2026-09-23, status updated
+2026-09-24 11:10Z), kept outside the repository; its inputs were the lane run logs
+(`lanes/*/.qwenloop/runs/*/events.jsonl`), the storm's progress log, the model server's
+log and the forge, at `develop` revision `b2f5b267`. The run logs and progress log were
+local operational files, never tracked, and a reboot of the host later on 2026-09-24
+erased them (see the governance account below). Every figure below is the audit's
+unless we say we recomputed it.
+
+**One model slot binds.** Across the 82 run directories on disk, 2,985 model turns were
+recorded, and model calls took 9.68 of the 10.01 hours those runs spanned, 96.7%; tool
+execution and harness overhead were the other 3.3%. The progress log held 41 closed
+lane intervals, and not one overlaps another. We recomputed these figures from the
+local files on 2026-09-24, before the reboot, and they agree. Three things serialised
+the storm, and they stack: the queue script waited for any running lane anywhere on
+the host, sub-doctrine 8.c gives a model on the operator's own hardware one run at a
+time, and the server was configured with one slot. Amdahl's law then bounds what more
+lanes sharing that slot could buy: with 3.3% of lane time outside the model, the
+speed-up is at most $1/0.967 \approx 1.03$. Interleaving lanes would also evict each
+other's cached prompt prefix; the audit put the cost at about 80 s of re-read per
+switch at the median turn of 22,500 tokens. Whether a *second slot* helps is a
+different question, which the calibration below measures. These populations are not
+the evidence ledger's (30 lanes, 70 attempts, 2,606 turns), which consumes the progress
+log and lane results from 2026-09-23T04:40:49Z onward; the audit counts every run
+directory then on disk, and the runs of nine earlier lanes had been deleted and are in
+neither. We report both and reconcile neither to the other.
+
+**Conversion.** The progress log showed 40 lanes started, which we recomputed. Of
+those, 13 had work on `develop` at the audit, 3 of them (#1044, #1053, #1054) through
+the automated path, in which the runner completes and the publish step opens the pull
+request. None reached `develop` with no human step: none of the last 60 merged pull
+requests had a successful required review gate, and the merge train logged *merged 0*
+on every pass, so every merge was made by hand. Ten lanes needed a hand-built pull
+request, eight of them in a single one (#396) that repaired or hand-wrote them where
+the local model fell short. At the runner level, 18 of the 82 runs completed. The
+audit's projection is the point: more lanes multiply this conversion rate and do not
+get around it, and the hand repair it implies is capacity nothing records.
+
+**Declared, not enforced.** Seven controls existed in configuration or documentation
+and were read by nothing, or bound only in a mode not in use: the delegated approver's
+author list (with both gates green, the approver would have readied a stranger's pull
+request); the merge train's trusted authors, which held a stranger's pull request only
+when pull-request automation was off, and it was on; 31 forbidden paths, of which a
+lane could touch up to 19, among them the workflow directory, the canon and the merge
+train itself; the issue text a lane's prompt carried, whose author was never fetched
+and which was followed directly by trusted instructions with no separator; a merge
+fallback that retried with `--admin`, unattended, contrary to 12.d; an environment
+switch for unattended approval that nothing read; and an approver agent that nothing
+called. None was exploited: every one of the 594 queued issues was the operator's. All
+seven were enforced by merged code on 2026-09-24 (#1078, #1079, #1083), with the yield
+fixes the audit ranked beside them: a retry on an empty model reply, the end of 27 of 60
+failed runs (#1077); a lane's commands run in the lane's own environment, after 18 runs
+in 12 lanes had tested the wrong tree (#1080); a per-lane time limit and stall
+watchdog, after one 93-minute stall with no terminal event (#1081); real `search`,
+`find` and `open_file` tools, after 446 calls to tools that did not exist, about 11% of
+model time (#1082); and instruments that report what they measured (#1084). The storm
+had not run since, so at the cutoff the effect of these fixes on yield is unmeasured.
+One control was not settled: the repository's rulesets carry a bypass actor nobody
+declared, and 78 of the last 200 merges went in while the forge reported a review
+still required; who made them, and how, needs the organisation's audit log.
+
+**Most of the audit's first claims were wrong.** Twenty-five agents audited six
+dimensions, and adversarial verifiers then checked the leading claims before anything
+was written up. They refuted 16 of 18. Some corrections were of degree: 29 of 64
+failed runs ending on an empty reply became 27 of 60; 45 calls to nonexistent tools
+became 446; 3.75 lanes an hour from the model alone became 3.20 from the runs on disk.
+Some were of kind: the claimed serialisation point was the wrong line of the queue
+script; a single slot said to be removable with hardware is serialised by code, canon
+and configuration together; a reaper said to abandon lanes without their gates does
+not; and the account of #1090 as a silently truncated prompt was wrong, as the
+exact-head section records. We report this as a finding about method, not a footnote.
+A first pass by capable agents over complete logs was wrong more often than right on
+its headline numbers, and it was the verification step, not the analysis, that made
+the audit usable. It applies to this paper too. The host-benchmark paragraph below
+once reported that the 64k window *generated 16% faster*, and the audit's verifiers
+found decode speed varying from 26 to 34 tokens per second within one allocation, so
+that difference is inside the noise and is no longer claimed.
+
 ### Host hardware benchmarks and context headroom
 
 On 2026-09-22 the storm was paused and the same ten-turn session was replayed against
@@ -2243,7 +2709,7 @@ time. The Ollama configuration finished the same session in 86 s, and the same
 record does not separate the model from the serving stack, so the difference is
 reported and not explained.
 
-<!-- BEGIN GENERATED figure:bench-hosts rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:bench-hosts rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2289,11 +2755,14 @@ median of 20,070 tokens, a 99th percentile of 42,979 and a maximum of 49,118.
 [Fig. 26](#fig:host-context) sets those percentiles against the three windows
 considered. A 32k window would have truncated 71 turns; the 128k baseline was never
 reached by any turn; the 64k window chosen covers every recorded turn with a third
-again as headroom, wires 1.3 GB less, and generated 16% faster. That is sub-doctrine
-8.j, fitted to the iron: a setting moves against a number read from this host, and
-the number is recorded beside it.
+again as headroom, and wires 1.3 GB less. In that one sweep it also generated 16%
+faster (32.5 against 28.0 tokens per second), but the throughput audit's verifiers found
+decode speed varying from 26 to 34 tokens per second within a single allocation, so the
+difference is inside the noise and we do not claim it. That is sub-doctrine 8.j, fitted
+to the iron: a setting moves against a number read from this host, and the number is
+recorded beside it.
 
-<!-- BEGIN GENERATED figure:host-context rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:host-context rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -2322,18 +2791,54 @@ the number is recorded beside it.
 ```
 <!-- END GENERATED figure:host-context -->
 
+**How many runs at once, per device.** The audit left one question it could not answer:
+sub-doctrine 8.c holds a model on the operator's own hardware to one run at a time,
+while 8.j requires every setting, how many run at once among them, to be fitted to a
+number measured on the machine. On 2026-09-23 the operator ruled
+*measure, then decide*. On 2026-09-24 the ruling was extended, and it is the method we
+report here, not a result. Sweep $N = 1, 2, 3, \dots$ concurrent runs replaying real storm-depth
+turns, and measure throughput, latency, wired memory and fidelity at each $N$, to find
+the ideal $N$. Calibrate every device separately, keyed by a fingerprint of its
+hardware, memory, operating system, server version, model digest and context window.
+Where the evidence is missing or stale, fall back to $N = 1$, and recalibrate
+automatically. And amend 8.c to rule the method, not a number, ratified by the
+operator's merge like every sub-doctrine. The single slot the audit found binding is
+therefore not treated as a law of this host but as the default an unmeasured device
+gets.
+
+The sweep for the 24 GB host ran on 2026-09-24 from 15:11 to 15:42Z, before the cutoff
+(ADR-0058; evidence tracked as `docs/architecture/evidence/slots-2026-09-24-mac17-2.md` and
+`.json`). The device is an Apple M5 with 24 GiB under macOS 26.6.2, running ollama 0.34.4 with
+gpt-oss:20b at a 65,536-token context per run, fingerprint `f99b07f610204948`. Each step
+replayed 60 storm-shaped turns in 20 segments, drawn from 1,096 turns in 40 runs. At
+$N = 1$, run twice, the host completed 98.2 and 112.7 turns an hour, with a median turn of
+16.5 and 12.9 s, a 95th percentile of 112.6 and 102.8 s, and peak wired memory of 18.4 and
+18.1 GB. The two runs agreed with each other exactly (structural and exact fidelity 1.0
+over 55 turns). Their throughput differed by 14.8%, so a smaller difference between steps
+is noise, not a finding. At $N = 2$ the host completed 111.9 turns an hour, within that
+noise, while the median turn rose to 29.8 s, the 95th percentile to 189.9 s and peak wired
+memory to 20.2 GB. The replies at $N = 2$ matched the single run's structure in only 81.8% of
+turns (exact: 74.5%), below the 95% floor. That was the overshoot, and the sweep stopped
+there. The ideal for this device is therefore $N = 1$: a second concurrent run bought no
+throughput and cost fidelity. One step was recorded but not judged: at a 32,768-token
+context, two runs reached 172.7 turns an hour, with structural fidelity still only 88.9%.
+The evidence does not cover other models, context windows or devices, tool execution
+between turns, whole runs, thermals, or long-horizon stability. The amendment to 8.c that
+sets the method, not a number, was proposed for the operator's ratification (#1141) and
+was not ratified at the cutoff.
+
 ### Field data
 
-The git history is field data: nothing in it was held fixed. At revision `842db09d2e61`,
-1,356 commits are reachable across nine root histories, the absorbed histories of the
-family's packages. Since 2026-08-09, when the family's own development begins, 1,344
-commits landed on 33 active days, between 1 and 191 per day (median 27, mean 40.7,
-sample standard deviation 40.6). Commits landed in all 24 hours of the day in US
+The git history is field data: nothing in it was held fixed. At revision `600f3db2883d`,
+1,381 commits are reachable across nine root histories, the absorbed histories of the
+family's packages. Since 2026-08-09, when the family's own development begins, 1,369
+commits landed on 34 active days, between 1 and 191 per day (median 28, mean 40.3,
+sample standard deviation 40.2). Commits landed in all 24 hours of the day in US
 Eastern time, with the fewest (19) in the 09:00 hour and the most (90) in the 18:00
 hour. The longest
 pause was nine days with no commit, from 2026-08-30 to 2026-09-09, and nothing in the
 repository records its cause. Seventeen `vibey` release tags point at commits dated
-between 2026-08-16 and 2026-09-21, and 569 commit subjects across the absorbed
+between 2026-08-16 and 2026-09-21, and 594 commit subjects across the absorbed
 histories end in a pull-request reference.
 
 The daily rate's spread is 100% of its mean, against 24% in the controlled region.
@@ -2344,14 +2849,14 @@ mistaken for a field rate.
 
 The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily).
 
-<!-- BEGIN GENERATED figure:commits-daily rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:commits-daily rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[vibeyaxis,width=17.2cm,height=5.6cm,ybar,bar width=4.2pt,xmin=-0.7,xmax=45.7,ymin=0,ymax=231,
-  xtick={0,7,14,21,28,35,42},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20},xlabel={day (2026, 842db09d and earlier)},ylabel={commits}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(0,5) (1,41) (3,21) (4,130) (5,27) (6,92) (7,47) (8,22) (9,39) (10,20) (11,52) (12,75) (13,13) (14,61) (15,1) (16,38) (17,3) (18,56) (19,29) (20,91) (21,71) (31,3) (32,13) (36,24) (37,61) (38,33) (39,16) (40,191) (41,7) (42,4) (43,8) (44,23) (45,27)};
+\begin{axis}[vibeyaxis,width=17.2cm,height=5.6cm,ybar,bar width=4.2pt,xmin=-0.7,xmax=46.7,ymin=0,ymax=231,
+  xtick={0,7,14,21,28,35,42},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20},xlabel={day (2026, 600f3db2 and earlier)},ylabel={commits}]
+\addplot[fill=vibeyblue,draw=none] coordinates {(0,5) (1,41) (3,21) (4,130) (5,27) (6,92) (7,47) (8,22) (9,39) (10,20) (11,52) (12,75) (13,13) (14,61) (15,1) (16,38) (17,3) (18,56) (19,29) (20,91) (21,71) (31,3) (32,13) (36,24) (37,61) (38,33) (39,16) (40,191) (41,7) (42,4) (43,8) (44,23) (45,37) (46,15)};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:7,53) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:7,56) {v0.1.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:11,58) {};
@@ -2380,7 +2885,7 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \node[vibeynote,anchor=north west,align=left] at (axis description cs:0.01,0.97) {\textcolor{vibeygold}{$\bullet$} vibey release tag};
 \end{axis}
 \end{tikzpicture}
-\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision 842db09d: 1,344 commits on 33 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
+\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision 600f3db2: 1,369 commits on 34 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
 \label{fig:commits-daily}
 \end{figure*}
 ```
@@ -2388,7 +2893,7 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 
 The circadian rhythm, weekday distribution, and Conventional Commit types are captured in [Fig. 28](#fig:commit-rhythm).
 
-<!-- BEGIN GENERATED figure:commit-rhythm rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:commit-rhythm rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2398,12 +2903,12 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (90:1.218) arc[start angle=90,end angle=75,radius=1.218] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (75:1.194) arc[start angle=75,end angle=60,radius=1.194] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (60:1.983) arc[start angle=60,end angle=45,radius=1.983] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (45:1.314) arc[start angle=45,end angle=30,radius=1.314] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (30:1.792) arc[start angle=30,end angle=15,radius=1.792] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (45:1.338) arc[start angle=45,end angle=30,radius=1.338] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (30:1.887) arc[start angle=30,end angle=15,radius=1.887] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (15:0.860) arc[start angle=15,end angle=0,radius=0.860] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (0:0.908) arc[start angle=0,end angle=-15,radius=0.908] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-15:0.741) arc[start angle=-15,end angle=-30,radius=0.741] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-30:0.741) arc[start angle=-30,end angle=-45,radius=0.741] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (0:0.956) arc[start angle=0,end angle=-15,radius=0.956] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-15:0.812) arc[start angle=-15,end angle=-30,radius=0.812] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-30:0.860) arc[start angle=-30,end angle=-45,radius=0.860] -- cycle;
 \fill[vibeyred!70,draw=white,line width=.4pt] (0,0) -- (-45:0.454) arc[start angle=-45,end angle=-60,radius=0.454] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-60:1.242) arc[start angle=-60,end angle=-75,radius=1.242] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-75:1.218) arc[start angle=-75,end angle=-90,radius=1.218] -- cycle;
@@ -2411,12 +2916,12 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-105:1.744) arc[start angle=-105,end angle=-120,radius=1.744] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-120:1.887) arc[start angle=-120,end angle=-135,radius=1.887] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-135:1.792) arc[start angle=-135,end angle=-150,radius=1.792] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-150:0.956) arc[start angle=-150,end angle=-165,radius=0.956] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-150:0.979) arc[start angle=-150,end angle=-165,radius=0.979] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-165:1.839) arc[start angle=-165,end angle=-180,radius=1.839] -- cycle;
 \fill[vibeygold,draw=white,line width=.4pt] (0,0) -- (-180:2.150) arc[start angle=-180,end angle=-195,radius=2.150] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-195:1.648) arc[start angle=-195,end angle=-210,radius=1.648] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-210:1.433) arc[start angle=-210,end angle=-225,radius=1.433] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-225:1.744) arc[start angle=-225,end angle=-240,radius=1.744] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-225:1.959) arc[start angle=-225,end angle=-240,radius=1.959] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-240:1.194) arc[start angle=-240,end angle=-255,radius=1.194] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-255:0.645) arc[start angle=-255,end angle=-270,radius=0.645] -- cycle;
 \node[vibeynote,text=vibeygray] at (82.5:2.42) {0}; \node[vibeynote,text=vibeygray] at (37.5:2.42) {3}; \node[vibeynote,text=vibeygray] at (-7.5:2.42) {6}; \node[vibeynote,text=vibeygray] at (-52.5:2.42) {9}; \node[vibeynote,text=vibeygray] at (-97.5:2.42) {12}; \node[vibeynote,text=vibeygray] at (-142.5:2.42) {15}; \node[vibeynote,text=vibeygray] at (-187.5:2.42) {18}; \node[vibeynote,text=vibeygray] at (-232.5:2.42) {21};
@@ -2425,14 +2930,14 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 \end{scope}
 \begin{axis}[vibeybars,at={(0.0cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
   xtick={0,...,6},xticklabels={Mon,Tue,Wed,Thu,Fri,Sat,Sun},title={commits by weekday},ylabel={commits}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(0,96) (1,161) (2,107) (3,267) (4,322) (5,203) (6,188)};
+\addplot[fill=vibeyblue,draw=none] coordinates {(0,96) (1,161) (2,117) (3,282) (4,322) (5,203) (6,188)};
 \end{axis}
 \begin{axis}[vibeybars,at={(6.1cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=7.6,ymin=0,
   xtick={0,...,7},xticklabels={chore,other,fix,feat,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={Conventional Commit types},ylabel={commits}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,378) (1,266) (2,246) (3,245) (4,125) (5,39) (6,25) (7,8)};
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,379) (1,267) (2,258) (3,254) (4,126) (5,39) (6,26) (7,8)};
 \end{axis}
 \end{tikzpicture}
-\caption{The rhythm of production since 2026-08-09, at revision 842db09d. Left, a 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 90 and the quietest at 09:00 with 19. Centre, the weekday distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first.}
+\caption{The rhythm of production since 2026-08-09, at revision 600f3db2. Left, a 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 90 and the quietest at 09:00 with 19. Centre, the weekday distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first.}
 \label{fig:commit-rhythm}
 \end{figure*}
 ```
@@ -2440,17 +2945,17 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 
 Cumulative deliveries, including the absorbed package roots and pull requests, appear in [Fig. 29](#fig:cumulative-commits).
 
-<!-- BEGIN GENERATED figure:cumulative-commits rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:cumulative-commits rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=45,ymin=0,ymax=1424,
+\begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=46,ymin=0,ymax=1449,
   xtick={0,7,14,21,28,35,42},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20},xlabel={day},ylabel={cumulative},legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1344)} \closedcycle;
-\addlegendentry{commits since Aug 9 (1,344; 12 earlier)}
-\addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,565)};
-\addlegendentry{commit subjects closing a pull request (565)}
+\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1369)} \closedcycle;
+\addlegendentry{commits since Aug 9 (1,369; 12 earlier)}
+\addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,575) (46,590)};
+\addlegendentry{commit subjects closing a pull request (590)}
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:0,0) {};
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:1,0) {};
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:4,0) {};
@@ -2462,7 +2967,7 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 \node[vibeynote,anchor=south east,align=right] at (axis description cs:0.99,0.04) {\textcolor{vibeyviolet}{$\bullet$} a package's root commit: 8 of 9 root histories begin in the window};
 \end{axis}
 \end{tikzpicture}
-\caption{Cumulative production at revision 842db09d: commits since 2026-08-09 and, beneath them, the commits whose subject closes a pull request. The violet marks on the baseline are the days on which the absorbed packages' own histories begin; the family was written as several repositories and merged into one tree with every history preserved.}
+\caption{Cumulative production at revision 600f3db2: commits since 2026-08-09 and, beneath them, the commits whose subject closes a pull request. The violet marks on the baseline are the days on which the absorbed packages' own histories begin; the family was written as several repositories and merged into one tree with every history preserved.}
 \label{fig:cumulative-commits}
 \end{figure*}
 ```
@@ -2470,7 +2975,7 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 
 The timeline of releases across each package in the family is shown in [Fig. 30](#fig:release-cadence).
 
-<!-- BEGIN GENERATED figure:release-cadence rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:release-cadence rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2511,7 +3016,7 @@ The timeline of releases across each package in the family is shown in [Fig. 30]
 \draw[vibeyline] (15.40,0.06) -- (15.40,0.48);
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.48) {2.0.0};
 \end{tikzpicture}
-\caption{Every release tag reachable at revision 842db09d, 17 tags on the repository. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
+\caption{Every release tag reachable at revision 600f3db2, 17 tags on the repository. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
@@ -2519,7 +3024,7 @@ The timeline of releases across each package in the family is shown in [Fig. 30]
 
 Finally, the architectural shape of the consolidated repository across its 11 packages and layers is depicted in [Fig. 31](#fig:codebase-shape).
 
-<!-- BEGIN GENERATED figure:codebase-shape rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:codebase-shape rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2529,15 +3034,15 @@ Finally, the architectural shape of the consolidated repository across its 11 pa
   scaled x ticks=false,x tick label style={/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}},point meta=x,
   nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray,/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}}]
 \nextgroupplot[title={a. Lines of Python per package},xbar,bar width=6pt,width=5.9cm,yticklabels={vibey-gh,vibey,claudeloop,vibey-bootstrap,agyloop,codexloop,cursorloop,qwenloop,vibey-skills,opencodeloop,runners-common},xlabel={lines}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(52772,0) (38228,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (6911,7) (2934,8) (1379,9) (258,10)};
+\addplot[fill=vibeyblue,draw=none] coordinates {(60701,0) (41536,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (9183,7) (2934,8) (1379,9) (258,10)};
 \nextgroupplot[title={b. Test functions per package},xbar,bar width=6pt,width=4.9cm,yticklabels={,,,,,,,,,,,},xlabel={tests}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(1420,0) (0,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (189,7) (30,8) (43,9) (0,10)};
-\nextgroupplot[title={c. The orchestrator's layers},xbar,bar width=6pt,width=4.9cm,ytick={0,...,4},yticklabels={domain,application,infrastructure,cli,tui},ymin=-0.7,ymax=4.7,xlabel={lines},xmax=29062,nodes near coords={}]
-\addplot[fill=vibeyviolet!85,draw=none] coordinates {(8341,0) (10276,1) (15296,2) (2677,3) (590,4)};
-\node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:9241,0) {8,341 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:11176,1) {10,276 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:16196,2) {15,296 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:3577,3) {2,677 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:1490,4) {590 $\cdot$ exempt};
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(1645,0) (0,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (249,7) (30,8) (43,9) (0,10)};
+\nextgroupplot[title={c. The orchestrator's layers},xbar,bar width=6pt,width=4.9cm,ytick={0,...,4},yticklabels={domain,application,infrastructure,cli,tui},ymin=-0.7,ymax=4.7,xlabel={lines},xmax=32000,nodes near coords={}]
+\addplot[fill=vibeyviolet!85,draw=none] coordinates {(9296,0) (10562,1) (16842,2) (3159,3) (590,4)};
+\node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:10196,0) {9,296 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:11462,1) {10,562 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:17742,2) {16,842 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:4059,3) {3,159 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:1490,4) {590 $\cdot$ exempt};
 \end{groupplot}
 \end{tikzpicture}
-\caption{The shape of the tree at revision 842db09d: 297,124 lines of Python in 1,916 files and 8,483 test functions. (a) Lines per package; (b) test functions per package, with 2,401 more in the orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below 100\% branch coverage.}
+\caption{The shape of the tree at revision 600f3db2: 327,067 lines of Python in 1,982 files and 9,245 test functions. (a) Lines per package; (b) test functions per package, with 2,878 more in the orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below 100\% branch coverage.}
 \label{fig:codebase-shape}
 \end{figure*}
 ```
@@ -2613,6 +3118,62 @@ corrected above were a confident, wrong claim that stood unchallenged in a track
 paper from the day its package was imported until this revision checked it against
 the record. Artifacts are commoditised; correct judgment about artifacts is not, and
 that gap, more than throughput, is where the remaining engineering lies.
+
+**Review before merge is a rate limiter, and it is meant to be.** On 2026-09-24 every
+change for 3.0.0 was sent for an independent review, and merging outran the reviews.
+The 3.0.0 release-gate record (12:22Z) counts seven pull requests merged before or
+during their independent reviews that day; the forge's own times show how long each
+was open, from creation to merge.
+
+| Pull request | Open for |
+|---|---:|
+| #1094, sovereign reviewer | 49 min 44 s |
+| #1095, derived lane | 44 min 6 s |
+| #1100, ledger guard | 35 min 16 s |
+| #1101, cut prompts | 23 min 4 s |
+| #1102, truncated log | 30 s |
+| #1103, lane follow-ups | 1 min 48 s |
+| #1105, push-gate reaper | 3 min 49 s |
+
+Two earlier merges that day, outside that count, had shown the pattern: #1089 merged
+30 s after it was opened and was reviewed afterwards (#1092), and #1092 merged while
+its final review said *not yet* (#1102). The findings did not disappear. Each was
+carried into a new pull request or branch: #1092 for #1089, #1101 for #1094, #1102 for
+#1092, #1103 for #1095, and a follow-up branch for #1100. In the meantime each finding
+was live on `develop`, which a push publishes to the development package index; the
+worst were the two high findings in the ledger guard. Merging ahead of review also let
+two changes that each passed their own gates break `develop` together: #1100 made the
+suite run as a restricted application role, #1103 added a test that needs the owner's
+privileges, and nothing tested the two together before both had landed (CI run
+35998404322 at `600f3db2`: 1 failed, 3,732 passed; the one-line repair is commit
+`bd9161ee`). And it created pressure to repair in place. A later commit on the job
+queue's branch rewrote migration 0015 to make it additive after 0015 had merged, and
+an open pull request (#1106) carries it. #1103 took the other road: it left 0015 as it
+was, because a push to `develop` publishes a build that may already have applied it
+and the migrator refuses a changed checksum, and it recorded the drain instruction and
+the gap in ADR-0054, with a new lint that fails any undocumented column drop. A
+migration that may have been applied is never edited; its correction is a new
+migration or a recorded gap.
+
+The same day supplied a second governance fact, about where work is kept. At about
+09:09 US Eastern time the host rebooted. Everything held only in the operating system's
+temporary directory, which macOS empties at boot, was lost: the storm's local run logs and
+progress log, from which the audit above was computed, and every worktree kept there,
+with its uncommitted edits, among them the first draft of this very update of the
+paper. What survived is what had been committed and pushed, or tracked: the evidence
+ledger, the benchmark record and every merged pull request. Worktrees moved to a
+persistent directory, and work in progress is now committed and pushed section by
+section. It is sub-doctrine 10.g's argument, observed: evidence that is not durably
+recorded is not evidence for long.
+
+None of this is a claim about anyone's care. It is the finding of this section,
+observed on governance itself. Producing the changes was cheap and fast that day;
+independent judgment about them took tens of minutes each and was the binding input,
+and wherever a merge ran ahead of it the judgment was still paid for, later, as a
+rescue pull request, a red integration branch or a finding shipped to the development
+channel. Review before merge limits the rate of delivery in the same sense the stress
+band limits the rate of generation, and it binds for the same reason: it is the step
+that decides whether the output is correct.
 
 ### Six materials and the modulators of the rate
 
@@ -2736,7 +3297,7 @@ it. Because the held-out check exceeded the ceiling, the firm half of the predic
 is the upper end: with every coordinate at its target, the work should take no longer
 than $W / r_{\min}$, as plotted in [Fig. 33](#fig:completion-band).
 
-<!-- BEGIN GENERATED figure:completion-band rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:completion-band rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -2762,7 +3323,7 @@ than $W / r_{\min}$, as plotted in [Fig. 33](#fig:completion-band).
 Beyond single-task completion bands, project delivery velocity is tracked over time
 in the delivery-estimate ledger, shown in [Fig. 34](#fig:forecast).
 
-<!-- BEGIN GENERATED figure:forecast rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:forecast rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2796,7 +3357,7 @@ and the bare suite falling from 383 s to 135 s, without removing a gate
 (`docs/runbooks/expansion/evidence/13-front1-validation.md`), as illustrated in [Fig. 35](#fig:governance-time).
 That is a governance dilation made smaller while the requirement stayed the same.
 
-<!-- BEGIN GENERATED figure:governance-time rev:842db09d2e619ffe9b6f1bbc753dd7686d02ce0e — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:governance-time rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -2842,11 +3403,18 @@ history. Neither the stress record nor the Qwen pilot measures network state or
 operator availability, so two of the five modulators are named, mapped and unmeasured.
 We do not claim a natural law, and we do not claim that the rate is constant. We claim
 a band, on a substrate, together with the conditions under which the claim would fail,
-and report the Qwen pilot only as a bounded reliability observation.
+and report the Qwen pilot only as a bounded reliability observation. The storm audit
+is narrower still: one storm, one model slot, one host, read from local logs that were
+never tracked and are now gone, and a record kept outside the repository. We
+recomputed its run, turn, model-time and overlap figures and its count of started
+lanes from those logs before they were lost; its conversion, control and refutation
+figures are cited from the audit with its date. The account of merging ahead of review
+covers one day of one project, and it is drawn from the forge's times and the
+release-gate record, not from a controlled comparison.
 
 ```latex
 \begin{plainwords}
-We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part.
+We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Checking takes time, and that time is the price of being right.
 \end{plainwords}
 ```
 
@@ -2871,9 +3439,27 @@ claims are validated separately, by the stress record and the evidence script ab
 the local Qwen pilot is reported as an operational reliability observation with its
 own cutoff and does not enlarge the throughput claim.
 
+The 3.0.0 additions are validated the same three ways, and each also went through an
+independent adversarial review whose probes are review records rather than tracked
+tests. At the property level, a Hypothesis state machine drives the priority lane
+through random, overlapping bumps, un-bumps and job endings and checks the derivation
+after every step (#1095, #1103), and the sovereign reviewer's refusals are pinned by a
+stub server that answers the way the real one was seen to answer: the half-window
+count, the HTTP 400 in the server's words, and a reply that echoes only one check code
+(#1101). At the chaos level, the whole orchestrator suite now runs as the restricted
+application role, so any query that needs an undeclared privilege fails as
+`permission denied` (#1100); five workers claim concurrently against a bumped queue
+and take exactly the front five in order (#1091); and a hung test is dumped at 240 s
+and failed by name at 300 s (#1105). At the cluster level, a new cluster-smoke step
+checks that, as the worker's role, an update, a delete and a truncation of the ledger
+are refused for want of privilege and disabling a trigger is refused as not the owner,
+and that, as the owner, all three are refused by the triggers (#1100). The full suite
+at #1105's head passed 3,627 tests, with 18 skipped and 1 expected failure, and the
+four per-layer branch-coverage floors at 100% (#1105).
+
 ```latex
 \begin{plainwords}
-We check the system three ways. Tests that walk every branch of the important code. A chaos test where helpers crash on purpose while a real database is running, to prove that no job is lost and no job is done twice. And a live run of a whole project on two different robot helpers, including a forced switch from one to the other in the middle.
+We check the system three ways. Tests that walk every branch of the important code. A chaos test where helpers crash on purpose while a real database is running, to prove that no job is lost and no job is done twice. And a live run of a whole project on two different robot helpers, including a forced switch from one to the other in the middle. The newest parts were also attacked on purpose by separate reviewers, who tried to break them before we wrote about them here.
 \end{plainwords}
 ```
 
@@ -2896,7 +3482,10 @@ refuse rather than by mean time between failures. The retrieval engine is lexica
 over SQLite FTS5; dense retrieval would reintroduce the nondeterminism the
 reviewability invariant forbids. The upward drift of the throughput band is the
 continuous batching of Orca, and the coordination cost that the six-material postulate
-treats as a coupling is the one Brooks described for human teams.
+treats as a coupling is the one Brooks described for human teams. The bound on what
+more lanes sharing one model slot could buy is Amdahl's. The ledger guard uses
+PostgreSQL's own trigger and privilege machinery rather than rules, whose documented
+behaviour on partitions and `TRUNCATE` is what left the earlier guard open.
 
 ## Conclusion
 
@@ -2906,9 +3495,16 @@ human authority is a structural property of the state machine rather than a
 prompt-engineering hope. The same discipline, binding every claim to the state it
 describes, governs the runners beneath the orchestrator and the release calculus above
 it. In the project's controlled record, production kept to a band set by its
-substrate, and the inputs that stopped work were decisions and judgments. The
-engineering that remains is less about producing faster than about deciding well and
-cheaply.
+substrate, and the inputs that stopped work were decisions and judgments. The 3.0.0
+record says the same from three more directions. A local storm was bound by one model
+slot and converted no lane without a person; the audit that found this was mostly wrong
+until it was verified; and on the day the release's fixes landed, the step that
+limited delivery was independent review, which merging outran and then had to repay.
+The guarantees added in this release, a ledger the database refuses to rewrite, a queue
+order that cannot be moved from outside, an engine that cannot see the worker's
+secrets, and a reviewer that will not grade what it did not read, are each stated here
+with the limits they do not cross. The engineering that remains is less about producing
+faster than about deciding well and cheaply.
 
 ```latex
 \begin{plainwords}
@@ -2933,6 +3529,8 @@ Put the notebook, not the robot, at the centre. Then any robot can be swapped ou
 - PyPI, *Trusted Publishers*, `https://docs.pypi.org/trusted-publishers/`, 2023.
 - GitHub, *About protected branches and rulesets*, GitHub Docs, 2024.
 - SQLite, *FTS5 Extension*, `https://www.sqlite.org/fts5.html`.
+- G. M. Amdahl, "Validity of the Single Processor Approach to Achieving Large Scale Computing Capabilities," *Proceedings of the AFIPS Spring Joint Computer Conference*, 1967, pp. 483–485. doi:10.1145/1465482.1465560.
+- PostgreSQL Global Development Group, *The Rule System* and *CREATE TRIGGER* (rules and row-level triggers on partitioned tables; `TRUNCATE` triggers). PostgreSQL documentation, `https://www.postgresql.org/docs/current/`.
 - The vibey repository: the sovereignty stress record, `src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`; the evidence script, `scripts/paper_evidence.py`; the architecture decision records, `docs/architecture/decisions/`; `https://github.com/the-vibey-project/vibey`, 2026.
 
 ## A call to FOSS developers

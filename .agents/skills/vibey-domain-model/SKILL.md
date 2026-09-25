@@ -176,7 +176,7 @@ Candidates come from `engine_health` rows, so an engine without a recorded
 `vibey doctor --conformance --record` pass is never eligible. A local engine joins
 only while its switch is on — gptossloop unless switched off, qwenloop and
 claudeloop-local only when switched on — and is preferred first (ADR-0038,
-ADR-0060).
+ADR-0061).
 
 See ADR-0005 (smooth weighted round robin), ADR-0007 (rotate at boundaries),
 and `domain/rotation.py`.

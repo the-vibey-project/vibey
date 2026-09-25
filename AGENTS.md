@@ -1,10 +1,10 @@
 # AGENTS.md
 
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
-Built on PostgreSQL and six `*loop` autonomous session runners (claudeloop,
-codexloop, cursorloop, agyloop, opencodeloop, and the local runner that ships as two
-engines: `gptossloop`, the sovereign default on GPT-OSS 20B, and the opt-in `qwenloop`
-on Qwen), which live in this
+Built on PostgreSQL and five `*loop` autonomous session runners (claudeloop,
+codexloop, cursorloop, agyloop, and the local runner that ships as two engines:
+`gptossloop`, the sovereign default on GPT-OSS 20B, and the opt-in `qwenloop` on
+Qwen), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
 an optional visual-design interstitial, plus an opt-in Azure deployment stage
 set. One distribution — `pip install vibey` delivers the whole family,
@@ -137,7 +137,7 @@ lives in `docs/architecture/decisions/`.
   TestPyPI; a push to `main` publishes `vibey` to PyPI. ADR-0028.
 - **Sovereign self-hosted free is the only default on every surface; paid is
   declared-only.** Each operational surface has one vibey-owned protocol and a
-  sovereign default adapter that is always on: engines `gptossloop`+`opencode`,
+  sovereign default adapter that is always on: engine `gptossloop`,
   cloud self-hosted OpenStack, forge self-hosted Forgejo, ticketing self-hosted
   free Plane, documentation self-hosted free BookStack, secrets self-hosted
   free Bitwarden, files self-hosted free Nextcloud, email self-hosted free
@@ -169,9 +169,9 @@ under 100%. `tui/` is outside the floor, a recorded exemption. ADR-0023.
 uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
 "src/vibey_tools/*"]`, ADR-0021) whose other members are absorbed with history:
 
-- `src/vibey_runners/{claude,codex,cursor,agy,opencode,qwen}` — claudeloop,
-  codexloop, cursorloop, agyloop, opencodeloop, gptossloop and qwenloop (one
-  package, two engines — ADR-0060); `src/vibey_runners/common` — vibey-runners-common.
+- `src/vibey_runners/{claude,codex,cursor,agy,qwen}` — claudeloop,
+  codexloop, cursorloop, agyloop, gptossloop and qwenloop (one package, two
+  engines — ADR-0061); `src/vibey_runners/common` — vibey-runners-common.
 - `src/vibey_tools/gh` — vibey-gh (provenance, merge train, promotion, release,
   and the governance canon under `docs/`); `src/vibey_tools/skills` —
   vibey-skills; `src/vibey_tools/bootstrap` — vibey-bootstrap.
@@ -202,8 +202,7 @@ explicit opt-in; declining deployment records a successful local completion.
 - **Queue backend:** PostgreSQL 14+, never SQLite. CI exercises every currently
   supported major (14–18), while the Helm chart defaults to PostgreSQL 17. `FOR UPDATE SKIP LOCKED` is
   the reason; see ADR-0002.
-- **Engines:** `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and
-  `opencode` (the `opencodeloop` adapter) are the
+- **Engines:** `claudeloop`, `codexloop`, `cursorloop`, and `agyloop` are the
   default paid-engine pool (tier PAID). Three local engines (tier LOCAL) join
   them, each behind its own switch: `gptossloop` — the sovereign default on
   GPT-OSS 20B, **on by default**, switched off only by `VIBEY_FEATURE_GPTOSSLOOP=0`
@@ -211,12 +210,12 @@ explicit opt-in; declining deployment records a successful local completion.
   (`qwen3:14b`), off by default (`VIBEY_FEATURE_QWENLOOP=1` or `[features]
   qwenloop = true`); and `claudeloop-local` — the claudeloop binary on a local
   backend profile, off by default (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features]
-  claudeloop_local`). ADR-0060. Under sub-doctrine 8.a local engines are
+  claudeloop_local`). ADR-0061. Under sub-doctrine 8.a local engines are
   **preferred first**: BUILD selection runs SWRR within the LOCAL tier and falls
   back to PAID only when no local engine is eligible (ADR-0038, amending
   ADR-0015's standby). With no `--provider`, DESIGN and DECOMPOSE run on the
   sovereign providers (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`;
-  ADR-0027, ADR-0038, ADR-0060). `VIBEY_OLLAMA_URL` is the one local endpoint
+  ADR-0027, ADR-0038, ADR-0061). `VIBEY_OLLAMA_URL` is the one local endpoint
   setting.
 - **Rotation:** `domain/rotation.py::select()` implements smooth-weighted
   round-robin selection (ADR-0005) and is wired in production: `bootstrap.py`
@@ -286,7 +285,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (60 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (61 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

@@ -21,7 +21,7 @@
  * separate act, open only once a graceful stop has had its fair time, and it is journaled.
  *
  * The engines this knows by name are the family's local runner under each name it ships as
- * (ADR-0060: gptossloop, the default, and qwenloop), and only for the binding the family
+ * (ADR-0061: gptossloop, the default, and qwenloop), and only for the binding the family
  * documents (docs/guides/local-models-ollama.md), each in its own settings' prefix:
  * `<PREFIX>_BASE_URL` names the Ollama endpoint, `<PREFIX>_MODEL` the model (only when one
  * is named, or the runner takes vibey.model: qwenloop's own config chooses its model),
@@ -479,7 +479,7 @@ export class TaskRun implements TaskRunInterface {
       overlay[runners.variable(runner, 'BASE_URL')] = settings.ollama.v1;
       overlay[runners.variable(runner, 'CONFIG')] = this.configPath;
       // vibey.model is gptossloop's model; a runner with no default of its own (qwenloop)
-      // gets a model only when one is named, else its own config chooses (ADR-0060).
+      // gets a model only when one is named, else its own config chooses (ADR-0061).
       const model = selection.model ?? (runner.defaultModel === null ? undefined : settings.model);
       if (model !== undefined) {
         overlay[runners.variable(runner, 'MODEL')] = model;

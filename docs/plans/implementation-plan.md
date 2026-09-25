@@ -15,7 +15,7 @@
 >   recorded playbook review), M10
 >   (10.8 rollback, 10.12 CLI, and the real-Azure half of 10.13).
 > - **Drift since writing:** five engines, not four (qwenloop is opt-in,
->   ADR-0015, and the sovereign DESIGN provider, ADR-0027; since ADR-0060 that
+>   ADR-0015, and the sovereign DESIGN provider, ADR-0027; since ADR-0061 that
 >   local runner ships as `gptossloop`, the sovereign default and DESIGN
 >   provider, and `qwenloop`, opt-in on Qwen); 25 argv golden files;
 >   eleven migrations in the root `migrations/` directory; no `vibey up` and no
@@ -165,7 +165,7 @@ whole design exists for.
 |---|---|---|---|---|
 | 5.1 | `design.interview` handler — the 7-stage protocol, batched questions | scripted-user integration | ≤4 questions per turn, each with a default | **done** — `design.interview` (`application/design_handler.py`) |
 | 5.2 | Question/answer/assumption lifecycle into the ledger | — | non-blocking questions become recorded assumptions | **done** |
-| 5.3 | `design.research` — parallel, `untrusted` provenance, web + docs MCP | — | research output never enters as instruction | **done** — `application/design_research_handler.py`; with `--provider gptossloop` (the default; `qwenloop` before ADR-0060) research reads `$VIBEY_EVIDENCE_DIR` (ADR-0027) |
+| 5.3 | `design.research` — parallel, `untrusted` provenance, web + docs MCP | — | research output never enters as instruction | **done** — `application/design_research_handler.py`; with `--provider gptossloop` (the default; `qwenloop` before ADR-0061) research reads `$VIBEY_EVIDENCE_DIR` (ADR-0027) |
 | 5.4 | `design.synthesize` with the **must-differ-from-interviewer** constraint | rotation exclusion test | — | **done** — `application/design_synthesis_handler.py` |
 | 5.5 | `design.spec` → `spec.md` / `acceptance.md` / `nfr.md` | `DesignSpec.is_buildable()` returns empty | Planguage fields present on every NFR | **done** — `application/design_spec.py` |
 | 5.6 | `DESIGN` opt-in gate | explicit `VisualDesignDeclined` routes directly to BUILD; opt-in enters the visual interstitial; no default is treated as yes |  | **done** |

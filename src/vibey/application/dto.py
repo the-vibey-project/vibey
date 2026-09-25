@@ -370,7 +370,7 @@ class EngineContext:
     run: tuple[str, ...]
     switch: str | None = None
     model: str | None = None
-    # Whether the switch is on when nothing sets it: gptossloop's is (ADR-0060).
+    # Whether the switch is on when nothing sets it: gptossloop's is (ADR-0061).
     on_by_default: bool = False
 
 

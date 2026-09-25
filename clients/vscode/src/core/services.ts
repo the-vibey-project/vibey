@@ -76,7 +76,7 @@ export class CoreServices implements ServicesInterface {
   readonly answers = new GateAnswerPlanner();
   readonly slash = new SlashCommands();
   readonly slashArguments = new SlashArguments();
-  /** The family's local runner under each of its names: gptossloop by default, and qwenloop (ADR-0060). */
+  /** The family's local runner under each of its names: gptossloop by default, and qwenloop (ADR-0061). */
   readonly runners = LocalRunners.FAMILY;
   private readonly catalogueSource: CatalogueSource;
   private catalogueLoad: Promise<Catalogue> | undefined;

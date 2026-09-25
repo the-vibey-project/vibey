@@ -4,7 +4,7 @@
 > live-proven engines. codexloop (silent `events.jsonl`) and cursorloop
 > (`CURSOR_API_KEY`) were still blocked at the last recorded check
 > (2026-08-20). qwenloop, the fifth engine (ADR-0015), has no live row yet;
-> since ADR-0060 its runner ships as two engines, gptossloop (the sovereign
+> since ADR-0061 its runner ships as two engines, gptossloop (the sovereign
 > default, GPT-OSS 20B) and qwenloop (opt-in, Qwen), and neither has one.
 > All five runners are now in-tree under `src/vibey_runners/` (ADR-0021), so
 > runner fixes land in this repository.
@@ -12,7 +12,7 @@
 ## Goal
 
 All engines — claudeloop, agyloop, codexloop, cursorloop, gptossloop (the
-sovereign local default) and qwenloop (opt-in, ADR-0060) — hold green 9/9 conformance and at least one paid live work
+sovereign local default) and qwenloop (opt-in, ADR-0061) — hold green 9/9 conformance and at least one paid live work
 item each, so rotation runs across the full pool instead of the two
 currently proven.
 
@@ -24,7 +24,7 @@ currently proven.
 | agyloop | Fully live-proven (implement + verify roles, cross-engine) |
 | codexloop | **Broken live**: a real `codexloop run` produced 0 `events.jsonl` lines in ~12 minutes; probe killed; no health row → honestly excluded. Its vocabulary in `LOOP_EVENT_MAP` was source-verified (#34) but never validated against captured runtime output. |
 | cursorloop | **Blocked on auth**: `doctor` fails wanting `CURSOR_API_KEY`. Untested beyond that. |
-| gptossloop | On by default (ADR-0060); the local runner on `gpt-oss:20b` via Ollama (or llama.cpp / vLLM), zero marginal dollars. Its model is the sovereign DESIGN provider (`vibey worker --provider gptossloop`, the default, ADR-0027). No live BUILD row recorded. |
+| gptossloop | On by default (ADR-0061); the local runner on `gpt-oss:20b` via Ollama (or llama.cpp / vLLM), zero marginal dollars. Its model is the sovereign DESIGN provider (`vibey worker --provider gptossloop`, the default, ADR-0027). No live BUILD row recorded. |
 | qwenloop | Opt-in (`[features] qwenloop = true`); the same runner on `qwen3:14b`. No live BUILD row recorded. |
 
 ## Plan per engine

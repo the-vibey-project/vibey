@@ -16,15 +16,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **engines:** the local engine that runs GPT-OSS is `gptossloop`, and it ships on; `qwenloop`
   runs Qwen and is off until switched on
-  ([ADR-0060](docs/architecture/decisions/0060-gptossloop-is-the-sovereign-engine.md)).
+  ([ADR-0061](docs/architecture/decisions/0061-gptossloop-is-the-sovereign-engine.md)).
   The engine called `qwenloop` ran `gpt-oss:20b` by default. The runner package now carries two
   console scripts that differ only in who they are: `gptossloop` (GPT-OSS 20B, reads
   `GPTOSSLOOP_BASE_URL`/`_MODEL`/`_API_KEY`/`_CONFIG` and its own config file) and `qwenloop`
   (`qwen3:14b`, reads `QWENLOOP_*`). Run records (`.qwenloop/runs/`), the done marker and the
   verdict fence stay shared. Runner 0.3.0.
   - **On by default.** gptossloop joins the local tier with no switch; `[features] gptossloop =
-    false` or `VIBEY_FEATURE_GPTOSSLOOP=0` switches it off. The sovereign pair is now
-    `gptossloop` and `opencode`.
+    false` or `VIBEY_FEATURE_GPTOSSLOOP=0` switches it off. The sovereign default is now
+    `gptossloop`.
   - **qwenloop is opt-in.** `VIBEY_FEATURE_QWENLOOP` / `[features] qwenloop` now switch on the
     Qwen engine, and `[engines].enabled` or `[phases.*].engines` naming qwenloop need that
     switch (the refusal says what qwenloop became). `vibey worker` and `vibey doctor` print a
@@ -395,6 +395,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   checks in its title; the review gate certifies the exact-head review verdict; the merge
   train requires both.
 
+### Removed
+
+* **engines:** **BREAKING:** the `opencode` engine and its runner `opencodeloop` are deleted.
+  Sub-doctrine 8.b repealed OpenCode as an engine of either loop, and the operator ruled its
+  code deleted. Gone: the `src/vibey_runners/opencode` tenant and the `opencodeloop` console
+  script (the distribution now ships eleven); the `opencode` engine id, its descriptor,
+  capacity classifier and event map; the OpenCode DESIGN/DECOMPOSE providers and
+  `--provider opencode` on `vibey work` and `vibey worker`; and `opencode` from the default
+  engine pool (`[engines] enabled` now defaults to `["qwenloop"]`), from the known engines,
+  from the `VibeyProject` CRD's `spec.engines` enum, from the image, the CI tools matrix and
+  the uv workspace, and from vibey-gh's default failover seats (now `qwenloop` alone; a
+  `failover.toml` may still name any seat). A `vibey.toml` `[engines]` or
+  `[engine_environment.engines]` entry, an `--engines` list or a `--provider` value that names
+  `opencode` is now refused as unknown, and a `VibeyProject` that lists it in `spec.engines`
+  no longer validates: remove it. Rows already stored with the engine id `opencode` stay in
+  the append-only ledger and read back verbatim as an unrecognized engine id.
+
 ### Fixed
 
 * **tests:** a test session whose database lock is lost no longer loses its databases to another
@@ -459,6 +476,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **engines:** the worker's startup preflight and `vibey doctor --record` probe each engine
   with the project's `engine_environment`, so a credential the project declares for opencode
   or agyloop reaches the auth check and the conformance run, not only the session
+* **vibey_gh:** the sovereign heartbeat is honest and no longer skips the pre-push gate
+  (ADR-0060). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
+  lane's label as online (read with the runner's own login) and the model endpoint answers;
+  otherwise it pushes nothing, says why, and the heartbeat goes stale so the gate falls back
+  honestly. It no longer pushes with `--no-verify` or a bare `--force`: the pre-push hook now
+  recognises by its own rule a push that carries no code (`vibey-gh push-scope`: every ref
+  outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents), and
+  the previous heartbeat is replaced by compare-and-swap. The timer is declared:
+  `vibey-gh heartbeat install|status|uninstall` (also run by `runner install`/`uninstall`)
+  renders a launchd agent on macOS or a systemd user timer on Linux, and refuses an
+  interpreter, package or log under a temporary directory or inside a git work tree. The
+  hand-written `vibey-local-authority` LaunchAgent that used to publish the heartbeat is
+  retired.
+
 * **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
   expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
   re-readied, so a job that kills its worker on every attempt is no longer claimed forever;

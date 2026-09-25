@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
  * The family's local runner (src/vibey_runners/qwen) under each name it ships as: who each
- * engine is, and the protocol they share (ADR-0060).
+ * engine is, and the protocol they share (ADR-0061).
  */
 import type { RawSettings } from './settings-interface';
 

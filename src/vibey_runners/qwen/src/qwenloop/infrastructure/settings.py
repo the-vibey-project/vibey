@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Where a runner's settings come from: a TOML file, the environment, and flags.
 
-Each engine this package carries reads its own (ADR-0060): `gptossloop` reads
+Each engine this package carries reads its own (ADR-0061): `gptossloop` reads
 `GPTOSSLOOP_*` and `<user config dir>/gptossloop/config.toml`, `qwenloop` reads
 `QWENLOOP_*` and `<user config dir>/qwenloop/config.toml`. Naming a model for one never
 changes the model the other runs.

@@ -9,7 +9,7 @@ There are three local engines. `gptossloop` — the local runner on GPT-OSS 20B,
 sovereign default — is on without any switch. `qwenloop` is the same runner on a
 Qwen model (`qwen3:14b`), and `claudeloop-local` is the claudeloop binary on a local
 backend profile; both are opt-in
-([ADR-0060](../architecture/decisions/0060-gptossloop-is-the-sovereign-engine.md)).
+([ADR-0061](../architecture/decisions/0061-gptossloop-is-the-sovereign-engine.md)).
 With its local engines on, vibey:
 
 - **prefers local engines first for BUILD.** Selection runs smooth weighted
@@ -122,7 +122,7 @@ default applies.
 | `qwenloop` | off | `VIBEY_FEATURE_QWENLOOP=1` | `[features] qwenloop = true` |
 | `claudeloop-local` | off | `VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` | `[features] claudeloop_local = true` |
 
-Before ADR-0060 the qwenloop switch turned on the engine that ran `gpt-oss:20b`; that
+Before ADR-0061 the qwenloop switch turned on the engine that ran `gpt-oss:20b`; that
 engine is now `gptossloop`, on by default. With the qwenloop switch on, `vibey
 worker` and `vibey doctor` print a `note:` saying so — drop the switch unless you
 want Qwen as well.

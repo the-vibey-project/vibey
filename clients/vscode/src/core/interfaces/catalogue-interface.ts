@@ -10,7 +10,8 @@ export type LoopName = 'sovereignloop' | 'paidloop';
 
 /**
  * How an engine writes its events: a top-level `type` (codexloop, gptossloop, qwenloop), `event_type`
- * with a `payload` (claudeloop, agyloop), or `event_type` beside flat fields (opencodeloop).
+ * with a `payload` (claudeloop, agyloop), or `event_type` beside flat fields (no engine
+ * today; the deleted opencodeloop wrote it, and `vibey loops` still names the shape).
  */
 export type EventEnvelope = 'type' | 'event_type+payload' | 'event_type';
 
@@ -44,11 +45,11 @@ export interface CatalogueEngine {
   readonly binary: string;
   readonly state_dir: string;
   readonly enabled: boolean;
-  /** Repealed by the canon (OpenCode, by 8.b): listed for transparency, and never run. */
+  /** Repealed by the canon (8.b) while its code is still in vibey: listed for transparency, and never run. */
   readonly repealed: boolean;
   readonly switch: string | null;
   /**
-   * Whether vibey switches it on unless its switch says otherwise (gptossloop, ADR-0060). A
+   * Whether vibey switches it on unless its switch says otherwise (gptossloop, ADR-0061). A
    * producer from before the key existed switched nothing on by default: false.
    */
   readonly on_by_default: boolean;

@@ -1,7 +1,7 @@
 # qwenloop
 
 An onion-architected autonomous local-model runner, installed as two engines
-that share one runner (vibey ADR-0060): `gptossloop` (entry point
+that share one runner (vibey ADR-0061): `gptossloop` (entry point
 `qwenloop.cli.app:gptoss_main`; `GPTOSSLOOP_*` settings; default model
 `gpt-oss:20b`) and `qwenloop` (`qwenloop.cli.app:main`; `QWENLOOP_*`; default
 `qwen3:14b`). Both write `.qwenloop/runs/`, end on

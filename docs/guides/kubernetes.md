@@ -377,10 +377,10 @@ as `vibey.toml`'s [`[gates]`](../reference/configuration.md#gates) and
 [`[engine_environment]`](../reference/configuration.md#engine_environment); a
 forbidden entry (`VIBEY_*`, `PG*`, a DSN) is refused before the project is created.
 `spec.engines` is restricted by the CRD schema to the known engine ids
-(`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `opencode`,
-`gptossloop`, `qwenloop`, `claudeloop-local`). The worker accepts
+(`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop`,
+`qwenloop`, `claudeloop-local`). The worker accepts
 `--provider gptossloop` (chart value `worker.provider`; `qwenloop` is still
-read as gptossloop, ADR-0060) for the sovereign DESIGN provider. That
+read as gptossloop, ADR-0061) for the sovereign DESIGN provider. That
 provider talks to a local Ollama over HTTP rather than running the
 `gptossloop` binary (which the image does ship), so it needs a model server
 the pod can reach: `ollama.enabled` runs one in the release and points the

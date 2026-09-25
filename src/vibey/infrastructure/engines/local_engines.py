@@ -11,7 +11,7 @@ not see the engine the worker was running).
 - `LocalEngineSettings` answers from the environment first, then the project's
   config: `VIBEY_FEATURE_<KEY>` whenever it is set at all, else `[features] <key>`,
   else the engine's own default -- on for gptossloop, the sovereign default, and off
-  for every other local engine (ADR-0060).
+  for every other local engine (ADR-0061).
 - `LocalEndpointEnvironment` turns the one operator setting, `VIBEY_OLLAMA_URL`, into
   the variables each local engine's own process reads.
 """
@@ -66,14 +66,14 @@ RUNNER_VARIABLES: dict[EngineId, LocalRunnerVariables] = {
 }
 #: The local engines vibey also hands a model: the one that runs this era's default
 #: model (`VIBEY_OLLAMA_MODEL`, 8.d). qwenloop runs the Qwen model it names itself, so
-#: vibey hands it only the endpoint (ADR-0060).
+#: vibey hands it only the endpoint (ADR-0061).
 HANDED_A_MODEL = frozenset({EngineId.GPTOSSLOOP})
 
 
 @dataclass(frozen=True, slots=True)
 class LocalEngineSwitch:
     """One local engine's feature switch: a `[features]` key, its environment name, and
-    whether the engine is on when neither sets it (ADR-0060)."""
+    whether the engine is on when neither sets it (ADR-0061)."""
 
     engine_id: EngineId
     feature_key: str
@@ -91,10 +91,10 @@ LOCAL_ENGINE_SWITCHES: tuple[LocalEngineSwitch, ...] = tuple(
     LocalEngineSwitch(EngineId(engine), key, engine in LOCAL_ENGINES_ON_BY_DEFAULT)
     for engine, key in LOCAL_ENGINE_FEATURES.items()
 )
-#: What an operator who switched qwenloop on before ADR-0060 needs to hear: the switch
+#: What an operator who switched qwenloop on before ADR-0061 needs to hear: the switch
 #: they set now means something else.
 QWENLOOP_SWITCH_NOTICE = (
-    "qwenloop is switched on, and since ADR-0060 it runs a Qwen model (qwen3:14b unless "
+    "qwenloop is switched on, and since ADR-0061 it runs a Qwen model (qwen3:14b unless "
     "QWENLOOP_MODEL names another). The gpt-oss engine qwenloop used to be is gptossloop, "
     "on by default: drop VIBEY_FEATURE_QWENLOOP / [features] qwenloop unless you want "
     "Qwen as well."
@@ -157,7 +157,7 @@ class LocalEngineSettings:
 
     @property
     def notices(self) -> tuple[str, ...]:
-        """What the operator should hear about how their switches now read (ADR-0060)."""
+        """What the operator should hear about how their switches now read (ADR-0061)."""
         return (QWENLOOP_SWITCH_NOTICE,) if self.enabled(EngineId.QWENLOOP) else ()
 
     @property
@@ -216,7 +216,7 @@ class LocalEndpointEnvironment:
     providers already read `VIBEY_OLLAMA_URL` / `VIBEY_OLLAMA_MODEL` through
     `OllamaChatClient`; this reads the same two through the same client -- so the URL is
     validated by the same rule and defaults the same way -- and hands each local runner
-    its own names for them (ADR-0060):
+    its own names for them (ADR-0061):
 
     - gptossloop: `GPTOSSLOOP_BASE_URL` = `<VIBEY_OLLAMA_URL>/v1`, and `GPTOSSLOOP_MODEL`
       = `--ollama-model`, else `VIBEY_OLLAMA_MODEL`, else the default -- the providers'

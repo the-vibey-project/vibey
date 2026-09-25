@@ -172,7 +172,7 @@ DESIGN jobs run in-process on one `DesignProvider`, chosen with
 `vibey work --provider` or `vibey worker --provider`:
 
 - `gptossloop` is the sovereign provider, the preferred way to run and the
-  default when no `--provider` is given (ADR-0027, ADR-0060; `qwenloop` is
+  default when no `--provider` is given (ADR-0027, ADR-0061; `qwenloop` is
   still accepted as its old name), on the Ollama server at `VIBEY_OLLAMA_URL` with the model
   `VIBEY_OLLAMA_MODEL` (or `--ollama-model`). Set `VIBEY_EVIDENCE_DIR` to a
   directory of operator-supplied reading: `design.research` refuses to invent
@@ -182,12 +182,11 @@ DESIGN jobs run in-process on one `DesignProvider`, chosen with
   With this provider the worker's decomposer is the sovereign one too (§2.1).
 - `claudeloop` drives the interview, research, synthesis, and decomposition
   through a claudeloop session, bounded by `--max-turns` and `--max-dollars`.
-- `opencode` drives the same stages through an opencodeloop session.
 - `scripted` is the test provider.
 
 No engine selection happens for any `design.*` job, so no per-stage rotation
 occurs. The ledger records the interviewer as the provider's own engine:
-`gptossloop` for the sovereign provider (ADR-0060), `claudeloop` for the paid
+`gptossloop` for the sovereign provider (ADR-0061), `claudeloop` for the paid
 one. The synthesize job carries `requirement.excluded =
 ["claudeloop"]` for a future selector, but nothing enforces it; the
 synthesizer runs on the same provider as the interviewer.
@@ -248,7 +247,7 @@ BUILD job is enqueued until `vibey visual accept` or `vibey visual waive`
 settles it.
 
 Today the only `VisualInventoryProducer` is the scripted one.
-`vibey work --provider claudeloop|gptossloop|opencode` raises `WrongPhase` in
+`vibey work --provider claudeloop|gptossloop` raises `WrongPhase` in
 `VISUAL_DESIGN`, and `vibey worker` always uses the scripted producer. Use
 `--provider scripted`.
 
@@ -395,7 +394,7 @@ class WorkItem:
 
 The decomposer is the worker's `WorkPlanProducer`: the sovereign
 `GptossloopWorkPlanProducer` by default (`--provider gptossloop`), claudeloop
-with `--provider claudeloop`, opencodeloop with `--provider opencode`, and the
+with `--provider claudeloop`, and the
 scripted one with `--provider scripted`. The sovereign one asks
 the local model under a JSON schema whose `acceptance_ids` and
 `criteria_checked` entries are an enum of the spec's own criterion ids and

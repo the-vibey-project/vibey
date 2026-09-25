@@ -215,9 +215,10 @@ option a declaration reaches.
 
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
 carried this entry; its two loops and two layers, and its one instance per model,
-set by the merge that carried them; its sovereign runners named by the merge that
-carries ADR-0060 — under Article II.3 a ratification-ready draft until the
-operator's merge carries it)*: the family runs **exactly two loops**. **`sovereignloop`** — what `gptossloop`
+set by the merge that carried them; its capacity on the operator's own hardware made
+the number measured on each device by the merge that carried that sentence; its
+sovereign runners named by the merge that carries ADR-0061 — under Article II.3 a
+ratification-ready draft until the operator's merge carries it)*: the family runs **exactly two loops**. **`sovereignloop`** — what `gptossloop`
 and `qwenloop` become — drives the models and tools that run on the operator's own hardware;
 **`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
 `cursorloop` and `agyloop` as its adapters. Each loop runs as
@@ -227,11 +228,17 @@ a second instance of a loop to go faster, and nothing spawns a loop directly:
 vibey's workers, storms and the command line put work on the loop's queue, and
 the one instance is shared by all of them.
 
-The instance takes on as much work at once as its capacity allows — for a model
-running on the operator's own hardware, one run at a time — and no more.
-Everything else waits in the queue, where waiting is ordered, visible and safe.
-Throughput is raised by giving the one instance more capacity, never by starting
-another.
+The instance takes on as much work at once as its capacity allows, and no more. For
+a model running on the operator's own hardware, that capacity is **the number of
+concurrent runs measured on that device and recorded as evidence** (8.j) — measured
+against the loop's own work, keyed to the device, the runner, the model and its context
+window, and held to the bounds 8.j names: wired memory within its ceiling, swap not
+rising, no prompt refused or cut that one run would have served, and every answer as
+faithful as one run's. **Unmeasured or stale means one.** A number the evidence does not
+support is never run, however it is declared, and the operator may always declare fewer
+(12.c). Everything else waits in the queue, where waiting is ordered, visible and safe.
+Throughput is raised by giving the one instance more capacity — measured capacity —
+never by starting another.
 
 **Rotation has two layers, and both run on the bus.** The outer layer chooses the
 loop: `sovereignloop` by default, always (8.a), and `paidloop` only when the
@@ -491,6 +498,8 @@ A source that cannot be read is a failure to report, never a gap to step over. T
 A tool that would put such work on volatile storage refuses, and says which key moves it. It does not decide on the work's behalf that the work was disposable; only a declaration that gives its reason may say so, and saying so is part of putting it there. What may live on volatile storage is what can be regenerated exactly: a cache, a pipe, a socket, a test's throwaway directory, a render compared and discarded.
 
 Durable storage is necessary and not sufficient, because one disk is one failure away from nothing. Work is committed as soon as it is coherent rather than when it is finished, and pushed to where others can see it often enough that an unrecoverable machine costs minutes of work and never hours — a draft is fine; an hour of work that exists nowhere else is not. A long measurement records each step as it finishes and resumes from the last one, so an interruption costs a step and never the run.
+
+**10.i — the signal is read before it is sent** *(ratified by the merge that carried this entry)*: a signal that tells others something is ready — a heartbeat, a status, a readiness flag that work will be routed on — is published only after what it claims has been read true, from the thing that knows, at the moment it is sent. A read that fails, or cannot be made, withholds the signal, and the silence is the honest message: a missing signal costs one lane, a false one costs everyone who trusted it. The same holds for the gates that judge work. A gate that exempts anything decides so itself, by a rule anyone can read, over the very objects it is judging, and exactly as wide as the one thing the rule was written for — never on a caller's flag, a variable, or a request to look away. An exemption a caller can ask for is a bypass with better manners (12.d).
 
 ## 11 — The living roadmap
 

@@ -22,12 +22,9 @@ from vibey.domain.queue_reap import (
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-# The engine id is `opencode` (the provider multiplexer); `opencodeloop` is the
-# wrapper binary and package that adapts it. The canonical id is what config,
-# the CLI and the ledger all speak.
-# The sovereign default pair (on without declaration; ADR-0060 made gptossloop, the
-# local runner on GPT-OSS, the local half of it)
-DEFAULT_ENGINES = ("gptossloop", "opencode")
+# The sovereign default (on without declaration; ADR-0061 made it gptossloop, the local
+# runner on GPT-OSS)
+DEFAULT_ENGINES = ("gptossloop",)
 # Local engines, each behind its own `[features]` switch (ADR-0015, ADR-0038). The
 # feature key is the engine id with the hyphen a TOML bare key cannot carry.
 LOCAL_ENGINE_FEATURES = {
@@ -35,7 +32,7 @@ LOCAL_ENGINE_FEATURES = {
     "qwenloop": "qwenloop",
     "claudeloop-local": "claudeloop_local",
 }
-# The local engines whose switch is on when nothing sets it (ADR-0060): the sovereign
+# The local engines whose switch is on when nothing sets it (ADR-0061): the sovereign
 # default, which a project switches off only by saying so -- `[features] gptossloop =
 # false` or `VIBEY_FEATURE_GPTOSSLOOP=0`. Every other local engine is opt-in.
 LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})
@@ -44,16 +41,15 @@ KNOWN_ENGINES = (
     "codexloop",
     "cursorloop",
     "agyloop",
-    "opencode",
     "gptossloop",
     "qwenloop",
     "claudeloop-local",
 )
 # Said beside a refused request for an engine whose meaning changed, so the operator who
-# configured the old one learns what it became (ADR-0060).
+# configured the old one learns what it became (ADR-0061).
 _SWITCH_HINTS = {
     "qwenloop": (
-        " -- qwenloop runs a Qwen model since ADR-0060; the gpt-oss engine it used to be is "
+        " -- qwenloop runs a Qwen model since ADR-0061; the gpt-oss engine it used to be is "
         "gptossloop, on by default"
     ),
 }
@@ -198,7 +194,7 @@ class TelemetryConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
-    # On unless switched off: the sovereign default engine (ADR-0060).
+    # On unless switched off: the sovereign default engine (ADR-0061).
     gptossloop: bool = True
     # The same runner on a Qwen model; opt-in.
     qwenloop: bool = False
@@ -577,7 +573,7 @@ def _parse_budget(data: dict[str, Any]) -> BudgetConfig:
 
 def _parse_engines(data: dict[str, Any], features: FeaturesConfig) -> EnginesConfig:
     table = _optional(data, "engines", "engines", dict, {})
-    # The sovereign pair are on without declaration. The one way one leaves the pool is
+    # The sovereign default is on without declaration. The one way it leaves the pool is
     # the declaration its own switch is for (gptossloop's `[features] gptossloop =
     # false`); nothing else -- an `enabled` list that omits it included -- removes it.
     sovereign = tuple(engine for engine in DEFAULT_ENGINES if features.enables(engine))

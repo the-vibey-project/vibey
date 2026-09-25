@@ -11,7 +11,7 @@ const engines = new CatalogueParser().parse(JSON.parse(fixture('vibey-loops.json
 const engine = (id: string): CatalogueEngine => engines.find((candidate) => candidate.engine_id === id) as CatalogueEngine;
 
 describe('LocalRunners', () => {
-  it('knows the runner under both names it ships as, each with its own settings (ADR-0060)', () => {
+  it('knows the runner under both names it ships as, each with its own settings (ADR-0061)', () => {
     const runners = LocalRunners.FAMILY;
     expect(runners.default).toBe(LocalRunners.GPTOSSLOOP);
     expect(runners.all.map((runner) => runner.name)).toEqual(['gptossloop', 'qwenloop']);
@@ -120,9 +120,6 @@ describe('EngineCommand', () => {
     // vibey declares no prompt for an engine that ignores one: no follow-up is ever sent to it.
     const cursor = new EngineCommand(engine('cursorloop'), '/bin/cursorloop');
     expect(cursor.prompt('r1', 'x', '/w')).toBeUndefined();
-    const opencode = new EngineCommand(engine('opencode'), '/bin/opencodeloop');
-    expect(opencode.stop('r1', '/w')).toBeUndefined();
-    expect(opencode.prompt('r1', 'x', '/w')).toBeUndefined();
     const codex = new EngineCommand(engine('codexloop'), '/bin/codexloop');
     expect(codex.stop('r1', '/w')?.args).toEqual(['stop', '--run-id', 'r1']);
     const claude = new EngineCommand(engine('claudeloop'), '/bin/claudeloop');

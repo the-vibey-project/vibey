@@ -3,7 +3,7 @@
 
 Doctrine 8.a makes the 100% sovereign path the preferred way to run. Until now it could
 not run at all: the local engine (then `EngineId.QWENLOOP`, now `EngineId.GPTOSSLOOP`,
-ADR-0060) was wired as a BUILD executor, but DESIGN is phase one and its only live
+ADR-0061) was wired as a BUILD executor, but DESIGN is phase one and its only live
 provider was ClaudeLoop. A project could not be started without
 paid credit, which makes the "preferred" path the one that cannot go first.
 
@@ -179,7 +179,7 @@ class GptossloopDesignProvider:
     """DESIGN on a local model, over Ollama's chat API with a compiled grammar."""
 
     #: The sovereign path's actor. Doctrine 8.a is only auditable if the
-    #: ledger says gptossloop when gptossloop's model is what ran (ADR-0060).
+    #: ledger says gptossloop when gptossloop's model is what ran (ADR-0061).
     engine_id: EngineId | None = EngineId.GPTOSSLOOP
 
     def __init__(

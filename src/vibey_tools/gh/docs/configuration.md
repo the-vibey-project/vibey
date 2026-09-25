@@ -251,7 +251,7 @@ the lane while `trusted_only` is on.
 | `model` | string / `"gpt-oss:20b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
 | `trusted_only` | boolean / `true` | Never run the sovereign lane for a fork pull request. |
-| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
+| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. A beat is published only while a runner carrying `runner_label` is registered and online (read with the runner's own login) and `base_url` answers with `model`; otherwise nothing is pushed and the ref goes stale. It replaces the previous heartbeat by compare-and-swap and goes through the pre-push gate, which lets it through by its own rule: every ref outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents. |
 | `heartbeat_max_age_minutes` | integer / `15` | How stale that heartbeat may be before the local lane is treated as down. A ref that stopped moving is indistinguishable from a runner that stopped, which is the point — both mean do not route work there. |
 | `max_diff_chars` | integer / `60000` | For the diff half, a diff longer than this is **refused**, never cut: a verdict on part of a diff would pass the rest unread, so the gate asks a human. A **whole** review (no paid review declared) never cuts the diff either: it is shown the whole diff or refused. It never bounds the documents; `max_document_chars` does. |
 | `max_document_chars` | integer / `120000` (at least 1000) | The most characters of `context_paths` documents a whole review is shown, whatever the window would allow. The documents' own limit, never the diff's: when they shared `max_diff_chars`, this repository's two pages already took 59,607 of its 60,000, and a few hundred more characters of README cut a page, so every pull request's review claimed the diff half alone and its gate asked a human. The default is about twice what those pages hold today; the window is what usually binds. |
@@ -305,7 +305,11 @@ The machine that serves the sovereign lane, declared rather than hand-made (sub-
 12.c). `vibey-gh runner install` renders the runner's LaunchAgent, supervisor, Dockerfile and
 container entrypoint from this table and the templates in `vibey_gh/templates/runner/`;
 `vibey-gh runner check` reconciles the host against them; `vibey-gh runner cleanup` finds
-agents under `unit_prefix` that the tree no longer declares. The runner label is
+agents under `unit_prefix` that the tree no longer declares. `runner install` also installs
+the heartbeat timer that tells the gate the runner is there (`vibey-gh heartbeat`, vibey
+ADR-0060): each beat publishes only while a runner with the label is registered and online
+and the model endpoint answers, and goes through the pre-push gate like any other push. The
+runner label is
 `[pr_automation.fallback] runner_label` and the host-side model URL is its `base_url`; neither
 is declared twice. The supervisor is macOS-only (launchd, `caffeinate`, `pmset`). The
 operator's steps are in the vibey repository's `docs/runbooks/sovereign-review-runner.md`.
@@ -324,7 +328,13 @@ operator's steps are in the vibey repository's `docs/runbooks/sovereign-review-r
 | `require_ac` | boolean / `true` | Stay down on battery rather than hold a laptop awake to idle-poll. |
 | `throttle_seconds` | integer 10–3600 / `120` | launchd's `ThrottleInterval` between restarts. |
 | `max_failures` | integer 1–100 / `5` | Consecutive runner failures before the supervisor stops rather than spins. |
-| `path` | string / Homebrew then system paths | The `PATH` launchd gives the supervisor; `docker` and `gh` must be on it. |
+| `path` | string / Homebrew then system paths | The `PATH` launchd gives the supervisor; `docker` and `gh` must be on it. The heartbeat timer runs with the same `PATH`, so `git`, and `vibey-gh` (or a `python3` that imports this repository's own copy) for the pre-push hook, must be on it too. |
+| `heartbeat_scheduler` | `""`, `"launchd"` or `"systemd"` / `""` | What runs the heartbeat timer (`vibey-gh heartbeat install`, also installed by `runner install`). Empty picks by platform: a launchd agent on macOS, a systemd user service and timer on Linux. |
+| `heartbeat_interval_minutes` | integer 0–720 / `0` | Minutes between beats. `0` takes half of `[pr_automation.fallback] heartbeat_max_age_minutes` (7 for the default 15). More than half is refused at install, so one missed beat never stales the lane. |
+| `heartbeat_python` | path / `""` | The interpreter the timer runs `python -m vibey_gh.cli sovereign --beat` with. Empty is the one running the install. It, and the `vibey_gh` it imports (asked of it at install), must live outside any temporary directory and any git work tree — install vibey-gh as a tool (for example `uv tool install vibey`) rather than into a checkout's virtualenv. |
+| `heartbeat_clone_dir` | path / `""` | The repository the heartbeat timer owns and pushes from: a clone with no working tree, its own pre-push gate, and a credential helper that uses only the runner's login. Empty is `<install_dir>/heartbeat-<repository name>`. It must live outside any temporary directory and any git work tree. |
+| `heartbeat_log_dir` | path / `""` | Where the timer logs (`<label>.log`) and records each beat (`<label>.last.json`, read by `heartbeat status`). Empty is `log_dir` under launchd and `~/.local/state/vibey-gh` under systemd. Refused under a temporary directory or inside a git work tree. |
+| `systemd_user_dir` | path / `"~/.config/systemd/user"` | Where the heartbeat's systemd user units are written. |
 
 ## `[conversation]`
 
@@ -846,8 +856,8 @@ launch = "gptossloop run"
 health = "curl -sf http://127.0.0.1:11434/api/tags"
 
 [[seats]]
-name = "opencode"
-launch = "opencode"                          # empty health = engage without preflight
+name = "ollama"
+launch = "ollama run qwen2.5-coder"          # empty health = engage without preflight
 ```
 
 | Field | Type / default | Meaning |
@@ -855,7 +865,7 @@ launch = "opencode"                          # empty health = engage without pre
 | `enabled` | boolean / `false` | The operator writes `true` deliberately; the first live handoff should be supervised. |
 | `paid_probe` | string / empty | A shell command whose exit status answers "is the paid lane alive?" — the 296 ms *Credit balance is too low* refusal is exactly what it distinguishes from health. A hang counts as down. |
 | `interval_seconds` | integer / `300` | Loop cadence when run without `--once`. |
-| `seats` | array of tables / gptossloop, then opencode | Each seat is a name, a `launch` command, and an optional `health` preflight, judged by exit status — any agent fits without a code change. qwenloop, gptossloop's opt-in Qwen twin (vibey ADR-0060), is a seat you name here. |
+| `seats` | array of tables / gptossloop | Each seat is a name, a `launch` command, and an optional `health` preflight, judged by exit status — any agent fits without a code change. qwenloop, gptossloop's opt-in Qwen twin (vibey ADR-0061), is a seat you name here. |
 
 Seat state (which agent holds the seat, and its pid) lives in
 `~/.local/state/vibey-gh/failover.json`; `--config` and `--state` override both paths.

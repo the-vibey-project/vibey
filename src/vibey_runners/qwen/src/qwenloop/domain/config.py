@@ -16,7 +16,7 @@ DEFAULT_ENDPOINT_BASE_URL = "http://127.0.0.1:11434/v1"
 #: gives it -- the model `gptossloop` asks an endpoint for. The pinned llama.cpp profiles
 #: are a separate choice and keep their own model.
 DEFAULT_ENDPOINT_MODEL = "gpt-oss:20b"
-#: The Qwen model `qwenloop` asks an endpoint for (ADR-0060): Qwen3 14B, under the name
+#: The Qwen model `qwenloop` asks an endpoint for (ADR-0061): Qwen3 14B, under the name
 #: Ollama gives it. Qwen3 rather than Qwen2.5-Coder because this runner drives the model
 #: through native tool calls, and Qwen2.5-Coder 14B on Ollama writes its calls out as text.
 DEFAULT_QWEN_ENDPOINT_MODEL = "qwen3:14b"
@@ -83,7 +83,7 @@ _TOOL_LIMIT_KEYS = frozenset(item.name for item in fields(ToolLimits))
 
 @dataclass(frozen=True, slots=True)
 class RunnerIdentity:
-    """Which engine this process runs as (ADR-0060).
+    """Which engine this process runs as (ADR-0061).
 
     One runner package carries two engines that differ only in the model they ask for:
     `gptossloop`, the sovereign default on GPT-OSS, and `qwenloop`, on a Qwen model. Each
@@ -175,7 +175,7 @@ class QwenConfigParser:
     """
 
     def __init__(self, *, default_model: str = DEFAULT_ENDPOINT_MODEL) -> None:
-        # The model a mapping that names none is given: each engine's own (ADR-0060).
+        # The model a mapping that names none is given: each engine's own (ADR-0061).
         self._default_model = default_model
 
     def parse(self, data: Mapping[str, Any]) -> QwenConfig:

@@ -7,7 +7,7 @@ sovereignloop, runs on your machine: gptossloop, vibey's local agent, drives **g
 through [Ollama](https://ollama.com). The design behind it is
 [ADR-0059](../architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md); the
 engine it runs is set out in
-[ADR-0060](../architecture/decisions/0060-gptossloop-is-the-sovereign-engine.md).
+[ADR-0061](../architecture/decisions/0061-gptossloop-is-the-sovereign-engine.md).
 
 The extension's own
 [README](https://github.com/the-vibey-project/vibey/blob/main/clients/vscode/README.md) lists
@@ -112,8 +112,8 @@ panel's page runs no script but its own.
   its Ollama address. `vibey.gptossloopPath` and `vibey.qwenloopPath` name the two programs
   when the first on your PATH is not the one you want.
 - **paidloop** runs vendors' engines, Claude through claudeloop by default, only once you
-  declare it, with a daily or monthly dollar cap or a no-cap declaration you confirm twice. A
-  repealed engine (OpenCode, by canon 8.b) is shown and never runs.
+  declare it, with a daily or monthly dollar cap or a no-cap declaration you confirm twice. An
+  engine canon 8.b repeals while vibey still carries its code is shown and never runs.
 - **Effort** `auto` climbs vibey's ladder, one rung per failed attempt, in the same copy.
 - **Budgets**: a vibey project's cycle caps go through `vibey budget`. This computer's own
   lanes have per-run, daily or monthly caps in dollars, turns or minutes, kept in the storm

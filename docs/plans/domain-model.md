@@ -260,9 +260,9 @@ the protocol, not to any one subprocess adapter."""
 
 class EngineId(StrEnum):
     CLAUDELOOP = "claudeloop"; CODEXLOOP = "codexloop"
-    CURSORLOOP = "cursorloop"; AGYLOOP = "agyloop"; OPENCODE = "opencode"
+    CURSORLOOP = "cursorloop"; AGYLOOP = "agyloop"
     GPTOSSLOOP = "gptossloop"   # the sovereign default: the local runner on GPT-OSS
-    QWENLOOP = "qwenloop"       # the same runner on a Qwen model, opt-in (ADR-0060)
+    QWENLOOP = "qwenloop"       # the same runner on a Qwen model, opt-in (ADR-0061)
     CLAUDELOOP_LOCAL = "claudeloop-local"
 
 
@@ -1162,12 +1162,12 @@ never touches the filesystem — reading the file is an infrastructure concern.
 ```python
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-DEFAULT_ENGINES = ("gptossloop", "opencode")   # the sovereign pair, on without declaration
-KNOWN_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop", "opencode",
+DEFAULT_ENGINES = ("gptossloop",)   # the sovereign default, on without declaration
+KNOWN_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop",
                  "gptossloop", "qwenloop", "claudeloop-local")
 LOCAL_ENGINE_FEATURES = {"gptossloop": "gptossloop", "qwenloop": "qwenloop",
                          "claudeloop-local": "claudeloop_local"}
-LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})   # ADR-0060
+LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})   # ADR-0061
 
 class ConfigError(VibeyError):
     def __init__(self, path: str, message: str) -> None: ...
@@ -1213,7 +1213,7 @@ class DeployConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
-    gptossloop: bool = True        # on unless switched off (ADR-0060)
+    gptossloop: bool = True        # on unless switched off (ADR-0061)
     qwenloop: bool = False
     claudeloop_local: bool = False
 
@@ -1244,7 +1244,7 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
     """Raises ConfigError on the first violation found. A local engine may
     only be requested (in engines.enabled or any phase's engines list) while
     its switch is on: `qwenloop` once features.qwenloop is true, `gptossloop`
-    unless features.gptossloop is false. The sovereign pair is added to any
+    unless features.gptossloop is false. The sovereign default is added to any
     engines.enabled list; without an explicit list, every switched-on local
     engine is added to the default engine set automatically."""
 

@@ -39,101 +39,6 @@
       "declared_only": false,
       "engines": [
         {
-          "engine_id": "opencode",
-          "binary": "opencodeloop",
-          "state_dir": ".opencodeloop",
-          "enabled": true,
-          "switch": null,
-          "on_by_default": false,
-          "repealed": true,
-          "cost_per_mtok_in": 0.0,
-          "cost_per_mtok_out": 0.0,
-          "default_model": null,
-          "efforts": [
-            {
-              "effort": "TRIVIAL",
-              "argv": [],
-              "achieved": "STANDARD",
-              "model": null,
-              "notes": "OpenCode has no portable effort flag; opencodeloop's own configuration chooses the model"
-            },
-            {
-              "effort": "LOW",
-              "argv": [],
-              "achieved": "STANDARD",
-              "model": null,
-              "notes": "OpenCode has no portable effort flag; opencodeloop's own configuration chooses the model"
-            },
-            {
-              "effort": "STANDARD",
-              "argv": [],
-              "achieved": "STANDARD",
-              "model": null,
-              "notes": "opencodeloop's own configuration chooses the model"
-            },
-            {
-              "effort": "HIGH",
-              "argv": [],
-              "achieved": "STANDARD",
-              "model": null,
-              "notes": "OpenCode has no portable effort flag; opencodeloop's own configuration chooses the model"
-            },
-            {
-              "effort": "MAX",
-              "argv": [],
-              "achieved": "STANDARD",
-              "model": null,
-              "notes": "OpenCode has no portable effort flag; opencodeloop's own configuration chooses the model"
-            }
-          ],
-          "capabilities": {
-            "images": null,
-            "files": true,
-            "paste_text": true,
-            "paste_images": null,
-            "plugins": "skills-context",
-            "mcp": null,
-            "evidence": {
-              "files": "it runs `opencode run --dir <cwd>` in the worktree (opencodeloop infrastructure/opencode_process.py)",
-              "paste_text": "the plan's text is the message it sends (opencodeloop infrastructure/opencode_process.py)",
-              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it"
-            }
-          },
-          "done_marker": "OPENCODELOOP_TASK_FULLY_COMPLETE",
-          "plan_flag": null,
-          "supports_cwd_flag": true,
-          "base_weight": 1,
-          "run": [
-            "{binary}",
-            "run",
-            "{plan}",
-            "--run-id",
-            "{run_id}",
-            "{effort_argv...}",
-            "--cwd",
-            "{cwd}"
-          ],
-          "controls": {
-            "stop": null,
-            "wind_down": null,
-            "prompt": null
-          },
-          "events": {
-            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
-            "envelope": "event_type"
-          },
-          "env": {
-            "auth": [],
-            "passthrough": [
-              "OPENCODELOOP_*",
-              "OPENCODE_*"
-            ]
-          },
-          "notes": [
-            "sub-doctrine 8.b repeals opencode from both loops; reported here as its descriptor says, tier local"
-          ]
-        },
-        {
           "engine_id": "gptossloop",
           "binary": "gptossloop",
           "state_dir": ".qwenloop",
@@ -384,7 +289,7 @@
             ]
           },
           "notes": [
-            "since ADR-0060 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop"
+            "since ADR-0061 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop"
           ]
         },
         {

@@ -1,5 +1,5 @@
 ---
-description: How vibey drives claudeloop, codexloop, cursorloop, agyloop, opencode, and the local engines — gptossloop (the sovereign default), and the opt-in qwenloop and claudeloop-local — the engine adapter pattern, tiers, argv building, and the conformance suite.
+description: How vibey drives claudeloop, codexloop, cursorloop, agyloop, and the local engines — gptossloop (the sovereign default), and the opt-in qwenloop and claudeloop-local — the engine adapter pattern, tiers, argv building, and the conformance suite.
 alwaysApply: false
 ---
 
@@ -7,17 +7,16 @@ alwaysApply: false
 
 # vibey engine adapters
 
-Vibey drives six autonomous session runners through eight engine ids:
-`claudeloop`, `codexloop`, `cursorloop`, `agyloop` (tier PAID) and `opencode`
-(the opencodeloop adapter; its descriptor says tier LOCAL, and canon 8.b repeals
-it from both loops) make up the default pool, `DEFAULT_DESCRIPTORS`; three
-local engines (tier LOCAL, `LOCAL_DESCRIPTORS`) join them, each behind its own
-switch (ADR-0060): `gptossloop` — the local runner on GPT-OSS 20B, the
-sovereign default, **on** unless `VIBEY_FEATURE_GPTOSSLOOP=0` / `[features]
-gptossloop = false`; `qwenloop` — the same runner on a Qwen model
-(`qwen3:14b`), opt-in by `VIBEY_FEATURE_QWENLOOP=1` / `[features] qwenloop =
-true` (ADR-0015); and `claudeloop-local` — the claudeloop binary run with a
-local backend profile (`--profile NAME`), opt-in by
+Vibey drives five autonomous session runners through seven engine ids:
+`claudeloop`, `codexloop`, `cursorloop` and `agyloop` (tier PAID) make up the
+default pool, `DEFAULT_DESCRIPTORS`; three local engines (tier LOCAL,
+`LOCAL_DESCRIPTORS`) join them, each behind its own switch (ADR-0061):
+`gptossloop` — the local runner on GPT-OSS 20B, the sovereign default, **on**
+unless `VIBEY_FEATURE_GPTOSSLOOP=0` / `[features] gptossloop = false`; `qwenloop`
+— the same runner on a Qwen model (`qwen3:14b`), opt-in by
+`VIBEY_FEATURE_QWENLOOP=1` / `[features] qwenloop = true` (ADR-0015); and
+`claudeloop-local` — the claudeloop binary run with a local backend profile
+(`--profile NAME`), opt-in by
 `VIBEY_FEATURE_CLAUDELOOP_LOCAL` / `[features] claudeloop_local` (ADR-0038).
 Under sub-doctrine 8.a local engines are **preferred first**: selection runs
 SWRR within the LOCAL tier and falls back to PAID only when no local engine is
@@ -121,15 +120,15 @@ ADR-0031). The packet is recorded as a `vibey_skills_context_packet` artifact.
 ## Engine descriptors
 
 `infrastructure/engines/descriptors.py` defines `CLAUDELOOP`, `CODEXLOOP`,
-`CURSORLOOP`, `AGYLOOP`, `OPENCODE`, `GPTOSSLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one
+`CURSORLOOP`, `AGYLOOP`, `GPTOSSLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one
 `EngineDescriptor` per engine. claudeloop-local's is *built* from `[engines.claudeloop_local]`
 (`profile`, `context_window`, `structured_verdict`) by
 `ClaudeloopLocalDescriptors.build()`; the constant is the default profile `local`.
 `GPTOSSLOOP` is `QWENLOOP` with its own id, binary and `GPTOSSLOOP_*`
 passthrough: one runner, whose run layout (`.qwenloop/runs/`), done marker and
 events both engines share.
-`DEFAULT_DESCRIPTORS` is the default pool of five, `LOCAL_DESCRIPTORS` the three
-local ones, `ALL_DESCRIPTORS` all eight, and `BY_ENGINE_ID` maps every
+`DEFAULT_DESCRIPTORS` is the default pool of four, `LOCAL_DESCRIPTORS` the three
+local ones, `ALL_DESCRIPTORS` all seven, and `BY_ENGINE_ID` maps every
 `EngineId`. The worker
 adds adapters for the local engines that are switched on through
 `local_engines.py::LocalEngineSettings` — the one resolver bootstrap, `worker`,
@@ -234,8 +233,9 @@ with every effort's argv, achieved effort and model, and the descriptor's run
 template, `affordances`, `controls`, `events` and env names (names only). It reads
 the local switches (and whether each is `on_by_default`) and each local runner's
 model through `local_engines.py`, the resolvers
-`vibey doctor` reads. An engine canon 8.b repeals (`REPEALED_FROM_LOOPS`) is listed
-with `repealed: true` and left out of every by-effort view. The document for one
+`vibey doctor` reads. An engine canon 8.b repeals (`REPEALED_FROM_LOOPS`; empty
+since OpenCode's engine was deleted) is listed with `repealed: true` and left out of
+every by-effort view. The document for one
 fixed environment is committed as `tests/cli/golden/vibey-loops.json`: after
 changing a descriptor, regenerate it with
 `VIBEY_UPDATE_GOLDENS=1 uv run pytest tests/cli/test_loops_cli.py -k golden` and

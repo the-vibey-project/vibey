@@ -516,7 +516,7 @@
         "vibey.qwenloopPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0060). Empty: the first `qwenloop` on your PATH."
+          "markdownDescription": "The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0061). Empty: the first `qwenloop` on your PATH."
         },
         "vibey.ollamaPath": {
           "type": "string",

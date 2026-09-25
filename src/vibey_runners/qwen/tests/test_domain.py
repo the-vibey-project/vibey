@@ -292,7 +292,7 @@ def test_recording_bounds_must_be_finite_non_negative_integers(key: str, value: 
 
 
 def test_the_two_engines_differ_only_in_name_prefix_and_model() -> None:
-    """ADR-0060: one runner, two engines; each derives its own variable names."""
+    """ADR-0061: one runner, two engines; each derives its own variable names."""
     from qwenloop.domain.config import GPTOSSLOOP, QWENLOOP
     from qwenloop.domain.interfaces import RunnerIdentityInterface
 
