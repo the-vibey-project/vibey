@@ -20,8 +20,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from vibey.domain.errors import UnknownLane
+
 QUIET_AFTER: Final = 120.0
 """Seconds without an event after which a running lane reads as quiet."""
+
+TAIL_MAX_BYTES: Final = 256 * 1024
+"""The most bytes one tail read returns; the reader resumes from the offset it is given."""
 
 RECENT_WITHIN: Final = 24 * 60 * 60.0
 """A lane whose last event is older than this many seconds is not listed."""
@@ -92,6 +97,30 @@ class LaneScanner:
                 "last_event_at": stat.st_mtime,
             }
         return sorted(found.values(), key=self._last_event, reverse=True)
+
+    def tail(
+        self, events_path: str, after: int, *, max_bytes: int = TAIL_MAX_BYTES
+    ) -> dict[str, object]:
+        """The complete lines of a listed lane's events file after byte `after`, and the
+        offset to resume from. A partial last line is left for the next read; an offset
+        past the end (the file was replaced) restarts from 0. Raises `UnknownLane` for a
+        path that is not a lane `_discover` finds: nothing else is ever opened."""
+        path = next((found for found, *_ in self._discover() if str(found) == events_path), None)
+        if path is None:
+            raise UnknownLane(f"no listed lane writes {events_path}")
+        size = path.stat().st_size
+        start = 0 if after < 0 or after > size else after
+        with path.open("rb") as handle:
+            handle.seek(start)
+            chunk = handle.read(max_bytes)
+        complete = chunk[: chunk.rfind(b"\n") + 1]
+        lines = [line.decode("utf-8", "replace") for line in complete.splitlines()]
+        return {
+            "events_path": events_path,
+            "from": start,
+            "offset": start + len(complete),
+            "lines": lines,
+        }
 
     def _discover(self) -> list[tuple[Path, LaneEngine, Path, str]]:
         found: list[tuple[Path, LaneEngine, Path, str]] = []
