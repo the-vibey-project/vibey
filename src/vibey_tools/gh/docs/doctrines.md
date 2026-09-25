@@ -230,11 +230,17 @@ lawful by exactly one path, and every step of it is required:
 
 A no-cap declaration that did not come through every step is no declaration at all, and
 paid work waits. No agent, delegated approver or paired device may make one or widen one
-(12.f), and while one stands every surface a person uses shows it, plainly. Declaring is
+(12.d, 12.f), and while one stands every surface a person uses shows it, plainly. Declaring is
 deliberate and withdrawing is immediate; the asymmetry is the protection (12.f). Effort
 without a ceiling ends only when the operator stops it or a declared cap is reached, and
 no cap is ever a reason it cannot be stopped. Credits exhausted is still a handoff to
 the next engine, never a stop and never a rate limit.
+
+This is how "budgets bound every loop" reads for a loop with no cap: the declaration made
+through every step is its budget, chosen aloud by the operator, and the operator's Stop,
+always in reach, is its bound. Before this paragraph a no-cap declaration took one flag
+and the canon said nothing of it; six required steps, a record and an instant withdrawal
+add protection and take none away (Constitution, Article IV).
 
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
 carried this entry; its two loops and two layers, and its one instance per model,

@@ -116,6 +116,8 @@ reference devices, and respects reduced motion (BB-3).
 - *Machine:* every duration and easing is a motion token (BB-1).
 - *Machine:* frame-timing traces for each signature animation (the lane orbit, ULTRA's aura,
   spend flows) show no dropped frames beyond the declared budget on the reference devices.
+  The frame budget and the reference devices are declared in configuration (12.c, 12.h);
+  until they are, this check is reported as unchecked.
 - *Machine:* a test with reduced motion on confirms that non-essential animation is off.
 - *Reviewer:* each animation's purpose is named in the design system's motion language.
 
@@ -180,7 +182,7 @@ off. Without that sign-off, the release does not ship.
 
 **Rule.** Every surface runs on current dependencies and current platform APIs: current
 toolkits, SDKs, target OS versions and libraries, and no deprecated API where a supported
-replacement exists.
+replacement exists. "Current" means within the declared currency window below.
 
 **Check.**
 

@@ -57,12 +57,14 @@ What `develop` has at `0a2f856e`:
       journal, and a ledger event on the `BudgetCapChanged` pattern naming who, when and
       which device;
    5. never switched on from a phone or the web app: only from the host;
-   6. switched off by one click, binding at once.
+   6. switched off by one action (one click in a client, one command at the CLI), binding
+      at once.
 
    While it stands, every client shows an "UNLIMITED SPEND" banner and a spend ticker, and
-   sends reminder notifications at declared thresholds. The extension's existing
-   `--no-cap --confirm-no-cap` flags become this path's CLI form, and a no-cap declaration
-   made any other way is ignored and reported.
+   sends reminder notifications at declared thresholds. The CLI form runs steps 1 to 3
+   interactively, in the terminal. The extension's existing `--no-cap --confirm-no-cap`
+   flags on their own can show no warning and take no typed phrase, so they are refused,
+   and a no-cap declaration made any other way is ignored and reported.
 7. **Every picker shows ULTRA distinctly.** It has its own colour and motion from the design
    tokens (ADR-0062), on every client and in `vibey loops --json`.
 
@@ -72,9 +74,10 @@ What `develop` has at `0a2f856e`:
   steps and the path out has one. The asymmetry is 12.f's, applied to money.
 - **Constitution Article III.2 is read, not amended.** "Budgets bound every loop" is read
   as: every loop has a budget the operator declared, and "no cap" is such a declaration,
-  made on purpose through the warned path, with Stop always in reach. Whether that reading
-  holds, or whether the Constitution needs its own amendment, is the operator's call at the
-  merge.
+  made on purpose through the warned path, with Stop always in reach. The 8.b amendment
+  states this reading in the canon itself, so the canon does not carry the rule and its
+  apparent opposite unreconciled. Whether that reading holds, or whether the Constitution
+  needs its own amendment, is the operator's call at the merge.
 - **Goldens and pickers change.** `vibey loops --json` gains ULTRA, and so do the
   extension's `CatalogueParser` and `LoopSelector` and every client's picker.
 - **Tests owed by the ULTRA lane:**
