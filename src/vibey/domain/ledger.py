@@ -104,6 +104,12 @@ class EventKind(StrEnum):
     # refused or replayed answer writes none. Not a design answer: `AnswerGiven` closes a
     # question the design phase asked, and is written by the phase that asked it.
     GATE_ANSWERED = "GateAnswered"
+    # A device was paired with the hub, or its pairing revoked (ADR-0068): the device's id,
+    # the name it gave and the scopes the host granted -- never its key. Written to every
+    # project's ledger, since each project's history should say who could read it. The
+    # device registry is what authentication reads; these events are the history.
+    HUB_DEVICE_PAIRED = "HubDevicePaired"
+    HUB_DEVICE_REVOKED = "HubDeviceRevoked"
     # Failover and handback (ADR-0070). A paid engine ran out of capacity and the work
     # moved to the sovereign engine at ULTRA; a probe of the paid engine was recorded
     # (ok or not); the work went back after a successful probe. Trusted only: no engine's

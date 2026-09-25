@@ -235,6 +235,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **hub:** pairing and trust (ADR-0068). `vibey hub pair --scope …` shows a QR code and a
+  6-digit code (two minutes, once); a device claims it for a per-device key and signs every
+  request (timestamp, nonce, body hash; HMAC via vibey_bootstrap). Deny by default; only
+  the host pairs, lists (`vibey hub devices`) and revokes (`vibey hub revoke`), which binds
+  at the device's next request. Pairing and revocation are ledger events in every project.
+  A declared LAN is served over a self-signed certificate whose fingerprint the QR carries,
+  and advertised as `_vibey._tcp` via mDNS. The `hub` extra gains `zeroconf` and `segno`.
 * **hub:** the live feed. Migration 0019 announces every ledger append on
   `vibey_ledger_appended` (additive). `WS /api/v1/projects/{id}/live?after=N` resumes after a
   seq and pages until caught up; `WS /api/v1/lanes/live` tails a listed lane by byte offset;

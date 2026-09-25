@@ -24,6 +24,7 @@ import os
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Final, cast
 from uuid import UUID
@@ -69,23 +70,38 @@ from vibey.domain.ledger import LedgerEvent
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
-from vibey.infrastructure.hub.authenticator import LocalTokenAuthenticator
+from vibey.infrastructure.hub.authenticator import FirstOf, LocalTokenAuthenticator
+from vibey.infrastructure.hub.devices import DeviceAuthenticator, DeviceRegistry
 from vibey.infrastructure.hub.exposure import HUB_EXPOSURE
 from vibey.infrastructure.hub.interfaces.app_interface import HubAppFactoryInterface
 from vibey.infrastructure.hub.interfaces.authenticator_interface import HubAuthenticatorInterface
+from vibey.infrastructure.hub.interfaces.devices_interface import DeviceRegistryInterface
 from vibey.infrastructure.hub.interfaces.exposure_interface import HubExposureCheckInterface
 from vibey.infrastructure.hub.interfaces.lanes_interface import LaneScannerInterface
 from vibey.infrastructure.hub.interfaces.live_interface import LedgerAnnouncementsInterface
+from vibey.infrastructure.hub.interfaces.mdns_interface import (
+    AdvertisementInterface,
+    MdnsAdvertiserInterface,
+)
+from vibey.infrastructure.hub.interfaces.pairing_interface import (
+    HubPairingInterface,
+    PairingLedgerInterface,
+)
 from vibey.infrastructure.hub.interfaces.server_interface import (
     HubServerInterface,
     LocalNamesInterface,
 )
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
+from vibey.infrastructure.hub.interfaces.tls_interface import HubCertificateInterface
 from vibey.infrastructure.hub.lanes import LaneEngine, LaneScanner
 from vibey.infrastructure.hub.live import LedgerAnnouncements
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.mdns import MdnsAdvertiser
+from vibey.infrastructure.hub.pairing import HubPairing
+from vibey.infrastructure.hub.pairing_ledger import PostgresPairingLedger
 from vibey.infrastructure.hub.server import HUB_SERVER, LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
+from vibey.infrastructure.hub.tls import HubCertificate, HubTls
 from vibey.tui.dashboard import fetch_dashboard_state
 
 if TYPE_CHECKING:
@@ -245,6 +261,7 @@ class DeferredHubAppFactory:
         allowed_hosts: frozenset[str],
         ready: Callable[[], Awaitable[bool]],
         live: LedgerAnnouncementsInterface,
+        pairing: HubPairingInterface | None = None,
     ) -> "FastAPI":
         from vibey.infrastructure.hub.app import HUB_APP
 
@@ -254,6 +271,7 @@ class DeferredHubAppFactory:
             allowed_hosts=allowed_hosts,
             ready=ready,
             live=live,
+            pairing=pairing,
         )
 
 
@@ -280,7 +298,15 @@ class ServeCommand:
             lambda: LedgerAnnouncements(lambda: asyncpg.connect(database_url()))
         ),
         exposure: HubExposureCheckInterface = HUB_EXPOSURE,
+        devices: Callable[[Path], DeviceRegistryInterface] = DeviceRegistry,
+        certificate: Callable[[Path], HubCertificateInterface] = HubCertificate,
+        advertiser: MdnsAdvertiserInterface | None = None,
+        pairing_ledger: Callable[[asyncpg.Pool], PairingLedgerInterface] = (PostgresPairingLedger),
     ) -> None:
+        self._devices = devices
+        self._certificate = certificate
+        self._advertiser = advertiser if advertiser is not None else MdnsAdvertiser()
+        self._pairing_ledger = pairing_ledger
         self._exposure = exposure
         self._open_app = open_app
         self._settings = settings
@@ -326,6 +352,17 @@ class ServeCommand:
             now=self._now,
         )
         live = self._announcements()
+        registry = self._devices(settings.state_dir)
+        # TLS, the pinned certificate and the mDNS advertisement only on a declared LAN:
+        # on loopback nothing crosses a network, and nothing is announced (10.f).
+        tls = (
+            self._certificate(settings.state_dir).ensure(names, datetime.now(UTC))
+            if settings.lan
+            else None
+        )
+        authenticator = FirstOf(
+            [LocalTokenAuthenticator(token), DeviceAuthenticator(registry, clock=self._now)]
+        )
         async with self._open_app() as resources:
             await live.start()
             probes = CliHubProbes(
@@ -343,21 +380,57 @@ class ServeCommand:
                 documents=CliHubDocuments(),
                 probes=probes,
             )
+            pairing = HubPairing(
+                registry,
+                self._pairing_ledger(resources.ledger._pool),
+                clock=self._now,
+                fingerprint=tls.fingerprint if tls is not None else "",
+                address=(bound, listen),
+            )
             app = self._factory.build(
                 service,
-                authenticator=LocalTokenAuthenticator(token),
+                authenticator=authenticator,
                 allowed_hosts=allowed,
                 ready=probes.ready,
                 live=live,
+                pairing=pairing,
             )
-            typer.echo(f"vibey hub on http://{self._shown(bound)}:{listen}/api/v1")
+            scheme = "https" if tls is not None else "http"
+            typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")
             typer.echo(f"host token: {settings.state_dir / 'token'} (owner-only)")
-            store.record_serving(ServingRecord(host=bound, port=listen, pid=os.getpid()))
+            if tls is not None:
+                typer.echo(f"certificate fingerprint (sha256): {tls.fingerprint}")
+            store.record_serving(
+                ServingRecord(host=bound, port=listen, pid=os.getpid(), tls=tls is not None)
+            )
+            advert = await self._advertise(names, listen, tls)
             try:
-                await self._server.serve(app, host=bound, port=listen)
+                await self._server.serve(app, host=bound, port=listen, tls=tls)
             finally:
                 store.clear_serving(os.getpid())
+                if advert is not None:
+                    await advert.close()
                 await live.stop()
+
+    async def _advertise(
+        self, names: frozenset[str], port: int, tls: HubTls | None
+    ) -> AdvertisementInterface | None:
+        """`_vibey._tcp` on the LAN, or nothing: only a TLS hub on a declared LAN is
+        announced, and one with no LAN address to announce says so and carries on."""
+        if tls is None:
+            return None
+        addresses = self._advertiser.lan_addresses(names)
+        if not addresses:
+            typer.echo("mDNS: no LAN address to advertise; devices must be told the address")
+            return None
+        return await self._advertiser.advertise(
+            instance=self._advertiser.instance(),
+            server=self._advertiser.instance(),
+            port=port,
+            addresses=addresses,
+            fingerprint=tls.fingerprint,
+            api_version="1",
+        )
 
     def exposure_line(self) -> bool:
         """`vibey doctor`'s `hub-exposure` line, printed; False only on FAIL. A `[hub]`
