@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=@APP_NAME@
+Comment=The desktop app for vibey
+Exec=krypton-desktop
+Icon=@APP_ID@
+Terminal=false
+Type=Application
+Categories=Development;GTK;
+Keywords=vibey;krypton;agents;gates;
+StartupNotify=true
