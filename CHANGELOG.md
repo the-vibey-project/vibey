@@ -14,6 +14,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **failover:** the driver hands off to gptossloop at ULTRA and back after a recorded probe
+  ([ADR-0070](docs/architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)).
+  Claude Code's `StopFailure` hook (`rate_limit`, `billing_error`) runs `vibey driver hook`: a
+  no-loss-gated brief naming the whole transcript by SHA-256 goes into the worktree,
+  `EngineFailedOver` is recorded, and gptossloop starts at ULTRA. `vibey driver probe`, on the
+  launchd or systemd timer `vibey driver timer` writes, hands back to the same session with
+  `claude -p --resume` only after a recorded successful probe. `[failover]` holds every key.
+
 * **ultra:** ULTRA, effort without a ceiling
   ([ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md)). `Effort` gains
   `ULTRA` after `MAX`; no ladder reaches it. `vibey ultra start|stop|status` runs a project's BUILD

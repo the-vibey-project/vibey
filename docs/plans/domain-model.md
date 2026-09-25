@@ -529,6 +529,9 @@ class EventKind(StrEnum):
     BUDGET_CAP_CHANGED = "BudgetCapChanged"
     # A gate answered once: gate, kind, answer, request id, by, account; with the answer
     GATE_ANSWERED = "GateAnswered"
+    ENGINE_FAILED_OVER = "EngineFailedOver"    # ADR-0070
+    ENGINE_PROBED = "EngineProbed"
+    ENGINE_HANDED_BACK = "EngineHandedBack"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({
