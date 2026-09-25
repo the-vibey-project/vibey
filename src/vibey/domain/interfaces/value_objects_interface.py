@@ -59,6 +59,9 @@ class EnginesConfigInterface(Protocol):
 @runtime_checkable
 class FeaturesConfigInterface(Protocol):
     @property
+    def gptossloop(self) -> bool: ...
+
+    @property
     def qwenloop(self) -> bool: ...
 
     @property

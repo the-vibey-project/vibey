@@ -23,8 +23,9 @@ class LocalEndpointEnvironmentInterface(Protocol):
 
     def model_for(self, engine_id: EngineId) -> str | None:
         """The model `engine_id` runs when it reaches the engine by a path vibey knows:
-        qwenloop's `QWENLOOP_MODEL`, else the one `overlay_for` hands it (only while
-        `VIBEY_OLLAMA_URL` is set); None otherwise. Raises ConfigError for a malformed
+        a local runner's own model variable (`GPTOSSLOOP_MODEL`, `QWENLOOP_MODEL`), else
+        the one `overlay_for` hands it (gptossloop only, only while `VIBEY_OLLAMA_URL` is
+        set); None otherwise. Raises ConfigError for a malformed
         endpoint setting whenever `overlay_for` would, whatever else is set."""
         ...
 
@@ -37,8 +38,18 @@ class LocalEngineSettingsInterface(Protocol):
         """The variable that switches `engine_id` on, or None for an engine with no switch."""
         ...
 
+    def on_by_default(self, engine_id: EngineId) -> bool:
+        """Whether `engine_id` is on when neither its variable nor `[features]` sets it."""
+        ...
+
     def enabled(self, engine_id: EngineId) -> bool:
-        """The environment switch when it is set at all, else `[features]`."""
+        """The environment switch when it is set at all, else `[features]`, else the
+        engine's own default (on for gptossloop, ADR-0064)."""
+        ...
+
+    @property
+    def notices(self) -> tuple[str, ...]:
+        """What the operator should hear about how their switches now read."""
         ...
 
     @property

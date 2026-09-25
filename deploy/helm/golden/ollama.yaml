@@ -3665,16 +3665,13 @@ spec:
               value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434"
             - name: VIBEY_OLLAMA_MODEL
               value: "gpt-oss:20b"
-            # qwenloop's openai-compat backend wants the OpenAI base URL, /v1
+            # gptossloop, the sovereign default engine and on without a switch
+            # (ADR-0064): its openai-compat backend wants the OpenAI base URL, /v1
             # included; a base URL alone is what makes `auto` select it.
-            - name: QWENLOOP_BASE_URL
+            - name: GPTOSSLOOP_BASE_URL
               value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434/v1"
-            - name: QWENLOOP_MODEL
+            - name: GPTOSSLOOP_MODEL
               value: "gpt-oss:20b"
-            # The one qwenloop switch that reaches a worker (ADR-0015): a
-            # project's [features] table never makes it into the record.
-            - name: VIBEY_FEATURE_QWENLOOP
-              value: "1"
             - name: VIBEY_TRACKER_URL
               value: "http://vibey-vibey-plane-api.vibey.svc.cluster.local:8000"
             - name: VIBEY_TRACKER_TOKEN

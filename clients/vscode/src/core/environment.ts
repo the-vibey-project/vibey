@@ -2,9 +2,10 @@
 /**
  * The environment a model-driven process receives is built from an allow-list, never copied.
  *
- * qwenloop runs shell commands a model chose, so whatever reaches it reaches the model. The
- * editor's environment can hold vibey's queue and ledger DSN (`VIBEY_PG_URL`), libpq's
- * variables and other credentials, and none of them may cross (vibey PR #1093, SECURITY.md).
+ * The local runner (gptossloop or qwenloop) runs shell commands a model chose, so whatever
+ * reaches it reaches the model. The editor's environment can hold vibey's queue and ledger
+ * DSN (`VIBEY_PG_URL`), libpq's variables and other credentials, and none of them may cross
+ * (vibey PR #1093, SECURITY.md).
  * The rule is the one `vibey.infrastructure.process.child_environment` enforces for engine
  * sessions: `MODEL_SESSION_FORBIDDEN` forbids every name starting `VIBEY_` or `PG`, and every
  * name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`, whoever declares it. Nothing
@@ -55,14 +56,14 @@ export class ForbiddenEnvironment implements ForbiddenEnvironmentInterface {
 
 export class EnvironmentAllowList implements EnvironmentAllowListInterface {
   /**
-   * What every qwenloop run receives: the basics a process needs to run and to find its
+   * What every engine run receives: the basics a process needs to run and to find its
    * config, and nothing that names a server, a database or a credential.
    */
   static readonly MODEL_BASICS = new EnvironmentAllowList(
     ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'TERM', 'LANG', 'LANGUAGE', 'TZ'],
     ['LC_'],
     ForbiddenEnvironment.MODEL_SESSION,
-    'the qwenloop environment',
+    'the engine environment',
   );
 
   private readonly names: ReadonlySet<string>;

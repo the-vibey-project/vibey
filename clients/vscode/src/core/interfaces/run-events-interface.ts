@@ -36,7 +36,7 @@ export interface RunFailure {
 }
 
 export interface Verdict {
-  /** The body of the last ```qwenloop-verdict fence, when there is one. */
+  /** The body of the last ```qwenloop-verdict fence (the runner's, whichever name ran), when there is one. */
   readonly text?: string;
   /** Whether the completion marker was written. */
   readonly marker: boolean;

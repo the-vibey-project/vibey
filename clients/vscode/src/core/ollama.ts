@@ -2,8 +2,8 @@
 /**
  * What the local Ollama server is doing, asked the way the family already asks it.
  *
- * Liveness is GET /api/version with a 2 s timeout, which is qwenloop's own `OllamaProbe`.
- * Whether the model is there is GET /v1/models, which is what `qwenloop doctor` checks,
+ * Liveness is GET /api/version with a 2 s timeout, which is the local runner's own `OllamaProbe`.
+ * Whether the model is there is GET /v1/models, which is what `gptossloop doctor` checks,
  * with /api/tags as the second source. What is in memory, and with how large a window,
  * is GET /api/ps. Nothing here is a new kind of check (dogfood rule, ADR-0017). Declared
  * by `interfaces/ollama-interface.ts`.
@@ -19,7 +19,7 @@ import type {
 } from './interfaces/ollama-interface';
 
 export class OllamaEndpoint implements OllamaEndpointInterface {
-  /** Ollama's own default address, the same one qwenloop falls back to. */
+  /** Ollama's own default address, the same one the local runner falls back to. */
   static readonly DEFAULT_ROOT = 'http://127.0.0.1:11434';
 
   readonly root: string;

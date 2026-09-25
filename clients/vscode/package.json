@@ -508,10 +508,15 @@
           "default": "",
           "markdownDescription": "The `vibey` program to run. Empty: the first `vibey` on your PATH. **Vibey: Check my setup** prints the one it found and its version."
         },
+        "vibey.gptossloopPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey`)."
+        },
         "vibey.qwenloopPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The `qwenloop` program that runs a task on the local model. Empty: the first `qwenloop` on your PATH."
+          "markdownDescription": "The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0064). Empty: the first `qwenloop` on your PATH."
         },
         "vibey.ollamaPath": {
           "type": "string",
@@ -541,7 +546,7 @@
         "vibey.model": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The model tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`."
+          "markdownDescription": "The model gptossloop tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. qwenloop is not handed this: its own config chooses (`qwen3:14b`), unless you name a model with the engine, `qwenloop/qwen3:14b`."
         },
         "vibey.loop": {
           "type": "string",
@@ -584,7 +589,7 @@
         "vibey.engine": {
           "type": "string",
           "default": "auto",
-          "markdownDescription": "`auto` picks within the loop by effort (preferring a model already loaded). Or name an engine, `qwenloop`, or an engine and model, `qwenloop/gpt-oss:20b`. The engines come from `vibey loops`."
+          "markdownDescription": "`auto` picks within the loop by effort (preferring a model already loaded). Or name an engine, `gptossloop`, or an engine and model, `gptossloop/gpt-oss:20b`. The engines come from `vibey loops`."
         },
         "vibey.maxTurns": {
           "type": "integer",
@@ -596,7 +601,7 @@
           "type": "integer",
           "default": 32768,
           "minimum": 1024,
-          "markdownDescription": "The context window, in tokens, qwenloop assumes (its own `context_window`, default 32768). **Check my setup** warns when Ollama loaded the model with a smaller one, because Ollama then drops the start of long tasks without saying so."
+          "markdownDescription": "The context window, in tokens, the local runner (gptossloop or qwenloop) assumes (its own `context_window`, default 32768). **Check my setup** warns when Ollama loaded the model with a smaller one, because Ollama then drops the start of long tasks without saying so."
         },
         "vibey.runInPlace": {
           "type": "boolean",
@@ -676,7 +681,7 @@
         "vibey.desktopNotifications": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Let qwenloop send its own desktop notification at every turn. Off: the editor shows progress instead."
+          "markdownDescription": "Let the local runner (gptossloop or qwenloop) send its own desktop notification at every turn. Off: the editor shows progress instead."
         },
         "vibey.environment.allow": {
           "type": "array",
@@ -684,7 +689,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Extra environment variables (a name, or a prefix ending in `*`) passed to qwenloop and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says."
+          "markdownDescription": "Extra environment variables (a name, or a prefix ending in `*`) passed to the engine and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says."
         }
       }
     },
@@ -762,7 +767,7 @@
           },
           {
             "name": "model",
-            "description": "auto picks by effort within the loop; or name one, such as qwenloop/gpt-oss:20b."
+            "description": "auto picks by effort within the loop; or name one, such as gptossloop/gpt-oss:20b."
           },
           {
             "name": "loops",
@@ -822,7 +827,7 @@
           },
           {
             "name": "doctor",
-            "description": "Check every piece: the storm home, git, qwenloop, vibey, Ollama, the model and its window."
+            "description": "Check every piece: the storm home, git, gptossloop, vibey, Ollama, the model and its window."
           },
           {
             "name": "help",

@@ -33,7 +33,7 @@ Options:
   --loop sovereign|paid --effort auto|TRIVIAL|LOW|STANDARD|HIGH|MAX
   --engine auto|ENGINE|ENGINE/MODEL        --base-effort LEVEL
   --max-turns N  --context-window N  --model NAME  --ollama-url URL
-  --storm-home DIR  --qwenloop PATH  --vibey PATH  --git PATH
+  --storm-home DIR  --gptossloop PATH  --qwenloop PATH  --vibey PATH  --git PATH
   --journal FILE        the batch journal (default: under the storm home)
   --commit-type TYPE    Conventional Commits type for a task with no title (default: chore)
   --json                machine-readable output`;
@@ -61,6 +61,7 @@ class HeadlessCli {
     }
     const raw: Partial<RawSettings> = {
       ...HeadlessCli.set('stormHome', option('storm-home')),
+      ...HeadlessCli.set('gptossloopPath', option('gptossloop')),
       ...HeadlessCli.set('qwenloopPath', option('qwenloop')),
       ...HeadlessCli.set('cliPath', option('vibey')),
       ...HeadlessCli.set('gitPath', option('git')),

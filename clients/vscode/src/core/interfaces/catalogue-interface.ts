@@ -9,7 +9,7 @@ export type Effort = 'TRIVIAL' | 'LOW' | 'STANDARD' | 'HIGH' | 'MAX';
 export type LoopName = 'sovereignloop' | 'paidloop';
 
 /**
- * How an engine writes its events: a top-level `type` (codexloop, qwenloop), `event_type`
+ * How an engine writes its events: a top-level `type` (codexloop, gptossloop, qwenloop), `event_type`
  * with a `payload` (claudeloop, agyloop), or `event_type` beside flat fields (no engine
  * today; the deleted opencodeloop wrote it, and `vibey loops` still names the shape).
  */
@@ -48,6 +48,11 @@ export interface CatalogueEngine {
   /** Repealed by the canon (8.b) while its code is still in vibey: listed for transparency, and never run. */
   readonly repealed: boolean;
   readonly switch: string | null;
+  /**
+   * Whether vibey switches it on unless its switch says otherwise (gptossloop, ADR-0064). A
+   * producer from before the key existed switched nothing on by default: false.
+   */
+  readonly on_by_default: boolean;
   readonly cost_per_mtok_in: number;
   readonly cost_per_mtok_out: number;
   readonly default_model: string | null;

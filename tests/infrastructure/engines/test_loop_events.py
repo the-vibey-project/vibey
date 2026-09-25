@@ -291,6 +291,11 @@ def test_cursorloop_unknown_event_returns_none() -> None:
     assert translate_event_type(EngineId.CURSORLOOP, "capacity.limited") is None
 
 
+def test_gptossloop_reads_through_qwenloops_one_map() -> None:
+    """ADR-0064: one runner, one map -- an alias, not a copy that could drift from it."""
+    assert LOOP_EVENT_MAP[EngineId.GPTOSSLOOP] is LOOP_EVENT_MAP[EngineId.QWENLOOP]
+
+
 def test_qwenloop_turn_and_delta_events() -> None:
     """text_delta is one streamed fragment of an answer -- many per turn --
     so it is transcript; qwenloop's own turn.completed is the turn."""
@@ -369,6 +374,8 @@ _EXPECTED_MAPS: dict[EngineId, dict[str, EventKind]] = {
         "failed": EventKind.VERDICT_RENDERED,
     },
 }
+# gptossloop is the qwenloop runner on GPT-OSS: the same events, read the same way.
+_EXPECTED_MAPS[EngineId.GPTOSSLOOP] = _EXPECTED_MAPS[EngineId.QWENLOOP]
 
 
 def test_every_engine_has_a_mapping_table() -> None:
@@ -391,6 +398,7 @@ _TURN_BOUNDARIES: dict[EngineId, frozenset[str]] = {
     EngineId.CODEXLOOP: frozenset({"turn.completed", "turn.failed"}),
     EngineId.CURSORLOOP: frozenset(),
     EngineId.AGYLOOP: frozenset({"turn.completed"}),
+    EngineId.GPTOSSLOOP: frozenset({"turn.completed"}),
     EngineId.QWENLOOP: frozenset({"turn.completed"}),
 }
 
