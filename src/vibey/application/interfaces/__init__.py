@@ -169,6 +169,7 @@ from vibey.application.interfaces.review import (
     AutomatedReviewRunner,
     ReviewArtifactWriter,
 )
+from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.secrets import SecretsPort
 from vibey.application.interfaces.siem import SiemPort
 from vibey.application.interfaces.sms import SmsPort
@@ -290,6 +291,7 @@ __all__ = [
     "RotationCursorInterface",
     "RotationRecordingHandlerInterface",
     "RunOutcomeInterface",
+    "SabbathGateInterface",
     "SearchTokenizerInterface",
     "SelectingEngineProviderInterface",
     "SelectionInputsInterface",

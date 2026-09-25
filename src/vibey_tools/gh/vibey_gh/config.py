@@ -1247,9 +1247,9 @@ class SabbathConfig:
     # Widens every window toward rest, both edges. Never narrows one.
     offset_minutes: int = 0
     # Extra widening when the location is only a time zone's reference city.
-    coarse_margin_minutes: int = 45
-    fallback_opens: str = "18:00"
-    fallback_closes: str = "19:00"
+    coarse_margin_minutes: int = 90
+    fallback_opens: str = "14:00"
+    fallback_closes: str = "23:00"
     # Ask CoreLocation (macOS) or GeoClue (Linux) when their helpers are installed.
     location_service: bool = True
     # At the first beat after the window closes, re-fire the held merge train and promotion.

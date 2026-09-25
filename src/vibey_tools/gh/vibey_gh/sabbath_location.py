@@ -13,7 +13,7 @@ source and its accuracy so a window computed from it can say what it rests on (1
 3. **The host's IANA time zone mapped to its reference city** from the system's own
    `zone1970.tab` (or `zone.tab`) -- no network. It can be tens of minutes off
    (America/New_York is New York City), so it is marked *coarse*, and the window widens by
-   a declared margin (`coarse_margin_minutes`, default 45) toward rest.
+   a declared margin (`coarse_margin_minutes`, default 90) toward rest.
 
 There is no IP geolocation (8.a: sovereignty). A resolution is cached for a week and
 dropped at once when the host's zone changes (8.j: fitted to the iron).

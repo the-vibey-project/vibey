@@ -41,12 +41,12 @@ system picks itself up at Saturday sundown.
       `CoreLocationCLI` on macOS, GeoClue's `where-am-i` on Linux;
    3. the reference city of the host's IANA zone, from the system's `zone1970.tab` or
       `zone.tab`, with no network. This is *coarse*, so the window widens toward rest by
-      `coarse_margin_minutes` (default 45).
+      `coarse_margin_minutes` (default 90).
 
    There is no IP geolocation (8.a). A resolution is cached for a week and dropped at
    once when the zone changes (8.j). Every window names its location source and accuracy
    in its `basis` (10.f). A host that no source can place uses the declared fallback times
-   (Friday 18:00 → Saturday 19:00 local, configurable), widened, and says so. It is never
+   (Friday 14:00 → Saturday 23:00 local, configurable: wider than any mid-latitude sundown, so it errs toward rest; the brief asked 18:00 → 19:00, which the review found closes before summer sundown and opens after winter sundown), widened, and says so. It is never
    silently off.
 4. **Held, visibly.** `vibey-gh merge-train` and `vibey-gh promote` consult the window
    before they touch anything. A held run prints one line, writes a job-summary section
@@ -69,7 +69,7 @@ system picks itself up at Saturday sundown.
    `vibey.toml` has these keys: `enabled`, `timezone`, `latitude`, `longitude`,
    `local_config`, `offset_minutes`, `coarse_margin_minutes`, `fallback_opens`,
    `fallback_closes`, `location_service`, `resume_dispatch` and `lanes_dir`. This
-   repository's committed file names only the zone (`America/New_York`) and a 60-minute
+   repository's committed file names only the zone (`America/New_York`) and a 90-minute
    coarse margin, because a hosted runner's clock is UTC and it has no location service.
 
 ## Consequences

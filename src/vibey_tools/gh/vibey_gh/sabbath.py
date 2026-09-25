@@ -175,8 +175,8 @@ class SabbathWindow(SabbathWindowInterface):
         longitude: float | None,
         zone: tzinfo | None = None,
         margin: timedelta = timedelta(0),
-        fallback_opens: time = time(18, 0),
-        fallback_closes: time = time(19, 0),
+        fallback_opens: time = time(14, 0),
+        fallback_closes: time = time(23, 0),
         enabled: bool = True,
         calculator: SunsetCalculatorInterface | None = None,
         location: str = "",
@@ -218,6 +218,13 @@ class SabbathWindow(SabbathWindowInterface):
         else:
             sunset = self._calc.sunset(day, self._lat, self._lon)
             if sunset is not None:
+                # Where the zone's offset and the longitude disagree by half a day or more
+                # (Kiritimati, Samoa), the sunset anchored on this date's 0h UT falls on the
+                # neighbouring civil day: re-anchor one day the other way.
+                shift = (sunset.astimezone(self._zone).date() - day).days
+                if shift:
+                    moved = self._calc.sunset(day - timedelta(days=shift), self._lat, self._lon)
+                    sunset = moved if moved is not None else sunset
                 return sunset, None
             reason = f"the sun does not set on {day.isoformat()} at this latitude"
         return datetime.combine(day, fallback, tzinfo=self._zone).astimezone(UTC), reason

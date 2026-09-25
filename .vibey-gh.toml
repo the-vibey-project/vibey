@@ -74,7 +74,7 @@ release     = "main"
 # ~/.config/vibey/sabbath.toml) or VIBEY_SABBATH_LATITUDE/VIBEY_SABBATH_LONGITUDE.
 [sabbath]
 timezone              = "America/New_York"
-coarse_margin_minutes = 60
+coarse_margin_minutes = 90
 
 [merge_train]
 owner           = "adammatthewsteinberger"

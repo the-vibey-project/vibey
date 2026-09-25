@@ -42,11 +42,11 @@ order:
 3. **Your time zone's main city**, read from your computer's own time-zone files. This
    needs no internet, but it can be tens of minutes off. For example, every clock in
    `America/New_York` would use New York City's sunset. So vibey starts the rest earlier
-   and ends it later, by 45 minutes unless you change it, to be safe.
+   and ends it later, by 90 minutes unless you change it, to be safe.
 
 vibey never looks up your location over the internet. It checks again every week, and at
 once if your time zone changes. If it cannot place your machine at all, `vibey doctor` says
-FAIL and the fixed times apply: Friday 18:00 to Saturday 19:00 local, widened.
+FAIL and the fixed times apply: Friday 14:00 to Saturday 23:00 local, widened.
 
 ## Pausing a lane so it restarts by itself
 

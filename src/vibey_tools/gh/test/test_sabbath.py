@@ -123,7 +123,26 @@ def test_an_unconfigured_window_uses_the_declared_fallback_and_says_so():
     held = window.hold(_at("2026-09-25T18:30"))
     assert held is not None and not held.computed
     assert "declared fallback times" in held.basis
-    assert held.resumes == _at("2026-09-26T19:00")
+    assert held.resumes == _at("2026-09-26T23:00")
+
+
+def test_a_zone_half_a_day_off_its_longitude_keeps_sundown_on_the_right_civil_day():
+    kiritimati = ZoneInfo("Pacific/Kiritimati")
+    window = SabbathWindow(latitude=1.87, longitude=-157.4, zone=kiritimati)
+    rest = window.window_for(date(2026, 9, 25))
+    assert rest.opened.date() == date(2026, 9, 25) and rest.resumes.date() == date(2026, 9, 26)
+
+
+def test_a_re_anchored_sundown_that_does_not_exist_keeps_the_first():
+    class Once:
+        calls = iter((datetime(2026, 9, 26, 20, tzinfo=UTC), None))
+
+        def sunset(self, day, latitude, longitude):
+            return next(self.calls)
+
+    window = SabbathWindow(latitude=0.0, longitude=0.0, zone=UTC, calculator=Once())
+    opened, reason = window._edge(date(2026, 9, 25), time(14, 0))
+    assert opened == datetime(2026, 9, 26, 20, tzinfo=UTC) and reason is None
 
 
 def test_a_polar_date_falls_back_loudly():
@@ -382,7 +401,7 @@ def test_a_local_file_without_coordinates_falls_through_to_the_zone(tmp_path):
         tmp_path, zone_tables=(table,), clock=lambda: _at("2026-09-23T12:00").astimezone(UTC)
     )
     rest = guard.window().window_for(date(2026, 9, 25))
-    assert "widened 45 min" in rest.basis and "reference city" in rest.basis
+    assert "widened 90 min" in rest.basis and "reference city" in rest.basis
     assert any(line.startswith("next rest ends") for line in guard.describe())
 
 

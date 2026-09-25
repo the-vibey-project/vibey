@@ -795,8 +795,8 @@ in this machine's own `vibey.toml`, in `local_config`, or in `VIBEY_SABBATH_LATI
 | `local_config` | `~/.config/vibey/sabbath.toml` | A per-host TOML file with `latitude` and `longitude`, read when the table has none. |
 | `location_service` | `true` | Ask CoreLocation (`CoreLocationCLI`, macOS) or GeoClue (`where-am-i`, Linux) when installed. |
 | `offset_minutes` | `0` | Widens every window toward rest, both edges (0–240). It never narrows one. |
-| `coarse_margin_minutes` | `45` | Extra widening when the location is only the zone's reference city (0–240). |
-| `fallback_opens`, `fallback_closes` | `"18:00"`, `"19:00"` | Friday open and Saturday close, local, when no sundown can be computed (no location, or a polar day). |
+| `coarse_margin_minutes` | `90` | Extra widening when the location is only the zone's reference city (0–240). |
+| `fallback_opens`, `fallback_closes` | `"14:00"`, `"23:00"` | Friday open and Saturday close, local, when no sundown can be computed (no location, or a polar day). |
 | `resume_dispatch` | `true` | At the first heartbeat after the window, re-fire the held merge train and promotion. |
 | `lanes_dir` | `~/.local/state/vibey/sabbath-lanes` | Where lanes register "paused for the Sabbath, resume with ...". |
 
