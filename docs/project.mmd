@@ -201,11 +201,11 @@ flowchart TB
         PRAuto --> MergeTrain["Merge train (merge-train.yml)<br/>vibey-gh merge-train: squash into develop,<br/>rebase into main"]
         MergeTrain --> Promote["Promote (promote-to-main.yml)<br/>vibey-gh promote: develop → main PR"]
         Bootstrap0(["automation-bootstrap.yml — manual, one-shot<br/>verified merge of an automation-repair PR"])
-        SourcePush(["git push: develop or main"]) --> ReleaseWF["Release workflow (release.yml)<br/>vibey-gh owns versioning; release-please retired"]
+        SourcePush(["git push: develop or main"]) --> ReleaseWF["Release workflow (vibey-engine.yml)<br/>vibey-gh owns versioning; release-please retired"]
         Promote --> SourcePush
         MergeTrain --> SourcePush
-        ReleaseWF --> BuildDist["build wheel + sdist<br/>one distribution: vibey + every tenant package<br/>and every console script (ADR-0037)"]
-        BuildDist -->|develop| TestPyPI["TestPyPI<br/>package renamed vibey-dev, dev-versioned<br/>(+ verify-testpypi)"]
+        ReleaseWF --> BuildDist["build wheel + sdist<br/>one package: vibey-engine + every tenant package<br/>and every console script (ADR-0037)"]
+        BuildDist -->|develop| TestPyPI["TestPyPI<br/>vibey-engine, dev-versioned<br/>(+ verify-testpypi)"]
         BuildDist -->|main| PyPI["PyPI<br/>package vibey, OIDC trusted publishing"]
         ReleaseWF -->|main only| Realign["realign job<br/>vibey-gh realign: develop := main"]
         ReleaseWF -.->|"workflow_run: completed, success, main only"| GhRelease["GitHub Release (github-release.yml)<br/>vibey-gh github-release: immutable tag + release"]

@@ -14,6 +14,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
+* **packaging:** the engine's package is `vibey-engine`, and the apps' package is
+  `krypton-app`; no `vibey` package is published any more
+  ([ADR-0067](docs/architecture/decisions/0067-two-packages-vibey-engine-and-krypton-app.md),
+  sub-doctrine 9.e). BREAKING for packagers and anyone who pinned `vibey`: install
+  `pip install vibey-engine` (or `uv tool install vibey-engine`) instead. The commands and the
+  importable packages are unchanged. `pyproject.toml` now names the project `vibey-engine`
+  itself, so a local build is the artifact the index gets; `vibey-engine.yml` no longer renames
+  it in the runner. `krypton-app` lives in `clients/krypton-app/`, installs the `krypton`
+  command (an honest launcher for the local hub: it starts `vibey serve` when the engine has
+  it, and otherwise says so and lists what is available), and publishes from its own
+  workflow, `krypton-app.yml`, nightly from `develop` to TestPyPI and stable from `main` to
+  PyPI. vibey-gh's `[install] fallback_package` default is now `vibey-engine`, and its managed
+  workflows re-render with it. `vibey-dev` is retired.
+
 * **engines:** the local engine that runs GPT-OSS is `gptossloop`, and it ships on; `qwenloop`
   runs Qwen and is off until switched on
   ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)).

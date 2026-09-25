@@ -8,7 +8,7 @@ anything holding it to that:
 1. **`.vibey-gh.toml` `[version] content_paths`.** `_classify` matches a changed file
    against these prefixes with `str.startswith`, and a range that matches none derives
    "nothing to release". Left at `["src/vibey/"]` after nine more trees started shipping,
-   a change to claudeloop or vibey_gh would publish nothing forever -- and `release.yml`
+   a change to claudeloop or vibey_gh would publish nothing forever -- and `vibey-engine.yml`
    would republish the current version into `skip-existing`, which is a GREEN run. There
    is no failure to notice. That is exactly the kind of drift a meta test exists for.
 

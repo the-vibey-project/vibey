@@ -322,7 +322,7 @@ python -m build
 ### Publish to PyPI
 
 > **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
-> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> (vibey ADR-0037); it ships inside `vibey-engine`, released by the monorepo's `vibey-engine.yml`.
 > The commands below are kept as a record of how this package was published.
 
 ```bash
@@ -526,7 +526,7 @@ See `azure-pipelines.yml` for complete configuration.
 ### Release Process
 
 > **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
-> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> (vibey ADR-0037); it ships inside `vibey-engine`, released by the monorepo's `vibey-engine.yml`.
 > Kept as the record of how this package was released and configured.
 
 
@@ -774,7 +774,7 @@ This library was extracted from a production Azure Functions application that pr
 
 > **Superseded — this section records the standalone repository's pipeline.** Those
 > workflows are inert here: the monorepo's `ci.yml` runs this package's gates and its
-> `release.yml` publishes the one `vibey` distribution that carries it (vibey ADR-0021,
+> `vibey-engine.yml` publishes the `vibey-engine` package that carries it (vibey ADR-0021,
 > ADR-0037). Kept because it documents why each gate existed.
 
 The library used **GitHub Actions** for CI/CD, publishing stable releases to
@@ -814,7 +814,7 @@ graph LR
 ### GitHub Actions Setup for PyPI Publishing
 
 > **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
-> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> (vibey ADR-0037); it ships inside `vibey-engine`, released by the monorepo's `vibey-engine.yml`.
 > Kept as the record of how this package was released and configured.
 
 

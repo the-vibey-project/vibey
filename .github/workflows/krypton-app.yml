@@ -1,0 +1,149 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: krypton-app
+
+# The apps' package, `krypton-app` (sub-doctrine 9.e, ADR-0067), from clients/krypton-app.
+# It mirrors vibey-engine.yml: develop publishes a uniquely versioned dev build to TestPyPI
+# and proves it installs from there; main publishes the release to PyPI. The trusted
+# publishers are registered for THIS file name in the environments `testpypi` and `pypi`,
+# so renaming the file or the environments stops publishing.
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/krypton-app/**"
+      - ".github/workflows/krypton-app.yml"
+  # A pull request runs the build job only (its tests and the wheel); every publishing job
+  # is gated on a push to main or develop.
+  pull_request:
+    paths:
+      - "clients/krypton-app/**"
+      - ".github/workflows/krypton-app.yml"
+
+# A superseded pull-request run is cancelled (12.g); a push to main or develop never is, so
+# no publish is cut off half-way.
+concurrency:
+  group: krypton-app-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    defaults:
+      run:
+        working-directory: clients/krypton-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: The project is krypton-app
+        # Refuses to publish anything else under these publishers.
+        run: grep -qx 'name = "krypton-app"' pyproject.toml
+
+      - name: Stamp a dev version on develop
+        if: github.ref == 'refs/heads/develop'
+        # An index version is immutable, so each develop push needs its own; `.devN`
+        # sorts BEFORE the release it anticipates, which is the correct relationship.
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          path = pathlib.Path("pyproject.toml")
+          text = path.read_text(encoding="utf-8")
+          run = os.environ["GITHUB_RUN_NUMBER"]
+          new, count = re.subn(
+              r'(?m)^version = "([^"]+)"$', lambda m: f'version = "{m.group(1)}.dev{run}"', text, count=1
+          )
+          if count != 1:
+              raise SystemExit("pyproject.toml has no version line to stamp")
+          path.write_text(new, encoding="utf-8")
+          PY
+
+      - id: v
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import pathlib
+          import tomllib
+
+          data = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          print("version=" + data["project"]["version"])
+          PY
+
+      - name: Test
+        run: |
+          python -m pip install --quiet pytest
+          PYTHONPATH=src python -m pytest -q tests
+
+      - run: python -m pip install --quiet build && python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: krypton-app-dist
+          path: clients/krypton-app/dist/
+
+  testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write            # trusted publishing; no token is stored anywhere
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: krypton-app-dist, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  verify-testpypi:
+    name: Verify the TestPyPI artifact
+    needs: [build, testpypi]
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install that exact version from TestPyPI and run it
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          # --pre: the engine this depends on is itself a dev build on TestPyPI.
+          for i in $(seq 1 20); do
+            if pip install --no-cache-dir --quiet --pre \
+                 --index-url https://test.pypi.org/simple/ \
+                 --extra-index-url https://pypi.org/simple/ \
+                 "krypton-app==${VERSION}"; then
+              break
+            fi
+            echo "not indexed yet (attempt $i); waiting"
+            sleep 30
+          done
+          krypton --version
+          krypton --help >/dev/null
+          echo "installed krypton-app ${VERSION} from TestPyPI; krypton runs"
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: krypton-app-dist, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
