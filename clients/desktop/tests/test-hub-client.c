@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "kr-hub-client.h"
+#include "kr-model.h"
 
 typedef struct {
     SoupServer *server;
