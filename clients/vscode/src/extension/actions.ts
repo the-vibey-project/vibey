@@ -161,7 +161,7 @@ export class CommandActions implements CommandActionsInterface {
     output.show(true);
     const journal = services.journalFor(folder, repository);
     await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: `Vibey batch: ${path.basename(folder)}`, cancellable: true },
+      { location: vscode.ProgressLocation.Notification, title: `krypton batch: ${path.basename(folder)}`, cancellable: true },
       async (progress, token) => {
         token.onCancellationRequested(() => void services.queue.stopAll());
         const summary = await services.batch().run(
@@ -955,7 +955,7 @@ export class CommandActions implements CommandActionsInterface {
     output.show(true);
     const failing = checks.filter((check) => check.status === 'fail').length;
     const warning = checks.filter((check) => check.status === 'warn').length;
-    invocation.say(failing === 0 && warning === 0 ? 'Everything checks out.' : `${failing} problem(s) and ${warning} warning(s): see the Vibey output for what to do.`);
+    invocation.say(failing === 0 && warning === 0 ? 'Everything checks out.' : `${failing} problem(s) and ${warning} warning(s): see the krypton output for what to do.`);
   }
 
   private async showMenu(invocation: Invocation): Promise<void> {
@@ -970,7 +970,7 @@ export class CommandActions implements CommandActionsInterface {
         items.push({ label: `$(${spec.icon}) ${spec.title}`, description: spec.slash === undefined ? '' : `/${spec.slash}`, detail: spec.description, id: spec.id });
       }
     }
-    const picked = await vscode.window.showQuickPick(items, { title: 'Vibey', matchOnDescription: true, matchOnDetail: true });
+    const picked = await vscode.window.showQuickPick(items, { title: 'krypton', matchOnDescription: true, matchOnDetail: true });
     if (picked?.id !== undefined) {
       await this.run(picked.id, { say: invocation.say });
     }

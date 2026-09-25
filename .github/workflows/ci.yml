@@ -807,8 +807,8 @@ jobs:
   vscode-extension:
     # The VS Code extension (clients/vscode, ADR-0059): its own Node toolchain and checks. It
     # has no runtime dependency, and none of it enters the image: @vibey/core travels inside
-    # the .vsix, copied into out/node_modules at compile (ADR-0067). Not a required check yet: it
-    # becomes one once it has run green on develop (#290).
+    # the .vsix, copied into out/node_modules at compile (ADR-0067). Both rows are required
+    # checks in .vibey-gh.toml since they ran green on develop (ADR-0059, #290).
     name: VS Code extension (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:

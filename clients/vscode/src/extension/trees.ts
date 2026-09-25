@@ -1,6 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * The six views in the Vibey activity bar: Model, Tasks, Lanes, Projects, Gates and Budgets.
+ * The six views in the krypton activity bar: Model, Tasks, Lanes, Projects, Gates and Budgets.
  * Each view is one `VibeyTree` over a source; every item's look, and the `contextValue` its
  * menu is chosen by, comes from `TreeItems`, so a view can never offer a command that its
  * item cannot take. Everything a model or vibey wrote is shown as a label, never as markup.
