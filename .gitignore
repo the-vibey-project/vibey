@@ -11,6 +11,7 @@ htmlcov/
 /dist/
 /build/
 .claudeloop/
+.playwright-mcp/
 .vibey/plans/
 .agyloop/
 .codexloop/

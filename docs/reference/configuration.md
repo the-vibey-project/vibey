@@ -829,6 +829,11 @@ Where the host stands is resolved in this order, and every window names its sour
 
 There is no IP lookup. The answer is cached for a week and dropped when the zone changes.
 
+`VIBEY_SABBATH_ENABLED=false` (also `0`, `no`, `off`; truthy values re-enable) declares
+the Sabbath off for one process without editing a file -- what the Helm cluster-smoke
+step uses so `vibey new` does not lawfully decline every Friday evening. It overrides the
+table's `enabled` in either direction; unset, the table decides.
+
 ```toml
 # This machine's own vibey.toml -- never committed. EXAMPLE coordinates only.
 [sabbath]

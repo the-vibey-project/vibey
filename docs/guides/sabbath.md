@@ -59,6 +59,14 @@ vibey-gh sabbath register-lane --name docs-batch --cwd ~/work/docs -- ./run-batc
 At sundown on Saturday the heartbeat runs `./run-batch.sh` in `~/work/docs`. When it
 succeeds, the lane is forgotten. If it fails, the heartbeat tries again on the next beat.
 
+## Turning it off for one run
+
+`VIBEY_SABBATH_ENABLED=false` (also `0`, `no`, `off`) switches the rest off for that
+process only, without touching any file. Automated checks use this: the Helm
+cluster-smoke step sets it so `vibey new` does not decline on a Friday evening. Turning
+it off anywhere else is a declared act -- prefer `enabled = false` in the file -- never a
+missing key.
+
 ## Settings
 
 All the keys are in [`[sabbath]`](../reference/configuration.md#sabbath). The design and

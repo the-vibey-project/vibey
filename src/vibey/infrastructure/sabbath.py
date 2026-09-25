@@ -23,12 +23,32 @@ from vibey.infrastructure.interfaces.sabbath_interface import HostSabbathGateInt
 
 __all__ = ["HostSabbathGate"]
 
+# `VIBEY_SABBATH_ENABLED` is read here (not in `SabbathConfig`, which is a frozen value
+# that touches no disk and no environment) so automated surfaces -- the Helm
+# cluster-smoke step, a CI job -- can declare the Sabbath off for one process without
+# editing a file. A declared `enabled = false` in the table is the same act in a file;
+# the environment only overrides when it names a truthy or falsy value, never by accident.
+_ENABLED_TRUE = frozenset({"1", "true", "yes", "on"})
+_ENABLED_FALSE = frozenset({"0", "false", "no", "off"})
+
 
 class HostSabbathGate(HostSabbathGateInterface):
     """Answers `SabbathGateInterface` from this machine's clock and location."""
 
     def __init__(self, guard: SabbathGuard) -> None:
         self._guard = guard
+
+    @staticmethod
+    def _enabled(table_value: bool, environ: Mapping[str, str] | None) -> bool:
+        """The table's `enabled` unless the environment declares otherwise."""
+        if environ is None:
+            return table_value
+        raw = environ.get("VIBEY_SABBATH_ENABLED", "").strip().lower()
+        if raw in _ENABLED_FALSE:
+            return False
+        if raw in _ENABLED_TRUE:
+            return True
+        return table_value
 
     @classmethod
     def from_table(
@@ -44,7 +64,9 @@ class HostSabbathGate(HostSabbathGateInterface):
         unknown = sorted(set(table) - known)
         if unknown:
             raise ValueError(f"[sabbath] has no key {unknown[0]!r}")
-        guard = SabbathGuard(SabbathConfig(**dict(table)), home=home, environ=environ, clock=clock)
+        merged = dict(table)
+        merged["enabled"] = cls._enabled(bool(merged.get("enabled", True)), environ)
+        guard = SabbathGuard(SabbathConfig(**merged), home=home, environ=environ, clock=clock)
         return cls(guard)
 
     @classmethod

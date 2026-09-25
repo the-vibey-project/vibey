@@ -51,3 +51,78 @@ def test_a_bad_table_is_refused_by_name(tmp_path: Path) -> None:
         HostSabbathGate.from_table({"lattitude": 1.0}, home=tmp_path)
     with pytest.raises(ValueError, match="must be a table"):
         HostSabbathGate.from_toml(_toml(tmp_path, 'sabbath = "on"\n'), home=tmp_path)
+
+
+def test_the_environment_declares_the_sabbath_off_for_one_process(tmp_path: Path) -> None:
+    friday_night = datetime(2026, 9, 26, 1, 0, tzinfo=UTC)
+    table = {
+        "latitude": 34.97,
+        "longitude": -82.44,
+        "timezone": "America/New_York",
+        "lanes_dir": str(tmp_path / "lanes"),
+    }
+    assert (
+        HostSabbathGate.from_table(
+            table, home=tmp_path, environ={}, clock=lambda: friday_night
+        ).hold()
+        is not None
+    )
+    for off in ("0", "false", "no", "off", "  FALSE  "):
+        gate = HostSabbathGate.from_table(
+            table,
+            home=tmp_path,
+            environ={"VIBEY_SABBATH_ENABLED": off},
+            clock=lambda: friday_night,
+        )
+        assert gate.hold() is None
+
+
+def test_the_environment_may_re_enable_a_table_that_says_off(tmp_path: Path) -> None:
+    friday_night = datetime(2026, 9, 26, 1, 0, tzinfo=UTC)
+    table = {
+        "enabled": False,
+        "latitude": 34.97,
+        "longitude": -82.44,
+        "timezone": "America/New_York",
+        "lanes_dir": str(tmp_path / "lanes"),
+    }
+    assert (
+        HostSabbathGate.from_table(
+            table, home=tmp_path, environ={}, clock=lambda: friday_night
+        ).hold()
+        is None
+    )
+    for on in ("1", "true", "yes", "on"):
+        gate = HostSabbathGate.from_table(
+            table,
+            home=tmp_path,
+            environ={"VIBEY_SABBATH_ENABLED": on},
+            clock=lambda: friday_night,
+        )
+        assert gate.hold() is not None
+
+
+def test_an_unset_or_unreadable_switch_leaves_the_table_to_decide(tmp_path: Path) -> None:
+    friday_night = datetime(2026, 9, 26, 1, 0, tzinfo=UTC)
+    table = {
+        "latitude": 34.97,
+        "longitude": -82.44,
+        "timezone": "America/New_York",
+        "lanes_dir": str(tmp_path / "lanes"),
+    }
+    assert (
+        HostSabbathGate.from_table(table, home=tmp_path, clock=lambda: friday_night).hold()
+        is not None
+    )
+    assert (
+        HostSabbathGate.from_table(
+            table,
+            home=tmp_path,
+            environ={"VIBEY_SABBATH_ENABLED": "maybe"},
+            clock=lambda: friday_night,
+        ).hold()
+        is not None
+    )
+    path = _toml(tmp_path, "[sabbath]\nlatitude = 34.97\nlongitude = -82.44\n")
+    gate = HostSabbathGate.from_toml(path, home=tmp_path, environ={"VIBEY_SABBATH_ENABLED": "off"})
+    assert gate.hold() is None
