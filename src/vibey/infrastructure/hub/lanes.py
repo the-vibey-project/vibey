@@ -115,7 +115,8 @@ class LaneScanner:
             return sorted(
                 entry
                 for entry in directory.iterdir()
-                if entry.is_dir() and not entry.name.startswith(".")
+                # A symlink is never walked: it could lead the scan out of its root.
+                if entry.is_dir() and not entry.is_symlink() and not entry.name.startswith(".")
             )
         except OSError:
             return []

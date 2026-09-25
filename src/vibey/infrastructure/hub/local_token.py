@@ -46,29 +46,46 @@ class LocalTokenStore:
         self._dir = state_dir
 
     def token(self) -> str:
-        """The token, created (0600) on first call. An existing file that is readable by
-        anyone but its owner is refused rather than trusted."""
-        path = self._dir / TOKEN_FILE
+        """The token, created (0600) on first call. The file is opened without following
+        a symlink and checked on the open descriptor: owned by this account and readable
+        by no other, or it is refused rather than trusted -- whoever could plant it would
+        know the host's key (security review of #1155)."""
         self._ensure_dir()
-        if not path.exists():
-            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        path = self._dir / TOKEN_FILE
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        except FileExistsError:
+            pass
+        else:
             with os.fdopen(fd, "w") as handle:
                 handle.write(secrets.token_urlsafe(TOKEN_BYTES))
-        if path.stat().st_mode & 0o077:
-            raise PermissionError(f"{path} is readable by other accounts; refusing to use it")
-        return path.read_text().strip()
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(fd) as handle:
+            self._owned(os.fstat(handle.fileno()), path, 0o077)
+            return handle.read().strip()
 
     def record_serving(self, record: ServingRecord) -> None:
-        """Writes the runtime record, replacing any earlier one."""
+        """Writes the runtime record, replacing any earlier one. The staged file is made
+        exclusively, owner-only, never through a symlink."""
         self._ensure_dir()
         target = self._dir / RUNTIME_FILE
-        staged = target.with_suffix(".tmp")
-        staged.write_text(json.dumps({"host": record.host, "port": record.port, "pid": record.pid}))
-        staged.chmod(0o600)
+        staged = self._dir / f".{RUNTIME_FILE}.{os.getpid()}.tmp"
+        staged.unlink(missing_ok=True)
+        fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "w") as handle:
+            handle.write(json.dumps({"host": record.host, "port": record.port, "pid": record.pid}))
         staged.replace(target)
 
-    def clear_serving(self) -> None:
-        """Removes the runtime record; nothing when there is none."""
+    def clear_serving(self, pid: int | None = None) -> None:
+        """Removes the runtime record -- only when it names `pid`, if one is given, so a
+        hub that failed to start never erases the record of one that is running."""
+        if pid is not None:
+            try:
+                current = self.serving()
+            except ValueError:
+                return
+            if current is None or current.pid != pid:
+                return
         (self._dir / RUNTIME_FILE).unlink(missing_ok=True)
 
     def serving(self) -> ServingRecord | None:
@@ -87,4 +104,14 @@ class LocalTokenStore:
         return ServingRecord(host=host, port=port, pid=pid)
 
     def _ensure_dir(self) -> None:
+        """The directory, made 0700; an existing one must be a real directory owned by
+        this account that no other can write or read."""
         self._dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self._owned(os.lstat(self._dir), self._dir, 0o077)
+
+    @staticmethod
+    def _owned(status: os.stat_result, path: Path, forbidden: int) -> None:
+        if status.st_uid != os.getuid():
+            raise PermissionError(f"{path} belongs to another account; refusing to use it")
+        if status.st_mode & forbidden:
+            raise PermissionError(f"{path} is open to other accounts; refusing to use it")

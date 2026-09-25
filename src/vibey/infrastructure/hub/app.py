@@ -12,11 +12,19 @@ browser can reach needs, applied to every request before any route runs:
   origin cannot read a response; the web app is served from the hub's own origin.
 - **A strict CSP and friends** on every response: `default-src 'none'`, no framing, no
   referrer, `nosniff`, and `no-store` so nothing a response says is cached.
-- **Authentication before routing.** Every `/api/v1` route and `/api/metrics` names its
-  principal first; a request that proves nothing gets 401 and learns nothing else.
-  Authorisation is the service's: it checks scopes before it reads anything.
+- **Bounded bodies.** A body over `MAX_BODY_BYTES`, or one sent without a length, is
+  refused (413/411) before it is read, so an unauthenticated caller cannot make the hub
+  buffer an unbounded request.
+- **Authentication, then the rate limit.** Every `/api/v1` route except the OpenAPI
+  document, and `/api/metrics`, names its principal first; a request that proves nothing
+  gets 401 and learns nothing else. Each principal has its own token bucket, so a flood
+  from one caller never starves another; failed attempts draw from a small bucket per
+  client address. Authorisation is the service's: it checks scopes before it reads
+  anything.
 
-The health probes answer without a principal, and say only "live" and "ready".
+The health probes and the OpenAPI document answer without a principal (the document is
+public: it is committed at `docs/reference/hub-api.json`); the probes say only "live" and
+"ready".
 
 Every route is versioned under `/api/v1`, and the OpenAPI 3.1 document is served at
 `/api/v1/openapi.json` and committed at `docs/reference/hub-api.json`; a test fails when
@@ -33,7 +41,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from vibey_bootstrap.fastapi_middleware import install_middleware
 from vibey_bootstrap.metrics import build_metrics_snapshot
-from vibey_bootstrap.ratelimit import TokenBucket, fastapi_rate_limit
+from vibey_bootstrap.ratelimit import TokenBucket
 
 from vibey.application.dto import HubPrincipal
 from vibey.application.hub.interfaces.hub_service_interface import HubServiceInterface
@@ -55,6 +63,13 @@ from vibey.infrastructure.hub.authenticator import HubRequest
 from vibey.infrastructure.hub.interfaces.authenticator_interface import (
     HubAuthenticatorInterface,
 )
+
+MAX_BODY_BYTES: Final = 64 * 1024
+"""The largest request body the hub reads. A gate answer is a few hundred bytes."""
+
+FAILED_BURST: Final = 10.0
+FAILED_PER_SECOND: Final = 0.5
+"""The budget for requests that prove no principal, per client address."""
 
 HUB_API_VERSION: Final = "1"
 """The hub API's major version: the `v1` in every route, and the OpenAPI `info.version`."""
@@ -92,6 +107,8 @@ the hub) is a 403, every other `ReorderRefused` a 409."""
 
 REFUSED: Final[dict[int | str, dict[str, Any]]] = {
     401: {"description": "The request proves no principal."},
+    411: {"description": "A body was sent without a Content-Length."},
+    413: {"description": "The body is larger than the hub reads."},
     403: {"description": "The principal's scopes do not permit this."},
     421: {"description": "The Host header is not one this hub answers."},
     429: {"description": "Too many requests."},
@@ -136,7 +153,16 @@ class HubAppFactory:
         allowed_hosts: frozenset[str],
         ready: Callable[[], Awaitable[bool]],
     ) -> FastAPI:
-        bucket = TokenBucket(budget=self._burst, refill_per_second=self._rate, name="hub")
+        buckets: dict[str, TokenBucket] = {}
+
+        def spend(key: str, burst: float, rate: float) -> bool:
+            bucket = buckets.get(key)
+            if bucket is None:
+                bucket = buckets[key] = TokenBucket(
+                    budget=burst, refill_per_second=rate, name=f"hub.{key}"
+                )
+            return bucket.consume(1.0)
+
         app = FastAPI(
             title="vibey hub",
             version=HUB_API_VERSION,
@@ -164,11 +190,16 @@ class HubAppFactory:
                 )
             )
             if found is None:
+                address = request.client.host if request.client else "unknown"
+                if not spend(f"failed:{address}", FAILED_BURST, FAILED_PER_SECOND):
+                    raise HTTPException(status_code=429)
                 raise HTTPException(status_code=401)
+            # vibey_bootstrap's token bucket, one per principal (the dogfood rule).
+            if not spend(f"principal:{found.name}", self._burst, self._rate):
+                raise HTTPException(status_code=429)
             return found
 
         who = Annotated[HubPrincipal, Depends(principal)]
-        limited = [Depends(fastapi_rate_limit(bucket))]
         v1 = f"/api/v{HUB_API_VERSION}"
 
         @app.get("/health/live", tags=["health"], summary="The process is up.")
@@ -190,7 +221,6 @@ class HubAppFactory:
             "/api/metrics",
             tags=["health"],
             summary="vibey_bootstrap's metrics snapshot.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def metrics(caller: who) -> JSONResponse:
@@ -202,7 +232,6 @@ class HubAppFactory:
             f"{v1}/projects",
             tags=["projects"],
             summary="Every project, newest first.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def projects(caller: who) -> JSONResponse:
@@ -212,7 +241,6 @@ class HubAppFactory:
             f"{v1}/projects/{{project_id}}/status",
             tags=["projects"],
             summary="One project's phase, queue depth and engine circuits.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def status(caller: who, project_id: UUID) -> JSONResponse:
@@ -222,7 +250,6 @@ class HubAppFactory:
             f"{v1}/gates",
             tags=["gates"],
             summary="Open gates, oldest first; one project's with project_id.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def gates(caller: who, project_id: UUID | None = None) -> JSONResponse:
@@ -232,7 +259,6 @@ class HubAppFactory:
             f"{v1}/gates/{{gate_id}}/answer",
             tags=["gates"],
             summary="Answer a gate once.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def answer(caller: who, gate_id: UUID, body: GateAnswerBody) -> JSONResponse:
@@ -244,7 +270,6 @@ class HubAppFactory:
             f"{v1}/projects/{{project_id}}/budget",
             tags=["budget"],
             summary="A project's caps and spend (read only).",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def budget(caller: who, project_id: UUID) -> JSONResponse:
@@ -254,7 +279,6 @@ class HubAppFactory:
             f"{v1}/projects/{{project_id}}/queue",
             tags=["queue"],
             summary="A project's queue, in claim order.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def queue(caller: who, project_id: UUID) -> JSONResponse:
@@ -264,7 +288,6 @@ class HubAppFactory:
             f"{v1}/projects/{{project_id}}/queue/{{job_id}}/bump",
             tags=["queue"],
             summary="Move a queued job to the front, as the declared source vibey-hub.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def bump(caller: who, project_id: UUID, job_id: UUID) -> JSONResponse:
@@ -274,7 +297,6 @@ class HubAppFactory:
             f"{v1}/projects/{{project_id}}/ledger",
             tags=["ledger"],
             summary="Search a project's ledger.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def ledger(
@@ -295,7 +317,6 @@ class HubAppFactory:
             f"{v1}/loops",
             tags=["loops"],
             summary="The loops, their engines and efforts.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def loops(caller: who) -> JSONResponse:
@@ -305,7 +326,6 @@ class HubAppFactory:
             f"{v1}/lanes",
             tags=["lanes"],
             summary="The lanes running on this computer.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def lanes(caller: who) -> JSONResponse:
@@ -315,7 +335,6 @@ class HubAppFactory:
             f"{v1}/doctor",
             tags=["doctor"],
             summary="The checks the hub runs itself.",
-            dependencies=limited,
             responses=REFUSED,
         )
         async def doctor(caller: who) -> JSONResponse:
@@ -330,10 +349,15 @@ class HubAppFactory:
         async def harden(
             request: Request, call_next: Callable[[Request], Awaitable[Response]]
         ) -> Response:
+            length = request.headers.get("content-length")
             if not binding.admits(request.headers.get("host"), allowed_hosts):
                 response: Response = JSONResponse(
                     {"detail": "this hub does not answer that Host"}, status_code=421
                 )
+            elif request.headers.get("transfer-encoding"):
+                response = JSONResponse({"detail": "send a Content-Length"}, status_code=411)
+            elif length is not None and (not length.isdigit() or int(length) > MAX_BODY_BYTES):
+                response = JSONResponse({"detail": "the body is too large"}, status_code=413)
             else:
                 response = await call_next(request)
             for name, value in SECURITY_HEADERS.items():
@@ -343,7 +367,7 @@ class HubAppFactory:
     @staticmethod
     def _errors(app: FastAPI) -> None:
         async def refused(_request: Request, exc: Exception) -> JSONResponse:
-            status = next(code for kind, code in ERROR_STATUS if isinstance(exc, kind))
+            status = next((code for kind, code in ERROR_STATUS if isinstance(exc, kind)), 500)
             return JSONResponse({"detail": str(exc)}, status_code=status)
 
         for kind, _code in ERROR_STATUS:

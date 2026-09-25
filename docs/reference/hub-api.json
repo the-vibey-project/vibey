@@ -117,6 +117,12 @@
           "403": {
             "description": "The principal's scopes do not permit this."
           },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
           "421": {
             "description": "The Host header is not one this hub answers."
           },
@@ -152,6 +158,12 @@
           },
           "403": {
             "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
           },
           "421": {
             "description": "The Host header is not one this hub answers."
@@ -207,6 +219,12 @@
           },
           "403": {
             "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
           },
           "421": {
             "description": "The Host header is not one this hub answers."
@@ -276,6 +294,12 @@
           "403": {
             "description": "The principal's scopes do not permit this."
           },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
           "421": {
             "description": "The Host header is not one this hub answers."
           },
@@ -322,6 +346,12 @@
           "403": {
             "description": "The principal's scopes do not permit this."
           },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
           "421": {
             "description": "The Host header is not one this hub answers."
           },
@@ -358,6 +388,12 @@
           "403": {
             "description": "The principal's scopes do not permit this."
           },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
           "421": {
             "description": "The Host header is not one this hub answers."
           },
@@ -393,6 +429,12 @@
           },
           "403": {
             "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
           },
           "421": {
             "description": "The Host header is not one this hub answers."
@@ -441,6 +483,12 @@
           },
           "403": {
             "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
           },
           "421": {
             "description": "The Host header is not one this hub answers."
@@ -563,6 +611,12 @@
           "403": {
             "description": "The principal's scopes do not permit this."
           },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
           "421": {
             "description": "The Host header is not one this hub answers."
           },
@@ -620,6 +674,12 @@
           },
           "403": {
             "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
           },
           "421": {
             "description": "The Host header is not one this hub answers."
@@ -689,6 +749,12 @@
           "403": {
             "description": "The principal's scopes do not permit this."
           },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
           "421": {
             "description": "The Host header is not one this hub answers."
           },
@@ -746,6 +812,12 @@
           },
           "403": {
             "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
           },
           "421": {
             "description": "The Host header is not one this hub answers."

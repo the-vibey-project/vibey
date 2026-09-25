@@ -79,3 +79,12 @@ class HumanGateRepository(Protocol):
         person, in the order it started waiting.
         """
         ...
+
+
+@runtime_checkable
+class GateLookup(Protocol):
+    """Reads one gate by id, open or answered. The hub authorises an answer on the gate's
+    kind through it (ADR-0067); a gate's kind is fixed when it is raised, so what this
+    reads is what the answer acts on."""
+
+    async def get(self, gate_id: UUID) -> HumanGateRecord | None: ...

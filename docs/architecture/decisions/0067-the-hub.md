@@ -48,8 +48,9 @@ on every install.
    the same database.
 
 3. **Loopback by default; the LAN only when declared (12.c).** `vibey serve` binds
-   127.0.0.1 unless asked otherwise, and refuses (exit 2) any non-loopback address unless
-   `vibey.toml` declares `[hub] lan = true`. `vibey doctor` gains a `hub-exposure` line:
+   127.0.0.1 unless `--host` names another address, and refuses (exit 2) any non-loopback
+   address unless `vibey.toml` declares `[hub] lan = true`. Both are needed: a cloned
+   repository's `vibey.toml` alone never opens the LAN. `vibey doctor` gains a `hub-exposure` line:
    FAIL when a running hub listens where nothing declares it may (10.f, 10.j), UNKNOWN when
    no hub runs or its runtime record is stale -- never a PASS it did not observe.
 
@@ -75,8 +76,11 @@ on every install.
    plus, with the LAN declared, this computer's names and the declared `[hub] names`)
    refuses anything else with 421 -- the DNS-rebinding defence. No CORS header is ever sent.
    Every response carries `default-src 'none'` CSP, `frame-ancestors 'none'`, `nosniff`,
-   `no-referrer` and `no-store`. Requests are rate-limited by vibey_bootstrap's token bucket
-   (429, empty body). No proxy is trusted for client addresses.
+   `no-referrer` and `no-store`. Requests are rate-limited by vibey_bootstrap's token bucket,
+   after authentication, one bucket per principal, so one caller's flood never starves
+   another; requests that prove nothing draw from a small bucket per client address. A
+   body over 64 KiB, or one without a length, is refused before it is read. No proxy is
+   trusted for client addresses.
 
 8. **Versioned, and the document committed.** Every route is under `/api/v1`; the OpenAPI
    3.1 document is served at `/api/v1/openapi.json`, printed by `vibey serve --openapi` (no
@@ -100,6 +104,15 @@ Not in any of the three: starting, stopping or winding down lanes, ULTRA control
 push relay (8.a/10.a). The `run` scope exists so a grant can name it; no route needs it yet.
 
 ## Consequences
+
+- **The independent reviews of the first change** found one blocking defect: an answer
+  sent with a request id to a gate that was no longer open skipped the spend check. The
+  service now reads the gate by id whatever its state and authorises on its kind. They also
+  hardened the token store (no symlinks; owner and mode checked on the open file), bounded
+  request bodies, moved the rate limit after authentication, and made the reserved list a
+  test over the routes that exist. Deferred to pairing: lane paths are absolute, which a
+  `view`-only device should not learn (relative paths for devices), and TLS before any
+  credential crosses the LAN.
 
 - A client on the host can use the hub today with the token file; a device on the LAN
   cannot until pairing lands, because there is no way to give it a principal.

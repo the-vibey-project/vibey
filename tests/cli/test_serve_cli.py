@@ -326,3 +326,19 @@ async def test_a_database_that_does_not_answer_is_not_ready(tmp_path: Path) -> N
 
 async def test_the_openapi_only_app_is_never_ready() -> None:
     assert await ServeCommand._never_ready() is False
+
+
+def test_a_config_or_token_that_cannot_be_used_exits_cleanly(tmp_path: Path) -> None:
+    state = tmp_path / "state"
+    state.mkdir(mode=0o755)
+    (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{state}'\n")
+    command = ServeCommand(
+        server=Driven(lambda *_: asyncio.sleep(0)), config_path=lambda: tmp_path / "vibey.toml"
+    )
+    with pytest.raises(Exception) as caught:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(caught.value, "exit_code", None) == 1
+    (tmp_path / "vibey.toml").write_text("[hub]\nlan = 'yes'\n")
+    with pytest.raises(Exception) as bad:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(bad.value, "exit_code", None) == 2

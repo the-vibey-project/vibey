@@ -26,7 +26,7 @@ from vibey.domain.errors import (
     UnknownProject,
 )
 from vibey.domain.hub_binding import HUB_BINDING
-from vibey.domain.hub_scope import HubForbidden
+from vibey.domain.hub_scope import HUB_SCOPES, NEVER_FROM_THE_HUB, HubForbidden
 from vibey.domain.ledger_query import InvalidLedgerQuery
 from vibey.infrastructure.hub.app import (
     HUB_API_VERSION,
@@ -297,3 +297,59 @@ async def test_first_of_asks_each_authenticator_in_turn() -> None:
         HubPrincipal(name="nobody")
     )
     assert await FirstOf([LocalTokenAuthenticator(TOKEN)]).authenticate(request) is None
+
+
+async def test_an_oversized_or_unmeasured_body_is_refused_before_it_is_read() -> None:
+    service = Service()
+    service.raises = AssertionError("no route may run")
+    async with _client(_app(service)) as client:
+        big = await client.post(
+            f"/api/v1/gates/{GATE}/answer", headers=AUTH, content=b"x" * (64 * 1024 + 1)
+        )
+        bogus = await client.post(
+            f"/api/v1/gates/{GATE}/answer", headers={**AUTH, "content-length": "lots"}, content=b""
+        )
+
+        async def stream() -> Any:
+            yield b"{}"
+
+        chunked = await client.post(f"/api/v1/gates/{GATE}/answer", headers=AUTH, content=stream())
+    assert [big.status_code, bogus.status_code, chunked.status_code] == [413, 413, 411]
+
+
+async def test_a_flood_of_failed_attempts_never_starves_the_host() -> None:
+    factory = HubAppFactory(requests_per_second=0.0, burst=5.0)
+    async with _client(_app(factory=factory)) as client:
+        failed = [
+            (await client.get("/api/v1/projects", headers={"host": HOST})).status_code
+            for _ in range(12)
+        ]
+        host = await client.get("/api/v1/projects", headers=AUTH)
+    assert failed[:10] == [401] * 10 and failed[10:] == [429, 429]
+    assert host.status_code == 200
+
+
+def test_no_route_offers_what_the_hub_never_offers() -> None:
+    """NEVER_FROM_THE_HUB is enforced by the routes that exist: none touches a reserved
+    capability, and the only route under a budget is a read (security review of #1155)."""
+    words = {
+        "declare_paid_use": ("paid", "declare"),
+        "no_cap": ("nocap", "no-cap", "no_cap"),
+        "change_caps": ("caps", "cap"),
+        "database_dsn": ("dsn", "database"),
+        "migrations": ("migrat",),
+        "canon": ("canon", "doctrine"),
+    }
+    assert set(words) == NEVER_FROM_THE_HUB
+    app = _app()
+    for route in app.routes:
+        path = getattr(route, "path", "")
+        segments = [part for part in path.lower().split("/") if part]
+        for capability, fragments in words.items():
+            assert HUB_SCOPES.reserved(capability)
+            assert not any(f in segment for f in fragments for segment in segments), (
+                path,
+                capability,
+            )
+        if "budget" in path:
+            assert getattr(route, "methods", set()) == {"GET"}

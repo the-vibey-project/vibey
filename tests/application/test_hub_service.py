@@ -74,6 +74,7 @@ class World:
 
     projects: list[ProjectRecord] = field(default_factory=list)
     gates: list[HumanGateRecord] = field(default_factory=list)
+    closed: list[HumanGateRecord] = field(default_factory=list)
     asked: list[tuple[str, Any]] = field(default_factory=list)
 
     # ProjectReader
@@ -92,6 +93,18 @@ class World:
 
     async def open_for_project(self, project_id: UUID) -> tuple[HumanGateRecord, ...]:
         return tuple(g for g in self.gates if g.project_id == project_id)
+
+    # GateLookup: every gate ever raised, open or answered.
+    async def get_gate(self, gate_id: UUID) -> HumanGateRecord | None:
+        return next((g for g in self.gates + self.closed if g.gate_id == gate_id), None)
+
+
+class Lookup:
+    def __init__(self, world: World) -> None:
+        self._world = world
+
+    async def get(self, gate_id: UUID) -> HumanGateRecord | None:
+        return await self._world.get_gate(gate_id)
 
 
 class Answers:
@@ -205,6 +218,7 @@ def _service(world: World) -> HubService:
     return HubService(
         projects=world,
         gates=world,  # type: ignore[arg-type]  # the reads the hub makes, nothing more
+        gate_lookup=Lookup(world),
         gate_answers=Answers(world),
         budgets=Budgets(world),
         queue=Queue(world),
@@ -341,26 +355,26 @@ async def test_a_spending_gate_needs_spend_as_well_as_answer() -> None:
     ) == ("answered", gate.gate_id)
 
 
-async def test_a_gate_that_is_not_open_is_unknown_unless_the_request_may_replay() -> None:
+async def test_a_gate_that_does_not_exist_is_unknown() -> None:
+    with pytest.raises(UnknownGate):
+        await _service(World()).answer_gate(
+            EVERYTHING, uuid4(), {"verdict": "accept"}, request_id="r-1"
+        )
+
+
+async def test_a_replay_of_a_spending_gate_still_needs_spend() -> None:
+    """The kind is read by id whatever the gate's state: an answered spending gate with a
+    request id is authorised exactly as an open one (review of #1155)."""
     world = World()
     project = _project()
-    answered = _gate(project)
-    world.projects = [project]
-    service = _service(world)
-    with pytest.raises(UnknownGate):
-        await service.answer_gate(
-            EVERYTHING, answered.gate_id, {"verdict": "accept"}, request_id=None
+    answered = _gate(project, kind="budget_exhausted")
+    world.projects, world.closed = [project], [answered]
+    answerer = HubPrincipal(name="device:phone", scopes=frozenset({HubScope.ANSWER}))
+    with pytest.raises(HubForbidden):
+        await _service(world).answer_gate(
+            answerer, answered.gate_id, {"choice": "resume"}, request_id="r-1"
         )
-    # With a request id the answering service decides: it replays this request's own
-    # earlier answer, or refuses. Here it replays.
-
-    async def replay(*_: Any, **__: Any) -> GateAnswerOutcome:
-        return GateAnswerOutcome(record=answered, replayed=True)
-
-    service._gate_answers.answer = replay  # type: ignore[method-assign]
-    assert await service.answer_gate(
-        EVERYTHING, answered.gate_id, {"verdict": "accept"}, request_id="r-1"
-    ) == ("answered", answered.gate_id)
+    assert world.asked == []
 
 
 async def test_nothing_is_permitted_by_default() -> None:

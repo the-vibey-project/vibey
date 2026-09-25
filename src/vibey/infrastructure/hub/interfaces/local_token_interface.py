@@ -25,8 +25,8 @@ class LocalTokenStoreInterface(Protocol):
         """Writes where the hub listens."""
         ...
 
-    def clear_serving(self) -> None:
-        """Removes the runtime record."""
+    def clear_serving(self, pid: int | None = None) -> None:
+        """Removes the runtime record; with `pid`, only when the record names it."""
         ...
 
     def serving(self) -> ServingRecord | None:

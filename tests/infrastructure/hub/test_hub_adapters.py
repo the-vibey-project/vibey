@@ -135,7 +135,7 @@ def test_a_token_others_can_read_is_refused(tmp_path: Path) -> None:
     store = LocalTokenStore(tmp_path)
     store.token()
     (tmp_path / "token").chmod(0o644)
-    with pytest.raises(PermissionError, match="readable by other accounts"):
+    with pytest.raises(PermissionError, match="open to other accounts"):
         store.token()
 
 
@@ -315,3 +315,34 @@ def test_this_computers_names_include_its_mdns_name_and_addresses(
 
     monkeypatch.setattr(socket, "getaddrinfo", unresolvable)
     assert LocalNames().names("192.168.1.30") == frozenset({"box.local", "192.168.1.30"})
+
+
+def test_a_runtime_record_is_cleared_only_by_the_process_it_names(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path)
+    store.clear_serving(pid=1)
+    store.record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=42))
+    store.clear_serving(pid=7)
+    assert store.serving() is not None
+    store.clear_serving(pid=42)
+    assert store.serving() is None
+    (tmp_path / "serving.json").write_text("[]")
+    store.clear_serving(pid=42)
+    assert (tmp_path / "serving.json").exists()
+
+
+def test_a_state_directory_of_another_account_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(os, "getuid", lambda: 12345)
+    with pytest.raises(PermissionError, match="another account"):
+        LocalTokenStore(tmp_path / "hub").token()
+
+
+def test_a_symlinked_token_is_never_followed(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path / "hub")
+    store.token()
+    (tmp_path / "hub" / "token").unlink()
+    (tmp_path / "planted").write_text("known")
+    (tmp_path / "hub" / "token").symlink_to(tmp_path / "planted")
+    with pytest.raises(OSError):
+        store.token()

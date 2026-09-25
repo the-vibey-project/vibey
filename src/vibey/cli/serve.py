@@ -1,8 +1,10 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """`vibey serve`: the hub, the one HTTP surface every Krypton client reaches (ADR-0067).
 
-It listens on the loopback interface unless `vibey.toml` declares `[hub] lan = true`, and
-refuses to start on any other address without that declaration (exit 2). Every route is
+It listens on the loopback interface. Leaving it takes two things, both deliberate: an
+explicit `--host <address>` on the command line, and `[hub] lan = true` in `vibey.toml`;
+an address the file does not declare is refused (exit 2). A repository's file alone never
+opens the LAN: without `--host` the hub binds loopback whatever the file says. Every route is
 under `/api/v1`, answers only a `Host` it expects, and names its caller before it runs:
 the host's own programs present the token in the hub's state directory (printed at
 start); devices on the network pair (ADR-0067's pairing, a later change).
@@ -250,15 +252,19 @@ class ServeCommand:
         return json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
 
     async def run(self, *, host: str | None, port: int | None) -> None:
-        settings = self._settings.load(self._config_path())
         try:
+            settings = self._settings.load(self._config_path())
             bound = self._binding.resolve(host, lan_declared=settings.lan)
-        except UndeclaredExposure as exc:
+        except (ConfigError, UndeclaredExposure) as exc:
             typer.echo(str(exc), err=True)
             raise typer.Exit(EXIT_USAGE) from exc
         listen = port if port is not None else settings.port
         store = LocalTokenStore(settings.state_dir)
-        token = store.token()
+        try:
+            token = store.token()
+        except PermissionError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(1) from exc
         names = self._names.names(bound) | settings.names if settings.lan else frozenset()
         allowed = self._binding.allowed_hosts(listen, names)
         scanner = LaneScanner(
@@ -273,6 +279,7 @@ class ServeCommand:
             service = HubService(
                 projects=resources.projects,
                 gates=resources.gates,
+                gate_lookup=resources.gates,
                 gate_answers=resources.gate_answers,
                 budgets=resources.project_budgets,
                 queue=resources.queue_priority,
@@ -292,7 +299,7 @@ class ServeCommand:
             try:
                 await self._server.serve(app, host=bound, port=listen)
             finally:
-                store.clear_serving()
+                store.clear_serving(os.getpid())
 
     def exposure_line(self) -> bool:
         """`vibey doctor`'s `hub-exposure` line, printed; False only on FAIL. A `[hub]`

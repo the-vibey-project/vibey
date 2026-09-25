@@ -31,7 +31,7 @@ from vibey.application.hub.interfaces.hub_service_interface import (
     HubProbesInterface,
 )
 from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
-from vibey.application.interfaces.gates import HumanGateRepository
+from vibey.application.interfaces.gates import GateLookup, HumanGateRepository
 from vibey.application.interfaces.ledger import LedgerSearch
 from vibey.application.interfaces.project_budget import ProjectBudgetServiceInterface
 from vibey.application.interfaces.projects import ProjectReader
@@ -58,6 +58,7 @@ class HubService:
         *,
         projects: ProjectReader,
         gates: HumanGateRepository,
+        gate_lookup: GateLookup,
         gate_answers: GateAnswerServiceInterface,
         budgets: ProjectBudgetServiceInterface,
         queue: QueuePriorityServiceInterface,
@@ -70,6 +71,7 @@ class HubService:
     ) -> None:
         self._projects = projects
         self._gates = gates
+        self._gate_lookup = gate_lookup
         self._gate_answers = gate_answers
         self._budgets = budgets
         self._queue = queue
@@ -114,18 +116,15 @@ class HubService:
         *,
         request_id: str | None,
     ) -> HubDocument:
-        # `answer` is the least any answer needs; a spending gate needs `spend` too, and
-        # that is only known once the gate's kind is read -- so check twice.
+        # `answer` is the least any answer needs; a spending gate needs `spend` too. The
+        # gate is read by id whatever its state -- open, or answered by this request before
+        # (a replay) -- so the kind check can never be skipped. A gate's kind is fixed when
+        # it is raised, so the kind read here is the kind the answer acts on.
         self._authorise(principal, HubAction.ANSWER_GATE)
-        gate = next(
-            (open_ for open_ in await self._gates.open_all() if open_.gate_id == gate_id), None
-        )
-        if gate is not None:
-            self._authorise(principal, self._policy.action_for_gate(gate.kind))
-        elif request_id is None:
-            # Not open. With a request id it may be this request's own earlier answer, which
-            # the service replays; without one there is nothing it could do but refuse.
-            raise UnknownGate(f"no open gate {gate_id}")
+        gate = await self._gate_lookup.get(gate_id)
+        if gate is None:
+            raise UnknownGate(f"no gate {gate_id}")
+        self._authorise(principal, self._policy.action_for_gate(gate.kind))
         outcome = await self._gate_answers.answer(
             gate_id, answer, by=principal.name, request_id=request_id
         )
