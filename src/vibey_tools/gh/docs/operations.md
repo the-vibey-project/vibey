@@ -159,6 +159,54 @@ the diff; a clean local verdict passes the gate as `PR review: gate (local fallb
 rather than blocking it. That title always names the weaker reviewer — treat it as a
 signal to still fix the primary path's root cause, not as a fully reviewed pass.
 
+## The sovereign heartbeat — honest, declared, and through the gate
+
+The PR-review gate schedules the sovereign review only while
+`[pr_automation.fallback] heartbeat_ref` is younger than `heartbeat_max_age_minutes`
+(default 15); otherwise it asks a human. The heartbeat is published by a timer on the
+machine that serves the lane (vibey ADR-0060).
+
+**Stand it up** from the repository's main checkout, with a `vibey-gh` installed outside any
+checkout and outside any temporary directory (for example `uv tool install vibey`):
+
+```bash
+vibey-gh heartbeat install          # writes the unit, loads nothing, prints the next commands
+vibey-gh heartbeat install --load   # also (re)loads it
+vibey-gh heartbeat status           # installed, current, loaded, last beat's age and result
+vibey-gh heartbeat uninstall        # dry run; --apply unloads it and moves the units aside
+```
+
+`vibey-gh runner install` and `runner uninstall` do the same for the heartbeat alongside the
+runner. On macOS the timer is a launchd agent; on Linux (Ubuntu LTS included) it is a systemd
+user service and timer, and `loginctl enable-linger "$USER"` keeps it running without a login
+session. It beats every `[runners] heartbeat_interval_minutes` — by default half the trust
+window, and never more — so one missed beat does not stale the lane. Install refuses an
+interpreter, a `vibey_gh` or a log directory under a temporary directory or inside a git work
+tree, and a checkout that is a linked worktree, and says which.
+
+**Each beat is honest.** `vibey-gh sovereign --beat` publishes only when a runner carrying
+`runner_label` is registered with the repository and online (read from GitHub with the
+runner's own login in `[runners] gh_config_dir`), and the model endpoint `base_url` answers
+with `model`. Otherwise it pushes nothing and says why — `heartbeat withheld: no runner
+labelled … is online …` — so the heartbeat goes stale on its own and the gate falls back
+honestly. A check that could not be read withholds the beat too. The timer's `--record` file
+is what `heartbeat status` reads.
+
+**Each beat goes through the pre-push gate.** There is no `--no-verify`. The hook
+`vibey-gh install` renders reads every ref git is pushing and ends before the heavy stage only
+when every ref is outside `refs/heads/` and `refs/tags/` and every commit is the empty tree with
+no parents (`vibey-gh push-scope`); anything else — a branch, a tag, a file, a parent, a
+heartbeat riding beside a branch — runs the whole gate. The heartbeat replaces the previous one
+by compare-and-swap (`--force-with-lease` on the exact value read, which must itself be a
+heartbeat), never a bare force. The hook needs `vibey-gh` (or, where the repository carries its
+own copy, a `python3` that can import it) on the timer's `[runners] path`.
+
+**`vibey-local-authority` is retired.** The hand-written LaunchAgent that used to publish the
+heartbeat, from one operator's home directory and recorded nowhere, said "up" whenever its
+supervisor had a live process and pushed with `--no-verify`. Unload it
+(`launchctl bootout gui/$(id -u)/<its label>`) and install the declared timer above in its
+place. The `vibey-gh local-authority` command below is a different thing and is unchanged.
+
 ## Local-authority mode — when the paid lane is capped
 
 When API credits are exhausted, evaluations fail rather than review, and the operator's

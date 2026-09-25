@@ -1,0 +1,32 @@
+#!/bin/sh
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+# Rendered by `vibey-gh heartbeat install` into the repository the heartbeat timer owns
+# (vibey ADR-0060). Do not edit: re-install, and `vibey-gh heartbeat status` reports drift.
+#
+# THE GATE, in a repository that exists to publish one thing. The timer pushes the sovereign
+# heartbeat from here -- an empty tree with no parents, to the declared heartbeat ref -- and
+# nothing else is meant to leave. There is no working tree and no code here, so nothing for a
+# test suite to judge: a push that is not a heartbeat is refused outright. Code is pushed from
+# a checkout, where the whole pre-push gate runs.
+#
+# Whether a push IS a heartbeat is decided exactly as every checkout's gate decides it, by
+# `vibey-gh push-scope`, and by the interpreter the timer itself runs, so the rule applied here
+# is the timer's own and can never fall behind it. Only its exact token lets a push through.
+# Nothing here reads a flag, a variable or a file that asks for the exemption.
+
+set -e
+
+# Git hands this hook the refs being pushed on stdin, one line each. Every one is judged.
+refs=$(cat)
+
+# PYTHONPATH is dropped and PYTHONSAFEPATH keeps this directory off sys.path, so the
+# interpreter runs the vibey_gh it was installed with and never anything else.
+scope=$(printf '%s\n' "$refs" | env -u PYTHONPATH PYTHONSAFEPATH=1 __PYTHON__ -m vibey_gh.cli push-scope) || scope=
+if [ "$scope" = "carries-no-code" ]; then
+  echo "pre-push: $scope" >&2
+  exit 0
+fi
+
+printf '\033[0;31m%s\033[0m\n' "✖ push refused: this repository publishes only the sovereign heartbeat." >&2
+echo "  Push code from a checkout, where the whole pre-push gate judges it." >&2
+exit 1

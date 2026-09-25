@@ -1,0 +1,17 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+# Rendered by `vibey-gh heartbeat install` from [runners]; do not edit, re-install instead.
+#
+# Starts the heartbeat unit beside this timer soon after it is enabled, then every interval:
+# at most half the age at which the gate stops trusting a heartbeat. A user timer runs only
+# while the user has a session unless lingering is enabled (`loginctl enable-linger`).
+[Unit]
+Description=vibey sovereign heartbeat timer for __REPOSITORY__
+
+[Timer]
+OnActiveSec=10s
+OnUnitActiveSec=__INTERVAL_MINUTES__min
+AccuracySec=30s
+Unit=__LABEL__.service
+
+[Install]
+WantedBy=timers.target

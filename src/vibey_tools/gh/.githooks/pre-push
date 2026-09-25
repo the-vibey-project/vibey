@@ -12,10 +12,19 @@
 # Escape hatch: `git push --no-verify` still works, because a hook that cannot be
 # bypassed in an emergency gets uninstalled instead. CI applies the same rule server-side,
 # so skipping here only defers the failure rather than avoiding it.
+#
+# A push that carries NO code has nothing here to judge, and the gate decides that for
+# itself rather than asking a caller to skip it: see "The gate's own scope" below.
 
 set -e
 
 red() { printf '\033[0;31m%s\033[0m\n' "$1"; }
+
+# Git hands this hook the refs being pushed on stdin, one line each. Read once, here,
+# before anything can consume it: it is the only place the list is complete, and both the
+# scope check and the chained hook below need every line of it.
+refs=$(cat)
+feed_refs() { if [ -n "$refs" ]; then printf '%s\n' "$refs"; fi; }
 
 
 # Resolve the CLI. `vibey-gh` on PATH is the normal case, but a project virtualenv that
@@ -99,6 +108,20 @@ if ! vibey_gh trailer-key >/dev/null 2>&1; then
   exit 1
 fi
 
+# The gate's own scope. This stage judges code on its way off the machine, and some pushes
+# carry none: the sovereign heartbeat is an empty tree with no parents on a ref outside
+# refs/heads/. `vibey-gh push-scope` applies one rule to every line git wrote above: every
+# ref outside refs/heads/ and refs/tags/, every commit an empty tree with no parents. Only
+# then does it print the token, and only the exact token ends the hook here. A branch, a
+# tag, a tree with anything in it, a commit with a parent, a deletion, an unreadable object,
+# an older vibey-gh that lacks the command, a crash -- each prints no token, and the whole
+# gate below runs. This is the gate applying its own rule, not a caller skipping it: there
+# is no flag or variable that asks for it, only what the objects being pushed are.
+scope=$(feed_refs | vibey_gh push-scope) || scope=
+if [ "$scope" = "carries-no-code" ]; then
+  exit 0
+fi
+
 if ! vibey_gh check --quiet; then
   red "✖ push refused: the provenance fingerprints are not intact."
   echo
@@ -112,7 +135,9 @@ fi
 
 # Chain to a pre-existing project hook, so adopting this does not discard local checks.
 # Its refusal is this hook's refusal. `set -e` and being the last line already carry the
-# status out; `|| exit $?` says so explicitly, so neither can be lost to a later edit.
+# status out; `|| exit $?` says so explicitly, so neither can be lost to a later edit. The
+# refs this hook read are handed on unchanged: the pre-commit framework reads them from
+# stdin, and with none it decides there is nothing to check and runs no gate at all.
 if [ -x "$(dirname "$0")/pre-push.local" ]; then
-  "$(dirname "$0")/pre-push.local" "$@" || exit $?
+  feed_refs | "$(dirname "$0")/pre-push.local" "$@" || exit $?
 fi

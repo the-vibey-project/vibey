@@ -588,6 +588,12 @@ class PrAutomationFallbackConfig:
                 "pr_automation.fallback.heartbeat_ref must not be a branch — a heartbeat"
                 " under refs/heads/ becomes a branch every tidy pass has to reason about"
             )
+        if self.heartbeat_ref.startswith("refs/tags/"):
+            raise ValueError(
+                "pr_automation.fallback.heartbeat_ref must not be a tag — every clone fetches"
+                " tags, a release is cut from them, and the pre-push gate judges every tag in"
+                " full, so a heartbeat there could never be published through it"
+            )
         if not 1 <= self.heartbeat_max_age_minutes <= 1440:
             raise ValueError(
                 "pr_automation.fallback.heartbeat_max_age_minutes must be between 1 and 1440"
@@ -659,7 +665,32 @@ class RunnersConfig:
     # Consecutive runner failures before the supervisor stops rather than spins.
     max_failures: int = 5
     # launchd starts a job with a near-empty PATH; docker and gh must be reachable from it.
+    # The heartbeat timer runs with the same PATH, and git must be reachable from it too.
     path: str = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    # The heartbeat timer (`vibey-gh heartbeat install`, ADR-0060). Which service manager
+    # runs it: "launchd", "systemd", or empty to pick by platform (macOS launchd, Linux
+    # systemd).
+    heartbeat_scheduler: str = ""
+    # Minutes between beats. 0 takes half of `[pr_automation.fallback]
+    # heartbeat_max_age_minutes`; anything over half is refused at install, so one missed
+    # beat never stales the lane.
+    heartbeat_interval_minutes: int = 0
+    # The interpreter the timer runs `python -m vibey_gh.cli` with, and the one the clone's
+    # pre-push hook asks for its scope decision. The default is where `uv tool install vibey`
+    # puts it on macOS and Linux alike; empty is the one running the install. Either way it,
+    # and the vibey_gh it imports, must live outside any temporary directory and any git work
+    # tree -- which is why `uv run` inside a checkout cannot be it.
+    heartbeat_python: str = "~/.local/share/uv/tools/vibey/bin/python"
+    # Where the timer logs and records each beat. Empty is `log_dir` under launchd and
+    # `~/.local/state/vibey-gh` under systemd.
+    heartbeat_log_dir: str = ""
+    # The repository the heartbeat timer owns and pushes from: a clone with no working tree,
+    # the repository's remote, the runner's own credential and a pre-push gate rendered by
+    # the timer's own vibey-gh. Empty is `<install_dir>/heartbeat-<repository name>`, durable
+    # beside the runner's files. Refused under a temporary directory or inside a checkout.
+    heartbeat_clone_dir: str = ""
+    # Where the systemd user units are written.
+    systemd_user_dir: str = "~/.config/systemd/user"
 
     def __post_init__(self) -> None:
         if self.repository and not _RUNNER_SLUG_RE.fullmatch(self.repository):
@@ -669,10 +700,33 @@ class RunnersConfig:
                 "runners.unit_prefix must be letters, digits, dots and dashes:"
                 f" {self.unit_prefix!r}"
             )
-        for name in ("install_dir", "launch_agents_dir", "log_dir", "gh_config_dir"):
+        for name in (
+            "install_dir",
+            "launch_agents_dir",
+            "log_dir",
+            "gh_config_dir",
+            "systemd_user_dir",
+        ):
             value = getattr(self, name)
             if not value.startswith(("/", "~/")):
                 raise ValueError(f"runners.{name} must be absolute or start with ~/: {value!r}")
+        for name in ("heartbeat_python", "heartbeat_log_dir", "heartbeat_clone_dir"):
+            value = getattr(self, name)
+            if value and not value.startswith(("/", "~/")):
+                raise ValueError(
+                    f"runners.{name} must be empty, absolute, or start with ~/: {value!r}"
+                )
+        if self.heartbeat_scheduler not in ("", "launchd", "systemd"):
+            raise ValueError(
+                "runners.heartbeat_scheduler must be empty, launchd or systemd:"
+                f" {self.heartbeat_scheduler!r}"
+            )
+        # `type(...) is int`: TOML hands a float or a bool through unchanged.
+        if (
+            type(self.heartbeat_interval_minutes) is not int
+            or not 0 <= self.heartbeat_interval_minutes <= 720
+        ):
+            raise ValueError("runners.heartbeat_interval_minutes must be a whole number 0-720")
         if self.shares_operator_gh_dir(Path(os.path.expanduser("~")), os.environ):
             raise ValueError(
                 f"runners.gh_config_dir {self.gh_config_dir!r} must be a directory of its own,"

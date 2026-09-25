@@ -43,6 +43,23 @@ class RunnerPlanInterface(Protocol):
 
 
 @runtime_checkable
+class RegisteredRunnerInterface(Protocol):
+    """One self-hosted runner as the forge lists it for the repository."""
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def online(self) -> bool: ...
+
+    @property
+    def busy(self) -> bool: ...
+
+    @property
+    def labels(self) -> tuple[str, ...]: ...
+
+
+@runtime_checkable
 class LaunchAgentUnitInterface(Protocol):
     """An installed LaunchAgent as its plist describes it."""
 
@@ -89,8 +106,17 @@ class SovereignRunnerInterface(Protocol):
         plan's host; [] only when GitHub accepts it. Never includes the token."""
         ...
 
+    def registered_runners(
+        self, plan: RunnerPlanInterface
+    ) -> tuple[Sequence[RegisteredRunnerInterface], str]:
+        """Every runner the forge lists for the plan's repository, read with the runner's own
+        login, and `""`; or `((), problem)` when the listing could not be read. Never
+        includes the token or anything the client said about it."""
+        ...
+
     def strays(self, plan: RunnerPlanInterface) -> tuple[LaunchAgentUnitInterface, ...]:
-        """Agents under `[runners] unit_prefix` that the tree no longer declares."""
+        """Agents under `[runners] unit_prefix` that the tree no longer declares -- never the
+        declared runner's, and never its heartbeat timer's."""
         ...
 
     def remove(self, units: Sequence[LaunchAgentUnitInterface], *, apply: bool) -> list[str]:

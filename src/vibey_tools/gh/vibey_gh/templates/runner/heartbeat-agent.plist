@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Rendered by `vibey-gh heartbeat install` (and `vibey-gh runner install`) from the
+  repository's [runners] and [pr_automation.fallback] tables. Do not edit: edit the tables and
+  re-install; `vibey-gh heartbeat status` reports drift.
+
+  Publishes the sovereign heartbeat on a timer, and only an honest one: a beat pushes
+  nothing unless the runner is registered and online and the model endpoint answers, so a
+  machine that cannot serve the lane lets the heartbeat go stale on its own. Each run
+  records what it did in the record file below, which `heartbeat status` reads.
+
+  It pushes from the repository the timer owns (vibey ADR-0060), never from a checkout:
+  a clone with no working tree, whose own pre-push gate asks this same interpreter whether a
+  push carries code and refuses anything that is not a heartbeat. Nothing here skips it.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__PYTHON__</string>
+    <string>-m</string>
+    <string>vibey_gh.cli</string>
+    <string>sovereign</string>
+    <string>--beat</string>
+    <string>--record</string>
+    <string>__RECORD__</string>
+  </array>
+
+  <!-- The timer's own clone: its remote, its credential, its gate and its configuration. -->
+  <key>WorkingDirectory</key>
+  <string>__CLONE__</string>
+
+  <!--
+    launchd starts jobs with a near-empty PATH; git and gh must be reachable from it.
+    PYTHONSAFEPATH keeps the working directory off sys.path, so the interpreter runs the
+    vibey_gh it was installed with and never a package a directory happens to hold.
+  -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__PATH__</string>
+    <key>PYTHONSAFEPATH</key>
+    <string>1</string>
+  </dict>
+
+  <!-- At most half the age at which the gate stops trusting a heartbeat. -->
+  <key>StartInterval</key>
+  <integer>__INTERVAL_SECONDS__</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>__LOG__</string>
+  <key>StandardErrorPath</key>
+  <string>__LOG__</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>
