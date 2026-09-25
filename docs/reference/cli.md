@@ -729,11 +729,14 @@ that state.
 The `db-passwordless` line after it asks whether the app DSN's database admits a
 login with no password at all: as the DSN's role and as the OS user doctor runs as,
 on the DSN's host and, when that host is local, on each local socket directory. It
-prints `WARN` when one is let in (trust or peer authentication: any process running
-as that user, an engine session included, can open the database without
-`VIBEY_PG_URL`; see [SECURITY.md](https://github.com/the-vibey-project/vibey/blob/main/SECURITY.md) §5),
-`PASS` when every attempt was refused, and `UNKNOWN` when none reached the server or
-`VIBEY_PG_URL` is unset. It never changes the exit code.
+prints `FAIL` when one is let in, and doctor then exits 1. That happens with trust or peer
+authentication: any process running as that user, an engine session included, can open
+the database without `VIBEY_PG_URL`. Sub-doctrine 10.j
+([ADR-0061](../architecture/decisions/0061-every-postgresql-connection-authenticates-with-scram-sha-256.md))
+requires scram-sha-256 for every connection; see
+[SECURITY.md](https://github.com/the-vibey-project/vibey/blob/main/SECURITY.md) §5 and §7.
+It prints `PASS` when every attempt was refused, and `UNKNOWN` when none reached the server
+or `VIBEY_PG_URL` is unset. `UNKNOWN` does not change the exit code.
 
 With `--conformance`, the command exits 1 if any engine fails a check. The
 worker does not select an engine for engine-driven jobs until a
@@ -750,9 +753,12 @@ Each prints `PASS`, `FAIL` or `UNKNOWN`, and doctor exits 1 if either fails:
   ([database roles](configuration.md#database-roles)).
 - `local-auth` fails when the server lets a password-less connection in as the owner or a
   superuser. It attempts one on the DSN's host and, for a local host, on the local socket
-  directories. It also fails when `pg_hba.conf` has a `trust`, `peer` or `ident` rule that
-  can match them. It is `UNKNOWN` (not a failure, never a pass) when it could neither get
-  in nor read `pg_hba_file_rules`.
+  directories. It also fails when `pg_hba.conf` has a `trust`, `peer`, `ident`, `md5` or
+  `password` rule that can match them, and when `password_encryption` is not
+  `scram-sha-256` (sub-doctrine 10.j,
+  [ADR-0061](../architecture/decisions/0061-every-postgresql-connection-authenticates-with-scram-sha-256.md)).
+  It is `UNKNOWN` (not a failure, never a pass) when it could neither get in nor read
+  `pg_hba_file_rules`.
 
 With `VIBEY_PG_URL` unset, `ledger-guard` prints `UNKNOWN` and nothing is checked.
 

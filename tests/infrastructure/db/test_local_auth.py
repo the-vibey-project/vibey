@@ -25,11 +25,16 @@ class _App:
     """The application's connection: the catalog answers, and pg_hba as configured."""
 
     def __init__(
-        self, roles: Sequence[str], hba: list[dict[str, Any]] | None, database: str = "vibey"
+        self,
+        roles: Sequence[str],
+        hba: list[dict[str, Any]] | None,
+        database: str = "vibey",
+        encryption: str = "scram-sha-256",
     ) -> None:
         self._roles = roles
         self._hba = hba
         self._database = database
+        self._encryption = encryption
 
     async def fetch(self, sql: str, *args: object) -> list[dict[str, Any]]:
         if "pg_hba_file_rules" in sql:
@@ -39,6 +44,8 @@ class _App:
         return [{"rolname": role} for role in self._roles]
 
     async def fetchval(self, sql: str, *args: object) -> str:
+        if "password_encryption" in sql:
+            return self._encryption
         return self._database
 
 
@@ -126,6 +133,57 @@ def test_a_password_less_rule_for_them_is_a_failure(rule: dict[str, Any]) -> Non
     assert finding.verdict is AuthVerdict.FAIL
     assert "pg_hba.conf lets these in without a password: line 90" in finding.detail
     assert "scram-sha-256" in finding.detail
+
+
+@pytest.mark.parametrize(
+    "rule",
+    [_rule(["all"], "md5", "host"), _rule(["owner"], "password"), _rule(["all"], "md5")],
+)
+def test_a_rule_that_asks_for_a_password_without_scram_is_a_failure(
+    rule: dict[str, Any],
+) -> None:
+    """Sub-doctrine 10.j (ADR-0061): md5 and clear-text passwords fail like trust does."""
+    refused = _Knocks(asyncpg.InvalidPasswordError("password authentication failed"))
+
+    finding = asyncio.run(
+        _probe(refused).probe(_App(["owner"], hba=[rule]), "postgresql://app@localhost/v")  # type: ignore[arg-type]
+    )
+
+    assert finding.verdict is AuthVerdict.FAIL
+    assert "pg_hba.conf lets these in without scram-sha-256: line 90" in finding.detail
+    assert "without a password" not in finding.detail
+    assert "10.j" in finding.detail
+
+
+def test_trust_and_md5_rules_are_both_named() -> None:
+    refused = _Knocks(asyncpg.InvalidPasswordError("password authentication failed"))
+    rules = [_rule(["all"]), _rule(["all"], "md5", "host")]
+
+    finding = asyncio.run(
+        _probe(refused).probe(_App(["owner"], hba=rules), "postgresql://app@localhost/v")  # type: ignore[arg-type]
+    )
+
+    assert finding.verdict is AuthVerdict.FAIL
+    assert "without a password: line 90: local all all trust" in finding.detail
+    assert "without scram-sha-256: line 90: host all all md5" in finding.detail
+
+
+@pytest.mark.parametrize("hba", [[], None])
+def test_passwords_stored_as_anything_but_scram_are_a_failure(
+    hba: list[dict[str, Any]] | None,
+) -> None:
+    """Even where pg_hba cannot be read, md5 storage is something the probe can see."""
+    refused = _Knocks(asyncpg.InvalidPasswordError("password authentication failed"))
+
+    finding = asyncio.run(
+        _probe(refused).probe(
+            _App(["owner"], hba=hba, encryption="md5"),  # type: ignore[arg-type]
+            "postgresql://app@localhost/v",
+        )
+    )
+
+    assert finding.verdict is AuthVerdict.FAIL
+    assert "password_encryption is 'md5'" in finding.detail
 
 
 def test_a_rule_for_someone_else_is_not_their_problem() -> None:

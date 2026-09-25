@@ -79,7 +79,8 @@ needs separately is its own vendor CLI and credentials — which is what
 
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
-vibey install --postgres       # install/start local PostgreSQL 18 when needed
+vibey install --postgres       # install/start local PostgreSQL 18 when needed, then set
+                               # the scram-sha-256 pg_hba.conf lines in SECURITY.md §7
 export VIBEY_PG_URL=postgresql://vibey_app:change-me@localhost:5432/vibey # the application
 # The owner's DSN is given to `vibey migrate` alone, for that one command -- never exported,
 # so no worker, engine session or gate command ever holds it:
@@ -321,7 +322,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (60 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (61 ADRs) |
 
 ## Status
 

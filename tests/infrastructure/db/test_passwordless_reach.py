@@ -82,7 +82,7 @@ def test_it_tries_the_dsns_role_and_the_os_user_against_the_dsns_database() -> N
     assert PasswordlessReachProbe().roles("postgresql://localhost/x") == (getpass.getuser(),)
 
 
-async def test_a_database_that_lets_the_os_user_in_with_no_password_is_a_warning() -> None:
+async def test_a_database_that_lets_the_os_user_in_with_no_password_is_a_failure() -> None:
     calls: list[dict[str, Any]] = []
     probe = _probe(
         {
@@ -95,7 +95,7 @@ async def test_a_database_that_lets_the_os_user_in_with_no_password_is_a_warning
 
     finding = await probe.probe("postgresql://vibey:secret@localhost:5432/app")
 
-    assert finding.verdict is ReachVerdict.WARN
+    assert finding.verdict is ReachVerdict.FAIL
     assert "adam via localhost:5432" in finding.detail
     assert "'app'" in finding.detail
     assert "without VIBEY_PG_URL" in finding.detail
@@ -148,17 +148,17 @@ async def test_against_the_real_test_database_the_verdict_is_what_a_connection_s
     password-less connection made directly."""
     finding = await PasswordlessReachProbe().probe(database_url)
 
-    assert finding.verdict in {ReachVerdict.WARN, ReachVerdict.PASS}, finding.detail
+    assert finding.verdict in {ReachVerdict.FAIL, ReachVerdict.PASS}, finding.detail
     user = getpass.getuser()
     try:
         conn = await asyncpg.connect(database_url, user=user, password="", passfile=os.devnull)
     except (asyncpg.InvalidPasswordError, asyncpg.InvalidAuthorizationSpecificationError):
         return
     await conn.close()
-    assert finding.verdict is ReachVerdict.WARN
+    assert finding.verdict is ReachVerdict.FAIL
     assert user in finding.detail
 
 
 @pytest.mark.parametrize("verdict", list(ReachVerdict))
 def test_each_verdict_prints_as_its_doctor_mark(verdict: ReachVerdict) -> None:
-    assert verdict.mark == {"warn": "WARN", "pass": "PASS", "unknown": "UNKNOWN"}[verdict.value]
+    assert verdict.mark == {"fail": "FAIL", "pass": "PASS", "unknown": "UNKNOWN"}[verdict.value]
