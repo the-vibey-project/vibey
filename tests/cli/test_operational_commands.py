@@ -1458,7 +1458,7 @@ def test_worker_invalid_engine() -> None:
 def test_worker_invalid_provider() -> None:
     res = runner.invoke(app, ["worker", "--provider", "nonexistent"])
     assert res.exit_code == 2
-    assert "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'" in res.output
+    assert "provider must be 'scripted', 'claudeloop', 'gptossloop', or 'opencode'" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1619,7 +1619,7 @@ def test_worker_sweeps_claudeloop_local_when_its_feature_is_on(
         res = runner.invoke(app, ["worker", "--once", "--engines", "claudeloop-local"])
     assert res.exit_code == 0, res.output
     assert "no recorded conformance for claudeloop-local" in res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1645,7 +1645,7 @@ def test_worker_defaults_to_the_sovereign_providers_from_the_project_config(
         mock_notifier_cls.return_value = AsyncMock()
         res = runner.invoke(app, ["worker", "--once"])
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1669,9 +1669,10 @@ def test_an_explicit_provider_still_wins_over_the_sovereign_default(
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_with_no_local_engine_the_default_provider_is_qwenloop(
+def test_with_no_local_engine_the_default_provider_is_gptossloop(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("VIBEY_FEATURE_GPTOSSLOOP", "0")
     monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
     monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
 
@@ -1687,7 +1688,7 @@ def test_with_no_local_engine_the_default_provider_is_qwenloop(
         res = runner.invoke(app, ["worker", "--once"])
     # #322 (sub-doctrine 8.b): the sovereign pair is always on, so no switch is needed.
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1731,8 +1732,8 @@ def test_worker_provider_opencode_constructs_live_providers(tmp_path: Path) -> N
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_provider_qwenloop_constructs_live_providers(tmp_path: Path) -> None:
-    """--provider qwenloop (8.a's sovereign path) builds the live design provider
+def test_worker_provider_gptossloop_constructs_live_providers(tmp_path: Path) -> None:
+    """--provider gptossloop (8.a's sovereign path) builds the live design provider
     without any network call at construction time, with no evidence dir configured."""
 
     async def seed() -> None:
@@ -1748,16 +1749,18 @@ def test_worker_provider_qwenloop_constructs_live_providers(tmp_path: Path) -> N
     ):
         os.environ.pop("VIBEY_EVIDENCE_DIR", None)
         mock_notifier_cls.return_value = AsyncMock()
-        res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
+        res = runner.invoke(app, ["worker", "--once", "--provider", "gptossloop"])
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
+    assert "is now --provider" not in res.output
     assert "no ready job" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_provider_qwenloop_picks_up_evidence_dir(tmp_path: Path) -> None:
     """VIBEY_EVIDENCE_DIR is how the operator hands the sovereign research stage its
-    reading; --provider qwenloop must actually read it rather than ignore it."""
+    reading; --provider qwenloop must actually read it rather than ignore it. `qwenloop`
+    is the provider's old name, read as gptossloop and said so (ADR-0060)."""
 
     async def seed() -> None:
         async with build_app() as resources:
@@ -1777,7 +1780,8 @@ def test_worker_provider_qwenloop_picks_up_evidence_dir(tmp_path: Path) -> None:
         mock_notifier_cls.return_value = AsyncMock()
         res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
+    assert "--provider qwenloop is now --provider gptossloop (ADR-0060)" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1860,7 +1864,8 @@ def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
             assert all(not r.conformance_ok for r in records)
             return len(records)
 
-    assert asyncio.run(check()) == 5
+    # The five paid engines, and gptossloop, the local engine on by default (ADR-0060).
+    assert asyncio.run(check()) == 6
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1873,7 +1878,8 @@ def test_worker_stays_quiet_when_every_engine_has_conformance(tmp_path: Path) ->
                 "quiet-sweep-proj", tmp_path, max_cycles=1, config={}
             )
             good = PreflightResult(installed=True, version="1.0.0", auth_ok=True)
-            for engine_id in resources.engine_adapters:
+            # Every engine this worker runs: the defaults, and gptossloop (ADR-0060).
+            for engine_id in (*resources.engine_adapters, EngineId.GPTOSSLOOP):
                 await resources.engine_health_service.update_from_preflight(
                     project.project_id, engine_id, good, conformance_ok=True
                 )

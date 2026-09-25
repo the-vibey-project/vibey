@@ -41,6 +41,7 @@ from vibey.domain.engine import (
     DEFAULT_LOOP,
     LOOP_BY_TIER,
     PAID_DEFAULT_ENGINE,
+    RENAMED_ENGINES,
     REPEALED_FROM_LOOPS,
     EngineDescriptor,
     Loop,
@@ -117,10 +118,14 @@ class LoopCatalog:
                 f"sub-doctrine 8.b repeals {descriptor.engine_id.value} from both loops; "
                 f"reported here as its descriptor says, tier {descriptor.tier.value}",
             )
+        renamed = RENAMED_ENGINES.get(descriptor.engine_id)
+        if renamed is not None:
+            notes = (*notes, renamed)
         return LoopEngine(
             descriptor=descriptor,
             enabled=context.enabled,
             switch=context.switch,
+            on_by_default=context.on_by_default,
             default_model=context.model,
             efforts=tuple(
                 self._effort(descriptor, effort, context.model) for effort in self._efforts

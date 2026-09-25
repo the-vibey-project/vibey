@@ -28,6 +28,8 @@ here guaranteed not to make things worse, since it removes a flag that
 would otherwise be rejected outright.
 """
 
+from dataclasses import replace
+
 from vibey.domain.config import ClaudeloopLocalConfig
 from vibey.domain.effort import Effort
 from vibey.domain.engine import (
@@ -468,8 +470,9 @@ QWENLOOP = EngineDescriptor(
     state_dir=".qwenloop",
     done_marker="QWENLOOP_TASK_FULLY_COMPLETE",
     auth_env=(),
-    # QWENLOOP_BASE_URL and QWENLOOP_MODEL also arrive through the adapter's overlay,
-    # derived from VIBEY_OLLAMA_URL -- which itself never reaches the session.
+    # QWENLOOP_BASE_URL also arrives through the adapter's overlay, derived from
+    # VIBEY_OLLAMA_URL -- which itself never reaches the session. Its model does not:
+    # qwenloop runs the Qwen model it names itself (ADR-0060) unless QWENLOOP_MODEL says.
     env_passthrough=("QWENLOOP_*",),
     # No attachments or web search: `attach` and `web-search` only echo (qwenloop cli/app.py
     # `_local_equivalent`). A mid-run prompt it does take: the runner adds each pending
@@ -529,6 +532,22 @@ QWENLOOP = EngineDescriptor(
     ),
     # Flat, keyed `"type"` (qwenloop application/runner.py, infrastructure/run_store.py).
     events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.TYPE),
+)
+
+
+# The same runner as qwenloop on this era's default model (ADR-0060): its own binary,
+# its own `GPTOSSLOOP_*` settings, and qwenloop's run layout, controls and events,
+# which are the runner package's protocol rather than either engine's name -- both write
+# `.qwenloop/runs/` and end on `QWENLOOP_TASK_FULLY_COMPLETE`. `gptossloop` first
+# shipped in runner 0.3.0.
+GPTOSSLOOP = replace(
+    QWENLOOP,
+    engine_id=EngineId.GPTOSSLOOP,
+    binary="gptossloop",
+    min_version="0.3.0",
+    # GPTOSSLOOP_BASE_URL and GPTOSSLOOP_MODEL also arrive through the adapter's
+    # overlay, derived from VIBEY_OLLAMA_URL -- which itself never reaches the session.
+    env_passthrough=("GPTOSSLOOP_*",),
 )
 
 
@@ -630,8 +649,9 @@ DEFAULT_DESCRIPTORS: tuple[EngineDescriptor, ...] = (
     AGYLOOP,
     OPENCODE,
 )
-# The local engines, each opt-in behind its own feature switch (ADR-0015, ADR-0038).
-LOCAL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (QWENLOOP, CLAUDELOOP_LOCAL)
+# The local engines, each behind its own feature switch (ADR-0015, ADR-0038): gptossloop
+# on unless switched off, the others opt-in (ADR-0060).
+LOCAL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (GPTOSSLOOP, QWENLOOP, CLAUDELOOP_LOCAL)
 ALL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (*DEFAULT_DESCRIPTORS, *LOCAL_DESCRIPTORS)
 
 BY_ENGINE_ID: dict[EngineId, EngineDescriptor] = {d.engine_id: d for d in ALL_DESCRIPTORS}

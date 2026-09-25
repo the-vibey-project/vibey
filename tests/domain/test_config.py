@@ -80,7 +80,7 @@ def test_architecture_doc_example_parses_every_field() -> None:
         "codexloop",
         "cursorloop",
         "agyloop",
-        "qwenloop",
+        "gptossloop",
         "opencode",
     )
     assert config.engines.weights == {
@@ -115,13 +115,14 @@ def test_minimal_config_applies_defaults() -> None:
     assert config.project.max_cycles == 10
     assert config.isolation.level == "worktree"
     assert config.engines.enabled == (
-        "qwenloop",
+        "gptossloop",
         "opencode",
     )
     assert config.phases.design.effort == "high"
     assert config.phases.build.effort == "low"
     assert config.phases.review.effort == "high"
     assert config.deploy.enabled is False
+    assert config.features.gptossloop is True
     assert config.features.qwenloop is False
     assert config.qwenloop.backend == "auto"
     assert config.notifications.enabled is False
@@ -173,9 +174,35 @@ def test_qwenloop_feature_auto_includes_standby() -> None:
     assert config.qwenloop.backend == "llama.cpp"
 
 
-def test_qwenloop_request_is_always_allowed() -> None:
-    config = load_config_from_string('[project]\nname = "x"\n\n[engines]\nenabled = ["qwenloop"]\n')
-    assert "qwenloop" in config.engines.enabled
+def test_gptossloop_request_is_always_allowed() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "x"\n\n[engines]\nenabled = ["gptossloop"]\n'
+    )
+    assert config.engines.enabled == ("gptossloop", "opencode")
+
+
+def test_qwenloop_request_requires_its_feature_and_says_what_it_became() -> None:
+    """ADR-0060: qwenloop is the opt-in Qwen engine now, and the gpt-oss one is gptossloop."""
+    with pytest.raises(ConfigError, match="features.qwenloop.*gptossloop, on by default"):
+        load_config_from_string('[project]\nname = "x"\n\n[engines]\nenabled = ["qwenloop"]\n')
+    config = load_config_from_string(
+        '[project]\nname = "x"\n\n[features]\nqwenloop = true\n\n'
+        '[engines]\nenabled = ["qwenloop"]\n'
+    )
+    assert config.engines.enabled == ("qwenloop", "gptossloop", "opencode")
+
+
+def test_gptossloop_is_switched_off_only_by_its_feature() -> None:
+    """The sovereign default leaves the pool only by the declaration its switch is for; a
+    request for it while it is switched off is refused like any local engine's."""
+    off = load_config_from_string('[project]\nname = "x"\n\n[features]\ngptossloop = false\n')
+    assert off.engines.enabled == ("opencode",)
+    assert not off.features.enables("gptossloop")
+    with pytest.raises(ConfigError, match="features.gptossloop"):
+        load_config_from_string(
+            '[project]\nname = "x"\n\n[features]\ngptossloop = false\n\n'
+            '[engines]\nenabled = ["gptossloop"]\n'
+        )
 
 
 def test_invalid_qwenloop_config_is_rejected() -> None:
@@ -286,7 +313,7 @@ def test_both_local_features_join_the_pool_in_order() -> None:
         '[project]\nname = "x"\n\n[features]\nqwenloop = true\nclaudeloop_local = true\n'
     )
 
-    assert config.engines.enabled[-2:] == ("opencode", "claudeloop-local")
+    assert config.engines.enabled == ("gptossloop", "opencode", "qwenloop", "claudeloop-local")
 
 
 def test_claudeloop_local_request_requires_its_feature() -> None:
@@ -306,7 +333,7 @@ def test_an_explicit_pool_is_kept_as_written() -> None:
         '[engines]\nenabled = ["claudeloop-local"]\n'
     )
 
-    assert config.engines.enabled == ("claudeloop-local", "qwenloop", "opencode")
+    assert config.engines.enabled == ("claudeloop-local", "gptossloop", "opencode")
 
 
 @pytest.mark.parametrize(

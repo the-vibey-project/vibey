@@ -1,9 +1,10 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The sovereign DECOMPOSE provider: BUILD's plan without paid credentials (8.a).
 
-With DESIGN sovereign (ADR-0027), `vibey worker --provider qwenloop` still handed the
-accepted spec to `ScriptedWorkPlanProducer` -- the test fake, whose items carry no
-verification commands, so every verify gate after it ran nothing and passed. A project
+With DESIGN sovereign (ADR-0027), `vibey worker --provider qwenloop` (now `gptossloop`,
+ADR-0060) still handed the accepted spec to `ScriptedWorkPlanProducer` -- the test fake,
+whose items carry no verification commands, so every verify gate after it ran nothing
+and passed. A project
 could be specified without paid credit and then not honestly planned.
 
 This asks the local model for the plan through the shared Ollama client, under a
@@ -53,7 +54,7 @@ DECOMPOSE_SYSTEM = (
 )
 
 
-class QwenloopWorkPlanProducer:
+class GptossloopWorkPlanProducer:
     """DECOMPOSE on a local model, over the shared Ollama client with a compiled grammar."""
 
     def __init__(

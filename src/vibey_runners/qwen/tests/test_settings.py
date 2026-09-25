@@ -13,7 +13,7 @@ def test_missing_default_file_is_an_empty_layer(tmp_path: Path) -> None:
     loader = SettingsLoader({}, default_path=tmp_path / "absent.toml")
     assert isinstance(loader, SettingsLoaderInterface)
     assert loader.path == tmp_path / "absent.toml"
-    assert loader.load() == QwenConfig()
+    assert loader.load() == QwenConfig(model="qwen3:14b")
     assert loader.api_key == ""
 
 
@@ -84,3 +84,28 @@ def test_config_path_expands_the_home_directory(
     loader = SettingsLoader({"QWENLOOP_CONFIG": "~/qwen.toml"})
     assert loader.path == tmp_path / "qwen.toml"
     assert loader.load().model == "home-model"
+
+
+def test_each_engine_reads_only_its_own_settings(tmp_path: Path) -> None:
+    """ADR-0060: gptossloop reads GPTOSSLOOP_* and asks for gpt-oss:20b; qwenloop reads
+    QWENLOOP_* and asks for qwen3:14b. A model named for one never reaches the other."""
+    from qwenloop.domain.config import GPTOSSLOOP, QWENLOOP
+
+    environ = {
+        "GPTOSSLOOP_BASE_URL": "http://gpt:1/v1",
+        "GPTOSSLOOP_API_KEY": "gpt-key",
+        "QWENLOOP_MODEL": "qwen3:32b",
+        "QWENLOOP_API_KEY": "qwen-key",
+    }
+    absent = tmp_path / "absent.toml"
+    gptoss = SettingsLoader(environ, identity=GPTOSSLOOP, default_path=absent)
+    qwen = SettingsLoader(environ, identity=QWENLOOP, default_path=absent)
+    assert (gptoss.load().model, gptoss.load().base_url, gptoss.api_key) == (
+        "gpt-oss:20b",
+        "http://gpt:1/v1",
+        "gpt-key",
+    )
+    assert (qwen.load().model, qwen.load().base_url, qwen.api_key) == ("qwen3:32b", "", "qwen-key")
+    assert SettingsLoader({}, identity=GPTOSSLOOP).path.parent.name == "gptossloop"
+    with pytest.raises(ValueError, match="GPTOSSLOOP_CONFIG names"):
+        SettingsLoader({"GPTOSSLOOP_CONFIG": str(absent)}, identity=GPTOSSLOOP).load()

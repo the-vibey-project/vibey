@@ -76,13 +76,16 @@ profile() {
 # is meant to reach every default install.
 profile default --
 # The in-cluster Ollama, whole: its volume, Service, Deployment, pull Job, and
-# the worker environment that points vibey and qwenloop at it.
+# the worker environment that points vibey and gptossloop at it.
 profile ollama -- --set ollama.enabled=true
-# The GPU branch and the qwenloop worker wiring, narrowed to what they touch.
-profile ollama-gpu-qwenloop \
+# The GPU branch and the local-runner worker wiring, narrowed to what they
+# touch: gptossloop as the provider, and qwenloop switched on beside it, so
+# its Qwen model is pulled and handed to it (ADR-0060).
+profile ollama-gpu-gptossloop \
   --show-only templates/ollama.yaml --show-only templates/worker.yaml -- \
   --set ollama.enabled=true --set ollama.gpu.enabled=true \
-  --set worker.provider=qwenloop --set worker.engines=qwenloop
+  --set ollama.qwenloopFeature=true \
+  --set worker.provider=gptossloop --set 'worker.engines=gptossloop\,qwenloop'
 # The KEDA claimable-work query, scoped to the project the worker serves:
 # unbound (the newest project, as the worker itself resolves it) and bound.
 profile keda-latest --show-only templates/keda-scaledobject.yaml -- \

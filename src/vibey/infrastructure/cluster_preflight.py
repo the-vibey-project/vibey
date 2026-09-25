@@ -62,12 +62,14 @@ ENGINE_API_KEY_ENVS: Mapping[EngineId, tuple[str, ...]] = {
 
 # Which engine each `vibey worker --provider` drives for DESIGN/decompose. Only
 # claudeloop is an engine subprocess there: `scripted` runs no engine at all, and
-# the qwenloop provider talks to a local Ollama over HTTP rather than running the
-# `qwenloop` binary (infrastructure/engines/qwenloop_design.py), so neither puts an
-# engine under this check. The keys are the worker's accepted --provider values.
+# the gptossloop provider talks to a local Ollama over HTTP rather than running the
+# `gptossloop` binary (infrastructure/engines/gptossloop_design.py), so neither puts an
+# engine under this check. The keys are the worker's accepted --provider values,
+# `qwenloop` among them as the old name of gptossloop's provider (ADR-0060).
 PROVIDER_ENGINES: Mapping[str, EngineId | None] = {
     "scripted": None,
     "claudeloop": EngineId.CLAUDELOOP,
+    "gptossloop": None,
     "qwenloop": None,
     "opencode": EngineId.OPENCODE,
 }

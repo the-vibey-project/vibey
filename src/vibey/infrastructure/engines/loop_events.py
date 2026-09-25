@@ -221,6 +221,9 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
 # runner writes the same events.jsonl, so it reads through the same map -- one
 # entry, not a copy that could drift from it (ADR-0038).
 LOOP_EVENT_MAP[EngineId.CLAUDELOOP_LOCAL] = LOOP_EVENT_MAP[EngineId.CLAUDELOOP]
+# gptossloop is the qwenloop runner on GPT-OSS: the same runner writes the same events,
+# so it too reads through qwenloop's one entry (ADR-0060).
+LOOP_EVENT_MAP[EngineId.GPTOSSLOOP] = LOOP_EVENT_MAP[EngineId.QWENLOOP]
 
 
 def translate_event_type(engine_id: EngineId, event_type: str) -> EventKind | None:

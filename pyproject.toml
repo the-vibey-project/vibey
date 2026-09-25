@@ -48,7 +48,7 @@ dependencies = [
     "google-antigravity>=0.1.10",
     # cursorloop and agyloop
     "anyio>=4.4",
-    # qwenloop
+    # gptossloop and qwenloop
     "platformdirs>=4.0",
 ]
 
@@ -65,17 +65,19 @@ Changelog = "https://github.com/the-vibey-project/vibey/blob/main/CHANGELOG.md"
 Discord = "https://discord.gg/Qvu8aYnVS"
 "Join me" = "https://vibewithadam.matthewsteinberger.com/join-me"
 
-# Twelve console scripts, one install (ADR-0037). Each is the entry point its own tenant
+# Thirteen console scripts, one install (ADR-0037). Each is the entry point its own tenant
 # declared while it was published separately; the name and target are unchanged, only the
 # distribution that carries them is. `azbootstrap` stays: it is vibey-bootstrap's
 # deprecated pre-4.0 alias, and dropping it here would be a second breaking change
-# smuggled in beside the first one.
+# smuggled in beside the first one. `gptossloop` is the one script no tenant published
+# before: the qwenloop tenant's second entry point, the same runner on GPT-OSS (ADR-0060).
 [project.scripts]
 vibey = "vibey.cli.main:app"
 claudeloop = "claudeloop.cli.app:main"
 codexloop = "codexloop.cli.app:main"
 cursorloop = "cursorloop.cli.app:main"
 agyloop = "agyloop.cli.app:main"
+gptossloop = "qwenloop.cli.app:gptoss_main"
 qwenloop = "qwenloop.cli.app:main"
 opencodeloop = "opencodeloop.cli.app:main"
 vibey-gh = "vibey_gh.cli:main"

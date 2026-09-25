@@ -8,6 +8,7 @@ from vibey.application.interfaces.loops import LoopCatalogInterface
 from vibey.application.loops import LOOP_CATALOG, LoopCatalog
 from vibey.domain.effort import BUILD_LADDER, BUILD_LADDER_EXHAUSTED, PHASE_BASE_EFFORT, Effort
 from vibey.domain.engine import (
+    RENAMED_ENGINES,
     EngineDescriptor,
     EngineId,
     EngineInvocation,
@@ -48,6 +49,7 @@ def _context(
     enabled: bool = True,
     switch: str | None = None,
     model: str | None = None,
+    on_by_default: bool = False,
 ) -> EngineContext:
     return EngineContext(
         descriptor=descriptor,
@@ -55,6 +57,7 @@ def _context(
         run=("{binary}", "run", "{plan}"),
         switch=switch,
         model=model,
+        on_by_default=on_by_default,
     )
 
 
@@ -128,24 +131,43 @@ def test_a_loop_with_no_engines_is_still_listed_with_an_empty_view_per_effort() 
 
 
 def test_the_state_the_resolvers_gave_passes_through_untouched() -> None:
-    local = _descriptor(EngineId.QWENLOOP, tier=EngineTier.LOCAL)
+    local = _descriptor(EngineId.GPTOSSLOOP, tier=EngineTier.LOCAL)
 
     (engine,) = (
         LoopCatalog()
         .report(
-            [_context(local, enabled=False, switch="VIBEY_FEATURE_QWENLOOP", model="gpt-oss:20b")]
+            [
+                _context(
+                    local,
+                    enabled=False,
+                    switch="VIBEY_FEATURE_GPTOSSLOOP",
+                    model="gpt-oss:20b",
+                    on_by_default=True,
+                )
+            ]
         )
         .loops[0]
         .engines
     )
 
-    assert (engine.enabled, engine.switch, engine.default_model) == (
+    assert (engine.enabled, engine.switch, engine.default_model, engine.on_by_default) == (
         False,
-        "VIBEY_FEATURE_QWENLOOP",
+        "VIBEY_FEATURE_GPTOSSLOOP",
         "gpt-oss:20b",
+        True,
     )
     assert engine.run == ("{binary}", "run", "{plan}")
     assert (engine.repealed, engine.notes) == (False, ())
+
+
+def test_an_engine_whose_name_changed_meaning_says_what_it_became() -> None:
+    """ADR-0060: qwenloop is the Qwen engine now; the gpt-oss engine is gptossloop."""
+    local = _descriptor(EngineId.QWENLOOP, tier=EngineTier.LOCAL)
+
+    (engine,) = LoopCatalog().report([_context(local)]).loops[0].engines
+
+    assert engine.notes == (RENAMED_ENGINES[EngineId.QWENLOOP],)
+    assert "gptossloop" in engine.notes[0]
 
 
 def test_a_model_flag_names_the_model() -> None:

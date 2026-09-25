@@ -30,6 +30,10 @@ class EngineId(StrEnum):
     CURSORLOOP = "cursorloop"
     AGYLOOP = "agyloop"
     OPENCODE = "opencode"
+    # The sovereign default engine (8.b, 8.d): the local runner on GPT-OSS, on unless a
+    # project switches it off. What was called qwenloop until ADR-0060, when qwenloop
+    # became the same runner on the Qwen model its name promises -- opt-in, below.
+    GPTOSSLOOP = "gptossloop"
     QWENLOOP = "qwenloop"
     # The same claudeloop binary, driven through a named backend profile that
     # points Claude Code at a local model (Ollama) instead of Anthropic. A
@@ -78,6 +82,17 @@ The selector does not act on it yet: within the paid tier it rotates by weight."
 REPEALED_FROM_LOOPS: Final[frozenset[EngineId]] = frozenset({EngineId.OPENCODE})
 """Engines 8.b repeals from both loops. Their descriptors are not changed by being named
 here: anything that reports one reports it as the code says, and says the canon differs."""
+
+RENAMED_ENGINES: Final[Mapping[EngineId, str]] = MappingProxyType(
+    {
+        EngineId.QWENLOOP: (
+            "since ADR-0060 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL "
+            "names another); the gpt-oss engine it used to be is gptossloop"
+        ),
+    }
+)
+"""Engines whose name now means something it did not, and what a reader who knew the old
+meaning needs to hear. Reported beside the engine; nothing selects by it."""
 
 
 class PluginSystem(StrEnum):

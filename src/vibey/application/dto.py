@@ -370,6 +370,8 @@ class EngineContext:
     run: tuple[str, ...]
     switch: str | None = None
     model: str | None = None
+    # Whether the switch is on when nothing sets it: gptossloop's is (ADR-0060).
+    on_by_default: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -408,6 +410,7 @@ class LoopEngine:
     run: tuple[str, ...]
     repealed: bool = False
     notes: tuple[str, ...] = ()
+    on_by_default: bool = False
 
 
 @dataclass(frozen=True, slots=True)

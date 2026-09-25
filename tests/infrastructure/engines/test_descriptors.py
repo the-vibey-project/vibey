@@ -11,6 +11,7 @@ from vibey.domain.engine import (
     Capability,
     EngineControls,
     EngineId,
+    EngineTier,
     EventEnvelope,
     EventLog,
     IsolationLevel,
@@ -203,6 +204,7 @@ RUNNER_CLI = {
     EngineId.CURSORLOOP: "cursorloop.cli.app",
     EngineId.AGYLOOP: "agyloop.cli.app",
     EngineId.OPENCODE: "opencodeloop.cli.app",
+    EngineId.GPTOSSLOOP: "qwenloop.cli.app",
     EngineId.QWENLOOP: "qwenloop.cli.app",
 }
 VERBS = {"stop": "stop", "wind_down": "wind-down", "prompt": "prompt"}
@@ -337,6 +339,7 @@ def test_the_capabilities_each_runner_shows() -> None:
         "cursorloop": (None, True, True, None, skills, None),
         "agyloop": (None, True, True, None, skills, False),
         "opencode": (None, True, True, None, skills, None),
+        "gptossloop": (False, True, True, False, skills, False),
         "qwenloop": (False, True, True, False, skills, False),
         "claudeloop-local": claude,
     }
@@ -420,6 +423,24 @@ def test_the_controls_each_runner_defines() -> None:
     assert BY_ENGINE_ID[EngineId.CLAUDELOOP_LOCAL].controls == CLAUDELOOP.controls
 
 
+def test_gptossloop_is_the_qwenloop_runner_under_its_own_name_and_settings() -> None:
+    """ADR-0060: gptossloop differs from qwenloop in its id, its binary, the runner version
+    that first shipped it and the settings it reads -- never in how a run is laid out."""
+    gptoss = BY_ENGINE_ID[EngineId.GPTOSSLOOP]
+    assert (gptoss.binary, gptoss.min_version, gptoss.env_passthrough) == (
+        "gptossloop",
+        "0.3.0",
+        ("GPTOSSLOOP_*",),
+    )
+    assert (gptoss.state_dir, gptoss.done_marker, gptoss.controls, gptoss.events) == (
+        QWENLOOP.state_dir,
+        QWENLOOP.done_marker,
+        QWENLOOP.controls,
+        QWENLOOP.events,
+    )
+    assert gptoss.tier is QWENLOOP.tier is EngineTier.LOCAL
+
+
 def test_every_runner_writes_its_events_in_its_own_run_directory() -> None:
     path = "{cwd}/{state_dir}/runs/{run_id}/events.jsonl"
     envelopes = {d.engine_id.value: d.events for d in ALL_DESCRIPTORS}
@@ -429,6 +450,7 @@ def test_every_runner_writes_its_events_in_its_own_run_directory() -> None:
         "cursorloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
         "agyloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
         "opencode": EventLog(path, EventEnvelope.EVENT_TYPE),
+        "gptossloop": EventLog(path, EventEnvelope.TYPE),
         "qwenloop": EventLog(path, EventEnvelope.TYPE),
         "claudeloop-local": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
     }

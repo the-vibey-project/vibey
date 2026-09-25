@@ -887,7 +887,7 @@ jobs:
             *) echo "::error::codex --version printed '$out'; the Dockerfile pins $want"; exit 1 ;;
           esac
 
-      # One distribution, twelve console scripts (ADR-0037). That is the new product
+      # One distribution, thirteen console scripts (ADR-0037, ADR-0060). That is the new product
       # contract, and it is the one the Dockerfile's COPY list can break silently: a
       # package root that never reaches the build context does not fail the build, it
       # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
@@ -897,7 +897,7 @@ jobs:
           docker run --rm --entrypoint sh vibey:ci -c '
             status=0
             for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
-                        azbootstrap claudeloop codexloop cursorloop agyloop qwenloop opencodeloop; do
+                        azbootstrap claudeloop codexloop cursorloop agyloop gptossloop qwenloop opencodeloop; do
               if command -v "$tool" >/dev/null 2>&1; then
                 echo "ok      $tool"
               else

@@ -9,7 +9,9 @@ keeping a copy of the precedence rule (two copies of it is how `doctor` once cou
 not see the engine the worker was running).
 
 - `LocalEngineSettings` answers from the environment first, then the project's
-  config: `VIBEY_FEATURE_<KEY>` whenever it is set at all, else `[features] <key>`.
+  config: `VIBEY_FEATURE_<KEY>` whenever it is set at all, else `[features] <key>`,
+  else the engine's own default -- on for gptossloop, the sovereign default, and off
+  for every other local engine (ADR-0060).
 - `LocalEndpointEnvironment` turns the one operator setting, `VIBEY_OLLAMA_URL`, into
   the variables each local engine's own process reads.
 """
@@ -21,6 +23,7 @@ from pathlib import Path
 from vibey.application.ports import EngineAdapter
 from vibey.domain.config import (
     LOCAL_ENGINE_FEATURES,
+    LOCAL_ENGINES_ON_BY_DEFAULT,
     ClaudeloopLocalConfig,
     ConfigError,
     parse_toml_string,
@@ -40,17 +43,41 @@ from vibey.infrastructure.engines.ollama_chat import OLLAMA_URL_ENV, OllamaChatC
 TRUTHY = frozenset({"1", "true", "yes", "on"})
 #: Overrides `[engines.claudeloop_local] profile` when set and non-empty.
 CLAUDELOOP_LOCAL_PROFILE_ENV = "VIBEY_CLAUDELOOP_LOCAL_PROFILE"
-#: What qwenloop's openai-compat backend reads (qwenloop's own settings, #243).
+#: What each local runner's openai-compat backend reads (its own settings, #243): the
+#: one runner package reads `GPTOSSLOOP_*` as gptossloop and `QWENLOOP_*` as qwenloop.
+GPTOSSLOOP_BASE_URL_ENV = "GPTOSSLOOP_BASE_URL"
+GPTOSSLOOP_MODEL_ENV = "GPTOSSLOOP_MODEL"
 QWENLOOP_BASE_URL_ENV = "QWENLOOP_BASE_URL"
 QWENLOOP_MODEL_ENV = "QWENLOOP_MODEL"
 
 
 @dataclass(frozen=True, slots=True)
+class LocalRunnerVariables:
+    """The two variables one local runner reads for its endpoint: its base URL and model."""
+
+    base_url: str
+    model: str
+
+
+#: The local engines vibey hands an endpoint, and the variables each reads for it.
+RUNNER_VARIABLES: dict[EngineId, LocalRunnerVariables] = {
+    EngineId.GPTOSSLOOP: LocalRunnerVariables(GPTOSSLOOP_BASE_URL_ENV, GPTOSSLOOP_MODEL_ENV),
+    EngineId.QWENLOOP: LocalRunnerVariables(QWENLOOP_BASE_URL_ENV, QWENLOOP_MODEL_ENV),
+}
+#: The local engines vibey also hands a model: the one that runs this era's default
+#: model (`VIBEY_OLLAMA_MODEL`, 8.d). qwenloop runs the Qwen model it names itself, so
+#: vibey hands it only the endpoint (ADR-0060).
+HANDED_A_MODEL = frozenset({EngineId.GPTOSSLOOP})
+
+
+@dataclass(frozen=True, slots=True)
 class LocalEngineSwitch:
-    """One local engine's feature switch: a `[features]` key and its environment name."""
+    """One local engine's feature switch: a `[features]` key, its environment name, and
+    whether the engine is on when neither sets it (ADR-0060)."""
 
     engine_id: EngineId
     feature_key: str
+    on_by_default: bool = False
 
     @property
     def env_var(self) -> str:
@@ -58,10 +85,19 @@ class LocalEngineSwitch:
 
 
 #: Every local engine, in the order the rest of the tree lists them. The feature keys
-#: come from the domain's own table, so the config schema and this resolver cannot
-#: name a switch differently.
+#: and defaults come from the domain's own tables, so the config schema and this
+#: resolver cannot name a switch, or its default, differently.
 LOCAL_ENGINE_SWITCHES: tuple[LocalEngineSwitch, ...] = tuple(
-    LocalEngineSwitch(EngineId(engine), key) for engine, key in LOCAL_ENGINE_FEATURES.items()
+    LocalEngineSwitch(EngineId(engine), key, engine in LOCAL_ENGINES_ON_BY_DEFAULT)
+    for engine, key in LOCAL_ENGINE_FEATURES.items()
+)
+#: What an operator who switched qwenloop on before ADR-0060 needs to hear: the switch
+#: they set now means something else.
+QWENLOOP_SWITCH_NOTICE = (
+    "qwenloop is switched on, and since ADR-0060 it runs a Qwen model (qwen3:14b unless "
+    "QWENLOOP_MODEL names another). The gpt-oss engine qwenloop used to be is gptossloop, "
+    "on by default: drop VIBEY_FEATURE_QWENLOOP / [features] qwenloop unless you want "
+    "Qwen as well."
 )
 
 
@@ -101,6 +137,11 @@ class LocalEngineSettings:
         switch = self._switches.get(engine_id)
         return None if switch is None else switch.env_var
 
+    def on_by_default(self, engine_id: EngineId) -> bool:
+        """Whether `engine_id` is on when neither its variable nor `[features]` sets it."""
+        switch = self._switches.get(engine_id)
+        return switch is not None and switch.on_by_default
+
     def enabled(self, engine_id: EngineId) -> bool:
         switch = self._switches.get(engine_id)
         if switch is None:
@@ -109,7 +150,15 @@ class LocalEngineSettings:
         if override is not None:
             return override.strip().lower() in TRUTHY
         features = self._config.get("features")
-        return isinstance(features, Mapping) and features.get(switch.feature_key) is True
+        value = features.get(switch.feature_key) if isinstance(features, Mapping) else None
+        # Only a boolean decides; anything else leaves the engine at its default, as an
+        # absent key does. An on-by-default engine is switched off only by saying so.
+        return value if isinstance(value, bool) else switch.on_by_default
+
+    @property
+    def notices(self) -> tuple[str, ...]:
+        """What the operator should hear about how their switches now read (ADR-0060)."""
+        return (QWENLOOP_SWITCH_NOTICE,) if self.enabled(EngineId.QWENLOOP) else ()
 
     @property
     def enabled_engines(self) -> tuple[EngineId, ...]:
@@ -166,16 +215,20 @@ class LocalEndpointEnvironment:
     Declared by `interfaces/local_engines_interface.py`. The DESIGN and DECOMPOSE
     providers already read `VIBEY_OLLAMA_URL` / `VIBEY_OLLAMA_MODEL` through
     `OllamaChatClient`; this reads the same two through the same client -- so the URL is
-    validated by the same rule and defaults the same way -- and hands qwenloop its own
-    names for them:
+    validated by the same rule and defaults the same way -- and hands each local runner
+    its own names for them (ADR-0060):
 
-    - `QWENLOOP_BASE_URL` = `<VIBEY_OLLAMA_URL>/v1` (qwenloop's openai-compat backend),
-    - `QWENLOOP_MODEL` = `--ollama-model`, else `VIBEY_OLLAMA_MODEL`, else the default.
+    - gptossloop: `GPTOSSLOOP_BASE_URL` = `<VIBEY_OLLAMA_URL>/v1`, and `GPTOSSLOOP_MODEL`
+      = `--ollama-model`, else `VIBEY_OLLAMA_MODEL`, else the default -- the providers'
+      model, so BUILD and DESIGN run the same one;
+    - qwenloop: `QWENLOOP_BASE_URL` only. It runs the Qwen model it names itself, and
+      this era's default model is not one.
 
     Each is derived only when `VIBEY_OLLAMA_URL` is set and the target is not already
-    set: an operator who configured qwenloop directly keeps what they configured, and one
-    who configured nothing keeps qwenloop's own backend selection. claudeloop-local gets
-    nothing here -- its endpoint is its claudeloop profile's `base_url`.
+    set: an operator who configured a runner directly keeps what they configured, and
+    one who configured nothing keeps the runner's own backend selection.
+    claudeloop-local gets nothing here -- its endpoint is its claudeloop profile's
+    `base_url`.
     """
 
     def __init__(self, environ: Mapping[str, str], *, model: str | None = None) -> None:
@@ -185,40 +238,48 @@ class LocalEndpointEnvironment:
     def model_for(self, engine_id: EngineId) -> str | None:
         """The model `engine_id` runs, when it reaches the engine by a path vibey knows.
 
-        For qwenloop, exactly as the model reaches it: `QWENLOOP_MODEL` as the operator set
-        it (qwenloop reads it and ignores a blank one, and the overlay never replaces it);
-        else the model `overlay_for` hands it, which it does only when `VIBEY_OLLAMA_URL` is
-        set; else None, and qwenloop's own configuration chooses. None for every other
-        engine: a model named in its argv, or chosen by its own configuration, is not one
-        vibey hands it.
+        For a local runner, exactly as the model reaches it: its own model variable
+        (`GPTOSSLOOP_MODEL`, `QWENLOOP_MODEL`) as the operator set it (the runner reads it
+        and ignores a blank one, and the overlay never replaces it); else the model
+        `overlay_for` hands it, which it does only for gptossloop and only when
+        `VIBEY_OLLAMA_URL` is set; else None, and the runner's own configuration chooses.
+        None for every other engine: a model named in its argv, or chosen by its own
+        configuration, is not one vibey hands it.
 
         The overlay is resolved first, always: a malformed endpoint setting is refused here
-        exactly as the worker refuses it, even when `QWENLOOP_MODEL` would name the model.
+        exactly as the worker refuses it, even when the model variable would name the model.
         """
-        if engine_id is not EngineId.QWENLOOP:
+        variables = RUNNER_VARIABLES.get(engine_id)
+        if variables is None:
             return None
         handed = self.overlay_for(engine_id)
-        named = (self._environ.get(QWENLOOP_MODEL_ENV) or "").strip()
-        return named or handed.get(QWENLOOP_MODEL_ENV)
+        named = (self._environ.get(variables.model) or "").strip()
+        return named or handed.get(variables.model)
 
     def overlay_for(self, engine_id: EngineId) -> dict[str, str]:
-        if engine_id is not EngineId.QWENLOOP or not self._environ.get(OLLAMA_URL_ENV):
+        variables = RUNNER_VARIABLES.get(engine_id)
+        if variables is None or not self._environ.get(OLLAMA_URL_ENV):
             return {}
         client = OllamaChatClient.from_environment(self._environ, model=self._model)
-        derived = {
-            QWENLOOP_BASE_URL_ENV: f"{client.base_url}/v1",
-            QWENLOOP_MODEL_ENV: client.model,
-        }
+        derived = {variables.base_url: f"{client.base_url}/v1"}
+        if engine_id in HANDED_A_MODEL:
+            derived[variables.model] = client.model
         return {key: value for key, value in derived.items() if not self._environ.get(key)}
 
 
 __all__ = [
     "CLAUDELOOP_LOCAL_PROFILE_ENV",
+    "GPTOSSLOOP_BASE_URL_ENV",
+    "GPTOSSLOOP_MODEL_ENV",
+    "HANDED_A_MODEL",
     "LOCAL_ENGINE_SWITCHES",
     "QWENLOOP_BASE_URL_ENV",
     "QWENLOOP_MODEL_ENV",
+    "QWENLOOP_SWITCH_NOTICE",
+    "RUNNER_VARIABLES",
     "TRUTHY",
     "LocalEndpointEnvironment",
     "LocalEngineSettings",
     "LocalEngineSwitch",
+    "LocalRunnerVariables",
 ]

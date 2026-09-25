@@ -145,7 +145,7 @@ jobs:
           # `vibey --version` unchanged.
           missing=""
           for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
-                      azbootstrap claudeloop codexloop cursorloop agyloop qwenloop; do
+                      azbootstrap claudeloop codexloop cursorloop agyloop gptossloop qwenloop; do
             if command -v "$tool" >/dev/null 2>&1; then
               echo "ok      $tool"
             else
