@@ -2,9 +2,9 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { LaneEngine } from '../../src/core/interfaces/lanes-interface';
-import type { RunRecord, RunRequest, RunStatus, TaskRunInterface } from '../../src/core/interfaces/run-interface';
-import type { Disposable } from '../../src/core/interfaces/support-interface';
+import type { LaneEngine } from '@vibey/core';
+import type { RunRecord, RunRequest, RunStatus, TaskRunInterface } from '@vibey/core';
+import type { Disposable } from '@vibey/core';
 import { JsonlTail } from '../../src/core/jsonl';
 import { LaneTracker } from '../../src/core/lanes';
 import { RunQueue } from '../../src/core/run-queue';

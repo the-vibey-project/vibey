@@ -5,7 +5,7 @@
  * actions, the views, the chat participant).
  */
 import * as vscode from 'vscode';
-import { CommandTable } from '../core/commands';
+import { CommandTable } from '@vibey/core';
 import { CommandActions } from './actions';
 import { VibeyChat } from './chat';
 import { VibeyController } from './controller';

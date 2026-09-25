@@ -1,10 +1,10 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** The six views in the Vibey activity bar, and what their items stand for. */
 import type * as vscode from 'vscode';
-import type { Budget } from '../../core/interfaces/budgets-interface';
-import type { Lane } from '../../core/interfaces/lanes-interface';
-import type { RunRecord } from '../../core/interfaces/run-interface';
-import type { VibeyBudget, VibeyGate, VibeyProject } from '../../core/interfaces/vibey-cli-interface';
+import type { Budget } from '@vibey/core';
+import type { Lane } from '@vibey/core';
+import type { RunRecord } from '@vibey/core';
+import type { VibeyBudget, VibeyGate, VibeyProject } from '@vibey/core';
 
 /** One item in a view. Commands run from an item's menu receive it as their argument. */
 export type TreeElement =

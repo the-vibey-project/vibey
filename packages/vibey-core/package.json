@@ -1,0 +1,40 @@
+{
+  "name": "@vibey/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The shared, pure TypeScript core of every krypton client: the engine catalogue, run events, the one command table, gate answers, budgets, the doctor, the design tokens and the transports to vibey.",
+  "license": "MIT",
+  "author": {
+    "name": "Adam Matthew Steinberger"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-vibey-project/vibey.git",
+    "directory": "packages/vibey-core"
+  },
+  "main": "./dist/packages/vibey-core/src/index.js",
+  "types": "./dist/packages/vibey-core/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/packages/vibey-core/src/index.d.ts",
+      "default": "./dist/packages/vibey-core/src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@vitest/coverage-v8": "5.0.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.1"
+  }
+}

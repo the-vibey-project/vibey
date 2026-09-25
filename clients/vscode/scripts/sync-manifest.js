@@ -1,11 +1,11 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 // Writes package.json's `contributes.commands` and the @vibey chat participant's commands from the
-// one command table (src/core/commands.ts, compiled to out/). `npm run compile` runs it; the unit
+// one command table (@vibey/core's commands.ts, built to its dist/). `npm run compile` runs it; the unit
 // suite fails if package.json and the table ever disagree.
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { CommandTable, SlashCommands } = require('../out/core/commands.js');
+const { CommandTable, SlashCommands } = require('@vibey/core');
 
 const file = path.join(__dirname, '..', 'package.json');
 const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));

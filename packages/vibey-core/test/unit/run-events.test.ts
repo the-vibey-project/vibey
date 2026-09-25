@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import { describe, expect, it } from 'vitest';
-import { JsonlParse } from '../../src/core/jsonl';
-import { RunTranscript, VerdictReader } from '../../src/core/run-events';
+import { JsonlParse } from '../../src/jsonl-parse';
+import { RunTranscript, VerdictReader } from '../../src/run-events';
 import { fixture } from './helpers';
 
 const events = (name: string): unknown[] => JsonlParse.lines(fixture(name)).records;
