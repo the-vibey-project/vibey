@@ -360,16 +360,6 @@ _EXPECTED_MAPS: dict[EngineId, dict[str, EventKind]] = {
         "capacity.forecast": EventKind.BUDGET_SPENT,
         "finished": EventKind.VERDICT_RENDERED,
     },
-    EngineId.OPENCODE: {
-        "run.started": EventKind.SESSION_SEEDED,
-        "turn.starting": EventKind.TURN_REQUESTED,
-        "text_delta": EventKind.TRANSCRIPT_RECORDED,
-        "tool_result": EventKind.TOOL_INVOKED,
-        "turn.completed": EventKind.TURN_COMPLETED,
-        "capacity.rejected": EventKind.CAPACITY_REJECTED,
-        "finished": EventKind.VERDICT_RENDERED,
-        "failed": EventKind.VERDICT_RENDERED,
-    },
     EngineId.QWENLOOP: {
         "run.started": EventKind.SESSION_SEEDED,
         "text_delta": EventKind.TRANSCRIPT_RECORDED,
@@ -402,7 +392,6 @@ _TURN_BOUNDARIES: dict[EngineId, frozenset[str]] = {
     EngineId.CURSORLOOP: frozenset(),
     EngineId.AGYLOOP: frozenset({"turn.completed"}),
     EngineId.QWENLOOP: frozenset({"turn.completed"}),
-    EngineId.OPENCODE: frozenset({"turn.completed"}),
 }
 
 

@@ -58,6 +58,8 @@ PACKAGES: tuple[tuple[str, str], ...] = (
     ("cursorloop", "src/vibey_runners/cursor"),
     ("qwenloop", "src/vibey_runners/qwen"),
     ("vibey-skills", "src/vibey_tools/skills"),
+    # Deleted from the tree after the paper's pinned revision; kept so the codebase-shape
+    # figure still rebuilds at that revision. A revision without it counts zero lines.
     ("opencodeloop", "src/vibey_runners/opencode"),
     ("runners-common", "src/vibey_runners/common"),
 )

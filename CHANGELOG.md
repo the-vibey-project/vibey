@@ -381,6 +381,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   checks in its title; the review gate certifies the exact-head review verdict; the merge
   train requires both.
 
+### Removed
+
+* **engines:** **BREAKING:** the `opencode` engine and its runner `opencodeloop` are deleted.
+  Sub-doctrine 8.b repealed OpenCode as an engine of either loop, and the operator ruled its
+  code deleted. Gone: the `src/vibey_runners/opencode` tenant and the `opencodeloop` console
+  script (the distribution now ships eleven); the `opencode` engine id, its descriptor,
+  capacity classifier and event map; the OpenCode DESIGN/DECOMPOSE providers and
+  `--provider opencode` on `vibey work` and `vibey worker`; and `opencode` from the default
+  engine pool (`[engines] enabled` now defaults to `["qwenloop"]`), from the known engines,
+  from the `VibeyProject` CRD's `spec.engines` enum, from the image, the CI tools matrix and
+  the uv workspace, and from vibey-gh's default failover seats (now `qwenloop` alone; a
+  `failover.toml` may still name any seat). A `vibey.toml` `[engines]` or
+  `[engine_environment.engines]` entry, an `--engines` list or a `--provider` value that names
+  `opencode` is now refused as unknown, and a `VibeyProject` that lists it in `spec.engines`
+  no longer validates: remove it. Rows already stored with the engine id `opencode` stay in
+  the append-only ledger and read back verbatim as an unrecognized engine id.
+
 ### Fixed
 
 * **tests:** a test session whose database lock is lost no longer loses its databases to another

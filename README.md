@@ -58,7 +58,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy), [`opencode`](src/vibey_runners/opencode) — the `opencodeloop` adapter for the official OpenCode CLI — plus the opt-in [`qwenloop`](src/vibey_runners/qwen) — a local engine and the sovereign DESIGN provider — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038). All six runners ship inside the `vibey` distribution (ADR-0037). |
+| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy) — plus the opt-in [`qwenloop`](src/vibey_runners/qwen) — a local engine and the sovereign DESIGN provider — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038). All five runners ship inside the `vibey` distribution (ADR-0037). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
@@ -71,7 +71,7 @@ and CI runs the database suite against each one. Every database-backed command
 reads the connection string from `VIBEY_PG_URL`; vibey never guesses a
 database and exits with `VIBEY_PG_URL is not set` when it is missing.
 
-One install is the whole family: `vibey`, all six `*loop` engines, and the
+One install is the whole family: `vibey`, all five `*loop` engines, and the
 tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey`
 distribution and land on `PATH` together (ADR-0037). What each engine still
 needs separately is its own vendor CLI and credentials — which is what
@@ -430,7 +430,6 @@ PyPI projects no longer exist.
 | codexloop | [`src/vibey_runners/codex`](src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
 | cursorloop | [`src/vibey_runners/cursor`](src/vibey_runners/cursor) | The same design retargeted onto Cursor |
 | agyloop | [`src/vibey_runners/agy`](src/vibey_runners/agy) | The same design retargeted onto Google Antigravity / Gemini |
-| opencodeloop | [`src/vibey_runners/opencode`](src/vibey_runners/opencode) | Contract-preserving adapter for the official OpenCode CLI; provider selection and billing remain OpenCode-owned |
 | qwenloop | [`src/vibey_runners/qwen`](src/vibey_runners/qwen) | The same design on a local Qwen 2.5 Coder model (llama.cpp or vLLM) — an opt-in local engine, preferred first when switched on, and the sovereign DESIGN provider |
 | vibey-skills | [`src/vibey_tools/skills`](src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) and its context packets |
 | vibey-gh | [`src/vibey_tools/gh`](src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
