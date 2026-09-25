@@ -69,14 +69,13 @@ jobs:
           # version; the dev suffix makes each push distinct and sorts it BEFORE the
           # release it anticipates, which is the correct relationship.
           vibey-gh version --dev "${GITHUB_RUN_NUMBER}" --apply
-          # The TestPyPI rehearsal publishes as vibey-dev: the name `vibey` on TestPyPI is
-          # squatted by an unrelated project ("AI-powered, vibe-aligned app generation"),
-          # was never ours, and can never be claimed -- index names are immutable. vibey-dev
-          # there is this project's own long-standing answer to that squat, and the
-          # release.yml trusted publisher already lives on it. Renamed in the runner only,
-          # exactly like the dev version above; the importable package stays `vibey`, and
-          # PyPI proper -- where we do own the name -- is untouched.
-          sed -i 's/^name = "vibey"$/name = "vibey-dev"/' pyproject.toml
+
+      - name: Publish as vibey-engine
+        # Both indexes carry this distribution as `vibey-engine`: its
+        # trusted publishers are registered for this workflow file, `vibey-engine.yml`, in
+        # the environments `pypi` and `testpypi`. Renamed in the runner only; the
+        # importable package and the commands keep their names.
+        run: sed -i 's/^name = "vibey"$/name = "vibey-engine"/' pyproject.toml
 
       - id: v
         # Indented inside the block scalar on purpose: a heredoc body written at column 0
@@ -131,13 +130,13 @@ jobs:
             if pip install --no-cache-dir --quiet \
                  --index-url https://test.pypi.org/simple/ \
                  --extra-index-url https://pypi.org/simple/ \
-                 "vibey-dev==${VERSION}"; then
+                 "vibey-engine==${VERSION}"; then
               break
             fi
             echo "not indexed yet (attempt $i); waiting"
             sleep 30
           done
-          # The distribution is vibey-dev; the packages it installs are the whole
+          # The distribution is vibey-engine; the packages it installs are the whole
           # family (ADR-0037). This is the ONLY place the artifact is proven against a
           # real index before PyPI, so it exercises the contract the distribution now
           # makes -- eleven console scripts -- rather than the one it used to make. A
