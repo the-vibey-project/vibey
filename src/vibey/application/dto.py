@@ -17,9 +17,12 @@ from vibey.domain.engine import (
     EngineId,
     EngineTier,
     IsolationLevel,
+    JobRequirement,
     Loop,
     StoredEngineId,
 )
+from vibey.domain.failover import FailoverStatus
+from vibey.domain.handoff import GateResult, HandoffBrief
 from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.budget_caps_interface import (
     CapChangeInterface,
@@ -487,3 +490,59 @@ class HubPrincipal:
 
     name: str
     scopes: frozenset[HubScope] = frozenset()
+
+
+# The driver failover (ADR-0070): what its seams exchange.
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptDigest:
+    sha256: str
+    lines: int
+
+
+@dataclass(frozen=True, slots=True)
+class RepoSnapshot:
+    branch: str
+    head_sha: str
+    dirty_paths: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessResult:
+    exit_code: int
+    stdout: str
+
+
+@dataclass(frozen=True, slots=True)
+class DriverSignal:
+    """What Claude Code's `StopFailure` hook hands its command on stdin."""
+
+    session_id: str
+    transcript_path: str
+    cwd: str
+    error: str
+    detail: str = ""
+    last_message: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class DriverOutcome:
+    """What happened, in one word, and the evidence behind it."""
+
+    result: str
+    detail: str = ""
+    brief_path: str | None = None
+    status: FailoverStatus | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EngineFailoverDecision:
+    """What engine-level failover or handback decided (ADR-0070)."""
+
+    result: str
+    """`failed_over`, `already`, `not_capacity`, `parked` or `handed_back`."""
+    next_engine: EngineId | None = None
+    requirement: JobRequirement | None = None
+    gate: GateResult | None = None
+    brief: HandoffBrief | None = None

@@ -154,6 +154,10 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         EventKind.ULTRA_STOPPED,
         EventKind.ULTRA_PASS_COMPLETED,
         EventKind.ULTRA_NO_CAP_CHANGED,
+        # Failover and handback name the operator's engines, accounts and probes.
+        EventKind.ENGINE_FAILED_OVER,
+        EventKind.ENGINE_PROBED,
+        EventKind.ENGINE_HANDED_BACK,
         # Who answered a gate, from which account, and what they answered: the answer
         # can carry anything a person typed, and the account is the operator's.
         EventKind.GATE_ANSWERED,

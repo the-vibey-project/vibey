@@ -69,6 +69,8 @@ export until the policy can withhold it (see [Widening or narrowing](#widening-o
     `vibey budget`, and the account that set them);
   - `GateAnswered` (what you answered a gate with, and the account that answered);
   - `CapacityRejected`, `SavePointCreated` and the handoff kinds;
+  - the failover kinds `EngineFailedOver`, `EngineProbed` and `EngineHandedBack`
+    (which engines and accounts ran out, and when they were probed; ADR-0070);
   - the queue's `JobPriorityBumped`, `JobPriorityUnbumped`, `JobPriorityRefused`
     and `QueueReaped`.
 
