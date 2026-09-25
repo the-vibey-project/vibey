@@ -5,9 +5,9 @@
  * the rest wait in the order they were asked for. Across processes the model slot lock
  * holds the same line. Declared by `interfaces/run-queue-interface.ts`.
  */
-import type { QueueSnapshot, RunQueueInterface } from './interfaces/run-queue-interface';
-import type { TaskRunInterface } from './interfaces/run-interface';
-import type { Disposable } from './interfaces/support-interface';
+import type { QueueSnapshot, RunQueueInterface } from '@vibey/core';
+import type { TaskRunInterface } from '@vibey/core';
+import type { Disposable } from '@vibey/core';
 import { Emitter } from './support';
 
 interface Lane {

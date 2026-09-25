@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import { describe, expect, it } from 'vitest';
-import type { VibeyGate } from '../../src/core/interfaces/vibey-cli-interface';
-import { GateAnswerPlanner, VibeyCli, VibeyCliError } from '../../src/core/vibey-cli';
+import type { VibeyGate } from '../../src/interfaces/vibey-cli-interface';
+import { GateAnswerPlanner, VibeyCli, VibeyCliError } from '../../src/vibey-cli';
 import { FakeProcessRunner, fixture } from './helpers';
 
 const cli = (runner: FakeProcessRunner): VibeyCli => new VibeyCli(runner, '/bin/vibey', { PATH: '/usr/bin' });

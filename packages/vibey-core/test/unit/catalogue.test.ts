@@ -8,10 +8,10 @@ import {
   Efforts,
   LoopSelector,
   SelectionError,
-} from '../../src/core/catalogue';
+} from '../../src/catalogue';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { Catalogue, SelectionRequest } from '../../src/core/interfaces/catalogue-interface';
+import type { Catalogue, SelectionRequest } from '../../src/interfaces/catalogue-interface';
 import { fixture } from './helpers';
 
 const raw = (): Record<string, unknown> => JSON.parse(fixture('vibey-loops.json')) as Record<string, unknown>;

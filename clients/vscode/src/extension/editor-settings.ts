@@ -7,7 +7,7 @@
  */
 import * as vscode from 'vscode';
 import { Defaults } from '../core/settings';
-import type { RawSettings } from '../core/interfaces/settings-interface';
+import type { RawSettings } from '@vibey/core';
 import type { EditorSettingsInterface } from './interfaces/editor-settings-interface';
 
 export class EditorSettings implements EditorSettingsInterface {

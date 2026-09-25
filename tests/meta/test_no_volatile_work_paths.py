@@ -49,6 +49,10 @@ EXEMPT: tuple[tuple[str, str], ...] = (
         "clients/*/test/*",
         "the editor clients' test code: fixture strings and each test's own scratch directory",
     ),
+    (
+        "packages/*/test/*",
+        "the shared client packages' test code: fixture strings, as in the clients' own tests",
+    ),
     ("*.jsonl", "append-only records of what happened (7.c); rewriting them falsifies them"),
     ("*.log", "append-only records of what happened (7.c); rewriting them falsifies them"),
     (

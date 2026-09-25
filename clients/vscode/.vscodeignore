@@ -1,5 +1,6 @@
 # What `vsce package` leaves out of the .vsix. The extension has no runtime dependency, so
-# the package is out/ (compiled), media/, package.json, README.md, LICENSE and CHANGELOG.md.
+# the package is out/ (compiled, with @vibey/core copied into out/node_modules), media/,
+# package.json, README.md, LICENSE and CHANGELOG.md.
 src/**
 test/**
 scripts/**
@@ -15,3 +16,4 @@ package-lock.json
 **/*.tsbuildinfo
 *.vsix
 .node-version
+out/node_modules/**/*.d.ts

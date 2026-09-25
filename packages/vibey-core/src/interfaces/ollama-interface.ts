@@ -1,6 +1,8 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** Ollama: where it listens, what it serves, what it has loaded, and how to fetch a model. */
 
+import type { AbortSignalLike } from './platform-interface';
+
 export interface OllamaEndpointInterface {
   /** The root form, no `/v1`: `http://127.0.0.1:11434`. What `VIBEY_OLLAMA_URL` holds. */
   readonly root: string;
@@ -75,7 +77,7 @@ export interface PullOutcome {
 }
 
 export interface ModelPullerInterface {
-  pull(model: string, onUpdate: (update: PullUpdate) => void, signal?: AbortSignal): Promise<PullOutcome>;
+  pull(model: string, onUpdate: (update: PullUpdate) => void, signal?: AbortSignalLike): Promise<PullOutcome>;
 }
 
 export interface OllamaStartFacts {

@@ -7,10 +7,10 @@
  */
 import * as os from 'node:os';
 import * as vscode from 'vscode';
-import type { CapabilityMenu } from '../core/interfaces/capabilities-interface';
-import type { Lane } from '../core/interfaces/lanes-interface';
-import type { RunItem } from '../core/interfaces/run-events-interface';
-import type { RunRecord, TaskRunInterface } from '../core/interfaces/run-interface';
+import type { CapabilityMenu } from '@vibey/core';
+import type { Lane } from '@vibey/core';
+import type { RunItem } from '@vibey/core';
+import type { RunRecord, TaskRunInterface } from '@vibey/core';
 import type { LaneTracker } from '../core/lanes';
 import { CoreServices } from '../core/services';
 import type { EditorSettings } from './editor-settings';

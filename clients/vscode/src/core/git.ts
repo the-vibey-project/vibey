@@ -11,9 +11,9 @@ import type {
   CommitOutcome,
   GitClientInterface,
   MergeOutcome,
-} from './interfaces/git-interface';
-import type { CompletedProcess, Environment, ProcessRunnerInterface } from './interfaces/process-runner-interface';
-import { LocalRunners } from './local-runner';
+} from '@vibey/core';
+import type { CompletedProcess, Environment, ProcessRunnerInterface } from '@vibey/core';
+import { LocalRunners } from '@vibey/core';
 import { PathScope } from './path-scope';
 
 export class GitError extends Error {

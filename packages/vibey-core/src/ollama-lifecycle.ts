@@ -13,6 +13,7 @@
  * platform (Ubuntu 26.04 is next, #1116) changes those two and nothing else. Declared by
  * `interfaces/ollama-interface.ts`.
  */
+import type { AbortSignalLike } from './interfaces/platform-interface';
 import type { HttpClientInterface } from './interfaces/http-client-interface';
 import type {
   ModelPullerInterface,
@@ -91,7 +92,7 @@ export class ModelPuller implements ModelPullerInterface {
   async pull(
     model: string,
     onUpdate: (update: PullUpdate) => void,
-    signal?: AbortSignal,
+    signal?: AbortSignalLike,
   ): Promise<PullOutcome> {
     const progress = new PullProgress();
     const fallbackCommand = ModelPuller.fallbackCommand(model);

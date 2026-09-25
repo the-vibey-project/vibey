@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { PlatformStorageInterface } from '../../src/core/interfaces/storage-interface';
+import type { PlatformStorageInterface } from '@vibey/core';
 import {
   DurabilityGate,
   LinuxStorage,
