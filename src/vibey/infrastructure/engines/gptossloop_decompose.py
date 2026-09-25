@@ -85,7 +85,7 @@ class GptossloopWorkPlanProducer:
                             "depends_on": strings,
                             "est_effort": {
                                 "type": "string",
-                                "enum": [effort.name.lower() for effort in Effort],
+                                "enum": [e.name.lower() for e in Effort if e is not Effort.ULTRA],
                             },
                             "files_touched_hint": strings,
                             "verification": {

@@ -248,7 +248,7 @@ class BuildImplementHandler:
     async def _run(
         self, job: JobRecord, base_effort: Effort, effort: Effort, *, ultra: bool
     ) -> Outcome:
-        assert job.work_item_id is not None  # checked in handle()
+        item = str(job.work_item_id)  # checked in handle()
         if self._budget_source is not None:
             budget = await self._budget_source.current(job.project_id, job.cycle)
             if budget.any_exhausted and self._human_gates is not None:
@@ -311,10 +311,10 @@ class BuildImplementHandler:
                     )
 
         base_ref = str(job.payload.get("base_ref", "HEAD"))
-        worktree_path = await self._worktrees.create(job.work_item_id, base_ref=base_ref)
+        worktree_path = await self._worktrees.create(item, base_ref=base_ref)
         await self._provisioner.provision(worktree_path, self._provision_spec)
 
-        prompt = _render_prompt(job.work_item_id, job.payload)
+        prompt = _render_prompt(item, job.payload)
         # A wind-down seed is a gate-verified no-loss brief and must reach the
         # next engine byte-for-byte. Retrieval resumes on ordinary and repair
         # jobs; it never mutates this handoff contract.
@@ -383,9 +383,7 @@ class BuildImplementHandler:
         if not run_outcome.complete:
             # A run its own backend could not serve is not the work's failure, and no
             # retry fixes it: park for the human who can (exit 78, ADR-0038).
-            misconfigured = run_outcome.misconfiguration_gate(
-                self._engine.descriptor, job.work_item_id
-            )
+            misconfigured = run_outcome.misconfiguration_gate(self._engine.descriptor, item)
             if misconfigured is not None:
                 return Park(misconfigured)
             if run_outcome.exit_code is None:

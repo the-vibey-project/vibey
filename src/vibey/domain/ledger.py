@@ -92,7 +92,7 @@ class EventKind(StrEnum):
     # One improvement pass of an ULTRA run finished with a done verdict: the work item,
     # the pass number and the job key of the pass enqueued after it. One per pass, so
     # a replayed pass is answered by its key and never runs twice.
-    ULTRA_PASS_COMPLETED = "UltraPassCompleted"
+    ULTRA_PASS_COMPLETED = "UltraPassCompleted"  # nosec B105 -- an event kind, not a secret
     # The no-cap declaration changed (`vibey budget no-cap` / `cap`): enabled or not,
     # who named themselves, the account and the device. The BudgetCapChanged pattern;
     # only a trusted event counts, so no engine can declare it.
