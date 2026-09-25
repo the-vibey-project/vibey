@@ -162,6 +162,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **canon:** two drafts for the operator's ratification (Article II.3).
+  * Sub-doctrine **12.k**, *beauty is the first measure*, under 12 (*Humans first*): the
+    operator's ruling, verbatim, makes beauty and user-friendliness the first measure of
+    every surface a person touches. Nothing ships to a person that is not fully
+    comprehensive, current and a joy to use, and the operator's sign-off closes the gate.
+    Its checkable bar is [the Beauty Bar](docs/design/beauty-bar.md), and the rationale is
+    [ADR-0062](docs/architecture/decisions/0062-the-beauty-law-and-its-bar.md).
+  * Sub-doctrine **8.b** gains *the cap, and the one path to no cap*: paid use carries a
+    cap, and a no-cap declaration is lawful only through six warned, typed and recorded
+    steps, never from a phone or the web app, and is withdrawn by one action.
+    [ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md) records
+    ULTRA, a sixth effort level with no ceiling, as a design for the ULTRA lane.
+
 * **vscode:** a VS Code extension, under `clients/vscode`, that drives vibey and a model on your
   own computer from the editor, with no account and no cloud
   ([ADR-0059](docs/architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md),
