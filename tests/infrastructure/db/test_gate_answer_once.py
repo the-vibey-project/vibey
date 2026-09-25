@@ -272,3 +272,13 @@ def _gate_record(project_id: UUID, at: datetime):  # type: ignore[no-untyped-def
         answered_by="adam",
         answer_request_id="r",
     )
+
+
+def test_a_missing_row_is_a_lookup_error_naming_its_context() -> None:
+    """The guard `_record` puts on the project read: the gate's foreign key holds the
+    project for as long as the answer's transaction holds the gate, so only a broken
+    schema could make it fire -- and then it names what was missing, not a None error."""
+    from vibey.infrastructure.db.human_gate_repository import _require
+
+    with pytest.raises(LookupError, match="answer: no project p: expected a row"):
+        _require(None, context="answer: no project p")
