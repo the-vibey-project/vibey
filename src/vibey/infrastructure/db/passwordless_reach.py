@@ -13,10 +13,10 @@ operator's own user, on a development machine.
 OS user, on the DSN's own host and -- when that host is local -- on each local socket
 directory, it attempts a connection to the DSN's database with an empty password
 (which also keeps libpq's `PGPASSWORD` and passfile out of it). One that is let in is a
-warning; attempts that are all refused are a pass; no attempt reaching the server is
-unknown, never a pass. It is a warning, not a failure: a trusted local database is a
-choice an operator may make on a single-user machine, and `vibey doctor` says so rather
-than refusing to run.
+failure; attempts that are all refused are a pass; no attempt reaching the server is
+unknown, never a pass. It is a failure, not a warning: sub-doctrine 10.j (ADR-0061) makes
+scram-sha-256 the only way any connection the project configures authenticates, local
+or remote, so a trusted local database is no longer a choice `vibey doctor` lets pass.
 
 Declared by `interfaces/passwordless_reach_interface.py` (ADR-0016).
 """
@@ -38,7 +38,7 @@ _LOCAL_HOSTS: Final = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 class ReachVerdict(StrEnum):
-    WARN = "warn"
+    FAIL = "fail"
     PASS = "pass"  # nosec B105 - a verdict name, not a password
     UNKNOWN = "unknown"
 
@@ -105,12 +105,12 @@ class PasswordlessReachProbe:
                     refused += 1
         if admitted:
             return PasswordlessReachFinding(
-                ReachVerdict.WARN,
+                ReachVerdict.FAIL,
                 f"database {database!r} accepts a password-less login as "
                 f"{', '.join(admitted)} (trust or peer authentication): any process "
                 f"running as OS user {self._os_user!r} -- engine sessions included -- can "
-                "open it without VIBEY_PG_URL; require scram-sha-256 for these "
-                "connections (SECURITY.md §5)",
+                "open it without VIBEY_PG_URL; sub-doctrine 10.j requires scram-sha-256 "
+                "for these connections (SECURITY.md §5, §7)",
             )
         if refused == 0:
             return PasswordlessReachFinding(

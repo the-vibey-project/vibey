@@ -111,11 +111,14 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
     vibey`, as that user, over the local socket or localhost. Review did exactly that on a
     development machine, connecting as the operator's own user with no password. An engine
     session or a gate command is such a process, so on that machine the allow-list does not
-    stop it reaching the queue and the ledger. `vibey doctor` checks for this: its
-    `db-passwordless` line **warns** when the app DSN's database accepts a password-less login
-    as the DSN's role or as the worker's OS user, on the DSN's host or (when that host is
-    local) a local socket. Require `scram-sha-256` in `pg_hba.conf` for those connections, or
-    run the worker as an OS user nothing else runs as.
+    stop it reaching the queue and the ledger. Such a server does not conform to this project:
+    sub-doctrine 10.j, drafted in ADR-0061 and in force once the operator's merge ratifies
+    it, requires `scram-sha-256` for every connection, local and remote alike. The required
+    `pg_hba.conf` lines are in §7. `vibey doctor` checks for this: its `db-passwordless` line
+    **fails**, and `vibey doctor` exits 1, when the app DSN's database accepts a password-less
+    login as the DSN's role or as the worker's OS user, on the DSN's host or (when that host
+    is local) a local socket. Running the worker as an OS user nothing else runs as narrows
+    who can reach the socket, but it does not replace the requirement.
   - **Same-user reach beyond the database.** A process running as the worker's user can read
     the worker's own environment through the OS (`/proc/<pid>/environ` on Linux), any file the
     worker can read (a `~/.pgpass`, a shell profile that exports `VIBEY_PG_URL`, a launchd
@@ -196,29 +199,51 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   and `vibey doctor --cluster` fail `ledger-guard`, `vibey migrate` exits 1, and `vibey
   worker` says so on stderr at every start. The upgrade path is in
   [the configuration reference](docs/reference/configuration.md#database-roles).
-- **The split protects the ledger only once local authentication requires a password for
-  the owner and every superuser.** A server that trusts its socket (the common default for
-  a local PostgreSQL) lets any process running as the right OS user connect as a superuser
-  without a DSN or a password, and no grant stops that. `vibey doctor` checks it as
-  `local-auth`:
-  - It fails when a password-less connection as the owner or a superuser is let in, or
-    when `pg_hba.conf` has a `trust`, `peer` or `ident` rule that can match them.
-  - It reports `UNKNOWN`, never a pass, when it could neither get in nor read
-    `pg_hba_file_rules`.
-
-  vibey does not edit `pg_hba.conf`: the lines below are the operator's to set. Put them
-  above any broader rule and reload (`SELECT pg_reload_conf();`):
+- **The split protects the ledger only once every connection proves its password with
+  scram-sha-256.** A server that trusts its socket (the common default for a local
+  PostgreSQL) lets any process running as the right OS user connect as a superuser without
+  a DSN or a password, and no grant stops that. An `md5` rule asks for a password but
+  accepts a replayable hash, and a `password` rule sends it in clear.
+- **scram-sha-256 is the required configuration, not an option** (sub-doctrine 10.j,
+  ADR-0061; law once the operator's merge ratifies it). Every PostgreSQL connection this
+  project configures, documents or installs authenticates with `scram-sha-256`, local and
+  remote alike. It never uses `trust`, `peer`, `ident`, `md5` or `password`, and passwords
+  are stored as SCRAM verifiers (`password_encryption = scram-sha-256`). A server that
+  vibey uses must carry these `pg_hba.conf` lines above any broader rule, and no rule that
+  admits anyone another way. The two `0.0.0.0/0` and `::/0` lines are for a server that
+  takes remote connections. A server that listens only locally needs only the first three.
 
   ```
   # TYPE  DATABASE  USER        ADDRESS         METHOD
   local   all       all                         scram-sha-256
   host    all       all         127.0.0.1/32    scram-sha-256
   host    all       all         ::1/128         scram-sha-256
+  host    all       all         0.0.0.0/0       scram-sha-256
+  host    all       all         ::/0            scram-sha-256
   ```
 
-  `local-auth` keeps failing while any `trust`, `peer` or `ident` rule can match the owner
-  or a superuser. If you keep one for administration, the failure stays until you remove
-  it, and you carry that risk knowingly.
+  In `postgresql.conf`, set `password_encryption = scram-sha-256` (the default since
+  PostgreSQL 14). Give every role that logs in a password before reloading
+  (`ALTER ROLE … PASSWORD …`, which stores a SCRAM verifier under that setting), or it
+  can no longer connect. Then run `SELECT pg_reload_conf();`. A password set while the
+  server stored `md5` must be set again. The Helm chart's built-in PostgreSQL declares
+  exactly these rules in its own `pg_hba.conf` and sets `password_encryption`. CI's
+  PostgreSQL services declare `POSTGRES_HOST_AUTH_METHOD` and `POSTGRES_INITDB_ARGS` as
+  `scram-sha-256`. `vibey install --postgres` and `vibey doctor --install-postgres` install
+  the distribution's package, and the package's own `pg_hba.conf` is left for the
+  operator to replace. The install says so, and `vibey doctor` fails until it is replaced.
+- `vibey doctor` checks the server as `local-auth`:
+  - It fails when a password-less connection as the owner or a superuser is let in.
+  - It fails when `pg_hba.conf` has a `trust`, `peer`, `ident`, `md5` or `password` rule
+    that can match them.
+  - It fails when `password_encryption` is anything but `scram-sha-256`.
+  - It reports `UNKNOWN`, never a pass, when it could neither get in nor read
+    `pg_hba_file_rules`.
+
+  vibey does not edit a server's `pg_hba.conf` that it did not deploy. `local-auth` keeps
+  failing while any such rule can match the owner or a superuser. No exemption is kept
+  for administration: an administrator authenticates with scram-sha-256 like everyone
+  else.
 
 ---
 

@@ -118,8 +118,9 @@ until the roles are split:
    `ledger guard in force`.
 3. Remove the owner's DSN from every other environment: a worker, an engine session or a
    gate command that holds it can disable the triggers.
-4. Run `vibey doctor`, and require a password for the owner and every superuser. The split
-   protects the ledger only once `local-auth` passes; `SECURITY.md` §7 gives the
+4. Run `vibey doctor`, and require scram-sha-256 for every connection (sub-doctrine 10.j,
+   ADR-0061): never `trust`, `peer`, `ident`, `md5` or a password in clear. The split
+   protects the ledger only once `local-auth` passes. `SECURITY.md` §7 gives the required
    `pg_hba.conf` lines.
 
 With the Helm chart this is `postgres.appRole` (default `vibey_app`) and, for an external

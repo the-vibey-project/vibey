@@ -59,7 +59,11 @@ not a supported target. The suite reads `VIBEY_TEST_DATABASE_URL` (default
 `postgresql://$USER@localhost:5432/vibey_test`); that role needs `CREATEDB`,
 because the session builds a migrated `vibey_test_template` and clones one
 `vibey_test_<worker>` per xdist worker. Parallel checkouts whose migrations
-differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The
+differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The server
+authenticates every connection with scram-sha-256, the socket included (sub-doctrine
+10.j, ADR-0061; the `pg_hba.conf` lines are in `SECURITY.md` §7). Give your role a
+password and put it in `~/.pgpass` (mode `0600`, one line for `localhost`, which also
+covers the local socket), and the DSN above works without the password written in it. The
 default suite needs no engine binaries and no paid accounts: tests marked
 `paid` are deselected unless you ask for them (ADR-0030).
 

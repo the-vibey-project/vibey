@@ -1,6 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Does the database let a password-less connection in as a role that could rewrite the
-ledger? (ADR-0055)
+"""Does the database let a role that could rewrite the ledger in without scram-sha-256?
+(ADR-0055, ADR-0061)
 
 Splitting the roles keeps the ledger append-only only while nobody can simply connect
 as the owner or a superuser. A local PostgreSQL commonly accepts `trust` or `peer`
@@ -14,10 +14,16 @@ as a superuser with no DSN and no password at all, and the split protects nothin
    host is local, on each local socket directory. One that is let in is a failure.
 2. **It reads `pg_hba_file_rules`** when the connecting role may (a superuser, or one
    granted it): a `trust`, `peer` or `ident` rule that can match the owner or a
-   superuser is a failure.
+   superuser is a failure, and so -- under sub-doctrine 10.j, which makes
+   scram-sha-256 the only method (ADR-0061) -- is an `md5` or `password` rule, which
+   asks for a password but proves it weakly or sends it in clear.
 
-A pass needs both: every attempt refused, and the rules read and clean. Anything less
-is `unknown`, printed as such -- never a pass. Declared by
+It also reads `password_encryption`: a server that stores new passwords as anything but
+a SCRAM verifier fails, because a password it stores that way cannot be proven by
+scram-sha-256.
+
+A pass needs every attempt refused, the rules read and clean, and SCRAM storage.
+Anything less is `unknown`, printed as such -- never a pass. Declared by
 `interfaces/local_auth_interface.py` (ADR-0016).
 """
 
@@ -36,6 +42,10 @@ type Connector = Callable[..., Awaitable[Any]]
 
 DEFAULT_SOCKET_DIRS: Final = ("/tmp", "/var/run/postgresql", "/run/postgresql")  # nosec B108 - PostgreSQL's socket directories, probed read-only
 PASSWORDLESS_METHODS: Final = ("trust", "peer", "ident")
+# Methods that ask for a password but do not prove it with SCRAM: `md5` (a replayable
+# hash, and a stored hash that is as good as the password) and `password` (clear text).
+WEAK_PASSWORD_METHODS: Final = ("md5", "password")
+REQUIRED_METHOD: Final = "scram-sha-256"
 _LOCAL_HOSTS: Final = frozenset({"localhost", "127.0.0.1", "::1"})
 
 # The ledger's owner, every login role that is a member of it, and every login superuser.
@@ -59,6 +69,9 @@ FROM pg_hba_file_rules
 WHERE error IS NULL AND auth_method = ANY($1::text[])
 ORDER BY line_number
 """
+
+
+_ENCRYPTION = "SELECT current_setting('password_encryption')"
 
 
 # A `+group` naming a role that does not exist matches nobody (pg_has_role would raise).
@@ -127,18 +140,30 @@ class LocalAuthProbe:
                     admitted.append(f"{role} via {host}:{port}")
                 elif outcome is False:
                     refused += 1
-        rules, undecidable = await self._passwordless_rules(app, roles)
-        if admitted or rules:
+        rules, undecidable = await self._non_scram_rules(app, roles)
+        encryption = str(await app.fetchval(_ENCRYPTION))
+        passwordless = [line for line, method in rules or () if method in PASSWORDLESS_METHODS]
+        weak = [line for line, method in rules or () if method in WEAK_PASSWORD_METHODS]
+        if admitted or passwordless or weak or encryption != REQUIRED_METHOD:
             parts = []
             if admitted:
                 parts.append("accepted a password-less connection as " + ", ".join(admitted))
-            if rules:
-                parts.append("pg_hba.conf lets these in without a password: " + "; ".join(rules))
+            if passwordless:
+                parts.append(
+                    "pg_hba.conf lets these in without a password: " + "; ".join(passwordless)
+                )
+            if weak:
+                parts.append("pg_hba.conf lets these in without scram-sha-256: " + "; ".join(weak))
+            if encryption != REQUIRED_METHOD:
+                parts.append(
+                    f"password_encryption is {encryption!r}, so a password set now cannot be "
+                    "proven by scram-sha-256"
+                )
             return LocalAuthFinding(
                 AuthVerdict.FAIL,
                 " and ".join(parts)
-                + " -- anyone who can reach it as that OS user can rewrite the ledger; "
-                "require scram-sha-256 for them (SECURITY.md §7)",
+                + " -- sub-doctrine 10.j requires scram-sha-256 for every connection; "
+                "set the pg_hba.conf lines in SECURITY.md §7",
             )
         if rules is None or refused == 0 or undecidable:
             why = []
@@ -156,7 +181,8 @@ class LocalAuthProbe:
         return LocalAuthFinding(
             AuthVerdict.PASS,
             f"{', '.join(roles)} refused without a password on {refused} attempt(s); "
-            "pg_hba.conf has no password-less rule for them",
+            "pg_hba.conf has no rule that lets them in without scram-sha-256, and "
+            "passwords are stored as SCRAM verifiers",
         )
 
     async def _knock(self, host: str, port: int, role: str, database: str) -> bool | None:
@@ -181,16 +207,16 @@ class LocalAuthProbe:
         await conn.close()
         return True
 
-    async def _passwordless_rules(
+    async def _non_scram_rules(
         self, app: OwnedConnection, roles: Sequence[str]
-    ) -> tuple[list[str] | None, list[str]]:
-        """(rules that let one of `roles` in without a password, rules that cannot be
-        decided) -- (None, []) when pg_hba_file_rules is not readable."""
+    ) -> tuple[list[tuple[str, str]] | None, list[str]]:
+        """((rule, method) pairs that let one of `roles` in without scram-sha-256, rules
+        that cannot be decided) -- (None, []) when pg_hba_file_rules is not readable."""
         try:
-            rows = await app.fetch(_HBA, list(PASSWORDLESS_METHODS))
+            rows = await app.fetch(_HBA, [*PASSWORDLESS_METHODS, *WEAK_PASSWORD_METHODS])
         except asyncpg.InsufficientPrivilegeError:
             return None, []
-        matching: list[str] = []
+        matching: list[tuple[str, str]] = []
         undecidable: list[str] = []
         for row in rows:
             users = list(row["user_name"] or [])
@@ -200,7 +226,7 @@ class LocalAuthProbe:
             )
             verdicts = [await self._matches(app, spec, roles) for spec in users]
             if True in verdicts:
-                matching.append(line)
+                matching.append((line, str(row["auth_method"])))
             elif None in verdicts:
                 undecidable.append(line)
         return matching, undecidable
