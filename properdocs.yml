@@ -116,4 +116,5 @@ nav:
           - "0059 — The editor drives the family's own loops, on a copy, and adds no loop of its own": architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md
           - "0060 — The heartbeat tells the truth, and passes the gate by the gate's own rule": architecture/decisions/0060-the-heartbeat-tells-the-truth-and-passes-the-gate-by-its-rule.md
           - "0061 — Every PostgreSQL connection authenticates with scram-sha-256": architecture/decisions/0061-every-postgresql-connection-authenticates-with-scram-sha-256.md
+          - "0062 — vibey and Krypton": architecture/decisions/0062-vibey-and-krypton.md
   - Research paper: paper.md

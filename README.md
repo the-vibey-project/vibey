@@ -32,6 +32,9 @@ team of those agents from your first description to deployed software, the
 way a project manager runs a team — asking you questions up front, checking
 the work, and only interrupting you when a decision is truly yours.
 
+The project and its engine are **vibey**; every app and interface a person uses is
+**Krypton** (sub-doctrine 9.e), whose emblem is the krypton atom: krypton-84, four shells.
+
 For the precise version: a queue-based, six-phase conductor for autonomous
 software delivery — with an optional visual-design interstitial and opt-in
 Azure deployment — built on top of the [`*loop` autonomous session
@@ -322,7 +325,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (61 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (62 ADRs) |
 
 ## Status
 

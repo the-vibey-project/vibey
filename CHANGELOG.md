@@ -500,6 +500,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `max_turns` and every recording cap. `ChatChunk` gains a `ChatChunkInterface` seam, which
   the runner and the `InferenceServer` port now depend on (ADR-0016)
 
+### Documentation
+
+* **canon:** sub-doctrine 9.e, for the operator's ratification: the project and its engine are
+  **vibey**, and every app and interface a person uses is **Krypton**, with the krypton-84 atom
+  as its emblem (ADR-0062). Package and command names are unchanged.
+
 ## [2.0.0] (2026-09-21)
 
 ### Added

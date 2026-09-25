@@ -430,6 +430,8 @@ not an externally adjudicated worldwide priority claim. This terminology is
 included as a clarification of 9.d, and any ratification of this corpus remains
 subject to the human merge required by Article II.3.
 
+**9.e — vibey and Krypton** *(ratified by the merge that carried this entry)*: the project and its engine are **vibey**. Every app and every interface a person uses is **Krypton** — the desktop app, the mobile and web app, the VS Code extension as a person sees it, and every interface after them. Krypton's emblem is the krypton atom, krypton-84: a nucleus of 36 protons and 48 neutrons, and 36 electrons in four shells of 2, 8, 18 and 8. The names are what a person reads; the distribution, its packages and its commands keep the names they have. Anything more — whether releases or builds carry either name — is the operator's to rule, and until the operator rules it stays unruled.
+
 ## 10 — No guarantees
 
 Internet, power, the developer's laptop, and every third-party dependency: never
