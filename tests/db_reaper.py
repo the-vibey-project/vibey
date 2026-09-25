@@ -197,8 +197,11 @@ class Candidate:
             mark = HoldMark.read(comment)
         except UnreadableMark:
             return cls(name, marked, connections, name_pid, unreadable=True)
-        creator = mark.pid_on(host) if mark is not None else None
-        return cls(name, marked, connections, name_pid if creator is None else creator)
+        if mark is None:  # no mark, or the v1 mark: a serial run's name still names its pid
+            return cls(name, marked, connections, name_pid)
+        # The mark and the name name the same process, so a mark from another machine names
+        # no process here, even through the name.
+        return cls(name, marked, connections, mark.pid_on(host))
 
 
 @dataclass(frozen=True, slots=True)
@@ -354,6 +357,9 @@ class TestDatabaseReaper:
             if match is None or (self._only is not None and row["datname"] not in self._only):
                 continue
             pid = match.group("pid")
+            # A pid past what os.kill accepts would overflow it and stop the whole reap.
+            if pid and int(pid) > _PID_MAX:
+                pid = None
             found.append(
                 Candidate.from_row(
                     row["datname"],

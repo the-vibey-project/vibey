@@ -44,11 +44,11 @@ checkouts whose `migrations/` differ -- parallel worktrees, one adding a migrati
 -- must not share it: set `VIBEY_TEST_TEMPLATE_DB` to a name of the checkout's own
 (default `vibey_test_template`).
 
-A killed run cannot drop its databases, so the harness reaps them: each session holds a lock
-on its database while it lives and marks it with the process that created it, and every run
-drops, in the background, the test databases no live session holds (`tests/db_reaper.py`). A
-database is kept while its lock is held or while that process is alive on this machine. See what would go with
-`uv run python -m tests.db_reaper --dry-run`; `VIBEY_TEST_REAP=0` turns the reap off.
+A killed run cannot drop its databases, so the harness reaps them: each session holds a lock on
+its database while it lives and marks it with the process that created it, and every run drops,
+in the background, the test databases no live session holds (`tests/db_reaper.py`). A database
+is kept while its lock is held or while that process is alive on this machine. See what would
+go with `uv run python -m tests.db_reaper --dry-run`; `VIBEY_TEST_REAP=0` turns the reap off.
 
 ```bash
 export VIBEY_TEST_DATABASE_URL="postgresql://$(whoami)@localhost:5432/vibey_test"

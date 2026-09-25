@@ -147,6 +147,7 @@ async def _setup(base_dsn: str) -> str:
             # is alive. The mark names this process and machine, so a hold that ends while the
             # process lives still gives nothing away: the reaper keeps the database until the
             # process is gone.
+            mark = HoldMark.this_process().text()  # before anything exists, so it cannot fail after
             global _HOLD
             _HOLD = TestDatabaseHold(base_dsn, wdb)
             _HOLD.start()
@@ -161,9 +162,7 @@ async def _setup(base_dsn: str) -> str:
             await conn.execute(
                 f'CREATE DATABASE "{wdb}" TEMPLATE "{_TEMPLATE_DB}"',
             )
-            await conn.execute(
-                f"COMMENT ON DATABASE \"{wdb}\" IS '{HoldMark.this_process().text()}'"
-            )
+            await conn.execute(f"COMMENT ON DATABASE \"{wdb}\" IS '{mark}'")
         finally:
             await conn.execute(
                 "SELECT pg_advisory_unlock(hashtext($1))",

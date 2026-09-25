@@ -205,6 +205,7 @@ def test_a_comment_that_is_no_mark_leaves_the_database_unmarked() -> None:
         "vibey-test-hold:v2 pid=0 host=build-box.lan",
         "vibey-test-hold:v2 pid=-4242 host=build-box.lan",
         "vibey-test-hold:v2 pid=04242 host=build-box.lan",
+        "vibey-test-hold:v2 pid=2147483648 host=build-box.lan",
         "vibey-test-hold:v2 pid=4294967296 host=build-box.lan",
         "vibey-test-hold:v2 pid=42424242424 host=build-box.lan",
         "vibey-test-hold:v2 pid=4242 host=build box.lan",
@@ -222,6 +223,24 @@ def test_a_mark_that_cannot_be_read_keeps_its_database(comment: str) -> None:
     assert candidate.marked and candidate.unreadable
     verdict = decide(candidate, lock_free=True, others_running=False, alive=None)
     assert not verdict.drop and verdict.reason == "kept: its mark could not be read"
+
+
+def test_the_largest_pid_os_kill_accepts_is_readable() -> None:
+    assert HoldMark.read("vibey-test-hold:v2 pid=2147483647 host=h") == HoldMark(2147483647, "h")
+
+
+def test_a_mark_from_another_machine_ignores_the_pid_in_the_name() -> None:
+    """A serial run's name carries the same pid the mark does: from another machine, neither
+    names a process here."""
+    candidate = Candidate.from_row(
+        "vibey_test_main_4242_abcdef12",
+        name_pid=4242,
+        comment="vibey-test-hold:v2 pid=4242 host=build-box.lan",
+        connections=0,
+        host="laptop.lan",
+    )
+    assert candidate.creator_pid is None
+    assert decide(candidate, lock_free=True, others_running=True, alive=None).drop
 
 
 def test_the_mark_this_process_writes_reads_back_as_itself() -> None:
@@ -400,6 +419,12 @@ def test_a_hold_that_ends_while_its_session_lives_gives_nothing_away(staging: _S
     assert report.dropped == []
     assert report.kept == {f"kept: its creator, pid {os.getpid()}, is alive": 1}
     assert staging.exists(name)
+
+
+def test_a_pid_too_large_for_os_kill_in_a_name_never_stops_the_reap(staging: _Staging) -> None:
+    """A name's pid past 2**31-1 would overflow os.kill; it names no process instead."""
+    name = staging.create("vibeyreap_test_main_99999999999_abcdef12", marked=True)
+    assert staging.reap(running=True, alive=pid_alive).dropped == [name]
 
 
 def test_a_database_whose_mark_cannot_be_read_is_kept(staging: _Staging) -> None:
