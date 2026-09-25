@@ -249,6 +249,31 @@ def pytest_configure(config: pytest.Config) -> None:
     os.environ.pop("VIBEY_PG_MIGRATE_URL", None)
 
 
+class _WeekdayIndependentSabbath:
+    """A host Sabbath gate that never holds and whose location is resolved, so no test's
+    outcome depends on the weekday or the machine it runs on (8.i, ADR-0070). Tests of the
+    Sabbath itself opt out with `@pytest.mark.sabbath` and name their own instant."""
+
+    def hold(self) -> None:
+        return None
+
+    def describe(self) -> list[str]:
+        return ["sabbath: enabled (test stub)"]
+
+    def location_resolved(self) -> bool:
+        return True
+
+
+@pytest.fixture(autouse=True)
+def _weekday_independent_sabbath(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if request.node.get_closest_marker("sabbath") is None:
+        from vibey.cli.sabbath import SABBATH
+
+        monkeypatch.setattr(SABBATH, "_factory", _WeekdayIndependentSabbath)
+
+
 def pytest_unconfigure(config: pytest.Config) -> None:
     if _BASE_DSN is not None:
         with contextlib.suppress(Exception):

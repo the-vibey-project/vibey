@@ -65,7 +65,7 @@ code_paths    = ["src/vibey/", "pyproject.toml"]
 integration = "develop"
 release     = "main"
 
-# Sub-doctrine 8.i (ADR-0072): the merge train, the promotion and the heartbeat stand down
+# Sub-doctrine 8.i (ADR-0070): the merge train, the promotion and the heartbeat stand down
 # from sundown Friday to sundown Saturday where the machine running them stands. A hosted
 # runner's clock is UTC and it has no location service, so this repository names the zone
 # its operator keeps; the location then resolves to that zone's reference city, which is

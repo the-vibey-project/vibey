@@ -1223,7 +1223,7 @@ _IANA_ZONE = re.compile(r"[A-Za-z0-9_+\-]+(/[A-Za-z0-9_+\-]+)*")
 
 @dataclass(frozen=True)
 class SabbathConfig:
-    """Sub-doctrine 8.i, fitted to the machine it runs on (vibey ADR-0072).
+    """Sub-doctrine 8.i, fitted to the machine it runs on (vibey ADR-0070).
 
     The window is sundown Friday to sundown Saturday wherever this host stands; see
     `vibey_gh.sabbath` for the formula and `vibey_gh.sabbath_location` for how the host is
@@ -1240,6 +1240,10 @@ class SabbathConfig:
     # The IANA zone the civil day is read in; empty reads the host's own zone.
     timezone: str = ""
     local_config: str = "~/.config/vibey/sabbath.toml"
+    # An explicit override for a caller holding a LOCAL, never-committed file -- the
+    # operator's own vibey.toml. A committed file names no place.
+    latitude: float | None = None
+    longitude: float | None = None
     # Widens every window toward rest, both edges. Never narrows one.
     offset_minutes: int = 0
     # Extra widening when the location is only a time zone's reference city.
@@ -1262,6 +1266,12 @@ class SabbathConfig:
                 raise ValueError(f"sabbath.{key} must be between 0 and 240")
         if self.timezone and _IANA_ZONE.fullmatch(self.timezone) is None:
             raise ValueError("sabbath.timezone must be an IANA zone name such as Europe/London")
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("sabbath.latitude and sabbath.longitude are set together")
+        if self.latitude is not None and not -90 <= self.latitude <= 90:
+            raise ValueError("sabbath.latitude must be between -90 and 90")
+        if self.longitude is not None and not -180 <= self.longitude <= 180:
+            raise ValueError("sabbath.longitude must be between -180 and 180")
 
 
 @dataclass(frozen=True)

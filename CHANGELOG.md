@@ -14,6 +14,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **sabbath:** the Sabbath, kept where the machine stands
+  ([ADR-0070](docs/architecture/decisions/0070-the-sabbath-kept-where-the-machine-stands.md),
+  sub-doctrine 8.i). From sundown Friday to sundown Saturday the merge train and the promotion
+  stand down visibly (exit 0, "paused, not failed"). Workers claim no lease, and `vibey new` and
+  `vibey work` decline with exit 75. Sundown is computed with the NOAA algorithm for the host's
+  own location: a local override, then CoreLocation or GeoClue, then the zone's reference city,
+  which is coarse and so widened toward rest. The heartbeat keeps beating through the window as
+  "resting until ...". At sundown it writes `SabbathEnded`, re-fires the held workflows and
+  resumes registered lanes. New: `vibey sabbath`, `vibey-gh sabbath status|register-lane|resume`,
+  the `[sabbath]` table, and a location line in `vibey doctor`.
+
 * **ultra:** ULTRA, effort without a ceiling
   ([ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md)). `Effort` gains
   `ULTRA` after `MAX`; no ladder reaches it. `vibey ultra start|stop|status` runs a project's BUILD

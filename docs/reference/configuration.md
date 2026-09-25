@@ -777,6 +777,45 @@ agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]
 "claudeloop-local" = ["GH_TOKEN"]
 ```
 
+## `[sabbath]` { #sabbath }
+
+Sub-doctrine 8.i: from sundown Friday to sundown Saturday nothing writes, merges, tests or
+ships code ([ADR-0070](../architecture/decisions/0070-the-sabbath-kept-where-the-machine-stands.md)).
+Sundown is computed for the machine the process runs on, with the NOAA algorithm. The same
+table is read from a local `vibey.toml` (by the engine) and from `.vibey-gh.toml` (by the
+merge train, the promotion and the heartbeat). **Never commit coordinates**: put them only
+in this machine's own `vibey.toml`, in `local_config`, or in `VIBEY_SABBATH_LATITUDE` and
+`VIBEY_SABBATH_LONGITUDE`.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | 8.i has no exception. Turning it off is a declared act, never a missing key. |
+| `timezone` | `""` | The IANA zone the civil day is read in. Empty reads the host's own zone (`$TZ`, then `/etc/localtime`). |
+| `latitude`, `longitude` | unset | An explicit override. Set both or neither, and only in a file that is never committed. |
+| `local_config` | `~/.config/vibey/sabbath.toml` | A per-host TOML file with `latitude` and `longitude`, read when the table has none. |
+| `location_service` | `true` | Ask CoreLocation (`CoreLocationCLI`, macOS) or GeoClue (`where-am-i`, Linux) when installed. |
+| `offset_minutes` | `0` | Widens every window toward rest, both edges (0–240). It never narrows one. |
+| `coarse_margin_minutes` | `45` | Extra widening when the location is only the zone's reference city (0–240). |
+| `fallback_opens`, `fallback_closes` | `"18:00"`, `"19:00"` | Friday open and Saturday close, local, when no sundown can be computed (no location, or a polar day). |
+| `resume_dispatch` | `true` | At the first heartbeat after the window, re-fire the held merge train and promotion. |
+| `lanes_dir` | `~/.local/state/vibey/sabbath-lanes` | Where lanes register "paused for the Sabbath, resume with ...". |
+
+Where the host stands is resolved in this order, and every window names its source:
+
+1. the override;
+2. the operating system's location service;
+3. the reference city of the host's zone from the system `zone1970.tab`, which is coarse
+   and so widened.
+
+There is no IP lookup. The answer is cached for a week and dropped when the zone changes.
+
+```toml
+# This machine's own vibey.toml -- never committed. EXAMPLE coordinates only.
+[sabbath]
+latitude  = 34.97
+longitude = -82.44
+```
+
 ## Full example
 
 This is a valid file exercising most of the schema that `parse_config`

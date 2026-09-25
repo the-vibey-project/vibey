@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Sub-doctrine 8.i: the Sabbath window, fitted to the host (vibey ADR-0072).
+"""Sub-doctrine 8.i: the Sabbath window, fitted to the host (vibey ADR-0070).
 
 The EXAMPLE location below (Greenville, South Carolina) is a golden test fixture and
 nothing else: the window is resolved per host at run time and no location is committed.
@@ -363,6 +363,15 @@ def test_the_guard_reads_a_local_never_committed_file(tmp_path, body):
     assert where is not None and where.source == "configured override"
 
 
+def test_coordinates_from_a_local_vibey_toml_come_first(tmp_path):
+    config = SabbathConfig(
+        latitude=EXAMPLE_LAT, longitude=EXAMPLE_LON, lanes_dir=str(tmp_path / "lanes")
+    )
+    env = {"TZ": "America/New_York", "VIBEY_SABBATH_LATITUDE": "0", "VIBEY_SABBATH_LONGITUDE": "0"}
+    where = _guard(tmp_path, config=config, environ=env).location()
+    assert where is not None and where.latitude == EXAMPLE_LAT
+
+
 def test_a_local_file_without_coordinates_falls_through_to_the_zone(tmp_path):
     local = tmp_path / ".config" / "vibey" / "sabbath.toml"
     local.parent.mkdir(parents=True)
@@ -408,6 +417,9 @@ def test_an_unknown_zone_is_refused_by_name(tmp_path):
         ({"offset_minutes": -1}, "offset_minutes"),
         ({"coarse_margin_minutes": 999}, "coarse_margin_minutes"),
         ({"timezone": "not a zone"}, "IANA"),
+        ({"latitude": 1.0}, "together"),
+        ({"latitude": 91.0, "longitude": 0.0}, "latitude must"),
+        ({"latitude": 0.0, "longitude": 181.0}, "longitude must"),
     ],
 )
 def test_the_sabbath_config_refuses_a_bad_declaration_at_load(kwargs, message):

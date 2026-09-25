@@ -1,6 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The Sabbath as this host keeps it: the window built for this machine, the lanes that
-rest in it, and what re-arms when it ends (sub-doctrine 8.i; vibey ADR-0072).
+rest in it, and what re-arms when it ends (sub-doctrine 8.i; vibey ADR-0070).
 
 `vibey_gh.sabbath` is the pure computation; this is where it meets the machine -- the
 host's zone, its location (`vibey_gh.sabbath_location`), the clock -- and where the
@@ -100,6 +100,8 @@ class SabbathGuard(SabbathGuardInterface):
         return self._config.timezone or host_zone(self._environ)
 
     def _override(self) -> OverrideLocation:
+        if self._config.latitude is not None and self._config.longitude is not None:
+            return OverrideLocation(self._config.latitude, self._config.longitude)
         lat_env = self._environ.get("VIBEY_SABBATH_LATITUDE", "")
         lon_env = self._environ.get("VIBEY_SABBATH_LONGITUDE", "")
         if lat_env and lon_env:
