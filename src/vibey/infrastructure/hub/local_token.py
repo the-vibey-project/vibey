@@ -35,6 +35,8 @@ class ServingRecord:
     host: str
     port: int
     pid: int
+    tls: bool = False
+    """Whether the hub serves its own certificate (a declared LAN) rather than plain HTTP."""
 
 
 class LocalTokenStore:
@@ -73,7 +75,11 @@ class LocalTokenStore:
         staged.unlink(missing_ok=True)
         fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "w") as handle:
-            handle.write(json.dumps({"host": record.host, "port": record.port, "pid": record.pid}))
+            handle.write(
+                json.dumps(
+                    {"host": record.host, "port": record.port, "pid": record.pid, "tls": record.tls}
+                )
+            )
         staged.replace(target)
 
     def clear_serving(self, pid: int | None = None) -> None:
@@ -101,7 +107,10 @@ class LocalTokenStore:
         host, port, pid = data.get("host"), data.get("port"), data.get("pid")
         if not isinstance(host, str) or not isinstance(port, int) or not isinstance(pid, int):
             raise ValueError(f"{path} does not name a host, port and pid")
-        return ServingRecord(host=host, port=port, pid=pid)
+        tls = data.get("tls", False)
+        if not isinstance(tls, bool):
+            raise ValueError(f"{path} says tls is {tls!r}, not true or false")
+        return ServingRecord(host=host, port=port, pid=pid, tls=tls)
 
     def _ensure_dir(self) -> None:
         """The directory, made 0700; an existing one must be a real directory owned by

@@ -1,4 +1,4 @@
-# 0071 — The Sabbath, kept where the machine stands
+# 0072 — The Sabbath, kept where the machine stands
 
 **Status:** proposed · **Date:** 2026-09-25 · **Cites:** sub-doctrines 8.i, 8.a, 8.j, 10.f, 12.c, 12.e · **Related:** ADR-0016, ADR-0017, ADR-0060 · **Evidence:** `develop` at `0823cdfd`, read 2026-09-25
 

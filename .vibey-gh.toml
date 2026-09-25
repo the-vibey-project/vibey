@@ -156,7 +156,12 @@ enabled = true
 # This list also renders into automation-bootstrap.yml, so re-run `vibey-gh install`
 # after changing it.
 [rulesets.integration]
-required_checks  = ["gates", "No-loss property suite (10,000 examples)"]
+# The two VS Code extension jobs joined once they had run green on develop (0823cdfd),
+# as ADR-0059 owed: a krypton client that breaks is a failed merge, not a later surprise.
+required_checks  = [
+  "gates", "No-loss property suite (10,000 examples)",
+  "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
+]
 required_approvals = 1
 # The owner in .github/CODEOWNERS must approve a change to a protected path.
 require_code_owner_review = true
@@ -178,6 +183,7 @@ enabled = true
 [rulesets.release]
 required_checks  = [
   "gates", "No-loss property suite (10,000 examples)", "uv.lock is in sync with pyproject.toml",
+  "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
 ]
 required_approvals = 1
 require_code_owner_review = true

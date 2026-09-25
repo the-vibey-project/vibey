@@ -800,7 +800,7 @@ agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]
 ## `[sabbath]` { #sabbath }
 
 Sub-doctrine 8.i: from sundown Friday to sundown Saturday nothing writes, merges, tests or
-ships code ([ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md)).
+ships code ([ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
 Sundown is computed for the machine the process runs on, with the NOAA algorithm. The same
 table is read from a local `vibey.toml` (by the engine) and from `.vibey-gh.toml` (by the
 merge train, the promotion and the heartbeat). **Never commit coordinates**: put them only

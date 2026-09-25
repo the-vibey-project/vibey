@@ -52,7 +52,7 @@ with payloads.
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
-| `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
+| `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
 
 ### Guarded and unguarded commands
 
@@ -145,13 +145,30 @@ one the hub answers is refused with 421 (the DNS-rebinding defence), and no resp
 carries a CORS header. The routes, scopes and refusals are in the
 [hub API reference](hub-api.md).
 
-While it runs it keeps `<state_dir>/serving.json` (address, port, process id), which
-`vibey doctor`'s `hub-exposure` line reads.
+While it runs it keeps `<state_dir>/serving.json` (address, port, process id, and whether
+it serves TLS), which `vibey doctor`'s `hub-exposure` line and `vibey hub` read.
+
+With `[hub] lan = true` the hub serves its own self-signed certificate (made on first run
+in `<state_dir>`, owner-only), prints its SHA-256 fingerprint, and advertises itself on
+the LAN as `_vibey._tcp` (mDNS/DNS-SD) with that fingerprint. On loopback it serves plain
+HTTP and announces nothing.
+
+## `vibey hub`
+
+The host's side of pairing devices with the running hub (ADR-0068). Each subcommand
+reads `<state_dir>/serving.json`, presents the host token, and -- when the hub serves
+TLS -- trusts only the hub's own certificate. With no hub running they exit 3.
+
+| Command | What it does |
+|---|---|
+| `vibey hub pair --scope SCOPE [--scope SCOPE ...]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
+| `vibey hub devices` | Lists the paired devices: id, name, scopes. Never a key. |
+| `vibey hub revoke DEVICE_ID` | Revokes a device. It is refused from its very next request. |
 
 ## `vibey sabbath`
 
 Print the Sabbath window on this host (sub-doctrine 8.i,
-[ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md)):
+[ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)):
 whether it is enabled, the zone, where the location came from and how accurate it is, and
 when the current or next rest ends. It only reads, and is never held. From sundown Friday
 to sundown Saturday `vibey new` and `vibey work` decline with exit code `75`, the worker
@@ -779,7 +796,7 @@ Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-pro
 ## `vibey-gh sabbath`
 
 The Sabbath as the release tooling keeps it (sub-doctrine 8.i,
-[ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md)).
+[ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
 `vibey-gh merge-train` and `vibey-gh promote` stand down inside the window: they print
 the hold, write it to the job summary, and exit 0. `vibey-gh sovereign --beat` keeps
 beating, recording "resting until ...".

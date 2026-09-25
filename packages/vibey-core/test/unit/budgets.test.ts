@@ -61,6 +61,10 @@ class MemoryStore implements BudgetStoreInterface {
   declarePaid(): PaidDeclaration {
     return { declared_at: '2026-09-24T12:00:00.000Z', no_cap_confirmed: true };
   }
+
+  endNoCap(): boolean {
+    return false;
+  }
 }
 
 const entry = (overrides: Record<string, unknown> = {}) =>
@@ -179,6 +183,7 @@ describe('BudgetGuard', () => {
     expect(store.remove(month.id).caps).toEqual({ minutes: 1 });
     expect(store.paid()).toBeUndefined();
     expect(store.declarePaid().no_cap_confirmed).toBe(true);
+    expect(store.endNoCap()).toBe(false);
   });
 });
 

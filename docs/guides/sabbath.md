@@ -63,4 +63,4 @@ succeeds, the lane is forgotten. If it fails, the heartbeat tries again on the n
 
 All the keys are in [`[sabbath]`](../reference/configuration.md#sabbath). The design and
 its reasons are in
-[ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md).
+[ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md).

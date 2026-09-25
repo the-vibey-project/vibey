@@ -37,6 +37,7 @@ from vibey.cli.budget import budget_app
 from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.gates import GATES
+from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.loops import LOOPS
@@ -265,6 +266,7 @@ def new_project(
 
 
 app.command("serve")(serve_command)
+app.add_typer(hub_app, name="hub")
 
 
 @app.command("sabbath")

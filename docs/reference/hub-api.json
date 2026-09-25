@@ -1,6 +1,32 @@
 {
   "components": {
     "schemas": {
+      "ClaimBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/pairing/claim` (a device, before it holds a key).",
+        "properties": {
+          "code": {
+            "description": "The code the host shows.",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "description": "What the device calls itself.",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "ClaimBody",
+        "type": "object"
+      },
       "GateAnswerBody": {
         "additionalProperties": false,
         "description": "The body of `POST /api/v1/gates/{gate_id}/answer`.",
@@ -41,6 +67,38 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HubScope": {
+        "description": "One kind of permission a paired device can hold. Stored by value.",
+        "enum": [
+          "view",
+          "answer",
+          "spend",
+          "run",
+          "bump"
+        ],
+        "title": "HubScope",
+        "type": "string"
+      },
+      "OfferBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/pairing/offers` (the host only).",
+        "properties": {
+          "scopes": {
+            "description": "What a device claiming the code may do; never empty.",
+            "items": {
+              "$ref": "#/components/schemas/HubScope"
+            },
+            "minItems": 1,
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scopes"
+        ],
+        "title": "OfferBody",
         "type": "object"
       },
       "ValidationError": {
@@ -138,6 +196,120 @@
         "summary": "vibey_bootstrap's metrics snapshot.",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/devices": {
+      "get": {
+        "operationId": "devices_api_v1_devices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "503": {
+            "description": "Pairing is not enabled."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "The paired devices, without their keys (the host only).",
+        "tags": [
+          "pairing"
+        ]
+      }
+    },
+    "/api/v1/devices/{device_id}": {
+      "delete": {
+        "operationId": "revoke_api_v1_devices__device_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "title": "Device Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "404": {
+            "description": "No such paired device."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "503": {
+            "description": "Pairing is not enabled."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke a device: refused from its next request (the host only).",
+        "tags": [
+          "pairing"
         ]
       }
     },
@@ -483,6 +655,131 @@
         "summary": "The loops, their engines and efforts.",
         "tags": [
           "loops"
+        ]
+      }
+    },
+    "/api/v1/pairing/claim": {
+      "post": {
+        "operationId": "claim_api_v1_pairing_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "503": {
+            "description": "Pairing is not enabled."
+          }
+        },
+        "summary": "Claim a pairing code: a device's key, shown once.",
+        "tags": [
+          "pairing"
+        ]
+      }
+    },
+    "/api/v1/pairing/offers": {
+      "post": {
+        "operationId": "offer_api_v1_pairing_offers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "503": {
+            "description": "Pairing is not enabled."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Offer a 6-digit pairing code for two minutes (the host only).",
+        "tags": [
+          "pairing"
         ]
       }
     },

@@ -2,12 +2,12 @@
 /** Every command the extension offers, declared once: palette, menu, slash commands and @vibey. */
 import type { EffortSetting, LoopName } from './catalogue-interface';
 
-export type CommandGroup = 'Run' | 'Loop & model' | 'Lanes' | 'Projects & gates' | 'Budgets' | 'Ollama' | 'Doctor';
+export type CommandGroup = 'Run' | 'Loop & model' | 'Lanes' | 'Projects & gates' | 'Budgets' | 'Connect & look' | 'Ollama' | 'Doctor';
 
 export interface CommandSpec {
   /** The VS Code command id: `vibey.ask`. */
   readonly id: string;
-  /** Its title in the Command Palette, under the "Vibey" category. */
+  /** Its title in the Command Palette, under the "krypton" category. */
   readonly title: string;
   readonly group: CommandGroup;
   /** A codicon name, shown as `$(name)`. */

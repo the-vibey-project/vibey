@@ -32,6 +32,12 @@
       "src/vibey_tools/gh/.github/vibey-gh/release/channel.js"
     ]
   },
+  "token_sheet_copies": {
+    "$description": "Places that ship the generated token sheet (design/dist/css/tokens.css) inside a package that cannot reach design/ at run time: the VS Code extension's webviews load it from their own media folder.",
+    "targets": [
+      "clients/vscode/media/tokens.css"
+    ]
+  },
   "identity": "design/identity",
   "rasters": "design/dist/icons/manifest.json"
 }

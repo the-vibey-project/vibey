@@ -32,6 +32,7 @@ from vibey.cli.serve import SERVE, CliHubProbes, ServeCommand
 from vibey.domain.phase import Phase
 from vibey.infrastructure.hub.lanes import LaneScanner
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.mdns import MdnsAdvertiser
 from vibey.infrastructure.hub.settings import HubSettings
 
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
@@ -50,8 +51,8 @@ class Driven:
         self.bound: tuple[str, int] | None = None
         self.app: FastAPI | None = None
 
-    async def serve(self, app: FastAPI, *, host: str, port: int) -> None:
-        self.bound, self.app = (host, port), app
+    async def serve(self, app: FastAPI, *, host: str, port: int, tls: Any = None) -> None:
+        self.bound, self.app, self.tls = (host, port), app, tls
         shown = f"[{host}]" if ":" in host else host
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(
@@ -67,11 +68,41 @@ class Names:
         return frozenset({"studio.local", bound})
 
 
-def _command(tmp_path: Path, server: Driven, toml: str = "") -> ServeCommand:
+class Advertiser:
+    """Records advertisements instead of announcing anything on this computer's network."""
+
+    def __init__(self) -> None:
+        self.adverts: list[dict[str, Any]] = []
+        self.closed = 0
+
+    async def advertise(self, **fields: Any) -> "Advertiser":
+        self.adverts.append(fields)
+        return self
+
+    async def close(self) -> None:
+        self.closed += 1
+
+    @staticmethod
+    def lan_addresses(names: frozenset[str]) -> list[str]:
+        return MdnsAdvertiser.lan_addresses(names)
+
+    @staticmethod
+    def instance() -> str:
+        return "studio"
+
+
+def _command(
+    tmp_path: Path, server: Driven, toml: str = "", advertiser: Advertiser | None = None
+) -> ServeCommand:
     state = tmp_path / "state"
     (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{state}'\n{toml}")
     server.state = state
-    return ServeCommand(server=server, names=Names(), config_path=lambda: tmp_path / "vibey.toml")
+    return ServeCommand(
+        server=server,
+        names=Names(),
+        config_path=lambda: tmp_path / "vibey.toml",
+        advertiser=advertiser or Advertiser(),
+    )
 
 
 # -- no database --------------------------------------------------------------------------
@@ -324,10 +355,47 @@ def test_a_declared_lan_answers_this_computers_names(tmp_path: Path) -> None:
         )
 
     server = Driven(drive)
-    command = _command(tmp_path, server, "lan = true\nport = 9100\nnames = ['hub.example']\n")
+    advertiser = Advertiser()
+    command = _command(
+        tmp_path, server, "lan = true\nport = 9100\nnames = ['hub.example']\n", advertiser
+    )
     asyncio.run(command.run(host="192.168.1.20", port=None))
     assert server.bound == ("192.168.1.20", 9100)
     assert got["name"].status_code == 200 and got["declared"].status_code == 200
+    # A declared LAN is served over the hub's own certificate, and announced with it.
+    assert server.tls is not None and server.tls.cert_path.exists()
+    assert advertiser.adverts == [
+        {
+            "instance": "studio",
+            "server": "studio",
+            "port": 9100,
+            "addresses": ["192.168.1.20"],
+            "fingerprint": server.tls.fingerprint,
+            "api_version": "1",
+        }
+    ]
+    assert advertiser.closed == 1
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_a_lan_with_no_address_to_announce_says_so_and_serves(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class NamesOnly:
+        def names(self, bound: str) -> frozenset[str]:
+            return frozenset({"studio.local"})
+
+    async def drive(client: httpx.AsyncClient, token: str) -> None:
+        return None
+
+    server = Driven(drive)
+    advertiser = Advertiser()
+    command = _command(tmp_path, server, "lan = true\n", advertiser)
+    command._names = NamesOnly()
+    asyncio.run(command.run(host="studio.local", port=9101))
+    assert advertiser.adverts == [] and server.tls is not None
+    assert "no LAN address to advertise" in capsys.readouterr().out
 
 
 async def test_a_database_that_does_not_answer_is_not_ready(tmp_path: Path) -> None:

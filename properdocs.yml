@@ -131,5 +131,6 @@ nav:
           - "0068 — The hub: vibey serve": architecture/decisions/0068-the-hub.md
           - "0069 — Two packages, vibey-engine and krypton-app": architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md
           - "0070 — Failover to the sovereign engine, and handback on a recorded probe": architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md
-          - "0071 — The Sabbath, kept where the machine stands": architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md
+          - "0071 — Hub pairing and trust": architecture/decisions/0071-hub-pairing-and-trust.md
+          - "0072 — The Sabbath, kept where the machine stands": architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md
   - Research paper: paper.md

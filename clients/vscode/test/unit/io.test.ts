@@ -76,6 +76,11 @@ describe('NodeHttpClient', () => {
           setTimeout(() => response.end(':2}\n{"n":3}'), 10);
           return;
         }
+        if (request.url === '/whoami') {
+          response.writeHead(200);
+          response.end(request.headers.authorization ?? 'nobody');
+          return;
+        }
         if (request.url === '/lines-ended') {
           response.writeHead(201);
           response.end('{"n":1}\n');
@@ -99,6 +104,13 @@ describe('NodeHttpClient', () => {
     expect(await client.get(`${base}/x`, 2000)).toEqual({ status: 200, body: '{"method":"GET","body":""}' });
     expect(await client.post(`${base}/x`, { a: 1 }, 2000)).toEqual({ status: 200, body: '{"method":"POST","body":"{\\"a\\":1}"}' });
     expect((await client.get(`${base}/missing`, 2000)).status).toBe(404);
+  });
+
+  it("sends a hub's bearer key only when it is given one", async () => {
+    const client = new NodeHttpClient();
+    expect((await client.get(`${base}/whoami`, 2000)).body).toBe('nobody');
+    expect((await client.get(`${base}/whoami`, 2000, { authorization: 'Bearer k' })).body).toBe('Bearer k');
+    expect((await client.post(`${base}/whoami`, {}, 2000, { authorization: 'Bearer p' })).body).toBe('Bearer p');
   });
 
   it('gives up on a server that does not answer in time, and on one that is not there', async () => {
