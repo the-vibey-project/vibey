@@ -1,0 +1,443 @@
+{
+  "$description": "Tier 2. The light theme: the paper's ink on white, for daylight and print.",
+  "theme": {
+    "light": {
+      "$type": "color",
+      "bg": {
+        "canvas": {
+          "$value": "{color.slate.25}"
+        },
+        "surface": {
+          "$value": "{color.slate.0}"
+        },
+        "raised": {
+          "$value": "{color.slate.50}"
+        },
+        "overlay": {
+          "$value": "{color.slate.0}"
+        },
+        "code": {
+          "$value": "{color.slate.55}"
+        }
+      },
+      "border": {
+        "subtle": {
+          "$value": "{color.slate.130}"
+        },
+        "strong": {
+          "$value": "{color.slate.475}"
+        }
+      },
+      "text": {
+        "primary": {
+          "$value": "{color.slate.800}"
+        },
+        "secondary": {
+          "$value": "{color.slate.700}"
+        },
+        "tertiary": {
+          "$value": "{color.slate.600}"
+        },
+        "link": {
+          "$value": "{color.violet.650}"
+        },
+        "link-hover": {
+          "$value": "{color.blue.600}"
+        },
+        "on-accent": {
+          "$value": "{color.slate.0}"
+        }
+      },
+      "accent": {
+        "default": {
+          "$value": "{color.violet.575}"
+        },
+        "hover": {
+          "$value": "{color.violet.650}"
+        },
+        "subtle": {
+          "$value": "{color.violet.75}"
+        }
+      },
+      "focus": {
+        "ring": {
+          "$value": "{color.blue.600}"
+        }
+      },
+      "status": {
+        "success": {
+          "$value": "{color.mint.575}"
+        },
+        "warning": {
+          "$value": "{color.gold.600}"
+        },
+        "danger": {
+          "$value": "{color.red.575}"
+        },
+        "info": {
+          "$value": "{color.blue.600}"
+        },
+        "ultra": {
+          "$value": "{color.magenta.600}"
+        }
+      },
+      "state": {
+        "queued": {
+          "$value": "{color.slate.600}"
+        },
+        "running": {
+          "$value": "{color.blue.600}"
+        },
+        "awaiting-human": {
+          "$value": "{color.gold.600}"
+        },
+        "parked": {
+          "$value": "{color.orange.600}"
+        },
+        "succeeded": {
+          "$value": "{color.mint.575}"
+        },
+        "failed": {
+          "$value": "{color.red.575}"
+        },
+        "cancelled": {
+          "$value": "{color.slate.550}"
+        },
+        "ultra": {
+          "$value": "{color.magenta.600}"
+        }
+      },
+      "lane": {
+        "1": {
+          "$value": "{color.violet.575}"
+        },
+        "2": {
+          "$value": "{color.blue.600}"
+        },
+        "3": {
+          "$value": "{color.teal.525}"
+        },
+        "4": {
+          "$value": "{color.gold.500}"
+        },
+        "5": {
+          "$value": "{color.red.575}"
+        },
+        "6": {
+          "$value": "{color.magenta.600}"
+        },
+        "7": {
+          "$value": "{color.green.500}"
+        },
+        "8": {
+          "$value": "{color.slate.550}"
+        }
+      },
+      "syntax": {
+        "text": {
+          "$value": "{color.slate.800}"
+        },
+        "string": {
+          "$value": "{color.mint.575}"
+        },
+        "keyword": {
+          "$value": "{color.violet.650}"
+        },
+        "number": {
+          "$value": "{color.orange.600}"
+        },
+        "title": {
+          "$value": "{color.blue.600}"
+        },
+        "attr": {
+          "$value": "{color.cyan.650}"
+        },
+        "builtin": {
+          "$value": "{color.teal.575}"
+        },
+        "comment": {
+          "$value": "{color.slate.575}"
+        },
+        "punct": {
+          "$value": "{color.slate.700}"
+        },
+        "deletion": {
+          "$value": "{color.red.575}"
+        },
+        "addition": {
+          "$value": "{color.mint.575}"
+        }
+      },
+      "effect": {
+        "$description": "Translucent washes for glass, glow and grid. Decoration only: never text, never the only carrier of meaning.",
+        "glass": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.9647,
+              0.9765,
+              0.9882
+            ],
+            "hex": "#f6f9fc",
+            "alpha": 0.82
+          }
+        },
+        "panel": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.78
+          }
+        },
+        "grid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0902,
+              0.1961,
+              0.302
+            ],
+            "hex": "#17324d",
+            "alpha": 0.045
+          }
+        },
+        "glow-1": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4196,
+              0.3569,
+              0.8235
+            ],
+            "hex": "#6b5bd2",
+            "alpha": 0.14
+          }
+        },
+        "glow-2": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.3098,
+              0.6392,
+              0.8196
+            ],
+            "hex": "#4fa3d1",
+            "alpha": 0.12
+          }
+        },
+        "page-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.9647,
+              0.9765,
+              0.9882
+            ],
+            "hex": "#f6f9fc"
+          }
+        },
+        "page-mid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.9333,
+              0.9608,
+              0.9804
+            ],
+            "hex": "#eef5fa"
+          }
+        },
+        "page-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.9725,
+              0.9686,
+              1.0
+            ],
+            "hex": "#f8f7ff"
+          }
+        },
+        "heading-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0902,
+              0.1961,
+              0.302
+            ],
+            "hex": "#17324d"
+          }
+        },
+        "heading-mid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.3294,
+              0.2627,
+              0.6902
+            ],
+            "hex": "#5443b0"
+          }
+        },
+        "heading-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.1843,
+              0.4196,
+              0.6039
+            ],
+            "hex": "#2f6b9a"
+          }
+        },
+        "hover": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0902,
+              0.1961,
+              0.302
+            ],
+            "hex": "#17324d",
+            "alpha": 0.06
+          }
+        },
+        "tint": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4196,
+              0.3569,
+              0.8235
+            ],
+            "hex": "#6b5bd2",
+            "alpha": 0.08
+          }
+        },
+        "tint-strong": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4196,
+              0.3569,
+              0.8235
+            ],
+            "hex": "#6b5bd2",
+            "alpha": 0.16
+          }
+        },
+        "card-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.95
+          }
+        },
+        "card-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.7
+          }
+        },
+        "line": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0902,
+              0.1961,
+              0.302
+            ],
+            "hex": "#17324d",
+            "alpha": 0.12
+          }
+        },
+        "line-bright": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0902,
+              0.1961,
+              0.302
+            ],
+            "hex": "#17324d",
+            "alpha": 0.22
+          }
+        },
+        "shadow": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0902,
+              0.1961,
+              0.302
+            ],
+            "hex": "#17324d",
+            "alpha": 0.12
+          }
+        },
+        "selection": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4196,
+              0.3569,
+              0.8235
+            ],
+            "hex": "#6b5bd2",
+            "alpha": 0.25
+          }
+        },
+        "input": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff"
+          }
+        },
+        "action-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4196,
+              0.3569,
+              0.8235
+            ],
+            "hex": "#6b5bd2"
+          }
+        },
+        "action-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.1843,
+              0.4196,
+              0.6039
+            ],
+            "hex": "#2f6b9a"
+          }
+        }
+      }
+    }
+  }
+}

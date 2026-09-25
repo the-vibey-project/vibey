@@ -1,1 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><title>Vibey</title><path d="M4 5l8 14 8-14"/><path d="M8.5 5h7"/><circle cx="12" cy="19" r="1.2" fill="currentColor"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="vibey">
+<title>vibey</title>
+<ellipse cx="12" cy="12" rx="4.24" ry="4.24" transform="rotate(0 12 12)" fill="none" stroke="currentColor" stroke-width="0.615"/>
+<ellipse cx="12" cy="12" rx="6.36" ry="6.36" transform="rotate(0 12 12)" fill="none" stroke="currentColor" stroke-width="0.615"/>
+<ellipse cx="12" cy="12" rx="8.48" ry="8.48" transform="rotate(0 12 12)" fill="none" stroke="currentColor" stroke-width="0.615"/>
+<ellipse cx="12" cy="12" rx="10.6" ry="10.6" transform="rotate(0 12 12)" fill="none" stroke="currentColor" stroke-width="0.615"/>
+<circle cx="12" cy="12" r="2.544" fill="currentColor"/>
+<circle cx="9.734" cy="11.599" r="0.976" fill="currentColor"/>
+<circle cx="13.235" cy="13.611" r="0.976" fill="currentColor"/>
+<circle cx="12.15" cy="10.291" r="0.976" fill="currentColor"/>
+<circle cx="11.02" cy="12.897" r="0.976" fill="currentColor"/>
+<circle cx="12.767" cy="12" r="0.976" fill="currentColor"/>
+<circle cx="12" cy="16.24" r="0.689" fill="currentColor"/>
+<circle cx="17.876" cy="14.434" r="0.689" fill="currentColor"/>
+<circle cx="6.124" cy="9.566" r="0.689" fill="currentColor"/>
+<circle cx="20.48" cy="12" r="0.689" fill="currentColor"/>
+<circle cx="3.52" cy="12" r="0.689" fill="currentColor"/>
+<circle cx="22.6" cy="12" r="0.689" fill="currentColor"/>
+<circle cx="1.4" cy="12" r="0.689" fill="currentColor"/>
+</svg>
