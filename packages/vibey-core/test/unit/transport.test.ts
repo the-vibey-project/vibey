@@ -142,6 +142,12 @@ describe('HubTransport', () => {
     expect(error.name).toBe('HubTransportError');
   });
 
+  it('names why a request failed even when the error carries no message', () => {
+    expect(HubTransport.reason(new Error('boom'))).toBe('boom');
+    expect(HubTransport.reason(Object.assign(new Error(''), { code: 'ECONNREFUSED' }))).toBe('ECONNREFUSED');
+    expect(HubTransport.reason({})).toBe('no answer');
+  });
+
   it('makes its own request ids when none are given', async () => {
     const seen: unknown[] = [];
     const http = new FakeHttp().route('POST', `${base}/api/v1/gates/g1/answer`, (body) => {

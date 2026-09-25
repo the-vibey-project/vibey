@@ -155,6 +155,12 @@ export class HubTransport implements VibeyTransportInterface {
     return `${call}: ${words[status] ?? `the hub answered HTTP ${status}.`}`;
   }
 
+  /** Why a request failed: its message, else its code (a refused dual-stack connect has no message), else a plain word. */
+  static reason(error: unknown): string {
+    const failure = error as { message?: unknown; code?: unknown };
+    return (typeof failure.message === 'string' && failure.message) || (typeof failure.code === 'string' && failure.code) || 'no answer';
+  }
+
   private hostOnly(call: string, command: string): Promise<never> {
     return Promise.reject(
       new HubTransportError(`${call}: no scope can change a cap over the network (ADR-0068). Change it on the host with ${command}.`),
@@ -174,7 +180,7 @@ export class HubTransport implements VibeyTransportInterface {
     try {
       response = await call();
     } catch (error) {
-      throw new HubTransportError(`${name}: ${this.baseUrl} did not answer (${(error as Error).message}).`);
+      throw new HubTransportError(`${name}: ${this.baseUrl} did not answer (${HubTransport.reason(error)}).`);
     }
     if (response.status !== 200) {
       throw new HubTransportError(HubTransport.explain(response.status, name, this.baseUrl), response.status);
@@ -255,7 +261,7 @@ export class HubDiscovery implements HubDiscoveryInterface {
         return { url, live: false, offersPairing: false, problem: `${url}/health/live answered HTTP ${live.status}, so this is not a vibey hub.` };
       }
     } catch (error) {
-      return { url, live: false, offersPairing: false, problem: `nothing answered at ${url} (${(error as Error).message}).` };
+      return { url, live: false, offersPairing: false, problem: `nothing answered at ${url} (${HubTransport.reason(error)}).` };
     }
     try {
       const reply = JSON.parse((await this.http.get(`${url}${HubTransport.OPENAPI_ROUTE}`, this.timeoutMs)).body) as {
