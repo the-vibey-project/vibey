@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import subprocess
 from unittest.mock import patch
 
 from vibey_gh import issue_triage as it
@@ -47,3 +48,34 @@ def test_bump_and_unbump_are_explicit_reversible_operations():
         it.set_bump(7, False)
     assert run.call_args_list[0].args[-2:] == ("--add-label", it.BUMPED)
     assert run.call_args_list[1].args[-2:] == ("--remove-label", it.BUMPED)
+
+
+def test_fetch_open_issues_uses_the_whole_open_issue_set_and_excludes_pull_requests():
+    with patch.object(
+        it.github_state,
+        "gh_json",
+        return_value=[issue(1), {"number": 2, "isPullRequest": True}],
+    ) as fetch:
+        assert [row["number"] for row in it.fetch_open_issues()] == [1]
+    assert fetch.call_args.args[-1] == "number,title,body,labels,createdAt,isPullRequest"
+
+
+def test_ensure_labels_and_command_failures_are_reported():
+    completed = subprocess.CompletedProcess([], 0, "", "")
+    with patch.object(it.subprocess, "run", return_value=completed) as run:
+        it.ensure_labels()
+    assert run.call_count == len(it.LABEL_DEFINITIONS)
+    failed = subprocess.CompletedProcess([], 1, "", "denied")
+    with patch.object(it.subprocess, "run", return_value=failed):
+        try:
+            it._run("issue", "edit", "1")
+        except RuntimeError as error:
+            assert str(error) == "denied"
+        else:  # pragma: no cover
+            raise AssertionError("failed GitHub command was not reported")
+
+
+def test_summary_handles_empty_and_bumped_rows():
+    item = it.rank(issue(4, "urgent", (it.BUMPED,)))
+    assert "bumped" in it.summary([item])
+    assert it.summary([]).endswith("|---:|---|---|\n")

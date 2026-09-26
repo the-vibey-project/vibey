@@ -1851,8 +1851,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     issue_labels.set_defaults(func=_issue_automation)
 
-    triage = sub.add_parser("issue-triage", help="classify and order all open issues")
-    triage_sub = triage.add_subparsers(dest="action", required=True)
+    issue_triage_parser = sub.add_parser("issue-triage", help="classify and order all open issues")
+    triage_sub = issue_triage_parser.add_subparsers(dest="action", required=True)
     triage_sweep = triage_sub.add_parser("sweep", help="reconcile every open issue")
     triage_sweep.set_defaults(func=_issue_triage)
     for action, help_text in (
