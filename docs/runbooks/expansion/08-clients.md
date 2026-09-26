@@ -2,7 +2,7 @@
 
 > **Status (2026-09-25):** the server side has started. The hard dependency on 12 is met
 > for reads, gate answers and bumps: the hub, `vibey serve`
-> ([ADR-0067](../../architecture/decisions/0067-the-hub.md)), serves the CLI's own `--json`
+> ([ADR-0068](../../architecture/decisions/0068-the-hub.md)), serves the CLI's own `--json`
 > documents under `/api/v1`, with an OpenAPI 3.1 document to generate clients from. Still
 > owed to the clients: the live feed (the hub's next change) and device pairing (the one
 > after), without which no device off the host can hold a principal. The desktop app is
