@@ -16,7 +16,7 @@ from vibey.domain.capacity import CreditsExhausted
 from vibey.domain.engine import EngineId
 from vibey.domain.job import FailureClass
 from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
-from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP, QWENLOOP
 from vibey.infrastructure.engines.loop_process_adapter import (
     EXIT_CODE_WIND_DOWN,
     LoopProcessAdapter,
@@ -1290,6 +1290,32 @@ async def test_stop_remaining_work_round_trips_through_snapshot(tmp_path: Path) 
 
     summary = await adapter.stop(handle)
     assert summary.remaining_work == ("task-a", "task-b")
+
+
+@pytest.mark.parametrize(
+    ("descriptor", "relative_inbox", "suffix", "payload"),
+    [
+        (CLAUDELOOP, Path("inbox"), ".cmd.json", {"type": "stop"}),
+        (CODEXLOOP, Path("inbox"), ".json", {"kind": "stop"}),
+        (QWENLOOP, Path("control/inbox"), ".json", {"type": "stop"}),
+    ],
+)
+async def test_stop_writes_the_runner_control_contract(
+    tmp_path: Path,
+    descriptor,
+    relative_inbox: Path,
+    suffix: str,
+    payload: dict[str, str],
+) -> None:
+    run_dir = tmp_path / descriptor.engine_id.value
+    run_dir.mkdir(parents=True)
+    (run_dir / "stop-summary.md").write_text("Run stopped normally.")
+
+    await LoopProcessAdapter(descriptor=descriptor).stop(_make_handle(run_dir))
+
+    files = list((run_dir / relative_inbox).glob(f"*{suffix}"))
+    assert len(files) == 1
+    assert json.loads(files[0].read_text()) == payload
 
 
 async def test_stop_handles_corrupt_snapshot_gracefully(tmp_path: Path) -> None:
