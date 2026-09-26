@@ -147,7 +147,7 @@ ref through by its own rule. The timer must run a `vibey-gh` installed outside a
 install it as a tool first and run the install with it:
 
 ```bash
-uv tool install --force --from . vibey
+uv tool install --force --from . vibey-engine
 ~/.local/bin/vibey-gh heartbeat install --load
 ~/.local/bin/vibey-gh heartbeat status
 uv run vibey-gh sovereign            # the heartbeat's age, as the workflow reads it
