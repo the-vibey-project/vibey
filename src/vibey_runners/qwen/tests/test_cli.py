@@ -807,6 +807,31 @@ def test_run_flag_beats_config_for_max_turns(
     assert recording_runner[0]["max_turns"] == 96
 
 
+def test_extreme_effort_uses_finite_ultra_budget_when_unconfigured(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    recording_runner: list[dict[str, object]],
+) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    plan = tmp_path / "plan.md"
+    plan.write_text("stabilize it")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            str(plan),
+            "--cwd",
+            str(tmp_path),
+            "--backend",
+            "openai-compat",
+            "--effort",
+            "extreme",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert recording_runner[0]["max_turns"] == 120
+
+
 def test_run_hands_the_declared_empty_reply_bound_to_the_runner(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
