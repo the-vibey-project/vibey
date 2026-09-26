@@ -1859,9 +1859,9 @@ def main(argv: list[str] | None = None) -> int:
         ("bump", "promote an issue above ordinary priority"),
         ("unbump", "remove an issue promotion"),
     ):
-        command = triage_sub.add_parser(action, help=help_text)
-        command.add_argument("--issue", type=int, required=True)
-        command.set_defaults(func=_issue_triage)
+        triage_command = triage_sub.add_parser(action, help=help_text)
+        triage_command.add_argument("--issue", type=int, required=True)
+        triage_command.set_defaults(func=_issue_triage)
     triage_labels = triage_sub.add_parser("ensure-labels", help="create triage labels")
     triage_labels.set_defaults(func=_issue_triage)
 
