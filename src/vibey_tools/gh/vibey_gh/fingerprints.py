@@ -17,6 +17,7 @@ trailer covers those without touching them.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -80,6 +81,24 @@ def normalize_commit_message(message: str) -> str:
     if subject and not conventional_subject(subject):
         return f"chore: {subject}{carriage_return}{separator}{rest}"
     return message
+
+
+def normalize_provenance_message(message: str, cfg: GhConfig | None = None) -> str:
+    """Normalize a topic commit and append the configured provenance trailer.
+
+    This is reserved for the guarded Dependabot repair workflow. Human-authored commits
+    still go through the normal hook, while this bookkeeping-only repair lets the bot's
+    same-repository branch satisfy the repository's provenance contract automatically.
+    """
+    cfg = cfg or load_config()
+    normalized = normalize_commit_message(message).rstrip()
+    if not normalized:
+        return message
+    pattern = re.compile(rf"^{re.escape(cfg.trailer_key)}:\s*\S", re.MULTILINE | re.IGNORECASE)
+    if pattern.search(normalized):
+        return normalized + "\n"
+    trailer = os.environ.get("VIBEY_GH_PROVENANCE_TRAILER") or cfg.trailer
+    return f"{normalized}\n\n{trailer}\n"
 
 
 def commits_with_invalid_subject(rev_range: str, cfg: GhConfig) -> list[str]:

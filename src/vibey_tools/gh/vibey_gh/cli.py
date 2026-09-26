@@ -187,11 +187,29 @@ def _conventional_message(args) -> int:
     return 0
 
 
+def _provenance_message(args) -> int:
+    message = args.file.read_text(encoding="utf-8") if args.file else sys.stdin.read()
+    normalized = fingerprints.normalize_provenance_message(message)
+    if args.file:
+        args.file.write_text(normalized, encoding="utf-8")
+    else:
+        print(normalized, end="")
+    return 0
+
+
 def _conventional_check(args) -> int:
     invalid = fingerprints.commits_with_invalid_subject(args.commits, load_config())
     for commit in invalid:
         print(commit)
     return 1 if invalid else 0
+
+
+def _provenance_check(args) -> int:
+    cfg = load_config()
+    missing = fingerprints.commits_missing_trailer(args.commits, cfg)
+    for commit in missing:
+        print(commit)
+    return 1 if missing else 0
 
 
 def _version(args) -> int:
@@ -1707,11 +1725,23 @@ def main(argv: list[str] | None = None) -> int:
     conventional.add_argument("--file", type=Path, help="rewrite this commit-message file")
     conventional.set_defaults(func=_conventional_message)
 
+    provenance_message = sub.add_parser(
+        "provenance-message", help="normalize a commit subject and add the provenance trailer"
+    )
+    provenance_message.add_argument("--file", type=Path, help="rewrite this commit-message file")
+    provenance_message.set_defaults(func=_provenance_message)
+
     conventional_check = sub.add_parser(
         "conventional-check", help="verify Conventional Commit subjects in a range"
     )
     conventional_check.add_argument("--commits", required=True, metavar="RANGE")
     conventional_check.set_defaults(func=_conventional_check)
+
+    provenance_check = sub.add_parser(
+        "provenance-check", help="verify provenance trailers in a commit range"
+    )
+    provenance_check.add_argument("--commits", required=True, metavar="RANGE")
+    provenance_check.set_defaults(func=_provenance_check)
 
     sab = sub.add_parser("sabbath", help="the Sabbath window on this host (sub-doctrine 8.i)")
     sab.add_argument("action", choices=("status", "register-lane", "resume"))
