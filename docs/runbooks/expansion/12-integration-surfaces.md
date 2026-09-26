@@ -1,7 +1,7 @@
 # Runbook: integration surfaces — MCP, API, webhooks, skills, SDKs (all repos)
 
 > **Status (2026-09-25):** work item 1 delivered by the hub, `vibey serve`
-> ([ADR-0067](../../architecture/decisions/0067-the-hub.md)): the FastAPI server on
+> ([ADR-0068](../../architecture/decisions/0068-the-hub.md)): the FastAPI server on
 > `vibey_bootstrap`, scoped auth, the resource routes over the same application services the
 > CLI calls, and the OpenAPI freeze test (`docs/reference/hub-api.json`). Two things changed
 > from the design below: the scopes are `view`, `answer`, `spend`, `run` and `bump` (not
