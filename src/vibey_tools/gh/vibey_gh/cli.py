@@ -20,6 +20,7 @@ from vibey_gh import (
     github_release,
     install,
     issue_automation,
+    issue_triage,
     merge_train,
     operation_estimate,
     pr_automation,
@@ -469,6 +470,27 @@ def _issue_automation(args) -> int:
         else:  # pragma: no cover - argparse constrains this
             raise ValueError(f"unknown action: {args.action}")
     except (OSError, RuntimeError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        print(f"vibey-gh: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _issue_triage(args) -> int:
+    try:
+        if args.action == "sweep":
+            items = issue_triage.triage()
+            print(issue_triage.summary(items), end="")
+        elif args.action in {"bump", "unbump"}:
+            issue_triage.set_bump(args.issue, args.action == "bump")
+            print(
+                f"vibey-gh: {'bumped' if args.action == 'bump' else 'unbumped'} issue #{args.issue}"
+            )
+        elif args.action == "ensure-labels":
+            issue_triage.ensure_labels()
+            print("vibey-gh: issue triage labels are ready")
+        else:  # pragma: no cover
+            raise ValueError(f"unknown action: {args.action}")
+    except (RuntimeError, ValueError, TypeError) as exc:
         print(f"vibey-gh: {exc}", file=sys.stderr)
         return 1
     return 0
@@ -1828,6 +1850,20 @@ def main(argv: list[str] | None = None) -> int:
         "ensure-labels", help="create or update issue automation labels"
     )
     issue_labels.set_defaults(func=_issue_automation)
+
+    issue_triage_parser = sub.add_parser("issue-triage", help="classify and order all open issues")
+    triage_sub = issue_triage_parser.add_subparsers(dest="action", required=True)
+    triage_sweep = triage_sub.add_parser("sweep", help="reconcile every open issue")
+    triage_sweep.set_defaults(func=_issue_triage)
+    for action, help_text in (
+        ("bump", "promote an issue above ordinary priority"),
+        ("unbump", "remove an issue promotion"),
+    ):
+        command = triage_sub.add_parser(action, help=help_text)
+        command.add_argument("--issue", type=int, required=True)
+        command.set_defaults(func=_issue_triage)
+    triage_labels = triage_sub.add_parser("ensure-labels", help="create triage labels")
+    triage_labels.set_defaults(func=_issue_triage)
 
     release = sub.add_parser(
         "github-release", help="idempotently create an immutable version tag and GitHub Release"
