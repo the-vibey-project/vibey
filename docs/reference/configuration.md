@@ -531,7 +531,7 @@ are documented in the vibey-gh
 ```toml
 # .vibey-gh.toml
 [local_models]
-concurrent_runs = 1
+concurrent_runs = "measured"
 model = "gpt-oss:20b"
 context_window = 65536
 ```
