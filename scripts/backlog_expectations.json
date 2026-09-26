@@ -305,6 +305,77 @@
       "next": "tooltip guide + getting-started guide per client",
       "probes": []
     },
+    "1185": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "hub API CRUD expansion first (Lane E), then chat surfaces",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "clients/app/src",
+              "clients/desktop/src"
+            ],
+            "pattern": "ChatScreen|GlobalChat|PerScreenChat"
+          }
+        }
+      ]
+    },
+    "1186": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "decide spawn-vs-require (health-probe + spawn)",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "clients/app/src",
+              "clients/desktop/src",
+              "clients/vscode/src"
+            ],
+            "pattern": "ensureEngine|engine.*spawn|spawn.*serve|autostart.*engine"
+          }
+        }
+      ]
+    },
+    "1188": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "per-OS matrix decision after #1116",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "deploy",
+              "clients/desktop/packaging",
+              "src/vibey/domain/local_stack.py"
+            ],
+            "pattern": "[Ff]edora"
+          }
+        }
+      ]
+    },
+    "1189": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "single-instance lock design + multiproject stress evidence",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/cli",
+              "clients/desktop/src",
+              "clients/app/src"
+            ],
+            "pattern": "single.instance|singleton|SingleInstance|already running"
+          }
+        }
+      ]
+    },
     "133": {
       "close_when_done": false,
       "kind": "standalone",
