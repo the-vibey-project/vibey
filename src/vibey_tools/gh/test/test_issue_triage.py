@@ -1,8 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import subprocess
+from argparse import Namespace
 from unittest.mock import patch
 
-from vibey_gh import issue_triage as it
+from vibey_gh import cli, issue_triage as it
 
 
 def issue(number=1, title="A feature", labels=(), created="2026-01-01T00:00:00Z"):
@@ -79,3 +80,9 @@ def test_summary_handles_empty_and_bumped_rows():
     item = it.rank(issue(4, "urgent", (it.BUMPED,)))
     assert "bumped" in it.summary([item])
     assert it.summary([]).endswith("|---:|---|---|\n")
+
+
+def test_cli_reports_triage_command_failures(capsys):
+    with patch.object(it, "set_bump", side_effect=RuntimeError("denied")):
+        assert cli._issue_triage(Namespace(action="bump", issue=7)) == 1
+    assert "vibey-gh: denied" in capsys.readouterr().err
