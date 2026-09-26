@@ -85,11 +85,9 @@ def fetch_open_issues(limit: int = 1000) -> list[dict[str, Any]]:
         "--limit",
         str(limit),
         "--json",
-        "number,title,body,labels,createdAt,isPullRequest",
+        "number,title,body,labels,createdAt",
     )
-    return [
-        item for item in value or [] if isinstance(item, dict) and not item.get("isPullRequest")
-    ]
+    return [item for item in value or [] if isinstance(item, dict)]
 
 
 def rank(issue: dict[str, Any]) -> RankedIssue:
