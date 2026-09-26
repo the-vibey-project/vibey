@@ -26,7 +26,7 @@ typedef enum {
 
 /* "io.github.the_vibey_project.Krypton", "...Krypton.Nightly". Static. */
 const char *kr_channel_app_id(KrChannel channel);
-/* "Krypton", "Krypton Nightly". Static. */
+/* "krypton", "krypton nightly". Static. */
 const char *kr_channel_display_name(KrChannel channel);
 /* The directory name for this channel's data: "krypton", "krypton-nightly". Static. */
 const char *kr_channel_dir_name(KrChannel channel);

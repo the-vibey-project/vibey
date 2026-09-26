@@ -44,7 +44,7 @@ announce_gates(KrApp *app, GPtrArray *fresh)
         const KrGate *gate = g_ptr_array_index(fresh, i);
         g_autoptr(GNotification) notification = g_notification_new("A gate needs you");
         g_autofree char *body =
-            g_strdup_printf("%s: %s", gate->project_name != NULL ? gate->project_name : "vibey",
+            g_strdup_printf("%s: %s", gate->project_name != NULL ? gate->project_name : "krypton",
                             gate->prompt != NULL ? gate->prompt : gate->kind);
         g_notification_set_body(notification, body);
         g_notification_set_priority(notification, G_NOTIFICATION_PRIORITY_HIGH);
@@ -69,7 +69,7 @@ on_answered(GObject *source, GAsyncResult *result, gpointer data)
         return;
     }
     if (body != NULL) {
-        kr_app_toast(app, "Answered. vibey carries on.");
+        kr_app_toast(app, "Answered. krypton carries on.");
         kr_app_refresh(app);
     } else {
         kr_app_toast(app, status != 0 ? kr_hub_status_text(status) : error->message);

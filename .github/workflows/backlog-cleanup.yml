@@ -1,0 +1,117 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Backlog cleanup
+
+# Once an hour, and by hand -- never per event. The loop only ever touches an issue
+# whose freshly computed verdict differs from its marker (or that has no marker), so
+# an hourly run is normally a no-op: survey, compare, change nothing. At most
+# MAX_ACTIONS forge mutations per run, paced past the secondary rate limit, and a
+# throttle response stops the run cleanly. Modelled on delivery-estimate.yml.
+on:
+  schedule:
+    - cron: "47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+# One run at a time, keyed on the repository: the publish job commits the
+# expectations file, so two cleanups must never overlap. Every run recomputes
+# every verdict from the whole expectations file plus the live tree and forge
+# rather than advancing a cursor, so a cancelled run leaves no gap -- the next
+# one derives the same answer from scratch (the delivery-estimate 12.g pattern).
+concurrency:
+  group: backlog-cleanup-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    name: Survey the backlog and apply only changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Run the backlog loop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python scripts/backlog_cleanup.py --check --cutoff "${GITHUB_SHA}"
+          python scripts/backlog_cleanup.py --apply --cutoff "${GITHUB_SHA}" --repo "${GH_REPO}"
+
+  publish:
+    name: Publish changed expectations
+    # Only repository-controlled automation may receive contents: write. In
+    # particular, an issue can be opened by anyone, so a non-schedule event must
+    # never reach the commit-and-push job.
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    needs: cleanup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Run the backlog loop with write permission
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python scripts/backlog_cleanup.py --apply --cutoff "${GITHUB_SHA}" --repo "${GH_REPO}"
+
+      - name: Publish the changed expectations
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          CLEANUP_BRANCH: automation/backlog-cleanup
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$CLEANUP_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$CLEANUP_BRANCH"
+          fi
+          git fetch origin develop
+          git switch --force-create "$CLEANUP_BRANCH" origin/develop
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/backlog_expectations.json
+          if git diff --cached --quiet; then
+            echo "backlog expectations are unchanged"
+            exit 0
+          fi
+          git commit -m "chore(backlog): refresh backlog expectations" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$CLEANUP_BRANCH" origin "HEAD:$CLEANUP_BRANCH"
+          pr_number="$(gh pr list --repo "$GH_REPO" --head "$CLEANUP_BRANCH" --base develop --state open --json number --jq '.[0].number')"
+          if [ -n "$pr_number" ]; then
+            echo "updated the existing backlog-cleanup pull request"
+          else
+            gh pr create \
+              --repo "$GH_REPO" \
+              --base develop \
+              --head "$CLEANUP_BRANCH" \
+              --title "chore(backlog): refresh backlog expectations" \
+              --body "Automated refresh of the backlog loop's declared expectations. Merge through the repository's normal train after the generated diff passes its checks."
+          fi

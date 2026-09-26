@@ -550,7 +550,7 @@
         "vibey.cliPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The `vibey` program to run. Empty: the first `vibey` on your PATH. **Vibey: Check my setup** prints the one it found and its version."
+          "markdownDescription": "The `vibey` program to run. Empty: the first `vibey` on your PATH. **krypton: Check my setup** prints the one it found and its version."
         },
         "vibey.gptossloopPath": {
           "type": "string",
@@ -769,8 +769,8 @@
     },
     "chatParticipants": [
       {
-        "id": "vibey.chat",
-        "name": "vibey",
+        "id": "krypton.chat",
+        "name": "krypton",
         "fullName": "krypton",
         "description": "Run tasks on your own computer's model, and drive vibey: projects, gates, lanes, budgets.",
         "isSticky": true,

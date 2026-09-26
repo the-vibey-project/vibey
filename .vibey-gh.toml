@@ -75,6 +75,7 @@ release     = "main"
 [sabbath]
 timezone              = "America/New_York"
 coarse_margin_minutes = 90
+enabled=false
 
 [merge_train]
 owner           = "adammatthewsteinberger"

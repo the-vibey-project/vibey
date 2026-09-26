@@ -313,7 +313,7 @@ render_gates(KrWindow *self)
         g_autofree char *raised = kr_format_relative(gate->raised_at, now);
         g_autofree char *subtitle =
             g_strdup_printf("%s · %s · raised %s",
-                            gate->project_name != NULL ? gate->project_name : "vibey",
+                            gate->project_name != NULL ? gate->project_name : "krypton",
                             gate->kind, raised);
         GtkWidget *expander = adw_expander_row_new();
         adw_preferences_row_set_use_markup(ADW_PREFERENCES_ROW(expander), FALSE);
@@ -627,7 +627,7 @@ build_settings(KrWindow *self)
     gtk_list_box_append(list, switch_row(self, "Notifications",
                                          "Say when a gate needs you, even with the window closed",
                                          &self->app->settings->notifications));
-    gtk_list_box_append(list, switch_row(self, "Sounds", "Play vibey's own sounds with them",
+    gtk_list_box_append(list, switch_row(self, "Sounds", "Play krypton's own sounds with them",
                                          &self->app->settings->sounds));
     g_autofree char *about = g_strdup_printf("%s %s", kr_channel_display_name(self->app->channel),
                                              KRYPTON_VERSION);
@@ -800,7 +800,7 @@ kr_window_new(KrApp *app)
     };
     const char *const empty_descriptions[KR_WINDOW_PAGES] = {
         "Start one with: vibey new NAME --repo PATH",
-        "When vibey needs a decision, it appears here and Krypton tells you.",
+        "When krypton needs a decision, it appears here and krypton tells you.",
         "Lanes started on this computer appear here as they run.",
         "Krypton asks the hub which loops, engines and efforts there are.",
         "Pick a project to see what it has spent this cycle.",

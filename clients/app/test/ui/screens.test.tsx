@@ -53,7 +53,7 @@ describe('screens', () => {
     expect(await screen.findByText('1 gate needs you')).toBeTruthy();
     expect(screen.getByText('Greeter')).toBeTruthy();
     expect(screen.getByText('Cycle 1 of 3')).toBeTruthy();
-    expect(screen.getByLabelText('Krypton')).toBeTruthy();
+    expect(screen.getByLabelText('krypton')).toBeTruthy();
   });
 
   it('Gates answers a review with a verdict, and re-verifies a gate that spends', async () => {
@@ -123,7 +123,7 @@ describe('screens', () => {
     await fireEvent.press(screen.getByText('Dark'));
     await fireEvent(screen.getByLabelText('A gate needs you'), 'valueChange', false);
     expect(screen.getByLabelText('A gate needs you').props.value).toBe(false);
-    expect(screen.getByText(/Channel: Krypton/)).toBeTruthy();
+    expect(screen.getByText(/Channel: krypton/)).toBeTruthy();
   });
 
   it('Pairing says plainly that codes wait for the hub, and a host token connects', async () => {

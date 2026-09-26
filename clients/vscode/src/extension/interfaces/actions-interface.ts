@@ -1,5 +1,5 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-/** Every command of the one command table, implemented once: palette, menu, panel and @vibey. */
+/** Every command of the one command table, implemented once: palette, menu, panel and @krypton. */
 import type { TaskPanelInterface } from './panel-interface';
 import type { TreeElement } from './trees-interface';
 
@@ -7,7 +7,7 @@ import type { TreeElement } from './trees-interface';
 export interface Invocation {
   /** The item a view's menu ran it on. */
   readonly element?: TreeElement;
-  /** What followed a slash command, typed in the panel or after @vibey. */
+  /** What followed a slash command, typed in the panel or after @krypton. */
   readonly args?: string;
   /** Where replies go: a notification, the panel, or the chat. */
   readonly say: (text: string) => void;

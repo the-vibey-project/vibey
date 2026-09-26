@@ -3,7 +3,7 @@
 pkgname=krypton-desktop
 pkgver=0.1.0
 pkgrel=1
-pkgdesc='The desktop app for vibey'
+pkgdesc='The desktop app for krypton'
 arch=('x86_64' 'aarch64')
 url='https://github.com/the-vibey-project/vibey'
 license=('MIT')
