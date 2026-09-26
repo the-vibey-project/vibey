@@ -653,11 +653,28 @@ class LoopProcessAdapter:
 
     async def stop(self, handle: RunHandle) -> StopSummary:
         """Send stop signal and collect stop-summary.md."""
-        # Write stop signal to inbox
-        inbox = handle.run_dir / "inbox"
+        # Write the control shape consumed by the selected runner.  The old
+        # generic ``*-stop.json`` file was invisible to every real runner:
+        # paid loops poll ``*.cmd.json`` and the sovereign runner polls
+        # ``control/inbox/*.json``.
+        if self.descriptor.engine_id in {
+            EngineId.GPTOSSLOOP,
+            EngineId.QWENLOOP,
+        }:
+            inbox = handle.run_dir / "control" / "inbox"
+            suffix = ".json"
+            payload = {"type": "stop"}
+        elif self.descriptor.engine_id is EngineId.CODEXLOOP:
+            inbox = handle.run_dir / "inbox"
+            suffix = ".json"
+            payload = {"kind": "stop"}
+        else:
+            inbox = handle.run_dir / "inbox"
+            suffix = ".cmd.json"
+            payload = {"type": "stop"}
         inbox.mkdir(parents=True, exist_ok=True)
-        stop_file = inbox / f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%f')}-stop.json"
-        stop_file.write_text(json.dumps({"command": "stop"}))
+        stop_file = inbox / (f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%f')}-stop{suffix}")
+        stop_file.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
         # Wait for stop-summary.md (with timeout)
         summary_path = handle.run_dir / "stop-summary.md"
