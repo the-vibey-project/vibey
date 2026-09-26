@@ -5,6 +5,14 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `[documentation] site_root_files` declares repository-relative files copied
+  by basename into the Pages root on every release-surfaces deploy — the declared answer
+  to Search Console's "HTML file" verification, which a hand-uploaded file cannot give
+  because each rebuild wipes the Pages root. Entries must stay inside the repository,
+  carry no whitespace or shell metacharacters, and have unique file names; a declared
+  file missing from the checkout fails the deploy rather than publishing without it.
+  Empty (the default) copies nothing. See configuration.md.
+
 - **Feature:** `vibey-gh announce` posts a concise changelog with every documentation deploy,
   replacing the release-surfaces workflow's inline announcement. It lists one line per merged
   change (its Conventional Commit subject, the type turned into a word, the PR linked), grouped

@@ -16,7 +16,7 @@ import shutil
 import stat
 import subprocess
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from vibey_gh import dependabot
 from vibey_gh.automation_bootstrap import AutomationBootstrapGate
@@ -135,6 +135,37 @@ def _favicon_links(spec: str) -> str:
     )
     uri = "data:image/svg+xml," + _up.quote(svg)
     return f'<link rel="icon" href="{uri}"><link rel="apple-touch-icon" href="{uri}">'
+
+
+def _site_root_files_block(paths: tuple[str, ...]) -> str:
+    """Shell lines copying declared files by basename into the Pages root.
+
+    The placeholder stands alone on its own indented line in the template, so the
+    first emitted line inherits that indent and the join below supplies the same
+    ten spaces to every following line; body lines carry only their own two extra
+    spaces. Paths are shell-quoted at render time;
+    `load_config` has already refused anything outside the repository or carrying
+    whitespace or shell metacharacters. A declared file missing from the checkout
+    fails the deploy: verification that silently stops being served is worse than
+    a red build.
+    """
+    indent = " " * 10
+    if not paths:
+        return "# No documentation.site_root_files declared; nothing to copy."
+    lines = []
+    for path in paths:
+        name = PurePosixPath(path).name
+        quoted = shlex.quote(path)
+        lines.append(f"if [ -f {quoted} ]; then")
+        lines.append(f"  cp {quoted} pages/")
+        lines.append(f"  echo {shlex.quote(f'site root: published {name}')}")
+        lines.append("else")
+        lines.append(
+            f"  echo {shlex.quote('::error::documentation.site_root_files names ' + path + ' which is not in this checkout; refusing to publish without it.')}"
+        )
+        lines.append("  exit 1")
+        lines.append("fi")
+    return f"\n{indent}".join(lines)
 
 
 def _strip_trailing_space(text: str) -> str:
@@ -418,6 +449,9 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace("__VIBEY_GH_DOC_THEME_COLOR__", docs.theme_color)
     wanted = wanted.replace("__VIBEY_GH_DOC_LOCALE__", docs.locale)
     wanted = wanted.replace("__VIBEY_GH_DOC_SITE_VERIFICATION__", docs.google_site_verification)
+    wanted = wanted.replace(
+        "__VIBEY_GH_DOC_SITE_ROOT_FILES__", _site_root_files_block(docs.site_root_files)
+    )
     wanted = wanted.replace(
         "__VIBEY_GH_DOC_SITE_VERIFICATION_TAG__",
         (

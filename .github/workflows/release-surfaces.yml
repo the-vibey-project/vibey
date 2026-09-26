@@ -245,7 +245,7 @@ jobs:
         # "Restore the other release channel" has the whole story.
         run: |
           set -euo pipefail
-          export GA_ID="G-DMYG7PHCQP"
+          export GA_ID="G-R673ZXZDFT"
           python -m pip install --quiet \
             'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7'
           # LaTeX on the site: arithmatex keeps math intact through the Markdown pass.
@@ -1157,7 +1157,7 @@ jobs:
           RELEASE_BRANCH: ${{ needs.context.outputs.branch }}
           RELEASE_CHANNEL: ${{ needs.context.outputs.channel }}
           RELEASE_SHA: ${{ needs.context.outputs.sha }}
-          GA_ID: "G-DMYG7PHCQP"
+          GA_ID: "G-R673ZXZDFT"
         run: |
           set -euo pipefail
           # GA_ID was a shell variable set in the restore step and read here, hundreds of
@@ -1284,6 +1284,17 @@ jobs:
             <sitemap><loc>${PAGES_ROOT}develop/sitemap.xml</loc></sitemap>
           </sitemapindex>
           EOF
+          fi
+          # Declared site-root files (documentation.site_root_files): copied by basename
+          # into the Pages root on EVERY deploy, so a Search Console HTML verification
+          # file survives the rebuild that wipes a hand-uploaded one. A declared file
+          # missing from the checkout fails the deploy rather than publishing without it.
+          if [ -f googleebf918639d02415d.html ]; then
+            cp googleebf918639d02415d.html pages/
+            echo 'site root: published googleebf918639d02415d.html'
+          else
+            echo '::error::documentation.site_root_files names googleebf918639d02415d.html which is not in this checkout; refusing to publish without it.'
+            exit 1
           fi
           # The paper and the book on the LLM-facing index as well, only where they exist.
           # SURFACE_LINES is built and consumed inside THIS step. It must stay that way:

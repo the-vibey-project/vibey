@@ -743,6 +743,7 @@ author_name = "Adam Matthew Steinberger"
 author_url = "https://vibewithadam.matthewsteinberger.com"
 google_analytics_id = ""                    # empty disables it; set a GA4 ID like "G-XXXXXXXXXX" to enable
 google_site_verification = ""                # bare Search Console "HTML tag" token; leave empty to skip verification
+site_root_files = []                         # e.g. ["googleebf918639d02415d.html"]: copied by basename to the Pages root on every deploy
 # ProperDocs depends on none of the plugins your site declares, so a site using
 # mkdocs-gen-files or pymdownx.* must name them here or the --strict build fails.
 site_requirements = []                      # e.g. ["mkdocs-gen-files", "pymdown-extensions>=10.7"]
@@ -790,7 +791,11 @@ Console without an uploaded verification file, which release-surfaces would othe
 wipe on every rebuild of the Pages root. Set it to the bare token from Search Console's
 "HTML tag" verification method — the `content="..."` value, not the whole `<meta>` tag —
 and it is rendered into a `<meta name="google-site-verification">` tag on every published
-page and the channel-picker landing page, so verification survives redeploys.
+page and the channel-picker landing page, so verification survives redeploys. If Search
+Console gave you the "HTML file" method instead, declare the file under
+`site_root_files` and commit the file to the repository: it is copied by basename to the
+Pages root on every deploy, and a deploy whose checkout is missing a declared file fails
+rather than publishing without it.
 
 Sanitized progress is the safe default. Claude's progress-comment mode is enabled only for
 the direct PR/issue events the action supports; `workflow_run`, `workflow_dispatch`, and

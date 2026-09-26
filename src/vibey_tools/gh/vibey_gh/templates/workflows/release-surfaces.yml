@@ -1285,6 +1285,11 @@ jobs:
           </sitemapindex>
           EOF
           fi
+          # Declared site-root files (documentation.site_root_files): copied by basename
+          # into the Pages root on EVERY deploy, so a Search Console HTML verification
+          # file survives the rebuild that wipes a hand-uploaded one. A declared file
+          # missing from the checkout fails the deploy rather than publishing without it.
+          __VIBEY_GH_DOC_SITE_ROOT_FILES__
           # The paper and the book on the LLM-facing index as well, only where they exist.
           # SURFACE_LINES is built and consumed inside THIS step. It must stay that way:
           # a later step would see it empty and silently drop every offline surface from
