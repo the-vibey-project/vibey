@@ -10,6 +10,7 @@ from qwenloop.domain.config import (
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
     DEFAULT_SKIP_DIRS,
+    Effort,
     QwenConfig,
     QwenConfigParser,
     ToolLimits,
@@ -307,3 +308,14 @@ def test_the_two_engines_differ_only_in_name_prefix_and_model() -> None:
     ) == ("GPTOSSLOOP_CONFIG", "GPTOSSLOOP_BASE_URL", "GPTOSSLOOP_MODEL", "GPTOSSLOOP_API_KEY")
     assert QWENLOOP.env_model == "QWENLOOP_MODEL"
     assert QwenConfigParser(default_model="qwen3:14b").parse({}).model == "qwen3:14b"
+
+
+def test_extreme_is_finite_and_matches_ultra_budget() -> None:
+    assert Effort.EXTREME.default_max_turns == Effort.ULTRA.default_max_turns
+    assert Effort.EXTREME.default_max_turns > Effort.STANDARD.default_max_turns
+
+
+def test_effort_parser_rejects_unknown_values() -> None:
+    assert Effort.parse("EXTREME") is Effort.EXTREME
+    with pytest.raises(ValueError, match="expected one of"):
+        Effort.parse("eternal")

@@ -36,6 +36,7 @@ from qwenloop.domain.config import (
     DEFAULT_QWEN_ENDPOINT_MODEL,
     GPTOSSLOOP,
     QWENLOOP,
+    Effort,
     QwenConfig,
     RunnerIdentity,
     ToolLimits,
@@ -168,11 +169,14 @@ def run(
         help="Send lifecycle desktop alerts; macOS alerts use the Ping sound.",
     ),
 ) -> None:
-    del preset, effort
+    del preset
+    selected_effort = Effort.parse(effort)
     if storm:
         if plan is not None:
             raise typer.BadParameter("pass either PLAN or --storm, not both")
         config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
+        if max_turns is None and selected_effort is not Effort.STANDARD:
+            config = replace(config, max_turns=selected_effort.default_max_turns)
         _run_storm(
             owner=owner,
             repos_root=repos_root,
@@ -186,6 +190,8 @@ def run(
     if plan is None:
         raise typer.BadParameter("PLAN is required unless --storm is set")
     config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
+    if max_turns is None and selected_effort is not Effort.STANDARD and config.max_turns == 40:
+        config = replace(config, max_turns=selected_effort.default_max_turns)
     _run_single(plan, run_id, cwd, config, desktop_notifications=desktop_notifications)
 
 
