@@ -35,15 +35,17 @@ reaper is a different reaper over a different lock; if the two converge, this mo
 import hashlib
 import json
 import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from typing import Final
+from typing import ClassVar, Final
 
 from vibey.domain.interfaces.queue_reap_interface import (
     DeadLetterInterface,
     DeadLetterPeekInterface,
     HeldWorkInterface,
+    QueueAttachmentInterface,
     QueueDepthInterface,
     QueueReapPolicyInterface,
     ReapThresholdsInterface,
@@ -75,7 +77,24 @@ class ReapAction(StrEnum):
     """A parked job and a ``human_gate`` row: a person decides, and no worker waits."""
 
     SURFACE = "surface"
-    """Reported loudly -- the ledger, the log, ``vibey queue reap`` -- and nothing moved."""
+    """Reported loudly -- the ledger, the log, ``vibey queue reap`` -- and nothing moved.
+    Recorded once per sighting, fleet-wide: the ledger holds the sighting open until a pass
+    that read the source whole no longer sees it."""
+
+    CLEARED = "cleared"
+    """A surfaced sighting that a later whole read no longer found: it closes the sighting,
+    so its return is a new one (#1108 review finding 4)."""
+
+
+class ReapSource(StrEnum):
+    """Where a verdict was measured -- and so who wrote the names in it."""
+
+    JOB_QUEUE = "job_queue"
+    """vibey's own PostgreSQL job queue: vibey's rows, vibey's words (`trusted`)."""
+
+    BROKER = "broker"
+    """A queue on the broker. Anyone with the broker's credentials names its queues and
+    writes its messages' headers, so what a broker verdict names is `untrusted` (SD-01 §4)."""
 
 
 class HolderState(StrEnum):
@@ -138,6 +157,8 @@ class HeldWork:
     can_dead_letter: bool = False
     """Whether the queue it came from has a dead-letter queue to reject it into."""
 
+    source: ReapSource = ReapSource.JOB_QUEUE
+
 
 @dataclass(frozen=True, slots=True)
 class QueueDepth:
@@ -157,6 +178,12 @@ class QueueDepth:
     owned: bool = False
     """Whether vibey owns the queue. A reaper acts only on what vibey owns; everything
     else on a shared broker -- Plane's Celery queues -- is surfaced and left alone."""
+
+    source: ReapSource = ReapSource.BROKER
+    kind: str = ""
+    """The broker's queue type (`classic`, `quorum`, `stream`), where it reports one. A
+    quorum queue reports no head-message timestamp, so its ready age is never measured
+    (#1108 review finding 12)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -223,13 +250,18 @@ class DeadLetterPeek:
 
 @dataclass(frozen=True, slots=True)
 class BrokerPolicy:
-    """The broker policy vibey reconciles onto the queues it owns, from ``[queue.reap]``.
+    """The broker policies vibey reconciles onto the queues it owns, from ``[queue.reap]``.
 
     ``consumer-timeout`` bounds a hung handler at the broker (a): past it the broker
     closes the channel and every delivery it held is requeued. ``delivery-limit`` bounds a
-    poison message (c) on a quorum queue: past it the broker dead-letters it. Classic
-    queues ignore ``delivery-limit``; that is RabbitMQ's rule, stated here so nobody reads
-    the key as a guarantee it is not.
+    poison message (c) on a quorum queue: past it the broker dead-letters it.
+
+    **Two policies, one per queue type** (#1108 review finding 2). Observed on the pinned
+    image (RabbitMQ 4.3.6): a policy whose definition holds ``delivery-limit`` does not
+    attach to a classic queue at all -- it did not merely ignore the key, it left the queue
+    with no policy, so its ``consumer-timeout`` never applied either. So quorum queues get
+    ``name`` (both keys, ``apply-to: quorum_queues``) and classic queues get
+    ``<name>-classic`` (``consumer-timeout`` only, ``apply-to: classic_queues``).
     """
 
     name: str
@@ -239,19 +271,40 @@ class BrokerPolicy:
     priority: int = 0
     dead_letter_pattern: str = r"(\.dlq|\.dead)$"
 
+    FOREIGN_CANARIES: ClassVar[tuple[str, ...]] = (
+        "celery",
+        "celery.pidbox",
+        "celeryev.canary",
+        "amq.gen-canary",
+    )
+    """Names on a shared broker that are certainly not vibey's: Plane's Celery queues and
+    the broker's own server-named queues. A pattern that owns one would put a policy on it,
+    and park its dead letters, so it is refused (#1108 review)."""
+
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("a broker policy needs a name")
         patterns = (("pattern", self.pattern), ("dead_letter_pattern", self.dead_letter_pattern))
         for label, pattern in patterns:
             try:
-                re.compile(pattern)
+                compiled = re.compile(pattern)
             except re.error as exc:
                 raise ValueError(f"{label} is not a regular expression: {exc}") from exc
+            if compiled.search("") is not None:
+                raise ValueError(
+                    f"{label} {pattern!r} matches every queue name; name the queues it means"
+                )
+        foreign = [name for name in self.FOREIGN_CANARIES if self.owns(name)]
+        if foreign:
+            raise ValueError(
+                f"pattern {self.pattern!r} would own {foreign[0]!r}, a queue vibey does not own"
+            )
         if self.consumer_timeout_ms < 1:
             raise ValueError("consumer_timeout_ms must be at least 1")
         if self.delivery_limit < 1:
             raise ValueError("delivery_limit must be at least 1")
+        if self.priority < 0:
+            raise ValueError("priority must not be negative")
 
     def owns(self, queue: str) -> bool:
         return re.search(self.pattern, queue) is not None
@@ -259,32 +312,104 @@ class BrokerPolicy:
     def is_dead_letter(self, queue: str) -> bool:
         return re.search(self.dead_letter_pattern, queue) is not None
 
-    def definition(self) -> dict[str, object]:
-        return {
-            "consumer-timeout": self.consumer_timeout_ms,
-            "delivery-limit": self.delivery_limit,
-        }
+    def documents(self) -> tuple["PolicyDocument", ...]:
+        """The policies, quorum first: what the broker is told, and read back against."""
+        return (
+            PolicyDocument(
+                name=self.name,
+                pattern=self.pattern,
+                apply_to="quorum_queues",
+                definition={
+                    "consumer-timeout": self.consumer_timeout_ms,
+                    "delivery-limit": self.delivery_limit,
+                },
+                priority=self.priority,
+            ),
+            PolicyDocument(
+                name=f"{self.name}-classic",
+                pattern=self.pattern,
+                apply_to="classic_queues",
+                definition={"consumer-timeout": self.consumer_timeout_ms},
+                priority=self.priority,
+            ),
+        )
+
+    def expected_for(self, kind: str) -> "PolicyDocument | None":
+        """The policy a queue of this type should carry; None for a type no policy of
+        vibey's applies to (a stream)."""
+        quorum, classic = self.documents()
+        return {"quorum": quorum, "classic": classic}.get(kind)
+
+    def attachment_gaps(self, queues: Iterable[QueueAttachmentInterface]) -> tuple[str, ...]:
+        """Every owned queue the broker says does NOT carry vibey's policy, and why: the
+        only evidence a policy is in force is the queue reporting it (12.e). A queue the
+        broker gives no type for is a gap -- its policy cannot be judged -- never a pass."""
+        gaps: list[str] = []
+        for queue in queues:
+            if not self.owns(queue.queue):
+                continue
+            if queue.kind == "stream":
+                continue
+            expected = self.expected_for(queue.kind)
+            if expected is None:
+                gaps.append(f"{queue.queue}: queue type {queue.kind or 'unknown'!r} not judged")
+                continue
+            if queue.policy != expected.name:
+                gaps.append(
+                    f"{queue.queue} ({queue.kind}): carries {queue.policy or 'no policy'!r}, "
+                    f"not {expected.name!r}"
+                )
+                continue
+            missing = {
+                key: value
+                for key, value in expected.definition.items()
+                if queue.effective.get(key) != value
+            }
+            if missing:
+                gaps.append(f"{queue.queue} ({queue.kind}): effective policy lacks {missing}")
+        return tuple(gaps)
+
+
+@dataclass(frozen=True, slots=True)
+class PolicyDocument:
+    """One broker policy, as the management API takes and reports it."""
+
+    name: str
+    pattern: str
+    apply_to: str
+    definition: dict[str, object]
+    priority: int = 0
 
     def body(self) -> dict[str, object]:
         """The management API's policy document."""
         return {
             "pattern": self.pattern,
-            "definition": self.definition(),
+            "definition": dict(self.definition),
             "priority": self.priority,
-            "apply-to": "queues",
+            "apply-to": self.apply_to,
         }
 
     def matches(self, observed: object) -> bool:
-        """Whether a policy read back from the broker is this one: the only evidence a
-        write landed (12.e)."""
+        """Whether a policy read back from the broker is this one (12.e)."""
         if not isinstance(observed, dict):
             return False
         return (
             observed.get("pattern") == self.pattern
-            and observed.get("definition") == self.definition()
+            and observed.get("definition") == self.definition
             and observed.get("priority") == self.priority
-            and observed.get("apply-to") == "queues"
+            and observed.get("apply-to") == self.apply_to
         )
+
+
+@dataclass(frozen=True, slots=True)
+class QueueAttachment:
+    """What the broker reports a queue carries: its type, the policy applied to it, and
+    the effective definition -- the policy in force, not the one written."""
+
+    queue: str
+    kind: str
+    policy: str | None
+    effective: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,6 +433,15 @@ class ReapVerdict:
     unit: str
     action: ReapAction
     detail: dict[str, object] = field(default_factory=dict)
+    source: ReapSource = ReapSource.BROKER
+    episode: str = ""
+    """What makes a sighting of the same condition on the same object a new one: the size
+    of an unread dead-letter remainder, so its growth is recorded again (finding 10)."""
+
+    @property
+    def sighting(self) -> tuple[str, str, str, str, str]:
+        """The key a sighting is recorded under, once, whichever process sees it."""
+        return (self.source.value, self.queue, self.condition.value, self.subject, self.episode)
 
     def payload(self) -> dict[str, object]:
         """The ledger payload: object, condition, measured value, threshold, action."""
@@ -319,10 +453,48 @@ class ReapVerdict:
             "threshold": self.threshold,
             "unit": self.unit,
             "action": self.action.value,
+            "source": self.source.value,
+            "episode": self.episode,
         }
         if self.detail:
             body["detail"] = dict(self.detail)
         return body
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, object]) -> "ReapVerdict":
+        """The verdict a `QueueReaped` event recorded. Raises ValueError on a payload no
+        vibey wrote; an event written before `source` and `episode` existed reads as a
+        broker sighting with no episode."""
+        try:
+            detail = payload.get("detail", {})
+            return cls(
+                subject=str(payload["object"]),
+                queue=str(payload["queue"]),
+                condition=ReapCondition(str(payload["condition"])),
+                measured=float(str(payload["measured"])),
+                threshold=float(str(payload["threshold"])),
+                unit=str(payload["unit"]),
+                action=ReapAction(str(payload["action"])),
+                detail=dict(detail) if isinstance(detail, Mapping) else {},
+                source=ReapSource(str(payload.get("source", ReapSource.BROKER.value))),
+                episode=str(payload.get("episode", "")),
+            )
+        except (KeyError, ValueError) as exc:
+            raise ValueError(f"not a QueueReaped payload: {exc}") from exc
+
+    def cleared(self) -> "ReapVerdict":
+        """The record that closes this sighting: same key, nothing measured now."""
+        return ReapVerdict(
+            subject=self.subject,
+            queue=self.queue,
+            condition=self.condition,
+            measured=0.0,
+            threshold=self.threshold,
+            unit=self.unit,
+            action=ReapAction.CLEARED,
+            source=self.source,
+            episode=self.episode,
+        )
 
 
 class QueueReapPolicy:
@@ -353,6 +525,7 @@ class QueueReapPolicy:
                 unit="attempts",
                 action=ReapAction.DEAD_LETTER if work.can_dead_letter else ReapAction.PARK,
                 detail={"overdue_seconds": overdue, "holder": work.holder.value},
+                source=work.source,
             )
         condition = {
             HolderState.LIVE: ReapCondition.HUNG_HANDLER,
@@ -368,6 +541,7 @@ class QueueReapPolicy:
             unit="seconds past deadline",
             action=ReapAction.REQUEUE,
             detail={"attempts": work.attempts, "attempt_limit": work.attempt_limit},
+            source=work.source,
         )
 
     def judge_queue(
@@ -387,6 +561,7 @@ class QueueReapPolicy:
                     threshold=float(thresholds.dead_letter_min_depth),
                     unit="messages",
                     action=ReapAction.PARK if depth.owned else ReapAction.SURFACE,
+                    source=depth.source,
                 ),
             )
         verdicts: list[ReapVerdict] = []
@@ -400,6 +575,7 @@ class QueueReapPolicy:
                     threshold=0.0,
                     unit="unacknowledged messages with no consumer",
                     action=ReapAction.SURFACE,
+                    source=depth.source,
                 )
             )
         age = depth.oldest_ready_age_seconds
@@ -416,9 +592,14 @@ class QueueReapPolicy:
                     condition=ReapCondition.STALE_READY,
                     measured=age,
                     threshold=float(thresholds.stale_ready_seconds),
-                    unit="seconds ready with no consumer",
+                    unit=(
+                        "seconds claimable and unclaimed"
+                        if depth.source is ReapSource.JOB_QUEUE
+                        else "seconds ready with no consumer"
+                    ),
                     action=ReapAction.SURFACE,
                     detail={"ready": depth.ready},
+                    source=depth.source,
                 )
             )
         return tuple(verdicts)
@@ -441,6 +622,7 @@ class QueueReapPolicy:
             unit="messages",
             action=ReapAction.PARK if depth.owned else ReapAction.SURFACE,
             detail={"origin_queue": item.origin_queue, "reason": item.reason},
+            source=ReapSource.BROKER,
         )
 
     def judge_unread(self, peek: DeadLetterPeekInterface) -> ReapVerdict | None:
@@ -453,15 +635,18 @@ class QueueReapPolicy:
         """
         if peek.complete:
             return None
+        remaining = peek.depth - len(peek.items)
         return ReapVerdict(
             subject=peek.queue,
             queue=peek.queue,
             condition=ReapCondition.DEAD_LETTERED,
-            measured=float(peek.depth - len(peek.items)),
+            measured=float(remaining),
             threshold=0.0,
             unit="dead letters past the read limit, not yet parked",
             action=ReapAction.SURFACE,
             detail={"read": len(peek.items), "depth": peek.depth},
+            source=ReapSource.BROKER,
+            episode=str(remaining),
         )
 
 

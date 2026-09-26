@@ -65,20 +65,38 @@ class QueueReapStore(Protocol):
         was written and recorded in the same transaction."""
         ...
 
-    async def ready_depths(self, project_id: UUID) -> tuple[QueueDepth, ...]:
-        """The project's job queue, for (d): how much claimable work waits, and how long
-        the oldest of it has been claimable. Empty when nothing is claimable."""
+    async def ready_depths(self) -> tuple[tuple[UUID, QueueDepth], ...]:
+        """Every project's job queue, for (d) -- a project with no worker included -- as
+        (project, depth): how much work is claimable and unclaimed, and how long the oldest
+        of it has been claimable. A project with nothing claimable is left out."""
+        ...
+
+    async def parked_count(self, queue: str) -> int:
+        """How many dead letters from `queue` are parked already, in any project."""
         ...
 
     async def park_dead_letter(
-        self, project_id: UUID, item: DeadLetter, verdict: ReapVerdict
+        self, project_id: UUID, item: DeadLetter, verdict: ReapVerdict, *, origin_owned: bool
     ) -> UUID | None:
         """Park one dead letter as a job with a `human_gate` row, and record the verdict,
-        in one transaction. The job id, or None when this identity is already parked."""
+        in one transaction. The job id, or None when this identity is parked already -- in
+        any project: one dead letter is one decision (finding 9). `origin_owned` says
+        whether the queue its headers name is vibey's: only then is replay offered."""
         ...
 
-    async def record(self, project_id: UUID, verdict: ReapVerdict) -> None:
-        """Record a verdict that moved nothing (a surfaced condition)."""
+    async def record_sighting(self, project_id: UUID, verdict: ReapVerdict) -> bool:
+        """Record a surfaced condition unless the ledger already holds this sighting open,
+        whoever recorded it. True when this call recorded it."""
+        ...
+
+    async def open_sightings(self) -> tuple[tuple[UUID, ReapVerdict], ...]:
+        """Every sighting whose latest record is still `surface`, with the project it was
+        recorded under."""
+        ...
+
+    async def record_cleared(self, project_id: UUID, verdict: ReapVerdict) -> bool:
+        """Close an open sighting, unless another process closed it first. True when this
+        call closed it."""
         ...
 
 

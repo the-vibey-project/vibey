@@ -415,12 +415,38 @@ class QueueReapConfig:
         "delivery_limit",
     )
 
+    MAX_LEASE_GRACE_SECONDS: ClassVar[int] = 86_400
+    """A day. A grace longer than that leaves a dead worker's job held for longer than any
+    lease vibey writes is meant to last, which is no longer a grace."""
+
+    MAX_DEAD_LETTER_PEEK_LIMIT: ClassVar[int] = 1_000
+    """One management-API read returns every message it asks for in one response."""
+
+    MIN_CONSUMER_TIMEOUT_SECONDS: ClassVar[int] = 7_200
+    """The longest job lease vibey writes (BUILD, two hours). Below it, the broker would
+    close the channel of a healthy consumer still inside its lease."""
+
     def __post_init__(self) -> None:
         for name in self._POSITIVE:
             if getattr(self, name) < 1:
                 raise ConfigError(f"queue.reap.{name}", "must be at least 1")
-        if self.lease_grace_seconds < 0:
-            raise ConfigError("queue.reap.lease_grace_seconds", "must not be negative")
+        if not 0 <= self.lease_grace_seconds <= self.MAX_LEASE_GRACE_SECONDS:
+            raise ConfigError(
+                "queue.reap.lease_grace_seconds",
+                f"must be from 0 to {self.MAX_LEASE_GRACE_SECONDS}",
+            )
+        if self.dead_letter_peek_limit > self.MAX_DEAD_LETTER_PEEK_LIMIT:
+            raise ConfigError(
+                "queue.reap.dead_letter_peek_limit",
+                f"must be at most {self.MAX_DEAD_LETTER_PEEK_LIMIT}",
+            )
+        if self.consumer_timeout_seconds < self.MIN_CONSUMER_TIMEOUT_SECONDS:
+            raise ConfigError(
+                "queue.reap.consumer_timeout_seconds",
+                f"must be at least {self.MIN_CONSUMER_TIMEOUT_SECONDS}, the longest job lease",
+            )
+        if self.policy_priority < 0:
+            raise ConfigError("queue.reap.policy_priority", "must not be negative")
         try:
             self.broker_policy()
         except ValueError as exc:

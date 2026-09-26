@@ -24,8 +24,13 @@ from vibey.infrastructure.bus.interfaces import (
     RabbitMqApiErrorInterface,
     RabbitMqBusInspectorInterface,
     RabbitMqManagementApiInterface,
+    RabbitMqUnreachableInterface,
 )
-from vibey.infrastructure.bus.management import RabbitMqApiError, RabbitMqManagementApi
+from vibey.infrastructure.bus.management import (
+    RabbitMqApiError,
+    RabbitMqManagementApi,
+    RabbitMqUnreachable,
+)
 from vibey.infrastructure.bus.rabbitmq_inspector import PEEK_TRUNCATE_BYTES, RabbitMqBusInspector
 
 POLICY = BrokerPolicy(
@@ -61,7 +66,13 @@ class Broker:
         return _response(answer)
 
 
-def _inspector(broker: Broker, *, now: float = 1_000.0, vhost: str = "/") -> RabbitMqBusInspector:
+def _inspector(
+    broker: Broker,
+    *,
+    now: float = 1_000.0,
+    vhost: str = "/",
+    sleeps: list[float] | None = None,
+) -> RabbitMqBusInspector:
     return RabbitMqBusInspector(
         url="http://bus:15672/",
         username="u",
@@ -69,6 +80,8 @@ def _inspector(broker: Broker, *, now: float = 1_000.0, vhost: str = "/") -> Rab
         vhost=vhost,
         opener=broker,
         epoch_seconds=lambda: now,
+        settle_seconds=3.0,
+        sleep=(sleeps.append if sleeps is not None else lambda _: None),
     )
 
 
@@ -96,6 +109,7 @@ async def test_depths_measure_every_queue_and_the_age_of_its_head() -> None:
     rows = [
         {
             "name": "vibey.jobs.p",
+            "type": "classic",
             "messages_ready": 3,
             "messages_unacknowledged": 1,
             "consumers": 2,
@@ -109,7 +123,7 @@ async def test_depths_measure_every_queue_and_the_age_of_its_head() -> None:
         {
             (
                 "GET",
-                "queues/%2F?columns=name,messages_ready,messages_unacknowledged,consumers,"
+                "queues/%2F?columns=name,type,messages_ready,messages_unacknowledged,consumers,"
                 "head_message_timestamp",
             ): lambda _: rows
         }
@@ -124,6 +138,7 @@ async def test_depths_measure_every_queue_and_the_age_of_its_head() -> None:
         ("future", 1, 0, 0, 0.0),
     ]
     assert all(not d.owned and not d.dead_letter for d in depths)
+    assert [d.kind for d in depths] == ["classic", "", "", ""]
 
 
 async def test_depths_of_an_empty_vhost_are_empty() -> None:
@@ -131,7 +146,7 @@ async def test_depths_of_an_empty_vhost_are_empty() -> None:
         {
             (
                 "GET",
-                "queues/vibey?columns=name,messages_ready,messages_unacknowledged,consumers,"
+                "queues/vibey?columns=name,type,messages_ready,messages_unacknowledged,consumers,"
                 "head_message_timestamp",
             ): lambda _: None
         }
@@ -224,52 +239,229 @@ async def test_a_peek_trusts_what_it_read_over_a_stale_count() -> None:
     assert peek.items[0].origin_queue == "q"
 
 
-async def test_a_policy_already_in_force_is_not_written_again() -> None:
-    broker = Broker({("GET", "policies/%2F/vibey-reap"): lambda _: POLICY.body()})
-    outcome = await _inspector(broker).apply_policy(POLICY)
-    assert outcome.verified and outcome.detail == "already in force"
-    assert [method for method, _, _ in broker.sent] == ["GET"]
+QUORUM, CLASSIC = POLICY.documents()
+QUORUM_PATH = "policies/%2F/vibey-reap"
+CLASSIC_PATH = "policies/%2F/vibey-reap-classic"
+ATTACH_PATH = "queues/%2F?columns=name,type,policy,effective_policy_definition"
+IN_FORCE = [
+    {
+        "name": "vibey.jobs.p",
+        "type": "quorum",
+        "policy": "vibey-reap",
+        "effective_policy_definition": {"consumer-timeout": 21_600_000, "delivery-limit": 20},
+    },
+    {
+        "name": "vibey.bus",
+        "type": "classic",
+        "policy": "vibey-reap-classic",
+        "effective_policy_definition": {"consumer-timeout": 21_600_000},
+    },
+    {"name": "celery", "type": "classic"},
+]
 
 
-async def test_a_missing_policy_is_written_and_read_back() -> None:
-    reads = iter([_http_error(404), POLICY.body()])
+async def test_policies_already_in_force_are_not_written_again() -> None:
     broker = Broker(
         {
-            ("GET", "policies/%2F/vibey-reap"): lambda _: next(reads),
-            ("PUT", "policies/%2F/vibey-reap"): lambda body: None,
+            ("GET", QUORUM_PATH): lambda _: QUORUM.body(),
+            ("GET", CLASSIC_PATH): lambda _: CLASSIC.body(),
+            ("GET", ATTACH_PATH): lambda _: IN_FORCE,
         }
     )
     outcome = await _inspector(broker).apply_policy(POLICY)
-    assert outcome.verified and outcome.detail == "written and read back"
-    assert broker.sent[1] == ("PUT", "policies/%2F/vibey-reap", POLICY.body())
+    assert outcome.verified and outcome.detail == "in force on every owned queue"
+    assert [method for method, _, _ in broker.sent] == ["GET", "GET", "GET"]
+
+
+async def test_missing_policies_are_written_read_back_and_checked_on_the_queues() -> None:
+    quorum_reads = iter([_http_error(404), QUORUM.body()])
+    classic_reads = iter([_http_error(404), CLASSIC.body()])
+    broker = Broker(
+        {
+            ("GET", QUORUM_PATH): lambda _: next(quorum_reads),
+            ("PUT", QUORUM_PATH): lambda body: None,
+            ("GET", CLASSIC_PATH): lambda _: next(classic_reads),
+            ("PUT", CLASSIC_PATH): lambda body: None,
+            ("GET", ATTACH_PATH): lambda _: IN_FORCE,
+        }
+    )
+    outcome = await _inspector(broker).apply_policy(POLICY)
+    assert outcome.verified
+    assert outcome.detail == "written, read back, and in force on every owned queue"
+    assert ("PUT", QUORUM_PATH, QUORUM.body()) in broker.sent
+    assert ("PUT", CLASSIC_PATH, CLASSIC.body()) in broker.sent
+
+
+async def test_a_policy_read_back_but_on_no_queue_is_not_verified() -> None:
+    """Finding 2 (probe_policy.py): the one policy #1108 wrote read back fine, and the
+    classic queues carried no policy at all. Verified meant nothing. Now the queues are
+    asked, a fresh write gets a bounded settle, and a gap that stays is reported."""
+    sleeps: list[float] = []
+    reads = iter([_http_error(404), QUORUM.body()])
+    classic_reads = iter([_http_error(404), CLASSIC.body()])
+    unattached = [
+        {**IN_FORCE[0]},
+        {"name": "vibey.bus", "type": "classic", "policy": None},
+    ]
+    broker = Broker(
+        {
+            ("GET", QUORUM_PATH): lambda _: next(reads),
+            ("PUT", QUORUM_PATH): lambda body: None,
+            ("GET", CLASSIC_PATH): lambda _: next(classic_reads),
+            ("PUT", CLASSIC_PATH): lambda body: None,
+            ("GET", ATTACH_PATH): lambda _: unattached,
+        }
+    )
+    outcome = await _inspector(broker, sleeps=sleeps).apply_policy(POLICY)
+    assert not outcome.verified
+    assert outcome.detail == (
+        "read back, but not in force on: vibey.bus (classic): carries 'no policy', "
+        "not 'vibey-reap-classic'"
+    )
+    assert sleeps == [1.0, 1.0, 1.0], "a fresh write waits out the settle, and no longer"
+
+
+async def test_a_write_that_settles_within_the_window_is_verified() -> None:
+    sleeps: list[float] = []
+    views = iter([[{"name": "vibey.bus", "type": "classic"}], IN_FORCE])
+    reads = iter([None, QUORUM.body()])
+    broker = Broker(
+        {
+            ("GET", QUORUM_PATH): lambda _: next(reads),
+            ("PUT", QUORUM_PATH): lambda body: None,
+            ("GET", CLASSIC_PATH): lambda _: CLASSIC.body(),
+            ("GET", ATTACH_PATH): lambda _: next(views),
+        }
+    )
+    outcome = await _inspector(broker, sleeps=sleeps).apply_policy(POLICY)
+    assert outcome.verified
+    assert sleeps == [1.0]
+
+
+async def test_an_unwritten_policy_with_a_gap_is_reported_without_waiting() -> None:
+    sleeps: list[float] = []
+    broker = Broker(
+        {
+            ("GET", QUORUM_PATH): lambda _: QUORUM.body(),
+            ("GET", CLASSIC_PATH): lambda _: CLASSIC.body(),
+            ("GET", ATTACH_PATH): lambda _: [
+                {
+                    "name": "vibey.jobs.p",
+                    "type": "quorum",
+                    "policy": "operators-own",
+                    "effective_policy_definition": {},
+                }
+            ],
+        }
+    )
+    outcome = await _inspector(broker, sleeps=sleeps).apply_policy(POLICY)
+    assert not outcome.verified
+    assert "carries 'operators-own', not 'vibey-reap'" in outcome.detail
+    assert sleeps == []
 
 
 async def test_a_policy_that_reads_back_wrong_is_not_verified() -> None:
-    drifted = {**POLICY.body(), "priority": 9}
+    drifted = {**QUORUM.body(), "priority": 9}
     broker = Broker(
         {
-            ("GET", "policies/%2F/vibey-reap"): lambda _: drifted,
-            ("PUT", "policies/%2F/vibey-reap"): lambda body: None,
+            ("GET", QUORUM_PATH): lambda _: drifted,
+            ("PUT", QUORUM_PATH): lambda body: None,
+            ("GET", CLASSIC_PATH): lambda _: CLASSIC.body(),
         }
     )
     outcome = await _inspector(broker).apply_policy(POLICY)
     assert not outcome.verified
-    assert outcome.detail.startswith("written, but read back as")
+    assert outcome.detail.startswith("vibey-reap: written, but read back as")
 
 
 async def test_a_refused_policy_write_is_reported_not_raised() -> None:
     broker = Broker(
         {
-            ("GET", "policies/%2F/vibey-reap"): lambda _: _http_error(404),
-            ("PUT", "policies/%2F/vibey-reap"): lambda body: _http_error(401),
+            ("GET", QUORUM_PATH): lambda _: _http_error(404),
+            ("PUT", QUORUM_PATH): lambda body: _http_error(401),
+            ("GET", CLASSIC_PATH): lambda _: CLASSIC.body(),
         }
     )
     outcome = await _inspector(broker).apply_policy(POLICY)
     assert not outcome.verified
-    assert "the broker refused it: RabbitMQ API error 401" in outcome.detail
+    assert "vibey-reap: the broker refused it: RabbitMQ API error 401" in outcome.detail
 
 
 async def test_an_unreadable_policy_raises_for_the_reaper_to_name() -> None:
-    broker = Broker({("GET", "policies/%2F/vibey-reap"): lambda _: _http_error(500)})
+    broker = Broker({("GET", QUORUM_PATH): lambda _: _http_error(500)})
     with pytest.raises(RabbitMqApiError, match="500"):
         await _inspector(broker).apply_policy(POLICY)
+
+
+async def test_an_empty_queue_list_leaves_nothing_to_judge() -> None:
+    broker = Broker(
+        {
+            ("GET", QUORUM_PATH): lambda _: QUORUM.body(),
+            ("GET", CLASSIC_PATH): lambda _: CLASSIC.body(),
+            ("GET", ATTACH_PATH): lambda _: None,
+        }
+    )
+    assert (await _inspector(broker).apply_policy(POLICY)).verified
+
+
+# -- #1108 review, finding 7: a password never reaches a log -------------------------
+
+
+@pytest.mark.parametrize(
+    "url", ["http://vibey:s3cretpw@127.0.0.1:25673", "http://vibey:s3cretpw@127.0.0.1", "http://@h"]
+)
+def test_a_management_url_carrying_credentials_is_refused_without_quoting_them(url: str) -> None:
+    """probe_leak.py: `user:pw@host` with no port made urllib read `pw@host` as the port,
+    and the InvalidURL quoting it was logged every pass and printed by the CLI."""
+    with pytest.raises(ValueError, match="must not carry credentials") as caught:
+        RabbitMqManagementApi(url=url, username="vibey", password="s3cretpw")
+    assert "s3cretpw" not in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        urllib.error.URLError("no route to http://vibey:s3cretpw@bus"),
+        OSError("connection refused by s3cretpw"),
+        ValueError("nonnumeric port: 's3cretpw@bus'"),
+    ],
+)
+def test_an_unreachable_broker_is_named_without_the_password(error: BaseException) -> None:
+    api = RabbitMqManagementApi(
+        url="http://bus:15672",
+        username="vibey",
+        password="s3cretpw",
+        opener=MagicMock(side_effect=error),
+    )
+    with pytest.raises(
+        RabbitMqUnreachable, match="cannot reach the RabbitMQ management API"
+    ) as caught:
+        api.request("GET", "overview")
+    assert "s3cretpw" not in str(caught.value)
+    assert "***" in str(caught.value)
+    assert caught.value.__cause__ is None and caught.value.__suppress_context__
+    assert isinstance(caught.value, RabbitMqUnreachableInterface)
+
+
+def test_an_http_error_reason_is_scrubbed_too() -> None:
+    error = urllib.error.HTTPError("http://bus", 500, "s3cretpw leaked", {}, None)  # type: ignore[arg-type]
+    api = RabbitMqManagementApi(
+        url="http://bus:15672",
+        username="u",
+        password="s3cretpw",
+        opener=MagicMock(side_effect=error),
+    )
+    with pytest.raises(RabbitMqApiError) as caught:
+        api.request("GET", "overview")
+    assert str(caught.value) == "RabbitMQ API error 500: *** leaked"
+
+
+def test_an_empty_password_scrubs_nothing() -> None:
+    api = RabbitMqManagementApi(
+        url="http://bus:15672",
+        username="u",
+        password="",
+        opener=MagicMock(side_effect=OSError("x")),
+    )
+    with pytest.raises(RabbitMqUnreachable, match="OSError: x$"):
+        api.request("GET", "overview")

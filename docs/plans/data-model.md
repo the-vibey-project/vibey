@@ -642,21 +642,23 @@ UPDATE job SET assigned_engine = $3, updated_at = now()
 WHERE id = $1 AND lease_owner = $2 AND state = 'leased';
 
 -- GATE ANSWER re-readies the parked job
--- (PostgresHumanGateRepository.answer, same transaction as the answer UPDATE)
-UPDATE job SET state = 'ready', updated_at = now()
+-- (PostgresHumanGateRepository.answer, same transaction as the answer UPDATE). `run_after`
+-- moves up to now, so "claimable since" reads the re-ready, not the first due time.
+UPDATE job SET state = 'ready', run_after = greatest(run_after, now()), updated_at = now()
 WHERE id = $1 AND state = 'awaiting_human';
 
 -- REAP (each idle worker-loop iteration, before the 5 s LISTEN wait; no separate supervisor)
--- One transaction (PostgresQueueReapStore.reap_leases, ADR-0056): lock the expired
--- leases, judge each with domain/queue_reap.py's QueueReapPolicy, move it, and append
--- its QueueReaped event on the same connection.
+-- One transaction per lease (PostgresQueueReapStore.reap_leases, ADR-0056): re-read it
+-- under its row lock, judge it with domain/queue_reap.py's QueueReapPolicy, move it, and
+-- append its QueueReaped event on the same connection. A lease that cannot be moved rolls
+-- back alone (LeaseReapIncomplete names it after the rest are reaped).
 SELECT id, project_id, cycle, phase, kind, attempts, max_attempts, lease_expires_at
 FROM job
-WHERE state = 'leased' AND lease_expires_at < now() AND phase::text = ANY($known_phases)
-ORDER BY lease_expires_at, id
+WHERE id = $1 AND state = 'leased' AND lease_expires_at < now()
 FOR UPDATE SKIP LOCKED;
 -- attempts remain: requeue (the claim already counted the attempt)
-UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL,
+               run_after = greatest(run_after, now()), updated_at = now()
 WHERE id = $1;
 -- attempts spent: park, refunding one, with a delivery_exhausted human_gate row
 UPDATE job SET state = 'awaiting_human', lease_owner = NULL, lease_expires_at = NULL,

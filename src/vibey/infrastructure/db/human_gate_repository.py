@@ -229,7 +229,8 @@ class PostgresHumanGateRepository:
             if gate.job_id is not None:
                 await conn.execute(
                     """
-                    UPDATE job SET state = 'ready', updated_at = now()
+                    UPDATE job SET state = 'ready', run_after = greatest(run_after, now()),
+                                   updated_at = now()
                     WHERE id = $1 AND state = 'awaiting_human'
                     """,
                     gate.job_id,

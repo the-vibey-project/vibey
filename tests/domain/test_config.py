@@ -414,12 +414,20 @@ def test_queue_reap_defaults_are_the_declared_ones() -> None:
     assert reap.thresholds() == ReapThresholds()
     policy = reap.broker_policy()
     assert policy.name == "vibey-reap"
-    assert policy.body() == {
-        "pattern": r"^vibey\.",
-        "definition": {"consumer-timeout": 21_600_000, "delivery-limit": 20},
-        "priority": 0,
-        "apply-to": "queues",
-    }
+    assert [d.body() for d in policy.documents()] == [
+        {
+            "pattern": r"^vibey\.",
+            "definition": {"consumer-timeout": 21_600_000, "delivery-limit": 20},
+            "priority": 0,
+            "apply-to": "quorum_queues",
+        },
+        {
+            "pattern": r"^vibey\.",
+            "definition": {"consumer-timeout": 21_600_000},
+            "priority": 0,
+            "apply-to": "classic_queues",
+        },
+    ]
     assert policy.is_dead_letter("vibey.jobs.dead")
 
 
@@ -437,7 +445,7 @@ def test_queue_reap_reads_every_key() -> None:
         "dead_letter_queue_pattern = '\\.parked$'\n"
         "policy_name = 'mine'\n"
         "policy_priority = 4\n"
-        "consumer_timeout_seconds = 60\n"
+        "consumer_timeout_seconds = 7200\n"
         "delivery_limit = 3\n"
     )
     reap = config.queue.reap
@@ -448,8 +456,9 @@ def test_queue_reap_reads_every_key() -> None:
     policy = reap.broker_policy()
     assert policy.owns("mine.q") and not policy.owns("vibey.q")
     assert policy.is_dead_letter("x.parked")
-    assert policy.body()["definition"] == {"consumer-timeout": 60_000, "delivery-limit": 3}
-    assert policy.body()["priority"] == 4
+    quorum, classic = policy.documents()
+    assert quorum.definition == {"consumer-timeout": 7_200_000, "delivery-limit": 3}
+    assert (quorum.name, classic.name, quorum.priority) == ("mine", "mine-classic", 4)
 
 
 @pytest.mark.parametrize(
@@ -460,7 +469,7 @@ def test_queue_reap_reads_every_key() -> None:
         ("[queue.reap]\ndelivery_limit = -1", r"queue.reap.delivery_limit: must be at least 1"),
         (
             "[queue.reap]\nlease_grace_seconds = -1",
-            r"queue.reap.lease_grace_seconds: must not be negative",
+            r"queue.reap.lease_grace_seconds: must be from 0 to 86400",
         ),
         ("[queue.reap]\nstale_ready_seconds = true", r"must be a int, got bool"),
         ("[queue.reap]\nenabled = 1", r"queue.reap.enabled: must be a bool, got int"),
@@ -479,3 +488,32 @@ def test_the_bus_vhost_defaults_to_the_root_and_reads_as_written() -> None:
     assert load_config_from_string('[project]\nname = "demo"\n').bus.vhost == "/"
     config = load_config_from_string('[project]\nname = "demo"\n[bus]\nvhost = "vibey"\n')
     assert config.bus.vhost == "vibey"
+
+
+@pytest.mark.parametrize(
+    ("fragment", "match"),
+    [
+        ("owned_queue_pattern = ''", r"pattern '' matches every queue name"),
+        ("owned_queue_pattern = '.*'", r"pattern '\.\*' matches every queue name"),
+        ("owned_queue_pattern = 'cel'", r"would own 'celery', a queue vibey does not own"),
+        ("owned_queue_pattern = '^amq\\.'", r"would own 'amq.gen-canary'"),
+        ("dead_letter_queue_pattern = ''", r"dead_letter_pattern '' matches every queue name"),
+        ("dead_letter_queue_pattern = 'x*'", r"matches every queue name"),
+        ("policy_priority = -5", r"queue.reap.policy_priority: must not be negative"),
+        ("dead_letter_peek_limit = 10000000", r"dead_letter_peek_limit: must be at most 1000"),
+        ("lease_grace_seconds = 1000000000", r"lease_grace_seconds: must be from 0 to 86400"),
+        ("consumer_timeout_seconds = 1", r"consumer_timeout_seconds: must be at least 7200"),
+    ],
+)
+def test_the_review_found_values_are_refused(fragment: str, match: str) -> None:
+    """#1108 review, finding 6 (probe_config.py): every one of these was accepted."""
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'[queue.reap]\n{fragment}\n[project]\nname = "demo"\n')
+
+
+def test_the_bounds_themselves_are_accepted() -> None:
+    reap = load_config_from_string(
+        '[project]\nname = "demo"\n[queue.reap]\nlease_grace_seconds = 86400\n'
+        "dead_letter_peek_limit = 1000\nconsumer_timeout_seconds = 7200\npolicy_priority = 0\n"
+    ).queue.reap
+    assert (reap.lease_grace_seconds, reap.dead_letter_peek_limit) == (86_400, 1_000)

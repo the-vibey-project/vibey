@@ -61,7 +61,7 @@ async def test_a_parked_dead_letter_is_settled_by_its_answer(
         pool = await asyncpg.create_pool(database_url(), min_size=1, max_size=2)
         try:
             job_id = await PostgresQueueReapStore(pool).park_dead_letter(
-                project.project_id, item, verdict
+                project.project_id, item, verdict, origin_owned=True
             )
         finally:
             await pool.close()

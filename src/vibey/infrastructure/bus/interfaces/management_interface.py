@@ -17,6 +17,14 @@ class RabbitMqApiErrorInterface(Protocol):
 
 
 @runtime_checkable
+class RabbitMqUnreachableInterface(Protocol):
+    """The management API could not be reached; its message names no credential."""
+
+    @property
+    def args(self) -> tuple[object, ...]: ...
+
+
+@runtime_checkable
 class RabbitMqManagementApiInterface(Protocol):
     """Authenticated requests to one broker's management API, scoped to one vhost."""
 
