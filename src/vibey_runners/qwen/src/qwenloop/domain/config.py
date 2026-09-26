@@ -173,6 +173,8 @@ class QwenConfig:
     model: str = DEFAULT_ENDPOINT_MODEL
     # How long doctor, health, and start wait for an endpoint's model list.
     endpoint_timeout_seconds: int = 5
+    turn_dispatch_mode: str = "direct"
+    turn_queue_url: str = ""
     # What one tool call may read or return: the config file's `[tools]` table.
     tools: ToolLimits = ToolLimits()
 
@@ -236,6 +238,8 @@ class QwenConfigParser:
             endpoint_timeout_seconds=int(
                 data.get("endpoint_timeout_seconds", defaults.endpoint_timeout_seconds)
             ),
+            turn_dispatch_mode=str(data.get("turn_dispatch_mode", defaults.turn_dispatch_mode)),
+            turn_queue_url=str(data.get("turn_queue_url", defaults.turn_queue_url)),
             tools=self._tool_limits(data.get("tools", {})),
         )
         if config.idle_timeout_seconds < 0:
@@ -249,6 +253,10 @@ class QwenConfigParser:
             raise ValueError("timeouts, context_window, and max_turns must be positive")
         if not config.model:
             raise ValueError("model must name the model the endpoint serves")
+        if config.turn_dispatch_mode not in {"direct", "rabbitmq"}:
+            raise ValueError("turn_dispatch_mode must be 'direct' or 'rabbitmq'")
+        if config.turn_dispatch_mode == "rabbitmq" and not config.turn_queue_url.strip():
+            raise ValueError("turn_queue_url is required when turn_dispatch_mode is 'rabbitmq'")
         return config
 
     @staticmethod

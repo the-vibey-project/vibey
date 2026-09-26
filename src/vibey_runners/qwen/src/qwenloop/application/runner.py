@@ -13,6 +13,7 @@ from qwenloop.application.interfaces import (
     InferenceServer,
     RunStore,
     ToolExecutor,
+    TurnDispatcherInterface,
 )
 from qwenloop.domain.config import (
     DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
@@ -156,6 +157,7 @@ class AutonomousRunner:
         notifier: DesktopNotifierInterface | None = None,
         *,
         clock: ClockInterface,
+        dispatcher: TurnDispatcherInterface | None = None,
     ) -> None:
         self._server = server
         self._store = store
@@ -164,6 +166,7 @@ class AutonomousRunner:
         # Required, not defaulted: a run that cannot be timed is not a run qwenloop starts
         # (sub-doctrine 8.g). Every turn is measured against this clock (#382).
         self._clock = clock
+        self._dispatcher = dispatcher
 
     async def _chat(
         self, run_id: str, turn: int, server_info: ServerInfo, state: RunState
@@ -173,7 +176,11 @@ class AutonomousRunner:
         repeats a chunk or a tool call; each one is recorded as `turn.retried`."""
         retries = 0
         while True:
-            stream = self._server.chat_stream(server_info, state.transcript)
+            stream = (
+                self._dispatcher.dispatch(self._server, server_info, state.transcript)
+                if self._dispatcher is not None
+                else self._server.chat_stream(server_info, state.transcript)
+            )
             try:
                 first = await anext(stream)
             except StopAsyncIteration:

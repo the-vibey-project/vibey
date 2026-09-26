@@ -160,6 +160,15 @@ Each engine reads its own environment variables: `GPTOSSLOOP_*` for `gptossloop`
 | Characters of an empty reply's reasoning recorded as an excerpt | — | — | `empty_reply_reasoning_excerpt_chars` | `400` |
 | Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
 | Context window (tokens) | — | — | `context_window` | `32768` |
+| Turn dispatch mode | — | — | `turn_dispatch_mode` | `direct` |
+| RabbitMQ URL (required for shared mode) | — | — | `turn_queue_url` | unset |
+
+`turn_dispatch_mode = "direct"` keeps one model turn local to the run. Set it to
+`"rabbitmq"` and provide `turn_queue_url` to publish turns to the shared
+`vibey.llm.turns` queue; a `RabbitMqTurnWorker` process owns the model server and
+can serve multiple lane processes. Shared mode is explicit opt-in and requires a
+durable RabbitMQ deployment; it does not silently change the sovereign direct
+default.
 
 A flag beats an environment variable, which beats the config file, which beats the
 default. The config file is TOML, read from `$<PREFIX>_CONFIG`. When that is unset,
