@@ -1,0 +1,5 @@
+# Meson subprojects fetched from their wraps (json-glib for a macOS build without it).
+/subprojects/*
+!/subprojects/*.wrap
+# Local build directories.
+/build*/

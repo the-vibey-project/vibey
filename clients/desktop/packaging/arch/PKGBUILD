@@ -1,0 +1,26 @@
+# Declared only: not published to the AUR until the operator decides (see clients/desktop/PACKAGING.md).
+# Maintainer: The vibey project <https://github.com/the-vibey-project>
+pkgname=krypton-desktop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='The desktop app for vibey'
+arch=('x86_64' 'aarch64')
+url='https://github.com/the-vibey-project/vibey'
+license=('MIT')
+depends=('gtk4' 'libadwaita' 'libsoup3' 'json-glib' 'avahi')
+makedepends=('meson' 'ninja')
+source=("vibey-$pkgver.tar.gz::https://github.com/the-vibey-project/vibey/archive/refs/tags/krypton-desktop-v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  arch-meson "vibey-krypton-desktop-v$pkgver/clients/desktop" build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}

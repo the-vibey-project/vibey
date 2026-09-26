@@ -1,0 +1,9 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+option('channel', type: 'combo', choices: ['stable', 'nightly'], value: 'stable',
+       description: 'Stable (from main, the default) or nightly (from develop); they install side by side')
+option('gui', type: 'feature', value: 'auto',
+       description: 'Build the GTK 4 + libadwaita app, not only the core and its tests')
+option('hub_transport', type: 'feature', value: 'auto',
+       description: 'The libsoup 3 hub client')
+option('discovery', type: 'feature', value: 'auto',
+       description: 'Find hubs on the network: Avahi on Linux, dns_sd on macOS')
