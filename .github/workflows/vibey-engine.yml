@@ -278,7 +278,7 @@ jobs:
         run: echo "OVSX_PAT is not set, so the extension is not published to Open VSX."
       - uses: actions/checkout@v4
         if: env.OVSX_PAT != ''
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: env.OVSX_PAT != ''
         with:
           node-version-file: .node-version
