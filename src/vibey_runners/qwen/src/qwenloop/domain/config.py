@@ -4,6 +4,7 @@
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, fields
+from enum import StrEnum
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -32,6 +33,30 @@ DEFAULT_MAX_RECORDED_ARGUMENT_CHARS = 200
 #: How many characters from the start of an empty reply's reasoning a `turn.empty` event
 #: keeps, beside the reasoning's full length. 0 records no excerpt at all.
 DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS = 400
+
+
+class Effort(StrEnum):
+    """Bounded execution policies for autonomous runs.
+
+    EXTREME has ULTRA's budget, but is explicitly finite: the runner still stops when
+    the plan reaches its stabilization verdict or the turn budget is exhausted.
+    """
+
+    STANDARD = "standard"
+    ULTRA = "ultra"
+    EXTREME = "extreme"
+
+    @property
+    def default_max_turns(self) -> int:
+        return 40 if self is Effort.STANDARD else 120
+
+    @classmethod
+    def parse(cls, value: str) -> "Effort":
+        try:
+            return cls(value.strip().lower())
+        except ValueError as exc:
+            allowed = ", ".join(item.value for item in cls)
+            raise ValueError(f"unknown effort {value!r}; expected one of: {allowed}") from exc
 
 
 #: Directories no search or find descends into unless the operator says otherwise:
