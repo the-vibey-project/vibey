@@ -502,6 +502,13 @@ def test_provenance_message_adds_configured_trailer(repo, monkeypatch, capsys):
     assert output.startswith("chore: Bad subject\n\nBody\n\nMade-With: ")
 
 
+def test_provenance_message_updates_a_file(repo, tmp_path):
+    message = tmp_path / "COMMIT_EDITMSG"
+    message.write_text("Bad subject\n\nBody\n")
+    assert main(["provenance-message", "--file", str(message)]) == 0
+    assert message.read_text().startswith("chore: Bad subject\n\nBody\n\nMade-With: ")
+
+
 def test_provenance_check_reports_missing_trailer(repo, capsys):
     subprocess.run(
         ["git", "commit", "-q", "--allow-empty", "-m", "fix: missing trailer"],
