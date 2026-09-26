@@ -48,6 +48,18 @@ async def test_linux_notification_uses_notify_send() -> None:
     assert commands == [["notify-send", "--", "vibey: Title", "message"]]
 
 
+def test_linux_notification_uses_configured_icon() -> None:
+    notifier = DesktopNotifier(platform_override="linux", icon_path="/icons/krypton.png")
+    assert notifier._build_command("Title", "message") == [
+        "notify-send",
+        "--icon",
+        "/icons/krypton.png",
+        "--",
+        "vibey: Title",
+        "message",
+    ]
+
+
 def test_configured_icon_uses_terminal_notifier_when_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
