@@ -351,7 +351,14 @@ generate_paper = true
 enabled = false
 # GA4 measurement id for the published docs site, rendered into release-surfaces.yml as
 # GA_ID. Public by nature -- it ships in the page source of every site using it.
-google_analytics_id = "G-DMYG7PHCQP"
+google_analytics_id = "G-R673ZXZDFT"
+# Consent Mode defaults plus an accept/decline banner while the ID above is set, so no
+# analytics cookie is set before the reader accepts. Explicitly on: the default, stated.
+cookie_consent = true
+# Search Console "HTML file" verification: copied by basename into the Pages root on
+# every release-surfaces deploy, so verification survives the rebuild that wipes a
+# hand-uploaded file. The committed file is the one Search Console issued.
+site_root_files = ["googleebf918639d02415d.html"]
 
 # ---------------------------------------------------------------------------------------
 # The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049).

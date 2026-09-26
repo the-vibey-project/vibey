@@ -1150,6 +1150,9 @@ def test_doctor_can_be_asked_for_claudeloop_local_by_name(
     from vibey.application.dto import PreflightResult
 
     monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
+    # The qwenloop switch notice prints ahead of the engine line, so an ambient
+    # VIBEY_FEATURE_QWENLOOP would move the start of the output this asserts on.
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
     with patch(
         "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
         new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
@@ -1837,9 +1840,16 @@ def test_watch_state_fetcher_is_invoked(tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
+def test_worker_warns_about_engines_without_conformance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The sweep records preflight but never grants conformance -- until
     doctor --conformance --record runs, engine-driven jobs can't select."""
+    # The sweep covers the four paid engines plus gptossloop, the local engine on
+    # by default: pin both switches so an ambient VIBEY_FEATURE_* cannot change
+    # the swept set this count asserts on.
+    monkeypatch.setenv("VIBEY_FEATURE_GPTOSSLOOP", "1")
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
 
     async def seed() -> None:
         async with build_app() as resources:
@@ -1871,8 +1881,15 @@ def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_stays_quiet_when_every_engine_has_conformance(tmp_path: Path) -> None:
+def test_worker_stays_quiet_when_every_engine_has_conformance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from vibey.application.dto import PreflightResult
+
+    # Conformance is seeded for the swept set below (the defaults plus gptossloop),
+    # so the opt-in qwenloop must stay off or its warning would rightly appear.
+    monkeypatch.setenv("VIBEY_FEATURE_GPTOSSLOOP", "1")
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
 
     async def seed() -> None:
         async with build_app() as resources:
