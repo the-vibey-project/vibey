@@ -3381,6 +3381,61 @@ def test_site_root_files_refuse_unsafe_duplicate_or_colliding_names():
         DocumentationConfig(site_root_files=("a/verify.html", "b/verify.html"))
 
 
+def test_cookie_consent_denies_analytics_until_accepted(tmp_path):
+    """With a measurement ID set, consent mode denies analytics storage by default
+    and every page carries an accept/decline banner that remembers its choice --
+    on both the channel pages and the channel picker. Consent off renders the plain
+    gtag snippet, and with no measurement ID nothing renders either way."""
+    from vibey_gh.config import DocumentationConfig, GhConfig
+    from vibey_gh.install import render_workflow
+
+    source = WORKFLOWS / "release-surfaces.yml"
+    assert DocumentationConfig().cookie_consent is True
+
+    on = render_workflow(
+        source,
+        GhConfig(
+            root=tmp_path,
+            documentation=DocumentationConfig(google_analytics_id="G-XXXXXXXXXX"),
+        ),
+    )
+    assert "__VIBEY_GH_DOC_COOKIE_CONSENT__" not in on
+    assert "COOKIE_CONSENT=true" in on
+    assert 'COOKIE_CONSENT: "true"' in on
+    assert "gtag('consent', 'default'" in on
+    assert "'analytics_storage': 'denied'" in on
+    assert 'id="vibey-consent"' in on
+    # The chooser heredoc keeps its deploy-time placeholder, which the chooser
+    # step substitutes from the same banner string.
+    assert '"__CONSENT_BANNER__": consent_banner' in on
+
+    off = render_workflow(
+        source,
+        GhConfig(
+            root=tmp_path,
+            documentation=DocumentationConfig(
+                google_analytics_id="G-XXXXXXXXXX", cookie_consent=False
+            ),
+        ),
+    )
+    # Both code paths ship in the workflow; the runtime flag selects the plain
+    # snippet at deploy time.
+    assert "COOKIE_CONSENT=false" in off
+    assert 'COOKIE_CONSENT: "false"' in off
+    assert 'os.environ.get("COOKIE_CONSENT", "") == "true"' in off
+    # The measurement ID travels by environment; the snippet interpolates it at
+    # deploy time, so the render carries the variable, not the value.
+    assert "gtag('config', '{ga_id}')" in off
+    assert 'GA_ID: "G-XXXXXXXXXX"' in off
+
+    neither = render_workflow(source, GhConfig(root=tmp_path))
+    # The builder code always ships; an empty measurement ID is what silences it
+    # at deploy time, and the banner is gated on the same ID.
+    assert 'GA_ID: ""' in neither
+    assert 'export GA_ID=""' in neither
+    assert ') if ga_id else ""' in neither
+
+
 def _composed_pass(changes: dict) -> bool:
     """The `pass` the review job persists for a full-review answer with `changes` applied."""
     from vibey_gh.review_composition import FULL, REVIEW_COMPOSER

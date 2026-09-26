@@ -470,6 +470,7 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         ("__VIBEY_GH_DOC_LLMS__", cfg.documentation.generate_llms_txt),
         ("__VIBEY_GH_DOC_LLMS_FULL__", cfg.documentation.generate_llms_full_txt),
         ("__VIBEY_GH_DOC_JSON_LD__", cfg.documentation.generate_json_ld),
+        ("__VIBEY_GH_DOC_COOKIE_CONSENT__", cfg.documentation.cookie_consent),
         ("__VIBEY_GH_DOC_BOOK__", cfg.documentation.generate_book),
         ("__VIBEY_GH_DOC_PAPER__", cfg.documentation.generate_paper),
         ("__VIBEY_GH_DOC_MATH__", cfg.documentation.math),

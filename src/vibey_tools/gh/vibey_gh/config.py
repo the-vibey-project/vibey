@@ -1815,6 +1815,12 @@ class DocumentationConfig:
     require_provenance: bool = False
     provenance_files: tuple[str, ...] = ("README.md", "docs/index.md")
     google_analytics_id: str = ""
+    # Cookie consent for the analytics snippet. When set and a GA4 measurement ID is
+    # configured, every published page and the channel-picker index deny analytics
+    # storage by default (Google Consent Mode v2) and show an accept/decline banner
+    # whose choice is remembered per browser. Off renders the plain gtag snippet,
+    # and with no measurement ID nothing renders either way.
+    cookie_consent: bool = True
     # --- Search & LLM optimisation for the published site. Every field is optional and
     # generic; the defaults derive from the repository so an unconfigured site still ships
     # complete metadata. ---
@@ -2796,6 +2802,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
                 documentation.get("provenance_files", ("README.md", "docs/index.md"))
             ),
             google_analytics_id=documentation.get("google_analytics_id", ""),
+            cookie_consent=documentation.get("cookie_consent", True),
             favicon=documentation.get("favicon", "📘"),
             og_image=documentation.get("og_image", ""),
             twitter_site=documentation.get("twitter_site", ""),

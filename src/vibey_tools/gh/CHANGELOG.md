@@ -5,6 +5,12 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `[documentation] cookie_consent` (default on) keeps the GA4 snippet lawful:
+  with a measurement ID configured, every published page and the channel-picker index
+  deny analytics storage by default (Google Consent Mode v2) and show an accept/decline
+  banner whose choice is remembered per browser, so no analytics cookie is set before
+  the reader accepts. `false` renders the plain gtag snippet; with no measurement ID
+  nothing renders either way. See configuration.md.
 - **Feature:** `[documentation] site_root_files` declares repository-relative files copied
   by basename into the Pages root on every release-surfaces deploy — the declared answer
   to Search Console's "HTML file" verification, which a hand-uploaded file cannot give

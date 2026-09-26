@@ -742,6 +742,7 @@ bottom_nav = true       # previous/next bar at the bottom of every published pag
 author_name = "Adam Matthew Steinberger"
 author_url = "https://vibewithadam.matthewsteinberger.com"
 google_analytics_id = ""                    # empty disables it; set a GA4 ID like "G-XXXXXXXXXX" to enable
+cookie_consent = true                       # Consent Mode defaults + accept/decline banner while a GA4 ID is set
 google_site_verification = ""                # bare Search Console "HTML tag" token; leave empty to skip verification
 site_root_files = []                         # e.g. ["googleebf918639d02415d.html"]: copied by basename to the Pages root on every deploy
 # ProperDocs depends on none of the plugins your site declares, so a site using
@@ -784,7 +785,11 @@ Google Analytics is off by default and fully generic: `google_analytics_id` acce
 repository's own GA4 measurement ID (`G-XXXXXXXXXX`), and leaving it empty means no
 analytics script tag is ever emitted and no request reaches Google. When set, the same ID
 is injected into every page of both generated documentation channels and the
-channel-picker landing page.
+channel-picker landing page. `cookie_consent` (on by default) keeps that injection
+lawful: analytics storage is denied by default under Google Consent Mode v2 and the
+site shows an accept/decline banner whose choice is remembered per browser, so no
+analytics cookie is set before the reader accepts. Set it `false` for the plain gtag
+snippet without a banner.
 
 `google_site_verification` proves ownership of the published site to Google Search
 Console without an uploaded verification file, which release-surfaces would otherwise
