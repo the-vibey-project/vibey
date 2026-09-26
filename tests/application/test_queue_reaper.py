@@ -399,6 +399,14 @@ async def test_a_sighting_that_cannot_be_recorded_or_cleared_is_named() -> None:
     report = await reaper.run(PROJECT)
     assert report.unreadable == ("clearing stale_ready on job:p: record_cleared failed",)
 
+    open_one = _verdict(ReapCondition.STALE_READY, ReapAction.SURFACE)
+    store = FakeStore(open_rows=[(PROJECT, open_one)])
+    store.ledger.append((PROJECT, open_one.cleared()))
+    reaper, _, _ = _reaper(store)
+    report = await reaper.run(PROJECT)
+    assert report.cleared == ()
+    assert report.unreadable == ()
+
     store = FakeStore(fail={"open_sightings"})
     reaper, _, _ = _reaper(store)
     report = await reaper.run(PROJECT)
