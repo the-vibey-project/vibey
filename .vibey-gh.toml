@@ -255,7 +255,10 @@ paid_conflict_resolution = false
 # calibration measures the runs this repository actually makes. The bounds keep their
 # defaults (vibey-gh docs/configuration.md#local_models-and-vibey-gh-slots).
 [local_models]
-concurrent_runs = 1
+# Let the sovereign storm launcher use the highest concurrency this device's
+# calibration proves safe for GPT-OSS 20B. Until evidence exists, the slot gate
+# conservatively falls back to one run and requests calibration.
+concurrent_runs = "measured"
 model = "gpt-oss:20b"
 context_window = 65536
 
