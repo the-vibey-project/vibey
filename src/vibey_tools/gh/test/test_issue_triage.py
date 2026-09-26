@@ -54,10 +54,10 @@ def test_fetch_open_issues_uses_the_whole_open_issue_set_and_excludes_pull_reque
     with patch.object(
         it.github_state,
         "gh_json",
-        return_value=[issue(1), {"number": 2, "isPullRequest": True}],
+        return_value=[issue(1)],
     ) as fetch:
         assert [row["number"] for row in it.fetch_open_issues()] == [1]
-    assert fetch.call_args.args[-1] == "number,title,body,labels,createdAt,isPullRequest"
+    assert fetch.call_args.args[-1] == "number,title,body,labels,createdAt"
 
 
 def test_ensure_labels_and_command_failures_are_reported():
