@@ -125,7 +125,7 @@ pin_version = true
 # author's own. It refuses to rewrite a branch that already carries merge commits and
 # fails loudly there rather than guessing, which is the right trade: an automated rewrite
 # of somebody's merge is not a tidy-up.
-workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
+workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "repository-profile.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
 
 # Declared here rather than clicked, per ADR-0018. `vibey-gh` has reconciled both of these
 # from configuration since 1.x and vibey-skills has used them for months; this repository,

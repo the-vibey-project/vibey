@@ -1,8 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import subprocess
+from argparse import Namespace
 from unittest.mock import patch
 
-from vibey_gh import issue_triage as it
+from vibey_gh import cli, issue_triage as it
 
 
 def issue(number=1, title="A feature", labels=(), created="2026-01-01T00:00:00Z"):
@@ -79,3 +80,26 @@ def test_summary_handles_empty_and_bumped_rows():
     item = it.rank(issue(4, "urgent", (it.BUMPED,)))
     assert "bumped" in it.summary([item])
     assert it.summary([]).endswith("|---:|---|---|\n")
+
+
+def test_cli_reports_triage_command_failures(capsys):
+    with patch.object(it, "set_bump", side_effect=RuntimeError("denied")):
+        assert cli._issue_triage(Namespace(action="bump", issue=7)) == 1
+    assert "vibey-gh: denied" in capsys.readouterr().err
+
+
+def test_cli_dispatches_triage_actions(capsys):
+    item = it.rank(issue(7, "feature"))
+    with (
+        patch.object(it, "triage", return_value=[item]),
+        patch.object(it, "set_bump") as set_bump,
+        patch.object(it, "ensure_labels") as ensure_labels,
+    ):
+        assert cli._issue_triage(Namespace(action="sweep", issue=None)) == 0
+        assert cli._issue_triage(Namespace(action="bump", issue=7)) == 0
+        assert cli._issue_triage(Namespace(action="unbump", issue=7)) == 0
+        assert cli._issue_triage(Namespace(action="ensure-labels", issue=None)) == 0
+    assert set_bump.call_args_list[0].args == (7, True)
+    assert set_bump.call_args_list[1].args == (7, False)
+    ensure_labels.assert_called_once_with()
+    assert "Issue triage order" in capsys.readouterr().out

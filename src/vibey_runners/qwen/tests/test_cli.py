@@ -876,8 +876,12 @@ def test_storm_hands_the_declared_empty_reply_bound_to_every_run(
     _no_managed_servers(monkeypatch)
     monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: None)
     monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
-    result = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
+    result = runner.invoke(
+        app,
+        ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a", "--effort", "extreme"],
+    )
     assert result.exit_code == 0, result.output
+    assert recording_runner[0]["max_turns"] == 120
     assert [
         (
             call["max_empty_reply_retries"],

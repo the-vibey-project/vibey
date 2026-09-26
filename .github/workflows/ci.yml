@@ -91,6 +91,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
+      - name: Gate 0 - governance corpus index
+        run: uv run vibey-gh corpus-index --check
+
       - name: Gate 1 - ruff check
         run: uv run ruff check .
 
@@ -955,6 +958,7 @@ jobs:
   image:
     name: Container image (amd64 + arm64)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
