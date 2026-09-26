@@ -1815,6 +1815,12 @@ class DocumentationConfig:
     require_provenance: bool = False
     provenance_files: tuple[str, ...] = ("README.md", "docs/index.md")
     google_analytics_id: str = ""
+    # Cookie consent for the analytics snippet. When set and a GA4 measurement ID is
+    # configured, every published page and the channel-picker index deny analytics
+    # storage by default (Google Consent Mode v2) and show an accept/decline banner
+    # whose choice is remembered per browser. Off renders the plain gtag snippet,
+    # and with no measurement ID nothing renders either way.
+    cookie_consent: bool = True
     # --- Search & LLM optimisation for the published site. Every field is optional and
     # generic; the defaults derive from the repository so an unconfigured site still ships
     # complete metadata. ---
@@ -1835,6 +1841,12 @@ class DocumentationConfig:
     # index, which is what makes it survive redeploys; an uploaded verification FILE is
     # wiped every time release-surfaces rebuilds the Pages root.
     google_site_verification: str = ""
+    # Repository-relative files copied by basename into the Pages root on every
+    # release-surfaces deploy — the declared answer to Search Console's "HTML file"
+    # verification, which a hand-uploaded file cannot give because the rebuild wipes
+    # the Pages root. Empty copies nothing. A declared file that is missing from the
+    # checkout fails the deploy rather than publishing without it.
+    site_root_files: tuple[str, ...] = ()
     # What the published-site build installs. ProperDocs renders whatever the repository's
     # `properdocs.yml` declares, and a site that declares plugins or markdown extensions
     # cannot build without them — `properdocs` and its theme pull in none of that, so a
@@ -1982,6 +1994,23 @@ class DocumentationConfig:
             raise ValueError(
                 "documentation.google_site_verification must be the bare token from the "
                 "HTML-tag method (the content= value), not the whole tag"
+            )
+        _unique_nonempty("documentation.site_root_files", self.site_root_files)
+        for entry in self.site_root_files:
+            if (
+                entry.startswith(("/", "~"))
+                or ".." in PurePosixPath(entry).parts
+                or any(char.isspace() or char in "'\"$`\\" for char in entry)
+            ):
+                raise ValueError(
+                    "documentation.site_root_files entries must be repository-relative paths"
+                    f" without '..', whitespace or shell metacharacters: {entry!r}"
+                )
+        basenames = [PurePosixPath(entry).name for entry in self.site_root_files]
+        if len(set(basenames)) != len(basenames):
+            raise ValueError(
+                "documentation.site_root_files entries must have unique file names:"
+                " each is copied by basename into the Pages root"
             )
         if self.google_analytics_id and not GOOGLE_ANALYTICS_ID_PATTERN.match(
             self.google_analytics_id
@@ -2773,6 +2802,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
                 documentation.get("provenance_files", ("README.md", "docs/index.md"))
             ),
             google_analytics_id=documentation.get("google_analytics_id", ""),
+            cookie_consent=documentation.get("cookie_consent", True),
             favicon=documentation.get("favicon", "📘"),
             og_image=documentation.get("og_image", ""),
             twitter_site=documentation.get("twitter_site", ""),
@@ -2782,6 +2812,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             theme_color=documentation.get("theme_color", "#080b14"),
             locale=documentation.get("locale", "en_US"),
             google_site_verification=documentation.get("google_site_verification", ""),
+            site_root_files=tuple(documentation.get("site_root_files", ())),
             site_requirements=tuple(documentation.get("site_requirements", ())),
             governance_source=documentation.get("governance_source", ""),
             corpus_index=documentation.get("corpus_index", "corpus-index.json"),

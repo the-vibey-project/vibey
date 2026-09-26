@@ -533,6 +533,7 @@ jobs:
           FUNDING_ETHEREUM='' FUNDING_LABEL='Support this work' \
           SEO_THEME_COLOR='#080b14' SEO_LOCALE='en_US' \
           SEO_SITE_VERIFICATION='' \
+          COOKIE_CONSENT=true \
           python - <<'PY'
           import html
           import json
@@ -583,6 +584,12 @@ jobs:
               )
 
           ga_id = os.environ.get("GA_ID", "")
+          # Cookie consent (documentation.cookie_consent): with a measurement ID set,
+          # analytics storage stays denied until the reader accepts, per Google Consent
+          # Mode v2, and the banner below records the choice per browser. The banner
+          # markup is duplicated in the channel-picker step below; keep the two copies
+          # identical, since each step renders its own page from its own environment.
+          consent = os.environ.get("COOKIE_CONSENT", "") == "true"
           ga_snippet = (
               f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
               "<script>\n"
@@ -592,6 +599,53 @@ jobs:
               f"gtag('config', '{ga_id}');\n"
               "</script>\n"
           ) if ga_id else ""
+          if ga_id and consent:
+              ga_snippet = (
+                  f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
+                  "<script>\n"
+                  "window.dataLayer = window.dataLayer || [];\n"
+                  "function gtag(){dataLayer.push(arguments);}\n"
+                  "gtag('consent', 'default', {'ad_storage': 'denied',"
+                  " 'ad_user_data': 'denied', 'ad_personalization': 'denied',"
+                  " 'analytics_storage': 'denied'});\n"
+                  "gtag('js', new Date());\n"
+                  f"gtag('config', '{ga_id}');\n"
+                  "</script>\n"
+              )
+          consent_banner = (
+              '<div id="vibey-consent" role="dialog" aria-label="Cookie consent"'
+              ' style="position:fixed;left:0;right:0;bottom:0;z-index:9999;display:none;'
+              "padding:1rem 1.25rem;background:#101528;color:#f7f8ff;"
+              "border-top:1px solid rgba(255,255,255,.15);"
+              'font:400 .9rem/1.5 system-ui,sans-serif;text-align:center">\n'
+              "<span>This documentation site uses Google Analytics to understand usage.</span>\n"
+              ' <button id="vibey-consent-accept" type="button"'
+              ' style="margin-left:.75rem;padding:.35rem .9rem;border:1px solid #75f0c2;'
+              'border-radius:99px;background:#75f0c2;color:#080b14;font-weight:700;cursor:pointer">'
+              "Accept</button>\n"
+              ' <button id="vibey-consent-decline" type="button"'
+              ' style="margin-left:.5rem;padding:.35rem .9rem;border:1px solid rgba(255,255,255,.4);'
+              'border-radius:99px;background:transparent;color:#f7f8ff;cursor:pointer">'
+              "Decline</button>\n"
+              "</div>\n"
+              "<script>\n"
+              "(function(){\n"
+              "var key='vibey-docs-consent';\n"
+              "function grant(v){if(typeof gtag!=='function')return;"
+              "gtag('consent','update',{'ad_storage':v,'ad_user_data':v,"
+              "'ad_personalization':v,'analytics_storage':v});}\n"
+              "function hide(){var b=document.getElementById('vibey-consent');"
+              "if(b)b.style.display='none';}\n"
+              "function choose(v){try{localStorage.setItem(key,v);}catch(e){}grant(v);hide();}\n"
+              "var stored=null;try{stored=localStorage.getItem(key);}catch(e){}\n"
+              "if(stored==='granted'||stored==='denied'){grant(stored);return;}\n"
+              "var bar=document.getElementById('vibey-consent');if(!bar)return;\n"
+              "bar.style.display='block';\n"
+              "document.getElementById('vibey-consent-accept').onclick=function(){choose('granted');};\n"
+              "document.getElementById('vibey-consent-decline').onclick=function(){choose('denied');};\n"
+              "})();\n"
+              "</script>\n"
+          ) if ga_id and consent else ""
 
           title_of = re.compile(r"<title>(.*?)</title>", re.S)
           # Bottom previous/next navigation. The theme already renders rel="prev"/rel="next"
@@ -696,6 +750,8 @@ jobs:
                       text = text.replace("</body>", bar + "</body>")
               if funding_html and "</body>" in text:
                   text = text.replace("</body>", funding_html + "</body>")
+              if consent_banner and "</body>" in text:
+                  text = text.replace("</body>", consent_banner + "</body>")
               path.write_text(text.replace("</head>", metadata + "</head>"))
           # The documentation's downloadable forms, substituted into the theme script from
           # what THIS deploy actually produced -- never from configuration -- so no page
@@ -1149,7 +1205,7 @@ jobs:
                 <span>Made with ❤️ by <a href="https://the-vibey-project.github.io/vibey/">Vibey</a>, Developed by <a href="https://vibewithadam.matthewsteinberger.com/">Adam Matthew Steinberger</a> (<a href="https://github.com/adammatthewsteinberger/">@adammatthewsteinberger</a>).</span>
               </footer>
             </main>
-          </body>
+          __CONSENT_BANNER__</body>
           </html>
           HTML
       - name: Substitute the chooser page's values
@@ -1158,6 +1214,7 @@ jobs:
           RELEASE_CHANNEL: ${{ needs.context.outputs.channel }}
           RELEASE_SHA: ${{ needs.context.outputs.sha }}
           GA_ID: "G-DV1RM8BD78"
+          COOKIE_CONSENT: "true"
         run: |
           set -euo pipefail
           # GA_ID was a shell variable set in the restore step and read here, hundreds of
@@ -1166,7 +1223,7 @@ jobs:
           # analytics snippet and nothing would report it. It now arrives through `env:`
           # above, and `${VAR?}` fails the step outright if an entry is ever deleted. An
           # empty GA_ID stays legal -- that is analytics switched off, not a missing value.
-          : "${GA_ID?}" "${RELEASE_BRANCH?}" "${RELEASE_CHANNEL?}" "${RELEASE_SHA?}"
+          : "${GA_ID?}" "${COOKIE_CONSENT?}" "${RELEASE_BRANCH?}" "${RELEASE_CHANNEL?}" "${RELEASE_SHA?}"
           REPOSITORY_NAME=${GITHUB_REPOSITORY#*/} \
           REPOSITORY_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY} \
           SEO_OG_IMAGE='' \
@@ -1177,6 +1234,10 @@ jobs:
           path = pathlib.Path("pages/index.html")
           text = path.read_text()
           ga_id = os.environ.get("GA_ID", "")
+          # Cookie consent, mirroring the channel injector above: deny analytics storage
+          # by default and show the banner until the reader chooses. The two copies stay
+          # identical on purpose -- each step renders its own page from its own env.
+          consent = os.environ.get("COOKIE_CONSENT", "") == "true"
           ga_snippet = (
               f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
               "<script>\n"
@@ -1186,6 +1247,53 @@ jobs:
               f"gtag('config', '{ga_id}');\n"
               "</script>"
           ) if ga_id else ""
+          if ga_id and consent:
+              ga_snippet = (
+                  f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
+                  "<script>\n"
+                  "window.dataLayer = window.dataLayer || [];\n"
+                  "function gtag(){dataLayer.push(arguments);}\n"
+                  "gtag('consent', 'default', {'ad_storage': 'denied',"
+                  " 'ad_user_data': 'denied', 'ad_personalization': 'denied',"
+                  " 'analytics_storage': 'denied'});\n"
+                  "gtag('js', new Date());\n"
+                  f"gtag('config', '{ga_id}');\n"
+                  "</script>"
+              )
+          consent_banner = (
+              '<div id="vibey-consent" role="dialog" aria-label="Cookie consent"'
+              ' style="position:fixed;left:0;right:0;bottom:0;z-index:9999;display:none;'
+              "padding:1rem 1.25rem;background:#101528;color:#f7f8ff;"
+              "border-top:1px solid rgba(255,255,255,.15);"
+              'font:400 .9rem/1.5 system-ui,sans-serif;text-align:center">\n'
+              "<span>This documentation site uses Google Analytics to understand usage.</span>\n"
+              ' <button id="vibey-consent-accept" type="button"'
+              ' style="margin-left:.75rem;padding:.35rem .9rem;border:1px solid #75f0c2;'
+              'border-radius:99px;background:#75f0c2;color:#080b14;font-weight:700;cursor:pointer">'
+              "Accept</button>\n"
+              ' <button id="vibey-consent-decline" type="button"'
+              ' style="margin-left:.5rem;padding:.35rem .9rem;border:1px solid rgba(255,255,255,.4);'
+              'border-radius:99px;background:transparent;color:#f7f8ff;cursor:pointer">'
+              "Decline</button>\n"
+              "</div>\n"
+              "<script>\n"
+              "(function(){\n"
+              "var key='vibey-docs-consent';\n"
+              "function grant(v){if(typeof gtag!=='function')return;"
+              "gtag('consent','update',{'ad_storage':v,'ad_user_data':v,"
+              "'ad_personalization':v,'analytics_storage':v});}\n"
+              "function hide(){var b=document.getElementById('vibey-consent');"
+              "if(b)b.style.display='none';}\n"
+              "function choose(v){try{localStorage.setItem(key,v);}catch(e){}grant(v);hide();}\n"
+              "var stored=null;try{stored=localStorage.getItem(key);}catch(e){}\n"
+              "if(stored==='granted'||stored==='denied'){grant(stored);return;}\n"
+              "var bar=document.getElementById('vibey-consent');if(!bar)return;\n"
+              "bar.style.display='block';\n"
+              "document.getElementById('vibey-consent-accept').onclick=function(){choose('granted');};\n"
+              "document.getElementById('vibey-consent-decline').onclick=function(){choose('denied');};\n"
+              "})();\n"
+              "</script>\n"
+          ) if ga_id and consent else ""
           # The paper and the book, per channel, from the files that were actually
           # deployed under pages/<channel>/ -- present on the chooser only when they exist.
           def surface_line(label, channel):
@@ -1244,6 +1352,7 @@ jobs:
               "__RELEASE_SHA__": os.environ["RELEASE_SHA"],
               "__SHORT_SHA__": os.environ["RELEASE_SHA"][:12],
               "__GA_SNIPPET__": ga_snippet,
+              "__CONSENT_BANNER__": consent_banner,
               "__PAGES_ROOT__": "https://"
               + os.environ["GITHUB_REPOSITORY"].split("/")[0]
               + ".github.io/"
@@ -1285,6 +1394,11 @@ jobs:
           </sitemapindex>
           EOF
           fi
+          # Declared site-root files (documentation.site_root_files): copied by basename
+          # into the Pages root on EVERY deploy, so a Search Console HTML verification
+          # file survives the rebuild that wipes a hand-uploaded one. A declared file
+          # missing from the checkout fails the deploy rather than publishing without it.
+          # No documentation.site_root_files declared; nothing to copy.
           # The paper and the book on the LLM-facing index as well, only where they exist.
           # SURFACE_LINES is built and consumed inside THIS step. It must stay that way:
           # a later step would see it empty and silently drop every offline surface from
