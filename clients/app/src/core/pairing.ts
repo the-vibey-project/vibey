@@ -18,11 +18,11 @@ export class Pairing implements PairingInterface {
     try {
       url = new URL(text.trim());
     } catch {
-      return { ok: false, reason: 'That QR code is not a Krypton pairing code.' };
+      return { ok: false, reason: 'That QR code is not a krypton pairing code.' };
     }
     const target = `${url.host}${url.pathname}`.replace(/^\/+/, '');
     if (!Pairing.SCHEMES.includes(url.protocol) || target !== 'pair') {
-      return { ok: false, reason: 'That QR code is not a Krypton pairing code.' };
+      return { ok: false, reason: 'That QR code is not a krypton pairing code.' };
     }
     const params = url.searchParams;
     const host = params.get('host') ?? '';

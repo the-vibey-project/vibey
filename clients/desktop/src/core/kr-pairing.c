@@ -61,7 +61,7 @@ kr_pairing_offer_free(KrPairingOffer *offer)
 static KrPairingOffer *
 refuse(GError **error, const char *why)
 {
-    g_set_error(error, KR_PAIRING_ERROR, KR_PAIRING_ERROR_INVALID, "not a vibey pairing code: %s",
+    g_set_error(error, KR_PAIRING_ERROR, KR_PAIRING_ERROR_INVALID, "not a krypton pairing code: %s",
                 why);
     return NULL;
 }

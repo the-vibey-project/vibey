@@ -104,7 +104,7 @@ kr_mark_new(int size)
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(area), draw, mark, g_free);
     g_object_set_data(G_OBJECT(area), "kr-mark", mark);
     gtk_accessible_update_property(GTK_ACCESSIBLE(area), GTK_ACCESSIBLE_PROPERTY_LABEL,
-                                   "Krypton", -1);
+                                   "krypton", -1);
     mark->tick = gtk_widget_add_tick_callback(area, on_tick, NULL, NULL);
     g_signal_connect_object(adw_style_manager_get_default(), "notify::dark",
                             G_CALLBACK(on_dark_changed), area, 0);

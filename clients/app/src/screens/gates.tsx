@@ -57,7 +57,7 @@ function Gate(props: { readonly gate: GateCard; readonly onDone: () => void; rea
 export function GatesScreen(props: { readonly verify?: () => Promise<boolean> }) {
   const { result, reload } = useHub((client) => client.gates());
   return (
-    <Screen title="Gates" subtitle="Where vibey waits for you." onRefresh={reload}>
+    <Screen title="Gates" subtitle="Where krypton waits for you." onRefresh={reload}>
       <Loaded result={result}>
         {(gates) => {
           const cards = present.gates(gates, Date.now());

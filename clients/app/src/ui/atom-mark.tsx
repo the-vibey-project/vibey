@@ -43,7 +43,7 @@ export function AtomMark(props: { readonly size?: number; readonly animated?: bo
   }, [spin, props.animated]);
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   return (
-    <Animated.View accessibilityRole="image" accessibilityLabel="Krypton" style={{ width: size, height: size, transform: [{ rotate }] }}>
+    <Animated.View accessibilityRole="image" accessibilityLabel="krypton" style={{ width: size, height: size, transform: [{ rotate }] }}>
       <Svg width={size} height={size} viewBox="0 0 100 100">
         {SHELLS.map((count, shell) => {
           const r = 18 + shell * 9;

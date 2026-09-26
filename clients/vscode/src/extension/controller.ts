@@ -2,7 +2,7 @@
 /**
  * One window's state: the core (built from the `vibey.*` settings, and built again when they
  * change), the tasks this window started, and what the next task takes with it. Views, the
- * task panel, the command menu and `@vibey` all read it, so they always agree. A paired hub's
+ * task panel, the command menu and `@krypton` all read it, so they always agree. A paired hub's
  * key lives in the editor's secret storage, never in settings: with it and `vibey.hubUrl`,
  * vibey is reached through the hub (ADR-0068); without either, through the local command
  * line, exactly as before. Declared by `interfaces/controller-interface.ts`.

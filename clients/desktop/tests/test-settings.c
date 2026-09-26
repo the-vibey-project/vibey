@@ -9,8 +9,8 @@ test_channels(void)
     g_assert_cmpstr(kr_channel_app_id(KR_CHANNEL_STABLE), ==, "io.github.the_vibey_project.Krypton");
     g_assert_cmpstr(kr_channel_app_id(KR_CHANNEL_NIGHTLY), ==,
                     "io.github.the_vibey_project.Krypton.Nightly");
-    g_assert_cmpstr(kr_channel_display_name(KR_CHANNEL_STABLE), ==, "Krypton");
-    g_assert_cmpstr(kr_channel_display_name(KR_CHANNEL_NIGHTLY), ==, "Krypton Nightly");
+    g_assert_cmpstr(kr_channel_display_name(KR_CHANNEL_STABLE), ==, "krypton");
+    g_assert_cmpstr(kr_channel_display_name(KR_CHANNEL_NIGHTLY), ==, "krypton nightly");
     g_assert_cmpstr(kr_channel_dir_name(KR_CHANNEL_STABLE), ==, "krypton");
     g_assert_cmpstr(kr_channel_dir_name(KR_CHANNEL_NIGHTLY), ==, "krypton-nightly");
     g_assert_cmpint(kr_channel_from_string("NIGHTLY"), ==, KR_CHANNEL_NIGHTLY);

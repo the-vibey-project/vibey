@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
  * Every command in the one command table, implemented once. The Command Palette, the views'
- * menus and buttons, the status-bar menu, the task panel's `/` commands and `@vibey` all call
+ * menus and buttons, the status-bar menu, the task panel's `/` commands and `@krypton` all call
  * `run`, so a command behaves the same wherever it was asked for; the constructor refuses to
  * start if a table command has no handler. Replies go where the command came from: a
  * notification, the panel, or the chat. Declared by `interfaces/actions-interface.ts`.

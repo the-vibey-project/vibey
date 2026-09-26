@@ -10,7 +10,7 @@ const present = new Presenters();
 export function HomeScreen() {
   const { result, reload } = useHub((client) => client.projects());
   return (
-    <Screen title="Krypton" subtitle="Every project vibey is running, live." onRefresh={reload}>
+    <Screen title="krypton" subtitle="Every project krypton is running, live." onRefresh={reload}>
       <View style={{ alignItems: 'center', marginVertical: 8 }}>
         <AtomMark size={112} />
       </View>

@@ -1,6 +1,6 @@
 # VS Code extension
 
-The extension is called **krypton**, the name every vibey app carries (sub-doctrine 9.e); its
+The extension is called **krypton**, the name every app carries (sub-doctrine 9.e); its
 commands and settings keep their `vibey.*` names. It lets you drive vibey, and a model on your own computer, from VS Code:
 describe a task, watch the model work on a copy of your project, and apply the result when
 you are happy with it. It needs no account and no cloud. Everything on the default loop,
@@ -46,9 +46,9 @@ Or use **Install from VSIX…** in the Extensions view's `…` menu. The `.vsix`
 ## 3. Your first task
 
 1. Open a folder that is a git repository with at least one commit.
-2. Click the **V** in the activity bar, then run **Vibey: Check my setup** from the Command
+2. Click the **V** in the activity bar, then run **krypton: Check my setup** from the Command
    Palette. Every `FAIL` says what to do.
-3. Run **Vibey: Ask the model to do a task** and describe it, for example
+3. Run **krypton: Ask the model to do a task** and describe it, for example
    `add a line to README.md that says how to run the tests`.
 4. The task panel shows the model's words, each tool call and each turn as they happen. Enter
    sends; Shift+Enter starts a new line; `/` shows every command. **Stop** lets the model finish

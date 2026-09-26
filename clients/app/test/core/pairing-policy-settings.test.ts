@@ -31,9 +31,9 @@ describe('Pairing', () => {
   });
 
   it.each([
-    ['not a url', 'not a Krypton pairing code'],
-    ['https://evil.example/pair?host=a&port=1&code=111111', 'not a Krypton pairing code'],
-    ['krypton://elsewhere?host=a&port=1&code=111111', 'not a Krypton pairing code'],
+    ['not a url', 'not a krypton pairing code'],
+    ['https://evil.example/pair?host=a&port=1&code=111111', 'not a krypton pairing code'],
+    ['krypton://elsewhere?host=a&port=1&code=111111', 'not a krypton pairing code'],
     ['krypton://pair?port=1&code=111111', 'names no host'],
     ['krypton://pair?host=a/b&port=1&code=111111', 'names no host'],
     ['krypton://pair?host=a&code=111111', 'no valid port'],
@@ -133,8 +133,8 @@ describe('AppIdentities', () => {
   it('gives the two channels different names, identifiers and schemes', () => {
     const stable = identities.identity('stable');
     const nightly = identities.identity('nightly');
-    expect(stable.name).toBe('Krypton');
-    expect(nightly.name).toBe('Krypton Nightly');
+    expect(stable.name).toBe('krypton');
+    expect(nightly.name).toBe('krypton nightly');
     for (const key of ['slug', 'scheme', 'iosBundleIdentifier', 'androidPackage', 'updateChannel'] as const) {
       expect(stable[key]).not.toBe(nightly[key]);
     }

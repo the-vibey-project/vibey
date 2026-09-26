@@ -20,11 +20,11 @@ describe('the one command table, as this extension contributes it', () => {
     expect(contributed).toEqual(declared);
   });
 
-  it("is exactly the @vibey chat participant's commands: each slash command's first word, once", () => {
-    // VS Code reads `@vibey /budget add ...` as the command `budget` and the prompt `add ...`,
+  it("is exactly the @krypton chat participant's commands: each slash command's first word, once", () => {
+    // VS Code reads `@krypton /budget add ...` as the command `budget` and the prompt `add ...`,
     // so the participant declares first words and the panel's parser reads the rest.
     const participant = manifest.contributes.chatParticipants[0];
-    expect(participant?.id).toBe('vibey.chat');
+    expect(participant?.id).toBe('krypton.chat');
     const words = new SlashCommands().firstWords();
     const declared = words.map((word) => ({
       name: word,
