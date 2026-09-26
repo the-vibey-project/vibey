@@ -23,7 +23,7 @@ kind = "github"
 # every `force-include` source in the root pyproject's `[tool.hatch.build.targets.wheel]`.
 # The invariant is one sentence, and `tests/meta/test_version_paths_cover_every_shipped_tree.py`
 # enforces it: every path that ships must be reachable by some prefix here. Left narrow,
-# a change to claudeloop or vibey_gh derives "nothing to release" and `release.yml`
+# a change to claudeloop or vibey_gh derives "nothing to release" and `vibey-engine.yml`
 # republishes the current version into `skip-existing` -- a green run that publishes
 # nothing.
 #
@@ -50,7 +50,6 @@ content_paths = [
   "src/vibey_runners/cursor/src/",
   "src/vibey_runners/agy/src/",
   "src/vibey_runners/qwen/src/",
-  "src/vibey_runners/opencode/src/",
   "src/vibey_runners/common/src/",
   "src/vibey_tools/gh/vibey_gh/",
   "src/vibey_tools/gh/docs/stylesheets/",
@@ -65,6 +64,18 @@ code_paths    = ["src/vibey/", "pyproject.toml"]
 [branches]
 integration = "develop"
 release     = "main"
+
+# Sub-doctrine 8.i (ADR-0070): the merge train, the promotion and the heartbeat stand down
+# from sundown Friday to sundown Saturday where the machine running them stands. A hosted
+# runner's clock is UTC and it has no location service, so this repository names the zone
+# its operator keeps; the location then resolves to that zone's reference city, which is
+# coarse, and the window widens toward rest by `coarse_margin_minutes`. No coordinates are
+# ever committed here: a host's own go in `local_config` (default
+# ~/.config/vibey/sabbath.toml) or VIBEY_SABBATH_LATITUDE/VIBEY_SABBATH_LONGITUDE.
+[sabbath]
+timezone              = "America/New_York"
+coarse_margin_minutes = 90
+enabled               = false
 
 [merge_train]
 owner           = "adammatthewsteinberger"
@@ -114,7 +125,7 @@ pin_version = true
 # author's own. It refuses to rewrite a branch that already carries merge commits and
 # fails loudly there rather than guessing, which is the right trade: an automated rewrite
 # of somebody's merge is not a tidy-up.
-workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
+workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "repository-profile.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
 
 # Declared here rather than clicked, per ADR-0018. `vibey-gh` has reconciled both of these
 # from configuration since 1.x and vibey-skills has used them for months; this repository,
@@ -146,7 +157,12 @@ enabled = true
 # This list also renders into automation-bootstrap.yml, so re-run `vibey-gh install`
 # after changing it.
 [rulesets.integration]
-required_checks  = ["gates", "No-loss property suite (10,000 examples)"]
+# The two VS Code extension jobs joined once they had run green on develop (0823cdfd),
+# as ADR-0059 owed: a krypton client that breaks is a failed merge, not a later surprise.
+required_checks  = [
+  "gates", "No-loss property suite (10,000 examples)",
+  "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
+]
 required_approvals = 1
 # The owner in .github/CODEOWNERS must approve a change to a protected path.
 require_code_owner_review = true
@@ -168,6 +184,7 @@ enabled = true
 [rulesets.release]
 required_checks  = [
   "gates", "No-loss property suite (10,000 examples)", "uv.lock is in sync with pyproject.toml",
+  "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
 ]
 required_approvals = 1
 require_code_owner_review = true
@@ -238,7 +255,10 @@ paid_conflict_resolution = false
 # calibration measures the runs this repository actually makes. The bounds keep their
 # defaults (vibey-gh docs/configuration.md#local_models-and-vibey-gh-slots).
 [local_models]
-concurrent_runs = 1
+# Let the sovereign storm launcher use the highest concurrency this device's
+# calibration proves safe for GPT-OSS 20B. Until evidence exists, the slot gate
+# conservatively falls back to one run and requests calibration.
+concurrent_runs = "measured"
 model = "gpt-oss:20b"
 context_window = 65536
 
@@ -275,6 +295,13 @@ repository = "the-vibey-project/vibey"
 # The prefix the operator's existing agents already carry, so an install replaces
 # `<prefix>-vibey` in place and cleanup finds the agents of the absorbed repositories.
 unit_prefix = "com.adammatthewsteinberger.vibey-runner"
+# The interpreter the heartbeat timer runs, and the one its clone's pre-push gate asks for
+# the scope decision (ADR-0060): the tool install `uv tool install --force --from . vibey`
+# makes, outside every checkout. Declared rather than defaulted so the runbook's
+# `uv run vibey-gh runner install` -- whose own interpreter is this checkout's .venv, which
+# the timer refuses -- installs the heartbeat with it. Re-run that tool install after pulling
+# a vibey-gh change, or `heartbeat status` reports the gate refusing a heartbeat.
+heartbeat_python = "~/.local/share/uv/tools/vibey/bin/python"
 
 [issue_automation]
 # The issue path's counterpart, sharing the fallback runner and model: an exhausted API
@@ -328,7 +355,14 @@ generate_paper = true
 enabled = false
 # GA4 measurement id for the published docs site, rendered into release-surfaces.yml as
 # GA_ID. Public by nature -- it ships in the page source of every site using it.
-google_analytics_id = "G-DMYG7PHCQP"
+google_analytics_id = "G-R673ZXZDFT"
+# Consent Mode defaults plus an accept/decline banner while the ID above is set, so no
+# analytics cookie is set before the reader accepts. Explicitly on: the default, stated.
+cookie_consent = true
+# Search Console "HTML file" verification: copied by basename into the Pages root on
+# every release-surfaces deploy, so verification survives the rebuild that wipes a
+# hand-uploaded file. The committed file is the one Search Console issued.
+site_root_files = ["googleebf918639d02415d.html"]
 
 # ---------------------------------------------------------------------------------------
 # The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049).

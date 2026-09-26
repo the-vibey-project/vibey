@@ -59,9 +59,22 @@ not a supported target. The suite reads `VIBEY_TEST_DATABASE_URL` (default
 `postgresql://$USER@localhost:5432/vibey_test`); that role needs `CREATEDB`,
 because the session builds a migrated `vibey_test_template` and clones one
 `vibey_test_<worker>` per xdist worker. Parallel checkouts whose migrations
-differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The
+differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The server
+authenticates every connection with scram-sha-256, the socket included (sub-doctrine
+10.j, ADR-0061; the `pg_hba.conf` lines are in `SECURITY.md` §7). Give your role a
+password and put it in `~/.pgpass` (mode `0600`, one line for `localhost`, which also
+covers the local socket), and the DSN above works without the password written in it. The
 default suite needs no engine binaries and no paid accounts: tests marked
 `paid` are deselected unless you ask for them (ADR-0030).
+
+A killed test run cannot drop its databases, so the harness reaps them. Each session holds a
+lock on its database for as long as it lives, and marks the database with the process that
+created it and that process's machine. At the start of every run, the harness drops, in the
+background, the test databases no live session holds (`tests/db_reaper.py`). A database is kept
+while its lock is held, or while the process its mark names is alive on this machine, so a
+session that loses its lock mid-run still keeps its databases. `uv run python -m
+tests.db_reaper --dry-run` shows what it would drop. `VIBEY_TEST_REAP=0` turns the automatic
+reap off, and `VIBEY_TEST_REAP_LIMIT` (default 200) caps one run's drops.
 
 ### Where your work lives, and how often it is saved
 
@@ -96,11 +109,11 @@ Durable storage alone is not enough. A disk fails and a laptop goes missing, so:
 ## The branch model
 
 ```
-main         ← always releasable; every push publishes to PyPI (release.yml)
+main         ← always releasable; every push publishes to PyPI (vibey-engine.yml)
   ▲ rebase merge — main's ruleset permits only rebase. The promotion PR is
   │ opened by `vibey-gh promote` (promote-to-main.yml); after a release,
   │ develop is realigned to main's tree.
-develop      ← integration branch; every push publishes a vibey-dev build to TestPyPI
+develop      ← integration branch; every push publishes dev builds to TestPyPI
   ▲ squash merge — develop's ruleset permits only squash
 feature/*    ← your work
 ```
@@ -115,7 +128,7 @@ feature/*    ← your work
    train. To see why a PR is not moving:
    `gh workflow run merge-train.yml -f pr=<N> -f dry_run=true`.
 5. `vibey-gh promote` opens the promotion PR from `develop` into `main`; it is
-   rebase-merged, `release.yml` publishes, and `develop` is realigned.
+   rebase-merged, `vibey-engine.yml` publishes, and `develop` is realigned.
 
 Never implement on `main`.
 
@@ -227,7 +240,7 @@ This repository is a uv workspace (ADR-0021). `src/vibey` is the conductor;
 `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}` are the `*loop`
 runners; `src/vibey_tools/{gh,skills,bootstrap}` are vibey-gh, vibey-skills
 and vibey-bootstrap. Each was imported with its history, and each ships inside
-the `vibey` distribution rather than under its own PyPI name (ADR-0037).
+the `vibey-engine` package rather than under its own PyPI name (ADR-0037, ADR-0069).
 
 The root gates above cover `src/vibey` only. A tenant keeps every gate it was
 already held to (ADR-0022), run from its own directory with its own command,

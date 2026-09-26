@@ -12,8 +12,121 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **desktop:** Krypton desktop, in C17 on GTK 4 and libadwaita
+  ([ADR-0073](docs/architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md)). `clients/desktop`
+  holds a pure-C core, libkryptondesktop: hub documents, the libsoup hub client, gate answers,
+  state, formatting, themes and channels, pairing, and `_vibey._tcp` discovery with Avahi and
+  dns_sd. Thin views sit over it: Projects, Gates (answered in place, with notifications),
+  Lanes, Loops and effort, Budgets, Doctor, Devices and Settings. It has GLib tests under ASan
+  and UBSan, a `desktop` CI job on Ubuntu and Arch, and declared-only packaging.
+* **sabbath:** the Sabbath, kept where the machine stands
+  ([ADR-0072](docs/architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md),
+  sub-doctrine 8.i). From sundown Friday to sundown Saturday the merge train and the promotion
+  stand down visibly (exit 0, "paused, not failed"). Workers claim no lease, and `vibey new` and
+  `vibey work` decline with exit 75. Sundown is computed with the NOAA algorithm for the host's
+  own location: a local override, then CoreLocation or GeoClue, then the zone's reference city,
+  which is coarse and so widened toward rest. The heartbeat keeps beating through the window as
+  "resting until ...". At sundown it writes `SabbathEnded`, re-fires the held workflows and
+  resumes registered lanes. New: `vibey sabbath`, `vibey-gh sabbath status|register-lane|resume`,
+  the `[sabbath]` table, and a location line in `vibey doctor`.
+* **vscode:** krypton 0.2.0, raised to the Beauty Law (12.k): the display name krypton (9.e),
+  the task panel on the design tokens with Light, Dark and System, a first-run walkthrough,
+  live lanes with motion that respects reduced motion, ULTRA and UNLIMITED SPEND shown
+  everywhere with a one-action way out, and **Connect to vibey on this network** through
+  `@vibey/core`'s `HubTransport`, which now speaks the hub's routes. The two `VS Code extension`
+  CI rows are required checks (ADR-0059).
+* **failover:** the driver hands off to gptossloop at ULTRA and back after a recorded probe
+  ([ADR-0070](docs/architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)).
+  Claude Code's `StopFailure` hook (`rate_limit`, `billing_error`) runs `vibey driver hook`: a
+  no-loss-gated brief naming the whole transcript by SHA-256 goes into the worktree,
+  `EngineFailedOver` is recorded, and gptossloop starts at ULTRA. `vibey driver probe`, on the
+  launchd or systemd timer `vibey driver timer` writes, hands back to the same session with
+  `claude -p --resume` only after a recorded successful probe. `[failover]` holds every key.
+  `EngineFailoverService` and `PostgresFailoverStore` apply the same policy to a project's jobs
+  (built and tested; not yet wired into the worker).
+
+* **ultra:** ULTRA, effort without a ceiling
+  ([ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md)). `Effort` gains
+  `ULTRA` after `MAX`; no ladder reaches it. `vibey ultra start|stop|status` runs a project's BUILD
+  passes at ULTRA with no `--max-turns`, never parked for length. Each done pass records
+  `UltraPassCompleted` and enqueues the next pass after the checks under its own job key. Stop
+  and the budget brake end it. `vibey budget no-cap` declares no cap through 8.b's warned, typed
+  path, and `vibey budget cap` withdraws it in one command. `vibey loops --json` lists ULTRA.
+
 ### BREAKING CHANGES
 
+* **packaging:** the engine's package is `vibey-engine`, and the apps' package is
+  `krypton-app`; no `vibey` package is published any more
+  ([ADR-0069](docs/architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md),
+  sub-doctrine 9.e). BREAKING for packagers and anyone who pinned `vibey`: install
+  `pip install vibey-engine` (or `uv tool install vibey-engine`) instead. The commands and the
+  importable packages are unchanged. `pyproject.toml` now names the project `vibey-engine`
+  itself, so a local build is the artifact the index gets; `vibey-engine.yml` no longer renames
+  it in the runner. `krypton-app` lives in `clients/krypton-app/`, installs the `krypton`
+  command (an honest launcher for the local hub: it starts `vibey serve` when the engine has
+  it, and otherwise says so and lists what is available), and publishes from its own
+  workflow, `krypton-app.yml`, nightly from `develop` to TestPyPI and stable from `main` to
+  PyPI. vibey-gh's `[install] fallback_package` default is now `vibey-engine`, and its managed
+  workflows re-render with it. `vibey-dev` is retired.
+
+* **engines:** the local engine that runs GPT-OSS is `gptossloop`, and it ships on; `qwenloop`
+  runs Qwen and is off until switched on
+  ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)).
+  The engine called `qwenloop` ran `gpt-oss:20b` by default. The runner package now carries two
+  console scripts that differ only in who they are: `gptossloop` (GPT-OSS 20B, reads
+  `GPTOSSLOOP_BASE_URL`/`_MODEL`/`_API_KEY`/`_CONFIG` and its own config file) and `qwenloop`
+  (`qwen3:14b`, reads `QWENLOOP_*`). Run records (`.qwenloop/runs/`), the done marker and the
+  verdict fence stay shared. Runner 0.3.0.
+  - **On by default.** gptossloop joins the local tier with no switch; `[features] gptossloop =
+    false` or `VIBEY_FEATURE_GPTOSSLOOP=0` switches it off. The sovereign default is now
+    `gptossloop`.
+  - **qwenloop is opt-in.** `VIBEY_FEATURE_QWENLOOP` / `[features] qwenloop` now switch on the
+    Qwen engine, and `[engines].enabled` or `[phases.*].engines` naming qwenloop need that
+    switch (the refusal says what qwenloop became). `vibey worker` and `vibey doctor` print a
+    note when it is on; `vibey loops` notes it too.
+  - **Migrate.** Run `gptossloop` where you ran `qwenloop` for gpt-oss, or set
+    `QWENLOOP_MODEL=gpt-oss:20b`; move `QWENLOOP_*` settings meant for the gpt-oss engine to
+    `GPTOSSLOOP_*` (vibey's own `VIBEY_OLLAMA_URL` path does this for you: it hands gptossloop
+    `GPTOSSLOOP_BASE_URL` and `GPTOSSLOOP_MODEL`, and qwenloop only `QWENLOOP_BASE_URL`); drop
+    `VIBEY_FEATURE_QWENLOOP=1` unless you want Qwen as well.
+  - **Providers.** The sovereign DESIGN/DECOMPOSE providers are `GptossloopDesignProvider` and
+    `GptossloopWorkPlanProducer` and record `gptossloop` in the ledger. `--provider gptossloop`
+    is the default; `--provider qwenloop` is still read, as gptossloop, and says so on stderr.
+  - **`vibey loops --json`.** Lists gptossloop in sovereignloop, and every engine gains
+    `on_by_default`.
+  - **Helm.** With `ollama.enabled` the worker gets `GPTOSSLOOP_BASE_URL`/`GPTOSSLOOP_MODEL`.
+    `ollama.qwenloopFeature` now defaults to `false`; turning it on hands qwenloop the new
+    `ollama.qwenModel` (`qwen3:14b`) and has the pull Job fetch it. The `ollama-gpu-qwenloop`
+    golden profile is `ollama-gpu-gptossloop`, and the CRD's engine enum lists gptossloop.
+  - **Canon.** An amendment to sub-doctrine 8.c (`sovereignloop` is what gptossloop and
+    qwenloop become) is carried here for the operator's ratification (Article II.3).
+* **gates:** a human gate is answered once (compare-and-set on `answered_at IS NULL`).
+  * `vibey answer` on an answered gate exits 3 with `GateAlreadyAnswered` instead of
+    overwriting the first answer; `--request-id` makes a retry of the same answer a no-op.
+  * It records the account that ran it, or `--by NAME`, instead of the literal `cli`, and
+    prints `answered <gate_id> as <name>`.
+  * Each answer appends a `GateAnswered` ledger event (withheld from publication);
+    migration 0018 adds `human_gate.answer_request_id`.
+  * The Kubernetes operator reports a gate answered elsewhere first under `ignoredAnswers`.
+* **db:** every PostgreSQL connection the project configures, documents or installs
+  authenticates with scram-sha-256, local and remote alike: never `trust`, `peer`,
+  `ident`, `md5` or a password in clear. This is sub-doctrine 10.j, drafted for the
+  operator's ratifying merge, with the rationale in ADR-0061.
+  * `SECURITY.md` §7's `pg_hba.conf` lines are now the required configuration.
+  * `vibey doctor`'s `db-passwordless` prints `FAIL` instead of `WARN` and exits 1.
+  * `local-auth` now also fails on an `md5` or `password` rule for the owner or a
+    superuser, and when `password_encryption` is not `scram-sha-256`.
+  * The Helm chart's built-in PostgreSQL reads a declared `pg_hba.conf` (the new
+    `<release>-postgres-hba` ConfigMap, through `hba_file`) and sets
+    `password_encryption=scram-sha-256`, so an existing install follows the rule on its
+    next start.
+  * CI's PostgreSQL services declare `POSTGRES_HOST_AUTH_METHOD` and
+    `POSTGRES_INITDB_ARGS` as scram-sha-256.
+  * `vibey install --postgres` names the `pg_hba.conf` step it leaves to the operator.
+  * Upgrade path: give every role that logs in a password, set the §7 lines and reload.
+    A password in `~/.pgpass` keeps password-less DSNs working.
 * **vibey_gh:** the sovereign review never returns a verdict on a prompt the model did not
   read in full, and names a model that ran out of room (#1090). #1090 read its whole
   31,765-token prompt and ran out of generation room in the 1,004 tokens a 32,768 window left
@@ -145,6 +258,119 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **hub:** pairing and trust (ADR-0068). `vibey hub pair --scope …` shows a QR code and a
+  6-digit code (two minutes, once); a device claims it for a per-device key and signs every
+  request (timestamp, nonce, body hash; HMAC via vibey_bootstrap). Deny by default; only
+  the host pairs, lists (`vibey hub devices`) and revokes (`vibey hub revoke`), which binds
+  at the device's next request. Pairing and revocation are ledger events in every project.
+  A declared LAN is served over a self-signed certificate whose fingerprint the QR carries,
+  and advertised as `_vibey._tcp` via mDNS. The `hub` extra gains `zeroconf` and `segno`.
+* **hub:** the live feed. Migration 0019 announces every ledger append on
+  `vibey_ledger_appended` (additive). `WS /api/v1/projects/{id}/live?after=N` resumes after a
+  seq and pages until caught up; `WS /api/v1/lanes/live` tails a listed lane by byte offset;
+  each has an HTTP polling twin. Sockets check Host and Origin and re-authenticate every page.
+* **hub:** `vibey serve`, the one HTTP API every Krypton client reaches
+  ([ADR-0068](docs/architecture/decisions/0068-the-hub.md)), behind the new `hub` extra
+  (`pip install 'vibey[hub]'`). Projects, status, gates (list and answer, through the
+  one-answer service), loops, budget (read only), queue (list and bump, as the declared source
+  `vibey-hub`), ledger search, lanes and doctor under `/api/v1`, plus `/health/live|ready` and
+  `/api/metrics`, built on `vibey_bootstrap`. Every document is the matching `--json` command's.
+  Loopback by default; a LAN address needs `[hub] lan = true`. Scopes `view`, `answer`, `spend`,
+  `run`, `bump`, deny by default, and none can declare paid use, caps, the DSN, migrations or
+  canon. A `Host` allowlist, no CORS, a strict CSP. The OpenAPI 3.1 document is committed at
+  `docs/reference/hub-api.json` with a drift test. `vibey doctor` gains a `hub-exposure` line
+  that fails on an undeclared exposure.
+* **clients:** `@vibey/core`, the pure TypeScript every krypton client shares, in
+  `packages/vibey-core/` ([ADR-0067](docs/architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md)).
+  It holds the engine catalogue, run events, the one command table, the gate-answer planner, the
+  budget rules, the doctor and every interface, taken from the VS Code extension's core. It also
+  re-exports the generated design tokens, and it builds against no platform types.
+  `VibeyTransportInterface` has two transports: `LocalProcessTransport` (the `vibey … --json` command
+  line, which the extension uses) and `HubTransport`, a declared stub until the hub's
+  `docs/reference/hub-api.json` lands.
+  - **npm workspace.** The repository root now holds an npm workspace (`package.json`,
+    `package-lock.json`) with the package and the extension.
+  - **Packaging.** The extension carries the package inside its `.vsix` and behaves as before.
+  - **CI.** The new `@vibey/core` job holds the package at 100% coverage, and
+    `tests/meta/test_clients_have_ci.py` fails when a `clients/*` or `packages/*` directory has no
+    CI job.
+
+* **design:** one design system for every surface
+  ([ADR-0066](docs/architecture/decisions/0066-one-design-system-for-every-surface.md)).
+  `design/tokens/` (DTCG 2025.10) is the single source of colour, type, space, radius,
+  elevation, motion and sound events; the docs palette and the paper's palette are one family
+  with deliberate dark and light themes, and all 182 declared colour pairs meet WCAG 2.2 AA.
+  `scripts/design/generate.py` writes the CSS token layer, TypeScript, GTK CSS, a C header,
+  the paper's TikZ colours and a refined logo, wordmark and full app-icon set. The docs sites'
+  three drifted `vibey.css` variants (and `channel.js`) are replaced by one generated file each,
+  and the site gains a Light / Dark / System switch (System by default).
+* **canon:** two drafts for the operator's ratification (Article II.3).
+  * Sub-doctrine **12.k**, *beauty is the first measure*, under 12 (*Humans first*): the
+    operator's ruling, verbatim, makes beauty and user-friendliness the first measure of
+    every surface a person touches. Nothing ships to a person that is not fully
+    comprehensive, current and a joy to use, and the operator's sign-off closes the gate.
+    Its checkable bar is [the Beauty Bar](docs/design/beauty-bar.md), and the rationale is
+    [ADR-0062](docs/architecture/decisions/0062-the-beauty-law-and-its-bar.md).
+  * Sub-doctrine **8.b** gains *the cap, and the one path to no cap*: paid use carries a
+    cap, and a no-cap declaration is lawful only through six warned, typed and recorded
+    steps, never from a phone or the web app, and is withdrawn by one action.
+    [ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md) records
+    ULTRA, a sixth effort level with no ceiling, as a design for the ULTRA lane.
+
+* **vscode:** a VS Code extension, under `clients/vscode`, that drives vibey and a model on your
+  own computer from the editor, with no account and no cloud
+  ([ADR-0059](docs/architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md),
+  #290). A task runs on a copy of the folder (a worktree on a branch of its own, in the durable
+  storm home), through qwenloop on gpt-oss:20b by default, and a person Reviews, Applies or
+  Discards it. The loops, efforts, engines and capabilities all come from `vibey loops --json`.
+  Views show the model, tasks, every lane on the computer, vibey projects, gates and budgets. A
+  task panel streams each task and takes follow-ups; Force stop opens only after a fair wait,
+  and is journaled. One command table serves the palette, the menus, the panel's `/` commands
+  and `@vibey`. `vibey-vscode batch` runs a folder of task files one at a time, resumably, from
+  a terminal, and a task file's `paths:` keeps its commit to its scope. No `VIBEY_*`, `PG*`,
+  credential or `postgres://` value reaches a model. The core is tested to 100% of lines,
+  branches, functions and statements; a smoke test runs it in a real VS Code. Its CI job is not
+  a required check yet, and Open VSX publishing is declared only, waiting on the operator's
+  `OVSX_PAT`.
+* **cli:** finding a project or an open gate no longer takes SQL. `vibey projects` lists every
+  project, newest first, with its id, phase, cycle and open-gate count; `vibey gates
+  [PROJECT_ID]` lists every open gate, oldest first, with its project, kind and prompt, and
+  `answer with:` -- the exact `vibey answer` command that answers it. Both take `--json`
+  (a projects array; `{"gates": [...]}`), the contract the VS Code extension reads, and both
+  exit 0 on an empty list. How each gate kind is answered is declared once, in
+  `vibey.cli.gate_answers`: a verdict or choice from the gate's own options, `--defaults` for
+  the interview, `--raw '{"max_dollars": N}'` and the other grants with the number left to
+  the person, `--raw '{}'` where any answer retries, and `--raw '<json>'` for the rest; a
+  test fails when a gate kind is raised without an entry there. The repositories gain
+  `list_all()` and `open_all()`, and the next-step hints, the README, the CLI reference and
+  the greeter runbook point at `vibey gates` instead of a `human_gate` query
+* **cli:** `vibey loops [--json]` lists the family's two loops (sub-doctrines 8.b and 8.c):
+  `sovereignloop` (tier local; the default by canon 8.b) and `paidloop` (tier paid; declared
+  only by canon 8.b, with claudeloop as its default). The canon is reported as the canon: the
+  selector does not read a paid declaration yet. For each engine it shows all five efforts:
+  the argv, the effort really achieved, and the model or what chooses it. It also gives the
+  escalation ladder and a by-effort view. qwenloop's model is the one that actually reaches
+  it: `QWENLOOP_MODEL`, else vibey's model only while `VIBEY_OLLAMA_URL` is set, else none.
+  Each engine reports what it can take: images, files, pasted text or images, plugins and
+  MCP. A value is `null` where the runner's own code shows nothing, and `evidence` names the
+  proof wherever it shows something. Each engine also reports its `run` argv template and its
+  `stop`, `wind_down` and `prompt` verbs. A prompt verb is listed only where the runner acts
+  on it, so cursorloop lists none. Tests hold the template to `build_argv`, and
+  read it and every effort flag and control against the runner's own Typer definition. The
+  report adds where the events land, their envelope (one of three), and the environment
+  names the engine reads (names only). The command needs no database and no network. A
+  malformed setting exits 3, naming the setting and never its value. `EngineDescriptor` gains
+  `affordances`, `controls` and `events`, all unknown by default. OpenCode is listed under its
+  descriptor's tier with `repealed: true`, because 8.b repeals it, and is left out of every
+  by-effort view. The document for one fixed environment is committed as
+  `tests/cli/golden/vibey-loops.json`, and the suite fails when the output drifts from it
+* **engines:** capabilities agree with what each runner's code backs, and a test ties them
+  to the facts `vibey loops` shows. codexloop and agyloop claim a mid-run prompt, which they
+  act on. qwenloop declares its `prompt` control, which its runner reads since #1133, and no
+  longer claims attachments or web search. agyloop no longer claims web search. cursorloop no longer declares a `prompt` control, because its
+  runner drops one unread. No job requires these capabilities, so engine selection is
+  unchanged. A refused `VIBEY_OLLAMA_URL` is named without echoing its value
+
 * **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
   model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
   8.c and 8.j, ADR-0058). `calibrate` replays storm-shaped turns (`truncate: false`, so a prompt
@@ -159,6 +385,24 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   bound. Missing or stale evidence means one, said out loud, with a calibration requested. A
   step taken while another runner held a model is discarded, and a 200 with no `done_reason`
   counts as a failure, not an answer.
+* **cli:** a project's budget can be added to, changed and removed after the project exists;
+  until now nothing could change the caps `vibey new` set. `vibey budget [PROJECT_ID]` shows
+  the caps, this cycle's spend against them and every change to them; `--all` shows every
+  project, newest first; `--json` is the object the VS Code extension reads (`project_id`,
+  `name`, `cycle`, `caps`, `spend`, `exhausted`, `history`). `vibey budget set
+  [--max-cycle-dollars F] [--max-cycle-turns N]` and `vibey budget clear (--dollars | --turns
+  | --all)` change `max_cycle_dollars` / `max_cycle_turns` in the project's config, the one
+  place the brake reads them, and append one `BudgetCapChanged` event per changed cap
+  (`field`, `old`, `new`, `by`, `account`) in the same transaction; a change that changes
+  nothing records nothing. `--by NAME` lets a tool name itself, a label for the record with
+  the account recorded beside it. A cap at or below the cycle's spend is allowed and the
+  command says the next BUILD session will park a `budget_exhausted` gate, and it names any
+  job already parked on one with the `vibey answer` that resumes it. The brake now reads the
+  caps at every BUILD session instead of once when the worker starts, so a change binds a
+  running worker's next session and an uncapped project can be capped without a restart.
+  `vibey cost` reads through the same service, its output unchanged. The publication policy
+  now names every kind it withholds (`WITHHELD_KINDS`) and a test fails on a kind classified
+  nowhere; `BudgetCapChanged` is withheld from the public and the billing shard
 * **storm:** `storm-queue.sh` asks `vibey-gh slots allowed` how many lanes may run at once,
   instead of the host-wide `pgrep` it hard-coded. It runs more than one only when this device's
   evidence says so, and calibrates itself when its queue empties and a calibration was
@@ -292,8 +536,50 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   checks in its title; the review gate certifies the exact-head review verdict; the merge
   train requires both.
 
+### Removed
+
+* **engines:** **BREAKING:** the `opencode` engine and its runner `opencodeloop` are deleted.
+  Sub-doctrine 8.b repealed OpenCode as an engine of either loop, and the operator ruled its
+  code deleted. Gone: the `src/vibey_runners/opencode` tenant and the `opencodeloop` console
+  script (the distribution now ships eleven); the `opencode` engine id, its descriptor,
+  capacity classifier and event map; the OpenCode DESIGN/DECOMPOSE providers and
+  `--provider opencode` on `vibey work` and `vibey worker`; and `opencode` from the default
+  engine pool (`[engines] enabled` now defaults to `["qwenloop"]`), from the known engines,
+  from the `VibeyProject` CRD's `spec.engines` enum, from the image, the CI tools matrix and
+  the uv workspace, and from vibey-gh's default failover seats (now `qwenloop` alone; a
+  `failover.toml` may still name any seat). A `vibey.toml` `[engines]` or
+  `[engine_environment.engines]` entry, an `--engines` list or a `--provider` value that names
+  `opencode` is now refused as unknown, and a `VibeyProject` that lists it in `spec.engines`
+  no longer validates: remove it. Rows already stored with the engine id `opencode` stay in
+  the append-only ledger and read back verbatim as an unrecognized engine id.
+
 ### Fixed
 
+* **ci:** the minikube smoke's ledger-guard probe passes each role's password to `psql`
+  inside the postgres pod. Local connections authenticate with scram-sha-256 since #1142
+  (sub-doctrine 10.j, ADR-0061), so the passwordless probe failed there and on every PR after it.
+* **tests:** a test session whose database lock is lost no longer loses its databases to another
+  session's reaper. Each test database's mark now names the process that created it and its
+  machine, and the reaper keeps the database while that process is alive on this machine,
+  whatever its lock says. On 2026-09-24 a patched `asyncio.sleep` ended one session's lock while
+  it ran, and another session's reaper dropped its worker databases: 127 `database ... does not
+  exist` errors in one run. A mark from another machine, or the first mark, still follows the
+  lock alone, and a mark that cannot be read is never dropped.
+* **qwenloop:** a follow-up sent with `qwenloop prompt` now reaches the model: the runner takes
+  it at the next turn boundary, once and in the order sent, records `prompt.received`, and moves
+  it to `control/ack`. It was written to the control inbox and never read, and control files are
+  now named by the time they were sent, so they are read in order (#290).
+* **ci:** the delivery estimate refreshes once an hour, and by hand, instead of on every push,
+  pull request and issue event. Its pull request now runs every CI gate: the `[skip ci]` that
+  let #1125 merge a ledger record, and break develop's paper-figure check with no check run,
+  is gone.
+* **tests:** a killed test run no longer leaves its databases behind for good. Each session
+  now holds an advisory lock on its database for as long as it lives, and marks the database.
+  Every run drops, in the background, the test databases that no live session holds
+  (`tests/db_reaper.py`; `uv run python -m tests.db_reaper --dry-run` shows what would go).
+  An unmarked database from an older harness is dropped only when no other test session is
+  running, and a database with an open connection is always kept. On the first run, 1,141
+  leaked databases, about 15 GB, were dropped from one machine.
 * **storm:** the push-gate reaper, now on an unattended schedule, acts only on what it has
   checked (the independent review of #1105 and #1107).
   - **Kill safety.** The lock and the traced push are read again under the lock's mutex before
@@ -334,6 +620,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **engines:** the worker's startup preflight and `vibey doctor --record` probe each engine
   with the project's `engine_environment`, so a credential the project declares for opencode
   or agyloop reaches the auth check and the conformance run, not only the session
+* **vibey_gh:** the sovereign heartbeat is honest and no longer skips the pre-push gate
+  (ADR-0060). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
+  lane's label as online (read with the runner's own login) and the model endpoint answers;
+  otherwise it pushes nothing, says why, and the heartbeat goes stale so the gate falls back
+  honestly. It no longer pushes with `--no-verify` or a bare `--force`: the pre-push hook now
+  recognises by its own rule a push that carries no code (`vibey-gh push-scope`: every ref
+  outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents), and
+  the previous heartbeat is replaced by compare-and-swap. The timer is declared:
+  `vibey-gh heartbeat install|status|uninstall` (also run by `runner install`/`uninstall`)
+  renders a launchd agent on macOS or a systemd user timer on Linux, and refuses an
+  interpreter, package or log under a temporary directory or inside a git work tree. The
+  hand-written `vibey-local-authority` LaunchAgent that used to publish the heartbeat is
+  retired.
+
 * **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
   expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
   re-readied, so a job that kills its worker on every attempt is no longer claimed forever;
@@ -357,6 +657,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `invalid_completion_claims` — with the run's `turn` and `max_turns`, and `meta.json` records
   `max_turns` and every recording cap. `ChatChunk` gains a `ChatChunkInterface` seam, which
   the runner and the `InferenceServer` port now depend on (ADR-0016)
+
+### Documentation
+
+* **canon:** sub-doctrine 9.e, for the operator's ratification: the project and its engine are
+  **vibey**, and every app and interface a person uses is **krypton**, with the krypton-84 atom
+  as its emblem (ADR-0065). The canon names exactly four names: `vibey`, `vibey-engine`, `krypton` and
+  `krypton-app`. Two packages publish, `vibey-engine` and `krypton-app`, each from its own workflow.
 
 ## [2.0.0] (2026-09-21)
 

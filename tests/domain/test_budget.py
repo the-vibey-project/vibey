@@ -30,6 +30,20 @@ def test_any_exhausted_false_when_caps_are_none() -> None:
     assert ledger.any_exhausted is False
 
 
+def test_each_cap_says_whether_it_is_the_one_reached() -> None:
+    """`vibey budget` names the cap a change put at or below the spend."""
+    dollars_only = _ledger(dollars_spent=40.0, turns_spent=1)
+    turns_only = _ledger(dollars_spent=1.0, turns_spent=60)
+    both = _ledger(dollars_spent=41.0, turns_spent=61)
+    uncapped = _ledger(dollars_spent=41.0, turns_spent=61, max_turns=None, max_dollars=None)
+
+    assert (dollars_only.dollars_exhausted, dollars_only.turns_exhausted) == (True, False)
+    assert (turns_only.dollars_exhausted, turns_only.turns_exhausted) == (False, True)
+    assert (both.dollars_exhausted, both.turns_exhausted) == (True, True)
+    assert (uncapped.dollars_exhausted, uncapped.turns_exhausted) == (False, False)
+    assert _ledger().any_exhausted is False
+
+
 def test_would_exceed_true_when_projection_crosses_cap() -> None:
     ledger = _ledger(dollars_spent=35.0, max_dollars=40.0)
     assert ledger.would_exceed(10.0) is True

@@ -97,7 +97,7 @@ def test_install_renders_the_pin_it_resolved(repo, capsys):
     out = capsys.readouterr().out
     assert "pin_version" not in out
     merge_train_yml = (repo / ".github" / "workflows" / "merge-train.yml").read_text()
-    assert 'python -m pip install --quiet "vibey==1.0.0"\n' in merge_train_yml
+    assert 'python -m pip install --quiet "vibey-engine==1.0.0"\n' in merge_train_yml
 
 
 def test_check_says_when_pin_version_cannot_pin_without_failing_for_it(repo, capsys):

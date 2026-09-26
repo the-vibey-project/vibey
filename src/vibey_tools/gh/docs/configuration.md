@@ -33,7 +33,7 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `install.union_merge_paths` | string list / `["CHANGELOG.md"]` | Files declared `merge=union` in `.gitattributes`, so two branches appending to the same section merge instead of conflicting. Appended to an existing `.gitattributes`, never rewriting it. `[]` declares none. |
 | `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. It also anchors `automation-bootstrap.yml`'s change scope: `gh pr diff` reports repository-root paths, so a vendored copy's automation-core files are admitted under this prefix and nowhere else. |
 | `install.fallback_package` | string / `"vibey"` | The distribution the managed workflows install when `self_source` does not hold the tooling — the branch every adopter takes, since their `self_source` default `"."` never matches. A key rather than a constant so a fork, or an internal index publishing under another name, can point it at their own distribution instead of one they cannot publish to. It is the package `pin_version` pins. |
-| `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey` — the distribution that carries `vibey-gh` — to the exact version that rendered it (`vibey==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. That version is knowable in two places: in the repository that IS `fallback_package`, its own `[project] version`; everywhere else, the installed `fallback_package` release the running `vibey-gh` came from, so `uvx --from vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree install names no release — its templates may be ahead of the number it carries — so there the fallback stays floating and `install` and `check` print a `notice:` saying why. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
+| `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey-engine` — the distribution that carries `vibey-gh` — to the exact version that rendered it (`vibey==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. That version is knowable in two places: in the repository that IS `fallback_package`, its own `[project] version`; everywhere else, the installed `fallback_package` release the running `vibey-gh` came from, so `uvx --from vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree install names no release — its templates may be ahead of the number it carries — so there the fallback stays floating and `install` and `check` print a `notice:` saying why. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
 
 ## `[platform]`
 
@@ -251,7 +251,7 @@ the lane while `trusted_only` is on.
 | `model` | string / `"gpt-oss:20b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
 | `trusted_only` | boolean / `true` | Never run the sovereign lane for a fork pull request. |
-| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
+| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. A beat is published only while a runner carrying `runner_label` is registered and online (read with the runner's own login) and `base_url` answers with `model`; otherwise nothing is pushed and the ref goes stale. It replaces the previous heartbeat by compare-and-swap and goes through the pre-push gate, which lets it through by its own rule: every ref outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents. |
 | `heartbeat_max_age_minutes` | integer / `15` | How stale that heartbeat may be before the local lane is treated as down. A ref that stopped moving is indistinguishable from a runner that stopped, which is the point — both mean do not route work there. |
 | `max_diff_chars` | integer / `60000` | For the diff half, a diff longer than this is **refused**, never cut: a verdict on part of a diff would pass the rest unread, so the gate asks a human. A **whole** review (no paid review declared) never cuts the diff either: it is shown the whole diff or refused. It never bounds the documents; `max_document_chars` does. |
 | `max_document_chars` | integer / `120000` (at least 1000) | The most characters of `context_paths` documents a whole review is shown, whatever the window would allow. The documents' own limit, never the diff's: when they shared `max_diff_chars`, this repository's two pages already took 59,607 of its 60,000, and a few hundred more characters of README cut a page, so every pull request's review claimed the diff half alone and its gate asked a human. The default is about twice what those pages hold today; the window is what usually binds. |
@@ -305,7 +305,11 @@ The machine that serves the sovereign lane, declared rather than hand-made (sub-
 12.c). `vibey-gh runner install` renders the runner's LaunchAgent, supervisor, Dockerfile and
 container entrypoint from this table and the templates in `vibey_gh/templates/runner/`;
 `vibey-gh runner check` reconciles the host against them; `vibey-gh runner cleanup` finds
-agents under `unit_prefix` that the tree no longer declares. The runner label is
+agents under `unit_prefix` that the tree no longer declares. `runner install` also installs
+the heartbeat timer that tells the gate the runner is there (`vibey-gh heartbeat`, vibey
+ADR-0060): each beat publishes only while a runner with the label is registered and online
+and the model endpoint answers, and goes through the pre-push gate like any other push. The
+runner label is
 `[pr_automation.fallback] runner_label` and the host-side model URL is its `base_url`; neither
 is declared twice. The supervisor is macOS-only (launchd, `caffeinate`, `pmset`). The
 operator's steps are in the vibey repository's `docs/runbooks/sovereign-review-runner.md`.
@@ -324,7 +328,13 @@ operator's steps are in the vibey repository's `docs/runbooks/sovereign-review-r
 | `require_ac` | boolean / `true` | Stay down on battery rather than hold a laptop awake to idle-poll. |
 | `throttle_seconds` | integer 10–3600 / `120` | launchd's `ThrottleInterval` between restarts. |
 | `max_failures` | integer 1–100 / `5` | Consecutive runner failures before the supervisor stops rather than spins. |
-| `path` | string / Homebrew then system paths | The `PATH` launchd gives the supervisor; `docker` and `gh` must be on it. |
+| `path` | string / Homebrew then system paths | The `PATH` launchd gives the supervisor; `docker` and `gh` must be on it. The heartbeat timer runs with the same `PATH`, so `git`, and `vibey-gh` (or a `python3` that imports this repository's own copy) for the pre-push hook, must be on it too. |
+| `heartbeat_scheduler` | `""`, `"launchd"` or `"systemd"` / `""` | What runs the heartbeat timer (`vibey-gh heartbeat install`, also installed by `runner install`). Empty picks by platform: a launchd agent on macOS, a systemd user service and timer on Linux. |
+| `heartbeat_interval_minutes` | integer 0–720 / `0` | Minutes between beats. `0` takes half of `[pr_automation.fallback] heartbeat_max_age_minutes` (7 for the default 15). More than half is refused at install, so one missed beat never stales the lane. |
+| `heartbeat_python` | path / `""` | The interpreter the timer runs `python -m vibey_gh.cli sovereign --beat` with. Empty is the one running the install. It, and the `vibey_gh` it imports (asked of it at install), must live outside any temporary directory and any git work tree — install vibey-gh as a tool (for example `uv tool install vibey-engine`) rather than into a checkout's virtualenv. |
+| `heartbeat_clone_dir` | path / `""` | The repository the heartbeat timer owns and pushes from: a clone with no working tree, its own pre-push gate, and a credential helper that uses only the runner's login. Empty is `<install_dir>/heartbeat-<repository name>`. It must live outside any temporary directory and any git work tree. |
+| `heartbeat_log_dir` | path / `""` | Where the timer logs (`<label>.log`) and records each beat (`<label>.last.json`, read by `heartbeat status`). Empty is `log_dir` under launchd and `~/.local/state/vibey-gh` under systemd. Refused under a temporary directory or inside a git work tree. |
+| `systemd_user_dir` | path / `"~/.config/systemd/user"` | Where the heartbeat's systemd user units are written. |
 
 ## `[conversation]`
 
@@ -841,13 +851,13 @@ paid_probe = "claude -p ok --max-turns 1"   # exit 0 = the paid lane is alive
 interval_seconds = 300
 
 [[seats]]                                    # tried in order; first healthy one wins
-name = "qwenloop"
-launch = "qwenloop run"
+name = "gptossloop"
+launch = "gptossloop run"
 health = "curl -sf http://127.0.0.1:11434/api/tags"
 
 [[seats]]
-name = "opencode"
-launch = "opencode"                          # empty health = engage without preflight
+name = "ollama"
+launch = "ollama run qwen2.5-coder"          # empty health = engage without preflight
 ```
 
 | Field | Type / default | Meaning |
@@ -855,7 +865,7 @@ launch = "opencode"                          # empty health = engage without pre
 | `enabled` | boolean / `false` | The operator writes `true` deliberately; the first live handoff should be supervised. |
 | `paid_probe` | string / empty | A shell command whose exit status answers "is the paid lane alive?" — the 296 ms *Credit balance is too low* refusal is exactly what it distinguishes from health. A hang counts as down. |
 | `interval_seconds` | integer / `300` | Loop cadence when run without `--once`. |
-| `seats` | array of tables / qwenloop, then opencode | Each seat is a name, a `launch` command, and an optional `health` preflight, judged by exit status — any agent fits without a code change. |
+| `seats` | array of tables / gptossloop | Each seat is a name, a `launch` command, and an optional `health` preflight, judged by exit status — any agent fits without a code change. qwenloop, gptossloop's opt-in Qwen twin (vibey ADR-0064), is a seat you name here. |
 
 Seat state (which agent holds the seat, and its pid) lives in
 `~/.local/state/vibey-gh/failover.json`; `--config` and `--state` override both paths.
@@ -1089,6 +1099,7 @@ job's name, not the workflow's.
 | `author_email` | email / empty | The paper's corresponding-author address. When set, it appears in the IEEEtran byline and the provenance paragraph; empty omits it. Must be a plain `mailbox@host` address. |
 | `author_affiliation` | string / empty | The affiliation line under the author's name in the paper's byline. Empty omits it. |
 | `google_analytics_id` | string / empty (disabled) | GA4 measurement ID (`G-<alphanumeric>`) injected into every page of both generated documentation channels and the channel-picker page. Empty disables Google Analytics entirely: no script tag is emitted and no request ever reaches Google. |
+| `cookie_consent` | boolean / `true` | Cookie consent for the analytics snippet. When set and a GA4 measurement ID is configured, every published page and the channel-picker index deny analytics storage by default (Google Consent Mode v2) and show an accept/decline banner whose choice is remembered per browser, so no analytics cookie is set before the reader accepts. `false` renders the plain gtag snippet; with no measurement ID nothing renders either way. |
 | `favicon` | string / `📘` | One or two emoji render as a zero-asset SVG favicon (plus a matching `apple-touch-icon`). A value that starts with `http://`, `https://`, or `/`, or whose last path segment contains a `.`, is instead used verbatim as a `<link rel="icon">` URL. Empty omits the favicon link. |
 | `og_image` | URL / empty | Social preview image rendered into the Open Graph and Twitter Card meta tags on every generated page. Empty falls back to GitHub's own generated OpenGraph card for the release commit, which always exists and stays current. |
 | `twitter_site` | string / empty | `@handle` rendered as the `twitter:site` meta tag. Empty omits the tag. |
@@ -1097,7 +1108,8 @@ job's name, not the workflow's.
 | `author` | string / empty | Rendered as the page's `<meta name="author">` and, when `generate_json_ld` is enabled, the JSON-LD `author.name`. Empty falls back to the repository owner. Distinct from `author_name`/`author_url` below, which are not yet emitted anywhere. |
 | `theme_color` | hex colour / `#080b14` | Rendered as `<meta name="theme-color">` when non-empty. Must match `^#[0-9a-fA-F]{3,8}$`. |
 | `locale` | string / `en_US` | Rendered as `og:locale` and, when `generate_json_ld` is enabled, the JSON-LD `inLanguage` (with `_` replaced by `-`). |
-| `google_site_verification` | string / empty | Google Search Console "HTML tag" verification token — the bare `content=` value, not the whole `<meta>` tag; must match `^[A-Za-z0-9_-]{1,128}$`. Rendered as a `<meta name="google-site-verification">` tag on every published page and the channel-picker index, so it survives Pages redeploys, unlike an uploaded verification file. |
+| `google_site_verification` | string / empty | Google Search Console "HTML tag" verification token — the bare `content=` value, not the whole `<meta>` tag; must match `^[A-Za-z0-9_-]{1,128}$`. Rendered as a `<meta name="google-site-verification">` tag on every published page and the channel-picker index, so it survives Pages redeploys, unlike a hand-uploaded verification file. |
+| `site_root_files` | string list / empty | Repository-relative files copied by basename into the Pages root on every release-surfaces deploy — the declared answer to Search Console's "HTML file" verification (e.g. `site_root_files = ["googleebf918639d02415d.html"]`), which a hand-uploaded file cannot give because each rebuild wipes the Pages root. Entries must stay inside the repository, carry no whitespace or shell metacharacters, and have unique file names; a declared file missing from the checkout fails the deploy rather than publishing without it. Empty copies nothing. |
 | `site_requirements` | string list / empty | Extra packages installed before the published site is built, as PEP 508 requirement specifiers. Each is shell-quoted, so `"mkdocs-material[imaging] >= 9.5"` stays one argument. |
 | `site_requirements_file` | path / `docs/requirements.txt` | Installed with `pip install -r` when the file exists. Absent, the step is skipped; empty disables the hook entirely. |
 | `properdocs_version` | string / `1.6.7` | The `properdocs` and `properdocs-theme-mkdocs` version the site build pins. |

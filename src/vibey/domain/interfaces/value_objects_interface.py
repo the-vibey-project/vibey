@@ -59,6 +59,9 @@ class EnginesConfigInterface(Protocol):
 @runtime_checkable
 class FeaturesConfigInterface(Protocol):
     @property
+    def gptossloop(self) -> bool: ...
+
+    @property
     def qwenloop(self) -> bool: ...
 
     @property
@@ -73,6 +76,70 @@ class EngineIdInterface(StringValueInterface, Protocol): ...
 
 @runtime_checkable
 class EngineTierInterface(StringValueInterface, Protocol): ...
+
+
+@runtime_checkable
+class LoopInterface(StringValueInterface, Protocol): ...
+
+
+@runtime_checkable
+class PluginSystemInterface(StringValueInterface, Protocol): ...
+
+
+@runtime_checkable
+class EventEnvelopeInterface(StringValueInterface, Protocol): ...
+
+
+@runtime_checkable
+class EngineAffordancesInterface(Protocol):
+    """What a person can hand a loop besides its plan; `None` is unknown."""
+
+    @property
+    def images(self) -> bool | None: ...
+
+    @property
+    def files(self) -> bool | None: ...
+
+    @property
+    def paste_text(self) -> bool | None: ...
+
+    @property
+    def paste_images(self) -> bool | None: ...
+
+    @property
+    def plugins(self) -> object: ...
+
+    @property
+    def mcp(self) -> bool | None: ...
+
+    @property
+    def evidence(self) -> Mapping[str, str]: ...
+
+
+@runtime_checkable
+class EngineControlsInterface(Protocol):
+    """A runner's own verbs for a run in flight, as argv after its binary; `None` is
+    unverified."""
+
+    @property
+    def stop(self) -> tuple[str, ...] | None: ...
+
+    @property
+    def wind_down(self) -> tuple[str, ...] | None: ...
+
+    @property
+    def prompt(self) -> tuple[str, ...] | None: ...
+
+
+@runtime_checkable
+class EventLogInterface(Protocol):
+    """Where a runner writes a run's events, and their envelope; `None` is unverified."""
+
+    @property
+    def path(self) -> str | None: ...
+
+    @property
+    def envelope(self) -> object: ...
 
 
 @runtime_checkable
@@ -136,6 +203,18 @@ class EngineDescriptorInterface(Protocol):
 
     @property
     def doctor_args(self) -> tuple[str, ...]: ...
+
+    @property
+    def env_passthrough(self) -> tuple[str, ...]: ...
+
+    @property
+    def affordances(self) -> EngineAffordancesInterface: ...
+
+    @property
+    def controls(self) -> EngineControlsInterface: ...
+
+    @property
+    def events(self) -> EventLogInterface: ...
 
     def invoke(self, effort: object) -> object: ...
 

@@ -19,9 +19,9 @@ Every project-specific decision lives here so the logic beside it can stay gener
 
     [install]
     workflows = []            # omit for all of them; [] for hooks and the CLI only
-    fallback_package = "vibey"  # the distribution a rendered workflow or hook installs
+    fallback_package = "vibey-engine"  # the distribution a rendered workflow or hook installs
                               # this tooling from when the repository has no copy of it
-    pin_version = false       # pin that rendered `pip install vibey` to the exact
+    pin_version = false       # pin that rendered `pip install vibey-engine` to the exact
                               # version that rendered it, instead of the latest release
 
     [issue_automation]
@@ -588,6 +588,12 @@ class PrAutomationFallbackConfig:
                 "pr_automation.fallback.heartbeat_ref must not be a branch — a heartbeat"
                 " under refs/heads/ becomes a branch every tidy pass has to reason about"
             )
+        if self.heartbeat_ref.startswith("refs/tags/"):
+            raise ValueError(
+                "pr_automation.fallback.heartbeat_ref must not be a tag — every clone fetches"
+                " tags, a release is cut from them, and the pre-push gate judges every tag in"
+                " full, so a heartbeat there could never be published through it"
+            )
         if not 1 <= self.heartbeat_max_age_minutes <= 1440:
             raise ValueError(
                 "pr_automation.fallback.heartbeat_max_age_minutes must be between 1 and 1440"
@@ -659,7 +665,32 @@ class RunnersConfig:
     # Consecutive runner failures before the supervisor stops rather than spins.
     max_failures: int = 5
     # launchd starts a job with a near-empty PATH; docker and gh must be reachable from it.
+    # The heartbeat timer runs with the same PATH, and git must be reachable from it too.
     path: str = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    # The heartbeat timer (`vibey-gh heartbeat install`, ADR-0060). Which service manager
+    # runs it: "launchd", "systemd", or empty to pick by platform (macOS launchd, Linux
+    # systemd).
+    heartbeat_scheduler: str = ""
+    # Minutes between beats. 0 takes half of `[pr_automation.fallback]
+    # heartbeat_max_age_minutes`; anything over half is refused at install, so one missed
+    # beat never stales the lane.
+    heartbeat_interval_minutes: int = 0
+    # The interpreter the timer runs `python -m vibey_gh.cli` with, and the one the clone's
+    # pre-push hook asks for its scope decision. The default is where `uv tool install vibey-engine`
+    # puts it on macOS and Linux alike; empty is the one running the install. Either way it,
+    # and the vibey_gh it imports, must live outside any temporary directory and any git work
+    # tree -- which is why `uv run` inside a checkout cannot be it.
+    heartbeat_python: str = "~/.local/share/uv/tools/vibey/bin/python"
+    # Where the timer logs and records each beat. Empty is `log_dir` under launchd and
+    # `~/.local/state/vibey-gh` under systemd.
+    heartbeat_log_dir: str = ""
+    # The repository the heartbeat timer owns and pushes from: a clone with no working tree,
+    # the repository's remote, the runner's own credential and a pre-push gate rendered by
+    # the timer's own vibey-gh. Empty is `<install_dir>/heartbeat-<repository name>`, durable
+    # beside the runner's files. Refused under a temporary directory or inside a checkout.
+    heartbeat_clone_dir: str = ""
+    # Where the systemd user units are written.
+    systemd_user_dir: str = "~/.config/systemd/user"
 
     def __post_init__(self) -> None:
         if self.repository and not _RUNNER_SLUG_RE.fullmatch(self.repository):
@@ -669,10 +700,33 @@ class RunnersConfig:
                 "runners.unit_prefix must be letters, digits, dots and dashes:"
                 f" {self.unit_prefix!r}"
             )
-        for name in ("install_dir", "launch_agents_dir", "log_dir", "gh_config_dir"):
+        for name in (
+            "install_dir",
+            "launch_agents_dir",
+            "log_dir",
+            "gh_config_dir",
+            "systemd_user_dir",
+        ):
             value = getattr(self, name)
             if not value.startswith(("/", "~/")):
                 raise ValueError(f"runners.{name} must be absolute or start with ~/: {value!r}")
+        for name in ("heartbeat_python", "heartbeat_log_dir", "heartbeat_clone_dir"):
+            value = getattr(self, name)
+            if value and not value.startswith(("/", "~/")):
+                raise ValueError(
+                    f"runners.{name} must be empty, absolute, or start with ~/: {value!r}"
+                )
+        if self.heartbeat_scheduler not in ("", "launchd", "systemd"):
+            raise ValueError(
+                "runners.heartbeat_scheduler must be empty, launchd or systemd:"
+                f" {self.heartbeat_scheduler!r}"
+            )
+        # `type(...) is int`: TOML hands a float or a bool through unchanged.
+        if (
+            type(self.heartbeat_interval_minutes) is not int
+            or not 0 <= self.heartbeat_interval_minutes <= 720
+        ):
+            raise ValueError("runners.heartbeat_interval_minutes must be a whole number 0-720")
         if self.shares_operator_gh_dir(Path(os.path.expanduser("~")), os.environ):
             raise ValueError(
                 f"runners.gh_config_dir {self.gh_config_dir!r} must be a directory of its own,"
@@ -1161,6 +1215,63 @@ class BranchSyncConfig:
     def __post_init__(self) -> None:
         if not 0 <= self.max_self_heals <= 10:
             raise ValueError("branch_sync.max_self_heals must be between 0 and 10")
+
+
+_WALL_CLOCK = re.compile(r"([01]\d|2[0-3]):([0-5]\d)")
+_IANA_ZONE = re.compile(r"[A-Za-z0-9_+\-]+(/[A-Za-z0-9_+\-]+)*")
+
+
+@dataclass(frozen=True)
+class SabbathConfig:
+    """Sub-doctrine 8.i, fitted to the machine it runs on (vibey ADR-0070).
+
+    The window is sundown Friday to sundown Saturday wherever this host stands; see
+    `vibey_gh.sabbath` for the formula and `vibey_gh.sabbath_location` for how the host is
+    found. Nothing here names a place: coordinates are per host and never committed, so
+    they live in `local_config` (a TOML file with `latitude` and `longitude`) or the
+    `VIBEY_SABBATH_LATITUDE`/`VIBEY_SABBATH_LONGITUDE` environment.
+
+    `enabled` defaults to true: 8.i has no exception, and turning it off is a declared
+    act, never a missing key. An unresolvable host is not "not the Sabbath": the window
+    falls back to `fallback_opens`/`fallback_closes` in the host's zone, and says so.
+    """
+
+    enabled: bool = True
+    # The IANA zone the civil day is read in; empty reads the host's own zone.
+    timezone: str = ""
+    local_config: str = "~/.config/vibey/sabbath.toml"
+    # An explicit override for a caller holding a LOCAL, never-committed file -- the
+    # operator's own vibey.toml. A committed file names no place.
+    latitude: float | None = None
+    longitude: float | None = None
+    # Widens every window toward rest, both edges. Never narrows one.
+    offset_minutes: int = 0
+    # Extra widening when the location is only a time zone's reference city.
+    coarse_margin_minutes: int = 90
+    fallback_opens: str = "14:00"
+    fallback_closes: str = "23:00"
+    # Ask CoreLocation (macOS) or GeoClue (Linux) when their helpers are installed.
+    location_service: bool = True
+    # At the first beat after the window closes, re-fire the held merge train and promotion.
+    resume_dispatch: bool = True
+    # Where lanes register "paused for the Sabbath, resume with X" (one JSON file each).
+    lanes_dir: str = "~/.local/state/vibey/sabbath-lanes"
+
+    def __post_init__(self) -> None:
+        for key in ("fallback_opens", "fallback_closes"):
+            if _WALL_CLOCK.fullmatch(getattr(self, key)) is None:
+                raise ValueError(f"sabbath.{key} must be a 24-hour HH:MM wall clock")
+        for key in ("offset_minutes", "coarse_margin_minutes"):
+            if not 0 <= getattr(self, key) <= 240:
+                raise ValueError(f"sabbath.{key} must be between 0 and 240")
+        if self.timezone and _IANA_ZONE.fullmatch(self.timezone) is None:
+            raise ValueError("sabbath.timezone must be an IANA zone name such as Europe/London")
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("sabbath.latitude and sabbath.longitude are set together")
+        if self.latitude is not None and not -90 <= self.latitude <= 90:
+            raise ValueError("sabbath.latitude must be between -90 and 90")
+        if self.longitude is not None and not -180 <= self.longitude <= 180:
+            raise ValueError("sabbath.longitude must be between -180 and 180")
 
 
 @dataclass(frozen=True)
@@ -1704,6 +1815,12 @@ class DocumentationConfig:
     require_provenance: bool = False
     provenance_files: tuple[str, ...] = ("README.md", "docs/index.md")
     google_analytics_id: str = ""
+    # Cookie consent for the analytics snippet. When set and a GA4 measurement ID is
+    # configured, every published page and the channel-picker index deny analytics
+    # storage by default (Google Consent Mode v2) and show an accept/decline banner
+    # whose choice is remembered per browser. Off renders the plain gtag snippet,
+    # and with no measurement ID nothing renders either way.
+    cookie_consent: bool = True
     # --- Search & LLM optimisation for the published site. Every field is optional and
     # generic; the defaults derive from the repository so an unconfigured site still ships
     # complete metadata. ---
@@ -1724,6 +1841,12 @@ class DocumentationConfig:
     # index, which is what makes it survive redeploys; an uploaded verification FILE is
     # wiped every time release-surfaces rebuilds the Pages root.
     google_site_verification: str = ""
+    # Repository-relative files copied by basename into the Pages root on every
+    # release-surfaces deploy — the declared answer to Search Console's "HTML file"
+    # verification, which a hand-uploaded file cannot give because the rebuild wipes
+    # the Pages root. Empty copies nothing. A declared file that is missing from the
+    # checkout fails the deploy rather than publishing without it.
+    site_root_files: tuple[str, ...] = ()
     # What the published-site build installs. ProperDocs renders whatever the repository's
     # `properdocs.yml` declares, and a site that declares plugins or markdown extensions
     # cannot build without them — `properdocs` and its theme pull in none of that, so a
@@ -1871,6 +1994,23 @@ class DocumentationConfig:
             raise ValueError(
                 "documentation.google_site_verification must be the bare token from the "
                 "HTML-tag method (the content= value), not the whole tag"
+            )
+        _unique_nonempty("documentation.site_root_files", self.site_root_files)
+        for entry in self.site_root_files:
+            if (
+                entry.startswith(("/", "~"))
+                or ".." in PurePosixPath(entry).parts
+                or any(char.isspace() or char in "'\"$`\\" for char in entry)
+            ):
+                raise ValueError(
+                    "documentation.site_root_files entries must be repository-relative paths"
+                    f" without '..', whitespace or shell metacharacters: {entry!r}"
+                )
+        basenames = [PurePosixPath(entry).name for entry in self.site_root_files]
+        if len(set(basenames)) != len(basenames):
+            raise ValueError(
+                "documentation.site_root_files entries must have unique file names:"
+                " each is copied by basename into the Pages root"
             )
         if self.google_analytics_id and not GOOGLE_ANALYTICS_ID_PATTERN.match(
             self.google_analytics_id
@@ -2179,6 +2319,7 @@ class GhConfig:
     issue_automation: IssueAutomationConfig = IssueAutomationConfig()
     realign: RealignConfig = RealignConfig()
     branch_sync: BranchSyncConfig = BranchSyncConfig()
+    sabbath: SabbathConfig = SabbathConfig()
     conversation: ConversationConfig = ConversationConfig()
     github_release: GithubReleaseConfig = GithubReleaseConfig()
     announce: AnnounceConfig = AnnounceConfig()
@@ -2212,7 +2353,7 @@ class GhConfig:
     # that `installed()` then reports as drift. One key, because the workflow fallback and
     # the pre-push hook's recovery advice must never name different packages -- they did,
     # and the hook kept telling people to install a distribution that no longer existed.
-    fallback_package: str = "vibey"
+    fallback_package: str = "vibey-engine"
     # Pin every rendered `pip install <fallback_package>` to the exact version that
     # rendered it. False keeps the historical floating install, so upgrading this
     # package changes nothing in an adopting repository until this is turned on.
@@ -2423,6 +2564,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     issues = data.get("issue_automation", {})
     realigning = data.get("realign", {})
     syncing = data.get("branch_sync", {})
+    resting = data.get("sabbath", {})
     talking = data.get("conversation", {})
     release = data.get("github_release", {})
     yanking = data.get("yank", {})
@@ -2481,7 +2623,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         code_paths=tuple(ver.get("code_paths", ("src/",))),
         managed_workflows=(tuple(inst["workflows"]) if "workflows" in inst else None),
         union_merge_paths=tuple(inst.get("union_merge_paths", DEFAULT_UNION_MERGE_PATHS)),
-        fallback_package=_fallback_package(inst.get("fallback_package", "vibey")),
+        fallback_package=_fallback_package(inst.get("fallback_package", "vibey-engine")),
         pin_version=inst.get("pin_version", False),
         self_source=_self_source(inst.get("self_source", ".")),
         integration_branch=br.get("integration", "develop"),
@@ -2538,6 +2680,13 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             enabled=syncing.get("enabled", True),
             update_contributor_branches=syncing.get("update_contributor_branches", True),
             max_self_heals=syncing.get("max_self_heals", 2),
+        ),
+        sabbath=SabbathConfig(
+            **{
+                field.name: resting[field.name]
+                for field in dataclasses.fields(SabbathConfig)
+                if field.name in resting
+            }
         ),
         realign=RealignConfig(
             reconcile_branches=realigning.get("reconcile_branches", True),
@@ -2653,6 +2802,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
                 documentation.get("provenance_files", ("README.md", "docs/index.md"))
             ),
             google_analytics_id=documentation.get("google_analytics_id", ""),
+            cookie_consent=documentation.get("cookie_consent", True),
             favicon=documentation.get("favicon", "📘"),
             og_image=documentation.get("og_image", ""),
             twitter_site=documentation.get("twitter_site", ""),
@@ -2662,6 +2812,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             theme_color=documentation.get("theme_color", "#080b14"),
             locale=documentation.get("locale", "en_US"),
             google_site_verification=documentation.get("google_site_verification", ""),
+            site_root_files=tuple(documentation.get("site_root_files", ())),
             site_requirements=tuple(documentation.get("site_requirements", ())),
             governance_source=documentation.get("governance_source", ""),
             corpus_index=documentation.get("corpus_index", "corpus-index.json"),

@@ -49,6 +49,7 @@ from vibey_gh.config import (
     RealignConfig,
     RepositoryProfileConfig,
     RunnersConfig,
+    SabbathConfig,
     SocialSignalsConfig,
     TidyConfig,
     UnattendedApprovalConfig,
@@ -87,6 +88,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "ai": _fields(AiConfig),
     "conversation": _fields(ConversationConfig),
     "branch_sync": _fields(BranchSyncConfig),
+    "sabbath": _fields(SabbathConfig),
     "realign": _fields(RealignConfig),
     "github_release": _fields(GithubReleaseConfig),
     # `groups` and `type_words` are sub-tables, and fields of the dataclass.

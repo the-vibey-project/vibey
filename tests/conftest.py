@@ -23,12 +23,14 @@ import faulthandler
 import getpass
 import os
 import signal
+import sys
 from pathlib import Path
 
 import asyncpg
 import pytest
 from hypothesis import HealthCheck, settings
 
+from tests.db_reaper import BackgroundReap, HoldMark, TestDatabaseHold, TestDatabaseReaper
 from tests.db_roles import TestDatabaseRoles
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
@@ -68,6 +70,13 @@ _MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 _TEMPLATE_DB = os.environ.get("VIBEY_TEST_TEMPLATE_DB", "vibey_test_template")
 _BASE_DSN: str | None = None
 _ROLES = TestDatabaseRoles.from_environ(os.environ)
+# This process's hold on its database (tests/db_reaper.py): taken before the database
+# exists, released after it is dropped. A killed session's hold ends with its connection,
+# which is how the reaper tells a leaked database from one in use. The database's mark names
+# this process too, so a hold that ends while the process lives gives nothing away.
+_HOLD: TestDatabaseHold | None = None
+# The reap of other, dead sessions' databases, run beside this session by its controller.
+_REAP: BackgroundReap | None = None
 
 
 def _resolve_base_dsn() -> str:
@@ -134,6 +143,14 @@ async def _setup(base_dsn: str) -> str:
             finally:
                 await tmpl_conn.close()
 
+            # The hold comes first, so this database never exists unheld while its session
+            # is alive. The mark names this process and machine, so a hold that ends while the
+            # process lives still gives nothing away: the reaper keeps the database until the
+            # process is gone.
+            mark = HoldMark.this_process().text()  # before anything exists, so it cannot fail after
+            global _HOLD
+            _HOLD = TestDatabaseHold(base_dsn, wdb)
+            _HOLD.start()
             # Drop-if-exists handles crashed prior runs (AC-14).
             await conn.execute(
                 "SELECT pg_terminate_backend(pid) "
@@ -145,6 +162,7 @@ async def _setup(base_dsn: str) -> str:
             await conn.execute(
                 f'CREATE DATABASE "{wdb}" TEMPLATE "{_TEMPLATE_DB}"',
             )
+            await conn.execute(f"COMMENT ON DATABASE \"{wdb}\" IS '{mark}'")
         finally:
             await conn.execute(
                 "SELECT pg_advisory_unlock(hashtext($1))",
@@ -170,6 +188,8 @@ async def _teardown(base_dsn: str) -> None:
         await conn.execute(f'DROP DATABASE IF EXISTS "{wdb}"')
     finally:
         await conn.close()
+        if _HOLD is not None:
+            _HOLD.release()
 
 
 # Where SIGUSR1 sends this process's stacks. Kept open for the life of the process: the
@@ -206,6 +226,15 @@ def pytest_configure(config: pytest.Config) -> None:
     _arm_stack_dump()
     _BASE_DSN = _resolve_base_dsn()
     os.environ["_VIBEY_TEST_BASE_DSN"] = _BASE_DSN
+    # Once per session (the controller, or a serial run; never each xdist worker), clear
+    # what killed sessions left on this server. In the background, so no run waits for it;
+    # VIBEY_TEST_REAP=0 turns it off and VIBEY_TEST_REAP_LIMIT caps one session's drops.
+    global _REAP
+    if "PYTEST_XDIST_WORKER" not in os.environ and os.environ.get("VIBEY_TEST_REAP", "1") != "0":
+        _REAP = BackgroundReap(
+            TestDatabaseReaper(_BASE_DSN), limit=int(os.environ.get("VIBEY_TEST_REAP_LIMIT", "200"))
+        )
+        _REAP.start()
     worker_dsn = asyncio.run(_setup(_BASE_DSN))
     os.environ["VIBEY_TEST_DATABASE_URL"] = worker_dsn
     # Some integration tests exercise the application entry point directly, whose
@@ -220,7 +249,36 @@ def pytest_configure(config: pytest.Config) -> None:
     os.environ.pop("VIBEY_PG_MIGRATE_URL", None)
 
 
+class _WeekdayIndependentSabbath:
+    """A host Sabbath gate that never holds and whose location is resolved, so no test's
+    outcome depends on the weekday or the machine it runs on (8.i, ADR-0070). Tests of the
+    Sabbath itself opt out with `@pytest.mark.sabbath` and name their own instant."""
+
+    def hold(self) -> None:
+        return None
+
+    def describe(self) -> list[str]:
+        return ["sabbath: enabled (test stub)"]
+
+    def location_resolved(self) -> bool:
+        return True
+
+
+@pytest.fixture(autouse=True)
+def _weekday_independent_sabbath(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if request.node.get_closest_marker("sabbath") is None:
+        from vibey.cli.sabbath import SABBATH
+
+        monkeypatch.setattr(SABBATH, "_factory", _WeekdayIndependentSabbath)
+
+
 def pytest_unconfigure(config: pytest.Config) -> None:
     if _BASE_DSN is not None:
         with contextlib.suppress(Exception):
             asyncio.run(_teardown(_BASE_DSN))
+    if _REAP is not None:
+        report = _REAP.finish()
+        if report is not None and (report.dropped or report.errors):
+            print(report.line(), file=sys.stderr)

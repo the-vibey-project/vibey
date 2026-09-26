@@ -240,9 +240,11 @@ def _site(
     direct_url: str | None = None,
     record: str | None = "vibey_gh/__init__.py,,\n",
 ) -> Path:
-    """A site directory holding `vibey` 1.0.0 and the `vibey_gh` it installed."""
+    """A site directory holding the fallback package 1.0.0 and the `vibey_gh` it installed."""
     site = tmp_path / "site"
-    info = site / f"{FALLBACK_DISTRIBUTION}-1.0.0.dist-info"
+    # Installers name the directory by the normalized name (PEP 427: `-` becomes `_`), and
+    # importlib.metadata finds it only under that spelling.
+    info = site / f"{FALLBACK_DISTRIBUTION.replace('-', '_')}-1.0.0.dist-info"
     info.mkdir(parents=True)
     info.joinpath("METADATA").write_text(
         f"Metadata-Version: 2.1\nName: {FALLBACK_DISTRIBUTION}\nVersion: 1.0.0\n",

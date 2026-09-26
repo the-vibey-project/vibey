@@ -43,6 +43,32 @@ class ToolLimitsInterface(Protocol):
 
 
 @runtime_checkable
+class RunnerIdentityInterface(Protocol):
+    """Which engine a runner process is: its name, its settings' prefix, its model."""
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def env_prefix(self) -> str: ...
+
+    @property
+    def default_model(self) -> str: ...
+
+    @property
+    def env_config(self) -> str: ...
+
+    @property
+    def env_base_url(self) -> str: ...
+
+    @property
+    def env_model(self) -> str: ...
+
+    @property
+    def env_api_key(self) -> str: ...
+
+
+@runtime_checkable
 class QwenConfigInterface(Protocol):
     @property
     def backend(self) -> BackendInterface: ...
@@ -117,6 +143,17 @@ class ChatChunkInterface(Protocol):
 
     @property
     def reasoning(self) -> str | None: ...
+
+
+@runtime_checkable
+class FollowUpInterface(Protocol):
+    """A person's message for a running run, taken from its control inbox once."""
+
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def text(self) -> str: ...
 
 
 @runtime_checkable

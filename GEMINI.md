@@ -1,9 +1,9 @@
 # GEMINI.md
 
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
-Orchestrates claudeloop, codexloop, cursorloop, agyloop, and opencode's
-`opencodeloop` (plus opt-in local qwenloop) via PostgreSQL queue with lossless
-handoff. All six runners live in
+Orchestrates claudeloop, codexloop, cursorloop, and agyloop (plus the local
+runner's two engines: `gptossloop`, the sovereign default on GPT-OSS 20B, and opt-in
+`qwenloop` on Qwen) via PostgreSQL queue with lossless handoff. All five runners live in
 this repository under `src/vibey_runners/`. Facts only —
 procedures live in `.agent/rules/`
 (mirrors of `.claude/skills/` and `.cursor/rules/`).
@@ -79,7 +79,7 @@ procedures live in `.agent/rules/`
 - Conventional Commits enforced by pre-commit hook.
 - Never implement on `main`. PRs squash into `develop` via the merge train
   (`vibey-gh merge-train`); `vibey-gh promote` rebase-merges `develop` into
-  `main` (linear history). `develop` → TestPyPI `vibey-dev`; `main` → PyPI.
+  `main` (linear history). `develop` → TestPyPI, `main` → PyPI, for `vibey-engine` and `krypton-app` (ADR-0069).
   ADR-0028.
 
 ## Layer map
@@ -96,27 +96,29 @@ domain, application, infrastructure, cli. ADR-0023.
 
 Map covers `src/vibey` only. The repo is a uv workspace (ADR-0021) whose other
 tenants keep their own pyproject, version, Python floor, tests and gates
-(ADR-0022): `src/vibey_runners/{claude,codex,cursor,agy,opencode,qwen,common}`
-(claudeloop, codexloop, cursorloop, agyloop, opencodeloop, qwenloop,
-vibey-runners-common) and
+(ADR-0022): `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
+(claudeloop, codexloop, cursorloop, agyloop, gptossloop and qwenloop — one
+package, two engines, ADR-0064 — and vibey-runners-common) and
 `src/vibey_tools/{gh,skills,bootstrap}` (vibey-gh, vibey-skills,
 vibey-bootstrap). Sibling GitHub repos are gone and so are the separate PyPI
-names — the tree ships as one `vibey` distribution (ADR-0037).
+names — the tree ships as one `vibey-engine` package (ADR-0037, ADR-0069); the apps ship as `krypton-app`.
 
 ## Queue and engines
 
 - **Queue:** PostgreSQL 17, never SQLite (`FOR UPDATE SKIP LOCKED`, ADR-0002).
-- **Engines:** claudeloop, codexloop, cursorloop, agyloop, opencode — the paid pool,
+- **Engines:** claudeloop, codexloop, cursorloop, agyloop — the paid pool,
   rotated per BUILD job via smooth weighted round robin
   (`SelectingEngineProvider` → `EngineSelector` → `domain/rotation.select()`,
-  ADR-0005). Two default-off local engines — `qwenloop`
-  (`VIBEY_FEATURE_QWENLOOP` or `[features] qwenloop`) and `claudeloop-local`, the
-  claudeloop binary on a local backend profile (`VIBEY_FEATURE_CLAUDELOOP_LOCAL`
-  or `[features] claudeloop_local`) — are **preferred first** under sub-doctrine
-  8.a: SWRR runs within the LOCAL tier, and the paid pool is the fallback when no
-  local engine is eligible (ADR-0038, amending ADR-0015). With a local engine on
-  and no `--provider`, DESIGN and DECOMPOSE run on the sovereign providers
-  (ADR-0027, ADR-0038). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
+  ADR-0005). Three local engines — `gptossloop`, the sovereign default on GPT-OSS
+  20B, on unless `VIBEY_FEATURE_GPTOSSLOOP=0` or `[features] gptossloop = false`;
+  `qwenloop`, the same runner on `qwen3:14b`, off unless
+  `VIBEY_FEATURE_QWENLOOP=1` or `[features] qwenloop = true`; and
+  `claudeloop-local`, the claudeloop binary on a local backend profile, off unless
+  `VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features] claudeloop_local` (ADR-0064) —
+  are **preferred first** under sub-doctrine 8.a: SWRR runs within the LOCAL tier,
+  and the paid pool is the fallback when no local engine is eligible (ADR-0038,
+  amending ADR-0015). With no `--provider`, DESIGN and DECOMPOSE run on the
+  sovereign gptossloop providers (ADR-0027, ADR-0038, ADR-0064). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Handoff:** when `CreditsExhausted`, vibey verifies brief against no-loss
   gate (10 rules: R1–R10), writes full ledger to receiving worktree, seeds
   next engine.
@@ -186,7 +188,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (58 ADRs: 0001–0058) |
+| ADRs | `docs/architecture/decisions/` (73 ADRs: 0001–0073) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

@@ -11,7 +11,7 @@ paste it there, press Enter. That is the whole skill this page needs.
 ## 1. Install the tool (2 minutes)
 
 ```bash
-pip install vibey
+pip install vibey-engine
 ```
 
 That installs one command, `vibey-gh`, with no other dependencies — it will

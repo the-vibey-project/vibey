@@ -10,10 +10,18 @@ class BudgetLedger:
     max_dollars: float | None
 
     @property
-    def any_exhausted(self) -> bool:
-        if self.max_turns is not None and self.turns_spent >= self.max_turns:
-            return True
+    def turns_exhausted(self) -> bool:
+        """The turn cap is set and the cycle's turns have reached it."""
+        return self.max_turns is not None and self.turns_spent >= self.max_turns
+
+    @property
+    def dollars_exhausted(self) -> bool:
+        """The dollar cap is set and the cycle's spend has reached it."""
         return self.max_dollars is not None and self.dollars_spent >= self.max_dollars
+
+    @property
+    def any_exhausted(self) -> bool:
+        return self.turns_exhausted or self.dollars_exhausted
 
     def would_exceed(self, projected: float) -> bool:
         """Checked before an effort escalation, not after: the escalation

@@ -5,6 +5,8 @@
 **Evidence:** the engine-pool, deploy, forge and tracker surfaces; sub-doctrine
 8.b; the corpus index
 
+**Superseded in part** by the change `feat(engines)!: remove the repealed opencodeloop engine` (2026-09-25): canon 8.b repealed OpenCode, and the `opencode` engine and its runner `opencodeloop` are deleted, so the engines' sovereign default below is `qwenloop` alone.
+
 **Owes:** the conduct rule is sub-doctrine 8.b. This record decides the
 mechanism that enforces it — one vibey-owned protocol per surface, sovereign
 self-hosted defaults, paid platforms declared and relayed. The rule is

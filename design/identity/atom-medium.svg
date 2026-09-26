@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="vibey">
+<title>vibey</title>
+<defs>
+<radialGradient id="vibey-atom-medium-g0" cx="512" cy="512" r="309.76" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.7"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.394"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.175"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.044"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<linearGradient id="vibey-atom-medium-g1" x1="72" y1="72" x2="952" y2="952" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g2" x1="72" y1="72" x2="952" y2="952" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g3" x1="72" y1="72" x2="952" y2="952" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g4" x1="72" y1="72" x2="952" y2="952" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g5" x1="415.2" y1="415.2" x2="608.8" y2="608.8" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bfa9ff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g6" x1="515.146" y1="575.95" x2="564.429" y2="625.233" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g7" x1="524.962" y1="407.003" x2="574.244" y2="456.286" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g8" x1="409.355" y1="519.558" x2="458.637" y2="568.84" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g9" x1="562.338" y1="514.741" x2="611.621" y2="564.024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g10" x1="452.799" y1="420.817" x2="502.082" y2="470.1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g11" x1="469.237" y1="554.769" x2="518.52" y2="604.052" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g12" x1="541.536" y1="452.896" x2="590.819" y2="502.178" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g13" x1="430.167" y1="477.242" x2="479.449" y2="526.525" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g14" x1="518.524" y1="528.008" x2="567.807" y2="577.291" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g15" x1="491.143" y1="444.234" x2="540.426" y2="493.517" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g16" x1="462.633" y1="510.01" x2="511.915" y2="559.292" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-atom-medium-g17" x1="506.719" y1="487.359" x2="556.001" y2="536.641" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+</defs>
+<circle cx="512" cy="512" r="309.76" fill="url(#vibey-atom-medium-g0)"/>
+<ellipse cx="512" cy="512" rx="158.4" ry="158.4" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-atom-medium-g1)" stroke-width="9.68"/>
+<ellipse cx="512" cy="512" rx="233.2" ry="233.2" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-atom-medium-g2)" stroke-width="9.68"/>
+<ellipse cx="512" cy="512" rx="325.6" ry="325.6" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-atom-medium-g3)" stroke-width="9.68"/>
+<ellipse cx="512" cy="512" rx="440" ry="440" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-atom-medium-g4)" stroke-width="9.68"/>
+<circle cx="512" cy="512" r="96.8" fill="url(#vibey-atom-medium-g5)"/>
+<circle cx="539.788" cy="600.592" r="24.641" fill="url(#vibey-atom-medium-g6)"/>
+<circle cx="549.603" cy="431.644" r="24.641" fill="url(#vibey-atom-medium-g7)"/>
+<circle cx="433.996" cy="544.199" r="24.641" fill="url(#vibey-atom-medium-g8)"/>
+<circle cx="586.98" cy="539.382" r="24.641" fill="url(#vibey-atom-medium-g9)"/>
+<circle cx="477.441" cy="445.458" r="24.641" fill="url(#vibey-atom-medium-g10)"/>
+<circle cx="493.879" cy="579.41" r="24.641" fill="url(#vibey-atom-medium-g11)"/>
+<circle cx="566.177" cy="477.537" r="24.641" fill="url(#vibey-atom-medium-g12)"/>
+<circle cx="454.808" cy="501.884" r="24.641" fill="url(#vibey-atom-medium-g13)"/>
+<circle cx="543.165" cy="552.65" r="24.641" fill="url(#vibey-atom-medium-g14)"/>
+<circle cx="515.785" cy="468.875" r="24.641" fill="url(#vibey-atom-medium-g15)"/>
+<circle cx="487.274" cy="534.651" r="24.641" fill="url(#vibey-atom-medium-g16)"/>
+<circle cx="531.36" cy="512" r="24.641" fill="url(#vibey-atom-medium-g17)"/>
+<circle cx="512" cy="670.4" r="17.6" fill="#f7f8ff"/>
+<circle cx="512" cy="353.6" r="17.6" fill="#f7f8ff"/>
+<circle cx="727.449" cy="601.242" r="17.6" fill="#f7f8ff"/>
+<circle cx="422.758" cy="727.449" r="17.6" fill="#f7f8ff"/>
+<circle cx="296.551" cy="422.758" r="17.6" fill="#f7f8ff"/>
+<circle cx="601.242" cy="296.551" r="17.6" fill="#f7f8ff"/>
+<circle cx="837.6" cy="512" r="17.6" fill="#f7f8ff"/>
+<circle cx="674.8" cy="793.978" r="17.6" fill="#f7f8ff"/>
+<circle cx="349.2" cy="793.978" r="17.6" fill="#f7f8ff"/>
+<circle cx="186.4" cy="512" r="17.6" fill="#f7f8ff"/>
+<circle cx="349.2" cy="230.022" r="17.6" fill="#f7f8ff"/>
+<circle cx="674.8" cy="230.022" r="17.6" fill="#f7f8ff"/>
+<circle cx="952" cy="512" r="17.6" fill="#f7f8ff"/>
+<circle cx="512" cy="952" r="17.6" fill="#f7f8ff"/>
+<circle cx="72" cy="512" r="17.6" fill="#f7f8ff"/>
+<circle cx="512" cy="72" r="17.6" fill="#f7f8ff"/>
+</svg>

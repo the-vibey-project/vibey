@@ -45,6 +45,7 @@ from vibey_gh.interfaces.paper_interface import (
     PaperProvenanceInterface,
     RevisionReaderInterface,
 )
+from vibey_gh.paper_palette import PAPER_COLOURS
 
 __all__ = [
     "PREAMBLE",
@@ -97,23 +98,8 @@ PREAMBLE: tuple[str, ...] = (
     r"\usepgfplotslibrary{fillbetween,statistics,polar,groupplots}",
     r"\usepackage{pifont}",
     r"\usepackage{url}",
-    r"\definecolor{vibeyink}{HTML}{17324D}",
-    r"\definecolor{vibeyblue}{HTML}{2F6B9A}",
-    r"\definecolor{vibeysky}{HTML}{4FA3D1}",
-    r"\definecolor{vibeyteal}{HTML}{168A8A}",
-    r"\definecolor{vibeymint}{HTML}{2EA97F}",
-    r"\definecolor{vibeygreen}{HTML}{3A8F5B}",
-    r"\definecolor{vibeygold}{HTML}{C68A19}",
-    r"\definecolor{vibeyamber}{HTML}{E0A83A}",
-    r"\definecolor{vibeyred}{HTML}{B24C4C}",
-    r"\definecolor{vibeyrose}{HTML}{D98A8A}",
-    r"\definecolor{vibeyviolet}{HTML}{6B5BD2}",
-    r"\definecolor{vibeylilac}{HTML}{A89BE8}",
-    r"\definecolor{vibeygray}{HTML}{64748B}",
-    r"\definecolor{vibeysilver}{HTML}{A7B2C2}",
-    r"\definecolor{vibeyline}{HTML}{D6E0EA}",
-    r"\definecolor{vibeywash}{HTML}{EEF5FA}",
-    r"\definecolor{vibeymist}{HTML}{F6F9FC}",
+    # The palette is the vibey design system's print family (design/tokens), generated.
+    *PAPER_COLOURS,
     (
         r"\tikzset{"
         r"every node/.append style={font=\sffamily},"

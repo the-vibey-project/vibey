@@ -23,6 +23,7 @@ import typer
 from vibey.domain.errors import (
     BudgetExceeded,
     EscalationExhausted,
+    GateAlreadyAnswered,
     HandoffRejected,
     IllegalTransitionError,
     InvalidPhaseError,
@@ -30,18 +31,18 @@ from vibey.domain.errors import (
     NoEligibleEngine,
     NotReorderable,
     PriorityRefused,
+    UnknownGate,
     VibeyError,
 )
 
 EXIT_USAGE = 2
 EXIT_BLOCKED = 3
 
-# No command lists open gates today, so the honest instruction is the query that
-# does. Kept in one place because three hints end with it.
+# How an operator finds the gate a hint tells them to answer. Kept in one place
+# because three hints end with it.
 _FINDING_A_GATE = (
-    "No command lists open gates yet; find the id with:\n"
-    "  SELECT gate_id, kind, prompt FROM human_gate\n"
-    "  WHERE answered_at IS NULL ORDER BY raised_at;"
+    "`vibey gates` lists every open gate with its id, its prompt, and the exact\n"
+    "`vibey answer` command that answers it."
 )
 
 # What to suggest next, per error type. Absent means "no honest suggestion" --
@@ -80,6 +81,14 @@ _NEXT_STEP: dict[type[BaseException], str] = {
         "in a reviewed change, and running it as that account (ADR-0054)."
     ),
     NotReorderable: "Nothing moved. `vibey queue list` shows the jobs that can still be moved.",
+    GateAlreadyAnswered: (
+        "A gate is answered once, and the first answer stands. The answer that landed\n"
+        "is on the ledger:\n"
+        "  vibey ledger search --kind GateAnswered\n"
+        "To retry an answer safely, give it a --request-id: the same id with the same\n"
+        "answer is a no-op once it has landed."
+    ),
+    UnknownGate: _FINDING_A_GATE,
 }
 
 

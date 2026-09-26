@@ -122,7 +122,7 @@ class DesignInterviewHandler:
                 ),
                 # The "a different engine synthesises than interviewed"
                 # constraint is derived from whoever actually interviewed, never
-                # from a literal: on the sovereign path that is qwenloop, and on
+                # from a literal: on the sovereign path that is gptossloop, and on
                 # the scripted path no engine interviewed at all, so nothing is
                 # excluded.
                 requirement={

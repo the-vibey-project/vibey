@@ -5,8 +5,10 @@ from qwenloop.domain.interfaces.class_contracts import (
     BackendChoiceInterface,
     BackendInterface,
     ChatChunkInterface,
+    FollowUpInterface,
     HardwareInterface,
     QwenConfigInterface,
+    RunnerIdentityInterface,
     ServerInfoInterface,
     ToolLimitsInterface,
 )
@@ -16,9 +18,11 @@ __all__ = [
     "BackendChoiceInterface",
     "BackendInterface",
     "ChatChunkInterface",
+    "FollowUpInterface",
     "HardwareInterface",
     "QwenConfigInterface",
     "QwenConfigParserInterface",
+    "RunnerIdentityInterface",
     "ServerInfoInterface",
     "ToolLimitsInterface",
 ]

@@ -2,6 +2,7 @@
 """Composition root: the only module that wires concrete adapters to ports."""
 
 import os
+import platform
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -43,6 +44,7 @@ from vibey.application.engine_selection import (
     SpendMeteringLedger,
 )
 from vibey.application.engine_selector import EngineSelector
+from vibey.application.gate_answer import GateAnswerService
 from vibey.application.interfaces import (
     AzureClientPort,
     BlobPort,
@@ -57,9 +59,11 @@ from vibey.application.interfaces import (
     EmailPort,
     EngineAdapter,
     FilesPort,
+    GateAnswerServiceInterface,
     IssueTrackerPort,
     JobHandler,
     MessagingPort,
+    ProjectBudgetServiceInterface,
     QueuePriorityServiceInterface,
     QueueReaperInterface,
     SecretsPort,
@@ -68,8 +72,11 @@ from vibey.application.interfaces import (
     VisualInventoryProducer,
     WorkPlanProducer,
 )
+from vibey.application.interfaces.sabbath import SabbathGateInterface
+from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
+from vibey.application.project_budget import ProjectBudgetService
 from vibey.application.queue_priority import QueuePriorityService
 from vibey.application.queue_reaper import QueueReaper
 from vibey.application.review_collect_handler import ReviewCollectHandler
@@ -77,6 +84,7 @@ from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
 from vibey.application.review_triage_handler import ReviewTriageHandler
 from vibey.application.rotation_handoff import RotationHandoffService
+from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
@@ -106,10 +114,12 @@ from vibey.infrastructure.db.ledger_guard import (
 )
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
+from vibey.infrastructure.db.project_budget_store import PostgresProjectBudgetStore
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 from vibey.infrastructure.db.queue_reap_store import PostgresQueueReapStore
 from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
+from vibey.infrastructure.db.ultra_control_store import PostgresUltraControlStore
 from vibey.infrastructure.db.visual_inventory_repository import FileVisualInventoryRepository
 from vibey.infrastructure.deploy.state_repository import FileDeploymentStateRepository
 from vibey.infrastructure.docs.bookstack import BookStackDocsAdapter
@@ -125,6 +135,7 @@ from vibey.infrastructure.engines.local_engines import (
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.files.in_memory import InMemoryFiles
 from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
+from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
@@ -191,6 +202,13 @@ class AppResources:
     # The queue reaper (ADR-0056): the worker's idle loop runs it when due, and
     # `vibey queue reap` on demand.
     queue_reaper: QueueReaperInterface
+    # Project budgets (`vibey budget`). Only the service: the store that writes a
+    # project's caps and their ledger events is built here and handed to nothing else.
+    project_budgets: ProjectBudgetServiceInterface
+    ultra: UltraControlServiceInterface
+    # Answering gates (`vibey answer`, the operator). The service names who answered and
+    # which request; the repository answers each gate once and records it on the ledger.
+    gate_answers: GateAnswerServiceInterface
     integration_lock: PostgresAdvisoryLock | None = None
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
@@ -210,7 +228,7 @@ def build_design_worker(
     The DESIGN handlers are told who to attribute by asking the provider that
     was actually composed (`DesignProvider.engine_id`) rather than naming an
     engine here. The ledger is append-only, so an event that names the wrong
-    actor is a correction no one can make: a sovereign run on qwenloop, or a
+    actor is a correction no one can make: a sovereign run on gptossloop, or a
     scripted run with no engine at all, must not be recorded as claudeloop.
     """
     clock = SystemClock()
@@ -375,6 +393,7 @@ def build_full_worker(
     engine_adapters: Mapping[EngineId, EngineAdapter] | None = None,
     allow_list: frozenset[EngineId] | None = None,
     azure_client: AzureClientPort | None = None,
+    sabbath: SabbathGateInterface | None = None,
 ) -> WorkerLoop:
     """The full-phase dispatcher: every job kind vibey enqueues, routed.
 
@@ -424,16 +443,14 @@ def build_full_worker(
         metrics=metrics,
     )
     # The runaway brake: caps come from the project's own config
-    # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
-    # either, spend stays uncapped -- opting in is explicit, never a
-    # silent default that would surprise existing projects. The parse is
-    # LedgerBudgetSource's own, the same one `vibey cost` reports from.
-    max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
-    budget_source: LedgerBudgetSource | None = None
-    if max_dollars is not None or max_turns is not None:
-        budget_source = LedgerBudgetSource(
-            resources.ledger, max_dollars=max_dollars, max_turns=max_turns
-        )
+    # (max_cycle_dollars / max_cycle_turns, set at `vibey new` and changed by
+    # `vibey budget`). Without either, spend stays uncapped -- opting in is
+    # explicit, never a silent default that would surprise existing projects.
+    # The caps are read at every BUILD session through LedgerBudgetSource's own
+    # parser, the one `vibey cost` and `vibey budget` report from -- not once,
+    # here -- so a cap changed while this worker runs binds the next session,
+    # and a project started uncapped can be capped without a restart.
+    budget_source = LedgerBudgetSource(resources.ledger, projects=resources.projects)
     wind_down = WindDownOrchestrator(
         ledger=resources.ledger,
         # The pool, like the provider's own selection: a wind-down must hand off to an
@@ -485,6 +502,8 @@ def build_full_worker(
             budget_source=budget_source,
             skills_context=skills_context,
             tracer=tracer,
+            ultra_ledger=resources.ledger,
+            checkpoint=GitCheckpoint(),
         )
         return _recording(handler, adapter, meter)
 
@@ -671,6 +690,7 @@ def build_full_worker(
         tracer=tracer,
         metrics=metrics,
         telemetry_enabled=telemetry_enabled,
+        sabbath=sabbath,
     )
 
 
@@ -977,10 +997,11 @@ async def build_app(
             clock=clock,
             logger=StructlogAppLogger(owner="queue-reaper"),
         )
+        gates = PostgresHumanGateRepository(pool)
         yield AppResources(
             projects=projects,
             jobs=jobs,
-            gates=PostgresHumanGateRepository(pool),
+            gates=gates,
             ledger=ledger,
             design_ledger=PostgresDesignLedger(ledger),
             design_specs=FileDesignSpecRepository(projects),
@@ -1020,6 +1041,23 @@ async def build_app(
                 caller=ProcessCaller(),
                 clock=clock,
             ),
+            project_budgets=ProjectBudgetService(
+                projects=projects,
+                ledger=ledger,
+                store=PostgresProjectBudgetStore(pool),
+                gates=gates,
+                caller=ProcessCaller(),
+                clock=clock,
+            ),
+            ultra=UltraControlService(
+                projects=projects,
+                ledger=ledger,
+                store=PostgresUltraControlStore(pool),
+                caller=ProcessCaller(),
+                clock=clock,
+                device=platform.node() or "unknown host",
+            ),
+            gate_answers=GateAnswerService(gates=gates, caller=ProcessCaller()),
             integration_lock=PostgresAdvisoryLock(pool),
             ledger_guard=guard,
             queue_reaper=queue_reaper,

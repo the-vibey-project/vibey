@@ -1,6 +1,6 @@
 # vibey-gh
 
-> **Now part of the vibey monorepo.** `vibey-gh` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
+> **Now part of the vibey monorepo.** `vibey-gh` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 Shipping a change safely through review, merge, versioning, and release usually means
 hand-wiring a dozen GitHub Actions steps — and they drift out of sync, silently skip a
@@ -109,7 +109,7 @@ pinned to immutable action revisions and run in GitHub-hosted jobs.
 ## Quick start
 
 ```bash
-pip install vibey          # vibey-gh ships inside it (vibey ADR-0037)
+pip install vibey-engine          # vibey-gh ships inside it (vibey ADR-0037)
 vibey-gh install
 ```
 
@@ -156,7 +156,7 @@ release-site assets used by the dual-channel Pages deployment. Existing hooks ar
 changes; opt out of individual workflows with `[install].workflows` rather than editing a
 generated copy that the next installation will overwrite.
 
-Every managed workflow installs this tooling with `pip install vibey` — the distribution
+Every managed workflow installs this tooling with `pip install vibey-engine` — the distribution
 that carries `vibey-gh` — floating on whatever the latest published release is, by
 default, so upgrading changes nothing until you ask. Set `[install].pin_version = true` to
 pin that install to the exact version that rendered the file (`vibey==X.Y.Z`) instead;
@@ -326,7 +326,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh paper --author NAME` | Render docs/paper.md — the repository's journal-grade research paper — as an IEEEtran LaTeX document, one TeX compile away from a submission-shaped PDF. |
 | `vibey-gh book --site-dir site --title T --author A` | Export the built docs site as an EPUB 3.0 plus a KDP print-ready HTML — the docs as a publishable book, chapters in nav order. |
 | `vibey-gh local-authority --once` | The capped-lane sync loop: green local branches reach their remotes by themselves while local is the source of truth; drop `--once` for the daemon form. |
-| `vibey-gh failover --once` | The operator-seat failover engine: paid lane down, the seat moves to the first healthy local agent (qwenloop, then opencode) and moves back on recovery — configured per machine in `~/.config/vibey-gh/failover.toml`, off until enabled; drop `--once` for the daemon form. |
+| `vibey-gh failover --once` | The operator-seat failover engine: paid lane down, the seat moves to the first healthy local agent (gptossloop by default) and moves back on recovery — configured per machine in `~/.config/vibey-gh/failover.toml`, off until enabled; drop `--once` for the daemon form. |
 | `vibey-gh report-superseded --index pypi\|testpypi --project NAME --version VERSION` | Report which prior releases a published version supersedes, since PyPI has no yank API; never yanks anything itself. Add `--governance-since REF` to evaluate Article V.4: a ratified governance change names every previous release, zero exceptions. |
 | `vibey-gh local-review [--diff FILE]` | Review a diff with a local Ollama-compatible model: the sovereign lane's diff half, the fallback when a declared paid review returns no verdict, or — `--scope full`, with no paid review declared — the whole review. See `[pr_automation.fallback]`. |
 | `vibey-gh doctor` | Offline adoption preflight: reads `.vibey-gh.toml`, `pyproject.toml`, and `.github/workflows/` on disk (no network, no credentials, no execution) to catch a config key silently ignored in the wrong section, a merge train stuck forever with no installed gate workflow, a ruff rule that fails every stamped file, contending Pages deployers, and superseded fingerprint headers. |
@@ -742,7 +742,9 @@ bottom_nav = true       # previous/next bar at the bottom of every published pag
 author_name = "Adam Matthew Steinberger"
 author_url = "https://vibewithadam.matthewsteinberger.com"
 google_analytics_id = ""                    # empty disables it; set a GA4 ID like "G-XXXXXXXXXX" to enable
+cookie_consent = true                       # Consent Mode defaults + accept/decline banner while a GA4 ID is set
 google_site_verification = ""                # bare Search Console "HTML tag" token; leave empty to skip verification
+site_root_files = []                         # e.g. ["googleebf918639d02415d.html"]: copied by basename to the Pages root on every deploy
 # ProperDocs depends on none of the plugins your site declares, so a site using
 # mkdocs-gen-files or pymdownx.* must name them here or the --strict build fails.
 site_requirements = []                      # e.g. ["mkdocs-gen-files", "pymdown-extensions>=10.7"]
@@ -783,14 +785,22 @@ Google Analytics is off by default and fully generic: `google_analytics_id` acce
 repository's own GA4 measurement ID (`G-XXXXXXXXXX`), and leaving it empty means no
 analytics script tag is ever emitted and no request reaches Google. When set, the same ID
 is injected into every page of both generated documentation channels and the
-channel-picker landing page.
+channel-picker landing page. `cookie_consent` (on by default) keeps that injection
+lawful: analytics storage is denied by default under Google Consent Mode v2 and the
+site shows an accept/decline banner whose choice is remembered per browser, so no
+analytics cookie is set before the reader accepts. Set it `false` for the plain gtag
+snippet without a banner.
 
 `google_site_verification` proves ownership of the published site to Google Search
 Console without an uploaded verification file, which release-surfaces would otherwise
 wipe on every rebuild of the Pages root. Set it to the bare token from Search Console's
 "HTML tag" verification method — the `content="..."` value, not the whole `<meta>` tag —
 and it is rendered into a `<meta name="google-site-verification">` tag on every published
-page and the channel-picker landing page, so verification survives redeploys.
+page and the channel-picker landing page, so verification survives redeploys. If Search
+Console gave you the "HTML file" method instead, declare the file under
+`site_root_files` and commit the file to the repository: it is copied by basename to the
+Pages root on every deploy, and a deploy whose checkout is missing a declared file fails
+rather than publishing without it.
 
 Sanitized progress is the safe default. Claude's progress-comment mode is enabled only for
 the direct PR/issue events the action supports; `workflow_run`, `workflow_dispatch`, and
@@ -1026,7 +1036,7 @@ workflow and asset differences. Never hand-copy only one generated workflow: tem
 configuration rendering, tests, and the dogfood copies form one versioned contract.
 
 ```bash
-python -m pip install --upgrade vibey
+python -m pip install --upgrade vibey-engine
 vibey-gh install
 vibey-gh check --ci
 git diff -- .github .githooks
@@ -1130,7 +1140,7 @@ forever — and a check that cannot pass is a check people route around.
 
 ### Pinning the tooling version
 
-By default every managed workflow installs this tooling with `pip install vibey` — the one
+By default every managed workflow installs this tooling with `pip install vibey-engine` — the one
 distribution that carries `vibey-gh` — which floats to whatever the latest published
 release is on every run. Pin it instead:
 

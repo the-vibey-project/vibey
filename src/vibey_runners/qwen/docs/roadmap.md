@@ -15,7 +15,6 @@ a risk requiring human confirmation.
 ## Next
 
 - Profile matrix growth (further quantizations/backends) as hardware baselines shift.
-- Deeper opencode integration for the agent-failover seat (vibey-gh#208).
 
 ## Done means
 

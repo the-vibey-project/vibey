@@ -79,6 +79,44 @@ class EventKind(StrEnum):
     # are written in the same transaction as the rows they change; a surfaced condition
     # changes nothing and is recorded once per sighting.
     QUEUE_REAPED = "QueueReaped"
+    # A project's cycle cap changed (`vibey budget set` / `clear`): the field, its old and
+    # new value, who named themselves and which account ran the command. Written in the
+    # same transaction as the project config it describes, so the config is the cap the
+    # brake enforces and these events are its history. Not spend: nothing counts it.
+    BUDGET_CAP_CHANGED = "BudgetCapChanged"
+    # ULTRA (ADR-0063). The operator started or stopped a project's ULTRA run (`vibey
+    # ultra start` / `stop`, from the host): the latest of the two decides whether the
+    # next BUILD pass runs, so Stop binds at the next pass boundary.
+    ULTRA_STARTED = "UltraStarted"
+    ULTRA_STOPPED = "UltraStopped"
+    # One improvement pass of an ULTRA run finished with a done verdict: the work item,
+    # the pass number and the job key of the pass enqueued after it. One per pass, so
+    # a replayed pass is answered by its key and never runs twice.
+    ULTRA_PASS_COMPLETED = "UltraPassCompleted"  # nosec B105 -- an event kind, not a secret
+    # The no-cap declaration changed (`vibey budget no-cap` / `cap`): enabled or not,
+    # who named themselves, the account and the device. The BudgetCapChanged pattern;
+    # only a trusted event counts, so no engine can declare it.
+    ULTRA_NO_CAP_CHANGED = "UltraNoCapChanged"
+    # A human gate was answered (`vibey answer`, the Kubernetes operator, any client): the
+    # gate, its kind, the answer, the request that answered it, who named themselves and
+    # which account ran it. Written in the same transaction as the compare-and-set that
+    # records the answer on the gate, so a gate is never answered without its event and a
+    # refused or replayed answer writes none. Not a design answer: `AnswerGiven` closes a
+    # question the design phase asked, and is written by the phase that asked it.
+    GATE_ANSWERED = "GateAnswered"
+    # A device was paired with the hub, or its pairing revoked (ADR-0068): the device's id,
+    # the name it gave and the scopes the host granted -- never its key. Written to every
+    # project's ledger, since each project's history should say who could read it. The
+    # device registry is what authentication reads; these events are the history.
+    HUB_DEVICE_PAIRED = "HubDevicePaired"
+    HUB_DEVICE_REVOKED = "HubDeviceRevoked"
+    # Failover and handback (ADR-0070). A paid engine ran out of capacity and the work
+    # moved to the sovereign engine at ULTRA; a probe of the paid engine was recorded
+    # (ok or not); the work went back after a successful probe. Trusted only: no engine's
+    # output maps onto these kinds, and a handback is allowed only after an ok probe.
+    ENGINE_FAILED_OVER = "EngineFailedOver"
+    ENGINE_PROBED = "EngineProbed"
+    ENGINE_HANDED_BACK = "EngineHandedBack"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)

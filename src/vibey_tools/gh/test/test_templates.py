@@ -3286,10 +3286,12 @@ def test_the_fallback_reconstructs_a_diff_the_api_refuses(tmp_path):
 
 
 def test_search_console_verification_survives_redeploys(tmp_path):
-    """An uploaded verification FILE is wiped every time release-surfaces rebuilds the
-    Pages root — observed as a repeatedly un-verifiable property. The HTML-tag token is
-    configuration, rendered into every page and the channel index, so verification
-    survives every deploy. Unset, nothing renders."""
+    """A hand-uploaded verification FILE is wiped every time release-surfaces rebuilds
+    the Pages root — observed as a repeatedly un-verifiable property. The HTML-tag
+    token is configuration, rendered into every page and the channel index, so
+    verification survives every deploy; the file method survives only as a declared
+    `site_root_files` entry, re-copied from the repository on every deploy. Unset,
+    nothing renders."""
     from vibey_gh.config import DocumentationConfig, GhConfig
     from vibey_gh.install import render_workflow
 
@@ -3320,6 +3322,118 @@ def test_search_console_token_refuses_a_whole_tag():
 
     with _pytest.raises(ValueError, match="bare token"):
         DocumentationConfig(google_site_verification='<meta name="google-site-verification">')
+
+
+def test_declared_site_root_files_are_copied_on_every_deploy(tmp_path):
+    """The file method of Search Console verification needs its file served from the
+    Pages root, which release-surfaces rebuilds from scratch on every deploy. Declared
+    `site_root_files` are copied there from the repository by basename on every deploy;
+    a declared file missing from the checkout fails the deploy instead of publishing
+    without it. Unset, the step renders a comment and copies nothing."""
+    from vibey_gh.config import DocumentationConfig, GhConfig
+    from vibey_gh.install import render_workflow
+
+    source = WORKFLOWS / "release-surfaces.yml"
+    off = render_workflow(source, GhConfig(root=tmp_path))
+    assert "__VIBEY_GH_DOC_SITE_ROOT_FILES__" not in off
+    assert "No documentation.site_root_files declared; nothing to copy." in off
+
+    on = render_workflow(
+        source,
+        GhConfig(
+            root=tmp_path,
+            documentation=DocumentationConfig(
+                site_root_files=("googleebf918639d02415d.html", "assets/extra.txt")
+            ),
+        ),
+    )
+    assert "__VIBEY_GH_DOC_SITE_ROOT_FILES__" not in on
+    assert "cp googleebf918639d02415d.html pages/" in on
+    # A source in a subdirectory is still served by basename at the root.
+    assert "cp assets/extra.txt pages/" in on
+    assert "refusing to publish without it" in on
+
+
+def test_site_root_files_refuse_unsafe_duplicate_or_colliding_names():
+    """The entries land in shell `cp` lines, so anything outside the repository or
+    carrying whitespace or shell metacharacters is refused at load. Two entries with
+    the same basename would overwrite each other in the Pages root, so the collision
+    is refused too."""
+    import pytest as _pytest
+
+    from vibey_gh.config import DocumentationConfig
+
+    for bad in (
+        "/abs/path.html",
+        "../escape.html",
+        "has space.html",
+        "back`tick.html",
+        "quote'.html",
+        "$var.html",
+    ):
+        with _pytest.raises(ValueError, match="repository-relative"):
+            DocumentationConfig(site_root_files=(bad,))
+    with _pytest.raises(ValueError, match="must be unique"):
+        DocumentationConfig(site_root_files=("a.html", "a.html"))
+    with _pytest.raises(ValueError, match="non-empty"):
+        DocumentationConfig(site_root_files=("",))
+    with _pytest.raises(ValueError, match="unique file names"):
+        DocumentationConfig(site_root_files=("a/verify.html", "b/verify.html"))
+
+
+def test_cookie_consent_denies_analytics_until_accepted(tmp_path):
+    """With a measurement ID set, consent mode denies analytics storage by default
+    and every page carries an accept/decline banner that remembers its choice --
+    on both the channel pages and the channel picker. Consent off renders the plain
+    gtag snippet, and with no measurement ID nothing renders either way."""
+    from vibey_gh.config import DocumentationConfig, GhConfig
+    from vibey_gh.install import render_workflow
+
+    source = WORKFLOWS / "release-surfaces.yml"
+    assert DocumentationConfig().cookie_consent is True
+
+    on = render_workflow(
+        source,
+        GhConfig(
+            root=tmp_path,
+            documentation=DocumentationConfig(google_analytics_id="G-XXXXXXXXXX"),
+        ),
+    )
+    assert "__VIBEY_GH_DOC_COOKIE_CONSENT__" not in on
+    assert "COOKIE_CONSENT=true" in on
+    assert 'COOKIE_CONSENT: "true"' in on
+    assert "gtag('consent', 'default'" in on
+    assert "'analytics_storage': 'denied'" in on
+    assert 'id="vibey-consent"' in on
+    # The chooser heredoc keeps its deploy-time placeholder, which the chooser
+    # step substitutes from the same banner string.
+    assert '"__CONSENT_BANNER__": consent_banner' in on
+
+    off = render_workflow(
+        source,
+        GhConfig(
+            root=tmp_path,
+            documentation=DocumentationConfig(
+                google_analytics_id="G-XXXXXXXXXX", cookie_consent=False
+            ),
+        ),
+    )
+    # Both code paths ship in the workflow; the runtime flag selects the plain
+    # snippet at deploy time.
+    assert "COOKIE_CONSENT=false" in off
+    assert 'COOKIE_CONSENT: "false"' in off
+    assert 'os.environ.get("COOKIE_CONSENT", "") == "true"' in off
+    # The measurement ID travels by environment; the snippet interpolates it at
+    # deploy time, so the render carries the variable, not the value.
+    assert "gtag('config', '{ga_id}')" in off
+    assert 'GA_ID: "G-XXXXXXXXXX"' in off
+
+    neither = render_workflow(source, GhConfig(root=tmp_path))
+    # The builder code always ships; an empty measurement ID is what silences it
+    # at deploy time, and the banner is gated on the same ID.
+    assert 'GA_ID: ""' in neither
+    assert 'export GA_ID=""' in neither
+    assert ') if ga_id else ""' in neither
 
 
 def _composed_pass(changes: dict) -> bool:

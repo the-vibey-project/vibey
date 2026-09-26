@@ -768,8 +768,12 @@ async def test_a_budget_grant_raises_the_cap_and_the_session_runs(tmp_path: Path
     granted = await handler.handle(job)
     assert isinstance(granted, Success)
 
-    # A grant below the spend still parks (turns grant path too).
-    await gates.answer(gate.gate_id, answer={"max_dollars": 11, "max_turns": 30}, answered_by="op")
+    # A grant below the spend still parks (turns grant path too). A gate is answered once
+    # (compare-and-set), so the second grant answers a second gate, as a real re-park would.
+    regate = await gates.raise_gate(job.project_id, job.id, parked.request)
+    await gates.answer(
+        regate.gate_id, answer={"max_dollars": 11, "max_turns": 30}, answered_by="op"
+    )
     still_parked = await handler.handle(job)
     assert isinstance(still_parked, Park)
 

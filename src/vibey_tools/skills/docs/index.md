@@ -27,7 +27,7 @@ assemble budgeted context packets for an agent.
 === "CLI (any agent)"
 
     ```bash
-    uv tool install vibey      # vibey-skills ships inside it
+    uv tool install vibey-engine      # vibey-skills ships inside it
     vibey-skills install --all
     ```
 

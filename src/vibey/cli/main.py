@@ -22,7 +22,7 @@ import typer
 
 from vibey import __version__
 from vibey.application.design_acceptance import DesignAcceptanceService
-from vibey.application.dto import ProjectRecord
+from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
@@ -33,10 +33,21 @@ from vibey.bootstrap import (
     build_design_worker,
     build_visual_worker,
 )
+from vibey.cli.budget import budget_app
+from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.gates import GATES
+from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.cli.loops import LOOPS
+from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
+from vibey.cli.sabbath import SABBATH
+from vibey.cli.serve import SERVE
+from vibey.cli.serve import serve as serve_command
+from vibey.cli.status import STATUS_PRESENTER
+from vibey.cli.ultra import ultra_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -65,8 +76,9 @@ from vibey.infrastructure.engines.claudeloop_process import (
     ClaudeLoopProcess,
     SpendRecorder,
 )
-from vibey.infrastructure.engines.descriptors import CLAUDELOOP, OPENCODE
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
@@ -74,7 +86,6 @@ from vibey.infrastructure.engines.ollama_chat import (
     OLLAMA_URL_ENV,
     OllamaChatClient,
 )
-from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.logging import configure_logging
@@ -93,6 +104,9 @@ ledger_app.command("search")(ledger_search)
 ledger_app.command("export")(ledger_export)
 ledger_app.command("site")(ledger_site)
 app.add_typer(queue_app, name="queue")
+app.add_typer(budget_app, name="budget")
+app.add_typer(ultra_app, name="ultra")
+app.add_typer(driver_app, name="driver")
 
 
 def _version_callback(value: bool) -> None:
@@ -213,6 +227,7 @@ def new_project(
     ] = 6_000,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview."""
+    SABBATH.decline_if_resting("new")
 
     async def create() -> tuple[str, str]:
         if skills_context_mode not in {"off", "shadow", "inject"}:
@@ -248,6 +263,52 @@ def new_project(
     with guard():
         project_id, job_id = asyncio.run(create())
     typer.echo(f"project {project_id}\ndesign job {job_id}")
+
+
+app.command("serve")(serve_command)
+app.add_typer(hub_app, name="hub")
+
+
+@app.command("sabbath")
+def sabbath_status() -> None:
+    """The Sabbath window on this host (sub-doctrine 8.i): zone, location source, and when
+    the current or next rest ends. Reads only; never held."""
+    for line in SABBATH.status():
+        typer.echo(line)
+
+
+@app.command("projects")
+def list_projects(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print a JSON array instead: one object per project, newest first.",
+        ),
+    ] = False,
+) -> None:
+    """List every project, newest first: its id, phase, cycle, and open gates."""
+    with guard():
+        asyncio.run(PROJECTS.run(as_json=as_json))
+
+
+@app.command("gates")
+def list_gates(
+    project_id: Annotated[
+        UUID | None,
+        typer.Argument(help="Only this project's gates; defaults to every project's."),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help='Print JSON instead: {"gates": [...]}, oldest first.',
+        ),
+    ] = False,
+) -> None:
+    """List open gates, oldest first, each with the `vibey answer` command that answers it."""
+    with guard():
+        asyncio.run(GATES.run(project_id, as_json=as_json))
 
 
 @design_app.callback(invoke_without_command=True)
@@ -287,23 +348,25 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
 
 
-async def _passwordless_reach_section() -> None:
-    """`vibey doctor`'s password-less-access line for the app DSN's database: WARN, PASS
-    or UNKNOWN, never a failure (SECURITY.md §5).
+async def _passwordless_reach_section() -> bool:
+    """`vibey doctor`'s password-less-access line for the app DSN's database: FAIL, PASS
+    or UNKNOWN (SECURITY.md §5). False on FAIL: sub-doctrine 10.j (ADR-0061) makes
+    scram-sha-256 the only way in, so a password-less login is a failure, not a choice.
 
     A module-level function because it is `doctor`'s own step, shared by nothing else,
     like `_postgres_status_line` beside it; the check itself is
     `PasswordlessReachProbe`.
     """
-    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe
+    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe, ReachVerdict
 
     name = "db-passwordless"
     dsn = os.environ.get("VIBEY_PG_URL", "").strip()
     if not dsn:
         typer.echo(f"UNKNOWN {name:<20} VIBEY_PG_URL is not set; nothing to check")
-        return
+        return True
     finding = await PasswordlessReachProbe().probe(dsn)
     typer.echo(f"{finding.verdict.mark} {name:<20} {finding.detail}")
+    return finding.verdict is not ReachVerdict.FAIL
 
 
 def _postgres_status_line(status: PostgresStatus) -> str:
@@ -354,6 +417,24 @@ def answer(
             "(combinable with positional pairs, which win)",
         ),
     ] = False,
+    by: Annotated[
+        str | None,
+        typer.Option(
+            "--by",
+            help="The name this answer is recorded under, for a tool that runs the command "
+            "(the VS Code extension says vibey-vscode). Defaults to the account running it. "
+            "A label for the record, not a permission: the account is recorded beside it.",
+        ),
+    ] = None,
+    request_id: Annotated[
+        str | None,
+        typer.Option(
+            "--request-id",
+            help="Name this request so a retry is safe: the same id with the same answer "
+            "is a no-op once it has landed. Without one, every run is a new request, and "
+            "a gate already answered refuses it.",
+        ),
+    ] = None,
 ) -> None:
     """Answer a parked gate: QUESTION_ID=ANSWER pairs, --choice, --verdict, or --raw.
 
@@ -361,6 +442,9 @@ def answer(
     are model-minted and vary per run; --defaults needs none); review gates
     take --verdict (accept/changes/cancel/approve/request_changes);
     deployment and triage gates take --choice; --raw covers any other shape.
+
+    A gate is answered once. A second answer is refused (exit 3) and the
+    first stands; `--request-id` makes a retry of the same answer a no-op.
     """
     modes = [m for m in (answers, choice, verdict, raw) if m]
     if defaults and (choice or verdict or raw):
@@ -390,20 +474,30 @@ def answer(
         if defaults:
             payload["accept_defaults"] = True
 
-    async def submit() -> None:
+    async def submit() -> GateAnswerOutcome:
         async with build_app() as resources:
-            await resources.gates.answer(gate_id, answer=payload, answered_by="cli")
+            return await resources.gate_answers.answer(
+                gate_id, payload, by=by, request_id=request_id
+            )
 
-    asyncio.run(submit())
-    typer.echo(f"answered {gate_id}")
+    with guard():
+        outcome = asyncio.run(submit())
+    if outcome.replayed:
+        typer.echo(f"already answered {gate_id} by this request; nothing changed")
+    else:
+        typer.echo(f"answered {gate_id} as {outcome.record.answered_by}")
 
 
 # One sentence for both commands' --ollama-model, so `work` and `worker` cannot drift.
 _OLLAMA_MODEL_HELP = (
-    "Local model for --provider qwenloop; ignored by the other providers. Default: "
+    "Local model for --provider gptossloop; ignored by the other providers. Default: "
     f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
 )
-_PROVIDERS = ("scripted", "claudeloop", "qwenloop", "opencode")
+_PROVIDERS = ("scripted", "claudeloop", "gptossloop")
+# Old provider names still accepted, each read as the provider it became. `qwenloop` was
+# the sovereign provider on this era's default model, GPT-OSS; since ADR-0064 that is
+# gptossloop, and the qwenloop engine runs a Qwen model the provider never did.
+_PROVIDER_ALIASES = {"qwenloop": "gptossloop"}
 # Built from _PROVIDERS so the message both commands print cannot fall behind the list.
 _UNKNOWN_PROVIDER = (
     "provider must be "
@@ -412,22 +506,33 @@ _UNKNOWN_PROVIDER = (
 )
 # The same for --provider: its default is the one decision both commands must share.
 _PROVIDER_HELP = (
-    "DESIGN/DECOMPOSE provider: scripted, claudeloop, qwenloop (the sovereign one, on "
-    "Ollama), or opencode. Default: qwenloop -- the sovereign pair is always on "
-    "(sub-doctrine 8.b). An explicit value always wins."
+    "DESIGN/DECOMPOSE provider: scripted, claudeloop, or gptossloop (the sovereign one, on "
+    "Ollama). Default: gptossloop -- the sovereign default is always on (sub-doctrine 8.b). "
+    "An explicit value always wins; 'qwenloop' is read as gptossloop (ADR-0064)."
 )
 
 
 def _resolve_provider(explicit: str | None) -> str:
     """The provider to run: the operator's explicit choice, else the sovereign default.
 
-    Sub-doctrine 8.b keeps the sovereign pair always on, never needing declaration, so
-    with no `--provider` DESIGN and DECOMPOSE run on qwenloop (#322). Before, they fell
-    back to the scripted fake unless a local engine was switched on. Paid (`claudeloop`)
-    and `opencode` are always a stated choice. Module-level, like the typer commands that
+    Sub-doctrine 8.b keeps the sovereign default always on, never needing declaration, so
+    with no `--provider` DESIGN and DECOMPOSE run on gptossloop (#322; qwenloop until
+    ADR-0064). Before, they fell back to the scripted fake unless a local engine was
+    switched on. Paid (`claudeloop`) is always a stated choice. An old name is read as the
+    provider it became, and said so on stderr. Module-level, like the typer commands that
     share it, so `work` and `worker` cannot disagree.
     """
-    return explicit if explicit is not None else "qwenloop"
+    if explicit is None:
+        return "gptossloop"
+    renamed = _PROVIDER_ALIASES.get(explicit)
+    if renamed is None:
+        return explicit
+    typer.echo(
+        f"--provider {explicit} is now --provider {renamed} (ADR-0064): the sovereign "
+        f"provider on {DEFAULT_OLLAMA_MODEL}; running {renamed}",
+        err=True,
+    )
+    return renamed
 
 
 async def _work_once(
@@ -481,7 +586,7 @@ async def _work_once(
                 process=claude_process,
                 worktree_path=project.repo_path,
             )
-        elif provider == "qwenloop":
+        elif provider == "gptossloop":
             # Doctrine 8.a: the sovereign path is the preferred way to run, so it has to
             # be selectable here rather than reachable only through a paid engine.
             # VIBEY_OLLAMA_URL / VIBEY_OLLAMA_MODEL (or --ollama-model) choose the local
@@ -489,26 +594,8 @@ async def _work_once(
             # for the research stage; without it research parks a `research_evidence`
             # gate rather than inventing a source. `work` runs DESIGN only, so it has no
             # decomposer to choose -- `worker` does.
-            design_provider = QwenloopDesignProvider.from_environment(
+            design_provider = GptossloopDesignProvider.from_environment(
                 os.environ, chat=OllamaChatClient.from_environment(os.environ, model=ollama_model)
-            )
-        elif provider == "opencode":
-            from vibey.infrastructure.engines.opencodeloop_design import OpenCodeLoopDesignProvider
-            from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
-
-            opencode_process = OpenCodeLoopProcess(
-                executor=AsyncSubprocessExecutor(
-                    EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
-                ),
-                max_turns=max_turns,
-                max_dollars=max_dollars,
-                spend_recorder=_build_spend_recorder(
-                    resources.ledger, project.project_id, project.cycle, project.phase
-                ),
-            )
-            design_provider = OpenCodeLoopDesignProvider(
-                process=opencode_process,
-                worktree_path=project.repo_path,
             )
         else:
             raise UnknownProvider(_UNKNOWN_PROVIDER)
@@ -533,6 +620,7 @@ def work_once(
     ] = None,
 ) -> None:
     """Process one ready DESIGN job; live ClaudeLoop use is explicit and capped."""
+    SABBATH.decline_if_resting("work")
     with guard():
         processed = asyncio.run(
             _work_once(project_id, provider, max_turns, max_dollars, ollama_model)
@@ -780,35 +868,7 @@ def status(
             )
 
             if as_json:
-                data = {
-                    "project_id": str(state.project_id),
-                    "name": state.project_name,
-                    "phase": state.phase.value,
-                    "cycle": state.cycle,
-                    "max_cycles": state.max_cycles,
-                    "repo_path": str(state.repo_path),
-                    "visual_decision": state.visual_decision,
-                    "deployment_decision": state.deployment_decision,
-                    "queue_depth": {k.value: v for k, v in state.queue_depth.items()},
-                    "circuits": [
-                        {
-                            "engine_id": c.engine_id.value,
-                            "installed": c.installed,
-                            "version": c.version,
-                            "conformance_ok": c.conformance_ok,
-                            "circuit": (
-                                c.circuit.value if hasattr(c.circuit, "value") else str(c.circuit)
-                            ),
-                            "capacity_state": str(c.capacity_state) if c.capacity_state else None,
-                            "consecutive_fail": c.consecutive_fail,
-                            "cost_usd_cycle": c.cost_usd_cycle,
-                            "selected_count": c.selected_count,
-                        }
-                        for c in state.circuits
-                    ],
-                    "active_worktrees": list(state.active_worktrees),
-                }
-                typer.echo(json.dumps(data, indent=2))
+                typer.echo(json.dumps(STATUS_PRESENTER.document(state), indent=2))
             else:
                 vis = f" | Visual: {state.visual_decision}" if state.visual_decision else ""
                 dep = f" | Deploy: {state.deployment_decision}" if state.deployment_decision else ""
@@ -874,13 +934,31 @@ def engines(
     asyncio.run(list_engines())
 
 
+@app.command("loops")
+def loops(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print the full JSON document instead: every engine's efforts, "
+            "capabilities, run, control and event facts, and environment names.",
+        ),
+    ] = False,
+) -> None:
+    """List the two loops, their engines at every effort, and what each engine can do.
+
+    Needs no database and no network: the local switches are read as `vibey doctor`
+    reads them, from the environment and then ./vibey.toml.
+    """
+    with guard():
+        LOOPS.run(as_json=as_json)
+
+
 @app.command("cost")
 def cost(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
     """Show the cycle's spend against the caps the budget brake enforces."""
-    from vibey.application.budget_source import LedgerBudgetSource
-    from vibey.application.interfaces import LedgerBudgetSourceInterface
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 
     async def show_cost() -> None:
@@ -902,13 +980,10 @@ def cost(
             # The brake's own numbers, not a second opinion (issue #210): the
             # caps through the one parser the worker uses, and the spend from
             # the ledger sum the worker checks before every BUILD session --
-            # which also carries DESIGN's spend, unlike engine_health. Typed as
-            # its interface so mypy holds the class to the declared seam.
-            max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
-            source: LedgerBudgetSourceInterface = LedgerBudgetSource(
-                resources.ledger, max_dollars=max_dollars, max_turns=max_turns
-            )
-            budget = await source.current(project.project_id, project.cycle)
+            # which also carries DESIGN's spend, unlike engine_health. Read
+            # through the one budget reader `vibey budget` shows, too.
+            budget = (await resources.project_budgets.show(project.project_id)).budget
+            max_dollars, max_turns = budget.max_dollars, budget.max_turns
             dollar_cap = f"${max_dollars:.2f}" if max_dollars is not None else "none (uncapped)"
             turn_cap = str(max_turns) if max_turns is not None else "none"
 
@@ -1305,8 +1380,10 @@ def doctor(
         # operator is actually depending on stayed invisible unless they knew to ask
         # for it by name. A preferred path you cannot inspect is not a preferred path.
         # The same resolver builds claudeloop-local from its configured profile and
-        # gives qwenloop the endpoint the worker would, so doctor probes what runs.
+        # gives each local runner the endpoint the worker would, so doctor probes what runs.
         local = _local_engines_from_toml()
+        for notice in local.notices:
+            typer.echo(f"note: {notice}")
         endpoint = LocalEndpointEnvironment(os.environ)
         if engine is not None:
             from vibey.domain.engine import EngineId
@@ -1326,7 +1403,7 @@ def doctor(
         # project to declare anything, so the defaults; with --record, the target
         # project's `engine_environment`, because the health written to that project must
         # be measured with what its sessions will receive -- a credential it declares
-        # for opencode or agyloop included.
+        # for agyloop included.
         engine_environment = EngineEnvironmentPolicy()
         if record:
             async with build_app() as resources:
@@ -1404,10 +1481,23 @@ def doctor(
         # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
         # protects nothing if the database lets the worker's OS user in without it.
         database_ok = await _database_security_section()
-        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above), which
-        # FAILS for the owner and superusers; reviewers to decide whether to consolidate.
-        await _passwordless_reach_section()
-        if (conformance and not all_ok) or not database_ok:
+        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above); both
+        # now FAIL (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
+        reach_ok = await _passwordless_reach_section()
+        # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
+        hub_ok = SERVE.exposure_line()
+        # Sub-doctrine 8.i: the window, the zone and where the location came from (10.f).
+        # A host no source could place is a FAIL -- the fallback times then rule.
+        sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
+        for line in sabbath_lines:
+            typer.echo(line)
+        if (
+            (conformance and not all_ok)
+            or not database_ok
+            or not reach_ok
+            or not hub_ok
+            or not sabbath_ok
+        ):
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:
@@ -1561,7 +1651,7 @@ def operator(
     try:
         from vibey.infrastructure.operator import run as run_operator
     except ImportError as exc:
-        typer.echo("operator support is not installed: pip install 'vibey[operator]'")
+        typer.echo("operator support is not installed: pip install 'vibey-engine[operator]'")
         raise typer.Exit(1) from exc
 
     run_operator(namespace=namespace)
@@ -1628,7 +1718,9 @@ def worker(
         except ValueError as exc:
             typer.echo(f"Invalid engine: {exc}")
             raise typer.Exit(2) from exc
-    if provider_opt is not None and provider_opt not in _PROVIDERS:
+    if provider_opt is not None and _PROVIDER_ALIASES.get(provider_opt, provider_opt) not in (
+        _PROVIDERS
+    ):
         typer.echo(_UNKNOWN_PROVIDER)
         raise typer.Exit(2)
     if azure not in ("memory", "az"):
@@ -1755,47 +1847,20 @@ def worker(
                     process=claude_process,
                     worktree_path=project.repo_path,
                 )
-            elif provider == "qwenloop":
+            elif provider == "gptossloop":
                 # Doctrine 8.a: the sovereign path is the preferred way to run, so the
                 # long-running worker has to be able to select it too, not just the
                 # one-shot `vibey work` -- and for DECOMPOSE as well as DESIGN. This used
                 # to hand BUILD's plan to ScriptedWorkPlanProducer, the test fake, whose
                 # items carry no verification commands. One client, so both providers
                 # talk to the same server and model.
-                from vibey.infrastructure.engines.qwenloop_decompose import (
-                    QwenloopWorkPlanProducer,
+                from vibey.infrastructure.engines.gptossloop_decompose import (
+                    GptossloopWorkPlanProducer,
                 )
 
                 chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
-                design_provider = QwenloopDesignProvider.from_environment(os.environ, chat=chat)
-                decomposer = QwenloopWorkPlanProducer(chat=chat)
-            elif provider == "opencode":
-                from vibey.infrastructure.engines.opencodeloop_decompose import (
-                    OpenCodeLoopWorkPlanProducer,
-                )
-                from vibey.infrastructure.engines.opencodeloop_design import (
-                    OpenCodeLoopDesignProvider,
-                )
-                from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
-
-                opencode_process = OpenCodeLoopProcess(
-                    executor=AsyncSubprocessExecutor(
-                        EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
-                    ),
-                    max_turns=max_turns,
-                    max_dollars=max_dollars,
-                    spend_recorder=_build_spend_recorder(
-                        resources.ledger, project.project_id, project.cycle, project.phase
-                    ),
-                )
-                design_provider = OpenCodeLoopDesignProvider(
-                    process=opencode_process,
-                    worktree_path=project.repo_path,
-                )
-                decomposer = OpenCodeLoopWorkPlanProducer(
-                    process=opencode_process,
-                    worktree_path=project.repo_path,
-                )
+                design_provider = GptossloopDesignProvider.from_environment(os.environ, chat=chat)
+                decomposer = GptossloopWorkPlanProducer(chat=chat)
             else:
                 design_provider = ScriptedDesignProvider()
                 decomposer = ScriptedWorkPlanProducer()
@@ -1805,17 +1870,19 @@ def worker(
             # Without this a local engine was the one engine the startup sweep could
             # not see: it ran, but its conformance warning never appeared, so an
             # operator depending on it had no way to learn it would never be selected.
-            # `--ollama-model` reaches qwenloop's process as QWENLOOP_MODEL too, so the
-            # BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
+            # `--ollama-model` reaches gptossloop's process as GPTOSSLOOP_MODEL too, so
+            # the BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
             local = LocalEngineSettings(environ=os.environ, config=project.config)
+            for notice in local.notices:
+                typer.echo(f"note: {notice}")
             adapters = dict(resources.engine_adapters)
             endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
             for engine_id, local_adapter in local.adapters(endpoint).items():
                 adapters.setdefault(engine_id, local_adapter)
             # The sweep probes each engine's auth, so it must probe with what the engine's
             # sessions will actually receive: the project's `engine_environment` on top of
-            # the defaults. Without it a credential the project declares (opencode's
-            # provider key, agyloop's Vertex credentials) was invisible to the auth check,
+            # the defaults. Without it a credential the project declares (agyloop's
+            # Vertex credentials, say) was invisible to the auth check,
             # and the engine read "auth FAIL" although its sessions would authenticate.
             engine_environment = EngineEnvironmentPolicy.from_config(project.config)
             adapters = {
@@ -1833,9 +1900,10 @@ def worker(
                     typer.echo(
                         f"--engines {engines_opt} matches none of this worker's engines "
                         f"({available}); a local engine joins them only with its switch "
-                        "on -- VIBEY_FEATURE_QWENLOOP=1 or VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, "
-                        "or [features] qwenloop / claudeloop_local in the project's config "
-                        "when that environment override is unset."
+                        "on -- gptossloop unless VIBEY_FEATURE_GPTOSSLOOP=0, qwenloop with "
+                        "VIBEY_FEATURE_QWENLOOP=1, claudeloop-local with "
+                        "VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, or the same keys under [features] "
+                        "in the project's config when that environment override is unset."
                     )
                     raise typer.Exit(EXIT_USAGE)
                 adapters = allowed
@@ -1872,6 +1940,9 @@ def worker(
             )
 
             count = max(1, min(parallelism, len(adapters) * 2, os.cpu_count() or 1))
+            # 8.i: one gate for every loop. The worker keeps running through the window,
+            # claiming nothing, and claims again on the first poll after it.
+            sabbath = SABBATH.gate()
             loops = [
                 build_full_worker(
                     resources=resources,
@@ -1883,6 +1954,7 @@ def worker(
                     engine_adapters=adapters,
                     allow_list=allow_list,
                     azure_client=azure_client,
+                    sabbath=sabbath,
                 )
                 for i in range(count)
             ]

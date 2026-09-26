@@ -1,0 +1,1079 @@
+{
+  "name": "vibey",
+  "displayName": "krypton",
+  "description": "krypton for VS Code: drive vibey and a local gpt-oss model from your editor, or a vibey hub on your network. Runs on your own computer; no account and no cloud.",
+  "version": "0.2.0",
+  "publisher": "the-vibey-project",
+  "license": "MIT",
+  "author": {
+    "name": "Adam Matthew Steinberger"
+  },
+  "homepage": "https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-vibey-project/vibey.git",
+    "directory": "clients/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/the-vibey-project/vibey/issues"
+  },
+  "keywords": [
+    "krypton",
+    "vibey",
+    "ollama",
+    "gpt-oss",
+    "local model",
+    "offline",
+    "sovereign"
+  ],
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./out/extension/extension.js",
+  "bin": {
+    "vibey-vscode": "out/cli.js"
+  },
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vibey",
+          "title": "krypton",
+          "icon": "media/vibey.svg"
+        }
+      ]
+    },
+    "views": {
+      "vibey": [
+        {
+          "id": "vibey.model",
+          "name": "Model"
+        },
+        {
+          "id": "vibey.runs",
+          "name": "Tasks"
+        },
+        {
+          "id": "vibey.lanes",
+          "name": "Lanes"
+        },
+        {
+          "id": "vibey.projects",
+          "name": "Projects"
+        },
+        {
+          "id": "vibey.gates",
+          "name": "Gates"
+        },
+        {
+          "id": "vibey.budgets",
+          "name": "Budgets"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "vibey.runs",
+        "contents": "Ask the local model to do something in this folder. It works on a copy, so nothing changes until you choose Apply.\n[Ask the model](command:vibey.ask)\n[Run a folder of tasks](command:vibey.runBatch)\n[Show every command](command:vibey.showMenu)\n[Take the one-minute tour](command:workbench.action.openWalkthrough?%22the-vibey-project.vibey%23krypton.firstRun%22)"
+      },
+      {
+        "view": "vibey.lanes",
+        "contents": "No lanes are running on this computer right now.\n[Ask the model](command:vibey.ask)"
+      },
+      {
+        "view": "vibey.projects",
+        "contents": "Projects come from vibey on this computer, or from a vibey hub on your network.\n[Connect to vibey on this network](command:vibey.connectHub)\n[Take the tour](command:workbench.action.openWalkthrough?%22the-vibey-project.vibey%23krypton.firstRun%22)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vibey.ask",
+        "title": "Ask the model to do a task",
+        "category": "krypton",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "vibey.followUp",
+        "title": "Tell the running task something",
+        "category": "krypton",
+        "icon": "$(reply)"
+      },
+      {
+        "command": "vibey.runBatch",
+        "title": "Run a folder of tasks",
+        "category": "krypton",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "vibey.stopRun",
+        "title": "Stop a running task",
+        "category": "krypton",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "vibey.forceStopRun",
+        "title": "Force-stop a task that did not stop",
+        "category": "krypton",
+        "icon": "$(close)"
+      },
+      {
+        "command": "vibey.openRunLog",
+        "title": "Open a task's log",
+        "category": "krypton",
+        "icon": "$(output)"
+      },
+      {
+        "command": "vibey.reviewRun",
+        "title": "Review a finished task's changes",
+        "category": "krypton",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "vibey.applyRun",
+        "title": "Apply a finished task to my branch",
+        "category": "krypton",
+        "icon": "$(check)"
+      },
+      {
+        "command": "vibey.discardRun",
+        "title": "Discard a finished task",
+        "category": "krypton",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vibey.attachFile",
+        "title": "Attach a file to the next task",
+        "category": "krypton",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "vibey.attachImage",
+        "title": "Attach an image to the next task",
+        "category": "krypton",
+        "icon": "$(file-media)"
+      },
+      {
+        "command": "vibey.pasteText",
+        "title": "Paste text into the next task",
+        "category": "krypton",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "vibey.pasteImage",
+        "title": "Paste an image into the next task",
+        "category": "krypton",
+        "icon": "$(device-camera)"
+      },
+      {
+        "command": "vibey.plugins",
+        "title": "Add vibey-skills context to the next task",
+        "category": "krypton",
+        "icon": "$(extensions)"
+      },
+      {
+        "command": "vibey.chooseLoop",
+        "title": "Choose the loop (sovereign or paid)",
+        "category": "krypton",
+        "icon": "$(server-environment)"
+      },
+      {
+        "command": "vibey.chooseEffort",
+        "title": "Choose the effort",
+        "category": "krypton",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "vibey.chooseModel",
+        "title": "Choose the engine and model",
+        "category": "krypton",
+        "icon": "$(symbol-class)"
+      },
+      {
+        "command": "vibey.showLoops",
+        "title": "Show the loops and engines",
+        "category": "krypton",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "vibey.showLanes",
+        "title": "Show running lanes",
+        "category": "krypton",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "vibey.openLane",
+        "title": "Watch a lane",
+        "category": "krypton",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "vibey.startQueue",
+        "title": "Start the queue",
+        "category": "krypton",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "vibey.stopAll",
+        "title": "Stop all lanes",
+        "category": "krypton",
+        "icon": "$(stop-circle)"
+      },
+      {
+        "command": "vibey.refresh",
+        "title": "Refresh",
+        "category": "krypton",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vibey.showProjects",
+        "title": "Show vibey projects",
+        "category": "krypton",
+        "icon": "$(project)"
+      },
+      {
+        "command": "vibey.showStatus",
+        "title": "Show a project's status",
+        "category": "krypton",
+        "icon": "$(info)"
+      },
+      {
+        "command": "vibey.showGates",
+        "title": "Show parked gates",
+        "category": "krypton",
+        "icon": "$(question)"
+      },
+      {
+        "command": "vibey.answerGate",
+        "title": "Answer a parked gate",
+        "category": "krypton",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "vibey.bumpJob",
+        "title": "Run a queued job next",
+        "category": "krypton",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "vibey.showBudgets",
+        "title": "Show budgets",
+        "category": "krypton",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "vibey.addBudget",
+        "title": "Add a budget",
+        "category": "krypton",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vibey.editBudget",
+        "title": "Edit a budget",
+        "category": "krypton",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vibey.removeBudget",
+        "title": "Remove a budget",
+        "category": "krypton",
+        "icon": "$(remove)"
+      },
+      {
+        "command": "vibey.grantBudget",
+        "title": "Grant more budget",
+        "category": "krypton",
+        "icon": "$(plus)"
+      },
+      {
+        "command": "vibey.endNoCap",
+        "title": "End unlimited spend (put a cap back)",
+        "category": "krypton",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "vibey.connectHub",
+        "title": "Connect to vibey on this network",
+        "category": "krypton",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "vibey.disconnectHub",
+        "title": "Disconnect from the hub",
+        "category": "krypton",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "vibey.chooseTheme",
+        "title": "Choose the theme (Light, Dark or System)",
+        "category": "krypton",
+        "icon": "$(color-mode)"
+      },
+      {
+        "command": "vibey.startOllama",
+        "title": "Start Ollama",
+        "category": "krypton",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vibey.pullModel",
+        "title": "Download the model",
+        "category": "krypton",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "vibey.doctor",
+        "title": "Check my setup (doctor)",
+        "category": "krypton",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "vibey.showMenu",
+        "title": "Show every command",
+        "category": "krypton",
+        "icon": "$(sparkle)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "vibey.startOllama",
+          "when": "view == vibey.model",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.pullModel",
+          "when": "view == vibey.model",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vibey.doctor",
+          "when": "view == vibey.model",
+          "group": "navigation@3"
+        },
+        {
+          "command": "vibey.refresh",
+          "when": "view == vibey.model",
+          "group": "navigation@9"
+        },
+        {
+          "command": "vibey.ask",
+          "when": "view == vibey.runs",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.runBatch",
+          "when": "view == vibey.runs",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vibey.showMenu",
+          "when": "view == vibey.runs",
+          "group": "navigation@3"
+        },
+        {
+          "command": "vibey.refresh",
+          "when": "view == vibey.runs",
+          "group": "navigation@9"
+        },
+        {
+          "command": "vibey.startQueue",
+          "when": "view == vibey.lanes",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.stopAll",
+          "when": "view == vibey.lanes",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vibey.refresh",
+          "when": "view == vibey.lanes",
+          "group": "navigation@9"
+        },
+        {
+          "command": "vibey.refresh",
+          "when": "view == vibey.projects",
+          "group": "navigation@9"
+        },
+        {
+          "command": "vibey.answerGate",
+          "when": "view == vibey.gates",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.refresh",
+          "when": "view == vibey.gates",
+          "group": "navigation@9"
+        },
+        {
+          "command": "vibey.addBudget",
+          "when": "view == vibey.budgets",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.refresh",
+          "when": "view == vibey.budgets",
+          "group": "navigation@9"
+        },
+        {
+          "command": "vibey.connectHub",
+          "when": "view == vibey.projects && !vibey.hubConnected",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.disconnectHub",
+          "when": "view == vibey.projects && vibey.hubConnected",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.endNoCap",
+          "when": "view == vibey.budgets && vibey.unlimitedSpend",
+          "group": "navigation@0"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vibey.startQueue",
+          "when": "view == vibey.runs && viewItem == vibey.run.queued",
+          "group": "inline@1"
+        },
+        {
+          "command": "vibey.stopRun",
+          "when": "view == vibey.runs && viewItem =~ /^vibey\\.run\\.(queued|running)$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "vibey.forceStopRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.stopping",
+          "group": "inline@3"
+        },
+        {
+          "command": "vibey.openRunLog",
+          "when": "view == vibey.runs && viewItem =~ /^vibey\\.run\\./",
+          "group": "inline@4"
+        },
+        {
+          "command": "vibey.reviewRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.finished",
+          "group": "inline@5"
+        },
+        {
+          "command": "vibey.applyRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.finished",
+          "group": "inline@6"
+        },
+        {
+          "command": "vibey.discardRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.finished",
+          "group": "inline@7"
+        },
+        {
+          "command": "vibey.startQueue",
+          "when": "view == vibey.lanes && viewItem == vibey.run.queued",
+          "group": "inline@1"
+        },
+        {
+          "command": "vibey.stopRun",
+          "when": "view == vibey.lanes && viewItem =~ /^vibey\\.run\\.(queued|running)$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "vibey.forceStopRun",
+          "when": "view == vibey.lanes && viewItem == vibey.run.stopping",
+          "group": "inline@3"
+        },
+        {
+          "command": "vibey.openRunLog",
+          "when": "view == vibey.lanes && viewItem =~ /^vibey\\.run\\./",
+          "group": "inline@4"
+        },
+        {
+          "command": "vibey.reviewRun",
+          "when": "view == vibey.lanes && viewItem == vibey.run.finished",
+          "group": "inline@5"
+        },
+        {
+          "command": "vibey.applyRun",
+          "when": "view == vibey.lanes && viewItem == vibey.run.finished",
+          "group": "inline@6"
+        },
+        {
+          "command": "vibey.discardRun",
+          "when": "view == vibey.lanes && viewItem == vibey.run.finished",
+          "group": "inline@7"
+        },
+        {
+          "command": "vibey.openLane",
+          "when": "view == vibey.lanes && viewItem =~ /^vibey\\.lane\\./",
+          "group": "inline@1"
+        },
+        {
+          "command": "vibey.answerGate",
+          "when": "view == vibey.gates && viewItem =~ /^vibey\\.gate/",
+          "group": "inline@1"
+        },
+        {
+          "command": "vibey.grantBudget",
+          "when": "view == vibey.gates && viewItem == vibey.gate.budget",
+          "group": "inline@2"
+        },
+        {
+          "command": "vibey.grantBudget",
+          "when": "view == vibey.budgets && viewItem =~ /^vibey\\.budget\\..*\\.exhausted$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "vibey.editBudget",
+          "when": "view == vibey.budgets && viewItem =~ /^vibey\\.budget\\./",
+          "group": "inline@2"
+        },
+        {
+          "command": "vibey.removeBudget",
+          "when": "view == vibey.budgets && viewItem =~ /^vibey\\.budget\\./",
+          "group": "inline@3"
+        },
+        {
+          "command": "vibey.bumpJob",
+          "when": "view == vibey.projects && viewItem == vibey.job",
+          "group": "inline@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "krypton",
+      "properties": {
+        "vibey.cliPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `vibey` program to run. Empty: the first `vibey` on your PATH. **krypton: Check my setup** prints the one it found and its version."
+        },
+        "vibey.gptossloopPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey-engine`)."
+        },
+        "vibey.qwenloopPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0064). Empty: the first `qwenloop` on your PATH."
+        },
+        "vibey.ollamaPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `ollama` program, used only to start a server with `ollama serve` and to show a download command. Empty: the first `ollama` on your PATH."
+        },
+        "vibey.gitPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `git` program. Empty: the first `git` on your PATH."
+        },
+        "vibey.vibeySkillsPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `vibey-skills` program that builds context packets for the **Plugins** menu. Empty: the first `vibey-skills` on your PATH."
+        },
+        "vibey.ollamaUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where Ollama listens, in root form without `/v1`. Empty: `$VIBEY_OLLAMA_URL`, else `http://127.0.0.1:11434`."
+        },
+        "vibey.ollamaAppPath": {
+          "type": "string",
+          "default": "/Applications/Ollama.app",
+          "markdownDescription": "macOS only: the Ollama app **Start Ollama** opens when it exists. Otherwise `ollama serve` is started."
+        },
+        "vibey.model": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The model gptossloop tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. qwenloop is not handed this: its own config chooses (`qwen3:14b`), unless you name a model with the engine, `qwenloop/qwen3:14b`."
+        },
+        "vibey.loop": {
+          "type": "string",
+          "enum": [
+            "sovereignloop",
+            "paidloop"
+          ],
+          "enumDescriptions": [
+            "Your own computer: free, private, always available (the default, sub-doctrine 8.b).",
+            "Paid vendors: they bill their own accounts, so this needs a one-time declaration with a budget."
+          ],
+          "default": "sovereignloop",
+          "markdownDescription": "Which loop runs tasks. `paidloop` works only after you declare it once (**Choose the loop**), with a daily or monthly dollar budget."
+        },
+        "vibey.effort": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "TRIVIAL",
+            "LOW",
+            "STANDARD",
+            "HIGH",
+            "MAX",
+            "ULTRA"
+          ],
+          "default": "auto",
+          "markdownDescription": "How hard the engine works (vibey's own effort levels). `auto` starts at **Base effort** and climbs one step each time a task fails, as vibey's escalation ladder does, never past a budget. `ULTRA` has no turn limit and is shown in its own colour with a flame.",
+          "markdownEnumDescriptions": [
+            "Start at **Base effort** and climb one step each time a task fails, never past a budget.",
+            "The least work: one small change.",
+            "A small task.",
+            "The usual task.",
+            "A hard task: more turns.",
+            "The most a bounded run does.",
+            "Effort without a ceiling (ADR-0063): no turn limit, and a finished pass is a checkpoint before the next improvement pass. It stops only at **Stop** or a declared budget cap."
+          ]
+        },
+        "vibey.baseEffort": {
+          "type": "string",
+          "enum": [
+            "TRIVIAL",
+            "LOW",
+            "STANDARD",
+            "HIGH",
+            "MAX"
+          ],
+          "default": "LOW",
+          "markdownDescription": "Where `auto` effort starts: vibey's BUILD phase starts at `LOW`."
+        },
+        "vibey.engine": {
+          "type": "string",
+          "default": "auto",
+          "markdownDescription": "`auto` picks within the loop by effort (preferring a model already loaded). Or name an engine, `gptossloop`, or an engine and model, `gptossloop/gpt-oss:20b`. The engines come from `vibey loops`."
+        },
+        "vibey.maxTurns": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "The most model turns one task may take, used only when neither the task file (`max_turns`) nor the effort sets one. `0`: none from here."
+        },
+        "vibey.contextWindow": {
+          "type": "integer",
+          "default": 32768,
+          "minimum": 1024,
+          "markdownDescription": "The context window, in tokens, the local runner (gptossloop or qwenloop) assumes (its own `context_window`, default 32768). **Check my setup** warns when Ollama loaded the model with a smaller one, because Ollama then drops the start of long tasks without saying so."
+        },
+        "vibey.runInPlace": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Run tasks directly in the open folder instead of in a separate copy (a git worktree on its own branch). **Off is safer**: with it on, the model edits your files as it goes and there is no Apply or Discard."
+        },
+        "vibey.baseRef": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The git branch or commit a task's copy starts from. Empty: whatever you have checked out (`HEAD`)."
+        },
+        "vibey.stormHome": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where task copies, plans and records are kept. Empty: `$VIBEY_STORM_HOME`, else `~/git/vibey-storm` on macOS and `$XDG_DATA_HOME/vibey/storm` (or `~/.local/share/vibey/storm`) on Linux. A folder your computer empties at restart is refused (sub-doctrine 10.h)."
+        },
+        "vibey.modelLockPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "A lock directory that keeps runs on the same computer from sharing the model at once, including runs started from a terminal with `vibey-vscode`. Empty: the lock the computer declares with `VIBEY_OLLAMA_LOCK` (the one vibey-gh and storm tooling share), else `.ollama-lock` in the storm home. A lock held by something that does not say who is never broken."
+        },
+        "vibey.maxConcurrentRuns": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1,
+          "markdownDescription": "How many tasks may use one model at the same time. Further tasks wait in line. `1` is the measured best on a 24 GB Mac: at two, answers drifted from what one run gives (structural fidelity 0.82, under the 0.95 floor; #1114, sub-doctrine 8.c)."
+        },
+        "vibey.refreshSeconds": {
+          "type": "integer",
+          "default": 30,
+          "minimum": 5,
+          "markdownDescription": "How often the Model, Projects and Gates views refresh themselves."
+        },
+        "vibey.pollMilliseconds": {
+          "type": "integer",
+          "default": 500,
+          "minimum": 100,
+          "markdownDescription": "How often a running task's event log is read for new lines."
+        },
+        "vibey.stuckHintMinutes": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 5,
+          "markdownDescription": "After this many minutes without a new event, a running task shows a hint. Nothing is ever stopped for being slow: on a 24 GB Mac one turn of gpt-oss:20b took 16.5 s typically and 112.6 s at the 95th percentile."
+        },
+        "vibey.forceStopAfterSeconds": {
+          "type": "integer",
+          "default": 120,
+          "minimum": 30,
+          "markdownDescription": "How long a graceful **Stop** is given before **Force stop** is offered. A force stop is only ever a person's choice, and it is written in the journal."
+        },
+        "vibey.lanesRecentMinutes": {
+          "type": "integer",
+          "default": 60,
+          "minimum": 1,
+          "markdownDescription": "The Lanes view lists lanes with an event in this many minutes."
+        },
+        "vibey.skillsBudget": {
+          "type": "integer",
+          "default": 6000,
+          "minimum": 1000,
+          "maximum": 32000,
+          "markdownDescription": "The token budget of a vibey-skills context packet (vibey's own bounds: 1,000 to 32,000)."
+        },
+        "vibey.budgetInputTokensPerTurn": {
+          "type": "integer",
+          "default": 20000,
+          "minimum": 1,
+          "markdownDescription": "Input tokens per turn assumed when projecting a paid run's cost, until this machine has measured the engine's own."
+        },
+        "vibey.budgetOutputTokensPerTurn": {
+          "type": "integer",
+          "default": 2000,
+          "minimum": 1,
+          "markdownDescription": "Output tokens per turn assumed when projecting a paid run's cost, until this machine has measured the engine's own."
+        },
+        "vibey.desktopNotifications": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Let the local runner (gptossloop or qwenloop) send its own desktop notification at every turn. Off: the editor shows progress instead."
+        },
+        "vibey.environment.allow": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra environment variables (a name, or a prefix ending in `*`) passed to the engine and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says."
+        },
+        "vibey.theme": {
+          "type": "string",
+          "enum": [
+            "system",
+            "light",
+            "dark"
+          ],
+          "enumDescriptions": [
+            "Follow the editor's colour theme, and switch live when it changes (the default).",
+            "krypton's own light palette, whatever the editor uses.",
+            "krypton's own dark palette, whatever the editor uses."
+          ],
+          "default": "system",
+          "markdownDescription": "How krypton's panels are coloured. **System** follows the editor's colour theme, live; **Light** and **Dark** keep krypton's own palette from the design tokens (ADR-0066). Remembered on this device."
+        },
+        "vibey.hubUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The vibey hub (`vibey serve`, ADR-0068) this device is paired with, like `http://studio.local:8765`. Empty: the local `vibey` command line, the default. Set it with **krypton: Connect to vibey on this network**, which also keeps the hub's key in the editor's secret storage, never in settings."
+        }
+      }
+    },
+    "chatParticipants": [
+      {
+        "id": "krypton.chat",
+        "name": "krypton",
+        "fullName": "krypton",
+        "description": "Run tasks on your own computer's model, and drive vibey: projects, gates, lanes, budgets.",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "ask",
+            "description": "Start a task on a copy of your folder; nothing changes until you apply it."
+          },
+          {
+            "name": "tell",
+            "description": "Send a follow-up to the task that is running; the model reads it at its next turn."
+          },
+          {
+            "name": "batch",
+            "description": "Run every .md task file in a folder, one at a time, each on its own branch; run it again to resume."
+          },
+          {
+            "name": "stop",
+            "description": "Ask a task to wind down: it finishes the turn it is on, then ends."
+          },
+          {
+            "name": "force-stop",
+            "description": "End a task at once, only after Stop has waited its fair time; it is written in the journal."
+          },
+          {
+            "name": "log",
+            "description": "Open a task's panel: its live stream, or the record of a finished one."
+          },
+          {
+            "name": "review",
+            "description": "See every change a finished task made, as a diff."
+          },
+          {
+            "name": "apply",
+            "description": "Merge a finished task's branch into yours; on a conflict nothing is changed."
+          },
+          {
+            "name": "discard",
+            "description": "Delete a finished task's copy and branch."
+          },
+          {
+            "name": "attach",
+            "description": "Copy a file into the task's copy of the folder and point the model at it."
+          },
+          {
+            "name": "image",
+            "description": "Only for an engine and model that can see images (for a local model, Ollama must report vision)."
+          },
+          {
+            "name": "paste",
+            "description": "Add text (or what is on the clipboard) to the next task."
+          },
+          {
+            "name": "paste-image",
+            "description": "Only for an engine and model that can see images; paste into the task panel."
+          },
+          {
+            "name": "plugins",
+            "description": "Pick plugins from the vibey marketplace; vibey-skills builds a context packet for the task."
+          },
+          {
+            "name": "loop",
+            "description": "sovereign runs on your own computer, always free; paid uses vendors who bill you, and needs a one-time declaration."
+          },
+          {
+            "name": "effort",
+            "description": "How hard the engine works; auto starts low and climbs one step each time a task fails."
+          },
+          {
+            "name": "model",
+            "description": "auto picks by effort within the loop; or name one, such as gptossloop/gpt-oss:20b."
+          },
+          {
+            "name": "loops",
+            "description": "Every loop, engine and what each effort level runs, from vibey."
+          },
+          {
+            "name": "lanes",
+            "description": "Every lane running on this computer, live, and the tasks waiting their turn."
+          },
+          {
+            "name": "watch",
+            "description": "Stream one lane's events live, whoever started it."
+          },
+          {
+            "name": "start",
+            "description": "Let waiting tasks start again; with a task id, that task goes next."
+          },
+          {
+            "name": "stop-all",
+            "description": "Hold the queue and wind down every running lane, gracefully, one by one."
+          },
+          {
+            "name": "refresh",
+            "description": "Read the model, projects, gates and lanes again now."
+          },
+          {
+            "name": "projects",
+            "description": "Every vibey project and the phase it is in."
+          },
+          {
+            "name": "status",
+            "description": "A project's queue and engines."
+          },
+          {
+            "name": "gates",
+            "description": "Every question vibey is waiting for a person to answer."
+          },
+          {
+            "name": "answer",
+            "description": "Answer a gate; with only its id, a list of the answers it takes."
+          },
+          {
+            "name": "bump",
+            "description": "Move a vibey job to the front of its project's queue."
+          },
+          {
+            "name": "budget",
+            "description": "Every budget, for vibey projects and for this machine's lanes, with what is spent."
+          },
+          {
+            "name": "cap",
+            "description": "One action ends a no-cap paidloop declaration at once; paidloop then needs a cap again."
+          },
+          {
+            "name": "connect",
+            "description": "Find a vibey hub here or at an address, pair once with its key, and read projects, gates and budgets through it."
+          },
+          {
+            "name": "disconnect",
+            "description": "Forget the hub's key on this device and go back to the local vibey command line."
+          },
+          {
+            "name": "theme",
+            "description": "System follows the editor's colour theme and switches live; Light and Dark keep krypton's own palette."
+          },
+          {
+            "name": "start-ollama",
+            "description": "Start the Ollama server if it is not running; never a second one."
+          },
+          {
+            "name": "pull",
+            "description": "Download a model into Ollama, with progress; gpt-oss:20b is about 14 GB."
+          },
+          {
+            "name": "doctor",
+            "description": "Check every piece: the storm home, git, gptossloop, vibey, Ollama, the model and its window."
+          },
+          {
+            "name": "help",
+            "description": "The menu of every command, grouped."
+          }
+        ]
+      }
+    ],
+    "colors": [
+      {
+        "id": "vibey.ultraEffort",
+        "description": "ULTRA, effort without a ceiling (ADR-0063): the design tokens' color.state.ultra.",
+        "defaults": {
+          "dark": "#ff6ad5",
+          "light": "#b0268f",
+          "highContrast": "#ff6ad5",
+          "highContrastLight": "#b0268f"
+        }
+      },
+      {
+        "id": "vibey.stateRunning",
+        "description": "A running lane or task: the design tokens' color.state.running.",
+        "defaults": {
+          "dark": "#57dcff",
+          "light": "#2f6b9a",
+          "highContrast": "#57dcff",
+          "highContrastLight": "#2f6b9a"
+        }
+      },
+      {
+        "id": "vibey.stateQueued",
+        "description": "A waiting lane or task: color.state.queued.",
+        "defaults": {
+          "dark": "#a7acc2",
+          "light": "#56657a",
+          "highContrast": "#a7acc2",
+          "highContrastLight": "#56657a"
+        }
+      },
+      {
+        "id": "vibey.stateSucceeded",
+        "description": "A finished lane or task: color.state.succeeded.",
+        "defaults": {
+          "dark": "#75f0c2",
+          "light": "#1f7a57",
+          "highContrast": "#75f0c2",
+          "highContrastLight": "#1f7a57"
+        }
+      },
+      {
+        "id": "vibey.stateFailed",
+        "description": "A failed lane or task: color.state.failed.",
+        "defaults": {
+          "dark": "#ff8a96",
+          "light": "#b24c4c",
+          "highContrast": "#ff8a96",
+          "highContrastLight": "#b24c4c"
+        }
+      },
+      {
+        "id": "vibey.stateAwaitingHuman",
+        "description": "A lane or gate waiting for a person: color.state.awaiting-human.",
+        "defaults": {
+          "dark": "#ffc861",
+          "light": "#8a5a00",
+          "highContrast": "#ffc861",
+          "highContrastLight": "#8a5a00"
+        }
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "krypton.firstRun",
+        "title": "Get started with krypton",
+        "description": "From install to your first result in under a minute: check the setup, pick a look, and ask for something small.",
+        "steps": [
+          {
+            "id": "setup",
+            "title": "Check your setup",
+            "description": "One click checks git, gptossloop, vibey, Ollama and the model, and says what to do about anything missing.\n[Check my setup](command:vibey.doctor)",
+            "media": {
+              "markdown": "media/walkthrough/setup.md"
+            },
+            "completionEvents": [
+              "onCommand:vibey.doctor"
+            ]
+          },
+          {
+            "id": "theme",
+            "title": "Light, Dark or System",
+            "description": "System follows your editor, live. Light and Dark keep krypton's own palette.\n[Choose the theme](command:vibey.chooseTheme)",
+            "media": {
+              "markdown": "media/walkthrough/theme.md"
+            },
+            "completionEvents": [
+              "onCommand:vibey.chooseTheme",
+              "onSettingChanged:vibey.theme"
+            ]
+          },
+          {
+            "id": "firstTask",
+            "title": "Your first result",
+            "description": "Ask for something small. It runs on a copy of your folder, so nothing changes until you choose Apply.\n[Ask the model](command:vibey.ask)",
+            "media": {
+              "markdown": "media/walkthrough/first-task.md"
+            },
+            "completionEvents": [
+              "onCommand:vibey.ask"
+            ]
+          },
+          {
+            "id": "effort",
+            "title": "How hard it works",
+            "description": "From TRIVIAL to MAX, or ULTRA: no turn limit, stopped only by you or a budget.\n[Choose the effort](command:vibey.chooseEffort)",
+            "media": {
+              "markdown": "media/walkthrough/effort.md"
+            },
+            "completionEvents": [
+              "onCommand:vibey.chooseEffort",
+              "onSettingChanged:vibey.effort"
+            ]
+          },
+          {
+            "id": "connect",
+            "title": "Connect to vibey on this network",
+            "description": "Pair once with a vibey hub on your network, or stay local: local is the default.\n[Connect](command:vibey.connectHub)",
+            "media": {
+              "markdown": "media/walkthrough/connect.md"
+            },
+            "completionEvents": [
+              "onCommand:vibey.connectHub"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "npm run core && tsc -p tsconfig.json && node scripts/sync-manifest.js && node scripts/vendor-core.js",
+    "typecheck": "npm run core && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "npm run core && vitest run",
+    "coverage": "npm run core && vitest run --coverage",
+    "smoke": "node test/smoke/run.js",
+    "package": "vsce package",
+    "core": "npm run build --prefix ../../packages/vibey-core"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/vscode": "1.90.0",
+    "@vibey/core": "0.1.0",
+    "@vitest/coverage-v8": "5.0.1",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "ovsx": "1.2.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.1"
+  }
+}

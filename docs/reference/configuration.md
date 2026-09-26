@@ -15,12 +15,12 @@ remain documented inputs for future wiring.
 
 | Input | Read by | What it controls |
 |---|---|---|
-| `./vibey.toml`, key `[features].qwenloop` | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`; a missing or malformed file counts as `qwenloop = false`. |
+| `./vibey.toml`, keys `[features].gptossloop`, `[features].qwenloop`, `[features].claudeloop_local` | `vibey doctor` and `vibey loops` (`cli/main.py` `_local_engines_from_toml`, through `LocalEngineSettings`) | Which local engines are added to the health sweep and reported as switched on. The file is read from the current directory with `parse_toml_string`; a missing or malformed file leaves every switch at its default: `gptossloop` on, the others off (ADR-0064). |
 | `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]` and `[engine_environment]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run and what an engine session may see of the environment into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
 | `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. |
-| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
-| Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
+| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
+| Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
 
@@ -38,12 +38,43 @@ The project record is written once, at creation, by one of two paths:
   `engine_environment` objects (validated the same way). `spec.engines` is stored as
   a flat `engines` list that nothing reads back yet.
 
-Neither path passes through `parse_config`. No command updates these values on
-an existing project.
+Neither path passes through `parse_config`. One command updates any of these values
+on an existing project, and only two of them: `vibey budget set` and
+`vibey budget clear` rewrite `max_cycle_dollars` and `max_cycle_turns` (see
+[Per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns)). No command
+changes the rest after creation. The operator applies its spec at creation only,
+so later edits to a `VibeyProject`'s `maxCycleDollars` or `maxCycleTurns` change
+nothing; use `vibey budget`.
 
-Neither path writes a `features` key either, so the worker's check of the
-stored `features.qwenloop` is always false for projects created today:
-**`VIBEY_FEATURE_QWENLOOP` is the switch that reaches the worker.**
+### Per-cycle caps: `max_cycle_dollars`, `max_cycle_turns`
+
+The budget brake's caps. They are top-level keys of the project's stored
+`config`, and that is the only place the brake reads them
+(`LedgerBudgetSource.caps_from_config`).
+
+| Key | Type | Unset means | Set by |
+|---|---|---|---|
+| `max_cycle_dollars` | number above zero | no dollar cap | `vibey new --max-cycle-dollars`, the operator's `spec.maxCycleDollars`, `vibey budget set --max-cycle-dollars` |
+| `max_cycle_turns` | integer above zero | no turn cap | `vibey new --max-cycle-turns`, the operator's `spec.maxCycleTurns`, `vibey budget set --max-cycle-turns` |
+
+- **Read at every BUILD session**, not once when a worker starts. A cap changed
+  while a worker runs binds its next BUILD session. A project created uncapped
+  can be capped without a restart.
+- **Uncapped is absence.** `vibey budget clear` removes the key, leaving the config
+  as if the cap had never been set. A key that is not a number, or a `true` or
+  `false`, is also no cap. It is never a default.
+- **Every change is on the ledger.** Each `set` or `clear` that changes a cap
+  appends one `BudgetCapChanged` event (`field`, `old`, `new`, `by`, `account`)
+  in the same transaction as the config write. `vibey budget --json` reads its
+  `history` back from those events. A value set at creation has no event.
+- **A grant is not a cap change.** Answering a `budget_exhausted` gate with
+  `--raw '{"max_dollars": N}'` raises the cap for that one job and leaves the
+  stored cap as it is.
+
+Neither path writes a `features` key either, so for projects created today the
+worker finds no stored switch and each local engine sits at its default —
+`gptossloop` on, `qwenloop` and `claudeloop-local` off (ADR-0064):
+**the `VIBEY_FEATURE_*` variables are the switches that reach the worker.**
 
 ## Environment variables
 
@@ -52,8 +83,9 @@ stored `features.qwenloop` is always false for projects created today:
 | `VIBEY_PG_URL` | `bootstrap.database_url()` (every command that opens the queue) | The application role's PostgreSQL DSN ([database roles](#database-roles)). Required; there is no default — `vibey` exits with `DatabaseNotConfigured` if it is unset. |
 | `VIBEY_PG_MIGRATE_URL` | `vibey migrate` only | The owner's DSN: migrations run on it, and the application role's grants are reconciled from it ([database roles](#database-roles)). Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it, and nothing else reads it. |
 | `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | `bootstrap.build_app()` via `PostgresMigrator.from_environ` (every command that opens the queue) | How long a start waits for another process's migration before failing with `MigrationLockTimeout`, which names the backend pid holding the lock. Seconds, fractions allowed and rounded up to the next millisecond; default `300`; `0` waits indefinitely. Unset or blank means the default; anything that is not a number from `0` to `2147483.647` fails the start with `InvalidMigrationLockTimeout` before the pool opens, rather than falling back. See [the migration lock](../plans/data-model.md#71-the-migration-lock). |
-| `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap.qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
-| `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
+| `VIBEY_FEATURE_GPTOSSLOOP` | `vibey worker`, `vibey doctor` and `vibey loops`, through `LocalEngineSettings` (`infrastructure/engines/local_engines.py`) | Overrides `features.gptossloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other set value — `0` included — disables. When set it wins over both the stored project record and `./vibey.toml`; when neither sets the switch, gptossloop is on (ADR-0064). For the worker, gptossloop on means a gptossloop adapter in the LOCAL tier, preferred first for BUILD ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md)). |
+| `VIBEY_FEATURE_QWENLOOP` | as `VIBEY_FEATURE_GPTOSSLOOP` | Overrides `features.qwenloop`, with the same values. Off when nothing sets it. Enabling it adds a qwenloop adapter — the same runner on a Qwen model — to the LOCAL tier beside gptossloop, and makes the worker and `vibey doctor` print a `note:` that qwenloop runs a Qwen model since ADR-0064. |
+| `VIBEY_EVIDENCE_DIR` | `vibey work --provider gptossloop`, `vibey worker --provider gptossloop` (the default) | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
 
 ### Database roles { #database-roles }
 
@@ -88,8 +120,9 @@ until the roles are split:
    `ledger guard in force`.
 3. Remove the owner's DSN from every other environment: a worker, an engine session or a
    gate command that holds it can disable the triggers.
-4. Run `vibey doctor`, and require a password for the owner and every superuser. The split
-   protects the ledger only once `local-auth` passes; `SECURITY.md` §7 gives the
+4. Run `vibey doctor`, and require scram-sha-256 for every connection (sub-doctrine 10.j,
+   ADR-0061): never `trust`, `peer`, `ident`, `md5` or a password in clear. The split
+   protects the ledger only once `local-auth` passes. `SECURITY.md` §7 gives the required
    `pg_hba.conf` lines.
 
 With the Helm chart this is `postgres.appRole` (default `vibey_app`) and, for an external
@@ -185,11 +218,15 @@ accepted), and `[deploy].target` / `[deploy].iac` accept any string.
 
 Engine names: an unknown engine name in `[engines].enabled` or as a key of
 `[engines].weights` fails validation with a `ConfigError` naming the offending
-path, as does `qwenloop` in `[engines].enabled` or any `[phases.*].engines`
-list before `features.qwenloop = true`. `[phases.*].engines` entries are
+path, as does a local engine in `[engines].enabled` or any `[phases.*].engines`
+list while its switch is off: `qwenloop` before `features.qwenloop = true` (the
+message adds that qwenloop runs a Qwen model since ADR-0064 and that the gpt-oss
+engine it used to be is `gptossloop`), `claudeloop-local` before
+`features.claudeloop_local = true`, and `gptossloop` while
+`features.gptossloop = false`. `[phases.*].engines` entries are
 otherwise not validated — unknown names and engines outside
 `[engines].enabled` are accepted as written — and `[engines].weights` may name
-`qwenloop` without the feature flag. Unknown tables (for example
+a local engine whose switch is off. Unknown tables (for example
 `[skills_context]`) are silently ignored. All of this applies only when
 something calls `load_config_from_path`/`parse_config`, which nothing in this
 codebase does outside tests.
@@ -230,19 +267,20 @@ for the same disclosure.
 | `max_dollars_per_cycle` | float or unset | unset (no cap) | Intended per-cycle spend cap. Not validated. |
 | `max_dollars_total` | float or unset | unset (no cap) | Intended total spend cap across the project's lifetime. Not validated. |
 | `max_turns_per_item` | integer or unset | unset (no cap) | Intended per-work-item turn cap; the implemented cap (`max_cycle_turns`) is per cycle. Not validated. |
+| `ultra_no_cap` | boolean | `false` | Written by `vibey budget no-cap` and `vibey budget cap` as the record of the no-cap declaration for ULTRA runs (ADR-0063). The worker reads the trusted `UltraNoCapChanged` ledger event, never this key: a `true` here with no event behind it declares nothing. |
 
 None of these keys is read at runtime. The live brake is the project's stored
 `max_cycle_dollars` / `max_cycle_turns` (set by `vibey new --max-cycle-dollars`
-/ `--max-cycle-turns`, or the operator's `spec.maxCycleDollars` /
-`spec.maxCycleTurns`). `LedgerBudgetSource` sums them live from the current
-cycle's `TurnCompleted` and `BudgetSpent` ledger events — never estimated
-ahead of time — and tripping either parks a `budget_exhausted` gate. With
-neither set, spend is uncapped.
+/ `--max-cycle-turns` or the operator's `spec.maxCycleDollars` /
+`spec.maxCycleTurns`, and changed afterwards by `vibey budget set` / `clear`; see
+[Per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns)).
+`LedgerBudgetSource` reads the caps at every BUILD session and sums the spend
+live from the current cycle's `TurnCompleted` and `BudgetSpent` ledger events,
+never estimating it ahead of time. Tripping either cap parks a
+`budget_exhausted` gate. With neither set, spend is uncapped.
 
-`vibey cost` prints caps from a `budget` key in the stored project config
-(`max_dollars_per_cycle`, `max_dollars_total`) that nothing writes, so it
-currently shows the fallbacks $40.00 (cycle) and $250.00 (total) rather than
-the real cap.
+`vibey cost` and `vibey budget` show those stored caps and that ledger sum. A
+`budget` key in the stored project config is not read by either.
 
 ## `[verify]`
 
@@ -257,12 +295,15 @@ Unlike `[budget]` above, this key **is** read at runtime, by
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop", "opencode"]` | Must be a subset of the known engines below. If omitted while `features.qwenloop = true`, `qwenloop` is appended to the default automatically; an explicit list is never extended. |
+| `enabled` | array of strings | `["gptossloop"]`, plus every other local engine whose switch is on | Must be a subset of the known engines below. `gptossloop`, the sovereign default (sub-doctrine 8.b, `DEFAULT_ENGINES`), is on without declaration: an explicit list that leaves it out is extended with it. It leaves the pool only by `features.gptossloop = false` (ADR-0064). If the list is omitted, each switched-on local engine (`qwenloop`, `claudeloop-local`) is appended too. |
 | `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
 
 Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
-`opencode`, and `qwenloop` (valid in `enabled` and `[phases.*].engines` only once
-`features.qwenloop = true`).
+`gptossloop` (valid unless `features.gptossloop = false`), `qwenloop` (valid in
+`enabled` and `[phases.*].engines` only once `features.qwenloop = true`), and
+`claudeloop-local` (only once `features.claudeloop_local = true`). `opencode` is no
+longer an engine: its engine and runner were deleted, and a `vibey.toml` that names
+it is refused as an unknown engine.
 
 ## `[phases.design]`, `[phases.build]`, `[phases.review]`
 
@@ -334,23 +375,30 @@ the running application but has no external exporter yet.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `qwenloop` | boolean | `false` | Must be `true` before `qwenloop` can appear in `[engines].enabled` or any `[phases.*].engines` list. |
+| `gptossloop` | boolean | `true` | The sovereign default engine: the local runner on GPT-OSS 20B (ADR-0064). On unless set `false`; `false` removes it from the default pool and refuses it in `[engines].enabled` and `[phases.*].engines`. |
+| `qwenloop` | boolean | `false` | The same runner on a Qwen model (`qwen3:14b` unless `QWENLOOP_MODEL` or its own config names another). Must be `true` before `qwenloop` can appear in `[engines].enabled` or any `[phases.*].engines` list. Before ADR-0064 this switch turned on the engine that ran `gpt-oss:20b`; that engine is now `gptossloop`, on by default. |
+| `claudeloop_local` | boolean | `false` | The claudeloop binary on a local backend profile (`[engines.claudeloop_local]`). Must be `true` before `claudeloop-local` can be requested. |
 
-Runtime: `vibey doctor` reads this key from `./vibey.toml`. `vibey worker`
-reads it from the project's stored config record, which `vibey new` and the
-operator never write, so for the worker `VIBEY_FEATURE_QWENLOOP=1` is
-currently the only way to enable qwenloop. The environment variable overrides
-both. Without it, the worker's default adapter set has no qwenloop adapter.
+Runtime: `vibey doctor` and `vibey loops` read these keys from `./vibey.toml`.
+`vibey worker` reads them from the project's stored config record, which
+`vibey new` and the operator never write, so for the worker the
+`VIBEY_FEATURE_GPTOSSLOOP`, `VIBEY_FEATURE_QWENLOOP` and
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL` variables are currently the only switches; each
+overrides both. With none set, the worker runs gptossloop and no other local
+engine.
 
 ## `[qwenloop]`
 
-Only meaningful when `features.qwenloop = true`. In engine-driven BUILD
-rotation qwenloop is a standby tier — selected only when no paid engine is
-eligible ([ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)).
-It is also the sovereign DESIGN provider, selected explicitly with
-`vibey work --provider qwenloop` or `vibey worker --provider qwenloop`
-([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)).
-These keys mirror the runner's own `QwenConfig`
+Describes the local runner package that both `gptossloop` and `qwenloop` run
+(the table keeps its historical name). In engine-driven BUILD rotation the local
+engines form the LOCAL tier, preferred first
+([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md),
+amending the standby of
+[ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)). The sovereign
+DESIGN and DECOMPOSE providers are gptossloop's, the default for
+`vibey work` and `vibey worker`
+([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md),
+ADR-0064). These keys mirror the runner's own `QwenConfig`
 (`src/vibey_runners/qwen/src/qwenloop/domain/config.py`, which additionally
 has `max_turns`, default `40`, must be positive); `parse_config` validates
 them into `VibeyConfig`, but nothing passes them to the runner.
@@ -363,6 +411,44 @@ them into `VibeyConfig`, but nothing passes them to the runner.
 | `idle_timeout_seconds` | integer | `900` | Must be non-negative; how long an idle local model stays warm. |
 | `startup_timeout_seconds` | integer | `180` | Must be positive. |
 | `context_window` | integer | `32768` | Must be positive. |
+
+## `[failover]` { #failover }
+
+The driver's failover and handback ([ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)),
+read by `vibey driver` from the worktree's `vibey.toml` (or `--config`). Every
+key is optional. An unknown key or a wrong type is refused by name.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | boolean | `true` | `false` plans no failover; the hook then records nothing. |
+| `target_engine` | string | `"gptossloop"` | The engine the work moves to. |
+| `target_effort` | string | `"ULTRA"` | An `Effort` name (ADR-0063). |
+| `probe_interval_seconds` | integer | `1800` | How long after a failover the first probe may run, and the timer's period. A window's known reset time replaces the first; credits never have one. |
+| `sovereign_argv` | list of strings | `["gptossloop", "run", "{brief}", "--run-id", "{run_id}", "--cwd", "{cwd}"]` | Started detached on failover. |
+| `sovereign_wind_down_argv` | list of strings | `["gptossloop", "wind-down", "{run_id}", "--cwd", "{cwd}"]` | Run before handback. |
+| `probe_argv` | list of strings | `["claude", "-p", "Reply with the single word OK.", "--output-format", "json", "--max-turns", "1"]` | Success is exit 0 with a JSON result whose `is_error` is `false`. |
+| `resume_argv` | list of strings | `["claude", "-p", "--resume", "{session_id}", "{prompt}"]` | Started detached on handback. |
+
+The argv templates fill `{brief}`, `{cwd}`, `{run_id}`, `{session_id}` and
+`{prompt}`; any other text is passed through unchanged.
+
+## `[hub]` { #hub }
+
+The hub, `vibey serve` (ADR-0067). Every key is optional, and the defaults are the closed
+ones: with no `[hub]` table the hub listens on loopback only. An unknown key, or a key of
+the wrong type, is refused rather than ignored, so a misspelt `lan` can never silently
+mean "not declared".
+
+| Key | Default | Meaning |
+|---|---|---|
+| `lan` | `false` | `true` declares that `vibey serve --host <LAN address>` may listen off loopback. Without it such an address is refused (exit 2), and `vibey doctor` fails a hub found listening on one. |
+| `port` | `8765` | The port `vibey serve` listens on when `--port` is not given. |
+| `names` | `[]` | Extra names a request may carry in `Host` when the LAN is declared, e.g. `"studio.local"`. The computer's own host name, its `.local` name and its addresses are always admitted then. |
+| `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600) and the runtime record (`serving.json`) live. |
+| `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
+
+A bump from the hub is requested as the queue source `vibey-hub`; it lands only when
+[`[queue.priority]`](#queuepriority) `sources` names it.
 
 ## `[queue.priority]` { #queuepriority }
 
@@ -445,7 +531,7 @@ are documented in the vibey-gh
 ```toml
 # .vibey-gh.toml
 [local_models]
-concurrent_runs = 1
+concurrent_runs = "measured"
 model = "gpt-oss:20b"
 context_window = 65536
 ```
@@ -608,7 +694,7 @@ vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `security_commands` | array of arrays of non-empty strings | `[]` (no security check runs) | Security checks. There is deliberately no default: any baked-in command names both a tool and a layout, and `bandit -q -r <path that does not exist>` exits 0 — a wrong default reports a passing security check that examined zero files. Configure this to get one. |
-| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop", "--exclude", ".opencodeloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
+| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
 
 A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than
@@ -643,7 +729,7 @@ env_allow = ["JAVA_HOME", "GRADLE_*", "TEST_DATABASE_URL"]
 
 An engine session runs model-chosen shell commands, unattended in BUILD and
 DEPLOY_EXECUTE. It never inherits the worker's environment. Every engine process (the
-run, its `--version`, `doctor` and `--help` probes, and the claudeloop and opencode
+run, its `--version`, `doctor` and `--help` probes, and the claudeloop
 DESIGN/DECOMPOSE sessions) starts from an allow-list built by
 `EngineEnvironmentPolicy` (`infrastructure/engines/engine_environment.py`). The
 allow-list has three parts:
@@ -665,8 +751,8 @@ allow-list has three parts:
    | `codexloop` | `OPENAI_API_KEY`, `CODEXLOOP_*`, `CODEX_*`, `OPENAI_*`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
    | `cursorloop` | `CURSOR_API_KEY`, `CURSORLOOP_*`, `CURSOR_*` |
    | `agyloop` | `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `AGYLOOP_*`, `ANTIGRAVITY_*`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` |
-   | `opencode` | `OPENCODELOOP_*`, `OPENCODE_*` |
-   | `qwenloop` | `QWENLOOP_*` (plus the `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` vibey derives from `VIBEY_OLLAMA_URL`) |
+   | `gptossloop` | `GPTOSSLOOP_*` (plus the `GPTOSSLOOP_BASE_URL`/`GPTOSSLOOP_MODEL` vibey derives from `VIBEY_OLLAMA_URL`) |
+   | `qwenloop` | `QWENLOOP_*` (plus the `QWENLOOP_BASE_URL` vibey derives from `VIBEY_OLLAMA_URL`; vibey hands qwenloop no model) |
 
 3. **What the project declares.** This is the record's `engine_environment` object,
    declared in `vibey.toml`'s `[engine_environment]` table (copied into the record by
@@ -685,7 +771,6 @@ engine it is declared for. Some things need declaring:
   default credentials under `CLOUDSDK_CONFIG` when the gcloud configuration lives
   somewhere other than `~/.config/gcloud`; declare `CLOUDSDK_CONFIG` too in that
   case.
-- OpenCode needs any provider key its own configuration reads from the environment.
 - claudeloop's GitHub issue import needs `GH_TOKEN` or `GITHUB_TOKEN` for a private
   repository.
 
@@ -708,9 +793,52 @@ project's.
 allow = ["JAVA_HOME"]
 
 [engine_environment.engines]
-opencode = ["OPENROUTER_API_KEY"]
 agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]
 "claudeloop-local" = ["GH_TOKEN"]
+```
+
+## `[sabbath]` { #sabbath }
+
+Sub-doctrine 8.i: from sundown Friday to sundown Saturday nothing writes, merges, tests or
+ships code ([ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
+Sundown is computed for the machine the process runs on, with the NOAA algorithm. The same
+table is read from a local `vibey.toml` (by the engine) and from `.vibey-gh.toml` (by the
+merge train, the promotion and the heartbeat). **Never commit coordinates**: put them only
+in this machine's own `vibey.toml`, in `local_config`, or in `VIBEY_SABBATH_LATITUDE` and
+`VIBEY_SABBATH_LONGITUDE`.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | 8.i has no exception. Turning it off is a declared act, never a missing key. |
+| `timezone` | `""` | The IANA zone the civil day is read in. Empty reads the host's own zone (`$TZ`, then `/etc/localtime`). |
+| `latitude`, `longitude` | unset | An explicit override. Set both or neither, and only in a file that is never committed. |
+| `local_config` | `~/.config/vibey/sabbath.toml` | A per-host TOML file with `latitude` and `longitude`, read when the table has none. |
+| `location_service` | `true` | Ask CoreLocation (`CoreLocationCLI`, macOS) or GeoClue (`where-am-i`, Linux) when installed. |
+| `offset_minutes` | `0` | Widens every window toward rest, both edges (0–240). It never narrows one. |
+| `coarse_margin_minutes` | `90` | Extra widening when the location is only the zone's reference city (0–240). |
+| `fallback_opens`, `fallback_closes` | `"14:00"`, `"23:00"` | Friday open and Saturday close, local, when no sundown can be computed (no location, or a polar day). |
+| `resume_dispatch` | `true` | At the first heartbeat after the window, re-fire the held merge train and promotion. |
+| `lanes_dir` | `~/.local/state/vibey/sabbath-lanes` | Where lanes register "paused for the Sabbath, resume with ...". |
+
+Where the host stands is resolved in this order, and every window names its source:
+
+1. the override;
+2. the operating system's location service;
+3. the reference city of the host's zone from the system `zone1970.tab`, which is coarse
+   and so widened.
+
+There is no IP lookup. The answer is cached for a week and dropped when the zone changes.
+
+`VIBEY_SABBATH_ENABLED=false` (also `0`, `no`, `off`; truthy values re-enable) declares
+the Sabbath off for one process without editing a file -- what the Helm cluster-smoke
+step uses so `vibey new` does not lawfully decline every Friday evening. It overrides the
+table's `enabled` in either direction; unset, the table decides.
+
+```toml
+# This machine's own vibey.toml -- never committed. EXAMPLE coordinates only.
+[sabbath]
+latitude  = 34.97
+longitude = -82.44
 ```
 
 ## Full example
@@ -765,7 +893,8 @@ secret = "replace-me"
 enabled = true
 
 [features]
-qwenloop = true
+gptossloop = true   # the default; false switches the sovereign engine off
+qwenloop = true     # opt in to the same runner on a Qwen model
 
 [qwenloop]
 backend = "auto"
@@ -778,7 +907,7 @@ sources = ["storm"]
 env_allow = ["JAVA_HOME"]
 
 [engine_environment.engines]
-opencode = ["OPENROUTER_API_KEY"]
+agyloop = ["GOOGLE_APPLICATION_CREDENTIALS"]
 
 [queue.reap]
 stale_ready_seconds = 900

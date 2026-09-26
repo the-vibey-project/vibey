@@ -69,6 +69,16 @@ class BuildWorktrees(Protocol):
 
 
 @runtime_checkable
+class BuildCheckpoint(Protocol):
+    """Commits a worktree's work at an ULTRA checkpoint (ADR-0063)."""
+
+    async def commit(self, worktree_path: Path, message: str) -> str | None:
+        """Stages and commits everything; the new commit's id, or `None` when there was
+        nothing to commit."""
+        ...
+
+
+@runtime_checkable
 class GateRunner(Protocol):
     async def run(self, argv: tuple[str, ...], *, cwd: Path) -> GateResult: ...
 

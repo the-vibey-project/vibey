@@ -322,7 +322,7 @@ python -m build
 ### Publish to PyPI
 
 > **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
-> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> (vibey ADR-0037); it ships inside `vibey-engine`, released by the monorepo's `vibey-engine.yml`.
 > The commands below are kept as a record of how this package was published.
 
 ```bash
@@ -526,7 +526,7 @@ See `azure-pipelines.yml` for complete configuration.
 ### Release Process
 
 > **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
-> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> (vibey ADR-0037); it ships inside `vibey-engine`, released by the monorepo's `vibey-engine.yml`.
 > Kept as the record of how this package was released and configured.
 
 
@@ -743,7 +743,7 @@ def hello(req):
 - **Repository**: https://github.com/the-vibey-project/vibey (this tree lives at
   `src/vibey_tools/bootstrap`)
 - **Issues**: https://github.com/the-vibey-project/vibey/issues
-- **PyPI**: https://pypi.org/project/vibey/ (the distribution that carries it)
+- **PyPI**: https://pypi.org/project/vibey-engine/ (the distribution that carries it)
 
 ---
 
@@ -774,7 +774,7 @@ This library was extracted from a production Azure Functions application that pr
 
 > **Superseded — this section records the standalone repository's pipeline.** Those
 > workflows are inert here: the monorepo's `ci.yml` runs this package's gates and its
-> `release.yml` publishes the one `vibey` distribution that carries it (vibey ADR-0021,
+> `vibey-engine.yml` publishes the `vibey-engine` package that carries it (vibey ADR-0021,
 > ADR-0037). Kept because it documents why each gate existed.
 
 The library used **GitHub Actions** for CI/CD, publishing stable releases to
@@ -814,7 +814,7 @@ graph LR
 ### GitHub Actions Setup for PyPI Publishing
 
 > **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
-> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> (vibey ADR-0037); it ships inside `vibey-engine`, released by the monorepo's `vibey-engine.yml`.
 > Kept as the record of how this package was released and configured.
 
 
@@ -865,10 +865,10 @@ This part is still live, and it is the one thing in this section that changed sh
 
 ```bash
 # Install from PyPI (no extra config needed)
-pip install vibey
+pip install vibey-engine
 
 # Install specific version
-pip install vibey==1.0.0
+pip install vibey-engine==1.0.0
 
 # Install a dev build. These live on TestPyPI as `vibey-dev`, NOT PyPI — `--pre`
 # against PyPI finds nothing, because PyPI now only ever holds real releases.
@@ -880,8 +880,8 @@ pip install \
 
 # Install with optional extras. On the vibey distribution the per-feature extras are
 # reached through two aggregates rather than by name.
-pip install 'vibey[azure]'
-pip install 'vibey[bootstrap-all]'
+pip install 'vibey-engine[azure]'
+pip install 'vibey-engine[bootstrap-all]'
 ```
 
 ### CI/CD Troubleshooting
@@ -901,9 +901,9 @@ Reads like a permissions bug; it is almost always a claim mismatch:
 
 #### Package Not Found After Publishing
 - PyPI indexing is usually instant, but wait a few seconds and retry
-- Verify package at https://pypi.org/project/vibey/ (stable) or
+- Verify package at https://pypi.org/project/vibey-engine/ (stable) or
   https://test.pypi.org/project/vibey-dev/ (dev builds) — since vibey ADR-0037
-  `vibey_bootstrap` ships inside the one `vibey` distribution and has no project
+  `vibey_bootstrap` ships inside the one `vibey-engine` package and has no project
   page of its own
 
 #### Workflow Not Running
@@ -928,7 +928,7 @@ GitHub Pages must be enabled once, by hand, before the first deploy:
 
 #### Version Conflicts
 - Clear pip cache: `pip cache purge`
-- Install specific version: `pip install vibey==1.0.0` (the distribution that carries it)
+- Install specific version: `pip install vibey-engine==1.0.0` (the distribution that carries it)
 
 ---
 

@@ -91,11 +91,15 @@ async def test_real_queue_runs_and_resumes_all_seven_interview_stages(
     # handler's clock. It is still pinned to an exact value -- the `updated_at`
     # that same UPDATE returned -- so nothing here asserts less than before;
     # the deterministic reference is the row rather than the FixedClock.
+    # GateAnswered is the same: written in the answer's own transaction, stamped with the
+    # `answered_at` the compare-and-set wrote. One per interview stage answered.
+    database_stamped = {EventKind.PHASE_TRANSITIONED, EventKind.GATE_ANSWERED}
     assert all(
         event.produced_at == datetime(2026, 8, 14, tzinfo=UTC)
         for event in events
-        if event.kind is not EventKind.PHASE_TRANSITIONED
+        if event.kind not in database_stamped
     )
+    assert [event.kind for event in events].count(EventKind.GATE_ANSWERED) == 7
     transitions = [event for event in events if event.kind is EventKind.PHASE_TRANSITIONED]
     assert [event.produced_at for event in transitions] == [project.updated_at]
 

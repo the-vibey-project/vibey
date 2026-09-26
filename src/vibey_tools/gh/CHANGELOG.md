@@ -5,6 +5,20 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `[documentation] cookie_consent` (default on) keeps the GA4 snippet lawful:
+  with a measurement ID configured, every published page and the channel-picker index
+  deny analytics storage by default (Google Consent Mode v2) and show an accept/decline
+  banner whose choice is remembered per browser, so no analytics cookie is set before
+  the reader accepts. `false` renders the plain gtag snippet; with no measurement ID
+  nothing renders either way. See configuration.md.
+- **Feature:** `[documentation] site_root_files` declares repository-relative files copied
+  by basename into the Pages root on every release-surfaces deploy — the declared answer
+  to Search Console's "HTML file" verification, which a hand-uploaded file cannot give
+  because each rebuild wipes the Pages root. Entries must stay inside the repository,
+  carry no whitespace or shell metacharacters, and have unique file names; a declared
+  file missing from the checkout fails the deploy rather than publishing without it.
+  Empty (the default) copies nothing. See configuration.md.
+
 - **Feature:** `vibey-gh announce` posts a concise changelog with every documentation deploy,
   replacing the release-surfaces workflow's inline announcement. It lists one line per merged
   change (its Conventional Commit subject, the type turned into a word, the PR linked), grouped
@@ -29,6 +43,18 @@ This file follows Keep a Changelog and semantic versioning conventions.
   as sent, check codes included, so documents trimmed to the window are never then refused for
   not fitting it. A model-server error whose body breaks off mid-read (`IncompleteRead`) is
   still a clean refusal in the status line's words.
+- **Fix:** an honest sovereign heartbeat that passes the pre-push gate by the gate's own rule
+  (vibey ADR-0060). `sovereign --beat` publishes only while a runner carrying `runner_label` is
+  registered and online and `base_url` answers with `model`, and says `heartbeat withheld: …`
+  otherwise; `--record FILE` writes what it did. It pushes without `--no-verify` and replaces
+  the previous heartbeat by `--force-with-lease` on the exact value read. New `push-scope`
+  command and pre-push hook rule: a push whose every ref is outside `refs/heads/` and
+  `refs/tags/` and whose every commit is the empty tree with no parents has nothing for the
+  heavy stage to judge; anything else runs the full gate. New `heartbeat install|status|
+  uninstall` (and `runner install`/`uninstall` do it too): a launchd agent or a systemd user
+  timer, beating at most every half trust window, with new `[runners]` keys
+  `heartbeat_scheduler`, `heartbeat_interval_minutes`, `heartbeat_python`, `heartbeat_log_dir`
+  and `systemd_user_dir`. `runner cleanup` never retires the declared heartbeat timer.
 
 - **Fix:** a local review never returns a verdict on a prompt the model did not read in full,
   and says when the model ran out of room (#1090). What #1090 was: its whole review sent about

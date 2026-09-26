@@ -1,0 +1,77 @@
+{
+  "name": "@vibey/krypton-mobile-web",
+  "version": "0.1.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@expo/metro-runtime": "~57.0.16",
+    "expo": "~57.0.25",
+    "expo-camera": "~57.0.5",
+    "expo-constants": "~57.0.19",
+    "expo-haptics": "~57.0.3",
+    "expo-linking": "~57.0.11",
+    "expo-local-authentication": "~57.0.3",
+    "expo-notifications": "~57.0.21",
+    "expo-router": "~57.0.23",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.20.4",
+    "@types/react": "~19.2.2",
+    "babel-preset-expo": "^57.0.13",
+    "jest": "^29.7.0",
+    "jest-expo": "^57.0.5",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "coverage": "jest --coverage",
+    "export:web": "expo export --platform web"
+  },
+  "private": true,
+  "description": "Krypton for iOS, Android and the web: one Expo app over the vibey hub (ADR-0068).",
+  "license": "MIT",
+  "jest": {
+    "preset": "jest-expo",
+    "testMatch": [
+      "<rootDir>/test/**/*.test.ts?(x)"
+    ],
+    "moduleNameMapper": {
+      "^@vibey/core$": "<rootDir>/../../packages/vibey-core/src/index.ts"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|react-native-svg)"
+    ],
+    "collectCoverageFrom": [
+      "src/core/**/*.ts",
+      "!src/core/interfaces/**",
+      "!src/core/index.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 100,
+        "branches": 100,
+        "functions": 100,
+        "statements": 100
+      }
+    },
+    "moduleDirectories": [
+      "node_modules",
+      "<rootDir>/node_modules"
+    ]
+  }
+}

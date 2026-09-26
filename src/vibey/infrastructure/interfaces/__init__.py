@@ -18,6 +18,7 @@ from vibey.infrastructure.interfaces.class_contracts import (
     InvalidMigrationLockTimeoutInterface,
     JsonlShardStoreInterface,
     LocalEngineSwitchInterface,
+    LocalRunnerVariablesInterface,
     LoopProcessAdapterInterface,
     MigrationInsideTransactionInterface,
     MigrationLockTimeoutInterface,
@@ -58,19 +59,11 @@ if TYPE_CHECKING:  # concrete result types live beside their adapter
         ClaudeLoopResult,
         CommandResult,
     )
-    from vibey.infrastructure.engines.opencodeloop_process import (
-        OpenCodeLoopResult,
-    )
 
 
 @runtime_checkable
 class BoundedClaudeLoop(Protocol):
     async def run(self, spec: RunSpec, *, web_search: bool = False) -> ClaudeLoopResult: ...
-
-
-@runtime_checkable
-class BoundedOpenCodeLoop(Protocol):
-    async def run(self, spec: RunSpec, *, web_search: bool = False) -> OpenCodeLoopResult: ...
 
 
 @runtime_checkable
@@ -80,7 +73,6 @@ class CommandExecutor(Protocol):
 
 __all__ = [
     "BoundedClaudeLoop",
-    "BoundedOpenCodeLoop",
     "ClaudeLoopDesignProviderInterface",
     "ClaudeLoopWorkPlanProducerInterface",
     "ClusterPreflightInterface",
@@ -92,6 +84,7 @@ __all__ = [
     "InvalidMigrationLockTimeoutInterface",
     "JsonlShardStoreInterface",
     "LocalEngineSwitchInterface",
+    "LocalRunnerVariablesInterface",
     "LoopProcessAdapterInterface",
     "MigrationInsideTransactionInterface",
     "MigrationLockTimeoutInterface",

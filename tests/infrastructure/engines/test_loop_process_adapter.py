@@ -1478,6 +1478,34 @@ async def test_tail_normalizes_vendor_success_into_vibey_complete(tmp_path: Path
     assert [e.payload.get("complete") for e in events] == [True, False]
 
 
+async def test_tail_reads_sovereign_completed_and_failed_as_the_verdict(tmp_path: Path) -> None:
+    """qwenloop and gptossloop end a run with a bare {"type": "completed"}
+    or {"type": "failed"}: the event's name is the verdict. Caught live by
+    the ULTRA proof run -- every sovereign BUILD session read as "did not
+    report completion"."""
+    from vibey.infrastructure.engines.descriptors import QWENLOOP
+
+    adapter = LoopProcessAdapter(descriptor=QWENLOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    (run_dir / "events.jsonl").write_text(
+        '{"type":"completed","ts":"2026-01-01T00:00:00+00:00","turn":3}\n'
+        '{"type":"failed","ts":"2026-01-01T00:00:01+00:00","error":"boom"}\n'
+        '{"type":"completed","ts":"2026-01-01T00:00:02+00:00","complete":false}\n'
+    )
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    events = [event async for event in adapter.tail(handle)]
+
+    assert [e.payload.get("complete") for e in events] == [True, False, False]
+    assert events[0].payload["done_marker"] == QWENLOOP.done_marker
+    assert "done_marker" not in events[1].payload
+    # An explicit completion key is never overwritten by the event's name.
+    assert "done_marker" not in events[2].payload
+
+
 async def test_tail_never_overwrites_an_explicit_complete_key(tmp_path: Path) -> None:
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     run_dir = tmp_path / "test-run"

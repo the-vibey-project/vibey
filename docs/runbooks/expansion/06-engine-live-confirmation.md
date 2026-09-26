@@ -3,14 +3,16 @@
 > **Status (2026-09-15):** open. claudeloop and agyloop are the only
 > live-proven engines. codexloop (silent `events.jsonl`) and cursorloop
 > (`CURSOR_API_KEY`) were still blocked at the last recorded check
-> (2026-08-20). qwenloop, the fifth engine (ADR-0015), has no live row yet.
+> (2026-08-20). qwenloop, the fifth engine (ADR-0015), has no live row yet;
+> since ADR-0064 its runner ships as two engines, gptossloop (the sovereign
+> default, GPT-OSS 20B) and qwenloop (opt-in, Qwen), and neither has one.
 > All five runners are now in-tree under `src/vibey_runners/` (ADR-0021), so
 > runner fixes land in this repository.
 
 ## Goal
 
-All engines — claudeloop, agyloop, codexloop, cursorloop, and qwenloop
-(opt-in standby, ADR-0015) — hold green 9/9 conformance and at least one paid live work
+All engines — claudeloop, agyloop, codexloop, cursorloop, gptossloop (the
+sovereign local default) and qwenloop (opt-in, ADR-0064) — hold green 9/9 conformance and at least one paid live work
 item each, so rotation runs across the full pool instead of the two
 currently proven.
 
@@ -22,7 +24,8 @@ currently proven.
 | agyloop | Fully live-proven (implement + verify roles, cross-engine) |
 | codexloop | **Broken live**: a real `codexloop run` produced 0 `events.jsonl` lines in ~12 minutes; probe killed; no health row → honestly excluded. Its vocabulary in `LOOP_EVENT_MAP` was source-verified (#34) but never validated against captured runtime output. |
 | cursorloop | **Blocked on auth**: `doctor` fails wanting `CURSOR_API_KEY`. Untested beyond that. |
-| qwenloop | Opt-in (`[features] qwenloop = true`); local model via llama.cpp or vLLM, zero marginal dollars. Used as the sovereign DESIGN provider (`vibey worker --provider qwenloop`, ADR-0027). No live BUILD row recorded. |
+| gptossloop | On by default (ADR-0064); the local runner on `gpt-oss:20b` via Ollama (or llama.cpp / vLLM), zero marginal dollars. Its model is the sovereign DESIGN provider (`vibey worker --provider gptossloop`, the default, ADR-0027). No live BUILD row recorded. |
+| qwenloop | Opt-in (`[features] qwenloop = true`); the same runner on `qwen3:14b`. No live BUILD row recorded. |
 
 ## Plan per engine
 
@@ -50,13 +53,15 @@ currently proven.
    the same way (its map is also source-verified only).
 3. Conformance 9/9 + one paid live item.
 
-### qwenloop
+### gptossloop and qwenloop
 
-1. Operator installs local model weights (`qwenloop model install
-   --profile portable` for llama.cpp, or the vLLM BF16 profile on NVIDIA)
-   and sets `[features] qwenloop = true`.
-2. `qwenloop doctor` green; capture a real run; reconcile the event map
-   against captured output.
+1. Operator serves the model — `ollama pull gpt-oss:20b` for gptossloop (on
+   by default), `ollama pull qwen3:14b` for qwenloop plus
+   `[features] qwenloop = true`; or installs local weights
+   (`qwenloop model install --profile portable` for llama.cpp, or the vLLM
+   BF16 profile on NVIDIA).
+2. `gptossloop doctor` (and `qwenloop doctor`) green; capture a real run of
+   each; reconcile the event map against captured output.
 3. Conformance 9/9 + one local BUILD work item. It costs no API dollars,
    so its bar is a completed item, not a paid one; its TurnCompleted
    events must still record `cost_usd` (zero) so the brake reads it.
@@ -84,7 +89,8 @@ forced-rotation tier crossing picks a different engine.
 - `CURSOR_API_KEY` exported (or in the env file the worker loads).
 - Nothing for codexloop unless root-cause turns out to be its own expired
   auth (`codex login` may need a refresh).
-- qwenloop: local model weights installed and `[features] qwenloop = true`.
+- gptossloop: a local Ollama serving `gpt-oss:20b`; qwenloop: `qwen3:14b`
+  (or local weights) and `[features] qwenloop = true`.
 
 ## Risks
 

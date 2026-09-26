@@ -1,5 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""qwenloop command line interface."""
+"""The command line of this runner package's two engines (ADR-0064).
+
+`gptossloop` and `qwenloop` are the same commands over the same runner. They differ in who
+they are -- the name they print, the settings they read (`GPTOSSLOOP_*` or `QWENLOOP_*`, and
+a config file of their own) and the model an endpoint is asked for when nothing names one
+(`gpt-oss:20b` or `qwen3:14b`). Run records, the done marker and the verdict fence are the
+runner's own protocol and are shared: both write `.qwenloop/runs/`.
+"""
 
 import asyncio
 import json
@@ -26,7 +33,12 @@ from qwenloop.domain.config import (
     DEFAULT_ENDPOINT_MODEL,
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    DEFAULT_QWEN_ENDPOINT_MODEL,
+    GPTOSSLOOP,
+    QWENLOOP,
+    Effort,
     QwenConfig,
+    RunnerIdentity,
     ToolLimits,
 )
 from qwenloop.domain.model import (
@@ -73,19 +85,26 @@ BaseUrlOption = Annotated[
     typer.Option(
         "--base-url",
         help="OpenAI-compatible base URL to attach to, /v1 included (e.g. Ollama's "
-        "http://127.0.0.1:11434/v1). Unset: $QWENLOOP_BASE_URL, else config `base_url`.",
+        "http://127.0.0.1:11434/v1). Unset: $GPTOSSLOOP_BASE_URL (gptossloop) or "
+        "$QWENLOOP_BASE_URL (qwenloop), else config `base_url`.",
     ),
 ]
 ModelOption = Annotated[
     str | None,
     typer.Option(
         "--model",
-        help="Model name the endpoint serves. Unset: $QWENLOOP_MODEL, else config `model`, "
-        f"else {DEFAULT_ENDPOINT_MODEL}.",
+        help="Model name the endpoint serves. Unset: $GPTOSSLOOP_MODEL or $QWENLOOP_MODEL, "
+        f"else config `model`, else {DEFAULT_ENDPOINT_MODEL} (gptossloop) or "
+        f"{DEFAULT_QWEN_ENDPOINT_MODEL} (qwenloop).",
     ),
 ]
 
 app = typer.Typer(name="qwenloop", no_args_is_help=True, add_completion=False)
+
+#: Which engine this process is. `main` leaves it qwenloop, the package's own name;
+#: `gptoss_main` makes it gptossloop before any command runs. Module-level for the reason
+#: `_ollama_probe` is: typer commands are plain functions and cannot be handed it.
+_identity: RunnerIdentity = QWENLOOP
 model_app = typer.Typer(no_args_is_help=True)
 server_app = typer.Typer(no_args_is_help=True)
 tool_app = typer.Typer(no_args_is_help=True)
@@ -96,7 +115,7 @@ app.add_typer(tool_app, name="tool")
 
 def _version(value: bool) -> None:
     if value:
-        typer.echo(f"qwenloop {__version__}")
+        typer.echo(f"{_identity.name} {__version__}")
         raise typer.Exit()
 
 
@@ -130,7 +149,7 @@ def run(
     storm: bool = typer.Option(
         False,
         "--storm",
-        help="Sweep every repo's open backlog through qwenloop instead of running PLAN.",
+        help="Sweep every repo's open backlog through this runner instead of running PLAN.",
     ),
     owner: str = typer.Option(
         _DEFAULT_STORM_OWNER, "--owner", help="GitHub owner --storm discovers repos under."
@@ -150,11 +169,14 @@ def run(
         help="Send lifecycle desktop alerts; macOS alerts use the Ping sound.",
     ),
 ) -> None:
-    del preset, effort
+    del preset
+    selected_effort = Effort.parse(effort)
     if storm:
         if plan is not None:
             raise typer.BadParameter("pass either PLAN or --storm, not both")
         config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
+        if max_turns is None and selected_effort is not Effort.STANDARD:
+            config = replace(config, max_turns=selected_effort.default_max_turns)
         _run_storm(
             owner=owner,
             repos_root=repos_root,
@@ -168,6 +190,8 @@ def run(
     if plan is None:
         raise typer.BadParameter("PLAN is required unless --storm is set")
     config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
+    if max_turns is None and selected_effort is not Effort.STANDARD and config.max_turns == 40:
+        config = replace(config, max_turns=selected_effort.default_max_turns)
     _run_single(plan, run_id, cwd, config, desktop_notifications=desktop_notifications)
 
 
@@ -178,9 +202,9 @@ def _load_config(**overrides: object) -> QwenConfig:
     functions, and this is the step they share. A bad file or value exits 2 naming it.
     """
     try:
-        return SettingsLoader(os.environ).load(overrides)
+        return SettingsLoader(os.environ, identity=_identity).load(overrides)
     except (OSError, ValueError) as exc:
-        raise typer.BadParameter(f"qwenloop configuration: {exc}") from exc
+        raise typer.BadParameter(f"{_identity.name} configuration: {exc}") from exc
 
 
 #: The one probe `_select` asks whether a local Ollama is running (#388). The tests replace
@@ -213,7 +237,7 @@ def _attach(config: QwenConfig) -> OpenAICompatServer:
     return OpenAICompatServer(
         config.endpoint_url,
         config.model,
-        api_key=SettingsLoader(os.environ).api_key,
+        api_key=SettingsLoader(os.environ, identity=_identity).api_key,
         timeout_seconds=config.endpoint_timeout_seconds,
         context_window=config.context_window,
     )
@@ -282,7 +306,7 @@ def _run_single(
             )
         )
     except (OSError, RuntimeError) as exc:
-        typer.echo(f"qwenloop unavailable: {exc}", err=True)
+        typer.echo(f"{_identity.name} unavailable: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     if state.status is RunStatus.WINDING_DOWN:
         raise typer.Exit(code=EXIT_CODE_WIND_DOWN)
@@ -561,7 +585,9 @@ def doctor(
     nvidia = shutil.which("vllm") is not None
     typer.echo(f"llama-server: {'ok' if portable else 'missing'}")
     typer.echo(f"vllm: {'ok' if nvidia else 'missing'}")
-    typer.echo("Models are never downloaded by doctor; run qwenloop model install explicitly.")
+    typer.echo(
+        f"Models are never downloaded by doctor; run {_identity.name} model install explicitly."
+    )
     if not portable and not nvidia:
         raise typer.Exit(code=1)
 
@@ -574,7 +600,7 @@ def _doctor_endpoint(server: OpenAICompatServer, choice: BackendChoice) -> None:
         served = asyncio.run(server.check())
     except RuntimeError as exc:
         typer.echo(f"model: {server.model} unavailable")
-        typer.echo(f"qwenloop doctor: {exc}", err=True)
+        typer.echo(f"{_identity.name} doctor: {exc}", err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(f"model: {served} ok")
     typer.echo("Models are never downloaded by doctor; the endpoint serves its own.")
@@ -595,35 +621,38 @@ def usage(cwd: Path = Path(".")) -> None:
     )
 
 
-def _control(run_id: str, kind: str, cwd: Path) -> None:
+def _control(run_id: str, payload: dict[str, object], cwd: Path) -> None:
+    # A module-level helper because each typer command below is one: it writes one control
+    # file, named by the time it was sent and then a random part, so the runner reads the
+    # inbox in the order things were sent (`FileRunStore.take_prompts` sorts by name).
     inbox = cwd / ".qwenloop" / "runs" / run_id / "control" / "inbox"
     inbox.mkdir(parents=True, exist_ok=True)
-    target = inbox / f"{uuid.uuid4()}.json"
-    target.write_text(json.dumps({"type": kind}) + "\n", encoding="utf-8")
+    target = inbox / f"{time.time_ns():020d}-{uuid.uuid4().hex}.json"
+    target.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
 @app.command()
 def stop(run_id: str, cwd: Path = Path(".")) -> None:
-    _control(run_id, "stop", cwd)
+    _control(run_id, {"type": "stop"}, cwd)
 
 
 @app.command("wind-down")
 def wind_down(run_id: str, cwd: Path = Path(".")) -> None:
-    _control(run_id, "wind_down", cwd)
+    _control(run_id, {"type": "wind_down"}, cwd)
 
 
 @app.command()
 def prompt(run_id: str, text: str, cwd: Path = Path(".")) -> None:
-    inbox = cwd / ".qwenloop" / "runs" / run_id / "control" / "inbox"
-    inbox.mkdir(parents=True, exist_ok=True)
-    (inbox / f"{uuid.uuid4()}.json").write_text(
-        json.dumps({"type": "prompt", "text": text}) + "\n", encoding="utf-8"
-    )
+    """Send the running run a follow-up; the model reads it at the start of its next turn."""
+    _control(run_id, {"type": "prompt", "text": text}, cwd)
 
 
 def _local_equivalent(name: str):  # type: ignore[no-untyped-def]
     def command() -> None:
-        typer.echo(f"{name}: local qwenloop equivalent; see qwenloop status and run artifacts")
+        typer.echo(
+            f"{name}: local {_identity.name} equivalent; see {_identity.name} status and run "
+            "artifacts"
+        )
 
     command.__name__ = name.replace("-", "_")
     return command
@@ -711,7 +740,7 @@ def server_start(
     try:
         asyncio.run(execute())
     except (OSError, RuntimeError, TimeoutError) as exc:
-        typer.echo(f"qwenloop server unavailable: {exc}", err=True)
+        typer.echo(f"{_identity.name} server unavailable: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
 
@@ -782,4 +811,18 @@ async def _wait_until_ready(
 
 
 def main() -> None:
-    app()
+    """`qwenloop`: this runner on a Qwen model (ADR-0064)."""
+    _run_as(QWENLOOP)
+
+
+def gptoss_main() -> None:
+    """`gptossloop`: this runner on GPT-OSS, the sovereign default engine (ADR-0064)."""
+    _run_as(GPTOSSLOOP)
+
+
+def _run_as(identity: RunnerIdentity) -> None:
+    """Run the command line as `identity`. Module-level because the two console scripts
+    are module-level entry points, and this is the one step they share."""
+    global _identity
+    _identity = identity
+    app(prog_name=identity.name)

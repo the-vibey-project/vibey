@@ -45,6 +45,19 @@ def _database_security_passes(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(DatabaseSecurityChecks, "run", passing)
 
+    # Whether the app database admits a password-less login depends on the machine too;
+    # the probe is tested on its own (tests/infrastructure/db/test_passwordless_reach.py).
+    from vibey.infrastructure.db.passwordless_reach import (
+        PasswordlessReachFinding,
+        PasswordlessReachProbe,
+        ReachVerdict,
+    )
+
+    async def refused(self: object, dsn: str) -> PasswordlessReachFinding:
+        return PasswordlessReachFinding(ReachVerdict.PASS, "stub")
+
+    monkeypatch.setattr(PasswordlessReachProbe, "probe", refused)
+
 
 @pytest.fixture(autouse=True)
 async def _use_test_database(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1137,6 +1150,9 @@ def test_doctor_can_be_asked_for_claudeloop_local_by_name(
     from vibey.application.dto import PreflightResult
 
     monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
+    # The qwenloop switch notice prints ahead of the engine line, so an ambient
+    # VIBEY_FEATURE_QWENLOOP would move the start of the output this asserts on.
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
     with patch(
         "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
         new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
@@ -1458,7 +1474,7 @@ def test_worker_invalid_engine() -> None:
 def test_worker_invalid_provider() -> None:
     res = runner.invoke(app, ["worker", "--provider", "nonexistent"])
     assert res.exit_code == 2
-    assert "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'" in res.output
+    assert "provider must be 'scripted', 'claudeloop', or 'gptossloop'" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1619,7 +1635,7 @@ def test_worker_sweeps_claudeloop_local_when_its_feature_is_on(
         res = runner.invoke(app, ["worker", "--once", "--engines", "claudeloop-local"])
     assert res.exit_code == 0, res.output
     assert "no recorded conformance for claudeloop-local" in res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1645,7 +1661,7 @@ def test_worker_defaults_to_the_sovereign_providers_from_the_project_config(
         mock_notifier_cls.return_value = AsyncMock()
         res = runner.invoke(app, ["worker", "--once"])
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1669,9 +1685,10 @@ def test_an_explicit_provider_still_wins_over_the_sovereign_default(
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_with_no_local_engine_the_default_provider_is_qwenloop(
+def test_with_no_local_engine_the_default_provider_is_gptossloop(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("VIBEY_FEATURE_GPTOSSLOOP", "0")
     monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
     monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
 
@@ -1687,7 +1704,7 @@ def test_with_no_local_engine_the_default_provider_is_qwenloop(
         res = runner.invoke(app, ["worker", "--once"])
     # #322 (sub-doctrine 8.b): the sovereign pair is always on, so no switch is needed.
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1711,28 +1728,17 @@ def test_worker_provider_claudeloop_constructs_live_providers(tmp_path: Path) ->
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_provider_opencode_constructs_live_providers(tmp_path: Path) -> None:
-    """--provider opencode builds the live design provider without any
-    subprocess spawn at construction time."""
-
-    async def seed() -> None:
-        async with build_app() as resources:
-            await resources.projects.create("opencode-prov-proj", tmp_path, max_cycles=1, config={})
-
-    asyncio.run(seed())
-    from unittest.mock import AsyncMock, patch
-
-    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
-        mock_notifier_cls.return_value = AsyncMock()
-        res = runner.invoke(app, ["worker", "--once", "--provider", "opencode"])
-    assert res.exit_code == 0, res.output
-    assert "provider=opencode" in res.output
-    assert "no ready job" in res.output
+def test_worker_refuses_the_deleted_opencode_provider() -> None:
+    """The OpenCode provider was deleted with its engine (sub-doctrine 8.b): naming it is
+    refused like any other unknown provider, before anything is built."""
+    res = runner.invoke(app, ["worker", "--once", "--provider", "opencode"])
+    assert res.exit_code == 2
+    assert "provider must be 'scripted', 'claudeloop', or 'gptossloop'" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_provider_qwenloop_constructs_live_providers(tmp_path: Path) -> None:
-    """--provider qwenloop (8.a's sovereign path) builds the live design provider
+def test_worker_provider_gptossloop_constructs_live_providers(tmp_path: Path) -> None:
+    """--provider gptossloop (8.a's sovereign path) builds the live design provider
     without any network call at construction time, with no evidence dir configured."""
 
     async def seed() -> None:
@@ -1748,16 +1754,18 @@ def test_worker_provider_qwenloop_constructs_live_providers(tmp_path: Path) -> N
     ):
         os.environ.pop("VIBEY_EVIDENCE_DIR", None)
         mock_notifier_cls.return_value = AsyncMock()
-        res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
+        res = runner.invoke(app, ["worker", "--once", "--provider", "gptossloop"])
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
+    assert "is now --provider" not in res.output
     assert "no ready job" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_provider_qwenloop_picks_up_evidence_dir(tmp_path: Path) -> None:
     """VIBEY_EVIDENCE_DIR is how the operator hands the sovereign research stage its
-    reading; --provider qwenloop must actually read it rather than ignore it."""
+    reading; --provider qwenloop must actually read it rather than ignore it. `qwenloop`
+    is the provider's old name, read as gptossloop and said so (ADR-0064)."""
 
     async def seed() -> None:
         async with build_app() as resources:
@@ -1777,7 +1785,8 @@ def test_worker_provider_qwenloop_picks_up_evidence_dir(tmp_path: Path) -> None:
         mock_notifier_cls.return_value = AsyncMock()
         res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
     assert res.exit_code == 0, res.output
-    assert "provider=qwenloop" in res.output
+    assert "provider=gptossloop" in res.output
+    assert "--provider qwenloop is now --provider gptossloop (ADR-0064)" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1831,9 +1840,16 @@ def test_watch_state_fetcher_is_invoked(tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
+def test_worker_warns_about_engines_without_conformance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The sweep records preflight but never grants conformance -- until
     doctor --conformance --record runs, engine-driven jobs can't select."""
+    # The sweep covers the four paid engines plus gptossloop, the local engine on
+    # by default: pin both switches so an ambient VIBEY_FEATURE_* cannot change
+    # the swept set this count asserts on.
+    monkeypatch.setenv("VIBEY_FEATURE_GPTOSSLOOP", "1")
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
 
     async def seed() -> None:
         async with build_app() as resources:
@@ -1860,12 +1876,20 @@ def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
             assert all(not r.conformance_ok for r in records)
             return len(records)
 
+    # The four paid engines, and gptossloop, the local engine on by default (ADR-0064).
     assert asyncio.run(check()) == 5
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_stays_quiet_when_every_engine_has_conformance(tmp_path: Path) -> None:
+def test_worker_stays_quiet_when_every_engine_has_conformance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from vibey.application.dto import PreflightResult
+
+    # Conformance is seeded for the swept set below (the defaults plus gptossloop),
+    # so the opt-in qwenloop must stay off or its warning would rightly appear.
+    monkeypatch.setenv("VIBEY_FEATURE_GPTOSSLOOP", "1")
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
 
     async def seed() -> None:
         async with build_app() as resources:
@@ -1873,7 +1897,8 @@ def test_worker_stays_quiet_when_every_engine_has_conformance(tmp_path: Path) ->
                 "quiet-sweep-proj", tmp_path, max_cycles=1, config={}
             )
             good = PreflightResult(installed=True, version="1.0.0", auth_ok=True)
-            for engine_id in resources.engine_adapters:
+            # Every engine this worker runs: the defaults, and gptossloop (ADR-0064).
+            for engine_id in (*resources.engine_adapters, EngineId.GPTOSSLOOP):
                 await resources.engine_health_service.update_from_preflight(
                     project.project_id, engine_id, good, conformance_ok=True
                 )
@@ -2244,7 +2269,7 @@ def test_operator_command_explains_itself_when_the_extra_is_not_installed() -> N
         res = runner.invoke(app, ["operator"])
 
     assert res.exit_code == 1
-    assert "vibey[operator]" in res.output
+    assert "vibey-engine[operator]" in res.output
 
 
 async def test_recorded_spend_is_visible_to_the_budget_brake(tmp_path: Path) -> None:
@@ -2348,14 +2373,14 @@ def test_recover_with_project(tmp_path: Path) -> None:
 # ── a project's declared engine environment reaches the probes ────────────────
 #
 # `engine_environment` in the project record is how a project hands an engine the
-# credential its own configuration reads -- opencode's provider key, agyloop's Vertex
+# credential its own configuration reads -- a relay's provider key, agyloop's Vertex
 # credentials. `build_full_worker` applied it, but the startup preflight sweep and
 # `vibey doctor --conformance --record --project X` still probed with the DEFAULT
 # policy, so the auth check and the conformance run could not see the credential the
 # real session would get: the engine read "auth FAIL" and never became eligible.
 
 _DECLARED_CREDENTIALS = [
-    (EngineId.OPENCODE, "OPENROUTER_API_KEY"),
+    (EngineId.CODEXLOOP, "OPENROUTER_API_KEY"),
     (EngineId.AGYLOOP, "GOOGLE_APPLICATION_CREDENTIALS"),
 ]
 
@@ -2480,10 +2505,10 @@ def test_doctor_without_record_probes_with_the_default_environment(
         "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
         new=_probe_recorder(probed),
     ):
-        res = runner.invoke(app, ["doctor", "--engine", "opencode"])
+        res = runner.invoke(app, ["doctor", "--engine", "codexloop"])
 
     assert res.exit_code == 0, res.output
-    assert "OPENROUTER_API_KEY" not in probed["opencode"]
+    assert "OPENROUTER_API_KEY" not in probed["codexloop"]
 
 
 def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
@@ -2499,7 +2524,7 @@ def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
             )
 
     asyncio.run(seed())
-    res = runner.invoke(app, ["doctor", "--record", "--engine", "opencode"])
+    res = runner.invoke(app, ["doctor", "--record", "--engine", "codexloop"])
 
     assert res.exit_code != 0
     assert "VIBEY_PG_URL" in res.output
@@ -2508,7 +2533,7 @@ def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
 # ── doctor: is the app database reachable with no password at all? ──────────────
 
 
-def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
+def test_doctor_fails_when_the_app_database_admits_a_passwordless_login(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from unittest.mock import AsyncMock, patch
@@ -2523,7 +2548,7 @@ def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
 
     async def probe(self, dsn):  # type: ignore[no-untyped-def]
         seen.append(dsn)
-        return PasswordlessReachFinding(ReachVerdict.WARN, "accepts a password-less login")
+        return PasswordlessReachFinding(ReachVerdict.FAIL, "accepts a password-less login")
 
     with (
         patch(
@@ -2534,9 +2559,9 @@ def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
     ):
         res = runner.invoke(app, ["doctor", "--engine", "claudeloop"])
 
-    # A warning, not a failure: a trusted local database is a choice, said out loud.
-    assert res.exit_code == 0, res.output
-    assert "WARN db-passwordless" in res.output
+    # A failure, not a warning: scram-sha-256 is the only way in (sub-doctrine 10.j).
+    assert res.exit_code == 1, res.output
+    assert "FAIL db-passwordless" in res.output
     assert "accepts a password-less login" in res.output
     assert seen == [os.environ["VIBEY_PG_URL"]]
 

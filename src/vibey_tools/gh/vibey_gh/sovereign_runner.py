@@ -23,6 +23,7 @@ Three rules shape it:
 
 from __future__ import annotations
 
+import json
 import os
 import plistlib
 import re
@@ -37,9 +38,12 @@ from xml.sax.saxutils import escape
 from vibey_gh.config import GhConfig
 
 __all__ = [
+    "AMBIENT_TOKENS",
     "PAT_PERMISSION",
+    "RETIRED_DIR",
     "TEMPLATES",
     "LaunchAgentUnit",
+    "RegisteredRunner",
     "RunnerFile",
     "RunnerPlan",
     "SovereignRunner",
@@ -53,6 +57,8 @@ TEMPLATES = Path(__file__).parent / "templates" / "runner"
 PAT_PERMISSION = "Administration: Read and write"
 RETIRED_DIR = "retired-units"
 _RUNNERS_JQ = ".runners[] | {name, status, busy, labels: [.labels[].name]}"
+# The same listing, one JSON object per line, for a program to read rather than a person.
+_RUNNER_LINES_JQ = f"{_RUNNERS_JQ} | tojson"
 _NO_AMBIENT_TOKEN = "env -u GH_TOKEN -u GITHUB_TOKEN"
 # A token gh wrote into hosts.yml itself (`--insecure-storage`). Without the flag gh writes
 # the user entry and keeps the token in the keyring, so this key is simply absent. The same
@@ -61,10 +67,11 @@ _STORED_TOKEN = re.compile(r"^[ \t]+oauth_token:[ \t]*\S", re.MULTILINE)
 
 # The environment variables gh prefers over any stored login. Stripped from every gh call
 # made on the runner's behalf, so the answer is about the dedicated login and nothing else.
-_AMBIENT_TOKENS = ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")
+AMBIENT_TOKENS = ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")
 
 Launchctl = Callable[[tuple[str, ...]], tuple[int, str]]
 GhStatus = Callable[[tuple[str, ...], dict[str, str]], int]
+GhRead = Callable[[tuple[str, ...], dict[str, str]], tuple[int, str]]
 
 
 @dataclass(frozen=True)
@@ -88,6 +95,16 @@ class RunnerPlan:
 
 
 @dataclass(frozen=True)
+class RegisteredRunner:
+    """One self-hosted runner as GitHub lists it for the repository."""
+
+    name: str
+    online: bool
+    busy: bool
+    labels: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class LaunchAgentUnit:
     """An installed LaunchAgent as its own plist describes it."""
 
@@ -108,6 +125,7 @@ class SovereignRunner:
         templates: Path | None = None,
         launchctl: Launchctl | None = None,
         gh: GhStatus | None = None,
+        gh_read: GhRead | None = None,
     ) -> None:
         self._cfg = cfg
         self._runners = cfg.runners
@@ -116,6 +134,7 @@ class SovereignRunner:
         self._templates = templates or TEMPLATES
         self._launch = launchctl or self._launchctl
         self._gh = gh or self._gh_status
+        self._gh_read = gh_read or self._gh_output
 
     # --- paths ----------------------------------------------------------------------------
 
@@ -272,7 +291,7 @@ class SovereignRunner:
         if hosts.stat().st_mode & (stat.S_IRGRP | stat.S_IROTH):
             return [f"{hosts} is readable by other users; run: chmod 600 {hosts}"]
         host = self._host(plan)
-        env = {k: v for k, v in os.environ.items() if k not in _AMBIENT_TOKENS}
+        env = {k: v for k, v in os.environ.items() if k not in AMBIENT_TOKENS}
         env["GH_CONFIG_DIR"] = str(directory)
         if self._gh(("gh", "auth", "status", "--hostname", host), env) != 0:
             rejected = (
@@ -282,6 +301,60 @@ class SovereignRunner:
             return [rejected]
         return []
 
+    def _runner_env(self) -> dict[str, str]:
+        env = {k: v for k, v in os.environ.items() if k not in AMBIENT_TOKENS}
+        env["GH_CONFIG_DIR"] = str(self._gh_dir)
+        return env
+
+    def registered_runners(self, plan: RunnerPlan) -> tuple[tuple[RegisteredRunner, ...], str]:
+        """Every runner GitHub lists for the plan's repository, read with the runner's OWN
+        login: `GH_CONFIG_DIR` is `gh_config_dir` and every ambient token is stripped, so the
+        answer is about the credential the runner itself uses -- the one that holds the
+        Administration permission the runners API needs. Only gh's exit status and standard
+        output are read; its standard error, which may describe the credential, never is.
+        """
+        repository = plan.repository
+        argv = (
+            "gh",
+            "api",
+            "--hostname",
+            self._host(plan),
+            "--paginate",
+            f"repos/{repository}/actions/runners",
+            "--jq",
+            _RUNNER_LINES_JQ,
+        )
+        code, out = self._gh_read(argv, self._runner_env())
+        if code != 0:
+            return (), (
+                f"could not list the runners registered with {repository} using the runner's"
+                f" own login in {self._gh_dir} (gh exited {code}); vibey-gh runner check says why"
+            )
+        runners = []
+        for line in out.splitlines():
+            if not line.strip():
+                continue
+            try:
+                entry = json.loads(line)
+                runners.append(
+                    RegisteredRunner(
+                        str(entry["name"]),
+                        entry["status"] == "online",
+                        bool(entry["busy"]),
+                        tuple(str(label) for label in entry["labels"]),
+                    )
+                )
+            except (ValueError, KeyError, TypeError):
+                return (), f"the runner listing for {repository} was not the JSON asked for"
+        return tuple(runners), ""
+
+    @staticmethod
+    def heartbeat_label(unit_prefix: str, repository: str) -> str:
+        """The heartbeat timer's unit label for `owner/name`: under the same prefix as the
+        runner's, so `cleanup` retires the timer of a repository the tree stopped declaring,
+        and never the one it still declares."""
+        return f"{unit_prefix}-heartbeat-{repository.split('/')[1]}"
+
     # --- removal --------------------------------------------------------------------------
 
     def strays(self, plan: RunnerPlan) -> tuple[LaunchAgentUnit, ...]:
@@ -290,7 +363,12 @@ class SovereignRunner:
         agents = self._agents_dir
         for path in sorted(agents.iterdir()) if agents.is_dir() else []:
             name = path.name
-            if path == plan.plist or path.suffix != ".plist" or not name.startswith(prefix):
+            if path.suffix != ".plist" or not name.startswith(prefix):
+                continue
+            if path in (
+                plan.plist,
+                agents / f"{self.heartbeat_label(prefix, plan.repository)}.plist",
+            ):
                 continue
             if name[len(prefix)] not in "-.":
                 continue  # a different prefix that merely starts the same way
@@ -314,7 +392,7 @@ class SovereignRunner:
         retired = self._install_dir / RETIRED_DIR
         lines = []
         for unit in units:
-            target = self._free(retired, unit.path)
+            target = self.free_name(retired, unit.path)
             serves = f" [serves {unit.repo_url}]" if unit.repo_url else ""
             if not apply:
                 lines.append(
@@ -334,7 +412,7 @@ class SovereignRunner:
         return lines
 
     @staticmethod
-    def _free(retired: Path, path: Path) -> Path:
+    def free_name(retired: Path, path: Path) -> Path:
         """The first name under `retired` nothing holds yet: an earlier copy is never replaced.
 
         Re-running cleanup after an agent was restored and retired again must keep the
@@ -373,6 +451,17 @@ class SovereignRunner:
         except OSError:
             return 127
         return done.returncode
+
+    @staticmethod
+    def _gh_output(argv: tuple[str, ...], env: dict[str, str]) -> tuple[int, str]:
+        """Run gh and keep its exit status and standard output; standard error is dropped."""
+        try:
+            done = subprocess.run(  # nosec B603 - a fixed argv, never a shell
+                argv, capture_output=True, text=True, check=False, timeout=60, env=env
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return 127, ""
+        return done.returncode, done.stdout
 
     @staticmethod
     def _launchctl(argv: tuple[str, ...]) -> tuple[int, str]:

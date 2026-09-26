@@ -20,6 +20,7 @@ from vibey_gh import (
     github_release,
     install,
     issue_automation,
+    issue_triage,
     merge_train,
     operation_estimate,
     pr_automation,
@@ -222,8 +223,76 @@ def _summary_rows(rows: list[tuple[int, str, str]], merged: int, skipped: int) -
     return "\n".join(lines) + "\n"
 
 
+def _sabbath_guard(cfg):
+    """This host's Sabbath guard. A module function because argparse dispatches to
+    functions and every writer below builds the guard the same way."""
+    from vibey_gh.sabbath_guard import SabbathGuard
+
+    return SabbathGuard(cfg.sabbath, home=Path.home())
+
+
+def _sabbath_lanes(cfg):
+    from vibey_gh.sabbath_guard import SabbathLanes
+
+    declared = cfg.sabbath.lanes_dir
+    return SabbathLanes(Path(os.path.expanduser(declared)))
+
+
+def _sabbath_resume(cfg, cwd: str | None, *, ended: bool) -> list[str]:
+    """What the heartbeat re-arms outside the window. `ended` marks the first beat after
+    one: that beat writes the SabbathEnded line and re-fires the held workflows."""
+    from vibey_gh.sabbath_guard import resume_dispatch
+
+    lines: list[str] = []
+    if ended:
+        lines.append("SabbathEnded: the window has closed; re-arming what it held")
+        if cfg.sabbath.resume_dispatch:
+            lines += resume_dispatch(cfg, cwd=cwd)
+    resumed: list[str] = _sabbath_lanes(cfg).resume()
+    return lines + resumed
+
+
+def _sabbath(args) -> int:
+    """`vibey-gh sabbath status|register-lane|resume` (sub-doctrine 8.i)."""
+    cfg = load_config()
+    if args.action == "status":
+        for line in _sabbath_guard(cfg).describe():
+            print(line)
+        for name, command, _cwd in _sabbath_lanes(cfg).pending():
+            print(f"paused lane: {name}: {' '.join(command) or '(unreadable)'}")
+        return 0
+    if args.action == "register-lane":
+        if not args.name or not args.resume_command:
+            print(
+                "vibey-gh sabbath: register-lane needs --name and a resume command", file=sys.stderr
+            )
+            return 2
+        path = _sabbath_lanes(cfg).register(args.name, args.resume_command, args.cwd)
+        print(f"vibey-gh sabbath: lane {args.name} paused; resumes at sundown ({path})")
+        return 0
+    if _sabbath_guard(cfg).hold() is not None:
+        print("vibey-gh sabbath: still resting; nothing resumes until the window closes")
+        return 0
+    for line in _sabbath_resume(cfg, None, ended=args.dispatch):
+        print(f"vibey-gh sabbath: {line}")
+    return 0
+
+
+def _held_for_the_sabbath(args, cfg) -> bool:
+    """Sub-doctrine 8.i: stand down, visibly. A held run prints the hold, writes it to the
+    job summary and returns 0 -- paused, not failed, not silently skipped (10.f)."""
+    held = _sabbath_guard(cfg).hold()
+    if held is None:
+        return False
+    print(f"vibey-gh: {held.report()}")
+    _write_summary(args, held.summary())
+    return True
+
+
 def _merge_train(args) -> int:
     cfg = load_config()
+    if _held_for_the_sabbath(args, cfg):
+        return 0
     prs = (
         merge_train.open_pull_requests(cfg, number=args.pr)
         if args.pr is not None
@@ -406,6 +475,27 @@ def _issue_automation(args) -> int:
     return 0
 
 
+def _issue_triage(args) -> int:
+    try:
+        if args.action == "sweep":
+            items = issue_triage.triage()
+            print(issue_triage.summary(items), end="")
+        elif args.action in {"bump", "unbump"}:
+            issue_triage.set_bump(args.issue, args.action == "bump")
+            print(
+                f"vibey-gh: {'bumped' if args.action == 'bump' else 'unbumped'} issue #{args.issue}"
+            )
+        elif args.action == "ensure-labels":
+            issue_triage.ensure_labels()
+            print("vibey-gh: issue triage labels are ready")
+        else:  # pragma: no cover
+            raise ValueError(f"unknown action: {args.action}")
+    except (RuntimeError, ValueError, TypeError) as exc:
+        print(f"vibey-gh: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def _github_release(args) -> int:
     cfg = load_config()
     try:
@@ -456,9 +546,12 @@ def _promote(args) -> int:
         # accepted and silently ignored -- refused instead, so nobody believes it applied.
         print("vibey-gh: --admin-fallback only applies with --wait", file=sys.stderr)
         return 2
+    cfg = load_config()
+    if _held_for_the_sabbath(args, cfg):
+        return 0
     try:
         result = promote.promote(
-            load_config(),
+            cfg,
             dry_run=args.dry_run,
             method=args.method,
             wait=args.wait,
@@ -696,21 +789,105 @@ def _marketplace(args, renderer: MarketplaceRendererInterface | None = None) -> 
     return 0
 
 
+def _push_scope(args) -> int:
+    """Judge the refs a pre-push hook was handed: does this push carry code at all?
+
+    Reads git's pre-push standard input. Prints `NO_CODE` on stdout and exits 0 only when
+    every ref is the declared `[pr_automation.fallback] heartbeat_ref` and every commit is
+    an empty tree with no parents that brings nothing else; the reason goes to stderr so the
+    person pushing sees why the heavy stage did not run. Any other push -- or a
+    configuration that cannot be read, so that nothing is declared -- prints nothing on
+    stdout and exits 1, and the gate runs in full.
+    """
+    from vibey_gh.push_scope import NO_CODE, PushScope
+
+    try:
+        declared = load_config().pr_automation.fallback.heartbeat_ref
+    except (OSError, ValueError) as exc:
+        print(f"vibey-gh push-scope: no heartbeat ref could be read ({exc})", file=sys.stderr)
+        return 1
+    verdict = PushScope(refs=(declared,)).judge(sys.stdin.read())
+    if verdict.carries_code:
+        return 1
+    print(
+        f"vibey-gh push-scope: {verdict.reason}; nothing for the pre-push gate to judge",
+        file=sys.stderr,
+    )
+    print(NO_CODE)
+    return 0
+
+
+def _lane_readiness(cfg):
+    """The sovereign lane's readiness as this machine can read it: the runner `[runners]`
+    declares, listed with its own credential, and the model `[pr_automation.fallback]`
+    names, read through the fit's sampler. One function so a test can hand `--beat` an exact
+    answer instead of a runner and a model endpoint."""
+    from vibey_gh.fit import OllamaModelSampler
+    from vibey_gh.sovereign_lane import SovereignLaneReadiness
+    from vibey_gh.sovereign_runner import SovereignRunner
+
+    fallback = cfg.pr_automation.fallback
+    runner = SovereignRunner(cfg, home=Path.home(), uid=os.getuid())
+    return SovereignLaneReadiness(
+        fallback, runner=runner, model=OllamaModelSampler(fallback.base_url)
+    )
+
+
 def _sovereign(args) -> int:
     """Publish or read the sovereign heartbeat (doctrine 8.a).
 
-    `--beat` is what the operator's supervisor runs on a timer; the bare form is what
-    a workflow runs to decide whether it may schedule the sovereign lane at all. The
-    probe prints its verdict and, under Actions, writes `ready=` to `$GITHUB_OUTPUT`
-    so a job `if:` can consume it.
+    `--beat` is what the heartbeat timer runs (`vibey-gh heartbeat install`); the bare form
+    is what a workflow runs to decide whether it may schedule the sovereign lane at all.
+    `--beat` pushes from the timer's own clone, through that clone's gate, and only when the
+    lane can serve -- the runner registered and online, the model endpoint answering -- and
+    with `--record` writes what it did for `heartbeat status`. The probe prints its verdict
+    and, under Actions, writes `ready=` to `$GITHUB_OUTPUT` so a job `if:` can consume it.
     """
-    import os
-
     from vibey_gh import sovereign
 
-    fallback = load_config().pr_automation.fallback
+    cfg = load_config()
+    fallback = cfg.pr_automation.fallback
+    held = _sabbath_guard(cfg).hold()
     if args.beat:
-        result = sovereign.beat(fallback.heartbeat_ref, remote=args.remote)
+        from vibey_gh.heartbeat_timer import BeatRecord
+
+        now = datetime.now(UTC).timestamp()
+        if held is not None:
+            # 8.i: the heartbeat keeps beating through the window -- publishing nothing,
+            # but recording that it rests and until when, so a liveness check reads rest
+            # rather than death (10.f), and exiting 0 so the unit is never marked failed.
+            reason = f"resting for the Sabbath until {held.resumes.isoformat()} ({held.basis})"
+            if args.record:
+                BeatRecord(now, False, reason, held.resumes.timestamp()).write(Path(args.record))
+            print(f"vibey-gh sovereign: {reason}")
+            return 0
+        clone, problem = _heartbeat_timer(cfg).clone_dir()
+        previous = BeatRecord.read(Path(args.record)) if args.record else None
+        ended = previous is not None and previous.resting_until is not None
+        # Re-arm what the window held: the workflows once, on the first beat after it; the
+        # paused lanes on every beat until each one's resume has succeeded.
+        for line in _sabbath_resume(cfg, None if clone is None else str(clone), ended=ended):
+            print(f"vibey-gh sabbath: {line}")
+        if clone is None:
+            result = sovereign.Readiness(False, f"heartbeat withheld: {problem}")
+        else:
+            result = sovereign.beat(
+                fallback.heartbeat_ref,
+                readiness=_lane_readiness(cfg),
+                remote=args.remote,
+                cwd=str(clone),
+            )
+        if args.record:
+            BeatRecord(now, result.ready, result.reason).write(Path(args.record))
+    elif held is not None:
+        result = sovereign.Readiness(
+            False, f"resting for the Sabbath until {held.resumes.isoformat()}"
+        )
+        output = os.environ.get("GITHUB_OUTPUT")
+        if output:
+            with open(output, "a", encoding="utf-8") as handle:
+                handle.write("ready=false\n")
+                handle.write(f"reason={' '.join(result.reason.split())}\n")
     else:
         result = sovereign.probe(
             fallback.heartbeat_ref,
@@ -730,15 +907,68 @@ def _sovereign(args) -> int:
     return 0 if (result.ready or not args.beat) else 1
 
 
+def _heartbeat_timer(cfg, service=None):
+    """The heartbeat timer as this machine runs it. A module function because argparse
+    dispatches to functions, and `heartbeat`, `runner` and `sovereign --beat` all build the
+    timer the same way."""
+    from vibey_gh.heartbeat_timer import HeartbeatTimer
+
+    return HeartbeatTimer(cfg, home=Path.home(), uid=os.getuid(), service=service)
+
+
+def _install_heartbeat(timer, *, load: bool) -> int:
+    """Render and install the heartbeat timer, printing each act; 0 only when it is in place
+    (and loaded, with `load`). A module function: `heartbeat install` and `runner install`
+    share it, and argparse dispatches to functions."""
+    plan, problem = timer.render()
+    if plan is None:
+        print(f"vibey-gh heartbeat: {problem}", file=sys.stderr)
+        return 1
+    lines, loaded = timer.install(plan, load=load)
+    for line in lines:
+        print(line)
+    if not loaded:
+        return 1
+    if not load:
+        print("the heartbeat timer was not loaded. Next, in order:")
+        for number, step in enumerate(timer.next_steps(plan), start=1):
+            print(f"  {number}. {step}")
+    return 0
+
+
+def _heartbeat(args, service=None) -> int:
+    """Stand the sovereign heartbeat's timer up from the tree, report on it, or remove it.
+
+    launchd on macOS, a systemd user timer on Linux. Only `install --load` and
+    `uninstall --apply` touch the service manager; `service` is the seam tests replace.
+    """
+    timer = _heartbeat_timer(load_config(), service)
+    if args.action == "install":
+        return _install_heartbeat(timer, load=args.load)
+    if args.action == "status":
+        lines, healthy = timer.status()
+        for line in lines:
+            print(line)
+        return 0 if healthy else 1
+    for line in timer.uninstall(apply=args.apply):
+        print(line)
+    if not args.apply:
+        print("dry run: nothing was changed; pass --apply to do it")
+    return 0
+
+
 def _runner(args, launchctl=None) -> int:
     """Stand the sovereign review runner up from `[runners]`, or check or remove it (12.c).
 
     Only `install --load` and `--apply` touch launchd; every other form reads or writes
     files and prints what the operator runs next. `launchctl` is the seam tests replace.
+    `install` and `uninstall` do the same for the heartbeat timer, which is what tells the
+    gate the runner is there.
     """
     from vibey_gh.sovereign_runner import PAT_PERMISSION, SovereignRunner
 
-    runner = SovereignRunner(load_config(), home=Path.home(), uid=os.getuid(), launchctl=launchctl)
+    cfg = load_config()
+    runner = SovereignRunner(cfg, home=Path.home(), uid=os.getuid(), launchctl=launchctl)
     plan, problem = runner.render()
     if plan is None:
         print(f"vibey-gh runner: {problem}", file=sys.stderr)
@@ -765,11 +995,26 @@ def _runner(args, launchctl=None) -> int:
             )
             for number, step in enumerate(runner.next_steps(plan), start=1):
                 print(f"  {number}. {step}")
-        return 0
+        # The runner is finished above whatever happens here; a heartbeat that cannot be
+        # installed is reported on its own, with what to do next, and the exit status says
+        # the lane will not be offered yet (10.f).
+        print("the heartbeat timer:")
+        if _install_heartbeat(_heartbeat_timer(cfg, launchctl), load=args.load) == 0:
+            return 0
+        done = "installed and loaded" if args.load else "installed"
+        print(
+            f"vibey-gh runner: the runner is {done}, but its heartbeat timer is not, so the"
+            " gate will not offer the sovereign lane yet. Fix what is named above, then run"
+            f" `vibey-gh heartbeat install{' --load' if args.load else ''}`"
+            " (docs/runbooks/sovereign-review-runner.md).",
+            file=sys.stderr,
+        )
+        return 1
     if args.action == "cleanup":
         lines = runner.remove(runner.strays(plan), apply=args.apply)
     else:
         lines = runner.uninstall(plan, apply=args.apply)
+        lines += _heartbeat_timer(cfg, launchctl).uninstall(apply=args.apply)
     for line in lines:
         print(line)
     if not args.apply:
@@ -1468,6 +1713,22 @@ def main(argv: list[str] | None = None) -> int:
     conventional_check.add_argument("--commits", required=True, metavar="RANGE")
     conventional_check.set_defaults(func=_conventional_check)
 
+    sab = sub.add_parser("sabbath", help="the Sabbath window on this host (sub-doctrine 8.i)")
+    sab.add_argument("action", choices=("status", "register-lane", "resume"))
+    sab.add_argument("--name", help="register-lane: the paused lane's name")
+    sab.add_argument("--cwd", help="register-lane: where its resume command runs")
+    sab.add_argument(
+        "--dispatch",
+        action="store_true",
+        help="resume: also re-fire the held merge train and promotion",
+    )
+    sab.add_argument(
+        "resume_command",
+        nargs="*",
+        help="register-lane: the command that resumes the lane, after --",
+    )
+    sab.set_defaults(func=_sabbath)
+
     m = sub.add_parser("merge-train", help="merge every ready pull request")
     m.add_argument("--method", default="squash", choices=("squash", "rebase", "merge"))
     m.add_argument("--pr", type=int, help="evaluate only this pull request")
@@ -1589,6 +1850,20 @@ def main(argv: list[str] | None = None) -> int:
         "ensure-labels", help="create or update issue automation labels"
     )
     issue_labels.set_defaults(func=_issue_automation)
+
+    issue_triage_parser = sub.add_parser("issue-triage", help="classify and order all open issues")
+    triage_sub = issue_triage_parser.add_subparsers(dest="action", required=True)
+    triage_sweep = triage_sub.add_parser("sweep", help="reconcile every open issue")
+    triage_sweep.set_defaults(func=_issue_triage)
+    for action, help_text in (
+        ("bump", "promote an issue above ordinary priority"),
+        ("unbump", "remove an issue promotion"),
+    ):
+        triage_command = triage_sub.add_parser(action, help=help_text)
+        triage_command.add_argument("--issue", type=int, required=True)
+        triage_command.set_defaults(func=_issue_triage)
+    triage_labels = triage_sub.add_parser("ensure-labels", help="create triage labels")
+    triage_labels.set_defaults(func=_issue_triage)
 
     release = sub.add_parser(
         "github-release", help="idempotently create an immutable version tag and GitHub Release"
@@ -1848,13 +2123,48 @@ def main(argv: list[str] | None = None) -> int:
     )
     mk.set_defaults(func=_marketplace)
 
+    ps = sub.add_parser(
+        "push-scope",
+        help="read pre-push refs on stdin; print carries-no-code only for the declared heartbeat",
+    )
+    ps.set_defaults(func=_push_scope)
+
     sv = sub.add_parser(
         "sovereign",
         help="sovereign readiness (8.a): publish or read the local runner's heartbeat",
     )
     sv.add_argument("--beat", action="store_true", help="publish a heartbeat (run on a timer)")
     sv.add_argument("--remote", default="origin", help="git remote carrying the heartbeat ref")
+    sv.add_argument(
+        "--record",
+        metavar="FILE",
+        help="with --beat, write what it did (published or withheld, and why) for status",
+    )
     sv.set_defaults(func=_sovereign)
+
+    hb = sub.add_parser(
+        "heartbeat",
+        help="stand the sovereign heartbeat's timer up from the tree, report on it, remove it",
+    )
+    hb_sub = hb.add_subparsers(dest="action", required=True)
+    hb_install = hb_sub.add_parser(
+        "install",
+        help="create the timer's clone and gate, test the gate, render the launchd agent or"
+        " systemd timer, and print the next commands",
+    )
+    hb_install.add_argument(
+        "--load", action="store_true", help="also (re)load it with launchctl or systemctl"
+    )
+    hb_sub.add_parser(
+        "status",
+        help="installed, current, the clone's gate, loaded, and the last beat's age and result",
+    )
+    hb_uninstall = hb_sub.add_parser(
+        "uninstall",
+        help="unload the timer and move its units and clone aside (dry run by default)",
+    )
+    hb_uninstall.add_argument("--apply", action="store_true", help="do it, rather than list it")
+    hb.set_defaults(func=_heartbeat, load=False, apply=False)
 
     rn = sub.add_parser(
         "runner",

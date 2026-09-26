@@ -45,6 +45,14 @@ EXEMPT: tuple[tuple[str, str], ...] = (
     ("src/*/test/*", "test code, as above"),
     ("src/*/*/tests/*", "test code, as above"),
     ("src/*/*/test/*", "test code, as above"),
+    (
+        "clients/*/test/*",
+        "the editor clients' test code: fixture strings and each test's own scratch directory",
+    ),
+    (
+        "packages/*/test/*",
+        "the shared client packages' test code: fixture strings, as in the clients' own tests",
+    ),
     ("*.jsonl", "append-only records of what happened (7.c); rewriting them falsifies them"),
     ("*.log", "append-only records of what happened (7.c); rewriting them falsifies them"),
     (
@@ -66,6 +74,9 @@ RULE_TEXTS = (
     "docs/plans/qwenstorm-3.0.0/README.md",
     "docs/plans/qwenstorm-3.0.0/STORM-CONTEXT.md",
     "docs/plans/qwenstorm-3.0.0/tools/storm_durability.py",
+    # The VS Code extension's port of storm_durability.py: the same volatile locations, each
+    # listed with the reason it is volatile, so the gate refuses what the storm refuses.
+    "clients/vscode/src/core/storage.ts",
     "docs/plans/qwenstorm-3.0.0/tools/storm_checkpoint.py",
     "docs/plans/qwenstorm-3.0.0/tools/storm-queue.sh",
     "docs/plans/qwenstorm-3.0.0/tools/storm-watch.py",
@@ -191,6 +202,11 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "src/vibey/infrastructure/db/*.py",
         r"DEFAULT_SOCKET_DIRS",
         "PostgreSQL's socket directories, probed read-only; a socket is recreated at start",
+    ),
+    (
+        "src/vibey_tools/gh/vibey_gh/heartbeat_timer.py",
+        r'^\s+"(?:/private)?/(?:tmp|var/tmp|var/folders|dev/shm|run/user)",$',
+        "the directories the heartbeat timer refuses to run from (ADR-0060): named to forbid them",
     ),
     (
         "docs/architecture/decisions/0055-*.md",

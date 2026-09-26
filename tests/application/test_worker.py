@@ -395,6 +395,11 @@ async def test_new_gates_are_sent_to_the_configured_notification_sink(
 
     assert len(notifications.calls) == 1
     assert notifications.calls[0]["kind"] == expected_notification
+    assert notifications.calls[0]["message"] in {
+        "A budget decision is needed to continue.",
+        "Your response is needed to continue.",
+    }
+    assert notifications.calls[0]["message"] != "answer me"
     assert notifications.calls[0]["config"] == {"notifications": {"enabled": True}}
     assert notifications.calls[0]["payload"] == {
         "gate_id": str(gates.raised[0].gate_id),

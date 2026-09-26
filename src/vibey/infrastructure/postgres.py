@@ -32,6 +32,15 @@ POSTGRES_SUPPORTED_MAJORS: Final[tuple[int, ...]] = tuple(
 )
 POSTGRES_INSTALL_MAJOR: Final = POSTGRES_LATEST_MAJOR
 POSTGRES_LOCAL_PORT: Final = 5432
+# A package manager's PostgreSQL arrives with its own pg_hba.conf, which commonly trusts
+# the local socket. Sub-doctrine 10.j (ADR-0061) makes scram-sha-256 the only method,
+# and editing that file needs a password on every role first, which is the operator's
+# to choose -- so the install says so, and `vibey doctor` fails until it is done.
+SCRAM_REQUIRED_NOTE: Final = (
+    "before first use, give each role a password and set the scram-sha-256 "
+    "pg_hba.conf lines in SECURITY.md §7 (sub-doctrine 10.j); `vibey doctor` fails "
+    "local-auth and db-passwordless until they are set"
+)
 
 _VERSION_PATTERN = re.compile(r"\bPostgreSQL\)?\s+(\d+)(?:\.(\d+))?\b", re.IGNORECASE)
 _COMMAND_TIMEOUT_SECONDS: Final = 120.0
@@ -273,7 +282,7 @@ class PostgresLocalService:
         return PostgresInstallResult(
             ok=True,
             changed=bool(commands),
-            detail=f"{detail}; {after.detail}",
+            detail=f"{detail}; {after.detail}; {SCRAM_REQUIRED_NOTE}",
             status=after,
             commands=tuple(commands),
         )

@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
+from vibey.application.dto import ProjectRecord
 from vibey.application.interfaces import (
     BuildLedger,
     CallerIdentity,
@@ -165,6 +166,11 @@ class PostgresProjectRepositoryInterface(ProjectStore, Protocol):
 
     async def get_latest(self) -> object: ...
 
+    async def list_all(self) -> tuple[ProjectRecord, ...]:
+        """Every project, newest first: `created_at` descending, then id, so the order
+        is the same on every read. What `vibey projects` lists."""
+        ...
+
 
 @runtime_checkable
 class PostgresReviewLedgerInterface(PhaseLedger, Protocol):
@@ -194,7 +200,21 @@ class LocalEngineSwitchInterface(Protocol):
     @property
     def feature_key(self) -> str: ...
 
+    @property
+    def on_by_default(self) -> bool: ...
+
     def env_var(self) -> str: ...
+
+
+@runtime_checkable
+class LocalRunnerVariablesInterface(Protocol):
+    """The variables one local runner reads for its endpoint (ADR-0064)."""
+
+    @property
+    def base_url(self) -> str: ...
+
+    @property
+    def model(self) -> str: ...
 
 
 @runtime_checkable

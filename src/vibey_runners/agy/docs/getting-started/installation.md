@@ -9,8 +9,8 @@ distribution, which installs every `*loop` runner and every family tool in one
 step (vibey ADR-0037):
 
 ```bash
-pip install vibey
-pipx install vibey
+pip install vibey-engine
+pipx install vibey-engine
 ```
 
 Then:

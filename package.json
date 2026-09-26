@@ -1,0 +1,10 @@
+{
+  "name": "vibey-clients",
+  "private": true,
+  "description": "The npm workspace of vibey's TypeScript: the shared @vibey/core package and the krypton clients built on it (ADR-0062). The Python tree does not use it.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/vibey-core",
+    "clients/vscode"
+  ]
+}

@@ -1,0 +1,75 @@
+# Changelog
+
+All notable changes to krypton, vibey's extension for VS Code.
+
+## 0.2.0
+
+- **krypton.** The extension's display name, its activity-bar container, its command category
+  and its chat participant's full name are **krypton** (sub-doctrine 9.e). Command ids,
+  settings and `@vibey` keep their names.
+- **On the design system** ([ADR-0066](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0066-one-design-system-for-every-surface/)).
+  The task panel is rebuilt on the generated token sheet (`media/tokens.css`, copied by
+  `scripts/design/generate.py`) over VS Code's own variables: the krypton atom, state pills,
+  gentle entry motion, a designed empty state, and focus rings from the tokens.
+- **Light, Dark or System** (`vibey.theme`, **krypton: Choose the theme**, `/theme`). System, the
+  default, follows the editor's colour theme live.
+- **A first-run walkthrough**, **Get started with krypton**: five steps to a first result in
+  under a minute.
+- **Live lanes with motion.** Running lanes and tasks spin in the tokens' state colours
+  (`vibey.stateRunning` and four more contributed colours); reduced motion holds them still.
+- **Connect to vibey on this network** (`/connect`), with **Disconnect from the hub**
+  (`/disconnect`) and `vibey.hubUrl`: find a hub, pair once with a key checked against it and
+  kept in secret storage, and read projects, gates and budgets through it. Local mode is
+  unchanged and stays the default.
+- **ULTRA everywhere, and a way out of unlimited spend.** `vibey.effort` offers `ULTRA`; the
+  panel and views show it in its own colour. A standing no-cap declaration shows **UNLIMITED
+  SPEND** in the status bar and every panel, and **End unlimited spend** (`/cap`) ends it in one
+  action.
+
+- **ULTRA, effort without a ceiling** ([ADR-0063](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0063-ultra-effort-without-a-ceiling/)).
+  The effort picker, `/effort` and `vibey-vscode --effort` take `ULTRA`. It is shown with a flame
+  and in its own colour (`vibey.ultraEffort`, from the design tokens' `color.state.ultra`), in the
+  picker and the status bar. At ULTRA an engine runs with no turn limit: neither its projection nor
+  `vibey.maxTurns` sets one; only a task's own `max_turns` does.
+- **No cap takes the whole path.** Declaring paidloop with no cap shows the measured cost per hour
+  ("unknown" when nothing is measured), asks for the typed phrase `I accept unlimited spending`,
+  then warns again with **Keep a cap** as the default. `vibey-vscode declare-paid --no-cap
+  --confirm-no-cap` is refused: flags alone never declare no cap.
+- **gptossloop is the local engine** ([ADR-0064](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0064-gptossloop-is-the-sovereign-engine/)).
+  The runner that used to be called qwenloop ships as two programs: `gptossloop`, which runs
+  gpt-oss:20b and is on by default, and `qwenloop`, the same runner on a Qwen model, which runs
+  only once vibey switches it on. The extension now runs `gptossloop` on sovereignloop, and
+  binds either one through its own settings (`GPTOSSLOOP_*` or `QWENLOOP_*`) and its own config
+  file. qwenloop is handed a model only when you name one (`qwenloop/qwen3:14b`); otherwise its
+  own config chooses. Without `vibey loops`, the fallback offers gptossloop alone, with its
+  follow-up box.
+- **`vibey.gptossloopPath`** names the gptossloop program, and `vibey-vscode --gptossloop PATH`
+  does the same from a terminal. `vibey.qwenloopPath` still names qwenloop. **Check my setup**
+  checks gptossloop.
+- The engine picker's example is now `/model gptossloop/gpt-oss:20b`, and the loops list says
+  when an engine that is on by default has been switched off.
+
+## 0.1.0
+
+The first release: vibey and a model on your own computer, from the editor.
+
+- **Ask the model.** Describe a task in the task panel, the Command Palette or `@vibey`. It runs
+  on a copy of your folder (a git worktree on a branch of its own), so nothing in your checkout
+  changes until you choose **Apply**. **Review** shows the diff; **Discard** deletes the copy.
+- **The task panel.** Watch the model work as it happens: its words, each tool it runs, each
+  turn and its tokens. Enter sends and Shift+Enter starts a new line (input methods are
+  respected). Type while it runs to tell it something; it reads it at its next turn. **Stop**
+  lets it finish its turn; **Force stop** opens only after a fair wait, and is recorded.
+- **Loops, efforts and engines** come from `vibey loops --json`, never from the extension
+  itself. sovereignloop (qwenloop on gpt-oss:20b through Ollama) is the default; paidloop runs
+  only once you declare it with a spending cap.
+- **Lanes.** Every loop running on this computer, whoever started it, with its turn, the tool
+  it is running, its tokens and how long it has run.
+- **vibey projects, gates and budgets**, through vibey's own commands: answer a parked gate, run
+  a queued job next, and set a project's cycle caps. This computer's lanes have budgets of
+  their own, per run, per day or per month.
+- **A folder of task files** runs one after another, each on its own branch from one base, and
+  resumes where it stopped: the same batch runs from a terminal with `vibey-vscode batch`.
+- **Check my setup** names every program the extension uses, where it found it and its
+  version, and says in plain words what to do about anything missing.
+- Nothing that names a database, a password or vibey's own settings ever reaches the model.

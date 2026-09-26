@@ -21,8 +21,8 @@ Be clear about this before you install anything:
 - **Every engine ships in the image; none is configured by default.**
   Since [ADR-0037](../architecture/decisions/0037-one-distribution-one-version.md)
   the one `vibey` wheel carries all five runners, so the image puts
-  `claudeloop`, `codexloop`, `cursorloop`, `agyloop` and `qwenloop` on
-  `PATH` beside `vibey` (CI's `image` job asserts every console script
+  `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop` and
+  `qwenloop` on `PATH` beside `vibey` (CI's `image` job asserts every console script
   resolves). The chart still defaults to `worker.provider: scripted` with
   no `worker.engines` and no keys, and that is the install CI deploys. Its
   worker logs `no recorded conformance for agyloop, claudeloop, codexloop,
@@ -54,7 +54,7 @@ Be clear about this before you install anything:
   `engine-auth` as `FAIL` for any of them without a key (see
   [Preflight from inside a pod](#preflight-from-inside-a-pod)).
 - **The operator is implemented, but off by default.** `vibey operator`
-  (`pip install 'vibey[operator]'`) runs kopf handlers that create
+  (`pip install 'vibey-engine[operator]'`) runs kopf handlers that create
   projects and apply `spec.answers` through the same application services
   `vibey new` / `vibey answer` use, then reconcile `VibeyProject` status
   every 15s. The chart does not install it unless you set
@@ -149,6 +149,17 @@ password is `postgres.additionalDatabasePasswords.<name>`; the postgres containe
 it and hands it its database on every start, so an existing install is converted on
 upgrade and no surface pod holds the owner's credentials.
 
+Every connection to the built-in Postgres authenticates with scram-sha-256, local and
+remote alike (sub-doctrine 10.j,
+[ADR-0061](../architecture/decisions/0061-every-postgresql-connection-authenticates-with-scram-sha-256.md)).
+The chart ships the server's `pg_hba.conf` as the `<release>-postgres-hba` ConfigMap and
+points `hba_file` at it on every start, so an install created before this rule follows it
+after an upgrade. It also sets `password_encryption=scram-sha-256`. The method is not a
+value you can change. A managed instance must meet the same rule: require scram-sha-256
+for every role vibey and the surfaces connect as, with no `trust`, `md5` or clear-text
+`password` rule that could match them. See `SECURITY.md` §7 for the lines;
+`vibey doctor --cluster`'s `local-auth` does not pass until they are set.
+
 The `wait-for-postgres` init container is rendered only for the built-in
 Postgres. Against a managed instance the worker connects directly at
 startup, so an unreachable DSN shows up as `CrashLoopBackOff` rather than
@@ -238,7 +249,7 @@ check fails:
 | `dsn-host` | the DSN host is fully qualified, an IP address, or `localhost`, so KEDA's operator in another namespace can resolve it |
 | `non-root` | the process uid is not 0 |
 | `workspace-writable` | the working directory (`/work` in the chart) accepts a write |
-| `engine-auth` | every engine named by `--engines`, plus claudeloop under `--provider claudeloop`, is on `PATH` and has one of its API-key variables set (qwenloop takes none). With neither flag nothing is required: it passes and reports which engines in the worker's default pool have a key, so a default install says plainly that no engine-driven job can run |
+| `engine-auth` | every engine named by `--engines`, plus claudeloop under `--provider claudeloop`, is on `PATH` and has one of its API-key variables set (gptossloop and qwenloop take none). With neither flag nothing is required: it passes and reports which engines in the worker's default pool have a key, so a default install says plainly that no engine-driven job can run |
 | `database` | the DSN connects |
 | `migrations` | every file in `/app/migrations` is recorded in `schema_migration`; runs only when `database` connected |
 
@@ -376,12 +387,19 @@ command and an engine session may see of the worker's environment, the same obje
 as `vibey.toml`'s [`[gates]`](../reference/configuration.md#gates) and
 [`[engine_environment]`](../reference/configuration.md#engine_environment); a
 forbidden entry (`VIBEY_*`, `PG*`, a DSN) is refused before the project is created.
-`spec.engines` is restricted by the CRD schema to the four paid engines,
-so `qwenloop` cannot be named in a CR today. The worker accepts
-`--provider qwenloop` (chart value `worker.provider`) for the sovereign
-DESIGN provider. That provider talks to a local Ollama over HTTP rather
-than running the `qwenloop` binary (which the image does ship), so it
-needs a model server the pod can reach; the chart does not provide one.
+`spec.engines` is restricted by the CRD schema to the known engine ids
+(`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop`,
+`qwenloop`, `claudeloop-local`). The worker accepts
+`--provider gptossloop` (chart value `worker.provider`; `qwenloop` is still
+read as gptossloop, ADR-0064) for the sovereign DESIGN provider. That
+provider talks to a local Ollama over HTTP rather than running the
+`gptossloop` binary (which the image does ship), so it needs a model server
+the pod can reach: `ollama.enabled` runs one in the release and points the
+worker at it (`VIBEY_OLLAMA_URL`/`VIBEY_OLLAMA_MODEL`, and
+`GPTOSSLOOP_BASE_URL`/`GPTOSSLOOP_MODEL` for the gptossloop engine).
+`ollama.qwenloopFeature: true` also switches qwenloop on, hands it
+`QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` (`ollama.qwenModel`, default
+`qwen3:14b`) and pulls that model too; it is off by default.
 
 The operator creates the project on first reconcile, then re-reconciles
 every 15s. It applies any new `spec.answers` through the same gate-answer
@@ -463,7 +481,7 @@ inside the pod, with the worker's `--engines` and `--provider` (see
 | `worker.waitForProjectSeconds` | `15` | park instead of restart-looping |
 | `worker.parallelism` | `2` | concurrent job loops per pod |
 | `worker.project` | `""` | **set this**; empty binds to the newest project |
-| `worker.provider` | `scripted` | DESIGN/decompose provider; `claudeloop` needs its API key, `qwenloop` a reachable Ollama |
+| `worker.provider` | `scripted` | DESIGN/decompose provider; `claudeloop` needs its API key, `gptossloop` a reachable Ollama (`qwenloop` is read as gptossloop) |
 | `worker.engines` | `""` | comma-separated engine allow-list (`--engines`); empty means all; pass the same list to `doctor --cluster --engines` |
 | `worker.replicas` | `1` | ignored once KEDA owns the Deployment |
 | `worker.worktrees.size` / `storageClass` | `5Gi` / `""` | the `/work` PVC where BUILD worktrees live |

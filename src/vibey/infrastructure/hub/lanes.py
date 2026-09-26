@@ -1,0 +1,185 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Every lane on this computer, found where the loops write them.
+
+A lane is one run of a `*loop` runner. Each writes `<cwd>/<state_dir>/runs/<run id>/
+events.jsonl` (the descriptors' run-events template), and this finds them the way the VS
+Code extension's `LaneTracker` does: in each root, and in every directory directly inside
+it. A lane's position is its file's size in bytes -- the offset a reader resumes after
+(sub-doctrine 10.g) -- never a timestamp.
+
+What it reports is what the files prove and nothing more (10.f): `finished` when the
+runner's last snapshot says the run ended, `running` when the file changed within
+`quiet_after` seconds, `quiet` when it has not; a lane whose file is older than
+`recent_within` is not listed. The transcript itself -- turns, tools, tokens -- is the
+live feed's to tail (`vibey serve`'s lane stream), not this list's.
+"""
+
+import json
+import os
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Final
+
+from vibey.domain.errors import UnknownLane
+
+QUIET_AFTER: Final = 120.0
+"""Seconds without an event after which a running lane reads as quiet."""
+
+TAIL_MAX_BYTES: Final = 256 * 1024
+"""The most bytes one tail read returns; the reader resumes from the offset it is given."""
+
+RECENT_WITHIN: Final = 24 * 60 * 60.0
+"""A lane whose last event is older than this many seconds is not listed."""
+
+ENDED: Final[dict[str, str]] = {
+    "completed": "completed",
+    "failed": "failed",
+    "winding_down": "stopped",
+}
+"""A runner snapshot's status, read as how the lane ended."""
+
+
+@dataclass(frozen=True, slots=True)
+class LaneEngine:
+    """An engine a lane may belong to, and the directory its runner writes under."""
+
+    engine_id: str
+    state_dir: str
+
+
+class LaneScanner:
+    """Lists the lanes under `roots`.
+
+    Declared by `interfaces/lanes_interface.py::LaneScannerInterface`."""
+
+    def __init__(
+        self,
+        *,
+        engines: Sequence[LaneEngine],
+        roots: Sequence[Path],
+        now: Callable[[], float],
+        quiet_after: float = QUIET_AFTER,
+        recent_within: float = RECENT_WITHIN,
+    ) -> None:
+        self._engines = tuple(engines)
+        self._roots = tuple(roots)
+        self._now = now
+        self._quiet_after = quiet_after
+        self._recent_within = recent_within
+
+    def lanes(self) -> list[dict[str, object]]:
+        """Every recent lane, newest first."""
+        now = self._now()
+        found: dict[Path, dict[str, object]] = {}
+        for events, engine, cwd, run_id in self._discover():
+            if events in found:
+                continue
+            stat = events.stat()
+            if now - stat.st_mtime > self._recent_within:
+                continue
+            outcome = self._outcome(events.parent)
+            state = (
+                "finished"
+                if outcome is not None
+                else "quiet"
+                if now - stat.st_mtime > self._quiet_after
+                else "running"
+            )
+            found[events] = {
+                "id": run_id,
+                "engine": engine.engine_id,
+                "cwd": str(cwd),
+                "events_path": str(events),
+                "label": f"{cwd.name} · {engine.engine_id}",
+                "state": state,
+                "outcome": outcome,
+                "offset": stat.st_size,
+                "last_event_at": stat.st_mtime,
+            }
+        return sorted(found.values(), key=self._last_event, reverse=True)
+
+    def tail(
+        self, events_path: str, after: int, *, max_bytes: int = TAIL_MAX_BYTES
+    ) -> dict[str, object]:
+        """The complete lines of a listed lane's events file after byte `after`, and the
+        offset to resume from. A partial last line is left for the next read; an offset
+        past the end (the file was replaced) restarts from 0. Raises `UnknownLane` for a
+        path that is not a lane `_discover` finds: nothing else is ever opened."""
+        path = next((found for found, *_ in self._discover() if str(found) == events_path), None)
+        if path is None:
+            raise UnknownLane(f"no listed lane writes {events_path}")
+        # Opened without following a symlink, even though `_discover` refused them: the
+        # file could be swapped for one between the scan and the open.
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), "rb") as handle:
+            size = os.fstat(handle.fileno()).st_size
+            start = 0 if after < 0 or after > size else after
+            handle.seek(start)
+            chunk = handle.read(max_bytes)
+        complete = chunk[: chunk.rfind(b"\n") + 1]
+        truncated = not complete and len(chunk) == max_bytes
+        if truncated:
+            # One line longer than a whole read: hand it on in pieces, each marked, so the
+            # offset always moves -- a feed that stops on a long line would never recover.
+            complete = chunk
+        lines = [line.decode("utf-8", "replace") for line in complete.splitlines()]
+        return {
+            "events_path": events_path,
+            "from": start,
+            "offset": start + len(complete),
+            "lines": lines,
+            "truncated": truncated,
+        }
+
+    def _discover(self) -> list[tuple[Path, LaneEngine, Path, str]]:
+        found: list[tuple[Path, LaneEngine, Path, str]] = []
+        for root in self._roots:
+            real_root = root.resolve()
+            for cwd in (root, *self._children(root)):
+                for engine in self._engines:
+                    for run in self._children(cwd / engine.state_dir / "runs"):
+                        events = run / "events.jsonl"
+                        if self._inside(events, real_root):
+                            found.append((events, engine, cwd, run.name))
+        return found
+
+    @staticmethod
+    def _inside(events: Path, real_root: Path) -> bool:
+        """True for a regular file that is no symlink and whose real path stays under its
+        root. A lane's worktree is written by an autonomous agent: a link planted at its
+        state directory, its `runs` or its events file must not lead a reader to the
+        host's token or keys."""
+        try:
+            return (
+                events.is_file()
+                and not events.is_symlink()
+                and events.resolve().is_relative_to(real_root)
+            )
+        except OSError:
+            return False
+
+    @staticmethod
+    def _last_event(lane: dict[str, object]) -> float:
+        value = lane["last_event_at"]
+        return value if isinstance(value, float) else 0.0
+
+    @staticmethod
+    def _children(directory: Path) -> list[Path]:
+        try:
+            return sorted(
+                entry
+                for entry in directory.iterdir()
+                # A symlink is never walked: it could lead the scan out of its root.
+                if entry.is_dir() and not entry.is_symlink() and not entry.name.startswith(".")
+            )
+        except OSError:
+            return []
+
+    @staticmethod
+    def _outcome(run: Path) -> str | None:
+        try:
+            snapshot = json.loads((run / "snapshots" / "latest.json").read_text())
+        except (OSError, ValueError):
+            return None
+        status = snapshot.get("status") if isinstance(snapshot, dict) else None
+        return ENDED.get(status) if isinstance(status, str) else None

@@ -270,7 +270,7 @@ concurrency, secret exposure, and branch deletion—not merely YAML syntax.
 
 ## Tooling install version
 
-Every rendered workflow installs `vibey-gh` itself with `pip install vibey` — the one
+Every rendered workflow installs `vibey-gh` itself with `pip install vibey-engine` — the one
 distribution that carries it (vibey ADR-0037) — floating on the latest published release by
 default. Set `[install].pin_version = true` in `.vibey-gh.toml` to pin that install to the
 exact version that rendered the file (`vibey==X.Y.Z`) instead, so a later release of this

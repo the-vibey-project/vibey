@@ -291,6 +291,11 @@ def test_cursorloop_unknown_event_returns_none() -> None:
     assert translate_event_type(EngineId.CURSORLOOP, "capacity.limited") is None
 
 
+def test_gptossloop_reads_through_qwenloops_one_map() -> None:
+    """ADR-0064: one runner, one map -- an alias, not a copy that could drift from it."""
+    assert LOOP_EVENT_MAP[EngineId.GPTOSSLOOP] is LOOP_EVENT_MAP[EngineId.QWENLOOP]
+
+
 def test_qwenloop_turn_and_delta_events() -> None:
     """text_delta is one streamed fragment of an answer -- many per turn --
     so it is transcript; qwenloop's own turn.completed is the turn."""
@@ -360,16 +365,6 @@ _EXPECTED_MAPS: dict[EngineId, dict[str, EventKind]] = {
         "capacity.forecast": EventKind.BUDGET_SPENT,
         "finished": EventKind.VERDICT_RENDERED,
     },
-    EngineId.OPENCODE: {
-        "run.started": EventKind.SESSION_SEEDED,
-        "turn.starting": EventKind.TURN_REQUESTED,
-        "text_delta": EventKind.TRANSCRIPT_RECORDED,
-        "tool_result": EventKind.TOOL_INVOKED,
-        "turn.completed": EventKind.TURN_COMPLETED,
-        "capacity.rejected": EventKind.CAPACITY_REJECTED,
-        "finished": EventKind.VERDICT_RENDERED,
-        "failed": EventKind.VERDICT_RENDERED,
-    },
     EngineId.QWENLOOP: {
         "run.started": EventKind.SESSION_SEEDED,
         "text_delta": EventKind.TRANSCRIPT_RECORDED,
@@ -379,6 +374,8 @@ _EXPECTED_MAPS: dict[EngineId, dict[str, EventKind]] = {
         "failed": EventKind.VERDICT_RENDERED,
     },
 }
+# gptossloop is the qwenloop runner on GPT-OSS: the same events, read the same way.
+_EXPECTED_MAPS[EngineId.GPTOSSLOOP] = _EXPECTED_MAPS[EngineId.QWENLOOP]
 
 
 def test_every_engine_has_a_mapping_table() -> None:
@@ -401,8 +398,8 @@ _TURN_BOUNDARIES: dict[EngineId, frozenset[str]] = {
     EngineId.CODEXLOOP: frozenset({"turn.completed", "turn.failed"}),
     EngineId.CURSORLOOP: frozenset(),
     EngineId.AGYLOOP: frozenset({"turn.completed"}),
+    EngineId.GPTOSSLOOP: frozenset({"turn.completed"}),
     EngineId.QWENLOOP: frozenset({"turn.completed"}),
-    EngineId.OPENCODE: frozenset({"turn.completed"}),
 }
 
 

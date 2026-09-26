@@ -60,6 +60,10 @@ jobs:
           POSTGRES_USER: vibey
           POSTGRES_PASSWORD: vibey
           POSTGRES_DB: vibey_test
+          # scram-sha-256 for every connection, local and remote -- never trust,
+          # never md5 (sub-doctrine 10.j, ADR-0061).
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
         ports:
           - 5432:5432
         options: >-
@@ -86,6 +90,9 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --extra dev
+
+      - name: Gate 0 - governance corpus index
+        run: uv run vibey-gh corpus-index --check
 
       - name: Gate 1 - ruff check
         run: uv run ruff check .
@@ -139,6 +146,10 @@ jobs:
           POSTGRES_USER: vibey
           POSTGRES_PASSWORD: vibey
           POSTGRES_DB: vibey_test
+          # scram-sha-256 for every connection, local and remote -- never trust,
+          # never md5 (sub-doctrine 10.j, ADR-0061).
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
         ports:
           - 5432:5432
         options: >-
@@ -183,6 +194,10 @@ jobs:
           POSTGRES_USER: vibey
           POSTGRES_PASSWORD: vibey
           POSTGRES_DB: vibey_test
+          # scram-sha-256 for every connection, local and remote -- never trust,
+          # never md5 (sub-doctrine 10.j, ADR-0061).
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
         ports:
           - 5432:5432
         options: >-
@@ -571,22 +586,6 @@ jobs:
             python: "3.14"
             install: 'pip install -e ".[dev]"'
             test: 'python -m pytest -q'
-          - package: opencodeloop
-            dir: src/vibey_runners/opencode
-            python: "3.12"
-            install: 'pip install -e ".[dev]"'
-            static: 'mypy --strict src/opencodeloop && lint-imports && bandit -q -r src/opencodeloop'
-            test: 'python -m pytest -q'
-          - package: opencodeloop
-            dir: src/vibey_runners/opencode
-            python: "3.13"
-            install: 'pip install -e ".[dev]"'
-            test: 'python -m pytest -q'
-          - package: opencodeloop
-            dir: src/vibey_runners/opencode
-            python: "3.14"
-            install: 'pip install -e ".[dev]"'
-            test: 'python -m pytest -q'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -754,9 +753,212 @@ jobs:
           raise SystemExit("root automation drift: " + "; ".join(problems) if not ok else 0)
           PY
 
+  krypton-app:
+    # krypton-app (clients/krypton-app, sub-doctrine 9.e, ADR-0069): the apps' package. It is
+    # outside the uv workspace and publishes from krypton-app.yml; this job runs its suite and
+    # static checks on every change, as every client and package here is run by CI.
+    name: krypton-app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/krypton-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the checkers
+        run: python -m pip install --quiet pytest ruff mypy
+      - name: Lint and format
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type-check
+        run: mypy src
+      - name: Unit tests
+        run: PYTHONPATH=src python -m pytest -q tests
+
+  vibey-core:
+    # @vibey/core (packages/vibey-core, ADR-0067): the pure TypeScript every krypton client
+    # shares. It is built with no platform types at all, and held to 100% of lines, branches,
+    # functions and statements, as the extension's core was before it moved there.
+    name: "@vibey/core"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/vibey-core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install the npm workspace from its one lockfile
+        working-directory: .
+        run: npm ci
+      - name: No known high-severity advisory in any dependency
+        working-directory: .
+        run: npm audit --audit-level=high
+      - name: Build with no platform types, and type-check the tests
+        run: |
+          npm run build
+          npm run typecheck
+      - name: Unit tests, at 100% of lines, branches, functions and statements
+        run: npm run coverage
+
+  app:
+    # Krypton for iOS, Android and the web (clients/app, ADR-0068): one Expo app over the hub. It
+    # keeps its own lockfile, outside the npm workspace, so Expo's tree never enters the
+    # extension's or @vibey/core's install; it reads @vibey/core and the design tokens from
+    # source. Its core is held to 100%; the screens run under React Native Testing Library;
+    # the web build (react-native-web) is exported to prove it bundles. Native builds are EAS,
+    # declared only (eas.json).
+    name: Krypton app (mobile and web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: clients/app/package-lock.json
+      - name: Install from the app's own lockfile
+        run: npm ci
+      - name: No known high-severity advisory in any dependency
+        run: npm audit --audit-level=high
+      - name: Type-check, strict
+        run: npm run typecheck
+      - name: Unit and screen tests, with the core at 100% of lines, branches, functions and statements
+        run: npm run coverage
+      - name: The web build bundles
+        run: npm run export:web
+
+  vscode-extension:
+    # The VS Code extension (clients/vscode, ADR-0059): its own Node toolchain and checks. It
+    # has no runtime dependency, and none of it enters the image: @vibey/core travels inside
+    # the .vsix, copied into out/node_modules at compile (ADR-0067). Both rows are required
+    # checks in .vibey-gh.toml since they ran green on develop (ADR-0059, #290).
+    name: VS Code extension (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: clients/vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install the npm workspace from its one lockfile
+        working-directory: .
+        run: npm ci
+      - name: No known high-severity advisory in any dependency
+        working-directory: .
+        run: npm audit --audit-level=high
+      - name: Type-check the extension and its tests
+        run: npm run typecheck
+      - name: Compile, and package.json still agrees with the one command table
+        run: |
+          npm run compile
+          git diff --exit-code -- package.json
+      - name: Unit tests, with the core at 100% of lines, branches, functions and statements
+        run: npm run coverage
+      - name: Smoke test in a real VS Code (Linux, on a virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run smoke
+      - name: Smoke test in a real VS Code
+        if: runner.os != 'Linux'
+        run: npm run smoke
+      - name: Package the .vsix, and it carries @vibey/core
+        run: |
+          npx vsce package --no-dependencies --out vibey-${{ matrix.os }}.vsix
+          unzip -l vibey-${{ matrix.os }}.vsix | grep -q 'extension/out/node_modules/@vibey/core/dist/packages/vibey-core/src/index.js'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vibey-vscode-${{ matrix.os }}
+          path: clients/vscode/vibey-${{ matrix.os }}.vsix
+          if-no-files-found: error
+
+  desktop:
+    # Krypton desktop (clients/desktop): C17 on GTK 4 + libadwaita, built with Meson. The
+    # pure-C core (libkryptondesktop) is tested with GLib's test framework under ASan and
+    # UBSan, and its coverage is gated with gcovr; the GTK views are compiled with
+    # -Werror on every distribution here. Not a required check yet: it becomes one once it
+    # has run green on develop (the same rule as vscode-extension).
+    name: Krypton desktop (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+            container: ''
+          - distro: arch
+            container: archlinux:latest
+    defaults:
+      run:
+        working-directory: clients/desktop
+    steps:
+      - name: Toolchain and libraries (Ubuntu)
+        if: matrix.distro == 'ubuntu'
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends meson ninja-build gcovr pkg-config \
+            libglib2.0-dev libjson-glib-dev libsoup-3.0-dev libgtk-4-dev libadwaita-1-dev \
+            libavahi-client-dev libavahi-glib-dev desktop-file-utils appstream
+      - name: Toolchain and libraries (Arch)
+        if: matrix.distro == 'arch'
+        working-directory: /
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git meson ninja pkgconf glib2 json-glib \
+            libsoup3 gtk4 libadwaita avahi desktop-file-utils appstream
+      - uses: actions/checkout@v4
+      - name: Build everything under ASan and UBSan, warnings as errors
+        run: |
+          meson setup build -Db_sanitize=address,undefined -Dgui=enabled \
+            -Dhub_transport=enabled -Ddiscovery=enabled
+          meson compile -C build
+      - name: The core's GLib tests, under the sanitizers
+        env:
+          # LeakSanitizer needs ptrace, which a container job does not get.
+          ASAN_OPTIONS: detect_leaks=${{ matrix.distro == 'ubuntu' && '1' || '0' }}:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: meson test -C build --print-errorlogs
+      - name: The nightly channel builds beside stable, under its own app id
+        run: |
+          meson setup build-nightly -Dchannel=nightly -Dgui=enabled
+          meson compile -C build-nightly
+          grep -q 'io.github.the_vibey_project.Krypton.Nightly' build-nightly/src/app/*.desktop
+      - name: The desktop entry and AppStream metadata validate
+        run: |
+          desktop-file-validate build/src/app/io.github.the_vibey_project.Krypton.desktop
+          appstreamcli validate --no-net --explain build/src/app/io.github.the_vibey_project.Krypton.metainfo.xml
+      - name: Core coverage, gated (gcovr)
+        if: matrix.distro == 'ubuntu'
+        run: |
+          meson setup build-coverage -Db_coverage=true -Dbuildtype=debug -Dgui=disabled \
+            -Dhub_transport=enabled -Ddiscovery=enabled
+          meson test -C build-coverage --print-errorlogs
+          # The mDNS backends need a daemon a runner does not have: they are compiled and
+          # warning-free above, and left out of the measured core.
+          gcovr --root . --filter 'src/core/' --exclude 'src/core/kr-discovery-(avahi|dnssd)\.c' \
+            --fail-under-line 95 --fail-under-branch 80 --print-summary build-coverage
+
   image:
     name: Container image (amd64 + arm64)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -841,7 +1043,7 @@ jobs:
             *) echo "::error::codex --version printed '$out'; the Dockerfile pins $want"; exit 1 ;;
           esac
 
-      # One distribution, twelve console scripts (ADR-0037). That is the new product
+      # One distribution, twelve console scripts (ADR-0037, ADR-0064). That is the new product
       # contract, and it is the one the Dockerfile's COPY list can break silently: a
       # package root that never reaches the build context does not fail the build, it
       # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
@@ -851,7 +1053,7 @@ jobs:
           docker run --rm --entrypoint sh vibey:ci -c '
             status=0
             for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
-                        azbootstrap claudeloop codexloop cursorloop agyloop qwenloop opencodeloop; do
+                        azbootstrap claudeloop codexloop cursorloop agyloop gptossloop qwenloop; do
               if command -v "$tool" >/dev/null 2>&1; then
                 echo "ok      $tool"
               else
@@ -981,8 +1183,13 @@ jobs:
           test "$restarts" = "0"
 
       - name: Contract - the worker picks up a project created in-cluster
+        # The smoke fixture declares the Sabbath off for this one process
+        # (VIBEY_SABBATH_ENABLED=false): without it `vibey new` lawfully declines
+        # with exit 75 every Friday evening to Saturday evening, and the contract
+        # below would fail on a schedule rather than on a defect.
         run: |
           kubectl exec -n vibey deploy/vibey-vibey-worker -- \
+            env VIBEY_SABBATH_ENABLED=false \
             vibey new demo --repo /work/demo --max-cycles 1
           for _ in $(seq 1 24); do
             kubectl logs -n vibey deployment/vibey-vibey-worker > /tmp/log 2>&1 || true
@@ -1001,9 +1208,12 @@ jobs:
           kubectl logs -n vibey deployment/vibey-vibey-worker -c migrate > /tmp/migrate.log 2>&1 || true
           cat /tmp/migrate.log
           grep -q "ledger guard in force: vibey_app" /tmp/migrate.log
+          # Local connections authenticate with scram-sha-256 too (sub-doctrine 10.j,
+          # ADR-0061), so psql inside the pod needs a password. The smoke install uses the
+          # chart's dev defaults, where each role's password is its own name.
           as() {
             kubectl exec -n vibey statefulset/vibey-vibey-postgres -- \
-              psql -U "$1" -d vibey -v ON_ERROR_STOP=1 -c "$2" 2>&1 || true
+              env PGPASSWORD="$1" psql -U "$1" -d vibey -v ON_ERROR_STOP=1 -c "$2" 2>&1 || true
           }
           test "$(as vibey 'SELECT count(*) > 0 FROM event' | grep -c ' t$')" = "1"
           for sql in "UPDATE event SET digest = 'forged'" "DELETE FROM event" "TRUNCATE event"; do

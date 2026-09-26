@@ -139,10 +139,26 @@ env -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR=$HOME/.config/gh-runner \
   is ephemeral, so after each job it deregisters and the next one registers under a new name.
 
 The workflow schedules the sovereign job only while the heartbeat is fresh. The heartbeat is
-published by the separate `com.adammatthewsteinberger.vibey-local-authority` agent, which
-this procedure does not change. It finds the runner by the `VIBEY_REPO_URL` in agents under
-the same prefix, which the rendered agent still sets. `uv run vibey-gh sovereign` reports the
-heartbeat's age.
+published by a timer that `runner install` installs beside the runner (`vibey-gh heartbeat`,
+ADR-0060): `<unit_prefix>-heartbeat-vibey`, a LaunchAgent here. Each beat publishes only while
+GitHub lists a runner labelled `vibey-local-vibey` as online and Ollama answers with the model,
+and it goes through the pre-push gate, which lets an empty parentless commit on a non-branch
+ref through by its own rule. The timer must run a `vibey-gh` installed outside any checkout, so
+install it as a tool first and run the install with it:
+
+```bash
+uv tool install --force --from . vibey
+~/.local/bin/vibey-gh heartbeat install --load
+~/.local/bin/vibey-gh heartbeat status
+uv run vibey-gh sovereign            # the heartbeat's age, as the workflow reads it
+```
+
+`heartbeat status` prints the last beat's age and whether it was published or withheld, and
+why. The hand-written `com.adammatthewsteinberger.vibey-local-authority` agent that used to
+publish the heartbeat is retired: it pushed with `--no-verify` and said "up" whenever its
+supervisor had a live process. If it is still loaded, boot it out
+(`launchctl bootout gui/$(id -u)/com.adammatthewsteinberger.vibey-local-authority`) before
+loading the timer.
 
 ## Remove it
 
@@ -153,7 +169,8 @@ rm -rf ~/.config/gh-runner
 ```
 
 `uninstall` boots the agent out, moves its plist to `retired-units/`, and deletes only the
-three files `install` wrote. Heartbeat files and logs stay. Then revoke the token on GitHub:
+three files `install` wrote; it also unloads the heartbeat timer and moves its plist to
+`retired-units/`. Logs and the last beat's record stay. Then revoke the token on GitHub:
 **Settings → Developer settings → Personal access tokens → Fine-grained tokens**.
 
 ## Changing it

@@ -28,18 +28,66 @@ here guaranteed not to make things worse, since it removes a flag that
 would otherwise be rejected outright.
 """
 
+from dataclasses import replace
+
 from vibey.domain.config import ClaudeloopLocalConfig
 from vibey.domain.effort import Effort
 from vibey.domain.engine import (
     Capability,
+    EngineAffordances,
+    EngineControls,
     EngineDescriptor,
     EngineId,
     EngineInvocation,
     EngineTier,
+    EventEnvelope,
+    EventLog,
     IsolationLevel,
+    PluginSystem,
 )
 
 _CLAUDELOOP_ENV = ("CLAUDELOOP_*", "CLAUDE_CODE_*", "CLAUDE_CONFIG_DIR", "ANTHROPIC_*")
+
+# Where every runner in the tree writes a run's events: each one's own run directory,
+# `<cwd>/<state_dir>/runs/<run_id>`, holds its events.jsonl (claudeloop, agyloop,
+# cursorloop and codexloop `infrastructure/rundir.py`, qwenloop
+# `infrastructure/run_store.py`).
+_RUN_EVENTS = "{cwd}/{state_dir}/runs/{run_id}/events.jsonl"
+
+# The evidence for `plugins: skills-context`, the same for every loop.
+_SKILLS_CONTEXT = (
+    "when the project sets skills_context.mode = inject, vibey appends the vibey-skills "
+    "context packet to the plan's text before the run starts (vibey "
+    "application/build_implement_handler.py), whichever engine runs it"
+)
+
+# claudeloop's own vocabulary, shared by claudeloop-local: the same binary.
+_CLAUDELOOP_AFFORDANCES = EngineAffordances(
+    files=True,
+    paste_text=True,
+    plugins=PluginSystem.CLAUDE_PLUGINS,
+    mcp=True,
+    evidence={
+        "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and "
+        "`--attach` take more (claudeloop cli/commands/run.py)",
+        "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); "
+        "the plan itself is text",
+        "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option "
+        "(claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+        "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's "
+        "`mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+    },
+)
+# `stop` and `wind-down` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
+# `--now` (immediate) or `--at-break` (claudeloop cli/commands/stop.py,
+# wind_down_cmd.py, prompt.py).
+_CLAUDELOOP_CONTROLS = EngineControls(
+    stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+)
+# `{"ts", "run_id", "event_type", ..., "payload"}` (claudeloop infrastructure/events.py).
+_CLAUDELOOP_EVENTS = EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE_PAYLOAD)
 
 CLAUDELOOP = EngineDescriptor(
     engine_id=EngineId.CLAUDELOOP,
@@ -78,6 +126,10 @@ CLAUDELOOP = EngineDescriptor(
             ("--preset", "high", "--effort", "high"), achieved=Effort.HIGH
         ),
         Effort.MAX: EngineInvocation(("--preset", "high", "--effort", "max"), achieved=Effort.MAX),
+        # ULTRA (ADR-0063): the top tier, and no `--max-turns` -- vibey passes none.
+        Effort.ULTRA: EngineInvocation(
+            ("--preset", "high", "--effort", "max"), achieved=Effort.ULTRA
+        ),
     },
     session_verb="sessions",
     # --permission-mode is real (confirmed via --help), but its actual value
@@ -95,6 +147,9 @@ CLAUDELOOP = EngineDescriptor(
     cost_per_mtok_out=15.0,
     context_window=200_000,
     base_weight=3,
+    affordances=_CLAUDELOOP_AFFORDANCES,
+    controls=_CLAUDELOOP_CONTROLS,
+    events=_CLAUDELOOP_EVENTS,
 )
 
 CODEXLOOP = EngineDescriptor(
@@ -119,6 +174,9 @@ CODEXLOOP = EngineDescriptor(
             Capability.SAVEPOINTS,
             Capability.UNWIND,
             Capability.STRUCTURED_VERDICT,
+            # Its runner queues a prompt control's text for the next turn
+            # (codexloop application/runner.py `_apply_controls`); see `controls`.
+            Capability.MID_RUN_PROMPT,
             Capability.SNAPSHOT,
             Capability.SANDBOX,
         }
@@ -138,6 +196,9 @@ CODEXLOOP = EngineDescriptor(
         Effort.STANDARD: EngineInvocation((), achieved=Effort.STANDARD),
         Effort.HIGH: EngineInvocation((), achieved=Effort.STANDARD),
         Effort.MAX: EngineInvocation(
+            (), achieved=Effort.STANDARD, notes="codexloop has no CLI-level effort control"
+        ),
+        Effort.ULTRA: EngineInvocation(
             (), achieved=Effort.STANDARD, notes="codexloop has no CLI-level effort control"
         ),
     },
@@ -165,6 +226,29 @@ CODEXLOOP = EngineDescriptor(
     # (create_subprocess_exec(..., cwd=spec.worktree_path)), and codexloop's
     # own bootstrap.py falls back to Path.cwd() when --cwd is absent.
     supports_cwd_flag=False,
+    affordances=EngineAffordances(
+        files=True,
+        paste_text=True,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        evidence={
+            "files": "it runs in the worktree as its working directory, and its exec argv "
+            "carries `--add-dir` (codexloop infrastructure/agent/argv.py)",
+            "paste_text": "`prompt TEXT --now|--next-turn` (codexloop cli/commands/prompt.py); "
+            "the plan itself is text",
+            "plugins": _SKILLS_CONTEXT,
+        },
+    ),
+    # Like its `run`, none of these takes `--cwd`: each acts on the run under the working
+    # directory it is started in (codexloop cli/commands/stop.py, wind_down_cmd.py,
+    # prompt.py; `prompt` needs exactly one of `--now` or `--next-turn`).
+    controls=EngineControls(
+        stop=("stop", "--run-id", "{run_id}"),
+        wind_down=("wind-down", "--run-id", "{run_id}"),
+        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}"),
+    ),
+    # The wrapped Codex CLI's own events, flat and keyed `"type"`, and codexloop's
+    # `{"type": "run.verdict", ...}` (codexloop infrastructure/events.py, application/runner.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.TYPE),
 )
 
 CURSORLOOP = EngineDescriptor(
@@ -189,6 +273,11 @@ CURSORLOOP = EngineDescriptor(
         Effort.STANDARD: EngineInvocation(("--model", "grok-4.5"), achieved=Effort.STANDARD),
         Effort.HIGH: EngineInvocation(("--model", "grok"), achieved=Effort.HIGH),
         Effort.MAX: EngineInvocation(("--model", "grok-xhigh"), achieved=Effort.MAX),
+        Effort.ULTRA: EngineInvocation(
+            ("--model", "grok-xhigh"),
+            achieved=Effort.MAX,
+            notes="cursorloop has no unbounded tier; runs its top model",
+        ),
     },
     session_verb="agents",
     # cursorloop is the only engine whose `run` takes the plan as a flag
@@ -211,6 +300,29 @@ CURSORLOOP = EngineDescriptor(
     cost_per_mtok_out=10.0,
     context_window=128_000,
     base_weight=2,
+    affordances=EngineAffordances(
+        files=True,
+        paste_text=True,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        evidence={
+            "files": "it runs in the worktree (`run --cwd`, cursorloop cli/commands/run.py)",
+            "paste_text": "the plan is text (`run --plan`, cursorloop cli/commands/run.py), "
+            "and it is the run's first message",
+            "plugins": _SKILLS_CONTEXT,
+        },
+    ),
+    # `stop` and `wind-down` take `--run-id` and `--cwd` (cursorloop
+    # cli/commands/control_cmds.py), and act only while the run waits between turns. No
+    # prompt: its CLI writes a `prompt` control, but the runner reads its inbox only while
+    # it waits (`_sleep_interruptible`), acts on stop and wind-down alone, and
+    # `FileRunControl.poll` deletes every command it parsed, so a prompt sent that way is
+    # dropped unread (cursorloop application/runner.py, infrastructure/control.py).
+    controls=EngineControls(
+        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    ),
+    # `{"ts", "run_id", "event_type", ..., "payload"}` (cursorloop infrastructure/events.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE_PAYLOAD),
 )
 
 AGYLOOP = EngineDescriptor(
@@ -237,7 +349,10 @@ AGYLOOP = EngineDescriptor(
         {
             Capability.UNWIND,
             Capability.STRUCTURED_VERDICT,
-            Capability.WEB_SEARCH,
+            # Its runner applies a prompt control at the next turn (agyloop
+            # application/runner.py); see `controls`. No WEB_SEARCH: nothing in agyloop's
+            # source searches the web, and its `run` has no `--web-search`.
+            Capability.MID_RUN_PROMPT,
             Capability.SNAPSHOT,
         }
     ),
@@ -255,6 +370,10 @@ AGYLOOP = EngineDescriptor(
             ("--preset", "high", "--effort", "high"), achieved=Effort.HIGH
         ),
         Effort.MAX: EngineInvocation(("--preset", "high", "--effort", "max"), achieved=Effort.MAX),
+        # ULTRA (ADR-0063): the top tier, and no `--max-turns` -- vibey passes none.
+        Effort.ULTRA: EngineInvocation(
+            ("--preset", "high", "--effort", "max"), achieved=Effort.ULTRA
+        ),
     },
     session_verb="sessions",
     isolation_flags={
@@ -266,58 +385,30 @@ AGYLOOP = EngineDescriptor(
     cost_per_mtok_out=2.0,
     context_window=1_000_000,
     base_weight=1,
-)
-
-OPENCODE = EngineDescriptor(
-    engine_id=EngineId.OPENCODE,
-    binary="opencodeloop",
-    min_version="0.1.0",
-    state_dir=".opencodeloop",
-    done_marker="OPENCODELOOP_TASK_FULLY_COMPLETE",
-    # OpenCode is a provider multiplexer: authentication belongs to the
-    # installed OpenCode CLI and must not be guessed from a provider-specific
-    # environment variable here. `opencodeloop doctor` checks the CLI contract.
-    auth_env=(),
-    # Its own settings only. A provider key the operator's OpenCode configuration reads
-    # from the environment (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, ...) is declared
-    # under `engine_environment.engines.opencode`, never guessed here.
-    env_passthrough=("OPENCODELOOP_*", "OPENCODE_*"),
-    capabilities=frozenset({Capability.STRUCTURED_VERDICT, Capability.SNAPSHOT}),
-    # The OpenCode CLI accepts provider-specific model settings rather than a
-    # portable effort flag. Empty argv is therefore intentional; the achieved
-    # level is the adapter's conservative STANDARD ceiling until a provider
-    # exposes a verified effort control.
-    effort_projection={
-        Effort.TRIVIAL: EngineInvocation(
-            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
-        ),
-        Effort.LOW: EngineInvocation(
-            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
-        ),
-        Effort.STANDARD: EngineInvocation((), achieved=Effort.STANDARD),
-        Effort.HIGH: EngineInvocation(
-            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
-        ),
-        Effort.MAX: EngineInvocation(
-            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
-        ),
-    },
-    session_verb="sessions",
-    resume_run_id_flag="--run-id",
-    isolation_flags={
-        IsolationLevel.WORKTREE: (),
-        IsolationLevel.CONTAINER: (),
-        IsolationLevel.VM: (),
-    },
-    # OpenCode itself does not publish a stable price table: the selected
-    # provider may be local or remote. The wrapper preserves provider usage in
-    # raw events; fixed descriptor pricing is deliberately zero until a
-    # provider-specific meter is configured rather than inventing a price.
-    cost_per_mtok_in=0.0,
-    cost_per_mtok_out=0.0,
-    context_window=32_768,
-    base_weight=1,
-    tier=EngineTier.LOCAL,
+    affordances=EngineAffordances(
+        files=True,
+        paste_text=True,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        mcp=False,
+        evidence={
+            "files": "it runs in the worktree (`run --cwd`), and `run --add-dir` and "
+            "`attach PATH` take more (agyloop cli/commands/run.py, attach_cmd.py)",
+            "paste_text": "`prompt TEXT --now|--at-break` (agyloop cli/commands/prompt.py); "
+            "the plan itself is text",
+            "plugins": _SKILLS_CONTEXT,
+            "mcp": "its agent options are built with `mcp_servers=[]`, always "
+            "(agyloop infrastructure/agent/options.py)",
+        },
+    ),
+    # `stop` and `prompt` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
+    # `--now` or `--at-break` (agyloop cli/commands/stop.py, prompt.py). No wind-down: its
+    # CLI has no such verb (agyloop cli/app.py), and it winds down on its own forecast.
+    controls=EngineControls(
+        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    ),
+    # `{"ts", "run_id", "event_type", ..., "payload"}` (agyloop infrastructure/events.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE_PAYLOAD),
 )
 
 QWENLOOP = EngineDescriptor(
@@ -327,16 +418,27 @@ QWENLOOP = EngineDescriptor(
     state_dir=".qwenloop",
     done_marker="QWENLOOP_TASK_FULLY_COMPLETE",
     auth_env=(),
-    # QWENLOOP_BASE_URL and QWENLOOP_MODEL also arrive through the adapter's overlay,
-    # derived from VIBEY_OLLAMA_URL -- which itself never reaches the session.
+    # QWENLOOP_BASE_URL also arrives through the adapter's overlay, derived from
+    # VIBEY_OLLAMA_URL -- which itself never reaches the session. Its model does not:
+    # qwenloop runs the Qwen model it names itself (ADR-0064) unless QWENLOOP_MODEL says.
     env_passthrough=("QWENLOOP_*",),
-    capabilities=frozenset(Capability),
+    # No attachments or web search: `attach` and `web-search` only echo (qwenloop cli/app.py
+    # `_local_equivalent`). A mid-run prompt it does take: the runner adds each pending
+    # `prompt` control to the conversation at the next turn boundary (qwenloop
+    # application/runner.py, `take_prompts`); see `controls`. The other claims are not
+    # re-verified here, and `savepoints`, `unwind`, `effort`, `slash` and `sandbox` are
+    # echo-only commands in the same list.
+    capabilities=frozenset(Capability) - {Capability.ATTACHMENTS, Capability.WEB_SEARCH},
     effort_projection={
         Effort.TRIVIAL: EngineInvocation(("--max-turns", "8"), achieved=Effort.TRIVIAL),
         Effort.LOW: EngineInvocation(("--max-turns", "16"), achieved=Effort.LOW),
         Effort.STANDARD: EngineInvocation(("--max-turns", "40"), achieved=Effort.STANDARD),
         Effort.HIGH: EngineInvocation(("--max-turns", "64"), achieved=Effort.HIGH),
         Effort.MAX: EngineInvocation(("--max-turns", "96"), achieved=Effort.MAX),
+        # ULTRA (ADR-0063): no `--max-turns`. The runner still ends a session at its own
+        # configured limit, so the adapter re-invokes it pass after pass (the ULTRA
+        # improvement loop, application/build_implement_handler.py) until Stop or a cap.
+        Effort.ULTRA: EngineInvocation((), achieved=Effort.ULTRA),
     },
     session_verb="sessions",
     isolation_flags={
@@ -349,6 +451,55 @@ QWENLOOP = EngineDescriptor(
     context_window=32_768,
     base_weight=1,
     tier=EngineTier.LOCAL,
+    affordances=EngineAffordances(
+        images=False,
+        files=True,
+        paste_text=True,
+        paste_images=False,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        mcp=False,
+        evidence={
+            "images": "its model-facing tools are read_file, write_file, edit_file, shell, "
+            "search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and "
+            "every message it sends is text (`ChatMessage.content: str`, same module)",
+            "files": "its file tools read and write paths inside the worktree "
+            "(qwenloop infrastructure/tools.py)",
+            "paste_text": "the plan is text, and is the first message it sends",
+            "paste_images": "every message it sends is text (`ChatMessage.content: str`, "
+            "qwenloop domain/model.py)",
+            "plugins": _SKILLS_CONTEXT,
+            "mcp": "the model is offered only its own fixed tools (qwenloop "
+            "infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` "
+            "and `skill` commands only echo (qwenloop cli/app.py)",
+        },
+    ),
+    # Each takes the run id positionally, then `prompt` its text, and `--cwd` (qwenloop
+    # cli/app.py). The runner reads the prompt at the next turn boundary and moves it to
+    # `control/ack`, so it reaches the model once (qwenloop application/runner.py,
+    # infrastructure/run_store.py `take_prompts`).
+    controls=EngineControls(
+        stop=("stop", "{run_id}", "--cwd", "{cwd}"),
+        wind_down=("wind-down", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{run_id}", "{text}", "--cwd", "{cwd}"),
+    ),
+    # Flat, keyed `"type"` (qwenloop application/runner.py, infrastructure/run_store.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.TYPE),
+)
+
+
+# The same runner as qwenloop on this era's default model (ADR-0064): its own binary,
+# its own `GPTOSSLOOP_*` settings, and qwenloop's run layout, controls and events,
+# which are the runner package's protocol rather than either engine's name -- both write
+# `.qwenloop/runs/` and end on `QWENLOOP_TASK_FULLY_COMPLETE`. `gptossloop` first
+# shipped in runner 0.3.0.
+GPTOSSLOOP = replace(
+    QWENLOOP,
+    engine_id=EngineId.GPTOSSLOOP,
+    binary="gptossloop",
+    min_version="0.3.0",
+    # GPTOSSLOOP_BASE_URL and GPTOSSLOOP_MODEL also arrive through the adapter's
+    # overlay, derived from VIBEY_OLLAMA_URL -- which itself never reaches the session.
+    env_passthrough=("GPTOSSLOOP_*",),
 )
 
 
@@ -385,6 +536,7 @@ class ClaudeloopLocalDescriptors:
         Effort.STANDARD: ("medium", Effort.STANDARD),
         Effort.HIGH: ("high", Effort.STANDARD),
         Effort.MAX: ("high", Effort.STANDARD),
+        Effort.ULTRA: ("high", Effort.STANDARD),
     }
     _CAPABILITIES = frozenset(
         {
@@ -434,6 +586,10 @@ class ClaudeloopLocalDescriptors:
             base_weight=1,
             tier=EngineTier.LOCAL,
             doctor_args=profile,
+            # The same binary, so the same verbs, run directory and envelope.
+            affordances=CLAUDELOOP.affordances,
+            controls=CLAUDELOOP.controls,
+            events=CLAUDELOOP.events,
         )
 
 
@@ -444,10 +600,10 @@ DEFAULT_DESCRIPTORS: tuple[EngineDescriptor, ...] = (
     CODEXLOOP,
     CURSORLOOP,
     AGYLOOP,
-    OPENCODE,
 )
-# The local engines, each opt-in behind its own feature switch (ADR-0015, ADR-0038).
-LOCAL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (QWENLOOP, CLAUDELOOP_LOCAL)
+# The local engines, each behind its own feature switch (ADR-0015, ADR-0038): gptossloop
+# on unless switched off, the others opt-in (ADR-0064).
+LOCAL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (GPTOSSLOOP, QWENLOOP, CLAUDELOOP_LOCAL)
 ALL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (*DEFAULT_DESCRIPTORS, *LOCAL_DESCRIPTORS)
 
 BY_ENGINE_ID: dict[EngineId, EngineDescriptor] = {d.engine_id: d for d in ALL_DESCRIPTORS}

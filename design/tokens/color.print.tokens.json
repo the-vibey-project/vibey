@@ -1,0 +1,57 @@
+{
+  "$description": "The research paper's TikZ palette, in the order the preamble defines it. Same family, print ink.",
+  "print": {
+    "$type": "color",
+    "vibeyink": {
+      "$value": "{color.slate.800}"
+    },
+    "vibeyblue": {
+      "$value": "{color.blue.600}"
+    },
+    "vibeysky": {
+      "$value": "{color.blue.400}"
+    },
+    "vibeyteal": {
+      "$value": "{color.teal.525}"
+    },
+    "vibeymint": {
+      "$value": "{color.mint.425}"
+    },
+    "vibeygreen": {
+      "$value": "{color.green.500}"
+    },
+    "vibeygold": {
+      "$value": "{color.gold.425}"
+    },
+    "vibeyamber": {
+      "$value": "{color.gold.300}"
+    },
+    "vibeyred": {
+      "$value": "{color.red.575}"
+    },
+    "vibeyrose": {
+      "$value": "{color.red.375}"
+    },
+    "vibeyviolet": {
+      "$value": "{color.violet.575}"
+    },
+    "vibeylilac": {
+      "$value": "{color.violet.355}"
+    },
+    "vibeygray": {
+      "$value": "{color.slate.550}"
+    },
+    "vibeysilver": {
+      "$value": "{color.slate.300}"
+    },
+    "vibeyline": {
+      "$value": "{color.slate.130}"
+    },
+    "vibeywash": {
+      "$value": "{color.slate.50}"
+    },
+    "vibeymist": {
+      "$value": "{color.slate.25}"
+    }
+  }
+}

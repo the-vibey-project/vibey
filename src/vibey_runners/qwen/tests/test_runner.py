@@ -20,11 +20,13 @@ from qwenloop.application.runner import (
     _truncate_tool_result,
 )
 from qwenloop.domain.config import QwenConfig
+from qwenloop.domain.interfaces import FollowUpInterface
 from qwenloop.domain.model import (
     CODING_TOOL_NAMES,
     Backend,
     ChatChunk,
     ChatMessage,
+    FollowUp,
     RunStatus,
     ServerInfo,
     ToolCallParseError,
@@ -700,6 +702,104 @@ async def test_sandbox_command_timeout(monkeypatch: pytest.MonkeyPatch, tmp_path
     result = await SandboxTools(tmp_path).execute("shell", {"argv": ["slow"]})
     assert result == {"error": "command timed out"}
     assert process.killed
+
+
+def test_run_store_takes_follow_ups_once_in_the_order_they_were_sent(tmp_path: Path) -> None:
+    store = FileRunStore(tmp_path)
+    assert store.take_prompts("missing") == []
+    store.create("x", {})
+    inbox = tmp_path / ".qwenloop" / "runs" / "x" / "control" / "inbox"
+    (inbox / "00000000000000000002-b.json").write_text('{"type":"prompt","text":"second"}')
+    (inbox / "00000000000000000001-a.json").write_text('{"type":"prompt","text":"first"}')
+    (inbox / "00000000000000000003-c.json").write_text('{"type":"stop"}')
+    (inbox / "00000000000000000004-d.json").write_text("not json")
+    (inbox / "00000000000000000005-e.json").write_text("[]")
+    (inbox / "00000000000000000006-f.json").write_text('{"type":"prompt","text":7}')
+    taken = store.take_prompts("x")
+    assert taken == [
+        FollowUp(id="00000000000000000001-a", text="first"),
+        FollowUp(id="00000000000000000002-b", text="second"),
+    ]
+    assert all(isinstance(follow_up, FollowUpInterface) for follow_up in taken)
+    ack = tmp_path / ".qwenloop" / "runs" / "x" / "control" / "ack"
+    assert sorted(path.name for path in ack.glob("*.json")) == [
+        "00000000000000000001-a.json",
+        "00000000000000000002-b.json",
+    ]
+    assert len(list(inbox.glob("*.json"))) == 4
+    assert store.take_prompts("x") == []
+    assert [item["type"] for item in store.read_control("x")] == ["stop", "prompt"]
+
+
+class FollowUpServer(ScriptedServer):
+    """Sends a follow-up while its first turn streams, as a person would mid-run."""
+
+    def __init__(self, turns: list[list[ChatChunk]], inbox: Path) -> None:
+        super().__init__(turns)
+        self._inbox = inbox
+
+    async def chat_stream(
+        self, info: ServerInfo, messages: Sequence[ChatMessage]
+    ) -> AsyncIterator[ChatChunk]:
+        if not self.seen:
+            self._inbox.mkdir(parents=True, exist_ok=True)
+            (self._inbox / "00000000000000000001-a.json").write_text(
+                '{"type":"prompt","text":"keep the heading short"}'
+            )
+        async for chunk in super().chat_stream(info, messages):
+            yield chunk
+
+
+@pytest.mark.asyncio
+async def test_runner_gives_the_model_a_follow_up_at_its_next_turn_once(tmp_path: Path) -> None:
+    inbox = tmp_path / ".qwenloop" / "runs" / "follow" / "control" / "inbox"
+    server = FollowUpServer(
+        [
+            [
+                ChatChunk(
+                    tool_call={"name": "write_file", "arguments": {"path": "x", "content": "y"}}
+                )
+            ],
+            [
+                ChatChunk(
+                    tool_call={"name": "write_file", "arguments": {"path": "z", "content": "w"}}
+                )
+            ],
+            [
+                ChatChunk(
+                    text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE",
+                    output_tokens=4,
+                )
+            ],
+        ],
+        inbox,
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="follow", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
+    )
+    assert result.status is RunStatus.COMPLETED
+    follow_up = ChatMessage("user", "keep the heading short")
+    assert follow_up not in server.seen[0]
+    assert server.seen[1][-1] == follow_up
+    assert server.seen[2].count(follow_up) == 1
+    events = [
+        json.loads(line)
+        for line in (tmp_path / ".qwenloop" / "runs" / "follow" / "events.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    received = [event for event in events if event["type"] == "prompt.received"]
+    assert received == [
+        {
+            "type": "prompt.received",
+            "turn": 2,
+            "id": "00000000000000000001-a",
+            "text": "keep the heading short",
+        }
+    ]
 
 
 def test_run_store_handles_empty_and_invalid_control(tmp_path: Path) -> None:

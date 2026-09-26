@@ -174,7 +174,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
 
       # Doctrine 8.a prefers the sovereign path, but a sovereign job scheduled against a
