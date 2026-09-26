@@ -86,3 +86,20 @@ def test_cli_reports_triage_command_failures(capsys):
     with patch.object(it, "set_bump", side_effect=RuntimeError("denied")):
         assert cli._issue_triage(Namespace(action="bump", issue=7)) == 1
     assert "vibey-gh: denied" in capsys.readouterr().err
+
+
+def test_cli_dispatches_triage_actions(capsys):
+    item = it.rank(issue(7, "feature"))
+    with (
+        patch.object(it, "triage", return_value=[item]),
+        patch.object(it, "set_bump") as set_bump,
+        patch.object(it, "ensure_labels") as ensure_labels,
+    ):
+        assert cli._issue_triage(Namespace(action="sweep", issue=None)) == 0
+        assert cli._issue_triage(Namespace(action="bump", issue=7)) == 0
+        assert cli._issue_triage(Namespace(action="unbump", issue=7)) == 0
+        assert cli._issue_triage(Namespace(action="ensure-labels", issue=None)) == 0
+    assert set_bump.call_args_list[0].args == (7, True)
+    assert set_bump.call_args_list[1].args == (7, False)
+    ensure_labels.assert_called_once_with()
+    assert "Issue triage order" in capsys.readouterr().out
