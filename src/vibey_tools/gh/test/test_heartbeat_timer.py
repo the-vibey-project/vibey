@@ -283,9 +283,9 @@ def test_an_interval_that_could_stale_the_lane_is_refused(tmp_path, window, inte
 
 
 def test_a_declared_interpreter_is_used_and_expanded(tmp_path):
-    cfg = _cfg(tmp_path, heartbeat_python="~/.local/share/uv/tools/vibey/bin/python")
+    cfg = _cfg(tmp_path, heartbeat_python="~/.local/share/uv/tools/vibey-engine/bin/python")
     plan = _plan(_timer(tmp_path, cfg))
-    assert plan.python == str(tmp_path / "home/.local/share/uv/tools/vibey/bin/python")
+    assert plan.python == str(tmp_path / "home/.local/share/uv/tools/vibey-engine/bin/python")
     # An explicit one (what status passes: the interpreter the installed unit runs) wins.
     assert _plan(_timer(tmp_path, cfg), "/usr/bin/python3").python == "/usr/bin/python3"
 
@@ -293,10 +293,10 @@ def test_a_declared_interpreter_is_used_and_expanded(tmp_path):
 def test_the_default_interpreter_is_the_uv_tool_install(tmp_path):
     """Not the interpreter running the install, which under `uv run` in a checkout is that
     checkout's own .venv -- the one place the timer must never run from."""
-    assert RunnersConfig().heartbeat_python == "~/.local/share/uv/tools/vibey/bin/python"
+    assert RunnersConfig().heartbeat_python == "~/.local/share/uv/tools/vibey-engine/bin/python"
     cfg = _cfg(tmp_path, heartbeat_python=RunnersConfig().heartbeat_python)
     plan = _plan(_timer(tmp_path, cfg, python="/somewhere/in/a/checkout/.venv/bin/python"))
-    assert plan.python == str(tmp_path / "home/.local/share/uv/tools/vibey/bin/python")
+    assert plan.python == str(tmp_path / "home/.local/share/uv/tools/vibey-engine/bin/python")
 
 
 # A clone directory outside every temporary root, for the tests that run the real roots
@@ -367,7 +367,7 @@ def test_a_vibey_gh_imported_from_a_checkout_is_refused(tmp_path):
 def test_an_interpreter_that_cannot_import_vibey_gh_is_refused(tmp_path):
     plan, problem = _timer(tmp_path, origin=None).render()
     assert plan is None and "cannot import vibey_gh" in problem
-    assert "uv tool install --force --from . vibey" in problem
+    assert "uv tool install --force --from . vibey-engine" in problem
 
 
 def test_a_relative_interpreter_is_refused(tmp_path):
@@ -496,7 +496,7 @@ def test_install_refuses_a_clone_whose_gate_refuses_a_heartbeat(tmp_path):
     assert not ok
     assert lines[-1].startswith("refused: the clone's own pre-push gate did not let a synthetic")
     assert "(exit 1): ✖ push refused: this repository publishes only" in lines[-1]
-    assert "uv tool install --force --from . vibey" in lines[-1]
+    assert "uv tool install --force --from . vibey-engine" in lines[-1]
     assert lines[-1].endswith("The timer was not written.")
     assert not plan.files[-1].path.exists()
     assert service.calls == []

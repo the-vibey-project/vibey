@@ -331,7 +331,7 @@ class HeartbeatTimer(HeartbeatTimerInterface):
         if not origin:
             return None, (
                 f"{interpreter} cannot import vibey_gh; install vibey into it first (for"
-                " example `uv tool install --force --from . vibey`)"
+                " example `uv tool install --force --from . vibey-engine`)"
             )
         problem = self._placement("the vibey_gh it runs", Path(origin), "heartbeat_python")
         if problem:

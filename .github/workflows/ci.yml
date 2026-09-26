@@ -998,7 +998,9 @@ jobs:
           load: true
           tags: vibey:ci
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # The image remains valid when GitHub's cache service evicts a layer while
+          # exporting it; cache acceleration is optional, image correctness is not.
+          cache-to: type=gha,mode=max,ignore-error=true
 
       # Every claim the Dockerfile makes in prose is asserted here, one
       # `Image contract - ...` step each. Prose does not survive a refactor:
@@ -1092,7 +1094,9 @@ jobs:
           push: false
           tags: vibey:ci-arm64
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # The image remains valid when GitHub's cache service evicts a layer while
+          # exporting it; cache acceleration is optional, image correctness is not.
+          cache-to: type=gha,mode=max,ignore-error=true
 
   # Render-only, so it needs neither a cluster nor the image: it lints the chart
   # and compares its render under every profile in deploy/helm/golden/render.sh

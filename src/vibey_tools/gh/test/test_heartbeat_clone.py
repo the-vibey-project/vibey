@@ -206,7 +206,7 @@ def test_the_real_gate_refuses_when_its_interpreter_cannot_decide(tmp_path):
     assert "invalid choice: 'push-scope'" in problem
     assert "✖ push refused: this repository publishes only the sovereign heartbeat." in problem
     assert "\x1b[" not in problem
-    assert "uv tool install --force --from . vibey" in problem
+    assert "uv tool install --force --from . vibey-engine" in problem
 
 
 def test_a_gate_that_exits_zero_without_the_token_is_not_a_pass(tmp_path):
