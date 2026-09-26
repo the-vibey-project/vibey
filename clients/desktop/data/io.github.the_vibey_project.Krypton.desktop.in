@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=@APP_NAME@
-Comment=The desktop app for vibey
+Comment=The desktop app for krypton
 Exec=krypton-desktop
 Icon=@APP_ID@
 Terminal=false

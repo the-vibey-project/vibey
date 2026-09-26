@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * `@vibey` in the chat view: the same commands as the panel's `/` commands, from the same
- * table, run by the same handlers. `@vibey /ask ...` (or `@vibey` with no command) starts a
+ * `@krypton` in the chat view: the same commands as the panel's `/` commands, from the same
+ * table, run by the same handlers. `@krypton /ask ...` (or `@krypton` with no command) starts a
  * task and streams its transcript into the chat as it happens. Everything from the model is
  * appended as escaped text, never as markdown it could write links or images with. Only
  * where this editor has the chat API; nothing otherwise. Declared by
@@ -15,7 +15,7 @@ import type { CommandActionsInterface } from './interfaces/actions-interface';
 import type { VibeyChatInterface } from './interfaces/chat-interface';
 
 export class VibeyChat implements VibeyChatInterface {
-  static readonly ID = 'vibey.chat';
+  static readonly ID = 'krypton.chat';
   private readonly slash = new SlashCommands();
   private readonly presenter = new Presenter();
 
@@ -39,7 +39,7 @@ export class VibeyChat implements VibeyChatInterface {
       stream.markdown(new vscode.MarkdownString().appendText(text));
       stream.markdown('\n\n');
     };
-    // VS Code hands over `@vibey /budget add x` as the command `budget` and the prompt `add x`.
+    // VS Code hands over `@krypton /budget add x` as the command `budget` and the prompt `add x`.
     const typed = request.command === undefined ? `/ask ${request.prompt}` : `/${request.command} ${request.prompt}`;
     const parsed = this.slash.parse(typed);
     if (parsed.kind !== 'command') {
@@ -56,12 +56,12 @@ export class VibeyChat implements VibeyChatInterface {
 
   private async ask(task: string, stream: vscode.ChatResponseStream, token: vscode.CancellationToken, say: (text: string) => void): Promise<void> {
     if (!task.trim()) {
-      say('Say what to do: @vibey add a line to README.md that says how to run the tests');
+      say('Say what to do: @krypton add a line to README.md that says how to run the tests');
       return;
     }
     const services = this.controller.services;
     if (services.settings.loop === 'paidloop' && !services.paidDeclared()) {
-      say('paidloop is not declared, so nothing was started. Declare it with a cap first: @vibey /loop paid');
+      say('paidloop is not declared, so nothing was started. Declare it with a cap first: @krypton /loop paid');
       return;
     }
     const run = await this.controller.ask(task.trim());

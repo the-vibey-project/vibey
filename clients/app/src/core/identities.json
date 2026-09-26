@@ -1,7 +1,7 @@
 {
   "stable": {
     "channel": "stable",
-    "name": "Krypton",
+    "name": "krypton",
     "slug": "krypton",
     "scheme": "krypton",
     "iosBundleIdentifier": "org.vibey.krypton",
@@ -10,7 +10,7 @@
   },
   "nightly": {
     "channel": "nightly",
-    "name": "Krypton Nightly",
+    "name": "krypton nightly",
     "slug": "krypton-nightly",
     "scheme": "krypton-nightly",
     "iosBundleIdentifier": "org.vibey.krypton.nightly",

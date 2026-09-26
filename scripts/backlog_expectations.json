@@ -1,0 +1,828 @@
+{
+  "_comment": "Declared state for scripts/backlog_cleanup.py. Per-issue probes plus last applied verdict; the hourly loop commits this file when verdicts change. Everything-as-code (ADR-0018): a value that could be a key is a key.",
+  "issues": {
+    "1024": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:core lanes",
+      "probes": [
+        {
+          "label_drained": "wave:core"
+        }
+      ]
+    },
+    "1025": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:models lanes",
+      "probes": [
+        {
+          "label_drained": "wave:models"
+        }
+      ]
+    },
+    "1026": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:installer lanes",
+      "probes": [
+        {
+          "label_drained": "wave:installer"
+        }
+      ]
+    },
+    "1027": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:deploy lanes",
+      "probes": [
+        {
+          "label_drained": "wave:deploy"
+        }
+      ]
+    },
+    "1028": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:forge lanes",
+      "probes": [
+        {
+          "label_drained": "wave:forge"
+        }
+      ]
+    },
+    "1029": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:job-queue lanes",
+      "probes": [
+        {
+          "label_drained": "wave:job-queue"
+        }
+      ]
+    },
+    "1030": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:orm lanes",
+      "probes": [
+        {
+          "label_drained": "wave:orm"
+        }
+      ]
+    },
+    "1031": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:fakes lanes",
+      "probes": [
+        {
+          "label_drained": "wave:fakes"
+        }
+      ]
+    },
+    "1032": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:loops lanes",
+      "probes": [
+        {
+          "label_drained": "wave:loops"
+        }
+      ]
+    },
+    "1033": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:harness lanes",
+      "probes": [
+        {
+          "label_drained": "wave:harness"
+        }
+      ]
+    },
+    "1034": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:gaps lanes",
+      "probes": [
+        {
+          "label_drained": "wave:gaps"
+        }
+      ]
+    },
+    "1035": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:roadmap lanes",
+      "probes": [
+        {
+          "label_drained": "wave:roadmap"
+        }
+      ]
+    },
+    "1036": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:seo lanes",
+      "probes": [
+        {
+          "label_drained": "wave:seo"
+        }
+      ]
+    },
+    "1037": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "land the wave:surfaces lanes",
+      "probes": [
+        {
+          "label_drained": "wave:surfaces"
+        }
+      ]
+    },
+    "1096": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator scope decision: kryptonnet program",
+      "probes": []
+    },
+    "1116": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "per-item checklist post-3.0.0",
+      "probes": []
+    },
+    "114": {
+      "close_when_done": true,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "codec ADR + segment table",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey"
+            ],
+            "pattern": "ledger_segment|LedgerSegment"
+          }
+        }
+      ]
+    },
+    "1160": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator scope decision + training program ADR",
+      "probes": []
+    },
+    "1172": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "polite fetcher first",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_runners/qwen"
+            ],
+            "pattern": "class WebSearch|def web_search|WebSearchTool"
+          }
+        }
+      ]
+    },
+    "1173": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "declare install scope per OS",
+      "probes": []
+    },
+    "1174": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "packaging recipe first",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "pyproject.toml",
+              ".github/workflows"
+            ],
+            "pattern": "[Pp]yInstaller"
+          }
+        }
+      ]
+    },
+    "1176": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "ride the runner-unit work",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "clients/app/src",
+              "clients/app/app.config.ts",
+              "clients/desktop",
+              "clients/vscode/src",
+              "clients/vscode/package.json"
+            ],
+            "pattern": "autostart|Autostart|login.item|LoginItem"
+          }
+        }
+      ]
+    },
+    "1178": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "design decision first",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/domain"
+            ],
+            "pattern": "ETERNITY|eternity"
+          }
+        }
+      ]
+    },
+    "1179": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "re-run the storm baseline to measure yield",
+      "probes": []
+    },
+    "1180": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "refresh the 29-gate count against the tip",
+      "probes": []
+    },
+    "1181": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "gate 6: notifications + sounds",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/infrastructure/notify"
+            ],
+            "pattern": "Matrix|messaging"
+          }
+        }
+      ]
+    },
+    "1184": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "tooltip guide + getting-started guide per client",
+      "probes": []
+    },
+    "133": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "PARTIAL",
+      "next": "loop-ask transport",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/application"
+            ],
+            "pattern": "gptossloop"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "loop ask\\b|loop_ask|LoopAsk"
+          }
+        }
+      ]
+    },
+    "134": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "PARTIAL",
+      "next": "software probe + dual-lane display",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "forecast_billing_ledger"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "SoftwareProbe"
+          }
+        }
+      ]
+    },
+    "136": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "the design ADR",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "ForgeStateLedger|forge_state_ledger|forge-state ledger"
+          }
+        }
+      ]
+    },
+    "138": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "PARTIAL",
+      "next": "read verbs",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh/vibey_gh/forge.py"
+            ],
+            "pattern": "NotSupported"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "comment_on_issue|ISSUE_FACT_KEYS"
+          }
+        }
+      ]
+    },
+    "143": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "PARTIAL",
+      "next": "notifications gate",
+      "probes": [
+        {
+          "path_exists": "clients/desktop"
+        },
+        {
+          "path_exists": "clients/app"
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/infrastructure/notify"
+            ],
+            "pattern": "Matrix|messaging"
+          }
+        }
+      ]
+    },
+    "145": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "snapshot verify + timelines",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh/vibey_gh/forge_snapshot.py"
+            ],
+            "pattern": "def verify"
+          }
+        }
+      ]
+    },
+    "155": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "the meta test first",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "tests/meta"
+            ],
+            "pattern": "test_one_book_one_paper"
+          }
+        }
+      ]
+    },
+    "165": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator scope decision + design ADR",
+      "probes": []
+    },
+    "226": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator scope decision",
+      "probes": []
+    },
+    "290": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "PARTIAL",
+      "next": "operator confirms split; engine adapter #754-761",
+      "probes": [
+        {
+          "path_exists": "clients/vscode/package.json"
+        },
+        {
+          "path_exists": "src/vibey_runners/vscode"
+        }
+      ]
+    },
+    "298": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "adapter + selector entry",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "BitbucketAdapter|bitbucket_adapter|BitbucketForge"
+          }
+        }
+      ]
+    },
+    "301": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "restate acceptance against the current paper",
+      "probes": []
+    },
+    "324": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "provider implementation",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey"
+            ],
+            "pattern": "QwenloopVisualProvider"
+          }
+        }
+      ]
+    },
+    "330": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "declare probes: target table",
+      "probes": []
+    },
+    "331": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "adapter + Heat renderer",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey"
+            ],
+            "pattern": "OpenStackCliAdapter"
+          }
+        }
+      ]
+    },
+    "332": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "PARTIAL",
+      "next": "paged reads + selector resolve",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh/vibey_gh/forge.py"
+            ],
+            "pattern": "NotSupported"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "review_thread_page"
+          }
+        }
+      ]
+    },
+    "333": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "fact keys + text verb",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "change_request_text|CHANGE_REQUEST_FACT_KEYS"
+          }
+        }
+      ]
+    },
+    "334": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "listing verb",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "open_change_request_numbers|wait_for_checks"
+          }
+        }
+      ]
+    },
+    "335": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "comment + label verbs",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "comment_on_change_request|create_change_request"
+          }
+        }
+      ]
+    },
+    "336": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "issue-fact keys",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh"
+            ],
+            "pattern": "ISSUE_FACT_KEYS|comment_on_issue"
+          }
+        }
+      ]
+    },
+    "341": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "declare probes: branch verbs",
+      "probes": []
+    },
+    "342": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "declare probes: automation seams",
+      "probes": []
+    },
+    "344": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "declare probes: protected-refs verb",
+      "probes": []
+    },
+    "351": {
+      "close_when_done": true,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "decide family client vs src/vibey bus",
+      "probes": [
+        {
+          "path_exists": "src/vibey_tools/bootstrap/vibey_bootstrap/amqp"
+        }
+      ]
+    },
+    "358": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "PARTIAL",
+      "next": "fenced claim",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/domain/queue_reap.py"
+            ],
+            "pattern": "dead_letter|DeadLetter"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey"
+            ],
+            "pattern": "fenced.*dispatch|dispatch_snapshot|dispatched.*stamp"
+          }
+        }
+      ]
+    },
+    "367": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "PARTIAL",
+      "next": "extract inbox writer + stop reader",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/infrastructure/engines"
+            ],
+            "pattern": "LedgerEvents"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey"
+            ],
+            "pattern": "InboxWriter|inbox_writer"
+          }
+        }
+      ]
+    },
+    "380": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "OPEN",
+      "next": "doctor lines first",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/cli"
+            ],
+            "pattern": "--rabbitmq|install.*rabbitmq"
+          }
+        }
+      ]
+    },
+    "383": {
+      "close_when_done": false,
+      "kind": "epic",
+      "last_verdict": "PARTIAL",
+      "next": "catalogue-as-data",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_runners/qwen"
+            ],
+            "pattern": "gpt-oss:20b"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_runners"
+            ],
+            "pattern": "Qwen3\\.6|Qwen3\\.8"
+          }
+        }
+      ]
+    },
+    "494": {
+      "close_when_done": false,
+      "hold_reason": "canon draft needs operator ratification (Constitution II.3)",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "495": {
+      "close_when_done": false,
+      "hold_reason": "owed sub-doctrines need operator ratification by merge",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "496": {
+      "close_when_done": false,
+      "hold_reason": "owed sub-doctrines need operator ratification by merge",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "668": {
+      "close_when_done": false,
+      "hold_reason": "operator's open rulings for 3.0.0",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "669": {
+      "close_when_done": false,
+      "hold_reason": "3.0.0 gating checklist gated on operator draft decision",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "670": {
+      "close_when_done": false,
+      "hold_reason": "fund the paid key or re-register runners: operator act",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "671": {
+      "close_when_done": false,
+      "hold_reason": "operator-owned supervisor/heartbeat/image files",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "672": {
+      "close_when_done": false,
+      "hold_reason": "yanking releases is the maintainer's act per Article V.4",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "85": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator priority order",
+      "probes": []
+    }
+  }
+}

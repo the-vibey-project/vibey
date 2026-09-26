@@ -18,7 +18,7 @@ kr_channel_app_id(KrChannel channel)
 const char *
 kr_channel_display_name(KrChannel channel)
 {
-    return channel == KR_CHANNEL_NIGHTLY ? "Krypton Nightly" : "Krypton";
+    return channel == KR_CHANNEL_NIGHTLY ? "krypton nightly" : "krypton";
 }
 
 const char *

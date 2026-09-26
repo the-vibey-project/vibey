@@ -48,7 +48,7 @@ export function PairScreen() {
   };
 
   return (
-    <Screen title="Welcome to Krypton" subtitle="Pair once with the vibey hub on your network. Being on the same Wi-Fi proves nothing; the code does.">
+    <Screen title="Welcome to krypton" subtitle="Pair once with the vibey hub on your network. Being on the same Wi-Fi proves nothing; the code does.">
       <View style={{ alignItems: 'center', marginVertical: 12 }}>
         <AtomMark size={160} />
       </View>

@@ -1,5 +1,5 @@
 {
-  "$description": "Tier 1. The one vibey colour family. Semantic tokens reference these; nothing else should.",
+  "$description": "Tier 1. The one krypton colour family. Semantic tokens reference these; nothing else should.",
   "color": {
     "$type": "color",
     "night": {

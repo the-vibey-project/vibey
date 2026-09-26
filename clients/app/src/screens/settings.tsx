@@ -44,7 +44,7 @@ export function SettingsScreen() {
         <Link href="/devices"><Label>Devices →</Label></Link>
         <Link href="/doctor"><Label>Doctor →</Label></Link>
       </Card>
-      <Label tone="tertiary">{`Channel: ${channel === 'nightly' ? 'Krypton Nightly (from develop)' : 'Krypton (stable, from main)'}`}</Label>
+      <Label tone="tertiary">{`Channel: ${channel === 'nightly' ? 'krypton nightly (from develop)' : 'krypton (stable, from main)'}`}</Label>
     </Screen>
   );
 }
