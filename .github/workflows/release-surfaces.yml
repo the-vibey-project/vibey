@@ -1386,11 +1386,13 @@ jobs:
           EOF
           fi
           if true; then
+            # Only the indexable channel belongs here: the preview channel is
+            # Disallow'd in robots.txt above and served noindex, so listing it
+            # makes Search Console report the index as unreadable.
             cat > pages/sitemap.xml <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
             <sitemap><loc>${PAGES_ROOT}main/sitemap.xml</loc></sitemap>
-            <sitemap><loc>${PAGES_ROOT}develop/sitemap.xml</loc></sitemap>
           </sitemapindex>
           EOF
           fi
