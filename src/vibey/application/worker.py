@@ -347,12 +347,19 @@ class WorkerLoop:
             return
         kind = "budget_exceeded" if request.kind == "budget_exhausted" else "human_gate_raised"
         title = "Budget Exceeded" if kind == "budget_exceeded" else "Human Gate Raised"
+        # Gate prompts can contain model/tool output and are displayed in the gate UI.
+        # Desktop toasts are deliberately a short privacy-safe cue, never prompt text.
+        message = (
+            "A budget decision is needed to continue."
+            if kind == "budget_exceeded"
+            else "Your response is needed to continue."
+        )
         try:
             result = await self._notifications.notify(
                 project_id=job.project_id,
                 kind=kind,
                 title=title,
-                message=request.prompt,
+                message=message,
                 payload={
                     "gate_id": str(gate_id),
                     "gate_kind": request.kind,

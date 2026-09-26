@@ -16,6 +16,8 @@ Declared by `interfaces/desktop_interface.py` (ADR-0016).
 """
 
 import asyncio
+import os
+import shutil
 import sys
 from collections.abc import Callable
 from contextlib import suppress
@@ -43,11 +45,13 @@ class DesktopNotifier:
         executor: Callable[[list[str]], bool] | None = None,
         platform_override: str | None = None,
         sound_name: str = "Ping",
+        icon_path: str | None = None,
         environment: ChildEnvironmentInterface | None = None,
     ) -> None:
         self._executor = executor
         self._platform = platform_override or sys.platform
         self._sound_name = sound_name
+        self._icon_path = icon_path or os.environ.get("VIBEY_NOTIFICATION_ICON")
         self._environment = (
             ChildEnvironment(SYSTEM_ENVIRONMENT) if environment is None else environment
         )
@@ -74,8 +78,23 @@ class DesktopNotifier:
     def _build_command(self, event: NotificationEvent) -> list[str]:
         title = f"vibey: {event.title}"
         if self._platform == "darwin":
+            if self._icon_path and shutil.which("terminal-notifier"):
+                return [
+                    "terminal-notifier",
+                    "-title",
+                    title,
+                    "-message",
+                    event.message,
+                    "-sound",
+                    self._sound_name,
+                    "-appIcon",
+                    self._icon_path,
+                ]
             statements = [part for line in APPLESCRIPT for part in ("-e", line)]
             return ["osascript", *statements, "--", title, event.message, self._sound_name]
         elif self._platform.startswith("linux"):
-            return ["notify-send", "--", title, event.message]
+            command = ["notify-send"]
+            if self._icon_path:
+                command.extend(["--icon", self._icon_path])
+            return [*command, "--", title, event.message]
         return []

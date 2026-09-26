@@ -2,9 +2,17 @@
 """Best-effort desktop notifications for local Qwen runs."""
 
 import asyncio
+import os
+import shutil
 import sys
 from collections.abc import Callable
 from contextlib import suppress
+
+APPLESCRIPT: tuple[str, ...] = (
+    "on run argv",
+    "display notification (item 2 of argv) with title (item 1 of argv) sound name (item 3 of argv)",
+    "end run",
+)
 
 
 class DesktopNotifier:
@@ -17,11 +25,13 @@ class DesktopNotifier:
         platform_override: str | None = None,
         enabled: bool = True,
         sound_name: str = "Ping",
+        icon_path: str | None = None,
     ) -> None:
         self._executor = executor
         self._platform = platform_override or sys.platform
         self._enabled = enabled
         self._sound_name = sound_name
+        self._icon_path = icon_path or os.environ.get("VIBEY_NOTIFICATION_ICON")
 
     async def notify(self, title: str, message: str) -> bool:
         if not self._enabled:
@@ -43,20 +53,31 @@ class DesktopNotifier:
         return False
 
     def _build_command(self, title: str, message: str) -> list[str]:
-        safe_message = self._escape(message)
-        safe_title = self._escape(f"vibey: {title}")
-        safe_sound = self._escape(self._sound_name)
-
         if self._platform == "darwin":
-            script = (
-                f'display notification "{safe_message}" with title "{safe_title}" '
-                f'sound name "{safe_sound}"'
-            )
-            return ["osascript", "-e", script]
+            if self._icon_path and shutil.which("terminal-notifier"):
+                return [
+                    "terminal-notifier",
+                    "-title",
+                    f"vibey: {title}",
+                    "-message",
+                    message,
+                    "-sound",
+                    self._sound_name,
+                    "-appIcon",
+                    self._icon_path,
+                ]
+            statements = [part for line in APPLESCRIPT for part in ("-e", line)]
+            return [
+                "osascript",
+                *statements,
+                "--",
+                f"vibey: {title}",
+                message,
+                self._sound_name,
+            ]
         if self._platform.startswith("linux"):
-            return ["notify-send", f"vibey: {title}", message]
+            command = ["notify-send"]
+            if self._icon_path:
+                command.extend(["--icon", self._icon_path])
+            return [*command, "--", f"vibey: {title}", message]
         return []
-
-    @staticmethod
-    def _escape(value: str) -> str:
-        return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
