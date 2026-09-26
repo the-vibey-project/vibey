@@ -1386,6 +1386,10 @@ jobs:
           EOF
           fi
           if true; then
+            # Both channels are listed at the operator's request. Note the
+            # trade-off: the preview channel is Disallow'd in robots.txt above
+            # and served noindex, so Search Console reports its URLs as
+            # blocked/excluded — that warning is expected while it is listed.
             cat > pages/sitemap.xml <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
