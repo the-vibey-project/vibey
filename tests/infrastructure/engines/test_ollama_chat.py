@@ -191,7 +191,7 @@ async def test_a_question_goes_out_constrained_and_deterministic() -> None:
     # is compiled to a grammar, so malformed JSON is unreachable rather than unlikely.
     assert payload["format"] == schema
     assert payload["stream"] is False
-    assert payload["options"] == {"temperature": 0, "num_ctx": 4096, "num_predict": 2048}
+    assert payload["options"] == {"temperature": 0, "num_ctx": 4096, "num_predict": 512}
 
 
 @pytest.mark.asyncio
@@ -247,7 +247,7 @@ def test_the_context_ceiling_is_configurable_and_user_context_is_bounded() -> No
     assert len(content) <= (8192 - client.CONTEXT_RESERVE) * client.CHARS_PER_TOKEN + 80
     assert "context elided by sovereign client" in content
     assert sent["options"]["num_ctx"] == 8192
-    assert sent["options"]["num_predict"] == 2048
+    assert sent["options"]["num_predict"] == 512
 
 
 @pytest.mark.asyncio
