@@ -55,7 +55,10 @@ jobs:
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Update identity, Pages homepage, and topics
         env:
-          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          # Repository metadata and security settings require an administrator-capable
+          # token. The default GITHUB_TOKEN is intentionally not elevated and returns
+          # 403; skip this write step when the repository has not declared the secret.
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
@@ -64,6 +67,10 @@ jobs:
           CONFIG_SETTINGS: '__VIBEY_GH_PROFILE_SETTINGS__'
         run: |
           set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::repository profile reconciliation skipped: AUTOMERGE_TOKEN is not configured with repository-admin authority"
+            exit 0
+          fi
           pages_url="https://${OWNER}.github.io/${REPO_NAME}/"
           description="$CONFIG_DESCRIPTION"
           if [ -z "$description" ]; then

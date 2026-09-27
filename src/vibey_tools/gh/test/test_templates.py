@@ -2326,7 +2326,8 @@ def test_repository_profile_is_configurable_and_never_mutates_branches():
     # A cap, not a count: every occurrence is a step handed the elevated token, so the
     # number may grow as this workflow reconciles more repository state, but not
     # unnoticed. Raising it should be a deliberate decision about privileged surface.
-    assert text.count("secrets.AUTOMERGE_TOKEN || github.token") <= 5
+    assert "GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}" in text
+    assert "repository profile reconciliation skipped" in text
     assert "Unable to verify ${setting}" in text
     assert "HTTP 404" in text
     assert "branches/${branch}" in text
