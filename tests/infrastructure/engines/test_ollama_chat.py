@@ -218,6 +218,13 @@ async def test_empty_schema_reply_retries_once_in_json_mode() -> None:
     assert transport.calls[1][1]["format"] == "json"
 
 
+@pytest.mark.asyncio
+async def test_empty_json_fallback_is_rejected() -> None:
+    transport = SequenceTransport([{"message": {"content": ""}}, {"message": {"content": ""}}])
+    with pytest.raises(ValueError, match="empty message content"):
+        await OllamaChatClient(transport=transport).ask("s", "u", {"type": "object"})
+
+
 def test_the_context_window_is_sized_to_the_prompt() -> None:
     """Ollama's default window is far smaller than a full ledger, and overflowing it
     degrades generation from seconds to never-finishes rather than erroring."""
