@@ -5,12 +5,18 @@ from pathlib import Path
 
 import pytest
 
-from vibey.infrastructure.bus.dispatch import BusDispatchAdapter, BusDispatchSelection
+from vibey.infrastructure.bus.dispatch import (
+    BusDispatchAdapter,
+    BusDispatchBenchmark,
+    BusDispatchSelection,
+    WeeklyBusDispatchRecomputer,
+)
 
 
 class _Bus:
-    def __init__(self) -> None:
+    def __init__(self, *, empty_once: bool = False) -> None:
         self.values: list[dict[str, object]] = []
+        self.empty_once = empty_once
 
     async def declare_queue(self, _queue: str, *, dead_letter: bool = True) -> None:
         del dead_letter
@@ -19,6 +25,9 @@ class _Bus:
         self.values.append(payload)
 
     async def consume(self, _queue: str) -> dict[str, object] | None:
+        if self.empty_once:
+            self.empty_once = False
+            return None
         return self.values.pop(0) if self.values else None
 
 
@@ -50,3 +59,21 @@ def test_dispatch_selection_loads_only_valid_winners(tmp_path: Path) -> None:
     assert BusDispatchSelection.from_cache(invalid) is None
     assert BusDispatchSelection.from_cache(unknown) is None
     assert BusDispatchSelection.from_cache(tmp_path / "missing.json") is None
+
+
+@pytest.mark.asyncio
+async def test_benchmark_and_weekly_recomputer_persist_winner(tmp_path: Path) -> None:
+    bus = _Bus(empty_once=True)
+    result = await BusDispatchBenchmark(messages=1, hybrid_concurrency=1).run(bus)
+    assert result["winner"] in {"singleton", "multiplexer", "hybrid"}
+    path = tmp_path / "winner.json"
+    recomputer = WeeklyBusDispatchRecomputer(bus, path, hybrid_concurrency=1)
+    assert await recomputer.run_once_if_due() is True
+    assert await recomputer.run_once_if_due() is False
+
+
+def test_benchmark_rejects_invalid_parameters() -> None:
+    with pytest.raises(ValueError):
+        BusDispatchBenchmark(messages=0)
+    with pytest.raises(ValueError):
+        BusDispatchBenchmark(hybrid_concurrency=0)
