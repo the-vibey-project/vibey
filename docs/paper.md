@@ -1601,6 +1601,33 @@ A runner is a program that lets one robot helper work by itself, safely. Every r
 \end{plainwords}
 ```
 
+## Dispatch experiments from the 2026-09-26 session
+
+This section records the bounded dispatch experiments run during the current
+implementation session. They are machine-local observations, not universal
+performance claims. The laptop ran Ollama with `gpt-oss:20b` and RabbitMQ 4.3.6
+on loopback. The model-turn experiment used two samples at hybrid concurrency
+$2$; the orchestration-bus experiment used twelve messages.
+
+| Surface | Singleton | Hybrid | Multiplexer | Selected |
+|---|---:|---:|---:|---|
+| Model turns (turns/s) | 0.1162 | 0.2597 | 0.1297 | hybrid |
+| Orchestration bus (messages/s), first run | 41.2398 | 271.8715 | 422.8348 | multiplexer |
+| Orchestration bus (messages/s), repeat run | 33.6749 | 251.2280 | 412.2460 | multiplexer |
+
+The model-turn result was persisted as per-machine benchmark evidence and the
+orchestration-bus result was persisted as the local `auto` winner. The two bus
+runs agree on the winning policy while their absolute rates vary, which is why
+the implementation recomputes rather than treating one measurement as a
+constant. The experiments compare dispatch paths only; they do not establish
+model quality, paid-provider quality, or cross-machine performance.
+
+Paid-provider experiments were not run in this session. No live paid-provider
+benchmark result is therefore claimed. The provider benchmark executor and the
+durable global paid budget guard are implemented and unit-tested, but a live
+provider result requires an enabled adapter, a representative run, reported
+usage, and charging within the authorized total cap.
+
 ## Exact-head evaluation and the release calculus
 
 The orchestrator's output is a pull request, and what happens to it is governed by
