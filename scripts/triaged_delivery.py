@@ -16,6 +16,7 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass
+from os import environ
 from pathlib import Path
 
 PRIORITIES = ("critical", "high", "medium", "low")
@@ -97,8 +98,24 @@ def already_dispatched(number: int) -> bool:
     )
 
 
+def _worktree(repo: Path, issue: Issue) -> Path:
+    storm_home = Path(
+        environ.get("VIBEY_STORM_HOME", str(Path.home() / "git" / "vibey-storm"))
+    ).expanduser()
+    target = storm_home / f"triaged-{issue.number}"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not (target / ".git").exists():
+        subprocess.run(
+            ["git", "worktree", "add", "--detach", str(target), "develop"],
+            cwd=repo,
+            check=True,
+        )
+    return target
+
+
 def dispatch(issue: Issue, *, repo: Path) -> str:
     marker = MARKER.format(number=issue.number)
+    worktree = _worktree(repo, issue)
     output = subprocess.run(
         [
             "uv",
@@ -107,7 +124,7 @@ def dispatch(issue: Issue, *, repo: Path) -> str:
             "new",
             f"github#{issue.number}: {issue.title}",
             "--repo",
-            str(repo),
+            str(worktree),
             "--intake",
             f"GitHub issue #{issue.number}: {issue.title}\n\n{issue.body}",
         ],
