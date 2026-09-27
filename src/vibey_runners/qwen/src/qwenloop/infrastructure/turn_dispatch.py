@@ -117,7 +117,8 @@ class RabbitMqTurnDispatcher:
                         body = json.loads(message.body)
                         if body.get("error"):
                             raise RuntimeError(str(body["error"]))
-                        chunks.append(ChatChunk(**body["chunk"]))
+                        if "chunk" in body:
+                            chunks.append(ChatChunk(**body["chunk"]))
                         if body.get("done"):
                             break
             return chunks

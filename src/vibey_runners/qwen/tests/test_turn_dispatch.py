@@ -311,6 +311,24 @@ async def test_rabbitmq_dispatch_returns_when_reply_stream_closes() -> None:
 
 
 @pytest.mark.asyncio
+async def test_rabbitmq_dispatch_accepts_terminal_done_without_chunk() -> None:
+    connection = _Connection()
+
+    async def connect(_: str) -> _Connection:
+        return connection
+
+    dispatcher = RabbitMqTurnDispatcher("amqp://broker", connection_factory=connect)
+    connection.channel_instance.replies = _Replies([_Message(b'{"done": true}', "unused")])
+
+    async def publish(message: Any, *, routing_key: str) -> None:
+        connection.channel_instance.replies.messages[0].correlation_id = message.correlation_id
+
+    connection.channel_instance.default_exchange.publish = publish
+    info = ServerInfo(Backend.OPENAI_COMPAT, "local", "url", False, True)
+    assert await dispatcher.dispatch_all(info, [ChatMessage("user", "hello")]) == []
+
+
+@pytest.mark.asyncio
 async def test_rabbitmq_worker_publishes_chunks_and_completion() -> None:
     worker = RabbitMqTurnWorker("amqp://broker")
     channel = _Channel()
