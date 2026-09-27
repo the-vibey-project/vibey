@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **135 Claude Code plugins. 710 Agent Skills.** Long-form, source-cited practitioner
+> **136 Claude Code plugins. 728 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,7 +41,7 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 135 and vibey-gh's four. The
+That one address serves every plugin in the family: these 136 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 710 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 728 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -289,6 +289,8 @@ Part of the same open-source family — MIT, and all shipping inside the one
 - **[vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap)** — the Azure Functions cross-cutting layer the `vibey-bootstrap` plugin documents (formerly `azure-bootstrap`)
 - **[homebrew-tap](https://github.com/adammatthewsteinberger/homebrew-tap)** — `brew tap adammatthewsteinberger/tap`
 - **[clippy-pet](https://github.com/adammatthewsteinberger/clippy-pet)** — the fun one
+
+| [research-deep-dives](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/research-deep-dives) | 0.1.0 | research | 18 | Source-cited deep dives across agriculture, operating systems, cognition, civilization, politics, science, technology, storytelling, and integrated systems. |
 
 ## Contributing
 
