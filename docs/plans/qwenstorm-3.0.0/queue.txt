@@ -10,6 +10,7 @@ installer-catalogue 469
 installer-host-runner 470 installer-catalogue
 installer-orchestrator 471 installer-catalogue
 install-ollama 391 default-model-p1,installer-host-runner,installer-orchestrator
+custom-system-1-model 1222
 surfaces-env 323
 engines-pool 321 engines-provider
 chart-operator-forgejo-p1 326
@@ -592,3 +593,4 @@ surfaces-bench 1020 surfaces-composition,surfaces-chart-valkey
 surfaces-docs-wave 1021 surfaces-bench,surfaces-cluster-smoke,surfaces-contracts-lane,surfaces-cli-dead-letters,surfaces-callers-registry
 surfaces-default-flip 1022 surfaces-docs-wave,surfaces-cluster-smoke,surfaces-contracts-lane,surfaces-cli-dead-letters,surfaces-callers-registry,surfaces-consumer-notifications
 surfaces-docs-flip 1023 surfaces-default-flip
+more-research-vibey-skills 1223
