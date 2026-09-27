@@ -123,6 +123,11 @@ from vibey.application.interfaces.ledger_publication_interface import (
     ShardHeaderInterface,
     ShardHoldingInterface,
 )
+from vibey.application.interfaces.local_install import (
+    DependencyInstaller,
+    LocalStackFactory,
+    LocalStackInstallerInterface,
+)
 from vibey.application.interfaces.loops import LoopCatalogInterface
 from vibey.application.interfaces.messaging import MessagingPort
 from vibey.application.interfaces.observability import (
@@ -208,6 +213,9 @@ __all__ = [
     "TelemetryTracer",
     "AutomatedFinding",
     "AutomatedReviewRunner",
+    "DependencyInstaller",
+    "LocalStackFactory",
+    "LocalStackInstallerInterface",
     "AzureClientPort",
     "CloudClientPort",
     "DeploymentConsentStore",
