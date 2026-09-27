@@ -71,6 +71,22 @@ jobs:
             echo "::warning::repository profile reconciliation skipped: AUTOMERGE_TOKEN is not configured with repository-admin authority"
             exit 0
           fi
+          profile_api() {
+            local output status
+            set +e
+            output=$("$@" 2>&1 >/dev/null)
+            status=$?
+            set -e
+            if [ "$status" -eq 0 ]; then
+              return 0
+            fi
+            if grep -q "HTTP 403\|Resource not accessible" <<< "$output"; then
+              echo "::warning::repository profile reconciliation skipped: AUTOMERGE_TOKEN lacks repository-admin authority"
+              return 0
+            fi
+            printf '%s\n' "$output" >&2
+            return "$status"
+          }
           pages_url="https://${OWNER}.github.io/${REPO_NAME}/"
           description="$CONFIG_DESCRIPTION"
           if [ -z "$description" ]; then
@@ -80,16 +96,16 @@ jobs:
             --arg description "$description" --arg homepage "$pages_url" \
             '. + {description: $description, homepage: $homepage, has_downloads: true} |
              del(.vulnerability_alerts, .automated_security_fixes)')
-          printf '%s' "$payload" | gh api "repos/${REPO}" --method PATCH --input - >/dev/null
-          printf '%s' "$CONFIG_TOPICS" | gh api "repos/${REPO}/topics" \
+          printf '%s' "$payload" | profile_api gh api "repos/${REPO}" --method PATCH --input -
+          printf '%s' "$CONFIG_TOPICS" | profile_api gh api "repos/${REPO}/topics" \
             --method PUT --input - >/dev/null
           security_method() {
             setting=$1
             endpoint=$2
             if [ "$(printf '%s' "$CONFIG_SETTINGS" | jq -r --arg setting "$setting" '.[$setting]')" = true ]; then
-              gh api "repos/${REPO}/${endpoint}" --method PUT >/dev/null
+              profile_api gh api "repos/${REPO}/${endpoint}" --method PUT
             else
-              gh api "repos/${REPO}/${endpoint}" --method DELETE >/dev/null
+              profile_api gh api "repos/${REPO}/${endpoint}" --method DELETE
             fi
           }
           security_method vulnerability_alerts vulnerability-alerts

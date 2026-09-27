@@ -901,6 +901,20 @@
       "last_verdict": "OPEN",
       "next": "operator priority order",
       "probes": []
+    },
+    "1217": {
+      "close_when_done": true,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "add the attached research corpus to vibey-skills with provenance and validation",
+      "probes": []
+    },
+    "1218": {
+      "close_when_done": true,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "add the attached Linux, Ubuntu, Arch, Fedora, and macOS research to vibey-skills with provenance and validation",
+      "probes": []
     }
   }
 }
