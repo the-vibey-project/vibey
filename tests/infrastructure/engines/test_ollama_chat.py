@@ -13,6 +13,7 @@ from vibey.infrastructure.engines.interfaces import (
     OllamaTransportInterface,
 )
 from vibey.infrastructure.engines.ollama_chat import (
+    DEFAULT_OLLAMA_CONTEXT,
     DEFAULT_OLLAMA_MODEL,
     DEFAULT_OLLAMA_TIMEOUT,
     DEFAULT_OLLAMA_URL,
@@ -181,8 +182,23 @@ def test_the_context_window_is_sized_to_the_prompt() -> None:
     degrades generation from seconds to never-finishes rather than erroring."""
     client = OllamaChatClient()
     assert client.context_window(0) == 4096
-    assert client.context_window(300_000) == 32768
-    assert 4096 < client.context_window(60_000) < 32768
+    assert client.context_window(300_000) == DEFAULT_OLLAMA_CONTEXT == 8192
+    assert 4096 < client.context_window(10_000) < DEFAULT_OLLAMA_CONTEXT
+
+
+def test_the_context_ceiling_is_configurable_and_user_context_is_bounded() -> None:
+    transport = _answering('{"ok": true}')
+    client = OllamaChatClient(context_ceiling=8192, transport=transport)
+
+    import asyncio
+
+    asyncio.run(client.ask("system", "x" * 100_000, {"type": "object"}))
+    sent = transport.calls[0][1]
+    content = sent["messages"][1]["content"]
+    assert isinstance(content, str)
+    assert len(content) <= (8192 - client.CONTEXT_RESERVE) * client.CHARS_PER_TOKEN + 80
+    assert "context elided by sovereign client" in content
+    assert sent["options"]["num_ctx"] == 8192
 
 
 @pytest.mark.asyncio

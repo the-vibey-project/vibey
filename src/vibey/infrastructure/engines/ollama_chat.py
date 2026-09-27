@@ -34,10 +34,12 @@ from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
 OLLAMA_URL_ENV = "VIBEY_OLLAMA_URL"
 OLLAMA_MODEL_ENV = "VIBEY_OLLAMA_MODEL"
 OLLAMA_TIMEOUT_ENV = "VIBEY_OLLAMA_TIMEOUT"
+OLLAMA_CONTEXT_ENV = "VIBEY_OLLAMA_CONTEXT"
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
 DEFAULT_OLLAMA_TIMEOUT = 900
+DEFAULT_OLLAMA_CONTEXT = 8192
 
 _HTTP_SCHEMES = ("http", "https")
 
@@ -93,6 +95,7 @@ class OllamaChatClient:
         base_url: str = DEFAULT_OLLAMA_URL,
         model: str = DEFAULT_OLLAMA_MODEL,
         timeout: int = DEFAULT_OLLAMA_TIMEOUT,
+        context_ceiling: int = DEFAULT_OLLAMA_CONTEXT,
         transport: OllamaTransportInterface | None = None,
     ) -> None:
         self._base_url = self._validated_base_url(base_url)
@@ -100,8 +103,14 @@ class OllamaChatClient:
             raise ConfigError(OLLAMA_MODEL_ENV, "the local model name is empty")
         if timeout <= 0:
             raise ConfigError(OLLAMA_TIMEOUT_ENV, f"must be a positive number, got {timeout}")
+        if context_ceiling < self.CONTEXT_FLOOR:
+            raise ConfigError(
+                OLLAMA_CONTEXT_ENV,
+                f"must be at least {self.CONTEXT_FLOOR}, got {context_ceiling}",
+            )
         self._model = model.strip()
         self._timeout = timeout
+        self._context_ceiling = context_ceiling
         self._transport = transport if transport is not None else UrllibOllamaTransport()
 
     @classmethod
@@ -119,16 +128,25 @@ class OllamaChatClient:
         in the workflows that already read it.
         """
         raw_timeout = environ.get(OLLAMA_TIMEOUT_ENV) or str(DEFAULT_OLLAMA_TIMEOUT)
+        raw_context = environ.get(OLLAMA_CONTEXT_ENV) or str(DEFAULT_OLLAMA_CONTEXT)
         try:
             timeout = int(raw_timeout)
         except ValueError as exc:
             raise ConfigError(
                 OLLAMA_TIMEOUT_ENV, f"must be a whole number of seconds, got {raw_timeout!r}"
             ) from exc
+        try:
+            context_ceiling = int(raw_context)
+        except ValueError as exc:
+            raise ConfigError(
+                OLLAMA_CONTEXT_ENV,
+                f"must be a whole number of tokens, got {raw_context!r}",
+            ) from exc
         return cls(
             base_url=environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
             model=model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
             timeout=timeout,
+            context_ceiling=context_ceiling,
             transport=transport,
         )
 
@@ -142,14 +160,27 @@ class OllamaChatClient:
 
     def context_window(self, prompt_chars: int) -> int:
         wanted = prompt_chars // self.CHARS_PER_TOKEN + self.CONTEXT_RESERVE
-        return min(self.CONTEXT_CEILING, max(self.CONTEXT_FLOOR, wanted))
+        return min(self._context_ceiling, max(self.CONTEXT_FLOOR, wanted))
+
+    def _bounded_user(self, user: str) -> str:
+        budget = (self._context_ceiling - self.CONTEXT_RESERVE) * self.CHARS_PER_TOKEN
+        if len(user) <= budget:
+            return user
+        head = budget * 2 // 3
+        tail = budget - head
+        return (
+            user[:head]
+            + "\n\n[context elided by sovereign client: middle omitted]\n\n"
+            + user[-tail:]
+        )
 
     async def ask(self, system: str, user: str, schema: Mapping[str, object]) -> dict[str, object]:
+        bounded_user = self._bounded_user(user)
         payload: dict[str, object] = {
             "model": self._model,
             "messages": [
                 {"role": "system", "content": system},
-                {"role": "user", "content": user},
+                {"role": "user", "content": bounded_user},
             ],
             # The grammar. Malformed JSON is unreachable, so this boundary needs no
             # fence-hunting and no repair pass.
@@ -159,7 +190,7 @@ class OllamaChatClient:
             # reasoned about by the phase that consumes it.
             "options": {
                 "temperature": 0,
-                "num_ctx": self.context_window(len(system) + len(user)),
+                "num_ctx": self.context_window(len(system) + len(bounded_user)),
             },
         }
         body = await self._transport.post_json(
