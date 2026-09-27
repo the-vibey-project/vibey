@@ -61,6 +61,35 @@ def test_new_project_creates_and_enqueues_design(tmp_path: Path) -> None:
     assert lines[1].startswith("design job ")
 
 
+def test_new_project_seeds_issue_intake_in_design_ledger(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "issue-1222",
+            "--repo",
+            str(tmp_path),
+            "--intake",
+            "GitHub issue #1222: custom system-1 model",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    project_id = UUID(result.output.splitlines()[0].removeprefix("project "))
+    events = asyncio.run(_design_events(project_id))
+    assert any(
+        event.kind.value == "TranscriptRecorded"
+        and event.payload["source"] == "github-issue"
+        and event.payload["text"] == "GitHub issue #1222: custom system-1 model"
+        for event in events
+    )
+
+
+async def _design_events(project_id: UUID):
+    async with build_app() as resources:
+        return await resources.design_ledger.all_for_project(project_id)
+
+
 def test_full_design_flow_through_the_real_cli(tmp_path: Path) -> None:
     created = runner.invoke(app, ["new", "widget", "--repo", str(tmp_path)])
     assert created.exit_code == 0, created.output

@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 import typer
 
 from vibey import __version__
+from vibey.application.design import DesignEvent
 from vibey.application.design_acceptance import DesignAcceptanceService
 from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.project_kickoff import enqueue_design_interview
@@ -57,7 +58,7 @@ from vibey.domain.errors import (
     WrongPhase,
 )
 from vibey.domain.job import JobState
-from vibey.domain.ledger import EventKind, LedgerEventKind
+from vibey.domain.ledger import EventKind, LedgerEventKind, Provenance
 from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
 from vibey.domain.phase import Phase, StoredPhase, VisualDecision
 from vibey.domain.spec import (
@@ -200,6 +201,13 @@ def _build_spend_recorder(
 def new_project(
     name: str,
     repo: Annotated[Path, typer.Option("--repo")] = Path("."),
+    intake: Annotated[
+        str | None,
+        typer.Option(
+            "--intake",
+            help="Initial issue/task text to seed the DESIGN ledger with",
+        ),
+    ] = None,
     max_cycles: Annotated[int, typer.Option("--max-cycles", min=1)] = 10,
     max_cycle_dollars: Annotated[
         float | None,
@@ -258,6 +266,19 @@ def new_project(
                 max_cycles=max_cycles,
                 config=config,
             )
+            if intake:
+                await resources.design_ledger.append(
+                    project.project_id,
+                    project.cycle,
+                    None,
+                    None,
+                    DesignEvent(
+                        kind=EventKind.TRANSCRIPT_RECORDED,
+                        provenance=Provenance.UNTRUSTED,
+                        produced_at=datetime.now(UTC),
+                        payload={"text": intake, "source": "github-issue"},
+                    ),
+                )
         return str(project.project_id), await _enqueue_design(project.project_id)
 
     with guard():
