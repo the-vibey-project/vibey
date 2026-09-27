@@ -228,6 +228,51 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
     raise RuntimeError(f"project {project_id} exceeded dispatch step limit")
 
 
+def publish_project(project_id: str, issue: Issue) -> str | None:
+    """Publish the canonical integration branch once the project is DONE."""
+    status = json.loads(
+        subprocess.run(
+            ["uv", "run", "vibey", "status", project_id, "--json"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    )
+    if status.get("phase") != "done":
+        return None
+    branch = f"vibey/{int(status['cycle'])}/integration"
+    worktree = Path(str(status["repo_path"]))
+    listed = subprocess.run(
+        ["git", "-C", str(worktree), "worktree", "list", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    match = re.search(
+        rf"worktree (.+)\nHEAD [^\n]+\nbranch refs/heads/{re.escape(branch)}",
+        listed,
+    )
+    if match is None:
+        raise RuntimeError(f"project {project_id} has no integration worktree for {branch}")
+    integration_path = Path(match.group(1))
+    subprocess.run(["git", "-C", str(integration_path), "push", "-u", "origin", branch], check=True)
+    existing = json.loads(gh("pr", "list", "--head", branch, "--base", "develop", "--json", "url"))
+    if existing:
+        return str(existing[0]["url"])
+    return gh(
+        "pr",
+        "create",
+        "--base",
+        "develop",
+        "--head",
+        branch,
+        "--title",
+        f"delivery: #{issue.number} {issue.title}",
+        "--body",
+        f"Automated delivery for GitHub issue #{issue.number}.\n\nVibey project: `{project_id}`.",
+    ).strip()
+
+
 def run_once(repo: Path) -> int:
     for issue in issues():
         if already_dispatched(issue.number):
@@ -235,6 +280,9 @@ def run_once(repo: Path) -> int:
         project_id = dispatch(issue, repo=repo)
         print(f"dispatched #{issue.number} ({issue.priority}) -> project {project_id}")
         drive_project(project_id)
+        pull_request = publish_project(project_id, issue)
+        if pull_request:
+            gh("issue", "comment", str(issue.number), "--body", f"Delivery PR: {pull_request}")
         return 0
     print("no eligible triaged issue without a dispatch marker")
     return 1
