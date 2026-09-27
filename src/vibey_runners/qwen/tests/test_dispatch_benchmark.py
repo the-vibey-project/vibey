@@ -36,7 +36,7 @@ async def test_benchmark_measures_both_modes_and_selects_hybrid(
     ticks = iter((0.0, 2.0, 2.0, 3.0))
     monkeypatch.setattr(dispatch_benchmark.time, "perf_counter", lambda: next(ticks))
     result = await DispatchBenchmark().run(_Server(), _info(), samples=2, concurrency=2)
-    assert result == DispatchBenchmarkResult("hybrid", 1.0, 2.0, 2, 2)
+    assert result == DispatchBenchmarkResult("hybrid", 1.0, 2.0, None, 2, 2)
 
 
 @pytest.mark.asyncio
@@ -59,7 +59,7 @@ async def test_benchmark_rejects_invalid_parameters() -> None:
 
 def test_benchmark_persists_and_loads_winner(tmp_path: Path) -> None:
     path = tmp_path / "nested" / "benchmark.json"
-    result = DispatchBenchmarkResult("hybrid", 1.0, 2.0, 3, 2)
+    result = DispatchBenchmarkResult("hybrid", 1.0, 2.0, None, 3, 2)
     DispatchBenchmark.save(result, path)
     assert DispatchBenchmark.load(path) == "hybrid"
     assert json.loads(path.read_text(encoding="utf-8"))["samples"] == 3
@@ -70,7 +70,21 @@ def test_benchmark_load_returns_none_for_missing_or_invalid_data(tmp_path: Path)
     invalid = tmp_path / "invalid.json"
     invalid.write_text("not json", encoding="utf-8")
     unknown = tmp_path / "unknown.json"
-    unknown.write_text('{"winner": "rabbitmq"}', encoding="utf-8")
+    unknown.write_text('{"winner": "unknown"}', encoding="utf-8")
     assert DispatchBenchmark.load(missing) is None
     assert DispatchBenchmark.load(invalid) is None
     assert DispatchBenchmark.load(unknown) is None
+
+
+@pytest.mark.asyncio
+async def test_benchmark_includes_rabbitmq_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    ticks = iter((0.0, 1.0, 1.0, 2.0, 2.0, 2.1))
+    monkeypatch.setattr(dispatch_benchmark.time, "perf_counter", lambda: next(ticks))
+
+    class Rabbit:
+        async def dispatch(self, _server: object, _info: ServerInfo, _messages: object):
+            yield type("Chunk", (), {"text": "ok"})()
+
+    result = await DispatchBenchmark().run(_Server(), _info(), samples=1, rabbitmq=Rabbit())
+    assert result.winner == "rabbitmq"
+    assert result.rabbitmq_turns_per_second == pytest.approx(10.0)

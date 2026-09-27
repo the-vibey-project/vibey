@@ -12,7 +12,11 @@ from typing import Any
 
 from qwenloop.application.interfaces import InferenceServer
 from qwenloop.domain.model import ChatMessage, ServerInfo
-from qwenloop.infrastructure.turn_dispatch import DirectTurnDispatcher, HybridTurnMultiplexer
+from qwenloop.infrastructure.turn_dispatch import (
+    DirectTurnDispatcher,
+    HybridTurnMultiplexer,
+    RabbitMqTurnDispatcher,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +24,7 @@ class DispatchBenchmarkResult:
     winner: str
     direct_turns_per_second: float
     hybrid_turns_per_second: float
+    rabbitmq_turns_per_second: float | None
     samples: int
     concurrency: int
 
@@ -34,27 +39,36 @@ class DispatchBenchmark:
         *,
         samples: int = 3,
         concurrency: int = 2,
+        rabbitmq: RabbitMqTurnDispatcher | None = None,
     ) -> DispatchBenchmarkResult:
         if samples <= 0 or concurrency <= 0:
             raise ValueError("samples and concurrency must be positive")
         messages = [ChatMessage(role="user", content="Reply with one short word.")]
-        direct = DirectTurnDispatcher()
-        hybrid = HybridTurnMultiplexer(concurrency=concurrency)
+        dispatchers: list[tuple[str, Any]] = [
+            ("direct", DirectTurnDispatcher()),
+            ("hybrid", HybridTurnMultiplexer(concurrency=concurrency)),
+        ]
+        if rabbitmq is not None:
+            dispatchers.append(("rabbitmq", rabbitmq))
 
         async def one(dispatcher: Any) -> None:
             async for _ in dispatcher.dispatch(server, info, messages):
                 pass
 
-        started = time.perf_counter()
-        for _ in range(samples):
-            await one(direct)
-        direct_rate = samples / max(time.perf_counter() - started, 1e-9)
-
-        started = time.perf_counter()
-        await asyncio.gather(*(one(hybrid) for _ in range(samples)))
-        hybrid_rate = samples / max(time.perf_counter() - started, 1e-9)
-        winner = "hybrid" if hybrid_rate > direct_rate else "direct"
-        return DispatchBenchmarkResult(winner, direct_rate, hybrid_rate, samples, concurrency)
+        rates: dict[str, float] = {}
+        for name, dispatcher in dispatchers:
+            started = time.perf_counter()
+            await asyncio.gather(*(one(dispatcher) for _ in range(samples)))
+            rates[name] = samples / max(time.perf_counter() - started, 1e-9)
+        winner = max(rates, key=rates.__getitem__)
+        return DispatchBenchmarkResult(
+            winner,
+            rates["direct"],
+            rates["hybrid"],
+            rates.get("rabbitmq"),
+            samples,
+            concurrency,
+        )
 
     @staticmethod
     def save(result: DispatchBenchmarkResult, path: Path) -> None:
@@ -68,4 +82,4 @@ class DispatchBenchmark:
             winner = data.get("winner")
         except (OSError, ValueError, TypeError):
             return None
-        return winner if winner in {"direct", "hybrid"} else None
+        return winner if winner in {"direct", "hybrid", "rabbitmq"} else None

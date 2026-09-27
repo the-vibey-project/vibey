@@ -820,8 +820,13 @@ def server_benchmark(
             info = await _wait_until_ready(
                 server, info, timeout_seconds=config.startup_timeout_seconds
             )
+        rabbitmq = (
+            RabbitMqTurnDispatcher(config.turn_queue_url, request_queue=config.turn_queue_name)
+            if config.turn_queue_url.strip()
+            else None
+        )
         result = await DispatchBenchmark().run(
-            server, info, samples=samples, concurrency=concurrency
+            server, info, samples=samples, concurrency=concurrency, rabbitmq=rabbitmq
         )
         path = user_cache_path(_identity.name) / "dispatch-benchmark.json"
         DispatchBenchmark.save(result, path)

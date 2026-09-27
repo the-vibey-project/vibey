@@ -34,7 +34,7 @@ def test_server_benchmark_persists_measured_default(
         async def health(self, _info: ServerInfo) -> bool:
             return True
 
-    result = DispatchBenchmarkResult("hybrid", 1.0, 2.0, 3, 2)
+    result = DispatchBenchmarkResult("hybrid", 1.0, 2.0, None, 3, 2)
 
     class Benchmark:
         async def run(self, *_args: object, **_kwargs: object) -> DispatchBenchmarkResult:
@@ -73,7 +73,7 @@ def test_server_benchmark_starts_unhealthy_server(
 
     class Benchmark:
         async def run(self, *_args: object, **_kwargs: object) -> DispatchBenchmarkResult:
-            return DispatchBenchmarkResult("direct", 2.0, 1.0, 1, 1)
+            return DispatchBenchmarkResult("direct", 2.0, 1.0, None, 1, 1)
 
         @staticmethod
         def save(_value: DispatchBenchmarkResult, _path: Path) -> None:

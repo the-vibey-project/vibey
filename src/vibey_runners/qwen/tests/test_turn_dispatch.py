@@ -421,7 +421,9 @@ async def test_rabbitmq_worker_serves_until_queue_closes() -> None:
 
 
 def test_dispatcher_composition_preserves_direct_default_and_explicit_rabbitmq() -> None:
-    assert isinstance(_dispatcher_for(QwenConfig()), DirectTurnDispatcher)
+    assert isinstance(
+        _dispatcher_for(QwenConfig(turn_dispatch_mode="direct")), DirectTurnDispatcher
+    )
     assert isinstance(
         _dispatcher_for(QwenConfig(turn_dispatch_mode="rabbitmq", turn_queue_url="amqp://broker")),
         RabbitMqTurnDispatcher,

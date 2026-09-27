@@ -1015,8 +1015,9 @@ vhost/queue credentials when the broker is not local. If the worker stops,
 restart the same command after RabbitMQ is available; durable requests remain
 on the queue for another worker.
 
-`qwenloop server benchmark` runs a measured direct-versus-hybrid comparison against
-the configured local server and stores the winner in the user cache. Set
+`qwenloop server benchmark` runs a measured direct-versus-hybrid-versus-RabbitMQ
+comparison against the configured local server and stores the per-mode rates and
+winner in the user cache. Set
 `turn_dispatch_mode = "auto"` to use that persisted winner on subsequent runs;
 missing or invalid benchmark data safely falls back to direct dispatch. Use
 `--samples` and `--concurrency` to control the experiment size.

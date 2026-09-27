@@ -173,7 +173,7 @@ class QwenConfig:
     model: str = DEFAULT_ENDPOINT_MODEL
     # How long doctor, health, and start wait for an endpoint's model list.
     endpoint_timeout_seconds: int = 5
-    turn_dispatch_mode: str = "direct"
+    turn_dispatch_mode: str = "auto"
     hybrid_concurrency: int = 2
     turn_queue_url: str = ""
     turn_queue_name: str = "vibey.llm.turns"
