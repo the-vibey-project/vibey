@@ -915,6 +915,13 @@
       "last_verdict": "OPEN",
       "next": "add the attached Linux, Ubuntu, Arch, Fedora, and macOS research to vibey-skills with provenance and validation",
       "probes": []
+    },
+    "1222": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "define the System 1 model contract, training or serving plan, target hardware, safety boundary, and measurable acceptance criteria before implementation",
+      "probes": []
     }
   }
 }
