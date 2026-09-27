@@ -85,7 +85,6 @@ PREAMBLE: tuple[str, ...] = (
     r"\setsansfont{texgyreheros}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]",
     r"\setmonofont{texgyrecursor}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]",
     r"\usepackage{amsmath,amssymb,amsthm}",
-    r"\usepackage{algorithmic}",
     r"\usepackage{xcolor}",
     r"\usepackage{tikz}",
     (

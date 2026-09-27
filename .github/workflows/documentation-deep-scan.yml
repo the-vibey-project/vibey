@@ -1,0 +1,101 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Documentation deep scan
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: documentation-deep-scan-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Audit and refresh documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out develop
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the repository documentation tools
+        run: python -m pip install --quiet -e src/vibey_tools/gh
+
+      - name: Deep-scan the latest code, data, and documentation
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+
+          roots = (Path("README.md"), Path("docs"), Path("src/vibey_tools/gh/docs"))
+          files = [p for root in roots for p in ([root] if root.is_file() else root.rglob("*.md"))]
+          for path in files:
+              path.read_text(encoding="utf-8")
+              text = path.read_text(encoding="utf-8")
+              if text.count("```") % 2:
+                  raise SystemExit(f"unclosed fenced block: {path}")
+          tracked = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+          source_files = [Path(name) for name in tracked if Path(name).suffix == ".py"]
+          for path in source_files:
+              compile(path.read_text(encoding="utf-8"), str(path), "exec")
+          data_files = [
+              Path(name)
+              for name in tracked
+              if "tests/fixtures" not in name and "/.vscode/" not in f"/{name}"
+              and Path(name).suffix in {".json", ".jsonl", ".toml", ".yaml", ".yml", ".csv"}
+          ]
+          for path in data_files:
+              text = path.read_text(encoding="utf-8")
+              if path.suffix == ".json":
+                  json.loads(text)
+              elif path.suffix == ".jsonl":
+                  for line_number, line in enumerate(text.splitlines(), 1):
+                      if line.strip():
+                          try:
+                              json.loads(line)
+                          except json.JSONDecodeError as error:
+                              raise SystemExit(f"invalid JSONL {path}:{line_number}: {error}") from error
+          print(f"scanned {len(source_files)} Python files, {len(tracked)} tracked files, {len(files)} Markdown documents, and {len(data_files)} data files")
+          PY
+          vibey-gh corpus-index
+          python scripts/paper_figures.py --check
+          python scripts/paper_evidence.py --json > /tmp/paper-evidence.json
+
+      - name: Create a documentation refresh pull request when generated copy changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REFRESH_BRANCH: automation/documentation-deep-scan
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "documentation is current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$REFRESH_BRANCH"
+          git add src/vibey_tools/gh/corpus-index.json docs/paper.md
+          git commit -m "docs: refresh generated documentation indexes" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease origin "HEAD:$REFRESH_BRANCH"
+          number="$(gh pr list --repo "$GH_REPO" --head "$REFRESH_BRANCH" --base develop --state open --json number --jq '.[0].number')"
+          if [ -z "$number" ]; then
+            gh pr create --repo "$GH_REPO" --base develop --head "$REFRESH_BRANCH" \
+              --title "docs: refresh generated documentation indexes" \
+              --body "Daily documentation deep scan refresh. Semantic prose changes remain reviewable in this PR; generated indexes and paper figures are reconciled automatically."
+          fi
