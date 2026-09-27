@@ -1,15 +1,17 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Composition root: the only module that wires concrete adapters to ports."""
 
+import asyncio
 import os
 import platform
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import asyncpg
+from platformdirs import user_cache_path
 
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
@@ -91,11 +93,12 @@ from vibey.application.worker import WorkerLoop
 from vibey.domain.config import VibeyConfig
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import VibeyError
+from vibey.domain.interfaces.config_interface import QueueReapConfigInterface
 from vibey.domain.phase import Phase
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
-from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG
+from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG, QUEUE_CONFIG
 from vibey.infrastructure.db.advisory_lock import PostgresAdvisoryLock
 from vibey.infrastructure.db.build_ledger import PostgresBuildLedger
 from vibey.infrastructure.db.database_setup import SchemaPreparer
@@ -209,6 +212,9 @@ class AppResources:
     # Answering gates (`vibey answer`, the operator). The service names who answered and
     # which request; the repository answers each gate once and records it on the ledger.
     gate_answers: GateAnswerServiceInterface
+    # `[queue.reap]` as resolved: the reaper's thresholds and which broker queues are
+    # vibey's -- the dead-letter handler replays only into those.
+    queue_reap: QueueReapConfigInterface
     integration_lock: PostgresAdvisoryLock | None = None
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
@@ -664,7 +670,9 @@ def build_full_worker(
         ),
     }
     # A dead letter the queue reaper parked (ADR-0056), settled by its gate's answer.
-    handlers[BUS_DEAD_LETTER_KIND] = BusDeadLetterHandler(gates=resources.gates, bus=resources.bus)
+    handlers[BUS_DEAD_LETTER_KIND] = BusDeadLetterHandler(
+        gates=resources.gates, bus=resources.bus, owner=resources.queue_reap.broker_policy()
+    )
     # Alias kinds sharing a handler (the handlers themselves guard on both).
     handlers["build.plan"] = handlers["build.decompose"]
     handlers["deploy.accept"] = handlers["deploy.spec"]
@@ -758,6 +766,7 @@ async def build_app(
     pool = await asyncpg.create_pool(endpoints.app_url, min_size=1, max_size=10)
     if pool is None:
         raise RuntimeError("asyncpg did not create a pool")
+    bus_recomputer_task: asyncio.Task[None] | None = None
     try:
         async with pool.acquire() as conn:
             server_version_num = await conn.fetchval("SHOW server_version_num")
@@ -803,15 +812,18 @@ async def build_app(
         }
 
         resolved_config = config
+        vibey_toml = Path("vibey.toml")
+        skipped_toml = False
         if resolved_config is None:
             try:
                 from vibey.infrastructure.config_loader import load_config_from_path
 
-                vibey_toml = Path("vibey.toml")
                 if vibey_toml.is_file():
                     resolved_config = load_config_from_path(vibey_toml)
             except Exception:  # nosec B110 - a malformed optional vibey.toml must not block startup
-                pass
+                # ...except for the queue reaper's own table, read strictly below: skipping
+                # it would silently run the reaper on its defaults (#1108 review).
+                skipped_toml = True
 
         if (
             resolved_config
@@ -933,18 +945,55 @@ async def build_app(
         # which is where the chart renders them (ADR-0056). A malformed value raises.
         declared = resolved_config if resolved_config is not None else ENVIRONMENT_CONFIG.load()
         bus_settings = declared.bus
-        reap_settings = declared.queue.reap
+        reap_settings: QueueReapConfigInterface = declared.queue.reap
+        if skipped_toml:
+            # A vibey.toml the surfaces could not use is still the operator's word on the
+            # reaper: its [queue] table is read on its own, and a malformed one fails the
+            # start rather than falling back to an enabled reaper on defaults.
+            reap_settings = QUEUE_CONFIG.load(vibey_toml, environ=os.environ).reap
         bus_inspector: BusInspectorPort | None = None
+        bus_port: BusPort
         if bus_settings.url and bus_settings.username and bus_settings.password:
+            from vibey.infrastructure.bus.dispatch import (
+                BusDispatchAdapter,
+                BusDispatchSelection,
+                WeeklyBusDispatchRecomputer,
+            )
             from vibey.infrastructure.bus.rabbitmq import RabbitMqBusAdapter
             from vibey.infrastructure.bus.rabbitmq_inspector import RabbitMqBusInspector
 
-            bus_port: BusPort = RabbitMqBusAdapter(
+            base_bus: BusPort = RabbitMqBusAdapter(
                 url=bus_settings.url,
                 username=bus_settings.username,
                 password=bus_settings.password,
                 vhost=bus_settings.vhost,
             )
+            mode = bus_settings.mode
+            if mode == "auto":
+                cached = BusDispatchSelection.from_cache(
+                    user_cache_path("vibey") / "bus-dispatch-benchmark.json"
+                )
+                mode = cached or "singleton"
+            bus_port = (
+                base_bus
+                if mode == "singleton"
+                else BusDispatchAdapter(
+                    base_bus, mode, hybrid_concurrency=bus_settings.hybrid_concurrency
+                )
+            )
+            recomputer = WeeklyBusDispatchRecomputer(
+                base_bus,
+                user_cache_path("vibey") / "bus-dispatch-benchmark.json",
+                hybrid_concurrency=bus_settings.hybrid_concurrency,
+            )
+
+            async def recompute_weekly() -> None:
+                while True:
+                    with suppress(Exception):
+                        await recomputer.run_once_if_due()
+                    await asyncio.sleep(WeeklyBusDispatchRecomputer.WEEK_SECONDS)
+
+            bus_recomputer_task = asyncio.create_task(recompute_weekly())
             bus_inspector = RabbitMqBusInspector(
                 url=bus_settings.url,
                 username=bus_settings.username,
@@ -1061,8 +1110,13 @@ async def build_app(
             integration_lock=PostgresAdvisoryLock(pool),
             ledger_guard=guard,
             queue_reaper=queue_reaper,
+            queue_reap=reap_settings,
         )
     finally:
+        if bus_recomputer_task is not None:
+            bus_recomputer_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await bus_recomputer_task
         await pool.close()
 
 

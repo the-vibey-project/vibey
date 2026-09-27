@@ -10,6 +10,7 @@ adapter over it is at-most-once and why the job queue's transport (ADR-0044) is 
 from __future__ import annotations
 
 import base64
+import http.client
 import json
 import urllib.error
 import urllib.parse
@@ -25,6 +26,11 @@ class RabbitMqApiError(RuntimeError):
         self.status = status
 
 
+class RabbitMqUnreachable(RuntimeError):
+    """The management API could not be reached at all: no answer, not an HTTP error. The
+    message names the kind of failure and never the URL's credentials (#1108 review)."""
+
+
 class RabbitMqManagementApi:
     """Authenticated requests to one broker's management API, scoped to one vhost."""
 
@@ -37,7 +43,17 @@ class RabbitMqManagementApi:
         vhost: str = "/",
         opener: Any = urllib.request.urlopen,
     ) -> None:
+        parsed = urllib.parse.urlsplit(url.strip())
+        if parsed.username is not None or parsed.password is not None or "@" in parsed.netloc:
+            # A credential in the URL is logged with every error the URL appears in, and
+            # urllib reads `user:pw@host` with no port as a host whose port is `pw@host`.
+            # The credentials have their own keys, sent as a header, never as text.
+            raise ValueError(
+                "the RabbitMQ management URL must not carry credentials; set [bus] "
+                "username and password (VIBEY_BUS_USERNAME, VIBEY_BUS_PASSWORD) instead"
+            )
         self._url = url.strip().rstrip("/")
+        self._password = password
         credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
         self._auth = {"Authorization": f"Basic {credentials}"}
         self.vhost = urllib.parse.quote(vhost, safe="")
@@ -62,5 +78,16 @@ class RabbitMqManagementApi:
             with self._opener(req) as resp:
                 raw = resp.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
-            raise RabbitMqApiError(exc.code, str(exc.reason)) from exc
+            raise RabbitMqApiError(exc.code, self._scrubbed(str(exc.reason))) from None
+        except (OSError, ValueError, http.client.HTTPException) as exc:
+            # `from None`: the original exception's text can quote the URL.
+            raise RabbitMqUnreachable(
+                f"cannot reach the RabbitMQ management API: {type(exc).__name__}: "
+                f"{self._scrubbed(str(exc))}"
+            ) from None
         return json.loads(raw) if raw.strip() else None
+
+    def _scrubbed(self, text: str) -> str:
+        """`text` with the password replaced, whatever quoted it. The username is not a
+        secret, and replacing it would mangle every host named after it."""
+        return text.replace(self._password, "***") if self._password else text

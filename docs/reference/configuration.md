@@ -18,9 +18,10 @@ remain documented inputs for future wiring.
 | `./vibey.toml`, keys `[features].gptossloop`, `[features].qwenloop`, `[features].claudeloop_local` | `vibey doctor` and `vibey loops` (`cli/main.py` `_local_engines_from_toml`, through `LocalEngineSettings`) | Which local engines are added to the health sweep and reported as switched on. The file is read from the current directory with `parse_toml_string`; a missing or malformed file leaves every switch at its default: `gptossloop` on, the others off (ADR-0064). |
 | `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]` and `[engine_environment]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run and what an engine session may see of the environment into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
-| `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. |
-| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
-| Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
+ | `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. |
+ | `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
+ | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
+ | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
 
@@ -412,6 +413,27 @@ them into `VibeyConfig`, but nothing passes them to the runner.
 | `startup_timeout_seconds` | integer | `180` | Must be positive. |
 | `context_window` | integer | `32768` | Must be positive. |
 
+### Shared model turns
+
+The runner keeps direct dispatch as the default. To let multiple lanes share one
+model server, opt in explicitly:
+
+```toml
+[qwenloop]
+turn_dispatch_mode = "rabbitmq"
+turn_queue_url = "amqp://user:password@broker/vhost"
+turn_queue_name = "vibey.llm.turns"
+```
+
+`turn_queue_url` is sensitive connection material and should be supplied through
+operator-controlled configuration, never committed or printed in logs. Start
+`qwenloop server turn-worker` (or `gptossloop server turn-worker`) for the model
+host. `turn_queue_name` defaults to `vibey.llm.turns` and permits separate model
+pools to use distinct durable queues. `TurnDispatcherInterface` is the runner
+seam: `DirectTurnDispatcher` preserves local operation,
+`HybridTurnMultiplexer` shares one resident server among bounded in-process lanes, and
+`RabbitMqTurnDispatcher` publishes correlated requests to the worker.
+
 ## `[failover]` { #failover }
 
 The driver's failover and handback ([ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)),
@@ -487,22 +509,22 @@ default -- `true` is not a number -- and an unknown key is refused.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | bool | `true` | Whether the worker runs the reaper on its own. `vibey queue reap` runs regardless, and the lease reap -- `JobRepository.reap()`, in every idle worker iteration -- is always bounded. |
+| `enabled` | bool | `true` | Whether the worker runs the reaper's own pass (claimable-work and broker sightings, dead letters) on its own. `vibey queue reap` runs regardless. The lease reap -- `JobRepository.reap()`, in every idle worker iteration -- is not switched off: it is the job queue's crash recovery, and without it every dead worker's job would stay leased forever; its bound, parking a job whose attempts are spent, comes with it. |
 | `interval_seconds` | int ≥ 1 | `60` | The most often one worker runs a pass beyond the lease reap. |
-| `lease_grace_seconds` | int ≥ 0 | `0` | How far past `lease_expires_at` a lease may run before it is reaped. The lease is already the heartbeat's bound (renewed every third of it), so the default adds nothing. Condition (a)/(b) on PostgreSQL. |
-| `stale_ready_seconds` | int ≥ 1 | `900` | How long ready work may wait with nobody taking it before it is surfaced: the oldest claimable job's age on PostgreSQL, the head message's age on a queue with no consumer on the broker. Condition (d). A message without a `timestamp` property is not measured and never reported as old. |
+| `lease_grace_seconds` | int, 0–86,400 | `0` | How far past `lease_expires_at` a lease may run before it is reaped. The lease is already the heartbeat's bound (renewed every third of it), so the default adds nothing. Condition (a)/(b) on PostgreSQL. |
+| `stale_ready_seconds` | int ≥ 1 | `900` | How long ready work may wait with nobody taking it before it is surfaced. On PostgreSQL: how long the oldest job has been claimable and unclaimed, in **every** project, a project with no worker included -- measured from the later of `run_after` (which the lease reap, a gate answer and `vibey recover` move up to now) and its last dependency's success, never from `updated_at`, which a bump writes. On the broker: the head message's age on a queue with no consumer. Condition (d). A message without a `timestamp` property, and any message on a quorum queue (which reports no head timestamp), is not measured and never reported as old; the pass notes it instead. |
 | `dead_letter_min_depth` | int ≥ 1 | `1` | Dead letters on a dead-letter queue before it is acted on. Condition (e). |
-| `dead_letter_peek_limit` | int ≥ 1 | `100` | The most dead letters one pass reads off one queue. Reading returns each to its place and the reaper removes none, so any past the limit are counted and surfaced every pass, never assumed parked. |
-| `owned_queue_pattern` | regex | `^vibey\.` | Queues vibey owns. Only an owned dead-letter queue's messages are parked, and only owned queues get the policy below; every other queue on the broker -- Plane's Celery queues -- is measured and surfaced, never touched. |
-| `dead_letter_queue_pattern` | regex | `(\.dlq\|\.dead)$` | Which queues are dead-letter queues: the bus port's `<queue>.dlq` and ADR-0044's `vibey.jobs.dead` / `vibey.runs.<engine>.dead`. |
-| `policy_name` | string | `vibey-reap` | The broker policy the reaper reconciles onto owned queues, then reads back. |
-| `policy_priority` | int | `0` | That policy's priority, against any other policy matching the same queues. |
-| `consumer_timeout_seconds` | int ≥ 1 | `21600` | The policy's `consumer-timeout`: how long a consumer may hold a delivery from an owned queue before the broker closes its channel and requeues. Six hours: at least the longest job lease (two hours for BUILD), with room. Condition (a). The broker-wide value for everything else is the chart's `surfaces.rabbitmq.consumerTimeoutMs`. |
-| `delivery_limit` | int ≥ 1 | `20` | The policy's `delivery-limit`: deliveries of one message on an owned **quorum** queue before the broker dead-letters it (condition (c)). Twenty, not three, because a draining worker's requeues count too (ADR-0044 §11). Classic queues ignore it. |
+| `dead_letter_peek_limit` | int, 1–1,000 | `100` | The most **new** dead letters one pass parks off one queue. A read returns each message to its place and the reaper removes none, so the parked ones stay at the head: the read reaches past them (at most 10,000 in all) to the next unparked. Any still beyond it are counted and surfaced; the count is part of the sighting, so its growth is recorded again. |
+| `owned_queue_pattern` | regex | `^vibey\.` | Queues vibey owns. Only an owned dead-letter queue's messages are parked, only owned queues get the policies below, and a dead letter is replayed only into an owned queue; every other queue on the broker -- Plane's Celery queues -- is measured and surfaced, never touched. Refused: a pattern that matches every name (`''`, `.*`) or owns a known foreign one (`celery`, `celery.pidbox`, `amq.gen-…`). |
+| `dead_letter_queue_pattern` | regex | `(\.dlq\|\.dead)$` | Which queues are dead-letter queues: the bus port's `<queue>.dlq` and ADR-0044's `vibey.jobs.dead` / `vibey.runs.<engine>.dead`. Refused: a pattern that matches every name. |
+| `policy_name` | string | `vibey-reap` | The broker policies the reaper reconciles onto owned queues: `<name>` for quorum queues (`consumer-timeout`, `delivery-limit`) and `<name>-classic` for classic queues (`consumer-timeout` alone -- on RabbitMQ 4.3 a policy holding `delivery-limit` does not attach to a classic queue at all). Each is read back, and verified only when every owned queue reports carrying it. |
+| `policy_priority` | int ≥ 0 | `0` | Those policies' priority, against any other policy matching the same queues. An owned queue carrying another policy is reported, and the pass is not verified. |
+| `consumer_timeout_seconds` | int ≥ 7,200 | `21600` | The policy's `consumer-timeout`: how long a consumer may hold a delivery from an owned queue before the broker closes its channel and requeues. Six hours: at least the longest job lease (two hours for BUILD), with room. Condition (a). The broker-wide value for everything else is the chart's `surfaces.rabbitmq.consumerTimeoutMs`. |
+| `delivery_limit` | int ≥ 1 | `20` | The policy's `delivery-limit`: deliveries of one message on an owned **quorum** queue before the broker dead-letters it (condition (c)). Twenty, not three, because a draining worker's requeues count too (ADR-0044 §11). Only the quorum policy carries it. |
 
 A reap is a gate a number crossed, never a judgement (12.d): every verdict is recorded as
 a `QueueReaped` ledger event with the object, the condition, the measured value, the
-threshold and the action. What each condition does is set out in ADR-0056: an expired
+threshold and the action. A surfaced condition is recorded once for the whole fleet -- the ledger holds it open until a pass that read its source whole no longer sees it and records it `cleared` -- and a broker sighting is recorded `untrusted`, since the broker's names are not vibey's words. What each condition does is set out in ADR-0056: an expired
 lease is requeued while attempts remain and parked with a `delivery_exhausted` gate once
 they are spent; a dead letter on an owned queue becomes a parked `bus.dead_letter` job and
 a `bus_dead_lettered` gate, and is never deleted.
@@ -624,14 +646,20 @@ for that surface is present, otherwise the in-memory default.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `url` | string | unset | Base URL of the RabbitMQ Management API, e.g. `http://localhost:15672`. |
+| `url` | string | unset | Base URL of the RabbitMQ Management API, e.g. `http://localhost:15672`. It must not carry credentials (`http://user:pw@host` is refused): they go in `username` and `password`, and are never quoted in an error. |
 | `username` | string | unset | RabbitMQ management username. |
 | `password` | string | unset | RabbitMQ management password. |
 | `vhost` | string | `/` | The vhost the bus declares its queues in and the queue reaper reads ([`[queue.reap]`](#queuereap)). |
+| `mode` | `auto`, `singleton`, `multiplexer`, or `hybrid` | `auto` | Dispatch policy. `auto` uses the durable per-machine benchmark winner and falls back to singleton when no valid result exists. |
+| `hybrid_concurrency` | positive integer | `4` | Maximum concurrent bus operations in hybrid mode. |
 
 The bus port consumes at most once: its `consume` acknowledges on take, so no delivery is
 ever held -- and one whose consumer dies after `consume` returns is lost. The job queue's
 transport is ADR-0044's AMQP client, not this port.
+
+All bus-backed surfaces follow ADR-0074: singleton is the serial path, multiplexer permits
+concurrent operations, and hybrid bounds concurrency. The benchmark and winner are per surface
+and per machine; `mode` remains an explicit override when an operator needs one.
 
 ## `[blob]` (sovereign default: Garage, S3 API)
 

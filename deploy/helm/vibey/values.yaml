@@ -45,8 +45,8 @@ worker:
   # The queue reaper (ADR-0056). The worker runs it when idle, at most once per
   # intervalSeconds: expired leases are requeued, or parked with a gate once their
   # attempts are spent; ready work nobody takes is surfaced; on the broker, vibey's
-  # policy is reconciled onto the queues it owns and each dead letter on one becomes
-  # a parked job. Rendered into VIBEY_QUEUE_REAP_*; see [queue.reap] in
+  # two policies (quorum and classic queues) are reconciled onto the queues it owns
+  # and checked on them, and each dead letter on one becomes a parked job. Rendered into VIBEY_QUEUE_REAP_*; see [queue.reap] in
   # docs/reference/configuration.md for what each key means.
   queueReap:
     enabled: true
@@ -57,6 +57,7 @@ worker:
     deadLetterPeekLimit: 100
     ownedQueuePattern: "^vibey\\."
     deadLetterQueuePattern: "(\\.dlq|\\.dead)$"
+    # The quorum-queue policy; the classic-queue one is this name plus "-classic".
     policyName: vibey-reap
     policyPriority: 0
     # At least the longest job lease (two hours for BUILD), with room.

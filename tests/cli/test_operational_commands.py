@@ -1465,6 +1465,38 @@ def test_worker_continuous_processes_then_waits(tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
+def test_a_failing_reap_is_reported_and_the_worker_keeps_going(tmp_path: Path) -> None:
+    """#1108 review, finding 8: one bad lease row raised out of `jobs.reap()` and killed
+    the worker's drive loop. Both reaps are now guarded: reported, and the loop waits on."""
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("reap-fails", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with (
+        patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls,
+        patch(
+            "vibey.infrastructure.db.job_repository.PostgresJobRepository.reap",
+            new=AsyncMock(side_effect=RuntimeError("a bad lease row")),
+        ),
+        patch(
+            "vibey.application.queue_reaper.QueueReaper.run_if_due",
+            new=AsyncMock(side_effect=RuntimeError("the broker went away")),
+        ),
+    ):
+        mock_notifier = AsyncMock()
+        mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
+        mock_notifier_cls.return_value = mock_notifier
+        res = runner.invoke(app, ["worker"])
+    assert "lease reap failed: a bad lease row" in res.output
+    assert "queue reap failed: the broker went away" in res.output
+    mock_notifier.wait_for_job_ready.assert_awaited()
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_invalid_engine() -> None:
     res = runner.invoke(app, ["worker", "--engines", "nonexistent"])
     assert res.exit_code == 2

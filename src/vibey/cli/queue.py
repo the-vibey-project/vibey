@@ -187,6 +187,9 @@ class QueuePresenter:
         if report.surfaced:
             lines.append("stuck, surfaced, nothing moved:")
             lines.extend(f"  {self._verdict(v)}" for v in report.surfaced)
+        if report.cleared:
+            lines.append("no longer stuck, closed on the ledger:")
+            lines.extend(f"  {self._verdict(v)}" for v in report.cleared)
         if report.policy is not None:
             mark = "verified" if report.policy.verified else "NOT VERIFIED"
             lines.append(f"broker policy {report.policy.policy!r}: {mark} ({report.policy.detail})")
@@ -202,6 +205,7 @@ class QueuePresenter:
                 "ok": report.ok,
                 "acted": [v.payload() for v in report.acted],
                 "surfaced": [v.payload() for v in report.surfaced],
+                "cleared": [v.payload() for v in report.cleared],
                 "policy": (
                     None
                     if report.policy is None

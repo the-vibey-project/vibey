@@ -11,9 +11,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from datetime import datetime
 
-    from vibey.domain.queue_reap import HolderState, ReapVerdict
+    from vibey.domain.queue_reap import HolderState, ReapSource, ReapVerdict
 
 
 @runtime_checkable
@@ -55,6 +56,9 @@ class HeldWorkInterface(Protocol):
     @property
     def can_dead_letter(self) -> bool: ...
 
+    @property
+    def source(self) -> ReapSource: ...
+
 
 @runtime_checkable
 class QueueDepthInterface(Protocol):
@@ -80,6 +84,12 @@ class QueueDepthInterface(Protocol):
 
     @property
     def owned(self) -> bool: ...
+
+    @property
+    def source(self) -> ReapSource: ...
+
+    @property
+    def kind(self) -> str: ...
 
 
 @runtime_checkable
@@ -136,13 +146,52 @@ class BrokerPolicyInterface(Protocol):
 
     def is_dead_letter(self, queue: str) -> bool: ...
 
-    def body(self) -> dict[str, object]:
-        """The management API's policy document."""
+    def documents(self) -> tuple[PolicyDocumentInterface, ...]:
+        """One policy per queue type: quorum, then classic."""
         ...
+
+    def expected_for(self, kind: str) -> PolicyDocumentInterface | None: ...
+
+    def attachment_gaps(self, queues: Iterable[QueueAttachmentInterface]) -> tuple[str, ...]:
+        """Every owned queue the broker says does not carry vibey's policy, and why."""
+        ...
+
+
+@runtime_checkable
+class PolicyDocumentInterface(Protocol):
+    """One broker policy, as the management API takes and reports it."""
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def apply_to(self) -> str: ...
+
+    @property
+    def definition(self) -> dict[str, object]: ...
+
+    def body(self) -> dict[str, object]: ...
 
     def matches(self, observed: object) -> bool:
         """Whether a policy read back from the broker is this one."""
         ...
+
+
+@runtime_checkable
+class QueueAttachmentInterface(Protocol):
+    """What the broker reports a queue carries."""
+
+    @property
+    def queue(self) -> str: ...
+
+    @property
+    def kind(self) -> str: ...
+
+    @property
+    def policy(self) -> str | None: ...
+
+    @property
+    def effective(self) -> dict[str, object]: ...
 
 
 @runtime_checkable

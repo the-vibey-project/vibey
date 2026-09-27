@@ -2584,6 +2584,9 @@ def test_conventional_commits_self_heal_only_guarded_topic_history():
     assert "pull_request_target:" in text
     assert "vibey-gh conventional-check" in text
     assert "vibey-gh conventional-message" in text
+    assert "Repair Dependabot provenance trailers" in text
+    assert "vibey-gh provenance-check" in text
+    assert "vibey-gh provenance-message" in text
     assert "working-directory: target" in text
     assert '--force-with-lease="refs/heads/${HEAD_REF}:${HEAD_SHA}"' in text
     assert '"$INTEGRATION_BRANCH"|"$RELEASE_BRANCH"|develop|main' in text

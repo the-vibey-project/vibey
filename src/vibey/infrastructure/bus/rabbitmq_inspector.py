@@ -10,8 +10,9 @@ Three things, all over the management HTTP API:
 - **peek_dead_letters**: up to a limit of a dead-letter queue's head messages, fetched
   with `ackmode: ack_requeue_true`, so each goes straight back to its place. Read, never
   removed: a reaper never deletes a dead letter.
-- **apply_policy**: vibey's policy for the queues it owns, reconciled -- read, written
-  only when it differs, and read back. The read-back is the only evidence it landed.
+- **apply_policy**: vibey's two policies (quorum, classic) for the queues it owns,
+  reconciled -- read, written only when they differ, read back -- and then checked on the
+  owned queues themselves: a policy object that no queue carries is not in force (12.e).
 """
 
 from __future__ import annotations
@@ -26,7 +27,13 @@ from typing import Any, Final
 
 from vibey.application.interfaces.queue_reap import BusInspectorPort
 from vibey.domain.interfaces.queue_reap_interface import BrokerPolicyInterface
-from vibey.domain.queue_reap import DeadLetter, DeadLetterPeek, PolicyOutcome, QueueDepth
+from vibey.domain.queue_reap import (
+    DeadLetter,
+    DeadLetterPeek,
+    PolicyOutcome,
+    QueueAttachment,
+    QueueDepth,
+)
 from vibey.infrastructure.bus.management import RabbitMqApiError, RabbitMqManagementApi
 
 PEEK_TRUNCATE_BYTES: Final = 65_536
@@ -48,11 +55,15 @@ class RabbitMqBusInspector(BusInspectorPort):
         vhost: str = "/",
         opener: Any = urllib.request.urlopen,
         epoch_seconds: Callable[[], float] = time.time,
+        settle_seconds: float = 15.0,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._api = RabbitMqManagementApi(
             url=url, username=username, password=password, vhost=vhost, opener=opener
         )
         self._epoch_seconds = epoch_seconds
+        self._settle_seconds = settle_seconds
+        self._sleep = sleep
 
     async def depths(self) -> tuple[QueueDepth, ...]:
         return await asyncio.to_thread(self._depths_sync)
@@ -60,7 +71,7 @@ class RabbitMqBusInspector(BusInspectorPort):
     def _depths_sync(self) -> tuple[QueueDepth, ...]:
         rows = self._api.request(
             "GET",
-            f"queues/{self._api.vhost}?columns=name,messages_ready,"
+            f"queues/{self._api.vhost}?columns=name,type,messages_ready,"
             "messages_unacknowledged,consumers,head_message_timestamp",
         )
         now = self._epoch_seconds()
@@ -75,6 +86,7 @@ class RabbitMqBusInspector(BusInspectorPort):
                     unacked=int(row.get("messages_unacknowledged") or 0),
                     consumers=int(row.get("consumers") or 0),
                     oldest_ready_age_seconds=age,
+                    kind=str(row.get("type") or ""),
                 )
             )
         return tuple(depths)
@@ -131,22 +143,61 @@ class RabbitMqBusInspector(BusInspectorPort):
         return await asyncio.to_thread(self._apply_sync, policy)
 
     def _apply_sync(self, policy: BrokerPolicyInterface) -> PolicyOutcome:
-        path = f"policies/{self._api.vhost}/{self._api.name(policy.name)}"
-        if policy.matches(self._read_policy(path)):
-            return PolicyOutcome(policy=policy.name, verified=True, detail="already in force")
-        try:
-            self._api.request("PUT", path, policy.body())
-        except RabbitMqApiError as exc:
+        written = False
+        problems: list[str] = []
+        for document in policy.documents():
+            path = f"policies/{self._api.vhost}/{self._api.name(document.name)}"
+            if document.matches(self._read_policy(path)):
+                continue
+            try:
+                self._api.request("PUT", path, document.body())
+            except RabbitMqApiError as exc:
+                problems.append(f"{document.name}: the broker refused it: {exc}")
+                continue
+            written = True
+            observed = self._read_policy(path)
+            if not document.matches(observed):
+                problems.append(f"{document.name}: written, but read back as {observed!r}")
+        if problems:
+            return PolicyOutcome(policy=policy.name, verified=False, detail="; ".join(problems))
+        # A policy object is not a policy in force: only the queues say which policy they
+        # carry (12.e, #1108 review finding 2). A policy just written takes the broker's
+        # statistics a few seconds to show, so a write earns a bounded wait.
+        waited = 0.0
+        while True:
+            gaps = policy.attachment_gaps(self._attachments())
+            if not gaps or not written or waited >= self._settle_seconds:
+                break
+            self._sleep(1.0)
+            waited += 1.0
+        if gaps:
             return PolicyOutcome(
-                policy=policy.name, verified=False, detail=f"the broker refused it: {exc}"
+                policy=policy.name,
+                verified=False,
+                detail="read back, but not in force on: " + "; ".join(gaps),
             )
-        observed = self._read_policy(path)
-        if policy.matches(observed):
-            return PolicyOutcome(policy=policy.name, verified=True, detail="written and read back")
         return PolicyOutcome(
             policy=policy.name,
-            verified=False,
-            detail=f"written, but read back as {observed!r}",
+            verified=True,
+            detail=(
+                "written, read back, and in force on every owned queue"
+                if written
+                else "in force on every owned queue"
+            ),
+        )
+
+    def _attachments(self) -> tuple[QueueAttachment, ...]:
+        rows = self._api.request(
+            "GET", f"queues/{self._api.vhost}?columns=name,type,policy,effective_policy_definition"
+        )
+        return tuple(
+            QueueAttachment(
+                queue=str(row["name"]),
+                kind=str(row.get("type") or ""),
+                policy=str(row["policy"]) if row.get("policy") else None,
+                effective=dict(row.get("effective_policy_definition") or {}),
+            )
+            for row in rows or ()
         )
 
     def _read_policy(self, path: str) -> object:

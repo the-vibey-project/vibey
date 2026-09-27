@@ -52,6 +52,7 @@ from qwenloop.domain.model import (
 )
 from qwenloop.infrastructure.clock import SystemClock
 from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
+from qwenloop.infrastructure.dispatch_benchmark import DispatchBenchmark
 from qwenloop.infrastructure.github import (
     list_open_issues,
     list_open_pull_requests,
@@ -64,6 +65,12 @@ from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE, PROFILES
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.settings import SettingsLoader
 from qwenloop.infrastructure.tools import SandboxTools
+from qwenloop.infrastructure.turn_dispatch import (
+    DirectTurnDispatcher,
+    HybridTurnMultiplexer,
+    RabbitMqTurnDispatcher,
+    RabbitMqTurnWorker,
+)
 
 _DEFAULT_STORM_OWNER = "adammatthewsteinberger"
 _DEFAULT_STORM_AUTHOR = "Adam Matthew Steinberger"
@@ -303,6 +310,7 @@ def _run_single(
                 max_empty_reply_retries=config.max_empty_reply_retries,
                 max_recorded_argument_chars=config.max_recorded_argument_chars,
                 empty_reply_reasoning_excerpt_chars=config.empty_reply_reasoning_excerpt_chars,
+                dispatcher=_dispatcher_for(config),
             )
         )
     except (OSError, RuntimeError) as exc:
@@ -328,6 +336,7 @@ async def _run_plan(
     max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
     empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
+    dispatcher: object | None = None,
 ) -> RunState:
     """Start (or, for an attached endpoint, check) the server if it is not healthy, then
     drive one AutonomousRunner run to a verdict."""
@@ -341,6 +350,7 @@ async def _run_plan(
         SandboxTools(cwd, limits=tool_limits),
         DesktopNotifier(enabled=desktop_notifications),
         clock=SystemClock(),
+        dispatcher=dispatcher,  # type: ignore[arg-type]
     )
     return await runner.run(
         run_id=run_id,
@@ -353,6 +363,19 @@ async def _run_plan(
         max_recorded_argument_chars=max_recorded_argument_chars,
         empty_reply_reasoning_excerpt_chars=empty_reply_reasoning_excerpt_chars,
     )
+
+
+def _dispatcher_for(config: QwenConfig) -> object:
+    """Compose the declared turn-sharing mode; direct remains the safe default."""
+    mode = config.turn_dispatch_mode
+    if mode == "auto":
+        winner = DispatchBenchmark.load(user_cache_path(_identity.name) / "dispatch-benchmark.json")
+        mode = winner or "direct"
+    if mode == "rabbitmq":
+        return RabbitMqTurnDispatcher(config.turn_queue_url, request_queue=config.turn_queue_name)
+    if mode == "hybrid":
+        return HybridTurnMultiplexer(concurrency=config.hybrid_concurrency)
+    return DirectTurnDispatcher()
 
 
 def _discover_storm_repos(owner: str, repos_root: Path) -> list[str]:
@@ -741,6 +764,78 @@ def server_start(
         asyncio.run(execute())
     except (OSError, RuntimeError, TimeoutError) as exc:
         typer.echo(f"{_identity.name} server unavailable: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+
+@server_app.command("turn-worker")
+def server_turn_worker(
+    backend: BackendOption = None,
+    base_url: BaseUrlOption = None,
+    model: ModelOption = None,
+) -> None:
+    """Host the configured model behind the explicit RabbitMQ shared-turn mode."""
+    config = _load_config(backend=backend, base_url=base_url, model=model)
+    if config.turn_dispatch_mode != "rabbitmq":
+        typer.echo(
+            "turn-worker requires turn_dispatch_mode = 'rabbitmq' and turn_queue_url",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+    server, profile = _server_for(config)
+
+    async def execute() -> None:
+        info = server.inspect(profile)
+        if info is None or not await server.health(info):
+            info = await server.start(profile)
+            info = await _wait_until_ready(
+                server, info, timeout_seconds=config.startup_timeout_seconds
+            )
+        await RabbitMqTurnWorker(config.turn_queue_url, request_queue=config.turn_queue_name).serve(
+            server, info
+        )
+
+    try:
+        asyncio.run(execute())
+    except (OSError, RuntimeError, TimeoutError) as exc:
+        typer.echo(f"{_identity.name} turn worker unavailable: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+
+@server_app.command("benchmark")
+def server_benchmark(
+    samples: Annotated[int, typer.Option("--samples", min=1)] = 3,
+    concurrency: Annotated[int, typer.Option("--concurrency", min=1)] = 2,
+    backend: BackendOption = None,
+    base_url: BaseUrlOption = None,
+    model: ModelOption = None,
+) -> None:
+    """Measure direct versus hybrid dispatch and persist the faster local mode."""
+    config = _load_config(backend=backend, base_url=base_url, model=model)
+    server, profile = _server_for(config)
+
+    async def execute() -> None:
+        info = server.inspect(profile)
+        if info is None or not await server.health(info):
+            info = await server.start(profile)
+            info = await _wait_until_ready(
+                server, info, timeout_seconds=config.startup_timeout_seconds
+            )
+        rabbitmq = (
+            RabbitMqTurnDispatcher(config.turn_queue_url, request_queue=config.turn_queue_name)
+            if config.turn_queue_url.strip()
+            else None
+        )
+        result = await DispatchBenchmark().run(
+            server, info, samples=samples, concurrency=concurrency, rabbitmq=rabbitmq
+        )
+        path = user_cache_path(_identity.name) / "dispatch-benchmark.json"
+        DispatchBenchmark.save(result, path)
+        typer.echo(json.dumps({**asdict(result), "path": str(path)}))
+
+    try:
+        asyncio.run(execute())
+    except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
+        typer.echo(f"{_identity.name} benchmark unavailable: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
 

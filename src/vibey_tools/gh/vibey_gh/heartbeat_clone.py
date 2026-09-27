@@ -68,7 +68,7 @@ _CONFIG_VARIABLES = frozenset({"GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM", "GIT_CO
 _COLOUR = re.compile(r"\x1b\[[0-9;]*m")
 _HINT = (
     "the interpreter the timer runs must be a vibey-gh that knows `push-scope`; reinstall it"
-    " from this tree (for example `uv tool install --force --from . vibey`) and install again"
+    " from this tree (for example `uv tool install --force --from . vibey-engine`) and install again"
 )
 
 

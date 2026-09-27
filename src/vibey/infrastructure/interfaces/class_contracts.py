@@ -106,7 +106,7 @@ class EnvironmentConfigLoaderInterface(Protocol):
 class QueueConfigLoaderInterface(Protocol):
     """Reads `[queue]` from a vibey.toml, and only `[queue]`."""
 
-    def load(self, path: Path) -> QueueConfigInterface:
+    def load(self, path: Path, *, environ: Mapping[str, str] | None = None) -> QueueConfigInterface:
         """The declared queue policy. A missing file declares nothing -- the operator
         alone may reorder -- and a malformed one raises rather than being read as
         empty, so a broken declaration is never mistaken for none."""

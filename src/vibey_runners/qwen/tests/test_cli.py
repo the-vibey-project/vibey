@@ -12,13 +12,105 @@ from typer.testing import CliRunner
 
 from qwenloop import __version__
 from qwenloop.cli.app import app
-from qwenloop.domain.config import ToolLimits
+from qwenloop.domain.config import QwenConfig, ToolLimits
 from qwenloop.domain.model import Backend, RepoItem, RunState, RunStatus, ServerInfo
+from qwenloop.infrastructure.dispatch_benchmark import DispatchBenchmarkResult
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
 from qwenloop.infrastructure.tools import SandboxTools
 
 runner = CliRunner()
+
+
+def test_server_benchmark_persists_measured_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    info = ServerInfo(Backend.OPENAI_COMPAT, "local", "http://model/v1", False, True)
+
+    class Server:
+        def inspect(self, _profile: object) -> ServerInfo:
+            return info
+
+        async def health(self, _info: ServerInfo) -> bool:
+            return True
+
+    result = DispatchBenchmarkResult("hybrid", 1.0, 2.0, None, 3, 2)
+
+    class Benchmark:
+        async def run(self, *_args: object, **_kwargs: object) -> DispatchBenchmarkResult:
+            return result
+
+        @staticmethod
+        def save(value: DispatchBenchmarkResult, path: Path) -> None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(value.winner, encoding="utf-8")
+
+    monkeypatch.setattr("qwenloop.cli.app._load_config", lambda **_: QwenConfig())
+    monkeypatch.setattr("qwenloop.cli.app._server_for", lambda _config: (Server(), PORTABLE))
+    monkeypatch.setattr("qwenloop.cli.app.DispatchBenchmark", Benchmark)
+    monkeypatch.setattr("qwenloop.cli.app.user_cache_path", lambda _name: tmp_path)
+    response = runner.invoke(app, ["server", "benchmark"])
+    assert response.exit_code == 0
+    assert '"winner": "hybrid"' in response.stdout
+    assert (tmp_path / "dispatch-benchmark.json").read_text(encoding="utf-8") == "hybrid"
+
+
+def test_server_benchmark_starts_unhealthy_server(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    initial = ServerInfo(Backend.OPENAI_COMPAT, "local", "url", False, False)
+    ready = ServerInfo(Backend.OPENAI_COMPAT, "local", "url", False, True)
+
+    class Server:
+        def inspect(self, _profile: object) -> ServerInfo:
+            return initial
+
+        async def health(self, _info: ServerInfo) -> bool:
+            return False
+
+        async def start(self, _profile: object) -> ServerInfo:
+            return ready
+
+    class Benchmark:
+        async def run(self, *_args: object, **_kwargs: object) -> DispatchBenchmarkResult:
+            return DispatchBenchmarkResult("direct", 2.0, 1.0, None, 1, 1)
+
+        @staticmethod
+        def save(_value: DispatchBenchmarkResult, _path: Path) -> None:
+            return None
+
+    async def wait(_server: object, info: ServerInfo, *, timeout_seconds: int) -> ServerInfo:
+        assert timeout_seconds == QwenConfig().startup_timeout_seconds
+        return info
+
+    monkeypatch.setattr("qwenloop.cli.app._load_config", lambda **_: QwenConfig())
+    monkeypatch.setattr("qwenloop.cli.app._server_for", lambda _config: (Server(), PORTABLE))
+    monkeypatch.setattr("qwenloop.cli.app._wait_until_ready", wait)
+    monkeypatch.setattr("qwenloop.cli.app.DispatchBenchmark", Benchmark)
+    monkeypatch.setattr("qwenloop.cli.app.user_cache_path", lambda _name: tmp_path)
+    assert runner.invoke(app, ["server", "benchmark"]).exit_code == 0
+
+
+def test_server_benchmark_reports_runtime_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Benchmark:
+        async def run(self, *_args: object, **_kwargs: object) -> DispatchBenchmarkResult:
+            raise RuntimeError("model unavailable")
+
+    info = ServerInfo(Backend.OPENAI_COMPAT, "local", "url", False, True)
+
+    class Server:
+        def inspect(self, _profile: object) -> ServerInfo:
+            return info
+
+        async def health(self, _info: ServerInfo) -> bool:
+            return True
+
+    monkeypatch.setattr("qwenloop.cli.app._load_config", lambda **_: QwenConfig())
+    monkeypatch.setattr("qwenloop.cli.app._server_for", lambda _config: (Server(), PORTABLE))
+    monkeypatch.setattr("qwenloop.cli.app.DispatchBenchmark", Benchmark)
+    response = runner.invoke(app, ["server", "benchmark"])
+    assert response.exit_code == 1
+    assert "benchmark unavailable" in response.stderr
 
 
 def test_version() -> None:
@@ -211,6 +303,77 @@ def test_server_start_reports_unavailable(monkeypatch: pytest.MonkeyPatch) -> No
     result = runner.invoke(app, ["server", "start", "--backend", "llama.cpp"])
     assert result.exit_code == 1
     assert "unavailable" in result.stderr
+
+
+def test_turn_worker_requires_explicit_rabbitmq_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("qwenloop.cli.app._load_config", lambda **_: QwenConfig())
+    result = runner.invoke(app, ["server", "turn-worker"])
+    assert result.exit_code == 2
+    assert "requires turn_dispatch_mode" in result.stderr
+
+
+def test_turn_worker_hosts_a_healthy_server(monkeypatch: pytest.MonkeyPatch) -> None:
+    config = QwenConfig(turn_dispatch_mode="rabbitmq", turn_queue_url="amqp://broker")
+    info = ServerInfo(Backend.OPENAI_COMPAT, "local", "url", False, True)
+
+    class Server:
+        def inspect(self, _profile):  # type: ignore[no-untyped-def]
+            return info
+
+        async def health(self, _info):  # type: ignore[no-untyped-def]
+            return True
+
+    class Worker:
+        seen: tuple[str, ServerInfo] | None = None
+
+        def __init__(self, url: str, *, request_queue: str) -> None:
+            self.url = url
+            self.request_queue = request_queue
+
+        async def serve(self, _server, value):  # type: ignore[no-untyped-def]
+            Worker.seen = (self.url, value)
+
+    monkeypatch.setattr("qwenloop.cli.app._load_config", lambda **_: config)
+    monkeypatch.setattr("qwenloop.cli.app._server_for", lambda _config: (Server(), PORTABLE))
+    monkeypatch.setattr("qwenloop.cli.app.RabbitMqTurnWorker", Worker)
+    result = runner.invoke(app, ["server", "turn-worker"])
+    assert result.exit_code == 0
+    assert Worker.seen == ("amqp://broker", info)
+
+
+def test_turn_worker_starts_server_and_reports_worker_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = QwenConfig(turn_dispatch_mode="rabbitmq", turn_queue_url="amqp://broker")
+    info = ServerInfo(Backend.OPENAI_COMPAT, "local", "url", False, False)
+
+    class Server:
+        def inspect(self, _profile):  # type: ignore[no-untyped-def]
+            return None
+
+        async def health(self, _info):  # type: ignore[no-untyped-def]
+            return False
+
+        async def start(self, _profile):  # type: ignore[no-untyped-def]
+            return info
+
+    class Worker:
+        def __init__(self, _url: str, *, request_queue: str) -> None:
+            pass
+
+        async def serve(self, _server, _info):  # type: ignore[no-untyped-def]
+            raise RuntimeError("broker unavailable")
+
+    async def ready(_server, value, **_kwargs):  # type: ignore[no-untyped-def]
+        return value
+
+    monkeypatch.setattr("qwenloop.cli.app._load_config", lambda **_: config)
+    monkeypatch.setattr("qwenloop.cli.app._server_for", lambda _config: (Server(), PORTABLE))
+    monkeypatch.setattr("qwenloop.cli.app._wait_until_ready", ready)
+    monkeypatch.setattr("qwenloop.cli.app.RabbitMqTurnWorker", Worker)
+    result = runner.invoke(app, ["server", "turn-worker"])
+    assert result.exit_code == 1
+    assert "turn worker unavailable" in result.stderr
 
 
 def test_server_stop_when_nothing_is_running(monkeypatch: pytest.MonkeyPatch) -> None:

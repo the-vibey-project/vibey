@@ -73,7 +73,7 @@ jobs:
             echo "this repository provides the tooling — installing from source"
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey-engine==2.1.0"
+            python -m pip install --quiet "vibey-engine==3.0.0"
           fi
       - name: Check out exact topic head without executing it
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -106,6 +106,35 @@ jobs:
           else
             echo "conforms=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Repair Dependabot provenance trailers
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        working-directory: target
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$HEAD_REPO" = "$REPO" || { echo "fork history is never rewritten"; exit 1; }
+          test "$(git rev-list --merges --count "${BASE_SHA}..${HEAD_SHA}")" = 0 || {
+            echo "Refusing automatic rewrite of merge commits"
+            exit 1
+          }
+          if vibey-gh provenance-check --commits "${BASE_SHA}..${HEAD_SHA}"; then
+            echo "Dependabot commits already carry provenance."
+            exit 0
+          fi
+          TRAILER=$(cd ../automation && vibey-gh trailer)
+          git switch -C "$HEAD_REF" "$HEAD_SHA"
+          VIBEY_GH_PROVENANCE_TRAILER="$TRAILER" FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f \
+            --msg-filter 'vibey-gh provenance-message' "${BASE_SHA}..${HEAD_REF}"
+          current=$(git ls-remote origin "refs/heads/${HEAD_REF}" | cut -f1)
+          test "$current" = "$HEAD_SHA"
+          git push --force-with-lease="refs/heads/${HEAD_REF}:${HEAD_SHA}" \
+            origin "HEAD:refs/heads/${HEAD_REF}"
 
       - name: Normalize every nonconforming commit message
         if: steps.subjects.outputs.conforms == 'false' && true

@@ -14,6 +14,8 @@ from vibey.domain.interfaces import (
     DeadLetterInterface,
     DeadLetterPeekInterface,
     HeldWorkInterface,
+    PolicyDocumentInterface,
+    QueueAttachmentInterface,
     QueueDepthInterface,
     QueueReapPolicyInterface,
     ReapThresholdsInterface,
@@ -26,9 +28,11 @@ from vibey.domain.queue_reap import (
     HeldWork,
     HolderState,
     PolicyOutcome,
+    QueueAttachment,
     QueueDepth,
     ReapAction,
     ReapCondition,
+    ReapSource,
     ReapThresholds,
     ReapVerdict,
 )
@@ -83,6 +87,9 @@ def test_every_value_satisfies_its_interface() -> None:
         BrokerPolicyInterface,
     )
     assert isinstance(QUEUE_REAP_POLICY, QueueReapPolicyInterface)
+    policy = BrokerPolicy(name="p", pattern="^v", consumer_timeout_ms=1, delivery_limit=1)
+    assert all(isinstance(d, PolicyDocumentInterface) for d in policy.documents())
+    assert isinstance(QueueAttachment("q", "classic", None), QueueAttachmentInterface)
 
 
 # -- thresholds ------------------------------------------------------------------------
@@ -143,6 +150,7 @@ def test_overdue_work_with_attempts_left_is_requeued(
         unit="seconds past deadline",
         action=ReapAction.REQUEUE,
         detail={"attempts": 1, "attempt_limit": 7},
+        source=ReapSource.JOB_QUEUE,
     )
 
 
@@ -428,22 +436,67 @@ def test_the_policy_owns_by_its_pattern_and_knows_a_dead_letter_queue() -> None:
     assert not policy.is_dead_letter("vibey.jobs.p")
 
 
-def test_the_policy_document_is_what_the_management_api_takes() -> None:
-    assert _policy(priority=3).body() == {
+def test_the_policies_are_one_per_queue_type() -> None:
+    """#1108 review finding 2: on RabbitMQ 4.3.6 a policy holding `delivery-limit` does not
+    attach to a classic queue at all, so classic queues never got their consumer-timeout.
+    Quorum queues get both keys; classic queues get `consumer-timeout` alone."""
+    quorum, classic = _policy(priority=3).documents()
+    assert (quorum.name, quorum.apply_to) == ("vibey-reap", "quorum_queues")
+    assert quorum.body() == {
         "pattern": r"^vibey\.",
         "definition": {"consumer-timeout": 21_600_000, "delivery-limit": 20},
         "priority": 3,
-        "apply-to": "queues",
+        "apply-to": "quorum_queues",
     }
+    assert (classic.name, classic.apply_to) == ("vibey-reap-classic", "classic_queues")
+    assert classic.body()["definition"] == {"consumer-timeout": 21_600_000}
+    assert "delivery-limit" not in classic.definition
+    policy = _policy()
+    assert policy.expected_for("quorum") == policy.documents()[0]
+    assert policy.expected_for("classic") == policy.documents()[1]
+    assert policy.expected_for("stream") is None
 
 
 def test_a_policy_read_back_matches_only_itself() -> None:
+    document = _policy().documents()[0]
+    assert document.matches(json.loads(json.dumps(document.body())))
+    assert document.matches({**document.body(), "name": "vibey-reap", "vhost": "/"})
+    assert not document.matches(None)
+    assert not document.matches({**document.body(), "priority": 1})
+    assert not document.matches({**document.body(), "definition": {}})
+    assert not document.matches({**document.body(), "apply-to": "queues"})
+
+
+def test_a_policy_is_in_force_only_where_the_queue_reports_it() -> None:
+    """12.e: the policy object read back is not the policy in force; the queue is."""
     policy = _policy()
-    assert policy.matches(json.loads(json.dumps(policy.body())))
-    assert policy.matches({**policy.body(), "name": "vibey-reap", "vhost": "/"})
-    assert not policy.matches(None)
-    assert not policy.matches({**policy.body(), "priority": 1})
-    assert not policy.matches({**policy.body(), "definition": {}})
+    both = {"consumer-timeout": 21_600_000, "delivery-limit": 20}
+    ct = {"consumer-timeout": 21_600_000}
+    assert (
+        policy.attachment_gaps(
+            [
+                QueueAttachment("vibey.q", "quorum", "vibey-reap", both),
+                QueueAttachment("vibey.c", "classic", "vibey-reap-classic", ct),
+                QueueAttachment("vibey.s", "stream", None, {}),
+                QueueAttachment("celery", "classic", None, {}),
+            ]
+        )
+        == ()
+    )
+    gaps = policy.attachment_gaps(
+        [
+            QueueAttachment("vibey.c", "classic", None, {}),
+            QueueAttachment("vibey.q", "quorum", "operators", both),
+            QueueAttachment("vibey.x", "quorum", "vibey-reap", ct),
+            QueueAttachment("vibey.u", "", None, {}),
+        ]
+    )
+    assert gaps == (
+        "vibey.c (classic): carries 'no policy', not 'vibey-reap-classic'",
+        "vibey.q (quorum): carries 'operators', not 'vibey-reap'",
+        "vibey.x (quorum): effective policy lacks {'delivery-limit': 20}",
+        "vibey.u: queue type 'unknown' not judged",
+    )
 
 
 @pytest.mark.parametrize(
@@ -454,6 +507,10 @@ def test_a_policy_read_back_matches_only_itself() -> None:
         ({"dead_letter_pattern": "["}, "dead_letter_pattern is not a regular expression"),
         ({"consumer_timeout_ms": 0}, "consumer_timeout_ms"),
         ({"delivery_limit": 0}, "delivery_limit"),
+        ({"priority": -1}, "priority must not be negative"),
+        ({"pattern": ""}, "matches every queue name"),
+        ({"pattern": "^(vibey|celery)"}, "would own 'celery'"),
+        ({"dead_letter_pattern": ".*"}, "matches every queue name"),
     ],
 )
 def test_a_malformed_policy_is_refused(overrides: dict[str, object], message: str) -> None:
@@ -482,6 +539,8 @@ def test_a_verdict_payload_names_object_condition_measure_threshold_and_action()
         "threshold": 3.0,
         "unit": "attempts",
         "action": "park",
+        "source": "broker",
+        "episode": "",
     }
     detailed = ReapVerdict(
         subject="s",
@@ -492,8 +551,84 @@ def test_a_verdict_payload_names_object_condition_measure_threshold_and_action()
         unit="attempts",
         action=ReapAction.PARK,
         detail={"k": 1},
+        source=ReapSource.JOB_QUEUE,
+        episode="7",
     )
     assert detailed.payload()["detail"] == {"k": 1}
+    assert detailed.sighting == ("job_queue", "q", "poison", "s", "7")
+    assert ReapVerdict.from_payload(detailed.payload()) == detailed
+
+
+def test_a_sighting_read_back_from_an_older_record_is_a_broker_sighting() -> None:
+    older = {
+        "object": "celery",
+        "queue": "celery",
+        "condition": "stale_ready",
+        "measured": 1000,
+        "threshold": 900,
+        "unit": "seconds ready with no consumer",
+        "action": "surface",
+        "detail": "not a mapping",
+    }
+    verdict = ReapVerdict.from_payload(older)
+    assert (verdict.source, verdict.episode, verdict.detail) == (ReapSource.BROKER, "", {})
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {
+            "object": "o",
+            "queue": "q",
+            "condition": "nope",
+            "measured": 1,
+            "threshold": 1,
+            "unit": "u",
+            "action": "surface",
+        },
+    ],
+)
+def test_a_payload_no_vibey_wrote_is_refused(payload: dict[str, object]) -> None:
+    with pytest.raises(ValueError, match="not a QueueReaped payload"):
+        ReapVerdict.from_payload(payload)
+
+
+def test_clearing_a_sighting_keeps_its_key_and_measures_nothing() -> None:
+    open_one = ReapVerdict(
+        subject="s",
+        queue="q",
+        condition=ReapCondition.STALE_READY,
+        measured=1_000.0,
+        threshold=900.0,
+        unit="u",
+        action=ReapAction.SURFACE,
+        detail={"ready": 2},
+        source=ReapSource.JOB_QUEUE,
+        episode="e",
+    )
+    cleared = open_one.cleared()
+    assert cleared.sighting == open_one.sighting
+    assert (cleared.action, cleared.measured, cleared.detail) == (ReapAction.CLEARED, 0.0, {})
+
+
+def test_every_verdict_carries_the_source_it_was_measured_from() -> None:
+    held = QUEUE_REAP_POLICY.judge_held(_held(attempts=9, limit=3), now=NOW, thresholds=DEFAULTS)
+    assert held is not None and held.source is ReapSource.JOB_QUEUE
+    job_queue = QueueDepth(
+        queue="job:p",
+        ready=1,
+        unacked=0,
+        consumers=None,
+        oldest_ready_age_seconds=1e6,
+        source=ReapSource.JOB_QUEUE,
+    )
+    (stale,) = QUEUE_REAP_POLICY.judge_queue(job_queue, thresholds=DEFAULTS)
+    assert (stale.source, stale.unit) == (ReapSource.JOB_QUEUE, "seconds claimable and unclaimed")
+    item = DeadLetter(queue="q.dlq", origin_queue="q", reason="r", body="{}")
+    peek = DeadLetterPeek(queue="q.dlq", depth=4, items=(item,))
+    unread = QUEUE_REAP_POLICY.judge_unread(peek)
+    assert unread is not None and (unread.source, unread.episode) == (ReapSource.BROKER, "3")
 
 
 def test_a_policy_outcome_says_what_was_read_back() -> None:

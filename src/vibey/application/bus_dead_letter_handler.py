@@ -8,7 +8,8 @@ answer: the job holds no lease while it is parked.
 
 The answer re-readies the job, and this handler settles it:
 
-- ``--choice replay`` publishes the body back to the queue it was dead-lettered from.
+- ``--choice replay`` publishes the body back to the queue it was dead-lettered from --
+  only a queue vibey owns, since that name comes from the message's own headers.
   Delivery is at least once -- a worker that dies after the publish and before the ack
   publishes it again on the retry -- so the consumer must be idempotent, as every vibey
   consumer is. A body the broker cut short, or one that is not a JSON object, is never
@@ -27,6 +28,7 @@ from vibey.application.interfaces.bus import BusPort
 from vibey.application.interfaces.gates import HumanGateRepository
 from vibey.application.interfaces.queue import Outcome, Park, Success
 from vibey.application.interfaces.queue_reap import BusDeadLetterGateInterface
+from vibey.domain.interfaces.queue_reap_interface import BrokerPolicyInterface
 
 BUS_DEAD_LETTER_KIND: Final = "bus.dead_letter"
 BUS_DEAD_LETTER_GATE_KIND: Final = "bus_dead_lettered"
@@ -45,8 +47,10 @@ class BusDeadLetterGate:
     SHOWN_CHARS: Final = 200
 
     def request(self, payload: Mapping[str, object], *, note: str = "") -> HumanGateRequest:
-        replayable = isinstance(payload.get("payload"), Mapping) and not payload.get(
-            "truncated", False
+        replayable = (
+            isinstance(payload.get("payload"), Mapping)
+            and not payload.get("truncated", False)
+            and payload.get("origin_owned") is True
         )
         origin = self._shown(payload.get("origin_queue"))
         lead = f"{note} " if note else ""
@@ -54,7 +58,10 @@ class BusDeadLetterGate:
             f"`--choice {REPLAY}` publishes it back to {origin} "
             "(at least once: its consumer must be idempotent); "
             if replayable
-            else "It cannot be replayed: its body is not a whole JSON object. "
+            else (
+                "It cannot be replayed: its body is not a whole JSON object, or the queue its "
+                "headers name is not one vibey owns. "
+            )
         )
         return HumanGateRequest(
             kind=BUS_DEAD_LETTER_GATE_KIND,
@@ -84,10 +91,12 @@ class BusDeadLetterHandler:
         *,
         gates: HumanGateRepository,
         bus: BusPort,
+        owner: BrokerPolicyInterface,
         gate: BusDeadLetterGateInterface = BUS_DEAD_LETTER_GATE,
     ) -> None:
         self._gates = gates
         self._bus = bus
+        self._owner = owner
         self._gate = gate
 
     async def handle(self, job: JobRecord) -> Outcome:
@@ -98,10 +107,14 @@ class BusDeadLetterHandler:
         if choice == REPLAY:
             body = job.payload.get("payload")
             origin = job.payload.get("origin_queue")
+            # The origin comes from the message's own headers, which its publisher wrote:
+            # replay only into a queue vibey owns, or a forged `x-first-death-queue` would
+            # have vibey publish into someone else's queue (#1108 review finding 11).
             if (
                 isinstance(body, Mapping)
                 and isinstance(origin, str)
                 and origin
+                and self._owner.owns(origin)
                 and not job.payload.get("truncated", False)
             ):
                 await self._bus.publish(origin, dict(body))

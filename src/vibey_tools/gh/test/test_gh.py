@@ -171,6 +171,13 @@ def test_conventional_commit_subject_validation_and_normalization():
     )
 
 
+def test_provenance_message_preserves_existing_trailer_and_empty_messages():
+    cfg = GhConfig(root=Path.cwd())
+    existing = f"fix: already valid\n\n{cfg.trailer}\n"
+    assert fingerprints.normalize_provenance_message(existing, cfg) == existing
+    assert fingerprints.normalize_provenance_message("", cfg) == ""
+
+
 def test_nonconventional_commit_is_reported(repo):
     cfg = cfg_for(repo)
     git(repo, "commit", "-q", "--allow-empty", "-m", f"Not conventional\n\n{cfg.trailer}")

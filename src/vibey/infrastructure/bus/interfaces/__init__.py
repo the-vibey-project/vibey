@@ -8,6 +8,7 @@ from vibey.infrastructure.bus.interfaces.in_memory_interface import (
 from vibey.infrastructure.bus.interfaces.management_interface import (
     RabbitMqApiErrorInterface,
     RabbitMqManagementApiInterface,
+    RabbitMqUnreachableInterface,
 )
 from vibey.infrastructure.bus.interfaces.rabbitmq_inspector_interface import (
     RabbitMqBusInspectorInterface,
@@ -21,4 +22,5 @@ __all__ = [
     "RabbitMqBusAdapterInterface",
     "RabbitMqBusInspectorInterface",
     "RabbitMqManagementApiInterface",
+    "RabbitMqUnreachableInterface",
 ]

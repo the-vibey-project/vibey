@@ -680,7 +680,7 @@ class RunnersConfig:
     # puts it on macOS and Linux alike; empty is the one running the install. Either way it,
     # and the vibey_gh it imports, must live outside any temporary directory and any git work
     # tree -- which is why `uv run` inside a checkout cannot be it.
-    heartbeat_python: str = "~/.local/share/uv/tools/vibey/bin/python"
+    heartbeat_python: str = "~/.local/share/uv/tools/vibey-engine/bin/python"
     # Where the timer logs and records each beat. Empty is `log_dir` under launchd and
     # `~/.local/state/vibey-gh` under systemd.
     heartbeat_log_dir: str = ""

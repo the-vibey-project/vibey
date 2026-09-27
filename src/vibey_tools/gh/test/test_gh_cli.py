@@ -495,6 +495,30 @@ def test_conventional_message_normalizes_file_and_stdin(repo, tmp_path, monkeypa
     assert capsys.readouterr().out == "fix: already valid\n"
 
 
+def test_provenance_message_adds_configured_trailer(repo, monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin.read", lambda: "Bad subject\n\nBody\n")
+    assert main(["provenance-message"]) == 0
+    output = capsys.readouterr().out
+    assert output.startswith("chore: Bad subject\n\nBody\n\nMade-With: ")
+
+
+def test_provenance_message_updates_a_file(repo, tmp_path):
+    message = tmp_path / "COMMIT_EDITMSG"
+    message.write_text("Bad subject\n\nBody\n")
+    assert main(["provenance-message", "--file", str(message)]) == 0
+    assert message.read_text().startswith("chore: Bad subject\n\nBody\n\nMade-With: ")
+
+
+def test_provenance_check_reports_missing_trailer(repo, capsys):
+    subprocess.run(
+        ["git", "commit", "-q", "--allow-empty", "-m", "fix: missing trailer"],
+        cwd=repo,
+        check=True,
+    )
+    assert main(["provenance-check", "--commits", "HEAD~1..HEAD"]) == 1
+    assert "missing trailer" in capsys.readouterr().out
+
+
 def test_conventional_check_reports_invalid_range(repo, capsys):
     subprocess.run(
         ["git", "commit", "-q", "--allow-empty", "-m", "Invalid subject"],

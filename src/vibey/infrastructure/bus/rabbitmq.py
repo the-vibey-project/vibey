@@ -10,6 +10,9 @@ per call, None when the queue is empty. That is at-most-once: no delivery is
 ever held, so none can hang, be orphaned or be redelivered -- and a consumer
 that dies after `consume` returns has lost the message (ADR-0056 records this).
 
+A publish declares its queue only when the queue does not exist yet, so it never
+re-declares one that exists with other arguments (#1108 review finding 11).
+
 Every publish carries a `message_id` and a `timestamp` (ADR-0056): the id makes a
 dead letter's identity its own, so parking it is idempotent, and the timestamp
 lets the reaper measure how long the oldest ready message has waited.
@@ -27,7 +30,7 @@ from collections.abc import Callable
 from typing import Any
 
 from vibey.application.interfaces.bus import BusPort
-from vibey.infrastructure.bus.management import RabbitMqManagementApi
+from vibey.infrastructure.bus.management import RabbitMqApiError, RabbitMqManagementApi
 
 
 class RabbitMqBusAdapter(BusPort):
@@ -78,7 +81,11 @@ class RabbitMqBusAdapter(BusPort):
         await asyncio.to_thread(self._publish_sync, queue, payload)
 
     def _publish_sync(self, queue: str, payload: dict[str, object]) -> None:
-        self._declare_sync(queue, True)
+        # Declared only when missing: re-declaring a queue that exists with other
+        # arguments -- a quorum queue, say -- is a 406/400, and the declare's own dead-letter
+        # exchange and queue would be left behind beside it (#1108 review finding 11).
+        if not self._exists(queue):
+            self._declare_sync(queue, True)
         result = self._request(
             "POST",
             f"exchanges/{self._vhost}//publish",
@@ -95,6 +102,15 @@ class RabbitMqBusAdapter(BusPort):
         )
         if not isinstance(result, dict) or not result.get("routed"):
             raise RuntimeError(f"RabbitMQ did not route the payload to {queue!r}")
+
+    def _exists(self, queue: str) -> bool:
+        try:
+            self._request("GET", f"queues/{self._vhost}/{self._api.name(queue)}")
+        except RabbitMqApiError as exc:
+            if exc.status == 404:
+                return False
+            raise
+        return True
 
     async def consume(self, queue: str) -> dict[str, object] | None:
         return await asyncio.to_thread(self._consume_sync, queue)

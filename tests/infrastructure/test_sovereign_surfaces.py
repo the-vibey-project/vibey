@@ -34,6 +34,7 @@ from vibey.infrastructure.blob.garage import GarageBlobAdapter
 from vibey.infrastructure.blob.in_memory import InMemoryBlob
 from vibey.infrastructure.blob.interfaces.garage_interface import GarageBlobAdapterInterface
 from vibey.infrastructure.blob.interfaces.in_memory_interface import InMemoryBlobInterface
+from vibey.infrastructure.bus.dispatch import BusDispatchAdapter
 from vibey.infrastructure.bus.in_memory import InMemoryBus
 from vibey.infrastructure.bus.interfaces.in_memory_interface import InMemoryBusInterface
 from vibey.infrastructure.bus.interfaces.rabbitmq_interface import RabbitMqBusAdapterInterface
@@ -731,7 +732,7 @@ async def test_build_app_wires_concrete_adapters_from_config() -> None:
             assert isinstance(resources.messaging, MatrixMessagingAdapter)
             assert isinstance(resources.config_store, InfisicalConfigStoreAdapter)
             assert isinstance(resources.cache, RedisCacheAdapter)
-            assert isinstance(resources.bus, RabbitMqBusAdapter)
+            assert isinstance(resources.bus, (RabbitMqBusAdapter, BusDispatchAdapter))
             assert isinstance(resources.blob, GarageBlobAdapter)
             assert isinstance(resources.siem, WazuhSiemAdapter)
             assert isinstance(resources.queue_reaper, QueueReaperInterface)
@@ -758,7 +759,7 @@ async def test_build_app_composes_the_bus_and_the_reaper_from_the_environment_al
     ):
         migrator_cls.from_environ.return_value = migrator
         async with build_app() as resources:
-            assert isinstance(resources.bus, RabbitMqBusAdapter)
+            assert isinstance(resources.bus, (RabbitMqBusAdapter, BusDispatchAdapter))
             assert isinstance(resources.queue_reaper, QueueReaperInterface)
 
 
@@ -1251,6 +1252,45 @@ async def test_rabbitmq_adapter_publish_and_consume() -> None:
 
 
 @pytest.mark.asyncio
+async def test_rabbitmq_adapter_publishes_into_an_existing_queue_without_redeclaring_it() -> None:
+    """#1108 review finding 11 (probe_replay_quorum.py): publishing into an existing
+    quorum queue re-declared it as classic -- a 400 -- and left `.dlx`/`.dlq` behind."""
+    seen: list[Any] = []
+
+    def _fake_opener(req: Any) -> Any:
+        seen.append((req.get_method(), req.full_url))
+        if req.full_url.endswith("/publish"):
+            return _mock_response(b'{"routed": true}')
+        return _mock_response(b'{"name": "vibey.jobs.p1", "type": "quorum"}')
+
+    adapter = RabbitMqBusAdapter(
+        url="http://bus:15672", username="u", password="p", opener=_fake_opener
+    )
+    await adapter.publish("vibey.jobs.p1", {"replayed": True})
+    assert [m for m, _ in seen] == ["GET", "POST"]
+    assert seen[0][1] == "http://bus:15672/api/queues/%2F/vibey.jobs.p1"
+
+
+@pytest.mark.asyncio
+async def test_rabbitmq_adapter_declares_a_missing_queue_before_publishing() -> None:
+    seen: list[str] = []
+
+    def _fake_opener(req: Any) -> Any:
+        seen.append(req.get_method())
+        if req.get_method() == "GET":
+            raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)  # type: ignore[arg-type]
+        if req.full_url.endswith("/publish"):
+            return _mock_response(b'{"routed": true}')
+        return _mock_response(b"")
+
+    adapter = RabbitMqBusAdapter(
+        url="http://bus:15672", username="u", password="p", opener=_fake_opener
+    )
+    await adapter.publish("jobs", {"a": 1})
+    assert seen == ["GET", "PUT", "PUT", "POST", "PUT", "POST"]
+
+
+@pytest.mark.asyncio
 async def test_rabbitmq_adapter_unrouted_publish_raises() -> None:
     def _fake_opener(req: Any) -> Any:
         if req.full_url.endswith("/publish"):
@@ -1568,3 +1608,52 @@ def test_resp_reader_raises_on_empty_read() -> None:
     reader = _RespReader(sock)
     with pytest.raises(RedisError, match="redis closed the connection"):
         reader.read()
+
+
+async def _reaper_from(tmp_path: Any, monkeypatch: pytest.MonkeyPatch, toml: str) -> Any:
+    (tmp_path / "vibey.toml").write_text(toml)
+    monkeypatch.chdir(tmp_path)
+    migrator = MagicMock()
+    migrator.apply = AsyncMock()
+    with (
+        patch("asyncpg.create_pool", new=AsyncMock(return_value=_mock_pool())),
+        patch("vibey.bootstrap.PostgresMigrator") as migrator_cls,
+        patch("vibey.bootstrap.SchemaPreparer", new=_InForcePreparer),
+        patch("vibey.bootstrap.database_url", return_value="postgresql://x"),
+    ):
+        migrator_cls.from_environ.return_value = migrator
+        async with build_app() as resources:
+            return resources.queue_reaper
+
+
+@pytest.mark.asyncio
+async def test_a_skipped_vibey_toml_still_switches_the_reaper_off(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#1108 review, finding 6. A vibey.toml the surfaces cannot use was skipped whole, so
+    `[queue.reap] enabled = false` in it was ignored and the reaper ran on its defaults."""
+    reaper = await _reaper_from(
+        tmp_path,
+        monkeypatch,
+        '[project]\nname = "x"\n[tracker]\nurl = 3\n[queue.reap]\nenabled = false\n',
+    )
+    assert await reaper.run_if_due(uuid.uuid4()) is None
+
+
+@pytest.mark.asyncio
+async def test_a_malformed_reaper_table_fails_the_start(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with pytest.raises(ConfigError, match="queue.reap.enabled"):
+        await _reaper_from(
+            tmp_path, monkeypatch, '[project]\nname = "x"\n[queue.reap]\nenabled = "no"\n'
+        )
+
+
+@pytest.mark.asyncio
+async def test_the_environment_still_beats_a_skipped_vibey_toml(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VIBEY_QUEUE_REAP_ENABLED", "false")
+    reaper = await _reaper_from(tmp_path, monkeypatch, "[tracker]\nurl = 3\n")
+    assert await reaper.run_if_due(uuid.uuid4()) is None

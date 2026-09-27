@@ -733,7 +733,7 @@ Bare `vibey queue` prints help.
 | `queue bump JOB_ID` | `--project PROJECT_ID` | latest project | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place and any already ahead. |
 | | `--source NAME` | unset | An automation naming itself (see below). |
 | | `--json` | off | Print the change as JSON. |
-| `queue reap` | `--project PROJECT_ID` | latest project | One pass of the queue reaper: every expired lease (requeued while attempts remain, parked with a `delivery_exhausted` gate once they are spent), ready work nobody has taken for `[queue.reap] stale_ready_seconds`, and -- with a broker configured -- vibey's policy reconciled onto the queues it owns and read back, every queue measured, and each dead letter on an owned queue parked as a `bus.dead_letter` job. Ready work and broker verdicts are recorded under this project; a lease under its own job's project. |
+| `queue reap` | `--project PROJECT_ID` | latest project | One pass of the queue reaper: every expired lease (requeued while attempts remain, parked with a `delivery_exhausted` gate once they are spent), work claimable and unclaimed for `[queue.reap] stale_ready_seconds` in every project, and -- with a broker configured -- vibey's two policies reconciled onto the queues it owns and checked on them, every queue measured, and each dead letter on an owned queue parked as a `bus.dead_letter` job (once, whichever project's pass reads it). A lease or claimable-work sighting is recorded under its own job's project; a broker sighting once, under this project. |
 | | `--dry-run` | off | Judge everything and change nothing: no requeue, no park, no ledger event, no policy write. Prints what it would do. |
 | | `--json` | off | Print the report as JSON: `ok`, `acted`, `surfaced` (each with `object`, `queue`, `condition`, `measured`, `threshold`, `unit`, `action`), `policy`, `notes`, `unreadable`. |
 | `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Take the job out of the lane. The lane is always the jobs bumped by name plus their unfinished dependencies, so every pulled-in job no remaining named job needs leaves with it; the output and the ledger list exactly what was removed. Refused while another named job depends on this one. |
@@ -769,14 +769,19 @@ JobPriorityRefused` lists the refusals. Refused with exit 3, and recorded:
 - a request the database aborted to break a lock cycle (retry it).
 
 **`queue reap`** prints what it reaped (`reaped:`), what is stuck and was only surfaced
-(`stuck, surfaced, nothing moved:`), the broker policy's read-back (`verified` or
-`NOT VERIFIED`), notes, and every source it could not read (`UNREAD:`). Each verdict line
+(`stuck, surfaced, nothing moved:`), what was stuck and no longer is (`no longer stuck,
+closed on the ledger:`), the broker policies' check (`verified` or `NOT VERIFIED`, naming
+each owned queue that does not carry its policy), notes, and every source it could not read
+(`UNREAD:`). A surfaced condition is recorded once for the whole fleet -- every pod and
+every `queue reap` share the ledger -- until a pass that read its source whole records it
+cleared. Each verdict line
 names the action, the condition, the object, the queue, the measured value and the
 threshold. It exits 0 when every source was read and the broker policy, where one was
 reconciled, read back as written; otherwise 1 -- a reaper never reports success it did not
 observe. It never deletes a dead letter: answer the parked job's gate with `vibey answer
-GATE_ID --choice replay` (publish it back to the queue it died on, at least once) or
-`--choice dismiss`; the broker's copy stays on the dead-letter queue either way. Its
+GATE_ID --choice replay` (publish it back to the queue it died on, at least once -- offered
+only when that queue is one vibey owns, since its name comes from the message's own
+headers) or `--choice dismiss`; the broker's copy stays on the dead-letter queue either way. Its
 thresholds are [`[queue.reap]`](configuration.md#queuereap).
 
 ## `vibey-gh slots`
@@ -997,11 +1002,33 @@ start. With `VIBEY_OLLAMA_URL` set, the worker hands gptossloop
 `VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), and qwenloop `QWENLOOP_BASE_URL`
 only — never a model; a variable the operator set already is left alone.
 
+### qwenloop shared-turn worker
+
+`qwenloop server turn-worker` hosts one inference server behind the durable
+RabbitMQ turn queue so multiple lane processes can share it. Configure
+`turn_dispatch_mode = "rabbitmq"`, `turn_queue_url`, and optionally
+`turn_queue_name` in the qwenloop configuration before starting it. The
+command refuses direct mode, starts or verifies the configured inference
+server, and then consumes turns until stopped. Keep the broker URL in
+operator-owned secret configuration; use a TLS AMQP URL and least-privilege
+vhost/queue credentials when the broker is not local. If the worker stops,
+restart the same command after RabbitMQ is available; durable requests remain
+on the queue for another worker.
+
+`qwenloop server benchmark` runs a measured direct-versus-hybrid-versus-RabbitMQ
+comparison against the configured local server and stores the per-mode rates and
+winner in the user cache. Set
+`turn_dispatch_mode = "auto"` to use that persisted winner on subsequent runs;
+missing or invalid benchmark data safely falls back to direct dispatch. Use
+`--samples` and `--concurrency` to control the experiment size.
+
 The queue reaper (ADR-0056) runs in the same idle iterations: after the lease reap, at
 most once per `[queue.reap] interval_seconds` across all of the worker's loops, the
-worker surfaces stale ready work and -- with a broker configured -- reaps the broker, as
-`vibey queue reap` does. Its findings go to the ledger (`QueueReaped`) and to stderr
-(`queue.reaped`, `queue.stuck`, `queue.reap_unreadable`).
+worker surfaces claimable, unclaimed work in every project and -- with a broker
+configured -- reaps the broker, as `vibey queue reap` does. Its findings go to the ledger
+(`QueueReaped`) and to stderr (`queue.reaped`, `queue.stuck`, `queue.unstuck`,
+`queue.reap_unreadable`). A reap that fails is reported (`lease reap failed:`, `queue reap
+failed:`) and the worker carries on.
 
 Shutdown (ADR-0026): SIGTERM drains the worker — it finishes the job in
 hand, claims no more, and exits. A SIGTERM that arrives during startup,

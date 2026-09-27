@@ -817,12 +817,14 @@ def recover(
             if all_projects:
                 result = await conn.execute(
                     "UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL, "
-                    "assigned_engine = NULL WHERE state = 'leased'"
+                    "assigned_engine = NULL, run_after = greatest(run_after, now()), "
+                    "updated_at = now() WHERE state = 'leased'"
                 )
             else:
                 result = await conn.execute(
                     "UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL, "
-                    "assigned_engine = NULL WHERE state = 'leased' AND project_id = $1",
+                    "assigned_engine = NULL, run_after = greatest(run_after, now()), "
+                    "updated_at = now() WHERE state = 'leased' AND project_id = $1",
                     project_id,
                 )
 
@@ -1989,10 +1991,18 @@ def worker(
                     if once:
                         typer.echo("no ready job")
                         return
-                    await resources.jobs.reap()
+                    # A reap that fails is reported and the loop goes on: the worker's
+                    # own work never dies of its housekeeping (#1108 review finding 8).
+                    try:
+                        await resources.jobs.reap()
+                    except Exception as exc:
+                        typer.echo(f"drive[{idx}] lease reap failed: {exc}", err=True)
                     # Stale ready work and the broker, at most once per interval across
                     # every drive loop (ADR-0056); the lease reap just ran above.
-                    await resources.queue_reaper.run_if_due(project.project_id)
+                    try:
+                        await resources.queue_reaper.run_if_due(project.project_id)
+                    except Exception as exc:
+                        typer.echo(f"drive[{idx}] queue reap failed: {exc}", err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )

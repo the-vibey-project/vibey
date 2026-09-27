@@ -72,13 +72,16 @@ the action. Every key lives in `[queue.reap]`, which the chart renders from
 | **(a) hung handler**: a live holder past its deadline | *Broker:* how long a consumer has held an unacknowledged delivery. *PostgreSQL:* seconds past `lease_expires_at`. The heartbeat at a third of the lease is what pushes that deadline on | *Broker-wide:* `surfaces.rabbitmq.consumerTimeoutMs`, **1 800 000 ms**. That is the image's own default, declared explicitly so Plane keeps what it was built against. *vibey's own queues:* the policy key `consumer-timeout` = `consumer_timeout_seconds`, **21 600 s**, at least the two-hour BUILD lease with room (ADR-0044's default). *PostgreSQL:* `lease_grace_seconds`, **0** | *Broker:* it closes the channel and requeues every delivery on it; the redelivery counts toward (c). *PostgreSQL:* **requeue**. The claim already counted the attempt, so the ladder is (c)'s. `HUNG_HANDLER`, or `LEASE_EXPIRED` where liveness cannot be told apart from a hang |
 | **(b) holder gone**: work held with nobody holding it | *Broker:* `messages_unacknowledged` on a queue with `consumers = 0`. *PostgreSQL:* indistinguishable from (a) (`LEASE_EXPIRED`) | 0 messages | *Broker:* **surface**. Closing a dead consumer's channel and requeueing is the broker's own job; vibey reports when it has not happened, and does not guess. *PostgreSQL:* as (a) |
 | **(c) poison**: handed out as often as its limit allows and never settled | *PostgreSQL:* `attempts` at an expired lease. *Broker:* the quorum queue's delivery count | *PostgreSQL:* the row's `max_attempts`, default 7. *Broker:* the policy key `delivery-limit` = `delivery_limit`, **20** (ADR-0044) | *PostgreSQL:* **park.** The job goes to `awaiting_human` with a `delivery_exhausted` gate, and one attempt is refunded, so each answer buys exactly one more delivery (ADR-0044 §8). *Broker:* the broker dead-letters it, and (e) parks it |
-| **(d) stale ready**: ready, older than a declared age, nobody taking it | Age of the oldest ready message (its `timestamp` property; vibey's publishes now set one), with `consumers = 0`. *PostgreSQL:* how long the oldest claimable job has been claimable: the latest of `run_after`, its last state change, and its last dependency's success | `stale_ready_seconds`, **900** | **surface**, loudly, as a `QueueReaped` event, a `queue.stuck` warning and a line in `vibey queue reap`. Nothing is moved, because there is nowhere better to put it. An unmeasurable age (a message with no timestamp) is not old (10.f) |
+| **(d) stale ready**: ready, older than a declared age, nobody taking it | Age of the oldest ready message (its `timestamp` property; vibey's publishes now set one), with `consumers = 0`. *PostgreSQL, every project:* how long the oldest claimable job has been claimable and unclaimed: the later of `run_after` (which every path back to ready moves up to now) and its last dependency's success | `stale_ready_seconds`, **900** | **surface**, loudly, as a `QueueReaped` event, a `queue.stuck` warning and a line in `vibey queue reap`. Nothing is moved, because there is nowhere better to put it. An unmeasurable age (a message with no timestamp) is not old (10.f) |
 | **(e) dead letters** | Depth of a queue matching `dead_letter_queue_pattern`, **`(\.dlq\|\.dead)$`** | `dead_letter_min_depth`, **1**. Ownership: `owned_queue_pattern`, **`^vibey\.`** | *Owned:* each message becomes a **parked `bus.dead_letter` job and a `bus_dead_lettered` gate**, in one transaction and idempotent by identity. **Never deleted.** *Not owned* (Plane's): **surface**, never touched |
 
-Everything is bounded. A reap reads at most `dead_letter_peek_limit` messages
-(**100**) off a dead-letter queue. It runs at most once per `interval_seconds` (**60**) in
-each worker. `enabled` (**true**) switches the automatic pass off, and never the
-on-demand one.
+Everything is bounded. A reap parks at most `dead_letter_peek_limit` new dead letters
+(**100**, at most 1,000) off a dead-letter queue per pass, reading past the ones already
+parked (amended below). It runs at most once per `interval_seconds` (**60**) in each
+worker. `enabled` (**true**) switches the automatic pass off, and never the on-demand one
+-- **nor the lease reap**: that is the job queue's crash recovery, older than this record,
+and switching it off would strand every dead worker's job, so its bound (the park) comes
+with it (#1108 review P6, pinned by a test).
 
 **Both backends reap identically** because both are judged by `judge_held`. The PostgreSQL
 lease reaper, `PostgresJobRepository.reap()`, is now `PostgresQueueReapStore.reap_leases()`.
@@ -97,16 +100,20 @@ its call sites and its `int` result.
 - A dead-letter park writes the job, the gate and the event in one transaction. A second
   read of the same identity finds `ON CONFLICT DO NOTHING` and writes nothing.
 - A surfaced condition moves nothing. It is recorded when first seen, and again only after
-  it has cleared. A queue stuck for an hour is one event, not sixty. A source the pass
+  it has cleared -- **fleet-wide**, by the ledger, not by the process (amended below): a
+  sighting is held open by its latest `surface` record and closed by a `cleared` one. A
+  queue stuck for an hour is one event, not sixty, and not one per pod. A source the pass
   could not read says nothing about whether the condition cleared, so it clears nothing.
 - A dead letter's event is `untrusted`. Its queue and reason come from the message's own
   headers (`x-first-death-queue`, `x-death`), and a publisher can write those (SD-01 §4).
   The gate shows those values quoted and cut to 200 characters. Lease and ready-work
   events are vibey's own measurements, and are `trusted`.
-- The broker policy is **reconciled, then read back**. It is read first, written only when
-  it differs, and read again. `PolicyOutcome.verified` comes from the read-back and never
-  from a status code. A refused write -- a management user without the `policymaker` tag
-  -- is reported, not raised.
+- The broker policies are **reconciled, read back, and checked on the queues**. Each is
+  read first, written only when it differs, and read again; then every owned queue is asked
+  which policy it carries and what is in force on it. `PolicyOutcome.verified` comes from
+  the queues and never from a status code or the policy object alone (amended below). A
+  refused write -- a management user without the `policymaker` tag -- is reported, not
+  raised.
 - A source that cannot be read (the broker is down, a query fails) is named in the
   report's `unreadable`. Nothing is concluded from it, and the pass is not `ok`.
   `vibey queue reap` then exits 1.
@@ -147,11 +154,13 @@ As code (12.c):
 - `templates/surfaces.yaml` mounts `20-vibey-reap.conf` into the broker's `conf.d`, setting
   `consumer_timeout`, and restarts the broker when the value changes.
 - `templates/worker.yaml` renders every `[queue.reap]` key.
-- The reaper reconciles the owned-queue policy (`vibey-reap`: `consumer-timeout`,
-  `delivery-limit`) from configuration on every pass.
-- A cluster-smoke contract reads `consumer_timeout` back from the running node. It then runs
-  `vibey queue reap --json` in the worker pod, using only the chart's environment, and
-  asserts the policy verified and present on the broker.
+- The reaper reconciles two owned-queue policies from configuration on every pass:
+  `vibey-reap` for quorum queues (`consumer-timeout`, `delivery-limit`) and
+  `vibey-reap-classic` for classic queues (`consumer-timeout` only).
+- A cluster-smoke contract checks that the node lists the chart's `20-vibey-reap.conf` among
+  the files it loaded and holds the value the chart rendered. It then runs `vibey queue reap
+  --json` in the worker pod, using only the chart's environment, and asserts both policies
+  verified on the queues and present on the broker.
 
 ### 5. Code
 
@@ -184,28 +193,84 @@ its own and does not touch that tool.
 - **`domain/` stays pure.** `queue_reap.py` imports `hashlib`, `json` and `re`, and has no
   clock. `tests/domain/test_domain_purity.py` walks it.
 
-## Verification owed (upstream facts; CI has no RabbitMQ)
+## Verification (upstream facts; amended)
 
-`.github/workflows/ci.yml` runs PostgreSQL services and no broker, and the Docker socket
-was outside this lane's sandbox. So the broker's side is pinned by what vibey sends and
-reads, over a faked management API (`tests/infrastructure/bus/test_rabbitmq_inspector.py`),
-and by the in-memory bus with the adapter's semantics
-(`tests/infrastructure/bus/test_in_memory_reap.py`). The following are upstream behaviours
-of the pinned image (`rabbitmq:4-management-alpine@sha256:b839b492…`), recalled rather than
-observed:
+When this record was first written, CI ran no broker, so these were recalled rather than
+observed. Since the post-merge review, `gates` runs the pinned image
+(`rabbitmq:4-management-alpine@sha256:b839b492…`, RabbitMQ 4.3.6) as a service and
+`tests/infrastructure/bus/test_rabbitmq_live.py` observes them; the faked management API
+and the in-memory bus still pin what vibey sends and reads. Each line says which:
 
 - **`consumer_timeout` in a `conf.d` snippet takes effect.** Checked by the new
   cluster-smoke contract, which reads it back with `rabbitmqctl eval`.
-- **`consumer-timeout` and `delivery-limit` are accepted policy keys.** Checked by the same
-  contract: the reaper's policy write, read back from `rabbitmqctl list_policies`.
+- **`consumer-timeout` and `delivery-limit` are accepted policy keys** -- but **not together
+  on a classic queue.** Observed (live test, finding 2): a policy holding `delivery-limit`
+  does not attach to a classic queue at all, so the queue carried no policy and its
+  `consumer-timeout` never applied. Hence two policies, one per queue type.
 - **A closed channel's unacknowledged deliveries are requeued**, which is condition (b).
   Not observed here. Owed to lane R18's chaos twin, which kills channels. Meanwhile the
   reaper surfaces any unacknowledged message left on a queue with no consumer.
-- **`delivery-limit` dead-letters on a quorum queue and is ignored on a classic one.** The
-  bus port's queues are classic, so on them (c) is bounded by at-most-once, not by the
-  limit. Owed to R12.
-- **`head_message_timestamp` reports the head message's `timestamp` property.** Without
-  it, (d) on the broker stays unmeasured and is never guessed.
+- **`delivery-limit` dead-letters on a quorum queue.** Still owed to R12. It is **not**
+  "ignored on a classic queue", as this record first said: a policy carrying it does not
+  attach to a classic queue at all (above). The bus port's queues are classic, so on them
+  (c) is bounded by at-most-once, not by the limit.
+- **A read with requeue does not spend a quorum queue's delivery limit.** Observed (live
+  test): a quorum dead letter under a delivery limit of 20 survives thirty reads, so reading
+  a dead-letter queue never deletes from it.
+- **`head_message_timestamp` reports a classic queue's head message's `timestamp`; a
+  quorum queue reports none.** Observed (live test, finding 12). On a quorum queue (d) is
+  therefore never measured on the broker; the pass says so in its notes rather than
+  staying silent, and never guesses.
+
+## Amendment, 2026-09-24: the post-merge review of #1108
+
+An independent review after merge (probes kept in `tests/infrastructure/db/test_queue_reap_review.py`,
+`test_queue_gate_answers.py`, `test_queue_reap_store.py` and
+`tests/infrastructure/bus/test_rabbitmq_live.py`) found the following. Each is fixed test-first
+in the pull request that amends this record.
+
+1. **A queue gate's answer was read as the job's own.** `HumanGateRepository.latest_for_job`
+   returned the latest gate of any kind, so answering `delivery_exhausted` (or the worker's
+   `attempts_exhausted`, ADR-0024) "go" was read by `review.deployment_choice` as the
+   deployment answer: DeploymentDeclined, REVIEW to DONE, the question never asked (P7).
+   It now returns the job's own latest gate; the queue's gates
+   (`domain.job.QUEUE_GATE_KINDS`) are skipped unless asked for with
+   `include_queue_gates`, which only the worker, which raises them, does.
+2. **The broker policy was "verified" but not in force on classic queues** (above). Two
+   policies, and verification reads each owned queue's `policy` and
+   `effective_policy_definition`, with a bounded wait after a write for the management
+   statistics to catch up.
+3. **The CI contract could not fail**: the chart's default equals the image's. It now
+   requires the node to list the chart's conf file as loaded.
+4. **"Recorded once per sighting" was per process.** It is per fleet, held by the ledger,
+   with a `cleared` action (`ReapAction.CLEARED`) closing a sighting. A broker sighting is
+   recorded once, not once per project, and is `untrusted`: every verdict now carries its
+   `source` (`job_queue`, `broker`), and a broker's queue names are not vibey's words.
+5. **Claimable, unclaimed work (d) never fired from the worker**: its reaper ran only when
+   its own project had nothing claimable, and measured only that project. Every project is
+   measured now, including one with no worker, each recorded under its own project. The
+   age no longer reads `updated_at`, which a bump writes; instead every path back to ready
+   (lease reap, gate answer, `vibey recover`) moves `run_after` up to now.
+6. **Configuration gaps**: an empty or catch-all pattern, one owning a known foreign name
+   (`celery`, `amq.gen-…`), a negative policy priority, a grace over a day, a read limit
+   over 1,000 and a consumer timeout under the longest lease (7,200 s) are refused; and a
+   `vibey.toml` the surfaces cannot parse no longer hides its `[queue.reap]` table -- that
+   table is read strictly, and a malformed one fails the start.
+7. **A password could reach a log** through a URL with credentials in it. Such a URL is
+   refused, and every connection error is scrubbed of the password.
+8. **One bad lease row blocked every reap and could kill the worker.** Each lease is reaped
+   in its own transaction (`LeaseReapIncomplete` names the rest), which also ends the
+   cross-project deadlock two concurrent reapers hit (P4); the drive loop reports a failed
+   reap and carries on.
+9. **One dead letter was parked once per project.** The park is keyed across projects.
+10. **Past the first hundred, nothing was ever parked again**: a read returns the same head.
+    The read now reaches past what is parked, and the unread remainder's size is part of
+    its sighting, so growth is recorded again.
+11. **Replay into a quorum queue failed with a 400 and left `.dlx`/`.dlq` behind.** A
+    publish declares its queue only when missing; and since a dead letter's origin comes
+    from headers its publisher wrote, replay goes only to a queue vibey owns.
+12. **(d) cannot fire on a quorum queue on the broker** (no head timestamp). Documented,
+    and noted in every pass that meets it.
 
 ## Consequences
 

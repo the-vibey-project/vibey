@@ -1,6 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The queue reaper's pass (ADR-0056): each condition with a fake store, a fake broker
-and a fake clock, so every branch runs without a database or a broker."""
+and a fake clock, so every branch runs without a database or a broker. The fake store
+keeps its sightings the way the ledger does -- shared by every reaper handed the same
+store -- so fleet-wide recording is tested here and against PostgreSQL."""
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -18,11 +20,13 @@ from vibey.application.interfaces import (
 )
 from vibey.application.queue_reaper import (
     DELIVERY_EXHAUSTED_GATE,
-    DELIVERY_EXHAUSTED_GATE_KIND,
+    MAX_DEAD_LETTER_READ,
     QueueReaper,
 )
 from vibey.domain.config import QueueReapConfig
+from vibey.domain.errors import LeaseReapIncomplete
 from vibey.domain.interfaces.queue_reap_interface import BrokerPolicyInterface
+from vibey.domain.job import DELIVERY_EXHAUSTED_GATE_KIND
 from vibey.domain.queue_reap import (
     DeadLetter,
     DeadLetterPeek,
@@ -30,10 +34,12 @@ from vibey.domain.queue_reap import (
     QueueDepth,
     ReapAction,
     ReapCondition,
+    ReapSource,
     ReapVerdict,
 )
 
 PROJECT = UUID("6f1c2a4e-0000-4000-8000-000000000000")
+OTHER = UUID("6f1c2a4e-0000-4000-8000-000000000001")
 T0 = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
 
 
@@ -51,6 +57,7 @@ def _verdict(
         threshold=0.0,
         unit="seconds past deadline",
         action=action,
+        source=ReapSource.JOB_QUEUE,
     )
 
 
@@ -61,12 +68,16 @@ class Boom(RuntimeError):
 @dataclass
 class FakeStore:
     leases: tuple[ReapVerdict, ...] = ()
-    ready: tuple[QueueDepth, ...] = ()
+    ready: tuple[tuple[UUID, QueueDepth], ...] = ()
     fail: set[str] = field(default_factory=set)
-    parked_identities: set[str] = field(default_factory=set)
+    incomplete: LeaseReapIncomplete | None = None
+    parked_identities: dict[str, str] = field(default_factory=dict)
     calls: list[str] = field(default_factory=list)
-    recorded: list[ReapVerdict] = field(default_factory=list)
-    parked: list[tuple[DeadLetter, ReapVerdict]] = field(default_factory=list)
+    parked: list[tuple[UUID, DeadLetter, ReapVerdict, bool]] = field(default_factory=list)
+    ledger: list[tuple[UUID, ReapVerdict]] = field(default_factory=list)
+    """Every sighting recorded, and every clearing, in order: the shared ledger."""
+    open_rows: list[tuple[UUID, ReapVerdict]] | None = None
+    """When set, what `open_sightings` returns instead of what the ledger says."""
 
     def _enter(self, name: str) -> None:
         self.calls.append(name)
@@ -79,25 +90,59 @@ class FakeStore:
 
     async def reap_leases(self) -> tuple[ReapVerdict, ...]:
         self._enter("reap_leases")
+        if self.incomplete is not None:
+            raise self.incomplete
         return self.leases
 
-    async def ready_depths(self, project_id: UUID) -> tuple[QueueDepth, ...]:
+    async def ready_depths(self) -> tuple[tuple[UUID, QueueDepth], ...]:
         self._enter("ready_depths")
         return self.ready
 
+    async def parked_count(self, queue: str) -> int:
+        self._enter("parked_count")
+        return sum(1 for q in self.parked_identities.values() if q == queue)
+
     async def park_dead_letter(
-        self, project_id: UUID, item: DeadLetter, verdict: ReapVerdict
+        self, project_id: UUID, item: DeadLetter, verdict: ReapVerdict, *, origin_owned: bool
     ) -> UUID | None:
         self._enter("park_dead_letter")
         if item.identity in self.parked_identities:
             return None
-        self.parked_identities.add(item.identity)
-        self.parked.append((item, verdict))
+        self.parked_identities[item.identity] = item.queue
+        self.parked.append((project_id, item, verdict, origin_owned))
         return uuid4()
 
-    async def record(self, project_id: UUID, verdict: ReapVerdict) -> None:
-        self._enter("record")
-        self.recorded.append(verdict)
+    def _latest(self, verdict: ReapVerdict) -> ReapAction | None:
+        for _, recorded in reversed(self.ledger):
+            if recorded.sighting == verdict.sighting:
+                return recorded.action
+        return None
+
+    async def record_sighting(self, project_id: UUID, verdict: ReapVerdict) -> bool:
+        self._enter("record_sighting")
+        if self._latest(verdict) is ReapAction.SURFACE:
+            return False
+        self.ledger.append((project_id, verdict))
+        return True
+
+    async def open_sightings(self) -> tuple[tuple[UUID, ReapVerdict], ...]:
+        self._enter("open_sightings")
+        if self.open_rows is not None:
+            return tuple(self.open_rows)
+        latest: dict[tuple[str, ...], tuple[UUID, ReapVerdict]] = {}
+        for project, verdict in self.ledger:
+            latest[verdict.sighting] = (project, verdict)
+        return tuple(pair for pair in latest.values() if pair[1].action is ReapAction.SURFACE)
+
+    async def record_cleared(self, project_id: UUID, verdict: ReapVerdict) -> bool:
+        self._enter("record_cleared")
+        if self._latest(verdict) is not ReapAction.SURFACE:
+            return False
+        self.ledger.append((project_id, verdict.cleared()))
+        return True
+
+    def recorded(self, action: ReapAction = ReapAction.SURFACE) -> list[ReapVerdict]:
+        return [v for _, v in self.ledger if v.action is action]
 
 
 @dataclass
@@ -119,7 +164,8 @@ class FakeBus:
 
     async def peek_dead_letters(self, queue: str, *, limit: int) -> DeadLetterPeek:
         self._enter(f"peek:{queue}:{limit}")
-        return self.dead[queue]
+        whole = self.dead[queue]
+        return DeadLetterPeek(queue=queue, depth=whole.depth, items=whole.items[:limit])
 
     async def apply_policy(self, policy: BrokerPolicyInterface) -> PolicyOutcome:
         self._enter("apply_policy")
@@ -177,9 +223,29 @@ def _reaper(
     return reaper, store, logger
 
 
-def _dead(identity: str, queue: str = "vibey.jobs.dlq") -> DeadLetter:
+def _dead(identity: str, queue: str = "vibey.jobs.dlq", origin: str = "vibey.jobs") -> DeadLetter:
     return DeadLetter(
-        queue=queue, origin_queue="vibey.jobs", reason="rejected", body="{}", message_id=identity
+        queue=queue, origin_queue=origin, reason="rejected", body="{}", message_id=identity
+    )
+
+
+def _dlq(queue: str = "vibey.jobs.dlq", ready: int = 1) -> QueueDepth:
+    return QueueDepth(
+        queue=queue, ready=ready, unacked=0, consumers=0, oldest_ready_age_seconds=None
+    )
+
+
+def _stale(project: UUID = PROJECT, age: float = 1_000.0) -> tuple[UUID, QueueDepth]:
+    return (
+        project,
+        QueueDepth(
+            queue=f"job:{project}",
+            ready=2,
+            unacked=0,
+            consumers=None,
+            oldest_ready_age_seconds=age,
+            source=ReapSource.JOB_QUEUE,
+        ),
     )
 
 
@@ -226,12 +292,14 @@ async def test_a_pass_reaps_leases_and_reports_them() -> None:
 
 async def test_a_dry_run_previews_leases_and_writes_nothing() -> None:
     lease = _verdict()
-    reaper, store, logger = _reaper(FakeStore(leases=(lease,)))
+    reaper, store, logger = _reaper(FakeStore(leases=(lease,), ready=(_stale(),)))
     report = await reaper.run(PROJECT, dry_run=True)
     assert report.dry_run
     assert report.acted == (lease,)
+    assert report.surfaced
     assert "reap_leases" not in store.calls
-    assert "record" not in store.calls
+    assert "record_sighting" not in store.calls
+    assert "open_sightings" not in store.calls
     assert "queue.reap_planned" in logger.events()
 
 
@@ -250,67 +318,99 @@ async def test_an_unreadable_lease_reap_is_named_and_the_pass_carries_on() -> No
     assert "queue.reap_unreadable" in logger.events()
 
 
-# -- (d) on the job queue --------------------------------------------------------------
-
-
-def _stale(queue: str = "job:p", age: float = 1_000.0) -> QueueDepth:
-    return QueueDepth(queue=queue, ready=2, unacked=0, consumers=None, oldest_ready_age_seconds=age)
-
-
-async def test_stale_ready_work_is_surfaced_and_recorded_once_until_it_clears() -> None:
-    store = FakeStore(ready=(_stale(),))
-    reaper, _, logger = _reaper(store)
-    first = await reaper.run(PROJECT)
-    assert [v.condition for v in first.surfaced] == [ReapCondition.STALE_READY]
-    assert len(store.recorded) == 1
-    assert "queue.stuck" in logger.events()
-
-    await reaper.run(PROJECT)
-    assert len(store.recorded) == 1, "a condition still stuck is not recorded again"
-
-    store.ready = ()
-    await reaper.run(PROJECT)
-    store.ready = (_stale(),)
-    await reaper.run(PROJECT)
-    assert len(store.recorded) == 2, "a condition that cleared and came back is recorded again"
-
-
-async def test_a_surfaced_condition_is_not_recorded_in_a_dry_run() -> None:
-    reaper, store, _ = _reaper(FakeStore(ready=(_stale(),)))
-    report = await reaper.run(PROJECT, dry_run=True)
-    assert report.surfaced
-    assert store.recorded == []
-
-
-async def test_an_unreadable_ready_measure_is_named() -> None:
-    reaper, _, _ = _reaper(FakeStore(fail={"ready_depths"}))
-    report = await reaper.run(PROJECT)
-    assert report.unreadable == ("job-queue ready work: ready_depths failed",)
-
-
-async def test_a_recording_that_fails_is_named_and_retried_on_the_next_pass() -> None:
-    store = FakeStore(ready=(_stale(),), fail={"record"})
+async def test_a_partly_reaped_pass_keeps_what_it_reaped_and_names_the_rest() -> None:
+    """#1108 review finding 8: one bad row no longer hides the rows that were reaped."""
+    done = _verdict()
+    store = FakeStore(incomplete=LeaseReapIncomplete((done, "not a verdict"), ("j2: Boom: x",)))
     reaper, _, _ = _reaper(store)
     report = await reaper.run(PROJECT)
-    assert report.unreadable == ("recording stale_ready on job:p: record failed",)
-    store.fail.clear()
-    await reaper.run(PROJECT)
-    assert len(store.recorded) == 1
+    assert report.acted == (done,)
+    assert report.unreadable == ("job-queue lease j2: Boom: x",)
 
 
-async def test_an_unreadable_source_keeps_what_was_already_surfaced() -> None:
-    store = FakeStore(ready=(_stale(),))
-    reaper, _, _ = _reaper(store, FakeBus())
+# -- (d) on the job queue, and fleet-wide recording (findings 4 and 5) -----------------
+
+
+async def test_claimable_unclaimed_work_is_recorded_under_its_own_project() -> None:
+    """Finding 5: every project is measured, a project with no worker included, and each
+    sighting is filed under the project whose work it is -- not the reaper's."""
+    store = FakeStore(ready=(_stale(OTHER),))
+    reaper, _, logger = _reaper(store)
+    report = await reaper.run(PROJECT)
+    (verdict,) = report.surfaced
+    assert verdict.condition is ReapCondition.STALE_READY
+    assert verdict.unit == "seconds claimable and unclaimed"
+    assert verdict.source is ReapSource.JOB_QUEUE
+    assert [project for project, _ in store.ledger] == [OTHER]
+    assert "queue.stuck" in logger.events()
+
+
+async def test_p3_one_sighting_is_recorded_once_by_every_pod_and_the_cli() -> None:
+    """Finding 4 (P3): two pods and `vibey queue reap` recorded one continuous sighting
+    three times, because each process remembered only its own. The ledger remembers."""
+    shared = FakeStore(ready=(_stale(),))
+    pod_a, _, _ = _reaper(shared)
+    pod_b, _, _ = _reaper(shared)
+    cli, _, _ = _reaper(shared)
+    await pod_a.run(PROJECT)
+    await pod_a.run(PROJECT)
+    await pod_b.run(PROJECT)
+    await cli.run(PROJECT)
+    assert len(shared.recorded()) == 1
+
+
+async def test_a_cleared_sighting_is_closed_once_and_its_return_is_new() -> None:
+    shared = FakeStore(ready=(_stale(),))
+    pod_a, _, logger = _reaper(shared)
+    pod_b, _, _ = _reaper(shared)
+    await pod_a.run(PROJECT)
+    shared.ready = ()
+    first = await pod_a.run(PROJECT)
+    second = await pod_b.run(PROJECT)
+    assert [v.action for v in first.cleared] == [ReapAction.CLEARED]
+    assert second.cleared == (), "the other pod finds it closed already"
+    assert len(shared.recorded(ReapAction.CLEARED)) == 1
+    assert "queue.unstuck" in logger.events()
+    shared.ready = (_stale(),)
+    await pod_b.run(PROJECT)
+    assert len(shared.recorded()) == 2
+
+
+async def test_a_source_not_read_whole_clears_nothing() -> None:
+    shared = FakeStore(ready=(_stale(),))
+    reaper, _, _ = _reaper(shared)
     await reaper.run(PROJECT)
-    assert len(store.recorded) == 1
-    # The job queue cannot be read on this pass: that says nothing about whether the
-    # stuck work cleared, so it is not forgotten -- and not recorded again when it is
-    # read next time and is still stuck.
-    store.fail.add("ready_depths")
-    await reaper.run(PROJECT)
-    store.fail.clear()
-    await reaper.run(PROJECT)
-    assert len(store.recorded) == 1
+    shared.ready = ()
+    shared.fail.add("ready_depths")
+    report = await reaper.run(PROJECT)
+    assert report.cleared == ()
+    assert report.unreadable == ("job-queue claimable work: ready_depths failed",)
+
+
+async def test_a_sighting_that_cannot_be_recorded_or_cleared_is_named() -> None:
+    store = FakeStore(ready=(_stale(),), fail={"record_sighting"})
+    reaper, _, _ = _reaper(store)
+    report = await reaper.run(PROJECT)
+    assert report.unreadable == (f"recording stale_ready on job:{PROJECT}: record_sighting failed",)
+
+    open_one = _verdict(ReapCondition.STALE_READY, ReapAction.SURFACE)
+    store = FakeStore(open_rows=[(PROJECT, open_one)], fail={"record_cleared"})
+    reaper, _, _ = _reaper(store)
+    report = await reaper.run(PROJECT)
+    assert report.unreadable == ("clearing stale_ready on job:p: record_cleared failed",)
+
+    open_one = _verdict(ReapCondition.STALE_READY, ReapAction.SURFACE)
+    store = FakeStore(open_rows=[(PROJECT, open_one)])
+    store.ledger.append((PROJECT, open_one.cleared()))
+    reaper, _, _ = _reaper(store)
+    report = await reaper.run(PROJECT)
+    assert report.cleared == ()
+    assert report.unreadable == ()
+
+    store = FakeStore(fail={"open_sightings"})
+    reaper, _, _ = _reaper(store)
+    report = await reaper.run(PROJECT)
+    assert report.unreadable == ("open sightings: open_sightings failed",)
 
 
 # -- the broker ------------------------------------------------------------------------
@@ -342,67 +442,145 @@ async def test_a_dry_run_does_not_write_the_policy() -> None:
     assert any("not reconciled in a dry run" in note for note in report.notes)
 
 
-async def test_an_unreachable_broker_is_named_twice_and_nothing_concluded() -> None:
-    bus = FakeBus(fail={"apply_policy", "depths"})
-    reaper, _, _ = _reaper(bus=bus)
+async def test_an_unreachable_broker_is_named_and_no_broker_sighting_clears() -> None:
+    celery = QueueDepth(
+        queue="celery", ready=4, unacked=0, consumers=0, oldest_ready_age_seconds=5_000.0
+    )
+    shared = FakeStore()
+    bus = FakeBus(queues=(celery,))
+    reaper, _, _ = _reaper(shared, bus)
+    await reaper.run(PROJECT)
+    assert len(shared.recorded()) == 1
+    bus.fail = {"apply_policy", "depths"}
     report = await reaper.run(PROJECT)
     assert report.unreadable == (
         "broker policy 'vibey-reap': apply_policy failed",
         "broker queues: depths failed",
     )
-    assert report.surfaced == ()
+    assert report.cleared == ()
 
 
-async def test_a_foreign_queue_is_surfaced_and_never_parked() -> None:
-    """Plane's Celery queue on the shared broker: measured, surfaced, left alone."""
+async def test_a_foreign_queue_is_surfaced_once_untrusted_and_never_parked() -> None:
+    """Plane's Celery queue on the shared broker: measured, surfaced, left alone -- and,
+    finding 4, recorded once for the fleet as a broker sighting, not once per project."""
     celery = QueueDepth(
         queue="celery", ready=4, unacked=0, consumers=0, oldest_ready_age_seconds=5_000.0
     )
     celery_dead = QueueDepth(
         queue="celery.dlq", ready=2, unacked=0, consumers=0, oldest_ready_age_seconds=None
     )
+    shared = FakeStore()
     bus = FakeBus(queues=(celery, celery_dead))
-    reaper, store, _ = _reaper(bus=bus)
-    report = await reaper.run(PROJECT)
+    first, _, _ = _reaper(shared, bus)
+    second, _, _ = _reaper(shared, bus)
+    report = await first.run(PROJECT)
+    await second.run(OTHER)
     conditions = sorted((v.queue, v.condition, v.action) for v in report.surfaced)
     assert conditions == [
         ("celery", ReapCondition.STALE_READY, ReapAction.SURFACE),
         ("celery.dlq", ReapCondition.DEAD_LETTERED, ReapAction.SURFACE),
     ]
+    assert all(v.source is ReapSource.BROKER for v in report.surfaced)
+    assert len(shared.recorded()) == 2
+    assert {project for project, _ in shared.ledger} == {PROJECT}
     assert not [c for c in bus.calls if c.startswith("peek:")]
-    assert store.parked == []
+    assert shared.parked == []
+
+
+async def test_unmeasurable_ready_work_on_the_broker_is_noted_not_assumed() -> None:
+    """Finding 12: a quorum queue reports no head-message timestamp, so its ready age is
+    never measured -- which the pass now says rather than stays silent about."""
+    quorum = QueueDepth(
+        queue="vibey.jobs.p",
+        ready=3,
+        unacked=0,
+        consumers=0,
+        oldest_ready_age_seconds=None,
+        kind="quorum",
+    )
+    reaper, _, _ = _reaper(bus=FakeBus(queues=(quorum,)))
+    report = await reaper.run(PROJECT)
+    assert report.surfaced == ()
+    assert any(
+        "vibey.jobs.p: 3 ready with no consumer, age not measurable (a quorum" in note
+        for note in report.notes
+    )
+    untyped = replace_kind(quorum, "")
+    report = await _reaper(bus=FakeBus(queues=(untyped,)))[0].run(PROJECT)
+    assert any("(a queue whose head message" in note for note in report.notes)
+
+
+def replace_kind(depth: QueueDepth, kind: str) -> QueueDepth:
+    from dataclasses import replace
+
+    return replace(depth, kind=kind)
 
 
 async def test_an_owned_dead_letter_queue_is_parked_item_by_item_and_idempotently() -> None:
-    dlq = QueueDepth(
-        queue="vibey.jobs.dlq", ready=2, unacked=0, consumers=0, oldest_ready_age_seconds=None
-    )
-    items = (_dead("a"), _dead("b"))
+    items = (_dead("a"), _dead("b", origin="celery"))
     bus = FakeBus(
-        queues=(dlq,), dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 2, items)}
+        queues=(_dlq(ready=2),),
+        dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 2, items)},
     )
-    reaper, store, _ = _reaper(
-        store=FakeStore(), bus=bus, config=QueueReapConfig(dead_letter_peek_limit=7)
-    )
+    reaper, store, _ = _reaper(bus=bus, config=QueueReapConfig(dead_letter_peek_limit=7))
     first = await reaper.run(PROJECT)
     assert "peek:vibey.jobs.dlq:7" in bus.calls
     assert [v.subject for v in first.acted] == ["id:a", "id:b"]
     assert all(v.action is ReapAction.PARK for v in first.acted)
     assert all("job_id" in v.detail for v in first.acted)
-    assert [item.identity for item, _ in store.parked] == ["id:a", "id:b"]
+    assert [(item.identity, owned) for _, item, _, owned in store.parked] == [
+        ("id:a", True),
+        ("id:b", False),
+    ], "a header naming a queue vibey does not own is never offered for replay"
 
     second = await reaper.run(PROJECT)
     assert second.acted == ()
     assert any("2 dead letter(s) already parked" in note for note in second.notes)
-    assert len(store.parked) == 2
+    assert "peek:vibey.jobs.dlq:9" in bus.calls, "the read reaches past the parked two"
+
+
+async def test_p2_the_read_pages_past_what_is_parked_and_growth_is_recorded_again() -> None:
+    """Finding 10 (P2): past the first hundred, nothing was ever parked again -- the read
+    always returned the same head -- and the unread remainder's growth was never recorded.
+    """
+    items = tuple(_dead(f"m{i}") for i in range(150))
+    bus = FakeBus(
+        queues=(_dlq(ready=150),),
+        dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 150, items)},
+    )
+    reaper, store, _ = _reaper(bus=bus)
+    first = await reaper.run(PROJECT)
+    assert len(first.acted) == 100
+    (unread,) = first.surfaced
+    assert (unread.measured, unread.episode) == (50.0, "50")
+    second = await reaper.run(PROJECT)
+    assert len(second.acted) == 50
+    assert len(store.parked) == 150
+    assert [v.episode for v in second.cleared] == ["50"]
+
+    grown = items + tuple(_dead(f"m{i}") for i in range(150, 330))
+    bus.dead["vibey.jobs.dlq"] = DeadLetterPeek("vibey.jobs.dlq", 330, grown)
+    bus.queues = (_dlq(ready=330),)
+    third = await reaper.run(PROJECT)
+    assert len(third.acted) == 100
+    assert [v.episode for v in third.surfaced] == ["80"]
+    assert [v.episode for v in store.recorded()] == ["50", "80"]
+
+
+async def test_the_read_is_capped_however_much_is_parked() -> None:
+    store = FakeStore(parked_identities={f"id:{i}": "vibey.jobs.dlq" for i in range(20_000)})
+    bus = FakeBus(
+        queues=(_dlq(ready=20_001),),
+        dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 20_001, ())},
+    )
+    reaper, _, _ = _reaper(store, bus)
+    await reaper.run(PROJECT)
+    assert f"peek:vibey.jobs.dlq:{MAX_DEAD_LETTER_READ}" in bus.calls
 
 
 async def test_a_dry_run_plans_the_parks_without_making_them() -> None:
-    dlq = QueueDepth(
-        queue="vibey.jobs.dlq", ready=1, unacked=0, consumers=0, oldest_ready_age_seconds=None
-    )
     bus = FakeBus(
-        queues=(dlq,),
+        queues=(_dlq(),),
         dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 1, (_dead("a"),))},
     )
     reaper, store, _ = _reaper(bus=bus)
@@ -411,39 +589,39 @@ async def test_a_dry_run_plans_the_parks_without_making_them() -> None:
     assert "park_dead_letter" not in store.calls
 
 
-async def test_dead_letters_past_the_read_limit_are_surfaced_not_assumed() -> None:
-    dlq = QueueDepth(
-        queue="vibey.jobs.dlq", ready=5, unacked=0, consumers=0, oldest_ready_age_seconds=None
-    )
-    bus = FakeBus(
-        queues=(dlq,),
-        dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 5, (_dead("a"),))},
-    )
-    reaper, _, _ = _reaper(bus=bus)
-    report = await reaper.run(PROJECT)
-    (unread,) = report.surfaced
-    assert unread.condition is ReapCondition.DEAD_LETTERED
-    assert unread.measured == 4.0
-    assert len(report.acted) == 1
-
-
 async def test_an_unreadable_dead_letter_queue_and_a_failed_park_are_named() -> None:
-    dlq = QueueDepth(
-        queue="vibey.jobs.dlq", ready=1, unacked=0, consumers=0, oldest_ready_age_seconds=None
-    )
-    bus = FakeBus(queues=(dlq,), fail={"peek:vibey.jobs.dlq:100"})
+    bus = FakeBus(queues=(_dlq(),), fail={"peek:vibey.jobs.dlq:100"})
+    bus.dead["vibey.jobs.dlq"] = DeadLetterPeek("vibey.jobs.dlq", 1, (_dead("a"),))
     reaper, _, _ = _reaper(bus=bus)
     report = await reaper.run(PROJECT)
     assert report.unreadable == ("dead letters on vibey.jobs.dlq: peek:vibey.jobs.dlq:100 failed",)
 
+    reaper, _, _ = _reaper(FakeStore(fail={"parked_count"}), FakeBus(queues=(_dlq(),)))
+    report = await reaper.run(PROJECT)
+    assert report.unreadable == ("dead letters on vibey.jobs.dlq: parked_count failed",)
+
     bus = FakeBus(
-        queues=(dlq,),
+        queues=(_dlq(),),
         dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 1, (_dead("a"),))},
     )
     reaper, _, _ = _reaper(FakeStore(fail={"park_dead_letter"}), bus)
     report = await reaper.run(PROJECT)
     assert report.unreadable == ("parking id:a from vibey.jobs.dlq: park_dead_letter failed",)
     assert report.acted == ()
+
+
+async def test_a_dead_letter_queue_that_was_not_read_whole_clears_nothing() -> None:
+    items = tuple(_dead(f"m{i}") for i in range(150))
+    bus = FakeBus(
+        queues=(_dlq(ready=150),),
+        dead={"vibey.jobs.dlq": DeadLetterPeek("vibey.jobs.dlq", 150, items)},
+    )
+    shared = FakeStore()
+    reaper, _, _ = _reaper(shared, bus)
+    await reaper.run(PROJECT)
+    bus.fail = {"peek:vibey.jobs.dlq:200"}
+    report = await reaper.run(PROJECT)
+    assert report.cleared == ()
 
 
 # -- automation ------------------------------------------------------------------------
@@ -470,17 +648,20 @@ async def test_run_if_due_does_nothing_when_reaping_is_switched_off() -> None:
 
 @pytest.mark.parametrize("dry_run", [True, False])
 async def test_joined_keeps_the_later_policy_and_every_finding(dry_run: bool) -> None:
+    cleared = _verdict(ReapCondition.STALE_READY, ReapAction.CLEARED)
     left = QueueReapReport(
         project_id=PROJECT,
         dry_run=dry_run,
         acted=(_verdict(),),
         policy=PolicyOutcome(policy="a", verified=True),
         notes=("n1",),
+        cleared=(cleared,),
     )
     right = QueueReapReport(project_id=PROJECT, dry_run=dry_run, unreadable=("u",))
     joined = left.joined(right)
     assert joined.policy == left.policy
     assert joined.acted == left.acted
+    assert joined.cleared == (cleared,)
     assert joined.notes == ("n1",) and joined.unreadable == ("u",)
     assert not joined.ok
     newer = PolicyOutcome(policy="b", verified=False)
