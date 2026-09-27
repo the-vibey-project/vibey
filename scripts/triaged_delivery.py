@@ -259,22 +259,20 @@ def publish_project(project_id: str, issue: Issue, *, repo: Path) -> str | None:
         "VIBEY_PUSH_GATE",
         str(repo / "docs" / "plans" / "qwenstorm-3.0.0" / "tools" / "push_gate.py"),
     )
-    subprocess.run(  # push_gate
-        [
-            "python3",
-            push_gate,
-            "run",
-            "--",
-            "git",
-            "-C",
-            str(integration_path),
-            "push",
-            "-u",
-            "origin",
-            branch,
-        ],
-        check=True,
-    )
+    push_gate_command = [
+        "python3",
+        push_gate,
+        "run",
+        "--",
+        "git",
+        "-C",
+        str(integration_path),
+        "push",
+        "-u",
+        "origin",
+        branch,
+    ]
+    subprocess.run(push_gate_command, check=True)
     existing = json.loads(gh("pr", "list", "--head", branch, "--base", "develop", "--json", "url"))
     if existing:
         return str(existing[0]["url"])
