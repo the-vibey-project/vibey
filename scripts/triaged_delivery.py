@@ -148,25 +148,33 @@ def dispatch(issue: Issue, *, repo: Path) -> str:
     return project_id
 
 
-def drive_project(project_id: str, *, max_steps: int = 100) -> None:
+def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: float = 900.0) -> None:
     """Run the normal worker and answer only DESIGN gates with their declared defaults."""
     for _ in range(max_steps):
-        worker = subprocess.run(
-            [
-                "uv",
-                "run",
-                "vibey",
-                "worker",
-                "--once",
-                "--project",
-                project_id,
-                "--provider",
-                "gptossloop",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        try:
+            worker = subprocess.run(
+                [
+                    "uv",
+                    "run",
+                    "vibey",
+                    "worker",
+                    "--once",
+                    "--project",
+                    project_id,
+                    "--provider",
+                    "gptossloop",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=worker_timeout,
+            )
+        except subprocess.TimeoutExpired:
+            print(
+                f"project {project_id} worker exceeded {worker_timeout:g}s; "
+                "leaving the durable lease for queue.reap"
+            )
+            return
         gates = json.loads(
             subprocess.run(
                 ["uv", "run", "vibey", "gates", project_id, "--json"],
