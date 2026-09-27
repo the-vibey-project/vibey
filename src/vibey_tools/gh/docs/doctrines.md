@@ -777,6 +777,14 @@ confusing screen spends a person's attention the way a slow harness spends their
 (12.g), and a dull one wastes the one thing this whole machine exists to serve: the
 delight of the human it serves.
 
+**12.l — measure the path where it runs** *(ratified by the merge that carried this entry)*:
+every surface controlled by a service bus, queue, or RabbitMQ transport computes its dispatch
+choice by a bounded experiment on the machine and workload that will use it, comparing the
+singleton, multiplexer, and bounded hybrid paths where each is semantically available. The
+measurement is per surface, durable, inspectable, and recomputed when its inputs change; the
+default is the recorded winner, an absent or invalid result falls back safely, and an operator
+may explicitly override it. No result from one surface or machine is evidence for another.
+
 ---
 
 *The counts are sealed — twelve doctrines, ten rights, ten commandments — and the

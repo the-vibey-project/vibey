@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import asyncpg
+from platformdirs import user_cache_path
 
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
@@ -949,15 +950,30 @@ async def build_app(
             # start rather than falling back to an enabled reaper on defaults.
             reap_settings = QUEUE_CONFIG.load(vibey_toml, environ=os.environ).reap
         bus_inspector: BusInspectorPort | None = None
+        bus_port: BusPort
         if bus_settings.url and bus_settings.username and bus_settings.password:
+            from vibey.infrastructure.bus.dispatch import BusDispatchAdapter, BusDispatchSelection
             from vibey.infrastructure.bus.rabbitmq import RabbitMqBusAdapter
             from vibey.infrastructure.bus.rabbitmq_inspector import RabbitMqBusInspector
 
-            bus_port: BusPort = RabbitMqBusAdapter(
+            base_bus: BusPort = RabbitMqBusAdapter(
                 url=bus_settings.url,
                 username=bus_settings.username,
                 password=bus_settings.password,
                 vhost=bus_settings.vhost,
+            )
+            mode = bus_settings.mode
+            if mode == "auto":
+                cached = BusDispatchSelection.from_cache(
+                    user_cache_path("vibey") / "bus-dispatch-benchmark.json"
+                )
+                mode = cached or "singleton"
+            bus_port = (
+                base_bus
+                if mode == "singleton"
+                else BusDispatchAdapter(
+                    base_bus, mode, hybrid_concurrency=bus_settings.hybrid_concurrency
+                )
             )
             bus_inspector = RabbitMqBusInspector(
                 url=bus_settings.url,

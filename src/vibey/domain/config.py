@@ -319,6 +319,8 @@ class BusConfig:
     username: str | None = None
     password: str | None = None
     vhost: str = "/"
+    mode: str = "auto"
+    hybrid_concurrency: int = 4
     """The vhost vibey's queues, and the reaper's reads, are scoped to (ADR-0056)."""
 
 
@@ -823,11 +825,19 @@ def _parse_cache(data: dict[str, Any]) -> CacheConfig:
 
 def _parse_bus(data: dict[str, Any]) -> BusConfig:
     table = _optional(data, "bus", "bus", dict, {})
+    mode = _optional(table, "mode", "bus.mode", str, "auto")
+    if mode not in {"auto", "singleton", "multiplexer", "hybrid"}:
+        raise ConfigError("bus.mode", "must be 'auto', 'singleton', 'multiplexer', or 'hybrid'")
+    concurrency = _optional(table, "hybrid_concurrency", "bus.hybrid_concurrency", int, 4)
+    if isinstance(concurrency, bool) or concurrency <= 0:
+        raise ConfigError("bus.hybrid_concurrency", "must be a positive integer")
     return BusConfig(
         url=_optional(table, "url", "bus.url", str, None),
         username=_optional(table, "username", "bus.username", str, None),
         password=_optional(table, "password", "bus.password", str, None),
         vhost=_optional(table, "vhost", "bus.vhost", str, "/"),
+        mode=mode,
+        hybrid_concurrency=concurrency,
     )
 
 
