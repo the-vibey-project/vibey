@@ -160,6 +160,22 @@ Each engine reads its own environment variables: `GPTOSSLOOP_*` for `gptossloop`
 | Characters of an empty reply's reasoning recorded as an excerpt | — | — | `empty_reply_reasoning_excerpt_chars` | `400` |
 | Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
 | Context window (tokens) | — | — | `context_window` | `32768` |
+| Turn dispatch mode | — | — | `turn_dispatch_mode` | `direct` |
+| RabbitMQ URL (required for shared mode) | — | — | `turn_queue_url` | unset |
+| RabbitMQ request queue | — | — | `turn_queue_name` | `vibey.llm.turns` |
+
+`turn_dispatch_mode = "direct"` keeps one model turn local to the run. Set it to
+`"rabbitmq"`, provide `turn_queue_url`, and optionally set `turn_queue_name` to
+publish turns to a named shared queue; a `RabbitMqTurnWorker` process owns the model server and
+can serve multiple lane processes. Shared mode is explicit opt-in and requires a
+durable RabbitMQ deployment; it does not silently change the sovereign direct
+default.
+
+The broker URL may contain credentials. Keep it in operator-owned secret
+configuration, restrict RabbitMQ vhost and queue permissions to worker and lane
+identities, use TLS when the broker is not local, and never include the URL in
+diagnostics or committed files. `aio-pika` is included in the `vibey-engine`
+distribution.
 
 A flag beats an environment variable, which beats the config file, which beats the
 default. The config file is TOML, read from `$<PREFIX>_CONFIG`. When that is unset,

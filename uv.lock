@@ -4608,6 +4608,7 @@ name = "qwenloop"
 version = "0.3.0"
 source = { editable = "src/vibey_runners/qwen" }
 dependencies = [
+    { name = "aio-pika" },
     { name = "platformdirs" },
     { name = "typer" },
 ]
@@ -4625,6 +4626,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aio-pika", specifier = ">=9.5" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.14" },

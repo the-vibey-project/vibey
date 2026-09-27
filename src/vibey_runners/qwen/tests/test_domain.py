@@ -47,6 +47,27 @@ def test_config_validation() -> None:
         parser.parse({"backend": "unknown"})
     with pytest.raises(ValueError, match="positive"):
         parser.parse({"endpoint_timeout_seconds": 0})
+    with pytest.raises(ValueError, match="turn_dispatch_mode"):
+        parser.parse({"turn_dispatch_mode": "unknown"})
+    with pytest.raises(ValueError, match="turn_queue_url"):
+        parser.parse({"turn_dispatch_mode": "rabbitmq"})
+    with pytest.raises(ValueError, match="turn_queue_name"):
+        parser.parse({"turn_queue_name": "   "})
+
+
+def test_rabbitmq_turn_dispatch_is_explicitly_configured() -> None:
+    configured = parser.parse(
+        {
+            "turn_dispatch_mode": "rabbitmq",
+            "turn_queue_url": "amqp://broker/vibey",
+            "turn_queue_name": "custom.turns",
+        }
+    )
+    assert (
+        configured.turn_dispatch_mode,
+        configured.turn_queue_url,
+        configured.turn_queue_name,
+    ) == ("rabbitmq", "amqp://broker/vibey", "custom.turns")
 
 
 def test_tool_limits_default_and_come_from_the_tools_table() -> None:
