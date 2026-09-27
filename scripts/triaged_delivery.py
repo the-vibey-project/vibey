@@ -88,8 +88,8 @@ def issues() -> list[Issue]:
     return sorted(result, key=lambda issue: issue.rank)
 
 
-def already_dispatched(number: int) -> bool:
-    return MARKER.format(number=number) in gh(
+def dispatched_project(number: int) -> str | None:
+    comments = gh(
         "issue",
         "view",
         str(number),
@@ -98,6 +98,35 @@ def already_dispatched(number: int) -> bool:
         "--jq",
         '[.comments[].body] | join("\\n")',
     )
+    match = re.search(
+        rf"{re.escape(MARKER.format(number=number))}.*?project `([0-9a-f-]{{36}})`",
+        comments,
+        re.DOTALL,
+    )
+    return match.group(1) if match else None
+
+
+def already_dispatched(number: int) -> bool:
+    return dispatched_project(number) is not None
+
+
+def active_project(issue_list: list[Issue]) -> str | None:
+    for issue in issue_list:
+        project_id = dispatched_project(issue.number)
+        if project_id is None:
+            continue
+        status = json.loads(
+            subprocess.run(
+                ["uv", "run", "vibey", "status", project_id, "--json"],
+                capture_output=True,
+                text=True,
+                check=False,
+            ).stdout
+            or "{}"
+        )
+        if status.get("phase") not in {"done", "abandoned"}:
+            return project_id
+    return None
 
 
 def _worktree(repo: Path, issue: Issue) -> Path:
@@ -291,7 +320,12 @@ def publish_project(project_id: str, issue: Issue, *, repo: Path) -> str | None:
 
 
 def run_once(repo: Path) -> int:
-    for issue in issues():
+    issue_list = issues()
+    current = active_project(issue_list)
+    if current is not None:
+        print(f"active dispatched project {current}; waiting before selecting another issue")
+        return 0
+    for issue in issue_list:
         if already_dispatched(issue.number):
             continue
         project_id = dispatch(issue, repo=repo)
