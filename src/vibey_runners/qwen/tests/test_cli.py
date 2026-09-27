@@ -234,8 +234,9 @@ def test_turn_worker_hosts_a_healthy_server(monkeypatch: pytest.MonkeyPatch) -> 
     class Worker:
         seen: tuple[str, ServerInfo] | None = None
 
-        def __init__(self, url: str) -> None:
+        def __init__(self, url: str, *, request_queue: str) -> None:
             self.url = url
+            self.request_queue = request_queue
 
         async def serve(self, _server, value):  # type: ignore[no-untyped-def]
             Worker.seen = (self.url, value)
@@ -265,7 +266,7 @@ def test_turn_worker_starts_server_and_reports_worker_failure(
             return info
 
     class Worker:
-        def __init__(self, _url: str) -> None:
+        def __init__(self, _url: str, *, request_queue: str) -> None:
             pass
 
         async def serve(self, _server, _info):  # type: ignore[no-untyped-def]

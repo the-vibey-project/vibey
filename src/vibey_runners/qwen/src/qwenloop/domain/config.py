@@ -175,6 +175,7 @@ class QwenConfig:
     endpoint_timeout_seconds: int = 5
     turn_dispatch_mode: str = "direct"
     turn_queue_url: str = ""
+    turn_queue_name: str = "vibey.llm.turns"
     # What one tool call may read or return: the config file's `[tools]` table.
     tools: ToolLimits = ToolLimits()
 
@@ -240,6 +241,7 @@ class QwenConfigParser:
             ),
             turn_dispatch_mode=str(data.get("turn_dispatch_mode", defaults.turn_dispatch_mode)),
             turn_queue_url=str(data.get("turn_queue_url", defaults.turn_queue_url)),
+            turn_queue_name=str(data.get("turn_queue_name", defaults.turn_queue_name)),
             tools=self._tool_limits(data.get("tools", {})),
         )
         if config.idle_timeout_seconds < 0:
@@ -257,6 +259,8 @@ class QwenConfigParser:
             raise ValueError("turn_dispatch_mode must be 'direct' or 'rabbitmq'")
         if config.turn_dispatch_mode == "rabbitmq" and not config.turn_queue_url.strip():
             raise ValueError("turn_queue_url is required when turn_dispatch_mode is 'rabbitmq'")
+        if not config.turn_queue_name.strip():
+            raise ValueError("turn_queue_name must not be empty")
         return config
 
     @staticmethod

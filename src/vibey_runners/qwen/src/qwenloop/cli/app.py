@@ -366,7 +366,7 @@ async def _run_plan(
 def _dispatcher_for(config: QwenConfig) -> object:
     """Compose the declared turn-sharing mode; direct remains the safe default."""
     if config.turn_dispatch_mode == "rabbitmq":
-        return RabbitMqTurnDispatcher(config.turn_queue_url)
+        return RabbitMqTurnDispatcher(config.turn_queue_url, request_queue=config.turn_queue_name)
     return DirectTurnDispatcher()
 
 
@@ -782,7 +782,9 @@ def server_turn_worker(
             info = await _wait_until_ready(
                 server, info, timeout_seconds=config.startup_timeout_seconds
             )
-        await RabbitMqTurnWorker(config.turn_queue_url).serve(server, info)
+        await RabbitMqTurnWorker(config.turn_queue_url, request_queue=config.turn_queue_name).serve(
+            server, info
+        )
 
     try:
         asyncio.run(execute())
