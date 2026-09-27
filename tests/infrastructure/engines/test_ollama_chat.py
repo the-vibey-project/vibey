@@ -17,6 +17,7 @@ from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
     DEFAULT_OLLAMA_TIMEOUT,
     DEFAULT_OLLAMA_URL,
+    OLLAMA_CONTEXT_ENV,
     OLLAMA_MODEL_ENV,
     OLLAMA_TIMEOUT_ENV,
     OLLAMA_URL_ENV,
@@ -76,11 +77,19 @@ def test_the_environment_chooses_the_endpoint_model_and_timeout() -> None:
             OLLAMA_URL_ENV: "https://gpu-box.internal:8443/",
             OLLAMA_MODEL_ENV: "qwen2.5-coder:32b",
             OLLAMA_TIMEOUT_ENV: "120",
+            OLLAMA_CONTEXT_ENV: "8192",
         }
     )
     assert client.base_url == "https://gpu-box.internal:8443"
     assert client.model == "qwen2.5-coder:32b"
     assert client._timeout == 120
+
+
+def test_invalid_context_configuration_is_rejected() -> None:
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_CONTEXT"):
+        OllamaChatClient(context_ceiling=1024)
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_CONTEXT"):
+        OllamaChatClient.from_environment({OLLAMA_CONTEXT_ENV: "wide"})
 
 
 def test_an_explicit_model_beats_the_environment_and_empty_counts_as_unset() -> None:
