@@ -629,6 +629,7 @@ def test_sections_after_the_references_print_after_the_bibliography():
     # The box is defined once, in the document preamble, not in the figures' preamble.
     assert r"\usepackage[most]{tcolorbox}" in tex and r"\newtcolorbox{plainwords}" in tex
     assert not any("tcolorbox" in line for line in paper.PREAMBLE)
+    assert not any("algorithmic" in line for line in paper.PREAMBLE)
     doc = paper.convert(TAIL_MD)
     assert doc.tail and doc.tail[0] == r"\section*{A call to everyone}"
     assert not any("call to everyone" in line for line in doc.body)
