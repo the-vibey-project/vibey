@@ -362,7 +362,7 @@ class BacklogCleanup(BacklogCleanupInterface):
 
     def apply(self, rows: list[dict[str, object]]) -> dict[str, int]:
         """Comment or close only changed rows. Capped, paced, throttle-clean."""
-        counts = {"commented": 0, "closed": 0, "unchanged": 0, "skipped": 0}
+        counts = {"commented": 0, "closed": 0, "unchanged": 0, "skipped": 0, "failed": 0}
         actions = 0
         for row in rows:
             number = row["number"]
@@ -405,6 +405,13 @@ class BacklogCleanup(BacklogCleanupInterface):
                     counts["commented"] += 1
             except _ThrottleStop:
                 break
+            except subprocess.CalledProcessError as exc:
+                # A single forge mutation must not prevent the capped loop from recording
+                # the other observations.  Keep the failure visible so the workflow result
+                # remains evidence of a partial apply rather than a false clean run.
+                print(f"mutation failed for #{number}: {exc}", file=sys.stderr, flush=True)
+                counts["failed"] += 1
+                continue
             actions += 1
             if key in self.entries:
                 self.entries[key]["last_verdict"] = row["verdict"]
