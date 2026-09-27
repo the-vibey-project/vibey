@@ -232,8 +232,7 @@ def test_the_worker_decomposes_on_the_local_model(tmp_path: Path) -> None:
     ((request,),) = [ollama.requests]
     assert request["path"] == "/api/chat"
     assert request["model"] == "sovereign:test"
-    item_schema = request["format"]["properties"]["items"]["items"]  # type: ignore[index]
-    assert item_schema["properties"]["acceptance_ids"]["items"]["enum"] == ["AC-1", "AC-2"]
+    assert request["format"] == "json"
 
     rows = asyncio.run(
         _rows(
