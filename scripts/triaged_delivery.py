@@ -259,7 +259,7 @@ def publish_project(project_id: str, issue: Issue, *, repo: Path) -> str | None:
         "VIBEY_PUSH_GATE",
         str(repo / "docs" / "plans" / "qwenstorm-3.0.0" / "tools" / "push_gate.py"),
     )
-    subprocess.run(
+    subprocess.run(  # push_gate
         [
             "python3",
             push_gate,
