@@ -201,6 +201,15 @@ def drive_project(project_id: str, *, max_steps: int = 100) -> None:
             if gates:
                 print(f"project {project_id} paused at human gate(s)")
             return
+        accepted = subprocess.run(
+            ["uv", "run", "vibey", "design", "accept", project_id],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if accepted.returncode == 0:
+            print(accepted.stdout.strip())
+            continue
         return
     raise RuntimeError(f"project {project_id} exceeded dispatch step limit")
 
