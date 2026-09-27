@@ -228,7 +228,7 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
     raise RuntimeError(f"project {project_id} exceeded dispatch step limit")
 
 
-def publish_project(project_id: str, issue: Issue) -> str | None:
+def publish_project(project_id: str, issue: Issue, *, repo: Path) -> str | None:
     """Publish the canonical integration branch once the project is DONE."""
     status = json.loads(
         subprocess.run(
@@ -255,7 +255,26 @@ def publish_project(project_id: str, issue: Issue) -> str | None:
     if match is None:
         raise RuntimeError(f"project {project_id} has no integration worktree for {branch}")
     integration_path = Path(match.group(1))
-    subprocess.run(["git", "-C", str(integration_path), "push", "-u", "origin", branch], check=True)
+    push_gate = environ.get(
+        "VIBEY_PUSH_GATE",
+        str(repo / "docs" / "plans" / "qwenstorm-3.0.0" / "tools" / "push_gate.py"),
+    )
+    subprocess.run(
+        [
+            "python3",
+            push_gate,
+            "run",
+            "--",
+            "git",
+            "-C",
+            str(integration_path),
+            "push",
+            "-u",
+            "origin",
+            branch,
+        ],
+        check=True,
+    )
     existing = json.loads(gh("pr", "list", "--head", branch, "--base", "develop", "--json", "url"))
     if existing:
         return str(existing[0]["url"])
@@ -280,7 +299,7 @@ def run_once(repo: Path) -> int:
         project_id = dispatch(issue, repo=repo)
         print(f"dispatched #{issue.number} ({issue.priority}) -> project {project_id}")
         drive_project(project_id)
-        pull_request = publish_project(project_id, issue)
+        pull_request = publish_project(project_id, issue, repo=repo)
         if pull_request:
             gh("issue", "comment", str(issue.number), "--body", f"Delivery PR: {pull_request}")
         return 0
