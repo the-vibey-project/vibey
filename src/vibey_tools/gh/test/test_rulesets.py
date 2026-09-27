@@ -426,6 +426,16 @@ def test_bypass_actor_drift_is_detected_independent_of_list_order():
     assert rs.diff_ruleset(desired, existing_missing_one).changed
 
 
+def test_bypass_actor_diff_accepts_github_type_only_null_ids():
+    desired = rs.build_ruleset("develop", policy(bypass_actors=("OrganizationAdmin",)))
+    existing = {
+        **desired,
+        "id": 1,
+        "bypass_actors": [{**desired["bypass_actors"][0], "actor_id": None}],
+    }
+    assert not rs.diff_ruleset(desired, existing).changed
+
+
 def test_target_enforcement_and_conditions_drift_are_each_detected():
     desired = rs.build_ruleset("develop", policy())
     assert rs.diff_ruleset(desired, {**desired, "id": 1, "target": "tag"}).changed

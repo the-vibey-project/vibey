@@ -135,9 +135,18 @@ def _rules_by_type(rules: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return {rule["type"]: rule for rule in rules}
 
 
-def _bypass_key(actors: list[dict[str, Any]]) -> list[tuple[Any, Any, Any]]:
+def _bypass_key(actors: list[dict[str, Any]]) -> list[tuple[str, str, str]]:
+    """Return a deterministic comparison key for the API's mixed actor shapes.
+
+    GitHub uses ``null`` for type-only actors and integers for numeric actors.  Stringifying
+    each field keeps sorting total when both forms occur in one response.
+    """
     return sorted(
-        (actor.get("actor_id"), actor.get("actor_type"), actor.get("bypass_mode"))
+        (
+            str(actor.get("actor_id")),
+            str(actor.get("actor_type")),
+            str(actor.get("bypass_mode")),
+        )
         for actor in actors
     )
 
