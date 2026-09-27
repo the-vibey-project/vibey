@@ -490,6 +490,17 @@ def test_the_bus_vhost_defaults_to_the_root_and_reads_as_written() -> None:
     assert config.bus.vhost == "vibey"
 
 
+def test_bus_dispatch_policy_is_configurable_and_validated() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "demo"\n[bus]\nmode = "hybrid"\nhybrid_concurrency = 3\n'
+    )
+    assert (config.bus.mode, config.bus.hybrid_concurrency) == ("hybrid", 3)
+    with pytest.raises(ConfigError, match="bus.mode"):
+        load_config_from_string('[project]\nname = "demo"\n[bus]\nmode = "other"\n')
+    with pytest.raises(ConfigError, match="bus.hybrid_concurrency"):
+        load_config_from_string('[project]\nname = "demo"\n[bus]\nhybrid_concurrency = 0\n')
+
+
 @pytest.mark.parametrize(
     ("fragment", "match"),
     [

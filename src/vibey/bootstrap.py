@@ -1,15 +1,17 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Composition root: the only module that wires concrete adapters to ports."""
 
+import asyncio
 import os
 import platform
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import asyncpg
+from platformdirs import user_cache_path
 
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
@@ -764,6 +766,7 @@ async def build_app(
     pool = await asyncpg.create_pool(endpoints.app_url, min_size=1, max_size=10)
     if pool is None:
         raise RuntimeError("asyncpg did not create a pool")
+    bus_recomputer_task: asyncio.Task[None] | None = None
     try:
         async with pool.acquire() as conn:
             server_version_num = await conn.fetchval("SHOW server_version_num")
@@ -949,16 +952,48 @@ async def build_app(
             # start rather than falling back to an enabled reaper on defaults.
             reap_settings = QUEUE_CONFIG.load(vibey_toml, environ=os.environ).reap
         bus_inspector: BusInspectorPort | None = None
+        bus_port: BusPort
         if bus_settings.url and bus_settings.username and bus_settings.password:
+            from vibey.infrastructure.bus.dispatch import (
+                BusDispatchAdapter,
+                BusDispatchSelection,
+                WeeklyBusDispatchRecomputer,
+            )
             from vibey.infrastructure.bus.rabbitmq import RabbitMqBusAdapter
             from vibey.infrastructure.bus.rabbitmq_inspector import RabbitMqBusInspector
 
-            bus_port: BusPort = RabbitMqBusAdapter(
+            base_bus: BusPort = RabbitMqBusAdapter(
                 url=bus_settings.url,
                 username=bus_settings.username,
                 password=bus_settings.password,
                 vhost=bus_settings.vhost,
             )
+            mode = bus_settings.mode
+            if mode == "auto":
+                cached = BusDispatchSelection.from_cache(
+                    user_cache_path("vibey") / "bus-dispatch-benchmark.json"
+                )
+                mode = cached or "singleton"
+            bus_port = (
+                base_bus
+                if mode == "singleton"
+                else BusDispatchAdapter(
+                    base_bus, mode, hybrid_concurrency=bus_settings.hybrid_concurrency
+                )
+            )
+            recomputer = WeeklyBusDispatchRecomputer(
+                base_bus,
+                user_cache_path("vibey") / "bus-dispatch-benchmark.json",
+                hybrid_concurrency=bus_settings.hybrid_concurrency,
+            )
+
+            async def recompute_weekly() -> None:
+                while True:
+                    with suppress(Exception):
+                        await recomputer.run_once_if_due()
+                    await asyncio.sleep(WeeklyBusDispatchRecomputer.WEEK_SECONDS)
+
+            bus_recomputer_task = asyncio.create_task(recompute_weekly())
             bus_inspector = RabbitMqBusInspector(
                 url=bus_settings.url,
                 username=bus_settings.username,
@@ -1078,6 +1113,10 @@ async def build_app(
             queue_reap=reap_settings,
         )
     finally:
+        if bus_recomputer_task is not None:
+            bus_recomputer_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await bus_recomputer_task
         await pool.close()
 
 

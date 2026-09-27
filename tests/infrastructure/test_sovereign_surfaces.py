@@ -34,6 +34,7 @@ from vibey.infrastructure.blob.garage import GarageBlobAdapter
 from vibey.infrastructure.blob.in_memory import InMemoryBlob
 from vibey.infrastructure.blob.interfaces.garage_interface import GarageBlobAdapterInterface
 from vibey.infrastructure.blob.interfaces.in_memory_interface import InMemoryBlobInterface
+from vibey.infrastructure.bus.dispatch import BusDispatchAdapter
 from vibey.infrastructure.bus.in_memory import InMemoryBus
 from vibey.infrastructure.bus.interfaces.in_memory_interface import InMemoryBusInterface
 from vibey.infrastructure.bus.interfaces.rabbitmq_interface import RabbitMqBusAdapterInterface
@@ -731,7 +732,7 @@ async def test_build_app_wires_concrete_adapters_from_config() -> None:
             assert isinstance(resources.messaging, MatrixMessagingAdapter)
             assert isinstance(resources.config_store, InfisicalConfigStoreAdapter)
             assert isinstance(resources.cache, RedisCacheAdapter)
-            assert isinstance(resources.bus, RabbitMqBusAdapter)
+            assert isinstance(resources.bus, (RabbitMqBusAdapter, BusDispatchAdapter))
             assert isinstance(resources.blob, GarageBlobAdapter)
             assert isinstance(resources.siem, WazuhSiemAdapter)
             assert isinstance(resources.queue_reaper, QueueReaperInterface)
@@ -758,7 +759,7 @@ async def test_build_app_composes_the_bus_and_the_reaper_from_the_environment_al
     ):
         migrator_cls.from_environ.return_value = migrator
         async with build_app() as resources:
-            assert isinstance(resources.bus, RabbitMqBusAdapter)
+            assert isinstance(resources.bus, (RabbitMqBusAdapter, BusDispatchAdapter))
             assert isinstance(resources.queue_reaper, QueueReaperInterface)
 
 

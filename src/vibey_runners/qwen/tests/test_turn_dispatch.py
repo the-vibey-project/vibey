@@ -10,9 +10,43 @@ from qwenloop.domain.config import QwenConfig
 from qwenloop.domain.model import Backend, ChatMessage, ServerInfo
 from qwenloop.infrastructure.turn_dispatch import (
     DirectTurnDispatcher,
+    HybridTurnMultiplexer,
     RabbitMqTurnDispatcher,
     RabbitMqTurnWorker,
 )
+
+
+class _StreamingServer:
+    async def chat_stream(self, _info: ServerInfo, _messages: object):
+        yield type("Chunk", (), {"text": "ok"})()
+
+
+@pytest.mark.asyncio
+async def test_hybrid_dispatch_streams_through_bounded_pool() -> None:
+    info = ServerInfo(
+        backend=Backend.OPENAI_COMPAT,
+        profile="local",
+        endpoint="http://model/v1",
+        owned=False,
+        healthy=True,
+        pid=None,
+        token="",
+        model="gpt-oss:20b",
+        argv=(),
+        log_path="",
+    )
+    chunks = [
+        chunk
+        async for chunk in HybridTurnMultiplexer(concurrency=1).dispatch(
+            _StreamingServer(), info, [ChatMessage(role="user", content="hi")]
+        )
+    ]
+    assert chunks[0].text == "ok"
+
+
+def test_hybrid_dispatch_rejects_non_positive_concurrency() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        HybridTurnMultiplexer(concurrency=0)
 
 
 class _Message:
@@ -277,6 +311,24 @@ async def test_rabbitmq_dispatch_returns_when_reply_stream_closes() -> None:
 
 
 @pytest.mark.asyncio
+async def test_rabbitmq_dispatch_accepts_terminal_done_without_chunk() -> None:
+    connection = _Connection()
+
+    async def connect(_: str) -> _Connection:
+        return connection
+
+    dispatcher = RabbitMqTurnDispatcher("amqp://broker", connection_factory=connect)
+    connection.channel_instance.replies = _Replies([_Message(b'{"done": true}', "unused")])
+
+    async def publish(message: Any, *, routing_key: str) -> None:
+        connection.channel_instance.replies.messages[0].correlation_id = message.correlation_id
+
+    connection.channel_instance.default_exchange.publish = publish
+    info = ServerInfo(Backend.OPENAI_COMPAT, "local", "url", False, True)
+    assert await dispatcher.dispatch_all(info, [ChatMessage("user", "hello")]) == []
+
+
+@pytest.mark.asyncio
 async def test_rabbitmq_worker_publishes_chunks_and_completion() -> None:
     worker = RabbitMqTurnWorker("amqp://broker")
     channel = _Channel()
@@ -387,8 +439,26 @@ async def test_rabbitmq_worker_serves_until_queue_closes() -> None:
 
 
 def test_dispatcher_composition_preserves_direct_default_and_explicit_rabbitmq() -> None:
-    assert isinstance(_dispatcher_for(QwenConfig()), DirectTurnDispatcher)
+    assert isinstance(
+        _dispatcher_for(QwenConfig(turn_dispatch_mode="direct")), DirectTurnDispatcher
+    )
     assert isinstance(
         _dispatcher_for(QwenConfig(turn_dispatch_mode="rabbitmq", turn_queue_url="amqp://broker")),
         RabbitMqTurnDispatcher,
     )
+
+
+def test_dispatcher_composition_supports_explicit_hybrid_mode() -> None:
+    assert isinstance(
+        _dispatcher_for(QwenConfig(turn_dispatch_mode="hybrid")), HybridTurnMultiplexer
+    )
+
+
+def test_dispatcher_composition_auto_uses_measured_winner(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("qwenloop.cli.app.DispatchBenchmark.load", lambda _path: "hybrid")
+    assert isinstance(_dispatcher_for(QwenConfig(turn_dispatch_mode="auto")), HybridTurnMultiplexer)
+
+
+def test_dispatcher_composition_auto_falls_back_to_direct(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("qwenloop.cli.app.DispatchBenchmark.load", lambda _path: None)
+    assert isinstance(_dispatcher_for(QwenConfig(turn_dispatch_mode="auto")), DirectTurnDispatcher)

@@ -430,7 +430,8 @@ operator-controlled configuration, never committed or printed in logs. Start
 `qwenloop server turn-worker` (or `gptossloop server turn-worker`) for the model
 host. `turn_queue_name` defaults to `vibey.llm.turns` and permits separate model
 pools to use distinct durable queues. `TurnDispatcherInterface` is the runner
-seam: `DirectTurnDispatcher` preserves local operation and
+seam: `DirectTurnDispatcher` preserves local operation,
+`HybridTurnMultiplexer` shares one resident server among bounded in-process lanes, and
 `RabbitMqTurnDispatcher` publishes correlated requests to the worker.
 
 ## `[failover]` { #failover }
@@ -649,10 +650,16 @@ for that surface is present, otherwise the in-memory default.
 | `username` | string | unset | RabbitMQ management username. |
 | `password` | string | unset | RabbitMQ management password. |
 | `vhost` | string | `/` | The vhost the bus declares its queues in and the queue reaper reads ([`[queue.reap]`](#queuereap)). |
+| `mode` | `auto`, `singleton`, `multiplexer`, or `hybrid` | `auto` | Dispatch policy. `auto` uses the durable per-machine benchmark winner and falls back to singleton when no valid result exists. |
+| `hybrid_concurrency` | positive integer | `4` | Maximum concurrent bus operations in hybrid mode. |
 
 The bus port consumes at most once: its `consume` acknowledges on take, so no delivery is
 ever held -- and one whose consumer dies after `consume` returns is lost. The job queue's
 transport is ADR-0044's AMQP client, not this port.
+
+All bus-backed surfaces follow ADR-0074: singleton is the serial path, multiplexer permits
+concurrent operations, and hybrid bounds concurrency. The benchmark and winner are per surface
+and per machine; `mode` remains an explicit override when an operator needs one.
 
 ## `[blob]` (sovereign default: Garage, S3 API)
 

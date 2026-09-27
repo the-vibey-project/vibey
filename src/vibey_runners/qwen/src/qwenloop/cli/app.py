@@ -52,6 +52,7 @@ from qwenloop.domain.model import (
 )
 from qwenloop.infrastructure.clock import SystemClock
 from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
+from qwenloop.infrastructure.dispatch_benchmark import DispatchBenchmark
 from qwenloop.infrastructure.github import (
     list_open_issues,
     list_open_pull_requests,
@@ -66,6 +67,7 @@ from qwenloop.infrastructure.settings import SettingsLoader
 from qwenloop.infrastructure.tools import SandboxTools
 from qwenloop.infrastructure.turn_dispatch import (
     DirectTurnDispatcher,
+    HybridTurnMultiplexer,
     RabbitMqTurnDispatcher,
     RabbitMqTurnWorker,
 )
@@ -365,8 +367,14 @@ async def _run_plan(
 
 def _dispatcher_for(config: QwenConfig) -> object:
     """Compose the declared turn-sharing mode; direct remains the safe default."""
-    if config.turn_dispatch_mode == "rabbitmq":
+    mode = config.turn_dispatch_mode
+    if mode == "auto":
+        winner = DispatchBenchmark.load(user_cache_path(_identity.name) / "dispatch-benchmark.json")
+        mode = winner or "direct"
+    if mode == "rabbitmq":
         return RabbitMqTurnDispatcher(config.turn_queue_url, request_queue=config.turn_queue_name)
+    if mode == "hybrid":
+        return HybridTurnMultiplexer(concurrency=config.hybrid_concurrency)
     return DirectTurnDispatcher()
 
 
@@ -790,6 +798,44 @@ def server_turn_worker(
         asyncio.run(execute())
     except (OSError, RuntimeError, TimeoutError) as exc:
         typer.echo(f"{_identity.name} turn worker unavailable: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+
+@server_app.command("benchmark")
+def server_benchmark(
+    samples: Annotated[int, typer.Option("--samples", min=1)] = 3,
+    concurrency: Annotated[int, typer.Option("--concurrency", min=1)] = 2,
+    backend: BackendOption = None,
+    base_url: BaseUrlOption = None,
+    model: ModelOption = None,
+) -> None:
+    """Measure direct versus hybrid dispatch and persist the faster local mode."""
+    config = _load_config(backend=backend, base_url=base_url, model=model)
+    server, profile = _server_for(config)
+
+    async def execute() -> None:
+        info = server.inspect(profile)
+        if info is None or not await server.health(info):
+            info = await server.start(profile)
+            info = await _wait_until_ready(
+                server, info, timeout_seconds=config.startup_timeout_seconds
+            )
+        rabbitmq = (
+            RabbitMqTurnDispatcher(config.turn_queue_url, request_queue=config.turn_queue_name)
+            if config.turn_queue_url.strip()
+            else None
+        )
+        result = await DispatchBenchmark().run(
+            server, info, samples=samples, concurrency=concurrency, rabbitmq=rabbitmq
+        )
+        path = user_cache_path(_identity.name) / "dispatch-benchmark.json"
+        DispatchBenchmark.save(result, path)
+        typer.echo(json.dumps({**asdict(result), "path": str(path)}))
+
+    try:
+        asyncio.run(execute())
+    except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
+        typer.echo(f"{_identity.name} benchmark unavailable: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
 

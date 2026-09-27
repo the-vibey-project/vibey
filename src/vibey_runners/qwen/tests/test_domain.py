@@ -70,6 +70,17 @@ def test_rabbitmq_turn_dispatch_is_explicitly_configured() -> None:
     ) == ("rabbitmq", "amqp://broker/vibey", "custom.turns")
 
 
+def test_hybrid_turn_dispatch_accepts_a_positive_concurrency() -> None:
+    configured = parser.parse({"turn_dispatch_mode": "hybrid", "hybrid_concurrency": 4})
+    assert configured.turn_dispatch_mode == "hybrid"
+    assert configured.hybrid_concurrency == 4
+
+
+def test_hybrid_turn_dispatch_rejects_non_positive_concurrency() -> None:
+    with pytest.raises(ValueError, match="hybrid_concurrency"):
+        parser.parse({"turn_dispatch_mode": "hybrid", "hybrid_concurrency": 0})
+
+
 def test_tool_limits_default_and_come_from_the_tools_table() -> None:
     default = parser.parse({})
     assert isinstance(default, QwenConfigInterface)
