@@ -413,6 +413,26 @@ them into `VibeyConfig`, but nothing passes them to the runner.
 | `startup_timeout_seconds` | integer | `180` | Must be positive. |
 | `context_window` | integer | `32768` | Must be positive. |
 
+### Shared model turns
+
+The runner keeps direct dispatch as the default. To let multiple lanes share one
+model server, opt in explicitly:
+
+```toml
+[qwenloop]
+turn_dispatch_mode = "rabbitmq"
+turn_queue_url = "amqp://user:password@broker/vhost"
+turn_queue_name = "vibey.llm.turns"
+```
+
+`turn_queue_url` is sensitive connection material and should be supplied through
+operator-controlled configuration, never committed or printed in logs. Start
+`qwenloop server turn-worker` (or `gptossloop server turn-worker`) for the model
+host. `turn_queue_name` defaults to `vibey.llm.turns` and permits separate model
+pools to use distinct durable queues. `TurnDispatcherInterface` is the runner
+seam: `DirectTurnDispatcher` preserves local operation and
+`RabbitMqTurnDispatcher` publishes correlated requests to the worker.
+
 ## `[failover]` { #failover }
 
 The driver's failover and handback ([ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)),

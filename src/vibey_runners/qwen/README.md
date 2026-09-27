@@ -171,6 +171,12 @@ can serve multiple lane processes. Shared mode is explicit opt-in and requires a
 durable RabbitMQ deployment; it does not silently change the sovereign direct
 default.
 
+The broker URL may contain credentials. Keep it in operator-owned secret
+configuration, restrict RabbitMQ vhost and queue permissions to worker and lane
+identities, use TLS when the broker is not local, and never include the URL in
+diagnostics or committed files. `aio-pika` is included in the `vibey-engine`
+distribution.
+
 A flag beats an environment variable, which beats the config file, which beats the
 default. The config file is TOML, read from `$<PREFIX>_CONFIG`. When that is unset,
 it is read from `<user config dir>/<engine>/config.toml` — for qwenloop

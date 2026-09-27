@@ -14,6 +14,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **qwenloop:** add explicit direct or RabbitMQ shared-turn dispatch, configurable
+  durable queue names, and `server turn-worker` hosting for multiple lanes. Direct
+  mode remains the default; see the [configuration reference](docs/reference/configuration.md#shared-model-turns).
+
 * **desktop:** Krypton desktop, in C17 on GTK 4 and libadwaita
   ([ADR-0073](docs/architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md)). `clients/desktop`
   holds a pure-C core, libkryptondesktop: hub documents, the libsoup hub client, gate answers,
