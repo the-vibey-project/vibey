@@ -10,6 +10,7 @@ installer-catalogue 469
 installer-host-runner 470 installer-catalogue
 installer-orchestrator 471 installer-catalogue
 install-ollama 391 default-model-p1,installer-host-runner,installer-orchestrator
+custom-system-1-model 1222
 surfaces-env 323
 engines-pool 321 engines-provider
 chart-operator-forgejo-p1 326
