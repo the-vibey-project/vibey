@@ -5698,7 +5698,7 @@ provides-extras = ["dev", "test", "docs", "alerts", "health", "fastapi", "heartb
 
 [[package]]
 name = "vibey-engine"
-version = "2.1.0"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aio-pika" },
