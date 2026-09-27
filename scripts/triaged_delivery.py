@@ -11,6 +11,7 @@ supervisor loop.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -51,6 +52,30 @@ def gh(*args: str) -> str:
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "gh command failed")
     return result.stdout
+
+
+def _descendants(pid: int) -> list[int]:
+    children = subprocess.run(
+        ["pgrep", "-P", str(pid)], capture_output=True, text=True, check=False
+    ).stdout.split()
+    result = [int(child) for child in children]
+    return result + [grandchild for child in result for grandchild in _descendants(child)]
+
+
+def _terminate_worker(process: subprocess.Popen[str]) -> None:
+    for pid in reversed(_descendants(process.pid)):
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGTERM)
+    with contextlib.suppress(ProcessLookupError):
+        os.kill(process.pid, signal.SIGTERM)
+    with contextlib.suppress(subprocess.TimeoutExpired):
+        process.wait(timeout=2)
+    if process.poll() is None:
+        for pid in reversed(_descendants(process.pid)):
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGKILL)
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(process.pid, signal.SIGKILL)
 
 
 def issues() -> list[Issue]:
@@ -203,7 +228,7 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
             worker_process.communicate(timeout=worker_timeout)
             worker_returncode = worker_process.returncode
         except subprocess.TimeoutExpired:
-            os.killpg(worker_process.pid, signal.SIGTERM)
+            _terminate_worker(worker_process)
             worker_process.communicate()
             print(
                 f"project {project_id} worker exceeded {worker_timeout:g}s; "
