@@ -35,11 +35,13 @@ OLLAMA_URL_ENV = "VIBEY_OLLAMA_URL"
 OLLAMA_MODEL_ENV = "VIBEY_OLLAMA_MODEL"
 OLLAMA_TIMEOUT_ENV = "VIBEY_OLLAMA_TIMEOUT"
 OLLAMA_CONTEXT_ENV = "VIBEY_OLLAMA_CONTEXT"
+OLLAMA_OUTPUT_ENV = "VIBEY_OLLAMA_OUTPUT"
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
 DEFAULT_OLLAMA_TIMEOUT = 900
 DEFAULT_OLLAMA_CONTEXT = 8192
+DEFAULT_OLLAMA_OUTPUT = 2048
 
 _HTTP_SCHEMES = ("http", "https")
 
@@ -96,6 +98,7 @@ class OllamaChatClient:
         model: str = DEFAULT_OLLAMA_MODEL,
         timeout: int = DEFAULT_OLLAMA_TIMEOUT,
         context_ceiling: int = DEFAULT_OLLAMA_CONTEXT,
+        output_ceiling: int = DEFAULT_OLLAMA_OUTPUT,
         transport: OllamaTransportInterface | None = None,
     ) -> None:
         self._base_url = self._validated_base_url(base_url)
@@ -108,9 +111,12 @@ class OllamaChatClient:
                 OLLAMA_CONTEXT_ENV,
                 f"must be at least {self.CONTEXT_FLOOR}, got {context_ceiling}",
             )
+        if output_ceiling <= 0:
+            raise ConfigError(OLLAMA_OUTPUT_ENV, f"must be positive, got {output_ceiling}")
         self._model = model.strip()
         self._timeout = timeout
         self._context_ceiling = context_ceiling
+        self._output_ceiling = output_ceiling
         self._transport = transport if transport is not None else UrllibOllamaTransport()
 
     @classmethod
@@ -129,6 +135,7 @@ class OllamaChatClient:
         """
         raw_timeout = environ.get(OLLAMA_TIMEOUT_ENV) or str(DEFAULT_OLLAMA_TIMEOUT)
         raw_context = environ.get(OLLAMA_CONTEXT_ENV) or str(DEFAULT_OLLAMA_CONTEXT)
+        raw_output = environ.get(OLLAMA_OUTPUT_ENV) or str(DEFAULT_OLLAMA_OUTPUT)
         try:
             timeout = int(raw_timeout)
         except ValueError as exc:
@@ -142,11 +149,19 @@ class OllamaChatClient:
                 OLLAMA_CONTEXT_ENV,
                 f"must be a whole number of tokens, got {raw_context!r}",
             ) from exc
+        try:
+            output_ceiling = int(raw_output)
+        except ValueError as exc:
+            raise ConfigError(
+                OLLAMA_OUTPUT_ENV,
+                f"must be a whole number of tokens, got {raw_output!r}",
+            ) from exc
         return cls(
             base_url=environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
             model=model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
             timeout=timeout,
             context_ceiling=context_ceiling,
+            output_ceiling=output_ceiling,
             transport=transport,
         )
 
@@ -191,6 +206,7 @@ class OllamaChatClient:
             "options": {
                 "temperature": 0,
                 "num_ctx": self.context_window(len(system) + len(bounded_user)),
+                "num_predict": self._output_ceiling,
             },
         }
         body = await self._transport.post_json(

@@ -19,6 +19,7 @@ from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_URL,
     OLLAMA_CONTEXT_ENV,
     OLLAMA_MODEL_ENV,
+    OLLAMA_OUTPUT_ENV,
     OLLAMA_TIMEOUT_ENV,
     OLLAMA_URL_ENV,
     OllamaChatClient,
@@ -78,11 +79,13 @@ def test_the_environment_chooses_the_endpoint_model_and_timeout() -> None:
             OLLAMA_MODEL_ENV: "qwen2.5-coder:32b",
             OLLAMA_TIMEOUT_ENV: "120",
             OLLAMA_CONTEXT_ENV: "8192",
+            OLLAMA_OUTPUT_ENV: "1024",
         }
     )
     assert client.base_url == "https://gpu-box.internal:8443"
     assert client.model == "qwen2.5-coder:32b"
     assert client._timeout == 120
+    assert client._output_ceiling == 1024
 
 
 def test_invalid_context_configuration_is_rejected() -> None:
@@ -90,6 +93,10 @@ def test_invalid_context_configuration_is_rejected() -> None:
         OllamaChatClient(context_ceiling=1024)
     with pytest.raises(ConfigError, match="VIBEY_OLLAMA_CONTEXT"):
         OllamaChatClient.from_environment({OLLAMA_CONTEXT_ENV: "wide"})
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_OUTPUT"):
+        OllamaChatClient(output_ceiling=0)
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_OUTPUT"):
+        OllamaChatClient.from_environment({OLLAMA_OUTPUT_ENV: "many"})
 
 
 def test_an_explicit_model_beats_the_environment_and_empty_counts_as_unset() -> None:
@@ -172,7 +179,7 @@ async def test_a_question_goes_out_constrained_and_deterministic() -> None:
     # is compiled to a grammar, so malformed JSON is unreachable rather than unlikely.
     assert payload["format"] == schema
     assert payload["stream"] is False
-    assert payload["options"] == {"temperature": 0, "num_ctx": 4096}
+    assert payload["options"] == {"temperature": 0, "num_ctx": 4096, "num_predict": 2048}
 
 
 @pytest.mark.asyncio
@@ -208,6 +215,7 @@ def test_the_context_ceiling_is_configurable_and_user_context_is_bounded() -> No
     assert len(content) <= (8192 - client.CONTEXT_RESERVE) * client.CHARS_PER_TOKEN + 80
     assert "context elided by sovereign client" in content
     assert sent["options"]["num_ctx"] == 8192
+    assert sent["options"]["num_predict"] == 2048
 
 
 @pytest.mark.asyncio
