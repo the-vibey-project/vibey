@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import signal
 import subprocess
 import time
 from dataclasses import dataclass
@@ -152,7 +154,7 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
     """Run the normal worker and answer only DESIGN gates with their declared defaults."""
     for _ in range(max_steps):
         try:
-            worker = subprocess.run(
+            worker_process = subprocess.Popen(
                 [
                     "uv",
                     "run",
@@ -164,12 +166,16 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
                     "--provider",
                     "gptossloop",
                 ],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                check=False,
-                timeout=worker_timeout,
+                start_new_session=True,
             )
+            worker_process.communicate(timeout=worker_timeout)
+            worker_returncode = worker_process.returncode
         except subprocess.TimeoutExpired:
+            os.killpg(worker_process.pid, signal.SIGTERM)
+            worker_process.communicate()
             print(
                 f"project {project_id} worker exceeded {worker_timeout:g}s; "
                 "leaving the durable lease for queue.reap"
@@ -205,7 +211,7 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
                     check=True,
                 )
             continue
-        if gates or worker.returncode != 0:
+        if gates or worker_returncode != 0:
             if gates:
                 print(f"project {project_id} paused at human gate(s)")
             return
