@@ -189,7 +189,9 @@ class OllamaChatClient:
             + user[-tail:]
         )
 
-    async def ask(self, system: str, user: str, schema: Mapping[str, object]) -> dict[str, object]:
+    async def ask(
+        self, system: str, user: str, schema: Mapping[str, object] | str
+    ) -> dict[str, object]:
         bounded_user = self._bounded_user(user)
         payload: dict[str, object] = {
             "model": self._model,
@@ -199,7 +201,7 @@ class OllamaChatClient:
             ],
             # The grammar. Malformed JSON is unreachable, so this boundary needs no
             # fence-hunting and no repair pass.
-            "format": dict(schema),
+            "format": dict(schema) if isinstance(schema, Mapping) else schema,
             "stream": False,
             # temperature 0 because an answer that changes on unchanged input cannot be
             # reasoned about by the phase that consumes it.

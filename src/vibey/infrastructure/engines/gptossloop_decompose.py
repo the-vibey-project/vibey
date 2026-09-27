@@ -129,7 +129,10 @@ class GptossloopWorkPlanProducer:
         data = await self._chat.ask(
             DECOMPOSE_SYSTEM,
             f"Spec: {json.dumps(self._decoder.spec_json(spec), default=str)}",
-            self.schema(criteria_ids),
+            # The full nested schema makes the local GPT-OSS grammar compiler stall on
+            # this host. Keep the response in JSON mode and enforce the complete typed
+            # plan contract immediately below with WorkPlanDecoder.require_valid().
+            "json",
         )
         items = self._decoder.items(data.get("items"))
         self._decoder.require_valid(items, criteria_ids, strict=True)

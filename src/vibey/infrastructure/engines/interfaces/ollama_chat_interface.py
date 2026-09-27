@@ -34,6 +34,8 @@ class OllamaChatClientInterface(Protocol):
         """The `num_ctx` a prompt of this many characters is sent with."""
         ...
 
-    async def ask(self, system: str, user: str, schema: Mapping[str, object]) -> dict[str, object]:
+    async def ask(
+        self, system: str, user: str, schema: Mapping[str, object] | str
+    ) -> dict[str, object]:
         """The model's answer as a JSON object, or ValueError when it is not one."""
         ...

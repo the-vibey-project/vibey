@@ -26,7 +26,7 @@ class FakeChat:
 
     def __init__(self, answer: dict[str, object]) -> None:
         self.answer = answer
-        self.asked: list[tuple[str, str, dict[str, object]]] = []
+        self.asked: list[tuple[str, str, Mapping[str, object] | str]] = []
 
     @property
     def base_url(self) -> str:
@@ -39,8 +39,10 @@ class FakeChat:
     def context_window(self, prompt_chars: int) -> int:
         return 4096
 
-    async def ask(self, system: str, user: str, schema: Mapping[str, object]) -> dict[str, object]:
-        self.asked.append((system, user, dict(schema)))
+    async def ask(
+        self, system: str, user: str, schema: Mapping[str, object] | str
+    ) -> dict[str, object]:
+        self.asked.append((system, user, schema))
         return self.answer
 
 
@@ -122,23 +124,12 @@ async def test_a_valid_plan_decodes_whole() -> None:
 
 @pytest.mark.asyncio
 async def test_the_grammar_enumerates_the_specs_own_criteria() -> None:
-    """Constrained decoding makes a criterion that does not exist a token the model cannot
-    emit, and makes an item without a command or a checked criterion unrepresentable."""
+    """JSON mode avoids the local grammar compiler; the decoder owns validation."""
     producer, chat = _producer(VALID)
     await producer.decompose(_spec("AC-1", "AC-2"))
     ((_, _, schema),) = chat.asked
 
-    assert schema == producer.schema(["AC-1", "AC-2"])
-    item = schema["properties"]["items"]["items"]  # type: ignore[index]
-    assert schema["properties"]["items"]["minItems"] == 1  # type: ignore[index]
-    assert item["properties"]["acceptance_ids"]["items"]["enum"] == ["AC-1", "AC-2"]
-    verification = item["properties"]["verification"]
-    assert verification["properties"]["criteria_checked"]["items"]["enum"] == ["AC-1", "AC-2"]
-    assert verification["properties"]["criteria_checked"]["minItems"] == 1
-    assert verification["properties"]["commands"]["minItems"] == 1
-    assert verification["required"] == ["commands", "criteria_checked"]
-    assert item["properties"]["est_effort"]["enum"] == ["trivial", "low", "standard", "high", "max"]
-    assert set(item["required"]) == set(item["properties"])
+    assert schema == "json"
 
 
 @pytest.mark.asyncio
