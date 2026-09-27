@@ -1002,6 +1002,19 @@ start. With `VIBEY_OLLAMA_URL` set, the worker hands gptossloop
 `VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), and qwenloop `QWENLOOP_BASE_URL`
 only — never a model; a variable the operator set already is left alone.
 
+### qwenloop shared-turn worker
+
+`qwenloop server turn-worker` hosts one inference server behind the durable
+RabbitMQ turn queue so multiple lane processes can share it. Configure
+`turn_dispatch_mode = "rabbitmq"`, `turn_queue_url`, and optionally
+`turn_queue_name` in the qwenloop configuration before starting it. The
+command refuses direct mode, starts or verifies the configured inference
+server, and then consumes turns until stopped. Keep the broker URL in
+operator-owned secret configuration; use a TLS AMQP URL and least-privilege
+vhost/queue credentials when the broker is not local. If the worker stops,
+restart the same command after RabbitMQ is available; durable requests remain
+on the queue for another worker.
+
 The queue reaper (ADR-0056) runs in the same idle iterations: after the lease reap, at
 most once per `[queue.reap] interval_seconds` across all of the worker's loops, the
 worker surfaces claimable, unclaimed work in every project and -- with a broker
