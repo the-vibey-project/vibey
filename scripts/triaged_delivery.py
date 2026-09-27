@@ -175,7 +175,21 @@ def drive_project(project_id: str, *, max_steps: int = 100) -> None:
                 check=True,
             ).stdout
         ).get("gates", [])
-        design_gates = [gate for gate in gates if str(gate.get("kind", "")).startswith("design")]
+        design_gates = [
+            gate
+            for gate in gates
+            if str(gate.get("kind", "")) == "question"
+            and str(gate.get("prompt", "")).split(":", 1)[0]
+            in {
+                "context_free",
+                "job_story",
+                "laddering",
+                "example_mapping",
+                "walking_skeleton",
+                "nfr_planguage",
+                "premortem",
+            }
+        ]
         if design_gates:
             for gate in design_gates:
                 subprocess.run(
