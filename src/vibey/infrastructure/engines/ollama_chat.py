@@ -209,12 +209,24 @@ class OllamaChatClient:
                 "num_predict": self._output_ceiling,
             },
         }
-        body = await self._transport.post_json(
-            f"{self._base_url}/api/chat", payload, timeout=self._timeout
-        )
+        endpoint = f"{self._base_url}/api/chat"
+        body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
         message = body.get("message")
+        if (
+            isinstance(message, dict)
+            and message.get("content") == ""
+            and isinstance(payload["format"], dict)
+        ):
+            # Some local model builds accept the JSON schema but emit an empty message
+            # when grammar compilation cannot satisfy it. One bounded JSON-mode retry
+            # keeps the transport live; callers still validate the decoded object.
+            payload["format"] = "json"
+            body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
+            message = body.get("message")
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
             raise ValueError("Ollama response carried no message content")
+        if not message["content"].strip():
+            raise ValueError("Ollama response carried empty message content")
         value = json.loads(message["content"])
         # Constrained decoding guarantees the schema, but this is a boundary with an
         # external process: assert the top-level shape rather than trust it, so a gateway

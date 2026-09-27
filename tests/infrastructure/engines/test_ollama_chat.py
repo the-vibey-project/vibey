@@ -39,6 +39,18 @@ class FakeTransport:
         return self.body
 
 
+class SequenceTransport(FakeTransport):
+    def __init__(self, bodies: list[dict[str, object]]) -> None:
+        super().__init__(bodies[0])
+        self.bodies = iter(bodies)
+
+    async def post_json(
+        self, url: str, payload: Mapping[str, object], *, timeout: int
+    ) -> dict[str, object]:
+        self.calls.append((url, dict(payload), timeout))
+        return next(self.bodies)
+
+
 def _answering(content: str) -> FakeTransport:
     return FakeTransport({"message": {"content": content}})
 
@@ -191,6 +203,19 @@ async def test_a_gateway_that_is_not_ollama_cannot_pass_for_an_answer() -> None:
     for body in ({"nothing": "useful"}, {"message": "flat"}, {"message": {"content": 7}}):
         with pytest.raises(ValueError, match="no message content"):
             await OllamaChatClient(transport=FakeTransport(body)).ask("s", "u", {})
+
+
+@pytest.mark.asyncio
+async def test_empty_schema_reply_retries_once_in_json_mode() -> None:
+    transport = SequenceTransport(
+        [{"message": {"content": ""}}, {"message": {"content": '{"ok": true}'}}]
+    )
+    assert await OllamaChatClient(transport=transport).ask("s", "u", {"type": "object"}) == {
+        "ok": True
+    }
+    assert len(transport.calls) == 2
+    assert transport.calls[0][1]["format"] == {"type": "object"}
+    assert transport.calls[1][1]["format"] == "json"
 
 
 def test_the_context_window_is_sized_to_the_prompt() -> None:
