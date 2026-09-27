@@ -161,10 +161,14 @@ Each engine reads its own environment variables: `GPTOSSLOOP_*` for `gptossloop`
 | Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
 | Context window (tokens) | — | — | `context_window` | `32768` |
 | Turn dispatch mode | — | — | `turn_dispatch_mode` | `direct` |
+| Hybrid lane concurrency | — | — | `hybrid_concurrency` | `2` |
 | RabbitMQ URL (required for shared mode) | — | — | `turn_queue_url` | unset |
 | RabbitMQ request queue | — | — | `turn_queue_name` | `vibey.llm.turns` |
 
 `turn_dispatch_mode = "direct"` keeps one model turn local to the run. Set it to
+`"hybrid"` to multiplex up to `hybrid_concurrency` lane turns through one resident
+inference server in the same process. Hybrid mode is local and does not require a broker;
+it is useful when several lanes share one device. Set it to
 `"rabbitmq"`, provide `turn_queue_url`, and optionally set `turn_queue_name` to
 publish turns to a named shared queue; a `RabbitMqTurnWorker` process owns the model server and
 can serve multiple lane processes. Shared mode is explicit opt-in and requires a

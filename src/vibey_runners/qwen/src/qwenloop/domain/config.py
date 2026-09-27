@@ -174,6 +174,7 @@ class QwenConfig:
     # How long doctor, health, and start wait for an endpoint's model list.
     endpoint_timeout_seconds: int = 5
     turn_dispatch_mode: str = "direct"
+    hybrid_concurrency: int = 2
     turn_queue_url: str = ""
     turn_queue_name: str = "vibey.llm.turns"
     # What one tool call may read or return: the config file's `[tools]` table.
@@ -240,6 +241,7 @@ class QwenConfigParser:
                 data.get("endpoint_timeout_seconds", defaults.endpoint_timeout_seconds)
             ),
             turn_dispatch_mode=str(data.get("turn_dispatch_mode", defaults.turn_dispatch_mode)),
+            hybrid_concurrency=int(data.get("hybrid_concurrency", defaults.hybrid_concurrency)),
             turn_queue_url=str(data.get("turn_queue_url", defaults.turn_queue_url)),
             turn_queue_name=str(data.get("turn_queue_name", defaults.turn_queue_name)),
             tools=self._tool_limits(data.get("tools", {})),
@@ -255,8 +257,10 @@ class QwenConfigParser:
             raise ValueError("timeouts, context_window, and max_turns must be positive")
         if not config.model:
             raise ValueError("model must name the model the endpoint serves")
-        if config.turn_dispatch_mode not in {"direct", "rabbitmq"}:
-            raise ValueError("turn_dispatch_mode must be 'direct' or 'rabbitmq'")
+        if config.turn_dispatch_mode not in {"auto", "direct", "hybrid", "rabbitmq"}:
+            raise ValueError("turn_dispatch_mode must be 'auto', 'direct', 'hybrid', or 'rabbitmq'")
+        if config.hybrid_concurrency <= 0:
+            raise ValueError("hybrid_concurrency must be positive")
         if config.turn_dispatch_mode == "rabbitmq" and not config.turn_queue_url.strip():
             raise ValueError("turn_queue_url is required when turn_dispatch_mode is 'rabbitmq'")
         if not config.turn_queue_name.strip():

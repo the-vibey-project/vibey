@@ -430,7 +430,8 @@ operator-controlled configuration, never committed or printed in logs. Start
 `qwenloop server turn-worker` (or `gptossloop server turn-worker`) for the model
 host. `turn_queue_name` defaults to `vibey.llm.turns` and permits separate model
 pools to use distinct durable queues. `TurnDispatcherInterface` is the runner
-seam: `DirectTurnDispatcher` preserves local operation and
+seam: `DirectTurnDispatcher` preserves local operation,
+`HybridTurnMultiplexer` shares one resident server among bounded in-process lanes, and
 `RabbitMqTurnDispatcher` publishes correlated requests to the worker.
 
 ## `[failover]` { #failover }

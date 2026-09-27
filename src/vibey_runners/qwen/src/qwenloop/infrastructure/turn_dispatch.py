@@ -1,8 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Direct and RabbitMQ-backed model-turn dispatchers."""
+"""Direct, hybrid, and RabbitMQ-backed model-turn dispatchers."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from collections.abc import AsyncIterator, Sequence
@@ -25,6 +26,42 @@ class DirectTurnDispatcher:
         messages: Sequence[ChatMessage],
     ) -> AsyncIterator[ChatChunkInterface]:
         return server.chat_stream(info, messages)
+
+
+class HybridTurnMultiplexer:
+    """Multiplexes several lane turns through one resident server in-process.
+
+    The semaphore is shared by dispatchers for the same endpoint/model, so independently
+    constructed lane runners still share the configured model capacity. It is deliberately
+    local: RabbitMQ remains the explicit cross-process mode.
+    """
+
+    _pools: dict[tuple[str, str], asyncio.Semaphore] = {}
+
+    def __init__(self, *, concurrency: int = 2) -> None:
+        if concurrency <= 0:
+            raise ValueError("hybrid concurrency must be positive")
+        self._concurrency = concurrency
+
+    def dispatch(
+        self,
+        server: InferenceServer,
+        info: ServerInfo,
+        messages: Sequence[ChatMessage],
+    ) -> AsyncIterator[ChatChunkInterface]:
+        return self._dispatch(server, info, messages)
+
+    async def _dispatch(
+        self,
+        server: InferenceServer,
+        info: ServerInfo,
+        messages: Sequence[ChatMessage],
+    ) -> AsyncIterator[ChatChunkInterface]:
+        key = (info.endpoint, info.model)
+        pool = self._pools.setdefault(key, asyncio.Semaphore(self._concurrency))
+        async with pool:
+            async for chunk in server.chat_stream(info, messages):
+                yield chunk
 
 
 class RabbitMqTurnDispatcher:
