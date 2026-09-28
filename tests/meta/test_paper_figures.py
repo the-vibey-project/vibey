@@ -94,6 +94,16 @@ def test_every_figure_of_the_atlas_is_present_and_numbered_in_order() -> None:
         "fig:completion-band",
         "fig:forecast",
         "fig:governance-time",
+        "fig:delivery-pipeline",
+        "fig:probe-lifecycle",
+        "fig:microslice-contract",
+        "fig:exact-head-lifecycle",
+        "fig:authority-map",
+        "fig:process-reaping",
+        "fig:queue-state",
+        "fig:environment-boundary",
+        "fig:publication-ladder",
+        "fig:capacity-precedence",
     )
     positions = [text.index(rf"\label{{{label}}}") for label in expected_labels]
     assert positions == sorted(positions), "the figures are not in the order the paper lists them"

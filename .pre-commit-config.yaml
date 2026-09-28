@@ -48,7 +48,10 @@ repos:
 
       - id: pip-audit
         name: pip-audit
-        entry: uv run --extra dev pip-audit
+        # The checkout installs vibey-engine editable; auditing that local project
+        # makes pip-audit query PyPI for a package that may not exist yet (or may
+        # transiently return 503). Audit the resolved third-party environment instead.
+        entry: uv run --extra dev pip-audit --skip-editable
         language: system
         pass_filenames: false
         stages: [pre-push]
