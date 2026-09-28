@@ -13,6 +13,7 @@ import json
 import os
 import signal
 import subprocess  # nosec B404 - fixed argv, never shell=True
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, cast
@@ -1438,9 +1439,9 @@ def doctor(
             )
             output.parent.mkdir(parents=True, exist_ok=True)
             probe = Path(__file__).resolve().parents[3] / "scripts" / "sovereign_probe.py"
-            probe_result = subprocess.run(
+            probe_result = subprocess.run(  # nosec B603 - fixed repository script, shell disabled
                 [
-                    "python3",
+                    sys.executable,
                     str(probe),
                     "--url",
                     os.environ.get("VIBEY_OLLAMA_URL", "http://127.0.0.1:11434"),
