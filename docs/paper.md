@@ -1235,36 +1235,31 @@ When many programs work together for a long time, they start to behave a little 
 
 ## The engine family
 
-Six runners implement engines: `claudeloop` over Claude Code, `codexloop` over OpenAI
-Codex, `cursorloop` over Cursor's agent and its Cloud Agents API, `agyloop` over
-Gemini through the Antigravity SDK, `opencodeloop` over the official OpenCode CLI,
-and `qwenloop` over a local Qwen model. The pilot below uses `qwen3:14b`; the runner
+Five runner packages implement the engine family: `claudeloop` over Claude Code,
+`codexloop` over OpenAI Codex, `cursorloop` over Cursor's agent and its Cloud Agents
+API, `agyloop` over Gemini through the Antigravity SDK, and the local runner package
+over Ollama. The local package exposes `gptossloop`, the sovereign default on
+GPT-OSS 20B, and opt-in `qwenloop` on a Qwen model; `claudeloop-local` is a local
+backend profile of the Claude runner. The pilot below uses `qwen3:14b`; the runner
 contract does not depend on that model choice. `claudeloop` came first; the others
-transplanted its core. The orchestrator depends on a narrow contract that all six
-honour: a bounded run, a done marker, an
+transplanted its core. The orchestrator depends on a narrow contract that every
+runner honours: a bounded run, a done marker, an
 event vocabulary, a capacity mapping, and a shared wind-down exit code (75) meaning
 that the engine ran out of window capacity mid-item and stopped cleanly after writing
 its state. Capabilities beyond the contract (savepoints, unwind, mid-run prompts and
 others) differ by runner and are declared per engine.
 
-Over the six runners the orchestrator declares seven engine identities: the six, plus
-`claudeloop-local`, the claudeloop binary on a local backend profile. They fall into
-two tiers. At this revision the LOCAL tier holds `qwenloop`, `opencode` (declared at
-zero cost) and `claudeloop-local`, rotated among themselves before any PAID engine is
-offered, and the default engine pool is `qwenloop` with `opencode`; the DESIGN and
-DECOMPOSE interviews run on the sovereign provider unconditionally. The canon ratified
-after this code was written points further: sub-doctrines 8.b and 8.c name exactly
-two loops, `sovereignloop`, which `qwenloop` becomes, and `paidloop`, which gathers the
-paid adapters, each a single instance per model fed by a queue, and they repeal
-OpenCode. That migration is open work at this revision, and this paper describes the
-code, not the destination.
+Across those packages the orchestrator declares seven selectable identities: the four
+paid engines (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`), the sovereign
+default `gptossloop`, opt-in `qwenloop`, and opt-in `claudeloop-local`. LOCAL is
+preferred first by smooth-weighted round robin; PAID is a fallback only when no local
+identity is eligible. DESIGN and DECOMPOSE use the sovereign provider when no
+`--provider` is supplied. This is an implemented topology, not a roadmap claim.
 
-The OpenCode adapter is intentionally provider-neutral: it records the raw JSON
-events emitted by `opencode run --format json` and does not invent a model,
-authentication variable or price for the provider selected inside OpenCode. The
-adapter's unit, static and fake-conformance evidence is present in this tree;
-live OpenCode execution remains an explicit preflight item until the external
-CLI is installed.
+The distinction matters for reproducibility. A runner package is an executable
+adapter boundary; an engine identity is a configuration and policy choice inside that
+boundary. Counting packages as engines would hide the two local policies, while
+counting every binary as a package would overstate the distribution surface.
 
 ### Bounded runs that never block
 
@@ -1359,37 +1354,24 @@ the reason given above. And what a project adds is declared in reviewed configur
 which `vibey new` copies into the project record and the `VibeyProject` spec declares
 as `engineEnvironment` and `gates`; nobody edits the record by hand. 3.0.0 therefore
 asks a project to declare what it used to inherit: agyloop's Vertex credentials, a
-provider key OpenCode reads from the environment, a GitHub token for claudeloop's issue
+provider key a paid adapter reads from the environment, a GitHub token for claudeloop's issue
 import, and any toolchain variable a gate needs (`CHANGELOG.md`).
 
-### The sovereign driver, in progress
+### The sovereign driver and local fit
 
-The operator asked for an editor that drives the local model directly (#290), with
-`gpt-oss:20b` as the main driver. At the cutoff this was in progress, not delivered.
-Its core merged as #1127, marked as work in progress, and the extension as #1133 at
-22:25Z on 2026-09-24, but it had not been released, #290 was open, and the release-gate
-record lists a follow-up pull request still to come and each of the operator's
-additions still to be verified against the merged code
-(`docs/architecture/evidence/release-gate-2026-09-24.md`). What the merged code does
-(`clients/vscode/`): it runs a task through qwenloop on the local model, by default in
-a separate git worktree on a branch of its own, and it reads projects and open gates
-through `vibey projects --json` and `vibey gates --json`, a contract those commands
-declare for it (#1128; `CHANGELOG.md`), so it needs no SQL. It keeps one queue per
-model and by default lets one run use a model at a time, citing the measurement in
-*How many runs at once, per device* (`src/core/run-queue.ts`), and across processes it
-takes the same directory lock the family's other tools take, so a run started from a
-terminal waits in the same line (`src/core/model-lock.ts`). It never passes
-`VIBEY_*`, `PG*` or a name like a database credential to the model's commands, whatever
-its settings say.
+The local driver is now part of the tracked engine family. It runs a task through the
+Ollama-backed local runner, by default in a separate git worktree on a branch of its
+own, and reads projects and open gates through the JSON CLI contracts rather than SQL.
+The driver keeps one queue per model and a directory lock across processes. Its
+environment boundary rejects `VIBEY_*`, `PG*` and names containing credential words,
+while the project may explicitly allow the small set of variables a gate needs.
 
-Two of its defaults disagree with evidence in this paper, and we say so rather than
-settle them here. Its `vibey.contextWindow` setting defaults to 32,768 tokens, while
-this host was calibrated at 65,536 tokens per slot, and a 32,768-token window refused
-24 of the 60 storm-shaped turns in that calibration (ADR-0058). And its settings text
-says that Ollama drops the start of a long prompt it cannot fit, while the one tracked
-canary result echoed the code placed at the start and not the one at the end
-(`src/vibey_tools/gh/vibey_gh/local_review.py`); which end the server cuts remains
-disputed, as the exact-head section records.
+The driver makes the fit explicit rather than hiding it in a default. A portable
+probe records the endpoint, model, revision, prompt shape, every context/output pair,
+and a selected fit. The runtime accepts only a matching revision and endpoint, and
+caps prompt characters from the recorded shape. The probe persists the same `valid`
+field the runtime consumes; this producer/consumer contract is regression tested. A
+stale or malformed fit is ignored and the safe configured ceiling is used.
 
 ### Windows versus credits
 
@@ -1498,14 +1480,13 @@ excursion stays capped by $W_{\max}$. Its generated REST surface is pinned by a 
 test to a committed snapshot of the vendor's discovery document, so a regenerated
 client that diverges fails the suite instead of a run.
 
-`qwenloop` has no vendor. Its capacity is hardware, with the states available, locally
-busy and misconfigured, and nobody refills it by adding a payment method. Model
-acquisition is explicit: the doctor never downloads weights, and installing a model
-is a separate, deliberate command, because a surprise multi-gigabyte download is
-itself a capacity event on the constrained machine the runner exists to respect.
-Because no external party can revoke its capacity, it is the family's sovereign
-fallback: it is an opt-in standby for BUILD, and it is the preferred provider for the
-DESIGN interview, which it can run with no vendor account at all.
+The local runner has no vendor. Its capacity is hardware, with the states available,
+locally busy and misconfigured, and nobody refills it by adding a payment method.
+Model acquisition is explicit: the doctor never downloads weights, and installing a
+model is a separate, deliberate command, because a surprise multi-gigabyte download
+is itself a capacity event on the constrained machine the runner exists to respect.
+`gptossloop` is the sovereign default; `qwenloop` is opt-in for a different local
+model, and both share the same Ollama transport and measured-fit controls.
 
 ### The transplant thesis
 
@@ -1547,11 +1528,11 @@ every handoff has a well-defined ledger range $\rho$, shown in [Fig. 13](#fig:en
   redlab/.style={lab,text=vibeyred}]
   % ------------------------------------------------ local tier (preferred first)
   \node[vibeytealbox,eng,minimum width=2.45cm] (qwen) at (1.3,2.1)
-    {\textbf{qwenloop}\\local Ollama, sovereign};
-  \node[vibeytealbox,eng,minimum width=2.7cm] (cll) at (4.05,2.1)
+    {\textbf{gptossloop}\\local Ollama, sovereign default};
+  \node[vibeytealbox,eng,minimum width=2.45cm] (qwen2) at (3.95,2.1)
+    {\textbf{qwenloop}\\local Ollama, opt-in};
+  \node[vibeytealbox,eng,minimum width=2.7cm] (cll) at (6.7,2.1)
     {\textbf{claudeloop-local}\\local backend profile};
-  \node[vibeytealbox,eng,minimum width=2.3cm] (opencode) at (6.75,2.1)
-    {\textbf{opencodeloop}\\zero-cost, declared};
   % ------------------------------------------------ paid tier (fallback)
   \node[vibeysoft,eng,minimum width=1.45cm] (claude)   at (0.825,-0.7) {\textbf{claudeloop}\\Anthropic};
   \node[vibeysoft,eng,minimum width=1.4cm]  (codex)    at (2.4,-0.7)   {\textbf{codexloop}\\OpenAI};
@@ -1559,10 +1540,10 @@ every handoff has a well-defined ledger range $\rho$, shown in [Fig. 13](#fig:en
   \node[vibeysoft,eng,minimum width=1.15cm] (agy)      at (5.375,-0.7) {\textbf{agyloop}\\Google};
   \node[lab,font=\sffamily\tiny,text width=1.75cm,align=center] at (7.05,-0.7) {paid engines are declared, never default};
   % lane extents: shared x-range, headroom for the lane label
-  \coordinate (p1a) at (0.05,2.905);  \coordinate (p1b) at (7.95,1.675);
+  \coordinate (p1a) at (0.05,2.905);  \coordinate (p1b) at (9.1,1.675);
   \coordinate (p2a) at (0.05,0.105);  \coordinate (p2b) at (7.95,-1.125);
   \begin{scope}[on background layer]
-    \node[vibeylane,fit=(qwen)(cll)(opencode)(p1a)(p1b)] (L1) {};
+    \node[vibeylane,fit=(qwen)(qwen2)(cll)(p1a)(p1b)] (L1) {};
     \node[vibeylane,fit=(claude)(agy)(p2a)(p2b)] (L2) {};
   \end{scope}
   \node[vibeylanelabel] at (L1.north west) {Local tier};
@@ -1613,11 +1594,19 @@ performance claims. The laptop ran Ollama with `gpt-oss:20b` and RabbitMQ 4.3.6
 on loopback. The model-turn experiment used two samples at hybrid concurrency
 $2$; the orchestration-bus experiment used twelve messages.
 
-| Surface | Singleton | Hybrid | Multiplexer | Selected |
-|---|---:|---:|---:|---|
-| Model turns (turns/s) | 0.1162 | 0.2597 | 0.1297 | hybrid |
-| Orchestration bus (messages/s), first run | 41.2398 | 271.8715 | 422.8348 | multiplexer |
-| Orchestration bus (messages/s), repeat run | 33.6749 | 251.2280 | 412.2460 | multiplexer |
+```latex
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}p{1.45in}rrr@{}}
+\textbf{Surface} & \textbf{Single} & \textbf{Hybrid} & \textbf{Mux.}\\
+Model turns (turns/s) & 0.1162 & 0.2597 & 0.1297\\
+Bus, first run (msg/s) & 41.2398 & 271.8715 & 422.8348\\
+Bus, repeat run (msg/s) & 33.6749 & 251.2280 & 412.2460\\
+\end{tabular}
+\caption{Bounded local dispatch experiments. Hybrid won model turns; the multiplexer won the orchestration bus.}
+\label{tab:dispatch-experiments}
+\end{table}
+```
 
 The model-turn result was persisted as per-machine benchmark evidence and the
 orchestration-bus result was persisted as the local `auto` winner. The two bus
@@ -1904,7 +1893,7 @@ closed rather than degrade silently, at other scales.
 
 **Retrieval.** A skill library cannot be loaded wholesale into a context window, yet
 fragmentary retrieval of safety- and correctness-critical guidance is worse than none.
-At revision `559638f4` the library holds 710 skill documents across 135 plugins.
+At the current source cutoff the library holds 728 skill documents across 136 plugins.
 `vibey-skills` indexes it as a pure function of the corpus and retrieves only whole
 sections.
 
@@ -2019,8 +2008,8 @@ stress record is a controlled escalation of the local review lane; the Qwen reco
 operational reliability observation, not another throughput experiment.
 `scripts/paper_evidence.py` recomputes the stress, Qwen and history figures, and
 `scripts/paper_figures.py` redraws every computed figure from the tracked records;
-history figures are stated at revision `600f3db2883d`, which `--rev 600f3db2883d`
-reproduces. Two further sources are not tracked, and we name them where we use them:
+history figures are stated at the paper's pinned source revision, which `--rev HEAD`
+reproduces for this update. Two further sources are not tracked, and we name them where we use them:
 the storm throughput audit of 2026-09-23, whose record is a page kept outside the
 repository and whose inputs are local run logs, and the forge's own records of pull
 requests and their merge times. Where we could recompute an audit figure from the local
@@ -2034,7 +2023,7 @@ deadline per generation. Each generation was a real unit of work, an issue triag
 a pull-request diff reviewed, drawn from a pool of seven artifacts of 2 to 22 KB.
 Throughput is successful generations per minute of rung wall clock, reported across four views in [Fig. 18](#fig:stress-rate).
 
-<!-- BEGIN GENERATED figure:stress-dashboard rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:stress-dashboard rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2096,7 +2085,7 @@ In all, 243 of 444 generations succeeded over 2.18 hours. Every failure was a cl
 timeout; not one response was malformed or corrupt. The cumulative progression of attempts
 and successes across the 14 rungs is plotted in [Fig. 19](#fig:stress-cumulative).
 
-<!-- BEGIN GENERATED figure:stress-cumulative rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:stress-cumulative rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -2146,7 +2135,7 @@ file-write calls totalling 32,073 bytes, as detailed across each run in [Fig. 20
 Thus the accepted completion rate at the cutoff was 4/13, or 30.8%, while a verdict alone
 would have suggested 6/13, or 46.2%.
 
-<!-- BEGIN GENERATED figure:qwen-runs rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:qwen-runs rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2359,7 +2348,7 @@ in the consumed span.
 \label{fig:evidence-watermark}
 \end{figure*}
 ```
-<!-- BEGIN GENERATED figure:storm-lanes rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:storm-lanes rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2516,7 +2505,7 @@ overlapped in time. The timeline in [Fig. 24](#fig:storm-timeline) shows the lan
 the progress log recorded them; the bars never overlap, and the blank stretches between
 them are the reviewer's and the operator's time, not the machine's.
 
-<!-- BEGIN GENERATED figure:storm-timeline rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:storm-timeline rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2740,7 +2729,7 @@ time. The Ollama configuration finished the same session in 86 s, and the same
 record does not separate the model from the serving stack, so the difference is
 reported and not explained.
 
-<!-- BEGIN GENERATED figure:bench-hosts rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:bench-hosts rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2793,7 +2782,7 @@ difference is inside the noise and we do not claim it. That is sub-doctrine 8.j,
 to the iron: a setting moves against a number read from this host, and the number is
 recorded beside it.
 
-<!-- BEGIN GENERATED figure:host-context rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:host-context rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -2860,16 +2849,16 @@ was not ratified at the cutoff.
 
 ### Field data
 
-The git history is field data: nothing in it was held fixed. At revision `600f3db2883d`,
-1,381 commits are reachable across nine root histories, the absorbed histories of the
-family's packages. Since 2026-08-09, when the family's own development begins, 1,369
-commits landed on 34 active days, between 1 and 191 per day (median 28, mean 40.3,
-sample standard deviation 40.2). Commits landed in all 24 hours of the day in US
+The git history is field data: nothing in it was held fixed. At the current source
+revision, 1,513 commits are reachable across nine root histories, the absorbed histories
+of the family's packages. Since 2026-08-09, when the family's own development begins,
+1,501 commits landed on 38 active days, between 1 and 191 per day (median 31, mean 39.5,
+sample standard deviation 38.3). Commits landed in all 24 hours of the day in US
 Eastern time, with the fewest (19) in the 09:00 hour and the most (90) in the 18:00
 hour. The longest
 pause was nine days with no commit, from 2026-08-30 to 2026-09-09, and nothing in the
 repository records its cause. Seventeen `vibey` release tags point at commits dated
-between 2026-08-16 and 2026-09-21, and 594 commit subjects across the absorbed
+between 2026-08-16 and 2026-09-21, and 686 commit subjects across the absorbed
 histories end in a pull-request reference.
 
 The daily rate's spread is 100% of its mean, against 24% in the controlled region.
@@ -2880,14 +2869,14 @@ mistaken for a field rate.
 
 The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily).
 
-<!-- BEGIN GENERATED figure:commits-daily rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:commits-daily rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[vibeyaxis,width=17.2cm,height=5.6cm,ybar,bar width=4.2pt,xmin=-0.7,xmax=46.7,ymin=0,ymax=231,
-  xtick={0,7,14,21,28,35,42},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20},xlabel={day (2026, 600f3db2 and earlier)},ylabel={commits}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(0,5) (1,41) (3,21) (4,130) (5,27) (6,92) (7,47) (8,22) (9,39) (10,20) (11,52) (12,75) (13,13) (14,61) (15,1) (16,38) (17,3) (18,56) (19,29) (20,91) (21,71) (31,3) (32,13) (36,24) (37,61) (38,33) (39,16) (40,191) (41,7) (42,4) (43,8) (44,23) (45,37) (46,15)};
+\begin{axis}[vibeyaxis,width=17.2cm,height=5.6cm,ybar,bar width=4.2pt,xmin=-0.7,xmax=50.7,ymin=0,ymax=231,
+  xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day (2026, 3680d700 and earlier)},ylabel={commits}]
+\addplot[fill=vibeyblue,draw=none] coordinates {(0,5) (1,41) (3,21) (4,130) (5,27) (6,92) (7,47) (8,22) (9,39) (10,20) (11,52) (12,75) (13,13) (14,61) (15,1) (16,38) (17,3) (18,56) (19,29) (20,91) (21,71) (31,3) (32,13) (36,24) (37,61) (38,33) (39,16) (40,191) (41,7) (42,4) (43,8) (44,23) (45,37) (46,41) (47,33) (48,27) (49,45) (50,2)};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:7,53) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:7,56) {v0.1.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:11,58) {};
@@ -2916,7 +2905,7 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \node[vibeynote,anchor=north west,align=left] at (axis description cs:0.01,0.97) {\textcolor{vibeygold}{$\bullet$} vibey release tag};
 \end{axis}
 \end{tikzpicture}
-\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision 600f3db2: 1,369 commits on 34 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
+\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision 3680d700: 1,502 commits on 38 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
 \label{fig:commits-daily}
 \end{figure*}
 ```
@@ -2924,51 +2913,51 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 
 The circadian rhythm, weekday distribution, and Conventional Commit types are captured in [Fig. 28](#fig:commit-rhythm).
 
-<!-- BEGIN GENERATED figure:commit-rhythm rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:commit-rhythm rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{scope}[xshift=-5.4cm]
-\draw[vibeyline] (0,0) circle (0.597); \draw[vibeyline] (0,0) circle (1.194); \draw[vibeyline] (0,0) circle (1.792);
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (90:1.218) arc[start angle=90,end angle=75,radius=1.218] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (75:1.194) arc[start angle=75,end angle=60,radius=1.194] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (60:1.983) arc[start angle=60,end angle=45,radius=1.983] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (45:1.338) arc[start angle=45,end angle=30,radius=1.338] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (30:1.887) arc[start angle=30,end angle=15,radius=1.887] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (15:0.860) arc[start angle=15,end angle=0,radius=0.860] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (0:0.956) arc[start angle=0,end angle=-15,radius=0.956] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-15:0.812) arc[start angle=-15,end angle=-30,radius=0.812] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-30:0.860) arc[start angle=-30,end angle=-45,radius=0.860] -- cycle;
-\fill[vibeyred!70,draw=white,line width=.4pt] (0,0) -- (-45:0.454) arc[start angle=-45,end angle=-60,radius=0.454] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-60:1.242) arc[start angle=-60,end angle=-75,radius=1.242] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-75:1.218) arc[start angle=-75,end angle=-90,radius=1.218] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-90:1.409) arc[start angle=-90,end angle=-105,radius=1.409] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-105:1.744) arc[start angle=-105,end angle=-120,radius=1.744] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-120:1.887) arc[start angle=-120,end angle=-135,radius=1.887] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-135:1.792) arc[start angle=-135,end angle=-150,radius=1.792] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-150:0.979) arc[start angle=-150,end angle=-165,radius=0.979] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-165:1.839) arc[start angle=-165,end angle=-180,radius=1.839] -- cycle;
+\draw[vibeyline] (0,0) circle (0.527); \draw[vibeyline] (0,0) circle (1.054); \draw[vibeyline] (0,0) circle (1.581);
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (90:1.159) arc[start angle=90,end angle=75,radius=1.159] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (75:1.075) arc[start angle=75,end angle=60,radius=1.075] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (60:1.750) arc[start angle=60,end angle=45,radius=1.750] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (45:1.180) arc[start angle=45,end angle=30,radius=1.180] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (30:1.750) arc[start angle=30,end angle=15,radius=1.750] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (15:0.822) arc[start angle=15,end angle=0,radius=0.822] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (0:0.927) arc[start angle=0,end angle=-15,radius=0.927] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-15:0.759) arc[start angle=-15,end angle=-30,radius=0.759] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-30:0.885) arc[start angle=-30,end angle=-45,radius=0.885] -- cycle;
+\fill[vibeyred!70,draw=white,line width=.4pt] (0,0) -- (-45:0.527) arc[start angle=-45,end angle=-60,radius=0.527] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-60:1.286) arc[start angle=-60,end angle=-75,radius=1.286] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-75:1.223) arc[start angle=-75,end angle=-90,radius=1.223] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-90:1.391) arc[start angle=-90,end angle=-105,radius=1.391] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-105:1.665) arc[start angle=-105,end angle=-120,radius=1.665] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-120:1.728) arc[start angle=-120,end angle=-135,radius=1.728] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-135:1.728) arc[start angle=-135,end angle=-150,radius=1.728] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-150:1.075) arc[start angle=-150,end angle=-165,radius=1.075] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-165:1.792) arc[start angle=-165,end angle=-180,radius=1.792] -- cycle;
 \fill[vibeygold,draw=white,line width=.4pt] (0,0) -- (-180:2.150) arc[start angle=-180,end angle=-195,radius=2.150] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-195:1.648) arc[start angle=-195,end angle=-210,radius=1.648] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-210:1.433) arc[start angle=-210,end angle=-225,radius=1.433] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-225:1.959) arc[start angle=-225,end angle=-240,radius=1.959] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-240:1.194) arc[start angle=-240,end angle=-255,radius=1.194] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-255:0.645) arc[start angle=-255,end angle=-270,radius=0.645] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-195:1.750) arc[start angle=-195,end angle=-210,radius=1.750] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-210:1.370) arc[start angle=-210,end angle=-225,radius=1.370] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-225:1.855) arc[start angle=-225,end angle=-240,radius=1.855] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-240:1.180) arc[start angle=-240,end angle=-255,radius=1.180] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-255:0.632) arc[start angle=-255,end angle=-270,radius=0.632] -- cycle;
 \node[vibeynote,text=vibeygray] at (82.5:2.42) {0}; \node[vibeynote,text=vibeygray] at (37.5:2.42) {3}; \node[vibeynote,text=vibeygray] at (-7.5:2.42) {6}; \node[vibeynote,text=vibeygray] at (-52.5:2.42) {9}; \node[vibeynote,text=vibeygray] at (-97.5:2.42) {12}; \node[vibeynote,text=vibeygray] at (-142.5:2.42) {15}; \node[vibeynote,text=vibeygray] at (-187.5:2.42) {18}; \node[vibeynote,text=vibeygray] at (-232.5:2.42) {21};
 \node[vibeynote,anchor=south west,text=vibeygray] at (-2.6,2.45) {commits by hour, US Eastern};
-\node[vibeynote,anchor=north west,text=vibeygray,align=left] at (-2.6,-2.45) {rings at 25, 50, 75 commits\\\textcolor{vibeygold}{$\blacksquare$} busiest 18:00 (90) \; \textcolor{vibeyred!70}{$\blacksquare$} quietest 09:00 (19)};
+\node[vibeynote,anchor=north west,text=vibeygray,align=left] at (-2.6,-2.45) {rings at 25, 50, 75 commits\\\textcolor{vibeygold}{$\blacksquare$} busiest 18:00 (102) \; \textcolor{vibeyred!70}{$\blacksquare$} quietest 09:00 (25)};
 \end{scope}
 \begin{axis}[vibeybars,at={(0.0cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
   xtick={0,...,6},xticklabels={Mon,Tue,Wed,Thu,Fri,Sat,Sun},title={commits by weekday},ylabel={commits}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(0,96) (1,161) (2,117) (3,282) (4,322) (5,203) (6,188)};
+\addplot[fill=vibeyblue,draw=none] coordinates {(0,98) (1,161) (2,117) (3,308) (4,355) (5,230) (6,233)};
 \end{axis}
 \begin{axis}[vibeybars,at={(6.1cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=7.6,ymin=0,
-  xtick={0,...,7},xticklabels={chore,other,fix,feat,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={Conventional Commit types},ylabel={commits}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,379) (1,267) (2,258) (3,254) (4,126) (5,39) (6,26) (7,8)};
+  xtick={0,...,7},xticklabels={chore,fix,feat,other,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={Conventional Commit types},ylabel={commits}]
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,402) (1,302) (2,291) (3,277) (4,134) (5,41) (6,33) (7,8)};
 \end{axis}
 \end{tikzpicture}
-\caption{The rhythm of production since 2026-08-09, at revision 600f3db2. Left, a 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 90 and the quietest at 09:00 with 19. Centre, the weekday distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first.}
+\caption{The rhythm of production since 2026-08-09, at revision 3680d700. Left, a 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 102 and the quietest at 09:00 with 25. Centre, the weekday distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first.}
 \label{fig:commit-rhythm}
 \end{figure*}
 ```
@@ -2976,17 +2965,17 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 
 Cumulative deliveries, including the absorbed package roots and pull requests, appear in [Fig. 29](#fig:cumulative-commits).
 
-<!-- BEGIN GENERATED figure:cumulative-commits rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:cumulative-commits rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=46,ymin=0,ymax=1449,
-  xtick={0,7,14,21,28,35,42},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20},xlabel={day},ylabel={cumulative},legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1369)} \closedcycle;
-\addlegendentry{commits since Aug 9 (1,369; 12 earlier)}
-\addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,575) (46,590)};
-\addlegendentry{commit subjects closing a pull request (590)}
+\begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=50,ymin=0,ymax=1582,
+  xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day},ylabel={cumulative},legend pos=north west]
+\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)} \closedcycle;
+\addlegendentry{commits since Aug 9 (1,502; 12 earlier)}
+\addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,575) (46,616) (47,649) (48,675) (49,681) (50,682)};
+\addlegendentry{commit subjects closing a pull request (682)}
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:0,0) {};
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:1,0) {};
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:4,0) {};
@@ -2998,7 +2987,7 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 \node[vibeynote,anchor=south east,align=right] at (axis description cs:0.99,0.04) {\textcolor{vibeyviolet}{$\bullet$} a package's root commit: 8 of 9 root histories begin in the window};
 \end{axis}
 \end{tikzpicture}
-\caption{Cumulative production at revision 600f3db2: commits since 2026-08-09 and, beneath them, the commits whose subject closes a pull request. The violet marks on the baseline are the days on which the absorbed packages' own histories begin; the family was written as several repositories and merged into one tree with every history preserved.}
+\caption{Cumulative production at revision 3680d700: commits since 2026-08-09 and, beneath them, the commits whose subject closes a pull request. The violet marks on the baseline are the days on which the absorbed packages' own histories begin; the family was written as several repositories and merged into one tree with every history preserved.}
 \label{fig:cumulative-commits}
 \end{figure*}
 ```
@@ -3006,7 +2995,7 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 
 The timeline of releases across each package in the family is shown in [Fig. 30](#fig:release-cadence).
 
-<!-- BEGIN GENERATED figure:release-cadence rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:release-cadence rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -3047,7 +3036,7 @@ The timeline of releases across each package in the family is shown in [Fig. 30]
 \draw[vibeyline] (15.40,0.06) -- (15.40,0.48);
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.48) {2.0.0};
 \end{tikzpicture}
-\caption{Every release tag reachable at revision 600f3db2, 17 tags on the repository. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
+\caption{Every release tag reachable at revision 3680d700, 17 tags on the repository. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
@@ -3055,25 +3044,25 @@ The timeline of releases across each package in the family is shown in [Fig. 30]
 
 Finally, the architectural shape of the consolidated repository across its 11 packages and layers is depicted in [Fig. 31](#fig:codebase-shape).
 
-<!-- BEGIN GENERATED figure:codebase-shape rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:codebase-shape rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=3 by 1,horizontal sep=1.9cm},vibeyaxis,height=5.6cm,
-  y dir=reverse,ytick={0,...,10},ymin=-0.7,ymax=10.7,xmin=0,y tick label style={font=\sffamily\tiny},
+  y dir=reverse,ytick={0,...,9},ymin=-0.7,ymax=9.7,xmin=0,y tick label style={font=\sffamily\tiny},
   scaled x ticks=false,x tick label style={/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}},point meta=x,
   nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray,/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}}]
-\nextgroupplot[title={a. Lines of Python per package},xbar,bar width=6pt,width=5.9cm,yticklabels={vibey-gh,vibey,claudeloop,vibey-bootstrap,agyloop,codexloop,cursorloop,qwenloop,vibey-skills,opencodeloop,runners-common},xlabel={lines}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(60701,0) (41536,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (9183,7) (2934,8) (1379,9) (258,10)};
+\nextgroupplot[title={a. Lines of Python per package},xbar,bar width=6pt,width=5.9cm,yticklabels={vibey-gh,vibey,claudeloop,vibey-bootstrap,agyloop,codexloop,cursorloop,qwenloop,vibey-skills,runners-common},xlabel={lines}]
+\addplot[fill=vibeyblue,draw=none] coordinates {(75594,0) (58279,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (10909,7) (3109,8) (258,9)};
 \nextgroupplot[title={b. Test functions per package},xbar,bar width=6pt,width=4.9cm,yticklabels={,,,,,,,,,,,},xlabel={tests}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(1645,0) (0,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (249,7) (30,8) (43,9) (0,10)};
-\nextgroupplot[title={c. The orchestrator's layers},xbar,bar width=6pt,width=4.9cm,ytick={0,...,4},yticklabels={domain,application,infrastructure,cli,tui},ymin=-0.7,ymax=4.7,xlabel={lines},xmax=32000,nodes near coords={}]
-\addplot[fill=vibeyviolet!85,draw=none] coordinates {(9296,0) (10562,1) (16842,2) (3159,3) (590,4)};
-\node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:10196,0) {9,296 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:11462,1) {10,562 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:17742,2) {16,842 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:4059,3) {3,159 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:1490,4) {590 $\cdot$ exempt};
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(2011,0) (0,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (291,7) (33,8) (0,9)};
+\nextgroupplot[title={c. The orchestrator's layers},xbar,bar width=6pt,width=4.9cm,ytick={0,...,4},yticklabels={domain,application,infrastructure,cli,tui},ymin=-0.7,ymax=4.7,xlabel={lines},xmax=45323,nodes near coords={}]
+\addplot[fill=vibeyviolet!85,draw=none] coordinates {(12488,0) (13786,1) (23854,2) (6347,3) (590,4)};
+\node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:13388,0) {12,488 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:14686,1) {13,786 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:24754,2) {23,854 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:7247,3) {6,347 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:1490,4) {590 $\cdot$ exempt};
 \end{groupplot}
 \end{tikzpicture}
-\caption{The shape of the tree at revision 600f3db2: 327,067 lines of Python in 1,982 files and 9,245 test functions. (a) Lines per package; (b) test functions per package, with 2,878 more in the orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below 100\% branch coverage.}
+\caption{The shape of the tree at revision 3680d700: 389,222 lines of Python in 2,245 files and 10,638 test functions. (a) Lines per package; (b) test functions per package, with 3,893 more in the orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below 100\% branch coverage.}
 \label{fig:codebase-shape}
 \end{figure*}
 ```
@@ -3328,7 +3317,7 @@ it. Because the held-out check exceeded the ceiling, the firm half of the predic
 is the upper end: with every coordinate at its target, the work should take no longer
 than $W / r_{\min}$, as plotted in [Fig. 33](#fig:completion-band).
 
-<!-- BEGIN GENERATED figure:completion-band rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:completion-band rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -3354,7 +3343,7 @@ than $W / r_{\min}$, as plotted in [Fig. 33](#fig:completion-band).
 Beyond single-task completion bands, project delivery velocity is tracked over time
 in the delivery-estimate ledger, shown in [Fig. 34](#fig:forecast).
 
-<!-- BEGIN GENERATED figure:forecast rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:forecast rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -3388,7 +3377,7 @@ and the bare suite falling from 383 s to 135 s, without removing a gate
 (`docs/runbooks/expansion/evidence/13-front1-validation.md`), as illustrated in [Fig. 35](#fig:governance-time).
 That is a governance dilation made smaller while the requirement stayed the same.
 
-<!-- BEGIN GENERATED figure:governance-time rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:governance-time rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -3450,6 +3439,232 @@ We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally
 ```
 
 ## Validation
+
+## The 3.0.0 operational atlas
+
+The post-cutoff work is not one feature but a change in the system's control surface.
+The following atlas makes those changes inspectable without asking the reader to infer
+them from a changelog. The counts are source-tree counts at the paper revision; the
+arrows describe contracts, not an assertion that every path is exercised on every run.
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  box/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum height=.72cm,align=center,font=\sffamily\scriptsize},
+  gate/.style={draw=vibeyviolet!65,fill=vibeyviolet!10,rounded corners=3pt,minimum height=.72cm,align=center,font=\sffamily\scriptsize},
+  local/.style={draw=vibeyteal!70,fill=vibeyteal!12,rounded corners=3pt,minimum height=.72cm,align=center,font=\sffamily\scriptsize},
+  arrow/.style={-latex,line width=.65pt,draw=vibeygray}]
+  \node[box,minimum width=2.2cm] (issue) at (0,0) {GitHub issue\\688 open units};
+  \node[box,minimum width=2.2cm] (queue) at (3.0,0) {durable triage queue\\PostgreSQL};
+  \node[gate,minimum width=2.2cm] (design) at (6,0) {design gate\\parked if unanswered};
+  \node[local,minimum width=2.2cm] (worker) at (9,0) {gptossloop worker\\isolated worktree};
+  \node[gate,minimum width=2.2cm] (review) at (12,0) {sovereign review\\exact head};
+  \node[box,minimum width=2.2cm] (pr) at (15,0) {draft PR\\merge train};
+  \foreach \a/\b in {issue/queue,queue/design,design/worker,worker/review,review/pr}{\draw[arrow] (\a) -- (\b);}
+  \node[font=\sffamily\tiny,text=vibeyred,align=center] at (3,-1.05) {priority is derived\\not hand-edited};
+  \node[font=\sffamily\tiny,text=vibeyred,align=center] at (9,-1.05) {timeout + descendant reaping\\before evidence};
+  \node[font=\sffamily\tiny,text=vibeyred,align=center] at (15,-1.05) {push is not merge\\checks remain required};
+\end{tikzpicture}
+\caption{The durable delivery path added around the paper cutoff. Triage, dispatch, design answers, worker execution, review and publication are separate evidence-bearing states. A failure parks or requeues the item; it does not become a completion claim.}
+\label{fig:delivery-pipeline}
+\end{figure*}
+```
+
+```latex
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  s/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum width=2.1cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
+  a/.style={-latex,line width=.7pt,draw=vibeygray}]
+  \node[s] (probe) at (0,0) {probe grid};
+  \node[s] (measure) at (0,-1.25) {measure\\context/output};
+  \node[s] (persist) at (0,-2.5) {persist\\revision + shape};
+  \node[s] (select) at (3,-1.25) {select fastest\\valid fit};
+  \node[s,fill=vibeyteal!12,draw=vibeyteal!70] (run) at (3,-2.5) {runtime\\accepts match};
+  \node[s,fill=vibeyred!10,draw=vibeyred!65] (fallback) at (-3,-2.5) {stale/malformed\\safe fallback};
+  \draw[a] (probe) -- (measure) -- (persist) -- (select) -- (run);
+  \draw[a] (persist) -- (fallback);
+  \draw[a] (run) |- (fallback);
+  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (0,-3.35) {producer and consumer share the `valid` contract};
+\end{tikzpicture}
+\caption{Measured local capacity is a lifecycle, not a magic number. The persisted fit is bound to endpoint, model, revision and prompt shape; a mismatch fails closed to configured ceilings.}
+\label{fig:probe-lifecycle}
+\end{figure}
+```
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  n/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.1cm,minimum height=.6cm,align=center,font=\sffamily\scriptsize},
+  e/.style={-latex,line width=.65pt,draw=vibeygray}]
+  \node[n] (spec) at (0,0) {specification};
+  \node[n] (slice) at (3,0) {bounded slice};
+  \node[n] (link) at (6,0) {requires / links};
+  \node[n] (budget) at (9,0) {budget measured};
+  \node[n] (review) at (12,0) {reviewed boundary};
+  \node[n,fill=vibeyteal!12,draw=vibeyteal!70] (index) at (15,0) {numbered index};
+  \foreach \a/\b in {spec/slice,slice/link,link/budget,budget/review,review/index}{\draw[e] (\a) -- (\b);}
+  \draw[e,draw=vibeyred] (budget.south) |- ++(0,-.95) -| (slice.south);
+  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.55) {ADR-0075: identity, provenance, bounded size, explicit links; split or park, never truncate};
+\end{tikzpicture}
+\caption{The context-microslice contract. Large context is converted into identified, bounded slices with measured budgets and explicit provenance. The converter may split or park; it may not silently drop the tail.}
+\label{fig:microslice-contract}
+\end{figure*}
+```
+
+```latex
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  c/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum width=2.65cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
+  a/.style={-latex,line width=.7pt,draw=vibeygray}]
+  \node[c] (head) at (0,0) {head $h_i$};
+  \node[c] (scan) at (0,-1.2) {scan claim $(c,h_i)$};
+  \node[c] (change) at (3,-1.2) {head changes $h_j$};
+  \node[c,fill=vibeyred!10,draw=vibeyred!65] (reject) at (3,-2.4) {reject stale claim};
+  \node[c,fill=vibeyteal!12,draw=vibeyteal!70] (fresh) at (0,-2.4) {fresh claim only};
+  \draw[a] (head) -- (scan) -- (fresh);
+  \draw[a] (scan) -- (change) -- (reject);
+  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3.2) {exact-head calculus: revision is part of every verdict};
+\end{tikzpicture}
+\caption{Exact-head evaluation prevents a valid claim about one revision from authorizing an action on another. A new head invalidates prior claims and forces a fresh scan.}
+\label{fig:exact-head-lifecycle}
+\end{figure}
+```
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  p/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.45cm,minimum height=.7cm,align=center,font=\sffamily\scriptsize},
+  g/.style={draw=vibeyviolet!65,fill=vibeyviolet!10,rounded corners=3pt,minimum width=2.45cm,minimum height=.7cm,align=center,font=\sffamily\scriptsize},
+  a/.style={-latex,line width=.65pt,draw=vibeygray}]
+  \node[p] (claim) at (0,0) {worker claim};
+  \node[g] (design) at (3,0) {design answer};
+  \node[p] (build) at (6,0) {build evidence};
+  \node[g] (review) at (9,0) {review verdict};
+  \node[p] (deploy) at (12,0) {deploy opt-in};
+  \node[g] (audit) at (15,0) {deployment review};
+  \foreach \a/\b in {claim/design,design/build,build/review,review/deploy,deploy/audit}{\draw[a] (\a) -- (\b);}
+  \draw[a,draw=vibeyred] (design.south) -- ++(0,-.85) -| (claim.south);
+  \draw[a,draw=vibeyred] (review.south) -- ++(0,-.85) -| (build.south);
+  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.5) {local completion is terminal when deployment is declined; deployment is never inferred};
+\end{tikzpicture}
+\caption{The six-phase machine as an authority map. Human gates are explicit state transitions; unattended workers occupy only build and deployment-execute phases. Declining deployment records a successful local completion rather than waiting indefinitely.}
+\label{fig:authority-map}
+\end{figure*}
+```
+
+```latex
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  r/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.3cm,minimum height=.6cm,align=center,font=\sffamily\scriptsize},
+  a/.style={-latex,line width=.7pt,draw=vibeygray}]
+  \node[r] (run) at (0,0) {worker process};
+  \node[r] (timeout) at (0,-1.1) {deadline};
+  \node[r] (term) at (3,-1.1) {terminate group};
+  \node[r] (reap) at (3,-2.2) {reap descendants};
+  \node[r,fill=vibeyteal!12,draw=vibeyteal!70] (evidence) at (0,-2.2) {record evidence};
+  \draw[a] (run) -- (timeout) -- (term) -- (reap) -- (evidence);
+  \draw[a,draw=vibeyred] (term) -- (evidence);
+  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3) {no orphaned process can masquerade as a completed lane};
+\end{tikzpicture}
+\caption{Worker timeout handling. The delivery runner stops the process group, reaps descendants, and records the timeout before any retry or publication decision.}
+\label{fig:process-reaping}
+\end{figure}
+```
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  q/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum width=2.45cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
+  a/.style={-latex,line width=.65pt,draw=vibeygray}]
+  \node[q] (open) at (0,0) {open issue};
+  \node[q] (triage) at (3,0) {triaged label};
+  \node[q] (bump) at (6,0) {priority bump};
+  \node[q] (claim) at (9,0) {leased claim};
+  \node[q] (park) at (12,0) {parked gate};
+  \node[q,fill=vibeyteal!12,draw=vibeyteal!70] (done) at (15,0) {evidence done};
+  \foreach \a/\b in {open/triage,triage/bump,bump/claim,claim/park,park/done}{\draw[a] (\a) -- (\b);}
+  \draw[a,draw=vibeyred] (claim.south) -- ++(0,-.8) -| (triage.south);
+  \draw[a,draw=vibeyred] (park.south) -- ++(0,-.8) -| (claim.south);
+  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.45) {ordering is derived from labels and age; no manual reorder bypasses a gate};
+\end{tikzpicture}
+\caption{Durable queue state. Priority changes alter ordering but never erase history, bypass a human gate, or turn a lease timeout into success.}
+\label{fig:queue-state}
+\end{figure*}
+```
+
+```latex
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  b/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.25cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
+  a/.style={-latex,line width=.7pt,draw=vibeygray}]
+  \node[b,fill=vibeyteal!12,draw=vibeyteal!70] (engine) at (0,0) {engine};
+  \node[b] (allow) at (0,-1.15) {allow-list};
+  \node[b] (prompt) at (0,-2.3) {bounded prompt};
+  \node[b] (model) at (3,-2.3) {local model};
+  \node[b,fill=vibeyred!10,draw=vibeyred!65] (secret) at (3,-1.15) {secret names\\rejected};
+  \draw[a] (engine) -- (allow) -- (prompt) -- (model);
+  \draw[a,draw=vibeyred] (allow) -- (secret);
+  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3.05) {configuration declares permitted variables; defaults are sovereign and fail closed};
+\end{tikzpicture}
+\caption{The engine environment boundary. A project declares the narrow variables a gate or adapter needs; credential-shaped names and inherited process state are excluded before the model can choose a command.}
+\label{fig:environment-boundary}
+\end{figure}
+```
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  pubnode/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.4cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
+  pubarr/.style={-latex,line width=.65pt,draw=vibeygray}]
+  \node[pubnode] (source) at (0,0) {source markdown};
+  \node[pubnode] (evidence) at (3,0) {evidence JSON};
+  \node[pubnode] (fig) at (6,0) {TikZ atlas};
+  \node[pubnode] (tex) at (9,0) {LaTeX};
+  \node[pubnode] (pdf) at (12,0) {PDF};
+  \node[pubnode,fill=vibeyteal!12,draw=vibeyteal!70] (site) at (15,0) {site / book};
+  \foreach \a/\b in {source/evidence,evidence/fig,fig/tex,tex/pdf,pdf/site}{\draw[pubarr] (\a) -- (\b);}
+  \draw[pubarr,draw=vibeyred] (pdf.south) -- ++(0,-.8) -| (tex.south);
+  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.45) {canonical source; revision markers; visual inspection; separate output checks};
+\end{tikzpicture}
+\caption{Publication provenance. Evidence and figure generation are deterministic inputs to the canonical source, while rendering and visual inspection remain explicit release gates for PDF, site and book surfaces.}
+\label{fig:publication-ladder}
+\end{figure*}
+```
+
+```latex
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  c/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.5cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
+  a/.style={-latex,line width=.7pt,draw=vibeygray}]
+  \node[c] (claim) at (0,0) {completion claim};
+  \node[c] (capacity) at (0,-1.15) {capacity verdict};
+  \node[c,fill=vibeyred!10,draw=vibeyred!65] (reject) at (3,-1.15) {capacity wins};
+  \node[c,fill=vibeyteal!12,draw=vibeyteal!70] (done) at (3,0) {done accepted};
+  \draw[a] (claim) -- (done);
+  \draw[a,draw=vibeyred] (capacity) -- (reject);
+  \draw[a,draw=vibeyred] (claim) -- (reject);
+  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-2) {a plausible answer never launders a starved run into success};
+\end{tikzpicture}
+\caption{Capacity precedence. Completion is admissible only after the capacity classifier says the run was able to complete; an exhaustion verdict outranks any final-looking text.}
+\label{fig:capacity-precedence}
+\end{figure}
+```
+
+These diagrams expose the paper's new boundary conditions: durable work is distinct
+from live work, local capacity is measured and revision-bound, context is sliced with
+provenance, and publication has a visual gate. They also make the limitations visible:
+the atlas does not claim that an open issue is delivered, that a selected fit is
+portable across hosts, or that a generated figure proves a release is publishable.
 
 The model is validated at three levels. At the *property* level, the gate, the phase
 guards and the selector are pure functions under a 100% branch-coverage floor per

@@ -161,9 +161,11 @@ def test_the_probe_selected_fit_schema_is_consumed_without_translation(tmp_path)
         encoding="utf-8",
     )
 
-    assert _load_fit(
-        str(fit), DEFAULT_OLLAMA_URL, DEFAULT_OLLAMA_MODEL, "probe-head"
-    ) == {"context": 8192, "output": 1024, "max_prompt_chars": 42}
+    assert _load_fit(str(fit), DEFAULT_OLLAMA_URL, DEFAULT_OLLAMA_MODEL, "probe-head") == {
+        "context": 8192,
+        "output": 1024,
+        "max_prompt_chars": 42,
+    }
 
 
 @pytest.mark.parametrize(
