@@ -1979,8 +1979,9 @@ def test_doctor_record_persists_preflight_only(tmp_path: Path) -> None:
     asyncio.run(check())
 
 
+@pytest.mark.parametrize("probe_returncode", [0, 2])
 def test_doctor_sovereign_fit_uses_the_current_interpreter_and_fixed_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, probe_returncode: int
 ) -> None:
     """The portable probe must run from this environment, not an arbitrary PATH python."""
     from unittest.mock import AsyncMock
@@ -1991,7 +1992,8 @@ def test_doctor_sovereign_fit_uses_the_current_interpreter_and_fixed_probe(
 
     def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         seen.append(argv)
-        return subprocess.CompletedProcess(argv, 0, stdout="{}\n", stderr="")
+        code = probe_returncode if argv and argv[0] == sys.executable else 0
+        return subprocess.CompletedProcess(argv, code, stdout="{}\n", stderr="probe failed")
 
     monkeypatch.setattr("vibey.cli.main.subprocess.run", fake_run)
     output = tmp_path / "fit.json"
@@ -2012,6 +2014,8 @@ def test_doctor_sovereign_fit_uses_the_current_interpreter_and_fixed_probe(
     assert probe_argv[-2] == "--record"
     assert probe_argv[-1] == str(output)
     assert probe_argv[1].endswith("scripts/sovereign_probe.py")
+    expected = "sovereign fit PASS" if probe_returncode == 0 else "sovereign fit FAIL"
+    assert expected in result.output
 
 
 def test_doctor_record_with_conformance_grants_eligibility(tmp_path: Path) -> None:
