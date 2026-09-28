@@ -153,6 +153,22 @@ async def reap(database_url: str) -> int:
         )
 
 
+async def set_state(database_url: str, repository: str, issue_number: int, state: str) -> None:
+    if state not in {"ready", "leased", "dispatched", "blocked", "completed"}:
+        raise ValueError(f"invalid ticket state: {state}")
+    async with asyncpg.create_pool(database_url, min_size=1, max_size=1) as pool:
+        await pool.execute(
+            """UPDATE triaged_ticket SET state = $3,
+               lease_owner = CASE WHEN $3 = 'leased' THEN lease_owner ELSE NULL END,
+               lease_expires_at = CASE WHEN $3 = 'leased' THEN lease_expires_at ELSE NULL END,
+               updated_at = now()
+               WHERE repository = $1 AND issue_number = $2""",
+            repository,
+            issue_number,
+            state,
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", required=True)
@@ -160,6 +176,10 @@ def main() -> int:
     parser.add_argument("--claim-owner")
     parser.add_argument("--lease-seconds", type=int, default=900)
     parser.add_argument("--reap", action="store_true")
+    parser.add_argument(
+        "--state", choices=("ready", "leased", "dispatched", "blocked", "completed")
+    )
+    parser.add_argument("--issue-number", type=int)
     args = parser.parse_args()
     if args.reap:
         print(asyncio.run(reap(args.database_url)))
@@ -170,6 +190,10 @@ def main() -> int:
             claim(args.database_url, args.repository, args.claim_owner, args.lease_seconds)
         )
         print(json.dumps({"claimed": claimed}, default=str))
+    if args.state is not None:
+        if args.issue_number is None:
+            parser.error("--state requires --issue-number")
+        asyncio.run(set_state(args.database_url, args.repository, args.issue_number, args.state))
     return 0
 
 

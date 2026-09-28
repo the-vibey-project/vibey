@@ -11,6 +11,7 @@ supervisor loop.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import contextlib
 import json
 import os
@@ -21,6 +22,10 @@ import time
 from dataclasses import dataclass
 from os import environ
 from pathlib import Path
+
+from triage_queue import claim as claim_ticket
+from triage_queue import github_tickets, set_state
+from triage_queue import reconcile as reconcile_tickets
 
 PRIORITIES = ("critical", "high", "medium", "low")
 TRIAGED = "vibey-gh:triaged"
@@ -446,6 +451,25 @@ def publish_project(project_id: str, issue: Issue, *, repo: Path) -> str | None:
 
 def run_once(repo: Path) -> int:
     issue_list = issues()
+    database_url = environ.get("VIBEY_PG_URL")
+    repository = environ.get("VIBEY_GITHUB_REPOSITORY", "the-vibey-project/vibey")
+    claimed: dict[str, object] | None = None
+    if database_url:
+        asyncio.run(reconcile_tickets(database_url, github_tickets(repository)))
+        claimed = asyncio.run(claim_ticket(database_url, repository, "triaged-delivery", 900))
+        if claimed is None:
+            print("no claimable triaged ticket in PostgreSQL")
+            return 1
+        issue_list = [
+            Issue(
+                number=int(claimed["issue_number"]),
+                title=str(claimed["title"]),
+                body=str(claimed["body"]),
+                bumped=False,
+                priority=PRIORITIES[int(claimed["priority_rank"])],
+                created_at="",
+            )
+        ]
     current = active_project(issue_list)
     if current is not None:
         print(f"active dispatched project {current}; waiting before selecting another issue")
@@ -454,11 +478,15 @@ def run_once(repo: Path) -> int:
         if already_dispatched(issue.number):
             continue
         project_id = dispatch(issue, repo=repo)
+        if database_url:
+            asyncio.run(set_state(database_url, repository, issue.number, "dispatched"))
         print(f"dispatched #{issue.number} ({issue.priority}) -> project {project_id}")
         drive_project(project_id, repo=repo)
         pull_request = publish_project(project_id, issue, repo=repo)
         if pull_request:
             gh("issue", "comment", str(issue.number), "--body", f"Delivery PR: {pull_request}")
+            if database_url:
+                asyncio.run(set_state(database_url, repository, issue.number, "completed"))
         return 0
     print("no eligible triaged issue without a dispatch marker")
     return 1
