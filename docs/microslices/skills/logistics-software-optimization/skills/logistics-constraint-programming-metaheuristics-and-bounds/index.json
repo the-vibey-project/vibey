@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-constraint-programming-b804171bbf",
+    "purpose": "6 constraint programming",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/001-6-constraint-programming.md",
+    "requires": [],
+    "links": [
+      "skill-7-metaheuristics-e8b810036e"
+    ]
+  },
+  {
+    "id": "skill-7-metaheuristics-e8b810036e",
+    "purpose": "7 metaheuristics",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/002-7-metaheuristics.md",
+    "requires": [
+      "skill-6-constraint-programming-b804171bbf"
+    ],
+    "links": [
+      "skill-8-local-search-and-large-neighbourhood-search-a02e0a3637"
+    ]
+  },
+  {
+    "id": "skill-8-local-search-and-large-neighbourhood-search-a02e0a3637",
+    "purpose": "8 local search and large neighbourhood search",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/003-8-local-search-and-large-neighbourhood-search.md",
+    "requires": [
+      "skill-7-metaheuristics-e8b810036e"
+    ],
+    "links": [
+      "skill-9-bounds-and-solution-quality-ebcd3c5c49"
+    ]
+  },
+  {
+    "id": "skill-9-bounds-and-solution-quality-ebcd3c5c49",
+    "purpose": "9 bounds and solution quality",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/004-9-bounds-and-solution-quality.md",
+    "requires": [
+      "skill-8-local-search-and-large-neighbourhood-search-a02e0a3637"
+    ],
+    "links": []
+  }
+]

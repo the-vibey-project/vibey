@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-flight-processors-dfbd026167",
+    "purpose": "4 flight processors",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-processors-radiation-and-real-time/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-processors-radiation-and-real-time/001-4-flight-processors.md",
+    "requires": [],
+    "links": [
+      "skill-5-radiation-effects-in-software-terms-305dc6a1b1"
+    ]
+  },
+  {
+    "id": "skill-5-radiation-effects-in-software-terms-305dc6a1b1",
+    "purpose": "5 radiation effects in software terms",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-processors-radiation-and-real-time/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-processors-radiation-and-real-time/002-5-radiation-effects-in-software-terms.md",
+    "requires": [
+      "skill-4-flight-processors-dfbd026167"
+    ],
+    "links": [
+      "skill-6-real-time-discipline-67ad62c7a8"
+    ]
+  },
+  {
+    "id": "skill-6-real-time-discipline-67ad62c7a8",
+    "purpose": "6 real time discipline",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-processors-radiation-and-real-time/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-processors-radiation-and-real-time/003-6-real-time-discipline.md",
+    "requires": [
+      "skill-5-radiation-effects-in-software-terms-305dc6a1b1"
+    ],
+    "links": [
+      "skill-7-rtos-1e63e15db9"
+    ]
+  },
+  {
+    "id": "skill-7-rtos-1e63e15db9",
+    "purpose": "7 rtos",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-processors-radiation-and-real-time/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-processors-radiation-and-real-time/004-7-rtos.md",
+    "requires": [
+      "skill-6-real-time-discipline-67ad62c7a8"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-25-diagnostic-method-0008b12339",
+    "purpose": "25 diagnostic method",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/001-25-diagnostic-method.md",
+    "requires": [],
+    "links": [
+      "skill-26-obd-ii-and-scan-data-c8ca5df69f"
+    ]
+  },
+  {
+    "id": "skill-26-obd-ii-and-scan-data-c8ca5df69f",
+    "purpose": "26 obd ii and scan data",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/002-26-obd-ii-and-scan-data.md",
+    "requires": [
+      "skill-25-diagnostic-method-0008b12339"
+    ],
+    "links": [
+      "skill-27-tools-4ac2bfd0f3"
+    ]
+  },
+  {
+    "id": "skill-27-tools-4ac2bfd0f3",
+    "purpose": "27 tools",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/003-27-tools.md",
+    "requires": [
+      "skill-26-obd-ii-and-scan-data-c8ca5df69f"
+    ],
+    "links": [
+      "skill-28-common-misdiagnoses-c0af85612d"
+    ]
+  },
+  {
+    "id": "skill-28-common-misdiagnoses-c0af85612d",
+    "purpose": "28 common misdiagnoses",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/004-28-common-misdiagnoses.md",
+    "requires": [
+      "skill-27-tools-4ac2bfd0f3"
+    ],
+    "links": [
+      "skill-29-maintenance-and-shop-economics-8c172438cc"
+    ]
+  },
+  {
+    "id": "skill-29-maintenance-and-shop-economics-8c172438cc",
+    "purpose": "29 maintenance and shop economics",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/005-29-maintenance-and-shop-economics.md",
+    "requires": [
+      "skill-28-common-misdiagnoses-c0af85612d"
+    ],
+    "links": []
+  }
+]

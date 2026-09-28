@@ -1,0 +1,178 @@
+[
+  {
+    "id": "skill-why-networks-exist-and-the-packet-switching-breakthrough-d1bed3caaa",
+    "purpose": "why networks exist and the packet switching breakthrough",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/001-why-networks-exist-and-the-packet-switching-breakthrough.md",
+    "requires": [],
+    "links": [
+      "skill-packets-the-unit-of-network-communication-1c3bd97085"
+    ]
+  },
+  {
+    "id": "skill-packets-the-unit-of-network-communication-1c3bd97085",
+    "purpose": "packets the unit of network communication",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/002-packets-the-unit-of-network-communication.md",
+    "requires": [
+      "skill-why-networks-exist-and-the-packet-switching-breakthrough-d1bed3caaa"
+    ],
+    "links": [
+      "skill-osi-model-networking-s-periodic-table-5da2fd4257"
+    ]
+  },
+  {
+    "id": "skill-osi-model-networking-s-periodic-table-5da2fd4257",
+    "purpose": "osi model networking s periodic table",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/003-osi-model-networking-s-periodic-table.md",
+    "requires": [
+      "skill-packets-the-unit-of-network-communication-1c3bd97085"
+    ],
+    "links": [
+      "skill-layer-1-2-physical-media-ethernet-mac-addresses-switches-arp-vlans-6927395337"
+    ]
+  },
+  {
+    "id": "skill-layer-1-2-physical-media-ethernet-mac-addresses-switches-arp-vlans-6927395337",
+    "purpose": "layer 1 2 physical media ethernet mac addresses switches arp vlans",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/004-layer-1-2-physical-media-ethernet-mac-addresses-switches-arp-vlans.md",
+    "requires": [
+      "skill-osi-model-networking-s-periodic-table-5da2fd4257"
+    ],
+    "links": [
+      "skill-layer-3-ip-addressing-subnetting-routing-nat-3ad0b83185"
+    ]
+  },
+  {
+    "id": "skill-layer-3-ip-addressing-subnetting-routing-nat-3ad0b83185",
+    "purpose": "layer 3 ip addressing subnetting routing nat",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/005-layer-3-ip-addressing-subnetting-routing-nat.md",
+    "requires": [
+      "skill-layer-1-2-physical-media-ethernet-mac-addresses-switches-arp-vlans-6927395337"
+    ],
+    "links": [
+      "skill-layer-4-tcp-vs-udp-reliability-vs-speed-7f7ba1edb6"
+    ]
+  },
+  {
+    "id": "skill-layer-4-tcp-vs-udp-reliability-vs-speed-7f7ba1edb6",
+    "purpose": "layer 4 tcp vs udp reliability vs speed",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/006-layer-4-tcp-vs-udp-reliability-vs-speed.md",
+    "requires": [
+      "skill-layer-3-ip-addressing-subnetting-routing-nat-3ad0b83185"
+    ],
+    "links": [
+      "skill-the-tcp-three-way-handshake-129c809616"
+    ]
+  },
+  {
+    "id": "skill-the-tcp-three-way-handshake-129c809616",
+    "purpose": "the tcp three way handshake",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/007-the-tcp-three-way-handshake.md",
+    "requires": [
+      "skill-layer-4-tcp-vs-udp-reliability-vs-speed-7f7ba1edb6"
+    ],
+    "links": [
+      "skill-layers-5-7-tls-http-dns-d019076848"
+    ]
+  },
+  {
+    "id": "skill-layers-5-7-tls-http-dns-d019076848",
+    "purpose": "layers 5 7 tls http dns",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/008-layers-5-7-tls-http-dns.md",
+    "requires": [
+      "skill-the-tcp-three-way-handshake-129c809616"
+    ],
+    "links": [
+      "skill-network-devices-roles-and-layers-e7d53f5d8a"
+    ]
+  },
+  {
+    "id": "skill-network-devices-roles-and-layers-e7d53f5d8a",
+    "purpose": "network devices roles and layers",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/009-network-devices-roles-and-layers.md",
+    "requires": [
+      "skill-layers-5-7-tls-http-dns-d019076848"
+    ],
+    "links": [
+      "skill-vpns-site-to-site-vs-client-5b81299002"
+    ]
+  },
+  {
+    "id": "skill-vpns-site-to-site-vs-client-5b81299002",
+    "purpose": "vpns site to site vs client",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/010-vpns-site-to-site-vs-client.md",
+    "requires": [
+      "skill-network-devices-roles-and-layers-e7d53f5d8a"
+    ],
+    "links": [
+      "skill-data-center-networking-spine-leaf-0f660a8c73"
+    ]
+  },
+  {
+    "id": "skill-data-center-networking-spine-leaf-0f660a8c73",
+    "purpose": "data center networking spine leaf",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/011-data-center-networking-spine-leaf.md",
+    "requires": [
+      "skill-vpns-site-to-site-vs-client-5b81299002"
+    ],
+    "links": [
+      "skill-cloud-networking-fundamentals-95561870b7"
+    ]
+  },
+  {
+    "id": "skill-cloud-networking-fundamentals-95561870b7",
+    "purpose": "cloud networking fundamentals",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/012-cloud-networking-fundamentals.md",
+    "requires": [
+      "skill-data-center-networking-spine-leaf-0f660a8c73"
+    ],
+    "links": [
+      "skill-performance-metrics-b09b968337"
+    ]
+  },
+  {
+    "id": "skill-performance-metrics-b09b968337",
+    "purpose": "performance metrics",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/013-performance-metrics.md",
+    "requires": [
+      "skill-cloud-networking-fundamentals-95561870b7"
+    ],
+    "links": [
+      "skill-troubleshooting-toolkit-755d8d90b7"
+    ]
+  },
+  {
+    "id": "skill-troubleshooting-toolkit-755d8d90b7",
+    "purpose": "troubleshooting toolkit",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/014-troubleshooting-toolkit.md",
+    "requires": [
+      "skill-performance-metrics-b09b968337"
+    ],
+    "links": [
+      "skill-the-thread-connecting-everything-5cb90e2f0a"
+    ]
+  },
+  {
+    "id": "skill-the-thread-connecting-everything-5cb90e2f0a",
+    "purpose": "the thread connecting everything",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals/015-the-thread-connecting-everything.md",
+    "requires": [
+      "skill-troubleshooting-toolkit-755d8d90b7"
+    ],
+    "links": []
+  }
+]

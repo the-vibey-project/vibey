@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-collective-action-problems-75c9a51e3c",
+    "purpose": "5 collective action problems",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/001-5-collective-action-problems.md",
+    "requires": [],
+    "links": [
+      "skill-6-the-commons-and-ostrom-s-correction-1ebe2be328"
+    ]
+  },
+  {
+    "id": "skill-6-the-commons-and-ostrom-s-correction-1ebe2be328",
+    "purpose": "6 the commons and ostrom s correction",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/002-6-the-commons-and-ostrom-s-correction.md",
+    "requires": [
+      "skill-5-collective-action-problems-75c9a51e3c"
+    ],
+    "links": [
+      "skill-7-social-choice-71fbd69bf4"
+    ]
+  },
+  {
+    "id": "skill-7-social-choice-71fbd69bf4",
+    "purpose": "7 social choice",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/003-7-social-choice.md",
+    "requires": [
+      "skill-6-the-commons-and-ostrom-s-correction-1ebe2be328"
+    ],
+    "links": [
+      "skill-8-voting-systems-a4c95bf651"
+    ]
+  },
+  {
+    "id": "skill-8-voting-systems-a4c95bf651",
+    "purpose": "8 voting systems",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/004-8-voting-systems.md",
+    "requires": [
+      "skill-7-social-choice-71fbd69bf4"
+    ],
+    "links": []
+  }
+]

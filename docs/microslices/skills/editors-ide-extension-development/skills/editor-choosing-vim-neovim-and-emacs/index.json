@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-04b2c00147",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-choosing-honestly-d5676f0358"
+    ]
+  },
+  {
+    "id": "skill-1-choosing-honestly-d5676f0358",
+    "purpose": "1 choosing honestly",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/002-1-choosing-honestly.md",
+    "requires": [
+      "skill-0-routing-04b2c00147"
+    ],
+    "links": [
+      "skill-2-nano-047effbd42"
+    ]
+  },
+  {
+    "id": "skill-2-nano-047effbd42",
+    "purpose": "2 nano",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/003-2-nano.md",
+    "requires": [
+      "skill-1-choosing-honestly-d5676f0358"
+    ],
+    "links": [
+      "skill-3-vim-s-actual-model-22c3d218fb"
+    ]
+  },
+  {
+    "id": "skill-3-vim-s-actual-model-22c3d218fb",
+    "purpose": "3 vim s actual model",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/004-3-vim-s-actual-model.md",
+    "requires": [
+      "skill-2-nano-047effbd42"
+    ],
+    "links": [
+      "skill-4-configuring-vim-and-neovim-8cb86ecfc9"
+    ]
+  },
+  {
+    "id": "skill-4-configuring-vim-and-neovim-8cb86ecfc9",
+    "purpose": "4 configuring vim and neovim",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/005-4-configuring-vim-and-neovim.md",
+    "requires": [
+      "skill-3-vim-s-actual-model-22c3d218fb"
+    ],
+    "links": [
+      "skill-5-emacs-2eeefb2f8f"
+    ]
+  },
+  {
+    "id": "skill-5-emacs-2eeefb2f8f",
+    "purpose": "5 emacs",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/006-5-emacs.md",
+    "requires": [
+      "skill-4-configuring-vim-and-neovim-8cb86ecfc9"
+    ],
+    "links": []
+  }
+]

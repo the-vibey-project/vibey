@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-bb84-d8ee64094a",
+    "purpose": "6 bb84",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/001-6-bb84.md",
+    "requires": [],
+    "links": [
+      "skill-7-entanglement-based-qkd-1df6061027"
+    ]
+  },
+  {
+    "id": "skill-7-entanglement-based-qkd-1df6061027",
+    "purpose": "7 entanglement based qkd",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/002-7-entanglement-based-qkd.md",
+    "requires": [
+      "skill-6-bb84-d8ee64094a"
+    ],
+    "links": [
+      "skill-8-continuous-variable-qkd-b7ea6427bd"
+    ]
+  },
+  {
+    "id": "skill-8-continuous-variable-qkd-b7ea6427bd",
+    "purpose": "8 continuous variable qkd",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/003-8-continuous-variable-qkd.md",
+    "requires": [
+      "skill-7-entanglement-based-qkd-1df6061027"
+    ],
+    "links": [
+      "skill-9-from-raw-detections-to-a-usable-key-390c8d1659"
+    ]
+  },
+  {
+    "id": "skill-9-from-raw-detections-to-a-usable-key-390c8d1659",
+    "purpose": "9 from raw detections to a usable key",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/004-9-from-raw-detections-to-a-usable-key.md",
+    "requires": [
+      "skill-8-continuous-variable-qkd-b7ea6427bd"
+    ],
+    "links": []
+  }
+]

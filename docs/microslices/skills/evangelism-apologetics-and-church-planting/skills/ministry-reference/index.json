@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-how-to-read-a-pointer-72200fc22a",
+    "purpose": "how to read a pointer",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-reference/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-reference/001-how-to-read-a-pointer.md",
+    "requires": [],
+    "links": [
+      "skill-23-the-glossary-d52c91b0bc"
+    ]
+  },
+  {
+    "id": "skill-23-the-glossary-d52c91b0bc",
+    "purpose": "23 the glossary",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-reference/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-reference/002-23-the-glossary.md",
+    "requires": [
+      "skill-how-to-read-a-pointer-72200fc22a"
+    ],
+    "links": [
+      "skill-24-further-reading-1138c6d0de"
+    ]
+  },
+  {
+    "id": "skill-24-further-reading-1138c6d0de",
+    "purpose": "24 further reading",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-reference/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-reference/003-24-further-reading.md",
+    "requires": [
+      "skill-23-the-glossary-d52c91b0bc"
+    ],
+    "links": [
+      "skill-where-to-go-next-5d7eb5d549"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-5d7eb5d549",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-reference/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-reference/004-where-to-go-next.md",
+    "requires": [
+      "skill-24-further-reading-1138c6d0de"
+    ],
+    "links": []
+  }
+]

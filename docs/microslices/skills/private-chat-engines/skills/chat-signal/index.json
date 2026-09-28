@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-1-the-protocol-stack-fundamentals-stable-8e7c57b845",
+    "purpose": "1 the protocol stack fundamentals stable",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal/001-1-the-protocol-stack-fundamentals-stable.md",
+    "requires": [],
+    "links": [
+      "skill-2-what-signal-the-organisation-is-and-what-it-costs-verified-78128f03fa"
+    ]
+  },
+  {
+    "id": "skill-2-what-signal-the-organisation-is-and-what-it-costs-verified-78128f03fa",
+    "purpose": "2 what signal the organisation is and what it costs verified",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal/002-2-what-signal-the-organisation-is-and-what-it-costs-verified.md",
+    "requires": [
+      "skill-1-the-protocol-stack-fundamentals-stable-8e7c57b845"
+    ],
+    "links": [
+      "skill-3-the-legal-political-posture-verified-highlights-c8e61a34ef"
+    ]
+  },
+  {
+    "id": "skill-3-the-legal-political-posture-verified-highlights-c8e61a34ef",
+    "purpose": "3 the legal political posture verified highlights",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal/003-3-the-legal-political-posture-verified-highlights.md",
+    "requires": [
+      "skill-2-what-signal-the-organisation-is-and-what-it-costs-verified-78128f03fa"
+    ],
+    "links": [
+      "skill-4-operator-perspective-there-is-no-signal-server-to-run-now-what-d6df0fdf73"
+    ]
+  },
+  {
+    "id": "skill-4-operator-perspective-there-is-no-signal-server-to-run-now-what-d6df0fdf73",
+    "purpose": "4 operator perspective there is no signal server to run now what",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal/004-4-operator-perspective-there-is-no-signal-server-to-run-now-what.md",
+    "requires": [
+      "skill-3-the-legal-political-posture-verified-highlights-c8e61a34ef"
+    ],
+    "links": [
+      "skill-5-developer-perspective-bb73117d03"
+    ]
+  },
+  {
+    "id": "skill-5-developer-perspective-bb73117d03",
+    "purpose": "5 developer perspective",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal/005-5-developer-perspective.md",
+    "requires": [
+      "skill-4-operator-perspective-there-is-no-signal-server-to-run-now-what-d6df0fdf73"
+    ],
+    "links": [
+      "skill-6-honest-weaknesses-say-them-out-loud-68f1fb6ffb"
+    ]
+  },
+  {
+    "id": "skill-6-honest-weaknesses-say-them-out-loud-68f1fb6ffb",
+    "purpose": "6 honest weaknesses say them out loud",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal/006-6-honest-weaknesses-say-them-out-loud.md",
+    "requires": [
+      "skill-5-developer-perspective-bb73117d03"
+    ],
+    "links": [
+      "skill-sources-this-file-280630e9a0"
+    ]
+  },
+  {
+    "id": "skill-sources-this-file-280630e9a0",
+    "purpose": "sources this file",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal/007-sources-this-file.md",
+    "requires": [
+      "skill-6-honest-weaknesses-say-them-out-loud-68f1fb6ffb"
+    ],
+    "links": []
+  }
+]

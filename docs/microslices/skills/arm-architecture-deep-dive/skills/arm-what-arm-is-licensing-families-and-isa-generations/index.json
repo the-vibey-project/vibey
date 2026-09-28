@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-d8fcf5b95d",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-arm-actually-names-b5dd568df7"
+    ]
+  },
+  {
+    "id": "skill-1-what-arm-actually-names-b5dd568df7",
+    "purpose": "1 what arm actually names",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/002-1-what-arm-actually-names.md",
+    "requires": [
+      "skill-0-routing-d8fcf5b95d"
+    ],
+    "links": [
+      "skill-2-the-licensing-model-d02c74977b"
+    ]
+  },
+  {
+    "id": "skill-2-the-licensing-model-d02c74977b",
+    "purpose": "2 the licensing model",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/003-2-the-licensing-model.md",
+    "requires": [
+      "skill-1-what-arm-actually-names-b5dd568df7"
+    ],
+    "links": [
+      "skill-3-product-families-ae81221de2"
+    ]
+  },
+  {
+    "id": "skill-3-product-families-ae81221de2",
+    "purpose": "3 product families",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/004-3-product-families.md",
+    "requires": [
+      "skill-2-the-licensing-model-d02c74977b"
+    ],
+    "links": [
+      "skill-4-isa-generations-f87ab89edf"
+    ]
+  },
+  {
+    "id": "skill-4-isa-generations-f87ab89edf",
+    "purpose": "4 isa generations",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/005-4-isa-generations.md",
+    "requires": [
+      "skill-3-product-families-ae81221de2"
+    ],
+    "links": []
+  }
+]

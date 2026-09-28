@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-3-top-down-fabrication-134e2643bb",
+    "purpose": "3 top down fabrication",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-fabrication-and-semiconductor-process/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-fabrication-and-semiconductor-process/001-3-top-down-fabrication.md",
+    "requires": [],
+    "links": [
+      "skill-4-bottom-up-synthesis-and-self-assembly-42e4a1d919"
+    ]
+  },
+  {
+    "id": "skill-4-bottom-up-synthesis-and-self-assembly-42e4a1d919",
+    "purpose": "4 bottom up synthesis and self assembly",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-fabrication-and-semiconductor-process/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-fabrication-and-semiconductor-process/002-4-bottom-up-synthesis-and-self-assembly.md",
+    "requires": [
+      "skill-3-top-down-fabrication-134e2643bb"
+    ],
+    "links": [
+      "skill-5-semiconductor-process-4b8a6a5e49"
+    ]
+  },
+  {
+    "id": "skill-5-semiconductor-process-4b8a6a5e49",
+    "purpose": "5 semiconductor process",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-fabrication-and-semiconductor-process/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-fabrication-and-semiconductor-process/003-5-semiconductor-process.md",
+    "requires": [
+      "skill-4-bottom-up-synthesis-and-self-assembly-42e4a1d919"
+    ],
+    "links": []
+  }
+]

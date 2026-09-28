@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-19-pipeline-engineering-06c46e5e37",
+    "purpose": "19 pipeline engineering",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/001-19-pipeline-engineering.md",
+    "requires": [],
+    "links": [
+      "skill-20-compute-9980680245"
+    ]
+  },
+  {
+    "id": "skill-20-compute-9980680245",
+    "purpose": "20 compute",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/002-20-compute.md",
+    "requires": [
+      "skill-19-pipeline-engineering-06c46e5e37"
+    ],
+    "links": [
+      "skill-21-reproducibility-41703d4009"
+    ]
+  },
+  {
+    "id": "skill-21-reproducibility-41703d4009",
+    "purpose": "21 reproducibility",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/003-21-reproducibility.md",
+    "requires": [
+      "skill-20-compute-9980680245"
+    ],
+    "links": [
+      "skill-22-gxp-validation-and-the-regulated-context-6768e4834f"
+    ]
+  },
+  {
+    "id": "skill-22-gxp-validation-and-the-regulated-context-6768e4834f",
+    "purpose": "22 gxp validation and the regulated context",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/004-22-gxp-validation-and-the-regulated-context.md",
+    "requires": [
+      "skill-21-reproducibility-41703d4009"
+    ],
+    "links": [
+      "skill-23-software-as-a-medical-device-5346c65f41"
+    ]
+  },
+  {
+    "id": "skill-23-software-as-a-medical-device-5346c65f41",
+    "purpose": "23 software as a medical device",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/005-23-software-as-a-medical-device.md",
+    "requires": [
+      "skill-22-gxp-validation-and-the-regulated-context-6768e4834f"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,154 @@
+[
+  {
+    "id": "skill-core-thesis-fix-time-vary-scope-e6e77d10f1",
+    "purpose": "core thesis fix time vary scope",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/001-core-thesis-fix-time-vary-scope.md",
+    "requires": [],
+    "links": [
+      "skill-ruthless-scope-reduction-e1adb5cc3e"
+    ]
+  },
+  {
+    "id": "skill-ruthless-scope-reduction-e1adb5cc3e",
+    "purpose": "ruthless scope reduction",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/002-ruthless-scope-reduction.md",
+    "requires": [
+      "skill-core-thesis-fix-time-vary-scope-e6e77d10f1"
+    ],
+    "links": [
+      "skill-wsjf-weighted-shortest-job-first-7d77493bd3"
+    ]
+  },
+  {
+    "id": "skill-wsjf-weighted-shortest-job-first-7d77493bd3",
+    "purpose": "wsjf weighted shortest job first",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/003-wsjf-weighted-shortest-job-first.md",
+    "requires": [
+      "skill-ruthless-scope-reduction-e1adb5cc3e"
+    ],
+    "links": [
+      "skill-little-s-law-and-wip-limits-4810acb33c"
+    ]
+  },
+  {
+    "id": "skill-little-s-law-and-wip-limits-4810acb33c",
+    "purpose": "little s law and wip limits",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/004-little-s-law-and-wip-limits.md",
+    "requires": [
+      "skill-wsjf-weighted-shortest-job-first-7d77493bd3"
+    ],
+    "links": [
+      "skill-pipelined-timeboxes-the-throughput-multiplier-d170db2450"
+    ]
+  },
+  {
+    "id": "skill-pipelined-timeboxes-the-throughput-multiplier-d170db2450",
+    "purpose": "pipelined timeboxes the throughput multiplier",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/005-pipelined-timeboxes-the-throughput-multiplier.md",
+    "requires": [
+      "skill-little-s-law-and-wip-limits-4810acb33c"
+    ],
+    "links": [
+      "skill-team-size-5-2-people-864bca810e"
+    ]
+  },
+  {
+    "id": "skill-team-size-5-2-people-864bca810e",
+    "purpose": "team size 5 2 people",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/006-team-size-5-2-people.md",
+    "requires": [
+      "skill-pipelined-timeboxes-the-throughput-multiplier-d170db2450"
+    ],
+    "links": [
+      "skill-ci-cd-as-a-velocity-multiplier-79a5ea6ac8"
+    ]
+  },
+  {
+    "id": "skill-ci-cd-as-a-velocity-multiplier-79a5ea6ac8",
+    "purpose": "ci cd as a velocity multiplier",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/007-ci-cd-as-a-velocity-multiplier.md",
+    "requires": [
+      "skill-team-size-5-2-people-864bca810e"
+    ],
+    "links": [
+      "skill-decision-latency-the-1-delivery-killer-4164f4ab7a"
+    ]
+  },
+  {
+    "id": "skill-decision-latency-the-1-delivery-killer-4164f4ab7a",
+    "purpose": "decision latency the 1 delivery killer",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/008-decision-latency-the-1-delivery-killer.md",
+    "requires": [
+      "skill-ci-cd-as-a-velocity-multiplier-79a5ea6ac8"
+    ],
+    "links": [
+      "skill-what-to-eliminate-41a9561f7f"
+    ]
+  },
+  {
+    "id": "skill-what-to-eliminate-41a9561f7f",
+    "purpose": "what to eliminate",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/009-what-to-eliminate.md",
+    "requires": [
+      "skill-decision-latency-the-1-delivery-killer-4164f4ab7a"
+    ],
+    "links": [
+      "skill-contract-structure-for-velocity-06707ba4b7"
+    ]
+  },
+  {
+    "id": "skill-contract-structure-for-velocity-06707ba4b7",
+    "purpose": "contract structure for velocity",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/010-contract-structure-for-velocity.md",
+    "requires": [
+      "skill-what-to-eliminate-41a9561f7f"
+    ],
+    "links": [
+      "skill-dora-elite-benchmarks-b632e5b0cf"
+    ]
+  },
+  {
+    "id": "skill-dora-elite-benchmarks-b632e5b0cf",
+    "purpose": "dora elite benchmarks",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/011-dora-elite-benchmarks.md",
+    "requires": [
+      "skill-contract-structure-for-velocity-06707ba4b7"
+    ],
+    "links": [
+      "skill-the-delivery-first-operating-model-seven-principles-1eca58a55c"
+    ]
+  },
+  {
+    "id": "skill-the-delivery-first-operating-model-seven-principles-1eca58a55c",
+    "purpose": "the delivery first operating model seven principles",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/012-the-delivery-first-operating-model-seven-principles.md",
+    "requires": [
+      "skill-dora-elite-benchmarks-b632e5b0cf"
+    ],
+    "links": [
+      "skill-applying-the-playbook-per-engagement-checklist-e74ecb3263"
+    ]
+  },
+  {
+    "id": "skill-applying-the-playbook-per-engagement-checklist-e74ecb3263",
+    "purpose": "applying the playbook per engagement checklist",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity/013-applying-the-playbook-per-engagement-checklist.md",
+    "requires": [
+      "skill-the-delivery-first-operating-model-seven-principles-1eca58a55c"
+    ],
+    "links": []
+  }
+]

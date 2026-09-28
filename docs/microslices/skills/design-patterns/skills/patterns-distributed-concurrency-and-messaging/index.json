@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-8-distributed-data-patterns-1e9acbef75",
+    "purpose": "8 distributed data patterns",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-distributed-concurrency-and-messaging/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-distributed-concurrency-and-messaging/001-8-distributed-data-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-9-resilience-patterns-ce5e37b7f5"
+    ]
+  },
+  {
+    "id": "skill-9-resilience-patterns-ce5e37b7f5",
+    "purpose": "9 resilience patterns",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-distributed-concurrency-and-messaging/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-distributed-concurrency-and-messaging/002-9-resilience-patterns.md",
+    "requires": [
+      "skill-8-distributed-data-patterns-1e9acbef75"
+    ],
+    "links": [
+      "skill-10-concurrency-patterns-7ddc3dad7f"
+    ]
+  },
+  {
+    "id": "skill-10-concurrency-patterns-7ddc3dad7f",
+    "purpose": "10 concurrency patterns",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-distributed-concurrency-and-messaging/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-distributed-concurrency-and-messaging/003-10-concurrency-patterns.md",
+    "requires": [
+      "skill-9-resilience-patterns-ce5e37b7f5"
+    ],
+    "links": [
+      "skill-11-integration-and-messaging-a44a5701fe"
+    ]
+  },
+  {
+    "id": "skill-11-integration-and-messaging-a44a5701fe",
+    "purpose": "11 integration and messaging",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-distributed-concurrency-and-messaging/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-distributed-concurrency-and-messaging/004-11-integration-and-messaging.md",
+    "requires": [
+      "skill-10-concurrency-patterns-7ddc3dad7f"
+    ],
+    "links": []
+  }
+]

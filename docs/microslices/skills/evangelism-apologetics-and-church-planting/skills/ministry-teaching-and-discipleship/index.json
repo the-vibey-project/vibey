@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-the-framing-for-part-iv-6f9a37cf4d",
+    "purpose": "the framing for part iv",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/001-the-framing-for-part-iv.md",
+    "requires": [],
+    "links": [
+      "skill-16-small-groups-facilitation-and-questioning-d67ddd5c63"
+    ]
+  },
+  {
+    "id": "skill-16-small-groups-facilitation-and-questioning-d67ddd5c63",
+    "purpose": "16 small groups facilitation and questioning",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/002-16-small-groups-facilitation-and-questioning.md",
+    "requires": [
+      "skill-the-framing-for-part-iv-6f9a37cf4d"
+    ],
+    "links": [
+      "skill-17-discipleship-the-discipleship-process-and-spiritual-disciplines-53a2ab1c5d"
+    ]
+  },
+  {
+    "id": "skill-17-discipleship-the-discipleship-process-and-spiritual-disciplines-53a2ab1c5d",
+    "purpose": "17 discipleship the discipleship process and spiritual disciplines",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/003-17-discipleship-the-discipleship-process-and-spiritual-disciplines.md",
+    "requires": [
+      "skill-16-small-groups-facilitation-and-questioning-d67ddd5c63"
+    ],
+    "links": [
+      "skill-18-teaching-that-works-with-how-people-learn-8c25381e9b"
+    ]
+  },
+  {
+    "id": "skill-18-teaching-that-works-with-how-people-learn-8c25381e9b",
+    "purpose": "18 teaching that works with how people learn",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/004-18-teaching-that-works-with-how-people-learn.md",
+    "requires": [
+      "skill-17-discipleship-the-discipleship-process-and-spiritual-disciplines-53a2ab1c5d"
+    ],
+    "links": [
+      "skill-cross-references-05a13609a1"
+    ]
+  },
+  {
+    "id": "skill-cross-references-05a13609a1",
+    "purpose": "cross references",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/005-cross-references.md",
+    "requires": [
+      "skill-18-teaching-that-works-with-how-people-learn-8c25381e9b"
+    ],
+    "links": []
+  }
+]

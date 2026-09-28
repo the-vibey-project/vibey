@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-4-choosing-a-tool-40792f3502",
+    "purpose": "4 choosing a tool",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-tooling-and-symbolic-computation/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-tooling-and-symbolic-computation/001-4-choosing-a-tool.md",
+    "requires": [],
+    "links": [
+      "skill-5-symbolic-computation-53191c1342"
+    ]
+  },
+  {
+    "id": "skill-5-symbolic-computation-53191c1342",
+    "purpose": "5 symbolic computation",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-tooling-and-symbolic-computation/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-tooling-and-symbolic-computation/002-5-symbolic-computation.md",
+    "requires": [
+      "skill-4-choosing-a-tool-40792f3502"
+    ],
+    "links": []
+  }
+]

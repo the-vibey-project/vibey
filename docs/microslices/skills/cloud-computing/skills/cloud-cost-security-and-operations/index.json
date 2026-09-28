@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-cost-engineering-and-finops-47ea9ba516",
+    "purpose": "7 cost engineering and finops",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-cost-security-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-cost-security-and-operations/001-7-cost-engineering-and-finops.md",
+    "requires": [],
+    "links": [
+      "skill-8-security-and-shared-responsibility-2efeb1bbef"
+    ]
+  },
+  {
+    "id": "skill-8-security-and-shared-responsibility-2efeb1bbef",
+    "purpose": "8 security and shared responsibility",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-cost-security-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-cost-security-and-operations/002-8-security-and-shared-responsibility.md",
+    "requires": [
+      "skill-7-cost-engineering-and-finops-47ea9ba516"
+    ],
+    "links": [
+      "skill-9-operations-and-observability-097f9fa372"
+    ]
+  },
+  {
+    "id": "skill-9-operations-and-observability-097f9fa372",
+    "purpose": "9 operations and observability",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-cost-security-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-cost-security-and-operations/003-9-operations-and-observability.md",
+    "requires": [
+      "skill-8-security-and-shared-responsibility-2efeb1bbef"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-quirk-3-1-search-rows-searchrows2-is-case-sensitive-38a1887416",
+    "purpose": "quirk 3 1 search rows searchrows2 is case sensitive",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-tables/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-tables/001-quirk-3-1-search-rows-searchrows2-is-case-sensitive.md",
+    "requires": [],
+    "links": [
+      "skill-quirk-3-2-hard-3-500-row-return-cap-regardless-of-limit-0fddceda8d"
+    ]
+  },
+  {
+    "id": "skill-quirk-3-2-hard-3-500-row-return-cap-regardless-of-limit-0fddceda8d",
+    "purpose": "quirk 3 2 hard 3 500 row return cap regardless of limit",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-tables/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-tables/002-quirk-3-2-hard-3-500-row-return-cap-regardless-of-limit.md",
+    "requires": [
+      "skill-quirk-3-1-search-rows-searchrows2-is-case-sensitive-38a1887416"
+    ],
+    "links": [
+      "skill-quirk-3-3-table-hard-limits-8a775175e3"
+    ]
+  },
+  {
+    "id": "skill-quirk-3-3-table-hard-limits-8a775175e3",
+    "purpose": "quirk 3 3 table hard limits",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-tables/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-tables/003-quirk-3-3-table-hard-limits.md",
+    "requires": [
+      "skill-quirk-3-2-hard-3-500-row-return-cap-regardless-of-limit-0fddceda8d"
+    ],
+    "links": [
+      "skill-quirk-3-4-where-expression-json-quirk-when-testing-with-variables-35aa4c1134"
+    ]
+  },
+  {
+    "id": "skill-quirk-3-4-where-expression-json-quirk-when-testing-with-variables-35aa4c1134",
+    "purpose": "quirk 3 4 where expression json quirk when testing with variables",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-tables/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-tables/004-quirk-3-4-where-expression-json-quirk-when-testing-with-variables.md",
+    "requires": [
+      "skill-quirk-3-3-table-hard-limits-8a775175e3"
+    ],
+    "links": [
+      "skill-quirk-3-5-no-native-upsert-concurrent-write-race-risk-theory-722d313726"
+    ]
+  },
+  {
+    "id": "skill-quirk-3-5-no-native-upsert-concurrent-write-race-risk-theory-722d313726",
+    "purpose": "quirk 3 5 no native upsert concurrent write race risk theory",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-tables/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-tables/005-quirk-3-5-no-native-upsert-concurrent-write-race-risk-theory.md",
+    "requires": [
+      "skill-quirk-3-4-where-expression-json-quirk-when-testing-with-variables-35aa4c1134"
+    ],
+    "links": [
+      "skill-quirk-3-6-high-frequency-table-requests-trigger-throttling-9df8d29629"
+    ]
+  },
+  {
+    "id": "skill-quirk-3-6-high-frequency-table-requests-trigger-throttling-9df8d29629",
+    "purpose": "quirk 3 6 high frequency table requests trigger throttling",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-tables/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-tables/006-quirk-3-6-high-frequency-table-requests-trigger-throttling.md",
+    "requires": [
+      "skill-quirk-3-5-no-native-upsert-concurrent-write-race-risk-theory-722d313726"
+    ],
+    "links": []
+  }
+]

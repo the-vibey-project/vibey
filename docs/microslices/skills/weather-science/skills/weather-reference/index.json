@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-17-misconceptions-91ced597c8",
+    "purpose": "17 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-reference/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-reference/001-17-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-18-numbers-23244225f4"
+    ]
+  },
+  {
+    "id": "skill-18-numbers-23244225f4",
+    "purpose": "18 numbers",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-reference/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-reference/002-18-numbers.md",
+    "requires": [
+      "skill-17-misconceptions-91ced597c8"
+    ],
+    "links": [
+      "skill-19-books-329d58ab1a"
+    ]
+  },
+  {
+    "id": "skill-19-books-329d58ab1a",
+    "purpose": "19 books",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-reference/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-reference/003-19-books.md",
+    "requires": [
+      "skill-18-numbers-23244225f4"
+    ],
+    "links": [
+      "skill-20-quick-reference-da80c0ac31"
+    ]
+  },
+  {
+    "id": "skill-20-quick-reference-da80c0ac31",
+    "purpose": "20 quick reference",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-reference/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-reference/004-20-quick-reference.md",
+    "requires": [
+      "skill-19-books-329d58ab1a"
+    ],
+    "links": [
+      "skill-21-method-1524cfa121"
+    ]
+  },
+  {
+    "id": "skill-21-method-1524cfa121",
+    "purpose": "21 method",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-reference/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-reference/005-21-method.md",
+    "requires": [
+      "skill-20-quick-reference-da80c0ac31"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-23-what-s-live-checked-august-2026-a719c82920",
+    "purpose": "23 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-reference/001-23-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-24-misconceptions-317781149b"
+    ]
+  },
+  {
+    "id": "skill-24-misconceptions-317781149b",
+    "purpose": "24 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-reference/002-24-misconceptions.md",
+    "requires": [
+      "skill-23-what-s-live-checked-august-2026-a719c82920"
+    ],
+    "links": [
+      "skill-25-numbers-b90dd5f1d6"
+    ]
+  },
+  {
+    "id": "skill-25-numbers-b90dd5f1d6",
+    "purpose": "25 numbers",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-reference/003-25-numbers.md",
+    "requires": [
+      "skill-24-misconceptions-317781149b"
+    ],
+    "links": [
+      "skill-26-books-and-references-6f1311003e"
+    ]
+  },
+  {
+    "id": "skill-26-books-and-references-6f1311003e",
+    "purpose": "26 books and references",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-reference/004-26-books-and-references.md",
+    "requires": [
+      "skill-25-numbers-b90dd5f1d6"
+    ],
+    "links": [
+      "skill-27-quick-reference-ea0f9e658f"
+    ]
+  },
+  {
+    "id": "skill-27-quick-reference-ea0f9e658f",
+    "purpose": "27 quick reference",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-reference/005-27-quick-reference.md",
+    "requires": [
+      "skill-26-books-and-references-6f1311003e"
+    ],
+    "links": [
+      "skill-28-method-a5817d7bf5"
+    ]
+  },
+  {
+    "id": "skill-28-method-a5817d7bf5",
+    "purpose": "28 method",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-reference/006-28-method.md",
+    "requires": [
+      "skill-27-quick-reference-ea0f9e658f"
+    ],
+    "links": []
+  }
+]

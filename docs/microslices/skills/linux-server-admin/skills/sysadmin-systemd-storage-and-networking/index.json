@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-systemd-d8c2c67378",
+    "purpose": "4 systemd",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-systemd-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-systemd-storage-and-networking/001-4-systemd.md",
+    "requires": [],
+    "links": [
+      "skill-5-storage-94c4fefc3f"
+    ]
+  },
+  {
+    "id": "skill-5-storage-94c4fefc3f",
+    "purpose": "5 storage",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-systemd-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-systemd-storage-and-networking/002-5-storage.md",
+    "requires": [
+      "skill-4-systemd-d8c2c67378"
+    ],
+    "links": [
+      "skill-6-networking-bda8ff045c"
+    ]
+  },
+  {
+    "id": "skill-6-networking-bda8ff045c",
+    "purpose": "6 networking",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-systemd-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-systemd-storage-and-networking/003-6-networking.md",
+    "requires": [
+      "skill-5-storage-94c4fefc3f"
+    ],
+    "links": []
+  }
+]

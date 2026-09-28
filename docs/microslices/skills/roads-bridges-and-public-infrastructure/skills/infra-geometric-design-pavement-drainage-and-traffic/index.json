@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-daff42d1d5",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-infrastructure-as-a-system-2ba0653bb1"
+    ]
+  },
+  {
+    "id": "skill-1-infrastructure-as-a-system-2ba0653bb1",
+    "purpose": "1 infrastructure as a system",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/002-1-infrastructure-as-a-system.md",
+    "requires": [
+      "skill-0-routing-daff42d1d5"
+    ],
+    "links": [
+      "skill-2-geometric-design-80a65dd43b"
+    ]
+  },
+  {
+    "id": "skill-2-geometric-design-80a65dd43b",
+    "purpose": "2 geometric design",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/003-2-geometric-design.md",
+    "requires": [
+      "skill-1-infrastructure-as-a-system-2ba0653bb1"
+    ],
+    "links": [
+      "skill-3-pavement-30064826cb"
+    ]
+  },
+  {
+    "id": "skill-3-pavement-30064826cb",
+    "purpose": "3 pavement",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/004-3-pavement.md",
+    "requires": [
+      "skill-2-geometric-design-80a65dd43b"
+    ],
+    "links": [
+      "skill-4-earthworks-geotechnics-and-drainage-91e11b859a"
+    ]
+  },
+  {
+    "id": "skill-4-earthworks-geotechnics-and-drainage-91e11b859a",
+    "purpose": "4 earthworks geotechnics and drainage",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/005-4-earthworks-geotechnics-and-drainage.md",
+    "requires": [
+      "skill-3-pavement-30064826cb"
+    ],
+    "links": [
+      "skill-5-traffic-engineering-and-capacity-3f0d1a1c3e"
+    ]
+  },
+  {
+    "id": "skill-5-traffic-engineering-and-capacity-3f0d1a1c3e",
+    "purpose": "5 traffic engineering and capacity",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/006-5-traffic-engineering-and-capacity.md",
+    "requires": [
+      "skill-4-earthworks-geotechnics-and-drainage-91e11b859a"
+    ],
+    "links": []
+  }
+]

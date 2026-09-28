@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-research-brief-28b40762d5",
+    "purpose": "research brief",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/001-research-brief.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-core-distinction-forecast-manage-modify-adapt-3a8d818aa1"
+    ]
+  },
+  {
+    "id": "skill-1-the-core-distinction-forecast-manage-modify-adapt-3a8d818aa1",
+    "purpose": "1 the core distinction forecast manage modify adapt",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/002-1-the-core-distinction-forecast-manage-modify-adapt.md",
+    "requires": [
+      "skill-research-brief-28b40762d5"
+    ],
+    "links": [
+      "skill-2-what-cloud-seeding-actually-is-df765b9e9f"
+    ]
+  },
+  {
+    "id": "skill-2-what-cloud-seeding-actually-is-df765b9e9f",
+    "purpose": "2 what cloud seeding actually is",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/003-2-what-cloud-seeding-actually-is.md",
+    "requires": [
+      "skill-1-the-core-distinction-forecast-manage-modify-adapt-3a8d818aa1"
+    ],
+    "links": [
+      "skill-3-weather-risks-that-matter-most-to-farming-97503f1af0"
+    ]
+  },
+  {
+    "id": "skill-3-weather-risks-that-matter-most-to-farming-97503f1af0",
+    "purpose": "3 weather risks that matter most to farming",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/004-3-weather-risks-that-matter-most-to-farming.md",
+    "requires": [
+      "skill-2-what-cloud-seeding-actually-is-df765b9e9f"
+    ],
+    "links": [
+      "skill-4-water-management-is-the-most-important-practical-form-of-weather-management-f0c2b441b7"
+    ]
+  },
+  {
+    "id": "skill-4-water-management-is-the-most-important-practical-form-of-weather-management-f0c2b441b7",
+    "purpose": "4 water management is the most important practical form of weather management",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/005-4-water-management-is-the-most-important-practical-form-of-weather-management.md",
+    "requires": [
+      "skill-3-weather-risks-that-matter-most-to-farming-97503f1af0"
+    ],
+    "links": [
+      "skill-5-forecasts-as-decision-systems-80c3ad95bf"
+    ]
+  },
+  {
+    "id": "skill-5-forecasts-as-decision-systems-80c3ad95bf",
+    "purpose": "5 forecasts as decision systems",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/006-5-forecasts-as-decision-systems.md",
+    "requires": [
+      "skill-4-water-management-is-the-most-important-practical-form-of-weather-management-f0c2b441b7"
+    ],
+    "links": [
+      "skill-6-risk-management-beyond-agronomy-8333f99432"
+    ]
+  },
+  {
+    "id": "skill-6-risk-management-beyond-agronomy-8333f99432",
+    "purpose": "6 risk management beyond agronomy",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/007-6-risk-management-beyond-agronomy.md",
+    "requires": [
+      "skill-5-forecasts-as-decision-systems-80c3ad95bf"
+    ],
+    "links": [
+      "skill-7-opportunity-map-for-farms-47a8bae3f1"
+    ]
+  },
+  {
+    "id": "skill-7-opportunity-map-for-farms-47a8bae3f1",
+    "purpose": "7 opportunity map for farms",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/008-7-opportunity-map-for-farms.md",
+    "requires": [
+      "skill-6-risk-management-beyond-agronomy-8333f99432"
+    ],
+    "links": [
+      "skill-8-how-to-evaluate-a-weather-management-vendor-or-program-95ffb527b5"
+    ]
+  },
+  {
+    "id": "skill-8-how-to-evaluate-a-weather-management-vendor-or-program-95ffb527b5",
+    "purpose": "8 how to evaluate a weather management vendor or program",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/009-8-how-to-evaluate-a-weather-management-vendor-or-program.md",
+    "requires": [
+      "skill-7-opportunity-map-for-farms-47a8bae3f1"
+    ],
+    "links": [
+      "skill-9-practical-research-and-implementation-agenda-64450cdb76"
+    ]
+  },
+  {
+    "id": "skill-9-practical-research-and-implementation-agenda-64450cdb76",
+    "purpose": "9 practical research and implementation agenda",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/010-9-practical-research-and-implementation-agenda.md",
+    "requires": [
+      "skill-8-how-to-evaluate-a-weather-management-vendor-or-program-95ffb527b5"
+    ],
+    "links": [
+      "skill-10-myths-to-avoid-e7d98929f4"
+    ]
+  },
+  {
+    "id": "skill-10-myths-to-avoid-e7d98929f4",
+    "purpose": "10 myths to avoid",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/011-10-myths-to-avoid.md",
+    "requires": [
+      "skill-9-practical-research-and-implementation-agenda-64450cdb76"
+    ],
+    "links": [
+      "skill-research-note-3dbec7e658"
+    ]
+  },
+  {
+    "id": "skill-research-note-3dbec7e658",
+    "purpose": "research note",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/012-research-note.md",
+    "requires": [
+      "skill-10-myths-to-avoid-e7d98929f4"
+    ],
+    "links": []
+  }
+]

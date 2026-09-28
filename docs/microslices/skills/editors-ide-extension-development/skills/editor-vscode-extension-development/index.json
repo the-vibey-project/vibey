@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-12-anatomy-of-a-vs-code-extension-aa2f33b204",
+    "purpose": "12 anatomy of a vs code extension",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-extension-development/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-extension-development/001-12-anatomy-of-a-vs-code-extension.md",
+    "requires": [],
+    "links": [
+      "skill-13-contribution-points-and-activation-409a216508"
+    ]
+  },
+  {
+    "id": "skill-13-contribution-points-and-activation-409a216508",
+    "purpose": "13 contribution points and activation",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-extension-development/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-extension-development/002-13-contribution-points-and-activation.md",
+    "requires": [
+      "skill-12-anatomy-of-a-vs-code-extension-aa2f33b204"
+    ],
+    "links": [
+      "skill-14-api-surfaces-9a67059403"
+    ]
+  },
+  {
+    "id": "skill-14-api-surfaces-9a67059403",
+    "purpose": "14 api surfaces",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-extension-development/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-extension-development/003-14-api-surfaces.md",
+    "requires": [
+      "skill-13-contribution-points-and-activation-409a216508"
+    ],
+    "links": [
+      "skill-15-webviews-0948050610"
+    ]
+  },
+  {
+    "id": "skill-15-webviews-0948050610",
+    "purpose": "15 webviews",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-extension-development/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-extension-development/004-15-webviews.md",
+    "requires": [
+      "skill-14-api-surfaces-9a67059403"
+    ],
+    "links": [
+      "skill-16-writing-a-language-server-a9b3bdb62a"
+    ]
+  },
+  {
+    "id": "skill-16-writing-a-language-server-a9b3bdb62a",
+    "purpose": "16 writing a language server",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-extension-development/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-extension-development/005-16-writing-a-language-server.md",
+    "requires": [
+      "skill-15-webviews-0948050610"
+    ],
+    "links": [
+      "skill-17-testing-and-publishing-d9bc6d2654"
+    ]
+  },
+  {
+    "id": "skill-17-testing-and-publishing-d9bc6d2654",
+    "purpose": "17 testing and publishing",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-extension-development/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-extension-development/006-17-testing-and-publishing.md",
+    "requires": [
+      "skill-16-writing-a-language-server-a9b3bdb62a"
+    ],
+    "links": []
+  }
+]

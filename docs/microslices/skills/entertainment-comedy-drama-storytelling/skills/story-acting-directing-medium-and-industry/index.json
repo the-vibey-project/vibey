@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-20-acting-46f22b566d",
+    "purpose": "20 acting",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/001-20-acting.md",
+    "requires": [],
+    "links": [
+      "skill-21-directing-0c0299b506"
+    ]
+  },
+  {
+    "id": "skill-21-directing-0c0299b506",
+    "purpose": "21 directing",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/002-21-directing.md",
+    "requires": [
+      "skill-20-acting-46f22b566d"
+    ],
+    "links": [
+      "skill-22-medium-differences-f25cee09e2"
+    ]
+  },
+  {
+    "id": "skill-22-medium-differences-f25cee09e2",
+    "purpose": "22 medium differences",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/003-22-medium-differences.md",
+    "requires": [
+      "skill-21-directing-0c0299b506"
+    ],
+    "links": [
+      "skill-23-editing-and-rhythm-34482ca1e0"
+    ]
+  },
+  {
+    "id": "skill-23-editing-and-rhythm-34482ca1e0",
+    "purpose": "23 editing and rhythm",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/004-23-editing-and-rhythm.md",
+    "requires": [
+      "skill-22-medium-differences-f25cee09e2"
+    ],
+    "links": [
+      "skill-24-development-and-economics-cabb95b24d"
+    ]
+  },
+  {
+    "id": "skill-24-development-and-economics-cabb95b24d",
+    "purpose": "24 development and economics",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/005-24-development-and-economics.md",
+    "requires": [
+      "skill-23-editing-and-rhythm-34482ca1e0"
+    ],
+    "links": []
+  }
+]

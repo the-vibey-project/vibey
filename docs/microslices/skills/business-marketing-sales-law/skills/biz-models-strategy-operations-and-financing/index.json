@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-fd4ca63885",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-business-models-and-unit-economics-cf95bf215a"
+    ]
+  },
+  {
+    "id": "skill-1-business-models-and-unit-economics-cf95bf215a",
+    "purpose": "1 business models and unit economics",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/002-1-business-models-and-unit-economics.md",
+    "requires": [
+      "skill-0-routing-fd4ca63885"
+    ],
+    "links": [
+      "skill-2-strategy-7679d67ef5"
+    ]
+  },
+  {
+    "id": "skill-2-strategy-7679d67ef5",
+    "purpose": "2 strategy",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/003-2-strategy.md",
+    "requires": [
+      "skill-1-business-models-and-unit-economics-cf95bf215a"
+    ],
+    "links": [
+      "skill-3-operations-and-organization-fefc7fc977"
+    ]
+  },
+  {
+    "id": "skill-3-operations-and-organization-fefc7fc977",
+    "purpose": "3 operations and organization",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/004-3-operations-and-organization.md",
+    "requires": [
+      "skill-2-strategy-7679d67ef5"
+    ],
+    "links": [
+      "skill-4-financing-ffd4f917d3"
+    ]
+  },
+  {
+    "id": "skill-4-financing-ffd4f917d3",
+    "purpose": "4 financing",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/005-4-financing.md",
+    "requires": [
+      "skill-3-operations-and-organization-fefc7fc977"
+    ],
+    "links": []
+  }
+]

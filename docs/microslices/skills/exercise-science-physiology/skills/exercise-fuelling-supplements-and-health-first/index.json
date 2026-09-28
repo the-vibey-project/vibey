@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-19-fuelling-1ff1966d1a",
+    "purpose": "19 fuelling",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first/001-19-fuelling.md",
+    "requires": [],
+    "links": [
+      "skill-20-supplements-evidence-tiers-aea82e0fb1"
+    ]
+  },
+  {
+    "id": "skill-20-supplements-evidence-tiers-aea82e0fb1",
+    "purpose": "20 supplements evidence tiers",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first/002-20-supplements-evidence-tiers.md",
+    "requires": [
+      "skill-19-fuelling-1ff1966d1a"
+    ],
+    "links": [
+      "skill-21-under-fuelling-overtraining-and-health-first-framing-5ddcc5caeb"
+    ]
+  },
+  {
+    "id": "skill-21-under-fuelling-overtraining-and-health-first-framing-5ddcc5caeb",
+    "purpose": "21 under fuelling overtraining and health first framing",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first/003-21-under-fuelling-overtraining-and-health-first-framing.md",
+    "requires": [
+      "skill-20-supplements-evidence-tiers-aea82e0fb1"
+    ],
+    "links": []
+  }
+]

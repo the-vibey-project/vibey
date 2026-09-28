@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-double-entry-e6ba3051e5",
+    "purpose": "10 double entry",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/001-10-double-entry.md",
+    "requires": [],
+    "links": [
+      "skill-11-the-three-statements-c269b9ce32"
+    ]
+  },
+  {
+    "id": "skill-11-the-three-statements-c269b9ce32",
+    "purpose": "11 the three statements",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/002-11-the-three-statements.md",
+    "requires": [
+      "skill-10-double-entry-e6ba3051e5"
+    ],
+    "links": [
+      "skill-12-accrual-accounting-and-revenue-recognition-984c242f6d"
+    ]
+  },
+  {
+    "id": "skill-12-accrual-accounting-and-revenue-recognition-984c242f6d",
+    "purpose": "12 accrual accounting and revenue recognition",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/003-12-accrual-accounting-and-revenue-recognition.md",
+    "requires": [
+      "skill-11-the-three-statements-c269b9ce32"
+    ],
+    "links": [
+      "skill-13-the-judgement-heavy-areas-95eb0eb54a"
+    ]
+  },
+  {
+    "id": "skill-13-the-judgement-heavy-areas-95eb0eb54a",
+    "purpose": "13 the judgement heavy areas",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/004-13-the-judgement-heavy-areas.md",
+    "requires": [
+      "skill-12-accrual-accounting-and-revenue-recognition-984c242f6d"
+    ],
+    "links": [
+      "skill-14-ratio-analysis-1b0306ed89"
+    ]
+  },
+  {
+    "id": "skill-14-ratio-analysis-1b0306ed89",
+    "purpose": "14 ratio analysis",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/005-14-ratio-analysis.md",
+    "requires": [
+      "skill-13-the-judgement-heavy-areas-95eb0eb54a"
+    ],
+    "links": []
+  }
+]

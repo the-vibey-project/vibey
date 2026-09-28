@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-0-routing-e4193acb02",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-how-to-read-this-field-18131a2441"
+    ]
+  },
+  {
+    "id": "skill-1-how-to-read-this-field-18131a2441",
+    "purpose": "1 how to read this field",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/002-1-how-to-read-this-field.md",
+    "requires": [
+      "skill-0-routing-e4193acb02"
+    ],
+    "links": [
+      "skill-2-homeostasis-and-physiological-organization-e0552cba12"
+    ]
+  },
+  {
+    "id": "skill-2-homeostasis-and-physiological-organization-e0552cba12",
+    "purpose": "2 homeostasis and physiological organization",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/003-2-homeostasis-and-physiological-organization.md",
+    "requires": [
+      "skill-1-how-to-read-this-field-18131a2441"
+    ],
+    "links": [
+      "skill-3-drug-targets-f40580b292"
+    ]
+  },
+  {
+    "id": "skill-3-drug-targets-f40580b292",
+    "purpose": "3 drug targets",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/004-3-drug-targets.md",
+    "requires": [
+      "skill-2-homeostasis-and-physiological-organization-e0552cba12"
+    ],
+    "links": [
+      "skill-4-pathophysiology-8519369bc9"
+    ]
+  },
+  {
+    "id": "skill-4-pathophysiology-8519369bc9",
+    "purpose": "4 pathophysiology",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/005-4-pathophysiology.md",
+    "requires": [
+      "skill-3-drug-targets-f40580b292"
+    ],
+    "links": [
+      "skill-5-clinical-reasoning-3e6112e928"
+    ]
+  },
+  {
+    "id": "skill-5-clinical-reasoning-3e6112e928",
+    "purpose": "5 clinical reasoning",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/006-5-clinical-reasoning.md",
+    "requires": [
+      "skill-4-pathophysiology-8519369bc9"
+    ],
+    "links": [
+      "skill-6-diagnostic-testing-19483a9b1b"
+    ]
+  },
+  {
+    "id": "skill-6-diagnostic-testing-19483a9b1b",
+    "purpose": "6 diagnostic testing",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/007-6-diagnostic-testing.md",
+    "requires": [
+      "skill-5-clinical-reasoning-3e6112e928"
+    ],
+    "links": []
+  }
+]

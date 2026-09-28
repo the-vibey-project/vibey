@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-14-the-shipyard-68decbd821",
+    "purpose": "14 the shipyard",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/001-14-the-shipyard.md",
+    "requires": [],
+    "links": [
+      "skill-15-planning-and-the-build-65490432eb"
+    ]
+  },
+  {
+    "id": "skill-15-planning-and-the-build-65490432eb",
+    "purpose": "15 planning and the build",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/002-15-planning-and-the-build.md",
+    "requires": [
+      "skill-14-the-shipyard-68decbd821"
+    ],
+    "links": [
+      "skill-16-welding-and-fabrication-3bb8c9bc95"
+    ]
+  },
+  {
+    "id": "skill-16-welding-and-fabrication-3bb8c9bc95",
+    "purpose": "16 welding and fabrication",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/003-16-welding-and-fabrication.md",
+    "requires": [
+      "skill-15-planning-and-the-build-65490432eb"
+    ],
+    "links": [
+      "skill-17-launch-outfitting-and-trials-a54bfb7115"
+    ]
+  },
+  {
+    "id": "skill-17-launch-outfitting-and-trials-a54bfb7115",
+    "purpose": "17 launch outfitting and trials",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/004-17-launch-outfitting-and-trials.md",
+    "requires": [
+      "skill-16-welding-and-fabrication-3bb8c9bc95"
+    ],
+    "links": [
+      "skill-18-naval-and-specialist-vessels-d113ab98c3"
+    ]
+  },
+  {
+    "id": "skill-18-naval-and-specialist-vessels-d113ab98c3",
+    "purpose": "18 naval and specialist vessels",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/005-18-naval-and-specialist-vessels.md",
+    "requires": [
+      "skill-17-launch-outfitting-and-trials-a54bfb7115"
+    ],
+    "links": []
+  }
+]

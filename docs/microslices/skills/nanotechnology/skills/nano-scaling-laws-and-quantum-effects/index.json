@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-0-routing-b60e061b68",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-scaling-laws-and-quantum-effects/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-scaling-laws-and-quantum-effects/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-scaling-laws-d0b5b36f3c"
+    ]
+  },
+  {
+    "id": "skill-1-scaling-laws-d0b5b36f3c",
+    "purpose": "1 scaling laws",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-scaling-laws-and-quantum-effects/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-scaling-laws-and-quantum-effects/002-1-scaling-laws.md",
+    "requires": [
+      "skill-0-routing-b60e061b68"
+    ],
+    "links": [
+      "skill-2-quantum-effects-ddc3acb4aa"
+    ]
+  },
+  {
+    "id": "skill-2-quantum-effects-ddc3acb4aa",
+    "purpose": "2 quantum effects",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-scaling-laws-and-quantum-effects/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-scaling-laws-and-quantum-effects/003-2-quantum-effects.md",
+    "requires": [
+      "skill-1-scaling-laws-d0b5b36f3c"
+    ],
+    "links": []
+  }
+]

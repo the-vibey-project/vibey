@@ -1,0 +1,214 @@
+[
+  {
+    "id": "skill-safety-and-scope-68f0a3313c",
+    "purpose": "safety and scope",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/001-safety-and-scope.md",
+    "requires": [],
+    "links": [
+      "skill-1-system-1-system-2-and-judgment-40afdaac87"
+    ]
+  },
+  {
+    "id": "skill-1-system-1-system-2-and-judgment-40afdaac87",
+    "purpose": "1 system 1 system 2 and judgment",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/002-1-system-1-system-2-and-judgment.md",
+    "requires": [
+      "skill-safety-and-scope-68f0a3313c"
+    ],
+    "links": [
+      "skill-2-critical-thinking-61dbfe5525"
+    ]
+  },
+  {
+    "id": "skill-2-critical-thinking-61dbfe5525",
+    "purpose": "2 critical thinking",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/003-2-critical-thinking.md",
+    "requires": [
+      "skill-1-system-1-system-2-and-judgment-40afdaac87"
+    ],
+    "links": [
+      "skill-3-systems-thinking-d0d0c809cf"
+    ]
+  },
+  {
+    "id": "skill-3-systems-thinking-d0d0c809cf",
+    "purpose": "3 systems thinking",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/004-3-systems-thinking.md",
+    "requires": [
+      "skill-2-critical-thinking-61dbfe5525"
+    ],
+    "links": [
+      "skill-4-intelligence-high-ability-and-genius-ac8ef39652"
+    ]
+  },
+  {
+    "id": "skill-4-intelligence-high-ability-and-genius-ac8ef39652",
+    "purpose": "4 intelligence high ability and genius",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/005-4-intelligence-high-ability-and-genius.md",
+    "requires": [
+      "skill-3-systems-thinking-d0d0c809cf"
+    ],
+    "links": [
+      "skill-5-autism-cf9076af68"
+    ]
+  },
+  {
+    "id": "skill-5-autism-cf9076af68",
+    "purpose": "5 autism",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/006-5-autism.md",
+    "requires": [
+      "skill-4-intelligence-high-ability-and-genius-ac8ef39652"
+    ],
+    "links": [
+      "skill-6-double-empathy-2fd54cb6f3"
+    ]
+  },
+  {
+    "id": "skill-6-double-empathy-2fd54cb6f3",
+    "purpose": "6 double empathy",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/007-6-double-empathy.md",
+    "requires": [
+      "skill-5-autism-cf9076af68"
+    ],
+    "links": [
+      "skill-7-narcissism-and-npd-cf62e16363"
+    ]
+  },
+  {
+    "id": "skill-7-narcissism-and-npd-cf62e16363",
+    "purpose": "7 narcissism and npd",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/008-7-narcissism-and-npd.md",
+    "requires": [
+      "skill-6-double-empathy-2fd54cb6f3"
+    ],
+    "links": [
+      "skill-8-abuse-recovery-11f4cc3eeb"
+    ]
+  },
+  {
+    "id": "skill-8-abuse-recovery-11f4cc3eeb",
+    "purpose": "8 abuse recovery",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/009-8-abuse-recovery.md",
+    "requires": [
+      "skill-7-narcissism-and-npd-cf62e16363"
+    ],
+    "links": [
+      "skill-9-alcohol-use-disorder-and-recovery-b8449b0e6e"
+    ]
+  },
+  {
+    "id": "skill-9-alcohol-use-disorder-and-recovery-b8449b0e6e",
+    "purpose": "9 alcohol use disorder and recovery",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/010-9-alcohol-use-disorder-and-recovery.md",
+    "requires": [
+      "skill-8-abuse-recovery-11f4cc3eeb"
+    ],
+    "links": [
+      "skill-10-christian-12-step-practice-25a2208b63"
+    ]
+  },
+  {
+    "id": "skill-10-christian-12-step-practice-25a2208b63",
+    "purpose": "10 christian 12 step practice",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/011-10-christian-12-step-practice.md",
+    "requires": [
+      "skill-9-alcohol-use-disorder-and-recovery-b8449b0e6e"
+    ],
+    "links": [
+      "skill-11-spiritual-experiences-b4627f1378"
+    ]
+  },
+  {
+    "id": "skill-11-spiritual-experiences-b4627f1378",
+    "purpose": "11 spiritual experiences",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/012-11-spiritual-experiences.md",
+    "requires": [
+      "skill-10-christian-12-step-practice-25a2208b63"
+    ],
+    "links": [
+      "skill-12-social-death-and-reintegration-2c475e0c2a"
+    ]
+  },
+  {
+    "id": "skill-12-social-death-and-reintegration-2c475e0c2a",
+    "purpose": "12 social death and reintegration",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/013-12-social-death-and-reintegration.md",
+    "requires": [
+      "skill-11-spiritual-experiences-b4627f1378"
+    ],
+    "links": [
+      "skill-13-food-and-mobility-insecurity-a30cd60ebb"
+    ]
+  },
+  {
+    "id": "skill-13-food-and-mobility-insecurity-a30cd60ebb",
+    "purpose": "13 food and mobility insecurity",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/014-13-food-and-mobility-insecurity.md",
+    "requires": [
+      "skill-12-social-death-and-reintegration-2c475e0c2a"
+    ],
+    "links": [
+      "skill-14-community-health-and-engagement-0053b0f6c4"
+    ]
+  },
+  {
+    "id": "skill-14-community-health-and-engagement-0053b0f6c4",
+    "purpose": "14 community health and engagement",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/015-14-community-health-and-engagement.md",
+    "requires": [
+      "skill-13-food-and-mobility-insecurity-a30cd60ebb"
+    ],
+    "links": [
+      "skill-15-cross-cutting-errors-326d64b514"
+    ]
+  },
+  {
+    "id": "skill-15-cross-cutting-errors-326d64b514",
+    "purpose": "15 cross cutting errors",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/016-15-cross-cutting-errors.md",
+    "requires": [
+      "skill-14-community-health-and-engagement-0053b0f6c4"
+    ],
+    "links": [
+      "skill-core-sources-71a043be88"
+    ]
+  },
+  {
+    "id": "skill-core-sources-71a043be88",
+    "purpose": "core sources",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/017-core-sources.md",
+    "requires": [
+      "skill-15-cross-cutting-errors-326d64b514"
+    ],
+    "links": [
+      "skill-limits-b82894c593"
+    ]
+  },
+  {
+    "id": "skill-limits-b82894c593",
+    "purpose": "limits",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/018-limits.md",
+    "requires": [
+      "skill-core-sources-71a043be88"
+    ],
+    "links": []
+  }
+]

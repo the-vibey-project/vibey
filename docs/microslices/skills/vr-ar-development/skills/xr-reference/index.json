@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-12-anti-patterns-1b9eb809f2",
+    "purpose": "12 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-reference/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-reference/001-12-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-13-numbers-bb47899ed0"
+    ]
+  },
+  {
+    "id": "skill-13-numbers-bb47899ed0",
+    "purpose": "13 numbers",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-reference/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-reference/002-13-numbers.md",
+    "requires": [
+      "skill-12-anti-patterns-1b9eb809f2"
+    ],
+    "links": [
+      "skill-14-the-platform-landscape-verified-august-2026-540cff073f"
+    ]
+  },
+  {
+    "id": "skill-14-the-platform-landscape-verified-august-2026-540cff073f",
+    "purpose": "14 the platform landscape verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-reference/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-reference/003-14-the-platform-landscape-verified-august-2026.md",
+    "requires": [
+      "skill-13-numbers-bb47899ed0"
+    ],
+    "links": [
+      "skill-15-resources-30822dfa67"
+    ]
+  },
+  {
+    "id": "skill-15-resources-30822dfa67",
+    "purpose": "15 resources",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-reference/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-reference/004-15-resources.md",
+    "requires": [
+      "skill-14-the-platform-landscape-verified-august-2026-540cff073f"
+    ],
+    "links": [
+      "skill-16-quick-reference-8f4dd9400c"
+    ]
+  },
+  {
+    "id": "skill-16-quick-reference-8f4dd9400c",
+    "purpose": "16 quick reference",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-reference/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-reference/005-16-quick-reference.md",
+    "requires": [
+      "skill-15-resources-30822dfa67"
+    ],
+    "links": [
+      "skill-17-method-0540b8bf79"
+    ]
+  },
+  {
+    "id": "skill-17-method-0540b8bf79",
+    "purpose": "17 method",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-reference/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-reference/006-17-method.md",
+    "requires": [
+      "skill-16-quick-reference-8f4dd9400c"
+    ],
+    "links": []
+  }
+]

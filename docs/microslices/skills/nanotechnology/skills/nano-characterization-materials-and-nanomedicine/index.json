@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-characterization-7661f2935c",
+    "purpose": "6 characterization",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/001-6-characterization.md",
+    "requires": [],
+    "links": [
+      "skill-7-nanomaterials-7a28b3b587"
+    ]
+  },
+  {
+    "id": "skill-7-nanomaterials-7a28b3b587",
+    "purpose": "7 nanomaterials",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/002-7-nanomaterials.md",
+    "requires": [
+      "skill-6-characterization-7661f2935c"
+    ],
+    "links": [
+      "skill-8-dna-nanotechnology-fd933de860"
+    ]
+  },
+  {
+    "id": "skill-8-dna-nanotechnology-fd933de860",
+    "purpose": "8 dna nanotechnology",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/003-8-dna-nanotechnology.md",
+    "requires": [
+      "skill-7-nanomaterials-7a28b3b587"
+    ],
+    "links": [
+      "skill-9-nanomedicine-86159b4446"
+    ]
+  },
+  {
+    "id": "skill-9-nanomedicine-86159b4446",
+    "purpose": "9 nanomedicine",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/004-9-nanomedicine.md",
+    "requires": [
+      "skill-8-dna-nanotechnology-fd933de860"
+    ],
+    "links": []
+  }
+]

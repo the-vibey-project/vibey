@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-0-routing-63a33ef583",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-kind-of-claim-is-this-b164685417"
+    ]
+  },
+  {
+    "id": "skill-1-what-kind-of-claim-is-this-b164685417",
+    "purpose": "1 what kind of claim is this",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/002-1-what-kind-of-claim-is-this.md",
+    "requires": [
+      "skill-0-routing-63a33ef583"
+    ],
+    "links": [
+      "skill-2-heat-transfer-7e4213b2dd"
+    ]
+  },
+  {
+    "id": "skill-2-heat-transfer-7e4213b2dd",
+    "purpose": "2 heat transfer",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/003-2-heat-transfer.md",
+    "requires": [
+      "skill-1-what-kind-of-claim-is-this-b164685417"
+    ],
+    "links": [
+      "skill-3-proteins-and-meat-b99d60ff62"
+    ]
+  },
+  {
+    "id": "skill-3-proteins-and-meat-b99d60ff62",
+    "purpose": "3 proteins and meat",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/004-3-proteins-and-meat.md",
+    "requires": [
+      "skill-2-heat-transfer-7e4213b2dd"
+    ],
+    "links": [
+      "skill-4-browning-bfded1d496"
+    ]
+  },
+  {
+    "id": "skill-4-browning-bfded1d496",
+    "purpose": "4 browning",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/005-4-browning.md",
+    "requires": [
+      "skill-3-proteins-and-meat-b99d60ff62"
+    ],
+    "links": [
+      "skill-5-starch-gluten-and-gels-5064f4fe13"
+    ]
+  },
+  {
+    "id": "skill-5-starch-gluten-and-gels-5064f4fe13",
+    "purpose": "5 starch gluten and gels",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/006-5-starch-gluten-and-gels.md",
+    "requires": [
+      "skill-4-browning-bfded1d496"
+    ],
+    "links": [
+      "skill-6-fats-and-emulsions-776c283865"
+    ]
+  },
+  {
+    "id": "skill-6-fats-and-emulsions-776c283865",
+    "purpose": "6 fats and emulsions",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/007-6-fats-and-emulsions.md",
+    "requires": [
+      "skill-5-starch-gluten-and-gels-5064f4fe13"
+    ],
+    "links": [
+      "skill-7-salt-water-and-brining-f89f4506ca"
+    ]
+  },
+  {
+    "id": "skill-7-salt-water-and-brining-f89f4506ca",
+    "purpose": "7 salt water and brining",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/008-7-salt-water-and-brining.md",
+    "requires": [
+      "skill-6-fats-and-emulsions-776c283865"
+    ],
+    "links": [
+      "skill-8-acid-and-ph-bcb6e3fd86"
+    ]
+  },
+  {
+    "id": "skill-8-acid-and-ph-bcb6e3fd86",
+    "purpose": "8 acid and ph",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/009-8-acid-and-ph.md",
+    "requires": [
+      "skill-7-salt-water-and-brining-f89f4506ca"
+    ],
+    "links": [
+      "skill-9-flavour-and-seasoning-fc5dc66bc2"
+    ]
+  },
+  {
+    "id": "skill-9-flavour-and-seasoning-fc5dc66bc2",
+    "purpose": "9 flavour and seasoning",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/010-9-flavour-and-seasoning.md",
+    "requires": [
+      "skill-8-acid-and-ph-bcb6e3fd86"
+    ],
+    "links": [
+      "skill-10-fermentation-4aab5b0ae8"
+    ]
+  },
+  {
+    "id": "skill-10-fermentation-4aab5b0ae8",
+    "purpose": "10 fermentation",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/011-10-fermentation.md",
+    "requires": [
+      "skill-9-flavour-and-seasoning-fc5dc66bc2"
+    ],
+    "links": [
+      "skill-11-baking-and-leavening-e11adab656"
+    ]
+  },
+  {
+    "id": "skill-11-baking-and-leavening-e11adab656",
+    "purpose": "11 baking and leavening",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science/012-11-baking-and-leavening.md",
+    "requires": [
+      "skill-10-fermentation-4aab5b0ae8"
+    ],
+    "links": []
+  }
+]

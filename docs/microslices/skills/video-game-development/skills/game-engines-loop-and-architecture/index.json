@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-07c121212d",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-engines-loop-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-engines-loop-and-architecture/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-engines-2a88518910"
+    ]
+  },
+  {
+    "id": "skill-1-engines-2a88518910",
+    "purpose": "1 engines",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-engines-loop-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-engines-loop-and-architecture/002-1-engines.md",
+    "requires": [
+      "skill-0-routing-07c121212d"
+    ],
+    "links": [
+      "skill-2-the-game-loop-52f0d8cfc2"
+    ]
+  },
+  {
+    "id": "skill-2-the-game-loop-52f0d8cfc2",
+    "purpose": "2 the game loop",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-engines-loop-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-engines-loop-and-architecture/003-2-the-game-loop.md",
+    "requires": [
+      "skill-1-engines-2a88518910"
+    ],
+    "links": [
+      "skill-3-code-architecture-cb4275d87e"
+    ]
+  },
+  {
+    "id": "skill-3-code-architecture-cb4275d87e",
+    "purpose": "3 code architecture",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-engines-loop-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-engines-loop-and-architecture/004-3-code-architecture.md",
+    "requires": [
+      "skill-2-the-game-loop-52f0d8cfc2"
+    ],
+    "links": []
+  }
+]

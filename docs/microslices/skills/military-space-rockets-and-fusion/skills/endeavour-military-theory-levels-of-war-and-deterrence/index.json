@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-1-what-military-science-is-and-the-theoretical-canon-60e73abf39",
+    "purpose": "1 what military science is and the theoretical canon",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/001-1-what-military-science-is-and-the-theoretical-canon.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-levels-of-war-the-principles-and-decision-cycles-1a6f0ce0c0"
+    ]
+  },
+  {
+    "id": "skill-2-the-levels-of-war-the-principles-and-decision-cycles-1a6f0ce0c0",
+    "purpose": "2 the levels of war the principles and decision cycles",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/002-2-the-levels-of-war-the-principles-and-decision-cycles.md",
+    "requires": [
+      "skill-1-what-military-science-is-and-the-theoretical-canon-60e73abf39"
+    ],
+    "links": [
+      "skill-3-deterrence-nuclear-strategy-escalation-alliances-and-grand-strategy-34c43a1c99"
+    ]
+  },
+  {
+    "id": "skill-3-deterrence-nuclear-strategy-escalation-alliances-and-grand-strategy-34c43a1c99",
+    "purpose": "3 deterrence nuclear strategy escalation alliances and grand strategy",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/003-3-deterrence-nuclear-strategy-escalation-alliances-and-grand-strategy.md",
+    "requires": [
+      "skill-2-the-levels-of-war-the-principles-and-decision-cycles-1a6f0ce0c0"
+    ],
+    "links": [
+      "skill-where-the-rest-of-part-i-lives-d77ec7ef6d"
+    ]
+  },
+  {
+    "id": "skill-where-the-rest-of-part-i-lives-d77ec7ef6d",
+    "purpose": "where the rest of part i lives",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/004-where-the-rest-of-part-i-lives.md",
+    "requires": [
+      "skill-3-deterrence-nuclear-strategy-escalation-alliances-and-grand-strategy-34c43a1c99"
+    ],
+    "links": [
+      "skill-quick-reference-da1a401800"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-da1a401800",
+    "purpose": "quick reference",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/005-quick-reference.md",
+    "requires": [
+      "skill-where-the-rest-of-part-i-lives-d77ec7ef6d"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-the-software-stack-f9f382acb5",
+    "purpose": "8 the software stack",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-software-and-resource-estimation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-software-and-resource-estimation/001-8-the-software-stack.md",
+    "requires": [],
+    "links": [
+      "skill-9-resource-estimation-70f570ca43"
+    ]
+  },
+  {
+    "id": "skill-9-resource-estimation-70f570ca43",
+    "purpose": "9 resource estimation",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-software-and-resource-estimation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-software-and-resource-estimation/002-9-resource-estimation.md",
+    "requires": [
+      "skill-8-the-software-stack-f9f382acb5"
+    ],
+    "links": [
+      "skill-10-evaluating-quantum-advantage-claims-4efbd999e4"
+    ]
+  },
+  {
+    "id": "skill-10-evaluating-quantum-advantage-claims-4efbd999e4",
+    "purpose": "10 evaluating quantum advantage claims",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-software-and-resource-estimation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-software-and-resource-estimation/003-10-evaluating-quantum-advantage-claims.md",
+    "requires": [
+      "skill-9-resource-estimation-70f570ca43"
+    ],
+    "links": []
+  }
+]

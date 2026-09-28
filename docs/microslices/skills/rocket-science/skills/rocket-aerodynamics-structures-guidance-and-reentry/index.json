@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-9-aerodynamics-and-loads-02ebf59191",
+    "purpose": "9 aerodynamics and loads",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/001-9-aerodynamics-and-loads.md",
+    "requires": [],
+    "links": [
+      "skill-10-structures-df4fb486f4"
+    ]
+  },
+  {
+    "id": "skill-10-structures-df4fb486f4",
+    "purpose": "10 structures",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/002-10-structures.md",
+    "requires": [
+      "skill-9-aerodynamics-and-loads-02ebf59191"
+    ],
+    "links": [
+      "skill-11-guidance-and-control-dec9815c71"
+    ]
+  },
+  {
+    "id": "skill-11-guidance-and-control-dec9815c71",
+    "purpose": "11 guidance and control",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/003-11-guidance-and-control.md",
+    "requires": [
+      "skill-10-structures-df4fb486f4"
+    ],
+    "links": [
+      "skill-12-reentry-physics-cc017e9e2d"
+    ]
+  },
+  {
+    "id": "skill-12-reentry-physics-cc017e9e2d",
+    "purpose": "12 reentry physics",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/004-12-reentry-physics.md",
+    "requires": [
+      "skill-11-guidance-and-control-dec9815c71"
+    ],
+    "links": [
+      "skill-13-instabilities-and-failure-physics-33fd2fd295"
+    ]
+  },
+  {
+    "id": "skill-13-instabilities-and-failure-physics-33fd2fd295",
+    "purpose": "13 instabilities and failure physics",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/005-13-instabilities-and-failure-physics.md",
+    "requires": [
+      "skill-12-reentry-physics-cc017e9e2d"
+    ],
+    "links": []
+  }
+]

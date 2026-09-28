@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-0-routing-dcea3e799a",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-two-layers-44e3cd10bb"
+    ]
+  },
+  {
+    "id": "skill-1-the-two-layers-44e3cd10bb",
+    "purpose": "1 the two layers",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/002-1-the-two-layers.md",
+    "requires": [
+      "skill-0-routing-dcea3e799a"
+    ],
+    "links": [
+      "skill-2-diodes-4df2d0fa93"
+    ]
+  },
+  {
+    "id": "skill-2-diodes-4df2d0fa93",
+    "purpose": "2 diodes",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/003-2-diodes.md",
+    "requires": [
+      "skill-1-the-two-layers-44e3cd10bb"
+    ],
+    "links": [
+      "skill-3-transistors-as-switches-30fe96797c"
+    ]
+  },
+  {
+    "id": "skill-3-transistors-as-switches-30fe96797c",
+    "purpose": "3 transistors as switches",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/004-3-transistors-as-switches.md",
+    "requires": [
+      "skill-2-diodes-4df2d0fa93"
+    ],
+    "links": [
+      "skill-4-mosfet-switching-behaviour-8ebb7e8ce9"
+    ]
+  },
+  {
+    "id": "skill-4-mosfet-switching-behaviour-8ebb7e8ce9",
+    "purpose": "4 mosfet switching behaviour",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/005-4-mosfet-switching-behaviour.md",
+    "requires": [
+      "skill-3-transistors-as-switches-30fe96797c"
+    ],
+    "links": [
+      "skill-5-static-cmos-gates-adb0daf92c"
+    ]
+  },
+  {
+    "id": "skill-5-static-cmos-gates-adb0daf92c",
+    "purpose": "5 static cmos gates",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/006-5-static-cmos-gates.md",
+    "requires": [
+      "skill-4-mosfet-switching-behaviour-8ebb7e8ce9"
+    ],
+    "links": [
+      "skill-6-sizing-and-drive-strength-36127acc66"
+    ]
+  },
+  {
+    "id": "skill-6-sizing-and-drive-strength-36127acc66",
+    "purpose": "6 sizing and drive strength",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/007-6-sizing-and-drive-strength.md",
+    "requires": [
+      "skill-5-static-cmos-gates-adb0daf92c"
+    ],
+    "links": [
+      "skill-7-other-logic-families-2091a99b66"
+    ]
+  },
+  {
+    "id": "skill-7-other-logic-families-2091a99b66",
+    "purpose": "7 other logic families",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/008-7-other-logic-families.md",
+    "requires": [
+      "skill-6-sizing-and-drive-strength-36127acc66"
+    ],
+    "links": [
+      "skill-8-power-in-cmos-7175d37001"
+    ]
+  },
+  {
+    "id": "skill-8-power-in-cmos-7175d37001",
+    "purpose": "8 power in cmos",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/009-8-power-in-cmos.md",
+    "requires": [
+      "skill-7-other-logic-families-2091a99b66"
+    ],
+    "links": []
+  }
+]

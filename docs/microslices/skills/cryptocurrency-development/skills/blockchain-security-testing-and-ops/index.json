@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-9-testing-f19c0c6124",
+    "purpose": "9 testing",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-security-testing-and-ops/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-security-testing-and-ops/001-9-testing.md",
+    "requires": [],
+    "links": [
+      "skill-10-security-804287b292"
+    ]
+  },
+  {
+    "id": "skill-10-security-804287b292",
+    "purpose": "10 security",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-security-testing-and-ops/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-security-testing-and-ops/002-10-security.md",
+    "requires": [
+      "skill-9-testing-f19c0c6124"
+    ],
+    "links": [
+      "skill-13-deployment-and-operations-5cbcf79699"
+    ]
+  },
+  {
+    "id": "skill-13-deployment-and-operations-5cbcf79699",
+    "purpose": "13 deployment and operations",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-security-testing-and-ops/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-security-testing-and-ops/003-13-deployment-and-operations.md",
+    "requires": [
+      "skill-10-security-804287b292"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-16-the-12v-system-f980c18879",
+    "purpose": "16 the 12v system",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/001-16-the-12v-system.md",
+    "requires": [],
+    "links": [
+      "skill-17-vehicle-networks-c434e11b4c"
+    ]
+  },
+  {
+    "id": "skill-17-vehicle-networks-c434e11b4c",
+    "purpose": "17 vehicle networks",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/002-17-vehicle-networks.md",
+    "requires": [
+      "skill-16-the-12v-system-f980c18879"
+    ],
+    "links": [
+      "skill-18-adas-adaed10b9f"
+    ]
+  },
+  {
+    "id": "skill-18-adas-adaed10b9f",
+    "purpose": "18 adas",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/003-18-adas.md",
+    "requires": [
+      "skill-17-vehicle-networks-c434e11b4c"
+    ],
+    "links": [
+      "skill-19-air-conditioning-f126bb37fd"
+    ]
+  },
+  {
+    "id": "skill-19-air-conditioning-f126bb37fd",
+    "purpose": "19 air conditioning",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/004-19-air-conditioning.md",
+    "requires": [
+      "skill-18-adas-adaed10b9f"
+    ],
+    "links": [
+      "skill-20-ev-architecture-daa7dff761"
+    ]
+  },
+  {
+    "id": "skill-20-ev-architecture-daa7dff761",
+    "purpose": "20 ev architecture",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/005-20-ev-architecture.md",
+    "requires": [
+      "skill-19-air-conditioning-f126bb37fd"
+    ],
+    "links": [
+      "skill-21-batteries-and-degradation-eeb5036a77"
+    ]
+  },
+  {
+    "id": "skill-21-batteries-and-degradation-eeb5036a77",
+    "purpose": "21 batteries and degradation",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/006-21-batteries-and-degradation.md",
+    "requires": [
+      "skill-20-ev-architecture-daa7dff761"
+    ],
+    "links": [
+      "skill-22-high-voltage-safety-aeeee4f1a6"
+    ]
+  },
+  {
+    "id": "skill-22-high-voltage-safety-aeeee4f1a6",
+    "purpose": "22 high voltage safety",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/007-22-high-voltage-safety.md",
+    "requires": [
+      "skill-21-batteries-and-degradation-eeb5036a77"
+    ],
+    "links": [
+      "skill-23-hybrids-2299fd053e"
+    ]
+  },
+  {
+    "id": "skill-23-hybrids-2299fd053e",
+    "purpose": "23 hybrids",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/008-23-hybrids.md",
+    "requires": [
+      "skill-22-high-voltage-safety-aeeee4f1a6"
+    ],
+    "links": [
+      "skill-24-body-and-corrosion-acc7e3c4b5"
+    ]
+  },
+  {
+    "id": "skill-24-body-and-corrosion-acc7e3c4b5",
+    "purpose": "24 body and corrosion",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/009-24-body-and-corrosion.md",
+    "requires": [
+      "skill-23-hybrids-2299fd053e"
+    ],
+    "links": []
+  }
+]

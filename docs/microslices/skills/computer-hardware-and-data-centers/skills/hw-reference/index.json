@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-checked-august-2026-3cee1e9388",
+    "purpose": "26 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-reference/001-26-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-8676a99ab6"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-8676a99ab6",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-checked-august-2026-3cee1e9388"
+    ],
+    "links": [
+      "skill-28-numbers-96247ab6bf"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-96247ab6bf",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-reference/003-28-numbers.md",
+    "requires": [
+      "skill-27-misconceptions-8676a99ab6"
+    ],
+    "links": [
+      "skill-29-sources-caeee3115c"
+    ]
+  },
+  {
+    "id": "skill-29-sources-caeee3115c",
+    "purpose": "29 sources",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-reference/004-29-sources.md",
+    "requires": [
+      "skill-28-numbers-96247ab6bf"
+    ],
+    "links": [
+      "skill-30-quick-reference-7334165f39"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-7334165f39",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-sources-caeee3115c"
+    ],
+    "links": [
+      "skill-31-method-1d177372ef"
+    ]
+  },
+  {
+    "id": "skill-31-method-1d177372ef",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-7334165f39"
+    ],
+    "links": []
+  }
+]

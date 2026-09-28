@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-security-e8b2a6af03",
+    "purpose": "10 security",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-security-safety-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-security-safety-and-testing/001-10-security.md",
+    "requires": [],
+    "links": [
+      "skill-11-functional-safety-37c9804c6f"
+    ]
+  },
+  {
+    "id": "skill-11-functional-safety-37c9804c6f",
+    "purpose": "11 functional safety",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-security-safety-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-security-safety-and-testing/002-11-functional-safety.md",
+    "requires": [
+      "skill-10-security-e8b2a6af03"
+    ],
+    "links": [
+      "skill-12-testing-verification-and-debugging-534af92c27"
+    ]
+  },
+  {
+    "id": "skill-12-testing-verification-and-debugging-534af92c27",
+    "purpose": "12 testing verification and debugging",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-security-safety-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-security-safety-and-testing/003-12-testing-verification-and-debugging.md",
+    "requires": [
+      "skill-11-functional-safety-37c9804c6f"
+    ],
+    "links": [
+      "skill-13-board-bring-up-03ee099e9a"
+    ]
+  },
+  {
+    "id": "skill-13-board-bring-up-03ee099e9a",
+    "purpose": "13 board bring up",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-security-safety-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-security-safety-and-testing/004-13-board-bring-up.md",
+    "requires": [
+      "skill-12-testing-verification-and-debugging-534af92c27"
+    ],
+    "links": []
+  }
+]

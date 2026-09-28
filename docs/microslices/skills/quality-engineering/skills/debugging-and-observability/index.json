@@ -1,0 +1,214 @@
+[
+  {
+    "id": "skill-core-principles-37d12de589",
+    "purpose": "core principles",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/001-core-principles.md",
+    "requires": [],
+    "links": [
+      "skill-part-1-the-debugging-mindset-and-process-712bb7067b"
+    ]
+  },
+  {
+    "id": "skill-part-1-the-debugging-mindset-and-process-712bb7067b",
+    "purpose": "part 1 the debugging mindset and process",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/002-part-1-the-debugging-mindset-and-process.md",
+    "requires": [
+      "skill-core-principles-37d12de589"
+    ],
+    "links": [
+      "skill-part-2-correlation-trace-ids-the-distributed-debugging-primitive-3d8a572a13"
+    ]
+  },
+  {
+    "id": "skill-part-2-correlation-trace-ids-the-distributed-debugging-primitive-3d8a572a13",
+    "purpose": "part 2 correlation trace ids the distributed debugging primitive",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/003-part-2-correlation-trace-ids-the-distributed-debugging-primitive.md",
+    "requires": [
+      "skill-part-1-the-debugging-mindset-and-process-712bb7067b"
+    ],
+    "links": [
+      "skill-part-3-structured-logging-deb8d5dabc"
+    ]
+  },
+  {
+    "id": "skill-part-3-structured-logging-deb8d5dabc",
+    "purpose": "part 3 structured logging",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/004-part-3-structured-logging.md",
+    "requires": [
+      "skill-part-2-correlation-trace-ids-the-distributed-debugging-primitive-3d8a572a13"
+    ],
+    "links": [
+      "skill-part-4-opentelemetry-cncf-graduated-may-11-2026-4ef5a9c8ef"
+    ]
+  },
+  {
+    "id": "skill-part-4-opentelemetry-cncf-graduated-may-11-2026-4ef5a9c8ef",
+    "purpose": "part 4 opentelemetry cncf graduated may 11 2026",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/005-part-4-opentelemetry-cncf-graduated-may-11-2026.md",
+    "requires": [
+      "skill-part-3-structured-logging-deb8d5dabc"
+    ],
+    "links": [
+      "skill-part-5-the-four-observability-signals-cd3a363134"
+    ]
+  },
+  {
+    "id": "skill-part-5-the-four-observability-signals-cd3a363134",
+    "purpose": "part 5 the four observability signals",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/006-part-5-the-four-observability-signals.md",
+    "requires": [
+      "skill-part-4-opentelemetry-cncf-graduated-may-11-2026-4ef5a9c8ef"
+    ],
+    "links": [
+      "skill-part-6-ebpf-for-production-debugging-02daf74bfc"
+    ]
+  },
+  {
+    "id": "skill-part-6-ebpf-for-production-debugging-02daf74bfc",
+    "purpose": "part 6 ebpf for production debugging",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/007-part-6-ebpf-for-production-debugging.md",
+    "requires": [
+      "skill-part-5-the-four-observability-signals-cd3a363134"
+    ],
+    "links": [
+      "skill-part-7-slo-based-burn-rate-alerting-040b76deff"
+    ]
+  },
+  {
+    "id": "skill-part-7-slo-based-burn-rate-alerting-040b76deff",
+    "purpose": "part 7 slo based burn rate alerting",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/008-part-7-slo-based-burn-rate-alerting.md",
+    "requires": [
+      "skill-part-6-ebpf-for-production-debugging-02daf74bfc"
+    ],
+    "links": [
+      "skill-part-8-error-handling-design-and-patterns-8d895d7b4d"
+    ]
+  },
+  {
+    "id": "skill-part-8-error-handling-design-and-patterns-8d895d7b4d",
+    "purpose": "part 8 error handling design and patterns",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/009-part-8-error-handling-design-and-patterns.md",
+    "requires": [
+      "skill-part-7-slo-based-burn-rate-alerting-040b76deff"
+    ],
+    "links": [
+      "skill-part-9-distributed-debugging-f5a7245715"
+    ]
+  },
+  {
+    "id": "skill-part-9-distributed-debugging-f5a7245715",
+    "purpose": "part 9 distributed debugging",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/010-part-9-distributed-debugging.md",
+    "requires": [
+      "skill-part-8-error-handling-design-and-patterns-8d895d7b4d"
+    ],
+    "links": [
+      "skill-part-10-ai-debugging-limitations-564d034c46"
+    ]
+  },
+  {
+    "id": "skill-part-10-ai-debugging-limitations-564d034c46",
+    "purpose": "part 10 ai debugging limitations",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/011-part-10-ai-debugging-limitations.md",
+    "requires": [
+      "skill-part-9-distributed-debugging-f5a7245715"
+    ],
+    "links": [
+      "skill-part-11-language-specific-debugging-patterns-c92bdf3bc2"
+    ]
+  },
+  {
+    "id": "skill-part-11-language-specific-debugging-patterns-c92bdf3bc2",
+    "purpose": "part 11 language specific debugging patterns",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/012-part-11-language-specific-debugging-patterns.md",
+    "requires": [
+      "skill-part-10-ai-debugging-limitations-564d034c46"
+    ],
+    "links": [
+      "skill-part-12-advanced-debugging-tools-55f1401baf"
+    ]
+  },
+  {
+    "id": "skill-part-12-advanced-debugging-tools-55f1401baf",
+    "purpose": "part 12 advanced debugging tools",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/013-part-12-advanced-debugging-tools.md",
+    "requires": [
+      "skill-part-11-language-specific-debugging-patterns-c92bdf3bc2"
+    ],
+    "links": [
+      "skill-part-13-testing-for-debuggability-66932570f0"
+    ]
+  },
+  {
+    "id": "skill-part-13-testing-for-debuggability-66932570f0",
+    "purpose": "part 13 testing for debuggability",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/014-part-13-testing-for-debuggability.md",
+    "requires": [
+      "skill-part-12-advanced-debugging-tools-55f1401baf"
+    ],
+    "links": [
+      "skill-part-14-customer-issue-triage-e857987992"
+    ]
+  },
+  {
+    "id": "skill-part-14-customer-issue-triage-e857987992",
+    "purpose": "part 14 customer issue triage",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/015-part-14-customer-issue-triage.md",
+    "requires": [
+      "skill-part-13-testing-for-debuggability-66932570f0"
+    ],
+    "links": [
+      "skill-part-15-observability-2-0-23a0133a38"
+    ]
+  },
+  {
+    "id": "skill-part-15-observability-2-0-23a0133a38",
+    "purpose": "part 15 observability 2 0",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/016-part-15-observability-2-0.md",
+    "requires": [
+      "skill-part-14-customer-issue-triage-e857987992"
+    ],
+    "links": [
+      "skill-quick-reference-decision-thresholds-1b12b8a372"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-decision-thresholds-1b12b8a372",
+    "purpose": "quick reference decision thresholds",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/017-quick-reference-decision-thresholds.md",
+    "requires": [
+      "skill-part-15-observability-2-0-23a0133a38"
+    ],
+    "links": [
+      "skill-caveats-on-sources-4a67fc72c3"
+    ]
+  },
+  {
+    "id": "skill-caveats-on-sources-4a67fc72c3",
+    "purpose": "caveats on sources",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability/018-caveats-on-sources.md",
+    "requires": [
+      "skill-quick-reference-decision-thresholds-1b12b8a372"
+    ],
+    "links": []
+  }
+]

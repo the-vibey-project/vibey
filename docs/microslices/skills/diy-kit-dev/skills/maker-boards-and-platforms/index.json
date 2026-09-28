@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-de627438fa",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-boards-and-platforms/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-boards-and-platforms/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-choosing-a-board-a7236d8886"
+    ]
+  },
+  {
+    "id": "skill-1-choosing-a-board-a7236d8886",
+    "purpose": "1 choosing a board",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-boards-and-platforms/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-boards-and-platforms/002-1-choosing-a-board.md",
+    "requires": [
+      "skill-0-routing-de627438fa"
+    ],
+    "links": [
+      "skill-2-raspberry-pi-d5935d95f7"
+    ]
+  },
+  {
+    "id": "skill-2-raspberry-pi-d5935d95f7",
+    "purpose": "2 raspberry pi",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-boards-and-platforms/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-boards-and-platforms/003-2-raspberry-pi.md",
+    "requires": [
+      "skill-1-choosing-a-board-a7236d8886"
+    ],
+    "links": [
+      "skill-3-arduino-esp32-and-the-microcontroller-field-e58c043b39"
+    ]
+  },
+  {
+    "id": "skill-3-arduino-esp32-and-the-microcontroller-field-e58c043b39",
+    "purpose": "3 arduino esp32 and the microcontroller field",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-boards-and-platforms/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-boards-and-platforms/004-3-arduino-esp32-and-the-microcontroller-field.md",
+    "requires": [
+      "skill-2-raspberry-pi-d5935d95f7"
+    ],
+    "links": []
+  }
+]

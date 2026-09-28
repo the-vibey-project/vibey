@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-the-cleanroom-3fd0cb40a2",
+    "purpose": "10 the cleanroom",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/001-10-the-cleanroom.md",
+    "requires": [],
+    "links": [
+      "skill-11-lithography-c07bf1feed"
+    ]
+  },
+  {
+    "id": "skill-11-lithography-c07bf1feed",
+    "purpose": "11 lithography",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/002-11-lithography.md",
+    "requires": [
+      "skill-10-the-cleanroom-3fd0cb40a2"
+    ],
+    "links": [
+      "skill-12-deposition-5e196b5f9c"
+    ]
+  },
+  {
+    "id": "skill-12-deposition-5e196b5f9c",
+    "purpose": "12 deposition",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/003-12-deposition.md",
+    "requires": [
+      "skill-11-lithography-c07bf1feed"
+    ],
+    "links": [
+      "skill-13-etch-aa3dc3432a"
+    ]
+  },
+  {
+    "id": "skill-13-etch-aa3dc3432a",
+    "purpose": "13 etch",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/004-13-etch.md",
+    "requires": [
+      "skill-12-deposition-5e196b5f9c"
+    ],
+    "links": [
+      "skill-14-implant-and-anneal-4bd88edaa1"
+    ]
+  },
+  {
+    "id": "skill-14-implant-and-anneal-4bd88edaa1",
+    "purpose": "14 implant and anneal",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/005-14-implant-and-anneal.md",
+    "requires": [
+      "skill-13-etch-aa3dc3432a"
+    ],
+    "links": [
+      "skill-15-cmp-41cba1cf9c"
+    ]
+  },
+  {
+    "id": "skill-15-cmp-41cba1cf9c",
+    "purpose": "15 cmp",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/006-15-cmp.md",
+    "requires": [
+      "skill-14-implant-and-anneal-4bd88edaa1"
+    ],
+    "links": []
+  }
+]

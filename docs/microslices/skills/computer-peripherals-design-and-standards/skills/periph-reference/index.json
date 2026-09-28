@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-25-what-s-live-checked-august-2026-95cd586982",
+    "purpose": "25 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-reference/001-25-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-065e09cd61"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-065e09cd61",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-checked-august-2026-95cd586982"
+    ],
+    "links": [
+      "skill-27-numbers-b27dd0ed80"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-b27dd0ed80",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-reference/003-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-065e09cd61"
+    ],
+    "links": [
+      "skill-28-sources-2f308513ef"
+    ]
+  },
+  {
+    "id": "skill-28-sources-2f308513ef",
+    "purpose": "28 sources",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-reference/004-28-sources.md",
+    "requires": [
+      "skill-27-numbers-b27dd0ed80"
+    ],
+    "links": [
+      "skill-29-quick-reference-1fc0adf64b"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-1fc0adf64b",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-reference/005-29-quick-reference.md",
+    "requires": [
+      "skill-28-sources-2f308513ef"
+    ],
+    "links": [
+      "skill-30-method-921b1b66a7"
+    ]
+  },
+  {
+    "id": "skill-30-method-921b1b66a7",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-reference/006-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-1fc0adf64b"
+    ],
+    "links": []
+  }
+]

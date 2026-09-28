@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-design-systems-and-tokens-87b471c0fb",
+    "purpose": "7 design systems and tokens",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility/001-7-design-systems-and-tokens.md",
+    "requires": [],
+    "links": [
+      "skill-8-platform-conventions-99ec8151b2"
+    ]
+  },
+  {
+    "id": "skill-8-platform-conventions-99ec8151b2",
+    "purpose": "8 platform conventions",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility/002-8-platform-conventions.md",
+    "requires": [
+      "skill-7-design-systems-and-tokens-87b471c0fb"
+    ],
+    "links": [
+      "skill-9-accessibility-e78062161b"
+    ]
+  },
+  {
+    "id": "skill-9-accessibility-e78062161b",
+    "purpose": "9 accessibility",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility/003-9-accessibility.md",
+    "requires": [
+      "skill-8-platform-conventions-99ec8151b2"
+    ],
+    "links": []
+  }
+]

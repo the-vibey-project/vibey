@@ -10,3 +10,5 @@ Read that file; it applies unchanged regardless of which agent is doing the work
 [AGENTS.md](https://github.com/the-vibey-project/vibey-skills/blob/main/AGENTS.md)
 is the same content adapted for Codex, kept as a separate file because a handful of
 passages name the tool by name (e.g. what `/plugin marketplace add` reads).
+
+Skills and bot guidance follow the [context microslice contract](https://github.com/the-vibey-project/vibey/blob/develop/docs/context-microslices.md): retrieve only the smallest sufficient linked set, preserve provenance and acceptance criteria, and never silently truncate a context packet.

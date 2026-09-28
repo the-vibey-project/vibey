@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-4-protein-and-amino-acids-335f5af680",
+    "purpose": "4 protein and amino acids",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/001-4-protein-and-amino-acids.md",
+    "requires": [],
+    "links": [
+      "skill-5-carbohydrates-and-fibre-1798abbd40"
+    ]
+  },
+  {
+    "id": "skill-5-carbohydrates-and-fibre-1798abbd40",
+    "purpose": "5 carbohydrates and fibre",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/002-5-carbohydrates-and-fibre.md",
+    "requires": [
+      "skill-4-protein-and-amino-acids-335f5af680"
+    ],
+    "links": [
+      "skill-6-fats-and-lipids-484c9b28d4"
+    ]
+  },
+  {
+    "id": "skill-6-fats-and-lipids-484c9b28d4",
+    "purpose": "6 fats and lipids",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/003-6-fats-and-lipids.md",
+    "requires": [
+      "skill-5-carbohydrates-and-fibre-1798abbd40"
+    ],
+    "links": [
+      "skill-7-alcohol-d663cf9584"
+    ]
+  },
+  {
+    "id": "skill-7-alcohol-d663cf9584",
+    "purpose": "7 alcohol",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/004-7-alcohol.md",
+    "requires": [
+      "skill-6-fats-and-lipids-484c9b28d4"
+    ],
+    "links": [
+      "skill-8-vitamins-80276c9c0a"
+    ]
+  },
+  {
+    "id": "skill-8-vitamins-80276c9c0a",
+    "purpose": "8 vitamins",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/005-8-vitamins.md",
+    "requires": [
+      "skill-7-alcohol-d663cf9584"
+    ],
+    "links": [
+      "skill-9-minerals-45c6a59761"
+    ]
+  },
+  {
+    "id": "skill-9-minerals-45c6a59761",
+    "purpose": "9 minerals",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/006-9-minerals.md",
+    "requires": [
+      "skill-8-vitamins-80276c9c0a"
+    ],
+    "links": [
+      "skill-10-supplements-2c7279620a"
+    ]
+  },
+  {
+    "id": "skill-10-supplements-2c7279620a",
+    "purpose": "10 supplements",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/007-10-supplements.md",
+    "requires": [
+      "skill-9-minerals-45c6a59761"
+    ],
+    "links": []
+  }
+]

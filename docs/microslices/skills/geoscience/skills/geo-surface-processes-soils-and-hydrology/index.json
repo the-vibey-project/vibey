@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-7-surface-processes-6922eb7433",
+    "purpose": "7 surface processes",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-surface-processes-soils-and-hydrology/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-surface-processes-soils-and-hydrology/001-7-surface-processes.md",
+    "requires": [],
+    "links": [
+      "skill-8-soils-1d02cf6d86"
+    ]
+  },
+  {
+    "id": "skill-8-soils-1d02cf6d86",
+    "purpose": "8 soils",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-surface-processes-soils-and-hydrology/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-surface-processes-soils-and-hydrology/002-8-soils.md",
+    "requires": [
+      "skill-7-surface-processes-6922eb7433"
+    ],
+    "links": [
+      "skill-9-surface-hydrology-a56b250101"
+    ]
+  },
+  {
+    "id": "skill-9-surface-hydrology-a56b250101",
+    "purpose": "9 surface hydrology",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-surface-processes-soils-and-hydrology/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-surface-processes-soils-and-hydrology/003-9-surface-hydrology.md",
+    "requires": [
+      "skill-8-soils-1d02cf6d86"
+    ],
+    "links": [
+      "skill-10-groundwater-152e6e01f4"
+    ]
+  },
+  {
+    "id": "skill-10-groundwater-152e6e01f4",
+    "purpose": "10 groundwater",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-surface-processes-soils-and-hydrology/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-surface-processes-soils-and-hydrology/004-10-groundwater.md",
+    "requires": [
+      "skill-9-surface-hydrology-a56b250101"
+    ],
+    "links": []
+  }
+]

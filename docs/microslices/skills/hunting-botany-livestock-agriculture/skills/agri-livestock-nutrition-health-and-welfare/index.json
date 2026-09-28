@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-17-ruminant-digestion-e9d4cd5215",
+    "purpose": "17 ruminant digestion",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/001-17-ruminant-digestion.md",
+    "requires": [],
+    "links": [
+      "skill-18-livestock-nutrition-de922cadda"
+    ]
+  },
+  {
+    "id": "skill-18-livestock-nutrition-de922cadda",
+    "purpose": "18 livestock nutrition",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/002-18-livestock-nutrition.md",
+    "requires": [
+      "skill-17-ruminant-digestion-e9d4cd5215"
+    ],
+    "links": [
+      "skill-19-reproduction-f82616dcf8"
+    ]
+  },
+  {
+    "id": "skill-19-reproduction-f82616dcf8",
+    "purpose": "19 reproduction",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/003-19-reproduction.md",
+    "requires": [
+      "skill-18-livestock-nutrition-de922cadda"
+    ],
+    "links": [
+      "skill-20-herd-health-and-biosecurity-cfb846f5f1"
+    ]
+  },
+  {
+    "id": "skill-20-herd-health-and-biosecurity-cfb846f5f1",
+    "purpose": "20 herd health and biosecurity",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/004-20-herd-health-and-biosecurity.md",
+    "requires": [
+      "skill-19-reproduction-f82616dcf8"
+    ],
+    "links": [
+      "skill-21-livestock-genetics-2cac5c73ed"
+    ]
+  },
+  {
+    "id": "skill-21-livestock-genetics-2cac5c73ed",
+    "purpose": "21 livestock genetics",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/005-21-livestock-genetics.md",
+    "requires": [
+      "skill-20-herd-health-and-biosecurity-cfb846f5f1"
+    ],
+    "links": [
+      "skill-22-grazing-management-ba1e2fa3e2"
+    ]
+  },
+  {
+    "id": "skill-22-grazing-management-ba1e2fa3e2",
+    "purpose": "22 grazing management",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/006-22-grazing-management.md",
+    "requires": [
+      "skill-21-livestock-genetics-2cac5c73ed"
+    ],
+    "links": [
+      "skill-23-welfare-0c7c553b13"
+    ]
+  },
+  {
+    "id": "skill-23-welfare-0c7c553b13",
+    "purpose": "23 welfare",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/007-23-welfare.md",
+    "requires": [
+      "skill-22-grazing-management-ba1e2fa3e2"
+    ],
+    "links": []
+  }
+]

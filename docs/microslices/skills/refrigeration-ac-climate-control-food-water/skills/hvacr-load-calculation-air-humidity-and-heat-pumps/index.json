@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-7-load-calculation-aaf560940e",
+    "purpose": "7 load calculation",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/001-7-load-calculation.md",
+    "requires": [],
+    "links": [
+      "skill-8-air-distribution-9acdb984ec"
+    ]
+  },
+  {
+    "id": "skill-8-air-distribution-9acdb984ec",
+    "purpose": "8 air distribution",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/002-8-air-distribution.md",
+    "requires": [
+      "skill-7-load-calculation-aaf560940e"
+    ],
+    "links": [
+      "skill-9-humidity-control-358c45af5a"
+    ]
+  },
+  {
+    "id": "skill-9-humidity-control-358c45af5a",
+    "purpose": "9 humidity control",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/003-9-humidity-control.md",
+    "requires": [
+      "skill-8-air-distribution-9acdb984ec"
+    ],
+    "links": [
+      "skill-10-ventilation-and-indoor-air-quality-e621a7f43d"
+    ]
+  },
+  {
+    "id": "skill-10-ventilation-and-indoor-air-quality-e621a7f43d",
+    "purpose": "10 ventilation and indoor air quality",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/004-10-ventilation-and-indoor-air-quality.md",
+    "requires": [
+      "skill-9-humidity-control-358c45af5a"
+    ],
+    "links": [
+      "skill-11-heat-pumps-c81b366dd9"
+    ]
+  },
+  {
+    "id": "skill-11-heat-pumps-c81b366dd9",
+    "purpose": "11 heat pumps",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/005-11-heat-pumps.md",
+    "requires": [
+      "skill-10-ventilation-and-indoor-air-quality-e621a7f43d"
+    ],
+    "links": [
+      "skill-12-controls-49003061bf"
+    ]
+  },
+  {
+    "id": "skill-12-controls-49003061bf",
+    "purpose": "12 controls",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/006-12-controls.md",
+    "requires": [
+      "skill-11-heat-pumps-c81b366dd9"
+    ],
+    "links": [
+      "skill-13-building-envelope-c075bacae1"
+    ]
+  },
+  {
+    "id": "skill-13-building-envelope-c075bacae1",
+    "purpose": "13 building envelope",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/007-13-building-envelope.md",
+    "requires": [
+      "skill-12-controls-49003061bf"
+    ],
+    "links": []
+  }
+]

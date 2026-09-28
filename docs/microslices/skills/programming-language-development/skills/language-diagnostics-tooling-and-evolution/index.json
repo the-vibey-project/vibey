@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-diagnostics-2bcb23ad28",
+    "purpose": "10 diagnostics",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-diagnostics-tooling-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-diagnostics-tooling-and-evolution/001-10-diagnostics.md",
+    "requires": [],
+    "links": [
+      "skill-11-incremental-compilation-and-ide-support-617ae6487f"
+    ]
+  },
+  {
+    "id": "skill-11-incremental-compilation-and-ide-support-617ae6487f",
+    "purpose": "11 incremental compilation and ide support",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-diagnostics-tooling-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-diagnostics-tooling-and-evolution/002-11-incremental-compilation-and-ide-support.md",
+    "requires": [
+      "skill-10-diagnostics-2bcb23ad28"
+    ],
+    "links": [
+      "skill-12-testing-and-verification-e923e8e202"
+    ]
+  },
+  {
+    "id": "skill-12-testing-and-verification-e923e8e202",
+    "purpose": "12 testing and verification",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-diagnostics-tooling-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-diagnostics-tooling-and-evolution/003-12-testing-and-verification.md",
+    "requires": [
+      "skill-11-incremental-compilation-and-ide-support-617ae6487f"
+    ],
+    "links": [
+      "skill-13-standard-library-and-ecosystem-7936c14b56"
+    ]
+  },
+  {
+    "id": "skill-13-standard-library-and-ecosystem-7936c14b56",
+    "purpose": "13 standard library and ecosystem",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-diagnostics-tooling-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-diagnostics-tooling-and-evolution/004-13-standard-library-and-ecosystem.md",
+    "requires": [
+      "skill-12-testing-and-verification-e923e8e202"
+    ],
+    "links": [
+      "skill-14-language-evolution-5be9d4fc30"
+    ]
+  },
+  {
+    "id": "skill-14-language-evolution-5be9d4fc30",
+    "purpose": "14 language evolution",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-diagnostics-tooling-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-diagnostics-tooling-and-evolution/005-14-language-evolution.md",
+    "requires": [
+      "skill-13-standard-library-and-ecosystem-7936c14b56"
+    ],
+    "links": []
+  }
+]

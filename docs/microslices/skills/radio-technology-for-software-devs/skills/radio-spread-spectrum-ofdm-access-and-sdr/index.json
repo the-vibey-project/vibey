@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-10-spread-spectrum-bdef21050d",
+    "purpose": "10 spread spectrum",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/001-10-spread-spectrum.md",
+    "requires": [],
+    "links": [
+      "skill-11-ofdm-fbc6424340"
+    ]
+  },
+  {
+    "id": "skill-11-ofdm-fbc6424340",
+    "purpose": "11 ofdm",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/002-11-ofdm.md",
+    "requires": [
+      "skill-10-spread-spectrum-bdef21050d"
+    ],
+    "links": [
+      "skill-12-coding-and-retransmission-1bc572f0c9"
+    ]
+  },
+  {
+    "id": "skill-12-coding-and-retransmission-1bc572f0c9",
+    "purpose": "12 coding and retransmission",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/003-12-coding-and-retransmission.md",
+    "requires": [
+      "skill-11-ofdm-fbc6424340"
+    ],
+    "links": [
+      "skill-13-multiple-access-cff0c792f0"
+    ]
+  },
+  {
+    "id": "skill-13-multiple-access-cff0c792f0",
+    "purpose": "13 multiple access",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/004-13-multiple-access.md",
+    "requires": [
+      "skill-12-coding-and-retransmission-1bc572f0c9"
+    ],
+    "links": [
+      "skill-14-sdr-and-iq-sampling-6577dfeb0e"
+    ]
+  },
+  {
+    "id": "skill-14-sdr-and-iq-sampling-6577dfeb0e",
+    "purpose": "14 sdr and iq sampling",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/005-14-sdr-and-iq-sampling.md",
+    "requires": [
+      "skill-13-multiple-access-cff0c792f0"
+    ],
+    "links": [
+      "skill-15-sampling-and-dsp-essentials-c59f03228b"
+    ]
+  },
+  {
+    "id": "skill-15-sampling-and-dsp-essentials-c59f03228b",
+    "purpose": "15 sampling and dsp essentials",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/006-15-sampling-and-dsp-essentials.md",
+    "requires": [
+      "skill-14-sdr-and-iq-sampling-6577dfeb0e"
+    ],
+    "links": [
+      "skill-16-sdr-toolchain-9ce2b4f6ae"
+    ]
+  },
+  {
+    "id": "skill-16-sdr-toolchain-9ce2b4f6ae",
+    "purpose": "16 sdr toolchain",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/007-16-sdr-toolchain.md",
+    "requires": [
+      "skill-15-sampling-and-dsp-essentials-c59f03228b"
+    ],
+    "links": []
+  }
+]

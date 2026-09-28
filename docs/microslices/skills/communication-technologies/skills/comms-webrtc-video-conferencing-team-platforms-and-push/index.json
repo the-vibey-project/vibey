@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-19-webrtc-b2b3250114",
+    "purpose": "19 webrtc",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/001-19-webrtc.md",
+    "requires": [],
+    "links": [
+      "skill-20-video-conferencing-architecture-11aa124103"
+    ]
+  },
+  {
+    "id": "skill-20-video-conferencing-architecture-11aa124103",
+    "purpose": "20 video conferencing architecture",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/002-20-video-conferencing-architecture.md",
+    "requires": [
+      "skill-19-webrtc-b2b3250114"
+    ],
+    "links": [
+      "skill-21-team-platforms-bca5806717"
+    ]
+  },
+  {
+    "id": "skill-21-team-platforms-bca5806717",
+    "purpose": "21 team platforms",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/003-21-team-platforms.md",
+    "requires": [
+      "skill-20-video-conferencing-architecture-11aa124103"
+    ],
+    "links": [
+      "skill-22-push-and-notifications-5819ff9e11"
+    ]
+  },
+  {
+    "id": "skill-22-push-and-notifications-5819ff9e11",
+    "purpose": "22 push and notifications",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/004-22-push-and-notifications.md",
+    "requires": [
+      "skill-21-team-platforms-bca5806717"
+    ],
+    "links": []
+  }
+]

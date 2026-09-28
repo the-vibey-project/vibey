@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-11-the-measurement-problem-41645c64e7",
+    "purpose": "11 the measurement problem",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-measurement-problem-and-quantum-gravity/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-measurement-problem-and-quantum-gravity/001-11-the-measurement-problem.md",
+    "requires": [],
+    "links": [
+      "skill-12-why-qm-and-gr-don-t-fit-8752fd5ff8"
+    ]
+  },
+  {
+    "id": "skill-12-why-qm-and-gr-don-t-fit-8752fd5ff8",
+    "purpose": "12 why qm and gr don t fit",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-measurement-problem-and-quantum-gravity/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-measurement-problem-and-quantum-gravity/002-12-why-qm-and-gr-don-t-fit.md",
+    "requires": [
+      "skill-11-the-measurement-problem-41645c64e7"
+    ],
+    "links": []
+  }
+]

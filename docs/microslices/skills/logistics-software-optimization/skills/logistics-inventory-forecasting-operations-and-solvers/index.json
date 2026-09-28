@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-17-inventory-d3f15f7bcc",
+    "purpose": "17 inventory",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/001-17-inventory.md",
+    "requires": [],
+    "links": [
+      "skill-18-forecasting-b865482847"
+    ]
+  },
+  {
+    "id": "skill-18-forecasting-b865482847",
+    "purpose": "18 forecasting",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/002-18-forecasting.md",
+    "requires": [
+      "skill-17-inventory-d3f15f7bcc"
+    ],
+    "links": [
+      "skill-19-the-landscape-0cc4cb5c6a"
+    ]
+  },
+  {
+    "id": "skill-19-the-landscape-0cc4cb5c6a",
+    "purpose": "19 the landscape",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/003-19-the-landscape.md",
+    "requires": [
+      "skill-18-forecasting-b865482847"
+    ],
+    "links": [
+      "skill-20-warehouse-operations-0caaec109d"
+    ]
+  },
+  {
+    "id": "skill-20-warehouse-operations-0caaec109d",
+    "purpose": "20 warehouse operations",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/004-20-warehouse-operations.md",
+    "requires": [
+      "skill-19-the-landscape-0cc4cb5c6a"
+    ],
+    "links": [
+      "skill-21-last-mile-828124ef3f"
+    ]
+  },
+  {
+    "id": "skill-21-last-mile-828124ef3f",
+    "purpose": "21 last mile",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/005-21-last-mile.md",
+    "requires": [
+      "skill-20-warehouse-operations-0caaec109d"
+    ],
+    "links": [
+      "skill-22-data-9c3c95ab9b"
+    ]
+  },
+  {
+    "id": "skill-22-data-9c3c95ab9b",
+    "purpose": "22 data",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/006-22-data.md",
+    "requires": [
+      "skill-21-last-mile-828124ef3f"
+    ],
+    "links": [
+      "skill-23-dynamic-and-stochastic-605f48defd"
+    ]
+  },
+  {
+    "id": "skill-23-dynamic-and-stochastic-605f48defd",
+    "purpose": "23 dynamic and stochastic",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/007-23-dynamic-and-stochastic.md",
+    "requires": [
+      "skill-22-data-9c3c95ab9b"
+    ],
+    "links": [
+      "skill-24-solvers-and-tooling-4da5bc1f83"
+    ]
+  },
+  {
+    "id": "skill-24-solvers-and-tooling-4da5bc1f83",
+    "purpose": "24 solvers and tooling",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/008-24-solvers-and-tooling.md",
+    "requires": [
+      "skill-23-dynamic-and-stochastic-605f48defd"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-14-bureaucracy-and-public-administration-27686fe974",
+    "purpose": "14 bureaucracy and public administration",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/001-14-bureaucracy-and-public-administration.md",
+    "requires": [],
+    "links": [
+      "skill-15-parties-and-party-systems-a90e910e1c"
+    ]
+  },
+  {
+    "id": "skill-15-parties-and-party-systems-a90e910e1c",
+    "purpose": "15 parties and party systems",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/002-15-parties-and-party-systems.md",
+    "requires": [
+      "skill-14-bureaucracy-and-public-administration-27686fe974"
+    ],
+    "links": [
+      "skill-16-voter-behaviour-a48453636e"
+    ]
+  },
+  {
+    "id": "skill-16-voter-behaviour-a48453636e",
+    "purpose": "16 voter behaviour",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/003-16-voter-behaviour.md",
+    "requires": [
+      "skill-15-parties-and-party-systems-a90e910e1c"
+    ],
+    "links": [
+      "skill-17-public-opinion-and-measurement-a25347c0b0"
+    ]
+  },
+  {
+    "id": "skill-17-public-opinion-and-measurement-a25347c0b0",
+    "purpose": "17 public opinion and measurement",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/004-17-public-opinion-and-measurement.md",
+    "requires": [
+      "skill-16-voter-behaviour-a48453636e"
+    ],
+    "links": [
+      "skill-18-polarization-48c0cb462e"
+    ]
+  },
+  {
+    "id": "skill-18-polarization-48c0cb462e",
+    "purpose": "18 polarization",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/005-18-polarization.md",
+    "requires": [
+      "skill-17-public-opinion-and-measurement-a25347c0b0"
+    ],
+    "links": []
+  }
+]

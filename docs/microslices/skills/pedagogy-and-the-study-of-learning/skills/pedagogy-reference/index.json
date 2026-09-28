@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-25-what-s-live-verified-august-2026-98c6cfe088",
+    "purpose": "25 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/001-25-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-d0811fd022"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-d0811fd022",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-verified-august-2026-98c6cfe088"
+    ],
+    "links": [
+      "skill-27-numbers-370620b83c"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-370620b83c",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/003-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-d0811fd022"
+    ],
+    "links": [
+      "skill-28-books-and-sources-448b4d2734"
+    ]
+  },
+  {
+    "id": "skill-28-books-and-sources-448b4d2734",
+    "purpose": "28 books and sources",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/004-28-books-and-sources.md",
+    "requires": [
+      "skill-27-numbers-370620b83c"
+    ],
+    "links": [
+      "skill-29-quick-reference-e04fe858c1"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-e04fe858c1",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/005-29-quick-reference.md",
+    "requires": [
+      "skill-28-books-and-sources-448b4d2734"
+    ],
+    "links": [
+      "skill-30-method-0491e0cc90"
+    ]
+  },
+  {
+    "id": "skill-30-method-0491e0cc90",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/006-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-e04fe858c1"
+    ],
+    "links": []
+  }
+]

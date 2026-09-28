@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-real-time-and-safety-critical-engineering-7fd6545d56",
+    "purpose": "11 real time and safety critical engineering",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-safety-standards-and-deployment/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-safety-standards-and-deployment/001-11-real-time-and-safety-critical-engineering.md",
+    "requires": [],
+    "links": [
+      "skill-12-testing-debugging-and-deployment-070457cd15"
+    ]
+  },
+  {
+    "id": "skill-12-testing-debugging-and-deployment-070457cd15",
+    "purpose": "12 testing debugging and deployment",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-safety-standards-and-deployment/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-safety-standards-and-deployment/002-12-testing-debugging-and-deployment.md",
+    "requires": [
+      "skill-11-real-time-and-safety-critical-engineering-7fd6545d56"
+    ],
+    "links": [
+      "skill-13-functional-safety-and-standards-ca9acfbfe8"
+    ]
+  },
+  {
+    "id": "skill-13-functional-safety-and-standards-ca9acfbfe8",
+    "purpose": "13 functional safety and standards",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-safety-standards-and-deployment/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-safety-standards-and-deployment/003-13-functional-safety-and-standards.md",
+    "requires": [
+      "skill-12-testing-debugging-and-deployment-070457cd15"
+    ],
+    "links": [
+      "skill-14-aerospace-flight-software-adc519bb93"
+    ]
+  },
+  {
+    "id": "skill-14-aerospace-flight-software-adc519bb93",
+    "purpose": "14 aerospace flight software",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-safety-standards-and-deployment/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-safety-standards-and-deployment/004-14-aerospace-flight-software.md",
+    "requires": [
+      "skill-13-functional-safety-and-standards-ca9acfbfe8"
+    ],
+    "links": []
+  }
+]

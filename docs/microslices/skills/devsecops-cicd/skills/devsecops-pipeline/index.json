@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-the-full-6-job-github-actions-pipeline-b6e5ccb08a",
+    "purpose": "the full 6 job github actions pipeline",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/001-the-full-6-job-github-actions-pipeline.md",
+    "requires": [],
+    "links": [
+      "skill-job-by-job-breakdown-a1bcf6b459"
+    ]
+  },
+  {
+    "id": "skill-job-by-job-breakdown-a1bcf6b459",
+    "purpose": "job by job breakdown",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/002-job-by-job-breakdown.md",
+    "requires": [
+      "skill-the-full-6-job-github-actions-pipeline-b6e5ccb08a"
+    ],
+    "links": [
+      "skill-semgrep-posttooluse-hook-for-real-time-scanning-f1f93ddada"
+    ]
+  },
+  {
+    "id": "skill-semgrep-posttooluse-hook-for-real-time-scanning-f1f93ddada",
+    "purpose": "semgrep posttooluse hook for real time scanning",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/003-semgrep-posttooluse-hook-for-real-time-scanning.md",
+    "requires": [
+      "skill-job-by-job-breakdown-a1bcf6b459"
+    ],
+    "links": [
+      "skill-quality-gates-and-exception-process-bf37182081"
+    ]
+  },
+  {
+    "id": "skill-quality-gates-and-exception-process-bf37182081",
+    "purpose": "quality gates and exception process",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/004-quality-gates-and-exception-process.md",
+    "requires": [
+      "skill-semgrep-posttooluse-hook-for-real-time-scanning-f1f93ddada"
+    ],
+    "links": [
+      "skill-dast-owasp-zap-for-deployed-environments-367c40e4c3"
+    ]
+  },
+  {
+    "id": "skill-dast-owasp-zap-for-deployed-environments-367c40e4c3",
+    "purpose": "dast owasp zap for deployed environments",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/005-dast-owasp-zap-for-deployed-environments.md",
+    "requires": [
+      "skill-quality-gates-and-exception-process-bf37182081"
+    ],
+    "links": [
+      "skill-secrets-management-no-hardcoded-credentials-121c3aa354"
+    ]
+  },
+  {
+    "id": "skill-secrets-management-no-hardcoded-credentials-121c3aa354",
+    "purpose": "secrets management no hardcoded credentials",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/006-secrets-management-no-hardcoded-credentials.md",
+    "requires": [
+      "skill-dast-owasp-zap-for-deployed-environments-367c40e4c3"
+    ],
+    "links": [
+      "skill-branch-protection-rules-a96e1c9d00"
+    ]
+  },
+  {
+    "id": "skill-branch-protection-rules-a96e1c9d00",
+    "purpose": "branch protection rules",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/007-branch-protection-rules.md",
+    "requires": [
+      "skill-secrets-management-no-hardcoded-credentials-121c3aa354"
+    ],
+    "links": [
+      "skill-reusable-security-workflow-pattern-66034e170e"
+    ]
+  },
+  {
+    "id": "skill-reusable-security-workflow-pattern-66034e170e",
+    "purpose": "reusable security workflow pattern",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/008-reusable-security-workflow-pattern.md",
+    "requires": [
+      "skill-branch-protection-rules-a96e1c9d00"
+    ],
+    "links": [
+      "skill-security-policy-as-code-with-opa-rego-d02d9ec443"
+    ]
+  },
+  {
+    "id": "skill-security-policy-as-code-with-opa-rego-d02d9ec443",
+    "purpose": "security policy as code with opa rego",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/009-security-policy-as-code-with-opa-rego.md",
+    "requires": [
+      "skill-reusable-security-workflow-pattern-66034e170e"
+    ],
+    "links": [
+      "skill-dependency-management-dependabot-snyk-renovate-7a4b1f604f"
+    ]
+  },
+  {
+    "id": "skill-dependency-management-dependabot-snyk-renovate-7a4b1f604f",
+    "purpose": "dependency management dependabot snyk renovate",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/010-dependency-management-dependabot-snyk-renovate.md",
+    "requires": [
+      "skill-security-policy-as-code-with-opa-rego-d02d9ec443"
+    ],
+    "links": [
+      "skill-pipeline-security-anti-patterns-to-avoid-f4e59c21dc"
+    ]
+  },
+  {
+    "id": "skill-pipeline-security-anti-patterns-to-avoid-f4e59c21dc",
+    "purpose": "pipeline security anti patterns to avoid",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline/011-pipeline-security-anti-patterns-to-avoid.md",
+    "requires": [
+      "skill-dependency-management-dependabot-snyk-renovate-7a4b1f604f"
+    ],
+    "links": []
+  }
+]

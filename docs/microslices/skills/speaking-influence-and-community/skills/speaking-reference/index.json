@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-27-what-s-live-checked-august-2026-c2e2784d62",
+    "purpose": "27 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-reference/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-reference/001-27-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-28-misconceptions-9d137623fc"
+    ]
+  },
+  {
+    "id": "skill-28-misconceptions-9d137623fc",
+    "purpose": "28 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-reference/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-reference/002-28-misconceptions.md",
+    "requires": [
+      "skill-27-what-s-live-checked-august-2026-c2e2784d62"
+    ],
+    "links": [
+      "skill-29-numbers-and-claims-c3ab103fb4"
+    ]
+  },
+  {
+    "id": "skill-29-numbers-and-claims-c3ab103fb4",
+    "purpose": "29 numbers and claims",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-reference/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-reference/003-29-numbers-and-claims.md",
+    "requires": [
+      "skill-28-misconceptions-9d137623fc"
+    ],
+    "links": [
+      "skill-30-sources-3812fbf3de"
+    ]
+  },
+  {
+    "id": "skill-30-sources-3812fbf3de",
+    "purpose": "30 sources",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-reference/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-reference/004-30-sources.md",
+    "requires": [
+      "skill-29-numbers-and-claims-c3ab103fb4"
+    ],
+    "links": [
+      "skill-31-quick-reference-76095e8ac7"
+    ]
+  },
+  {
+    "id": "skill-31-quick-reference-76095e8ac7",
+    "purpose": "31 quick reference",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-reference/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-reference/005-31-quick-reference.md",
+    "requires": [
+      "skill-30-sources-3812fbf3de"
+    ],
+    "links": [
+      "skill-32-method-409eb51d9e"
+    ]
+  },
+  {
+    "id": "skill-32-method-409eb51d9e",
+    "purpose": "32 method",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-reference/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-reference/006-32-method.md",
+    "requires": [
+      "skill-31-quick-reference-76095e8ac7"
+    ],
+    "links": []
+  }
+]

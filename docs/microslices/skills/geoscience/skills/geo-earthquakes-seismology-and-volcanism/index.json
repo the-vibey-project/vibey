@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-5-earthquakes-and-seismology-cb36c1659e",
+    "purpose": "5 earthquakes and seismology",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earthquakes-seismology-and-volcanism/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earthquakes-seismology-and-volcanism/001-5-earthquakes-and-seismology.md",
+    "requires": [],
+    "links": [
+      "skill-6-volcanism-32f2ab7080"
+    ]
+  },
+  {
+    "id": "skill-6-volcanism-32f2ab7080",
+    "purpose": "6 volcanism",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earthquakes-seismology-and-volcanism/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earthquakes-seismology-and-volcanism/002-6-volcanism.md",
+    "requires": [
+      "skill-5-earthquakes-and-seismology-cb36c1659e"
+    ],
+    "links": []
+  }
+]

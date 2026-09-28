@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-qsar-and-property-prediction-bb75f51752",
+    "purpose": "13 qsar and property prediction",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/001-13-qsar-and-property-prediction.md",
+    "requires": [],
+    "links": [
+      "skill-14-admet-prediction-ac76d820b0"
+    ]
+  },
+  {
+    "id": "skill-14-admet-prediction-ac76d820b0",
+    "purpose": "14 admet prediction",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/002-14-admet-prediction.md",
+    "requires": [
+      "skill-13-qsar-and-property-prediction-bb75f51752"
+    ],
+    "links": [
+      "skill-15-generative-models-52158818bf"
+    ]
+  },
+  {
+    "id": "skill-15-generative-models-52158818bf",
+    "purpose": "15 generative models",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/003-15-generative-models.md",
+    "requires": [
+      "skill-14-admet-prediction-ac76d820b0"
+    ],
+    "links": [
+      "skill-16-active-learning-and-the-dmta-loop-fe0fe4522c"
+    ]
+  },
+  {
+    "id": "skill-16-active-learning-and-the-dmta-loop-fe0fe4522c",
+    "purpose": "16 active learning and the dmta loop",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/004-16-active-learning-and-the-dmta-loop.md",
+    "requires": [
+      "skill-15-generative-models-52158818bf"
+    ],
+    "links": [
+      "skill-17-benchmarks-91610af8a3"
+    ]
+  },
+  {
+    "id": "skill-17-benchmarks-91610af8a3",
+    "purpose": "17 benchmarks",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/005-17-benchmarks.md",
+    "requires": [
+      "skill-16-active-learning-and-the-dmta-loop-fe0fe4522c"
+    ],
+    "links": [
+      "skill-18-validation-that-means-something-690a6577ef"
+    ]
+  },
+  {
+    "id": "skill-18-validation-that-means-something-690a6577ef",
+    "purpose": "18 validation that means something",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/006-18-validation-that-means-something.md",
+    "requires": [
+      "skill-17-benchmarks-91610af8a3"
+    ],
+    "links": []
+  }
+]

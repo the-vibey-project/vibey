@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-122967ed57",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-reference/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-9215fffa11"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-9215fffa11",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-reference/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-122967ed57"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-dd7aa6a206"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-dd7aa6a206",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-reference/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-9215fffa11"
+    ],
+    "links": [
+      "skill-18-the-canon-d7e87c995c"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-d7e87c995c",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-reference/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-dd7aa6a206"
+    ],
+    "links": [
+      "skill-19-quick-reference-0c36723fd7"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-0c36723fd7",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-reference/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-d7e87c995c"
+    ],
+    "links": [
+      "skill-20-sources-and-method-dd063e8310"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-dd063e8310",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-reference/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-0c36723fd7"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-17-misconceptions-e2971111de",
+    "purpose": "17 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-reference/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-reference/001-17-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-18-numbers-57b9afd62a"
+    ]
+  },
+  {
+    "id": "skill-18-numbers-57b9afd62a",
+    "purpose": "18 numbers",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-reference/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-reference/002-18-numbers.md",
+    "requires": [
+      "skill-17-misconceptions-e2971111de"
+    ],
+    "links": [
+      "skill-19-books-and-quick-reference-fd908333d5"
+    ]
+  },
+  {
+    "id": "skill-19-books-and-quick-reference-fd908333d5",
+    "purpose": "19 books and quick reference",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-reference/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-reference/003-19-books-and-quick-reference.md",
+    "requires": [
+      "skill-18-numbers-57b9afd62a"
+    ],
+    "links": [
+      "skill-20-method-355a5c5597"
+    ]
+  },
+  {
+    "id": "skill-20-method-355a5c5597",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-reference/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-reference/004-20-method.md",
+    "requires": [
+      "skill-19-books-and-quick-reference-fd908333d5"
+    ],
+    "links": []
+  }
+]

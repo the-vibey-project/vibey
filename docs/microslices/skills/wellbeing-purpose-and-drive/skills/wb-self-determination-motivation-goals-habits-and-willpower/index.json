@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-11-self-determination-theory-ccfce31a7a",
+    "purpose": "11 self determination theory",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/001-11-self-determination-theory.md",
+    "requires": [],
+    "links": [
+      "skill-12-intrinsic-motivation-and-rewards-bf5ab9aad3"
+    ]
+  },
+  {
+    "id": "skill-12-intrinsic-motivation-and-rewards-bf5ab9aad3",
+    "purpose": "12 intrinsic motivation and rewards",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/002-12-intrinsic-motivation-and-rewards.md",
+    "requires": [
+      "skill-11-self-determination-theory-ccfce31a7a"
+    ],
+    "links": [
+      "skill-13-goals-ec87bd181f"
+    ]
+  },
+  {
+    "id": "skill-13-goals-ec87bd181f",
+    "purpose": "13 goals",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/003-13-goals.md",
+    "requires": [
+      "skill-12-intrinsic-motivation-and-rewards-bf5ab9aad3"
+    ],
+    "links": [
+      "skill-14-habits-and-behaviour-change-77eb6fe90f"
+    ]
+  },
+  {
+    "id": "skill-14-habits-and-behaviour-change-77eb6fe90f",
+    "purpose": "14 habits and behaviour change",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/004-14-habits-and-behaviour-change.md",
+    "requires": [
+      "skill-13-goals-ec87bd181f"
+    ],
+    "links": [
+      "skill-15-willpower-8e15b0c162"
+    ]
+  },
+  {
+    "id": "skill-15-willpower-8e15b0c162",
+    "purpose": "15 willpower",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/005-15-willpower.md",
+    "requires": [
+      "skill-14-habits-and-behaviour-change-77eb6fe90f"
+    ],
+    "links": []
+  }
+]

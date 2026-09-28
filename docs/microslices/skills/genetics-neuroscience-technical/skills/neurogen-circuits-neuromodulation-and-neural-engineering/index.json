@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-circuit-architectures-1482088851",
+    "purpose": "10 circuit architectures",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/001-10-circuit-architectures.md",
+    "requires": [],
+    "links": [
+      "skill-11-neuromodulation-eb61e40061"
+    ]
+  },
+  {
+    "id": "skill-11-neuromodulation-eb61e40061",
+    "purpose": "11 neuromodulation",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/002-11-neuromodulation.md",
+    "requires": [
+      "skill-10-circuit-architectures-1482088851"
+    ],
+    "links": [
+      "skill-12-development-and-glia-562461fb01"
+    ]
+  },
+  {
+    "id": "skill-12-development-and-glia-562461fb01",
+    "purpose": "12 development and glia",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/003-12-development-and-glia.md",
+    "requires": [
+      "skill-11-neuromodulation-eb61e40061"
+    ],
+    "links": [
+      "skill-13-neural-engineering-methods-d0864610d3"
+    ]
+  },
+  {
+    "id": "skill-13-neural-engineering-methods-d0864610d3",
+    "purpose": "13 neural engineering methods",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/004-13-neural-engineering-methods.md",
+    "requires": [
+      "skill-12-development-and-glia-562461fb01"
+    ],
+    "links": [
+      "skill-14-stimulation-and-intervention-d3dcdd0419"
+    ]
+  },
+  {
+    "id": "skill-14-stimulation-and-intervention-d3dcdd0419",
+    "purpose": "14 stimulation and intervention",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/005-14-stimulation-and-intervention.md",
+    "requires": [
+      "skill-13-neural-engineering-methods-d0864610d3"
+    ],
+    "links": []
+  }
+]

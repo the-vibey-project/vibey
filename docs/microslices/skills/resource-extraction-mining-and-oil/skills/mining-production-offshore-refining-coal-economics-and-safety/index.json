@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-19-production-and-decline-1d0c3f0afb",
+    "purpose": "19 production and decline",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/001-19-production-and-decline.md",
+    "requires": [],
+    "links": [
+      "skill-20-offshore-1adb1c53f1"
+    ]
+  },
+  {
+    "id": "skill-20-offshore-1adb1c53f1",
+    "purpose": "20 offshore",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/002-20-offshore.md",
+    "requires": [
+      "skill-19-production-and-decline-1d0c3f0afb"
+    ],
+    "links": [
+      "skill-21-refining-and-processing-3be5512d18"
+    ]
+  },
+  {
+    "id": "skill-21-refining-and-processing-3be5512d18",
+    "purpose": "21 refining and processing",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/003-21-refining-and-processing.md",
+    "requires": [
+      "skill-20-offshore-1adb1c53f1"
+    ],
+    "links": [
+      "skill-22-coal-c92dc92a49"
+    ]
+  },
+  {
+    "id": "skill-22-coal-c92dc92a49",
+    "purpose": "22 coal",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/004-22-coal.md",
+    "requires": [
+      "skill-21-refining-and-processing-3be5512d18"
+    ],
+    "links": [
+      "skill-23-economics-13c744fdb6"
+    ]
+  },
+  {
+    "id": "skill-23-economics-13c744fdb6",
+    "purpose": "23 economics",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/005-23-economics.md",
+    "requires": [
+      "skill-22-coal-c92dc92a49"
+    ],
+    "links": [
+      "skill-24-safety-1a95b52650"
+    ]
+  },
+  {
+    "id": "skill-24-safety-1a95b52650",
+    "purpose": "24 safety",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/006-24-safety.md",
+    "requires": [
+      "skill-23-economics-13c744fdb6"
+    ],
+    "links": [
+      "skill-25-closure-and-legacy-11dd12b445"
+    ]
+  },
+  {
+    "id": "skill-25-closure-and-legacy-11dd12b445",
+    "purpose": "25 closure and legacy",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/007-25-closure-and-legacy.md",
+    "requires": [
+      "skill-24-safety-1a95b52650"
+    ],
+    "links": [
+      "skill-26-social-licence-and-artisanal-mining-b4433fef74"
+    ]
+  },
+  {
+    "id": "skill-26-social-licence-and-artisanal-mining-b4433fef74",
+    "purpose": "26 social licence and artisanal mining",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/008-26-social-licence-and-artisanal-mining.md",
+    "requires": [
+      "skill-25-closure-and-legacy-11dd12b445"
+    ],
+    "links": []
+  }
+]

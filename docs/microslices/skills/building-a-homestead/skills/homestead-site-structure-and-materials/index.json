@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-part-i-framing-what-a-building-actually-is-a07f1cce7e",
+    "purpose": "part i framing what a building actually is",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-site-structure-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-site-structure-and-materials/001-part-i-framing-what-a-building-actually-is.md",
+    "requires": [],
+    "links": [
+      "skill-1-site-and-ground-investigation-32bafd6162"
+    ]
+  },
+  {
+    "id": "skill-1-site-and-ground-investigation-32bafd6162",
+    "purpose": "1 site and ground investigation",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-site-structure-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-site-structure-and-materials/002-1-site-and-ground-investigation.md",
+    "requires": [
+      "skill-part-i-framing-what-a-building-actually-is-a07f1cce7e"
+    ],
+    "links": [
+      "skill-2-orientation-and-solar-design-aed6bf3bc2"
+    ]
+  },
+  {
+    "id": "skill-2-orientation-and-solar-design-aed6bf3bc2",
+    "purpose": "2 orientation and solar design",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-site-structure-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-site-structure-and-materials/003-2-orientation-and-solar-design.md",
+    "requires": [
+      "skill-1-site-and-ground-investigation-32bafd6162"
+    ],
+    "links": [
+      "skill-3-structural-systems-and-material-selection-a9d3b32f2f"
+    ]
+  },
+  {
+    "id": "skill-3-structural-systems-and-material-selection-a9d3b32f2f",
+    "purpose": "3 structural systems and material selection",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-site-structure-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-site-structure-and-materials/004-3-structural-systems-and-material-selection.md",
+    "requires": [
+      "skill-2-orientation-and-solar-design-aed6bf3bc2"
+    ],
+    "links": [
+      "skill-before-you-commit-to-a-design-8b4cdd6c4c"
+    ]
+  },
+  {
+    "id": "skill-before-you-commit-to-a-design-8b4cdd6c4c",
+    "purpose": "before you commit to a design",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-site-structure-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-site-structure-and-materials/005-before-you-commit-to-a-design.md",
+    "requires": [
+      "skill-3-structural-systems-and-material-selection-a9d3b32f2f"
+    ],
+    "links": []
+  }
+]

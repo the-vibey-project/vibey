@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-classify-before-answering-34aa1abfb9",
+    "purpose": "0 routing classify before answering",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-macos-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-macos-platform/001-0-routing-classify-before-answering.md",
+    "requires": [],
+    "links": [
+      "skill-1-macos-platform-architecture-720e7ce771"
+    ]
+  },
+  {
+    "id": "skill-1-macos-platform-architecture-720e7ce771",
+    "purpose": "1 macos platform architecture",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-macos-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-macos-platform/002-1-macos-platform-architecture.md",
+    "requires": [
+      "skill-0-routing-classify-before-answering-34aa1abfb9"
+    ],
+    "links": [
+      "skill-2-macos-ui-swiftui-and-appkit-419098117f"
+    ]
+  },
+  {
+    "id": "skill-2-macos-ui-swiftui-and-appkit-419098117f",
+    "purpose": "2 macos ui swiftui and appkit",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-macos-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-macos-platform/003-2-macos-ui-swiftui-and-appkit.md",
+    "requires": [
+      "skill-1-macos-platform-architecture-720e7ce771"
+    ],
+    "links": [
+      "skill-3-swift-concurrency-and-persistence-8771448e9d"
+    ]
+  },
+  {
+    "id": "skill-3-swift-concurrency-and-persistence-8771448e9d",
+    "purpose": "3 swift concurrency and persistence",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-macos-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-macos-platform/004-3-swift-concurrency-and-persistence.md",
+    "requires": [
+      "skill-2-macos-ui-swiftui-and-appkit-419098117f"
+    ],
+    "links": []
+  }
+]

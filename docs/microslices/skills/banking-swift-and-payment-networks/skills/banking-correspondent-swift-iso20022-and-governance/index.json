@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-6-correspondent-banking-40b7e2cf3d",
+    "purpose": "6 correspondent banking",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/001-6-correspondent-banking.md",
+    "requires": [],
+    "links": [
+      "skill-7-what-swift-actually-is-705edb21f4"
+    ]
+  },
+  {
+    "id": "skill-7-what-swift-actually-is-705edb21f4",
+    "purpose": "7 what swift actually is",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/002-7-what-swift-actually-is.md",
+    "requires": [
+      "skill-6-correspondent-banking-40b7e2cf3d"
+    ],
+    "links": [
+      "skill-8-message-formats-mt-to-iso-20022-2d848dc91f"
+    ]
+  },
+  {
+    "id": "skill-8-message-formats-mt-to-iso-20022-2d848dc91f",
+    "purpose": "8 message formats mt to iso 20022",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/003-8-message-formats-mt-to-iso-20022.md",
+    "requires": [
+      "skill-7-what-swift-actually-is-705edb21f4"
+    ],
+    "links": [
+      "skill-9-gpi-and-tracking-6899cfdf15"
+    ]
+  },
+  {
+    "id": "skill-9-gpi-and-tracking-6899cfdf15",
+    "purpose": "9 gpi and tracking",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/004-9-gpi-and-tracking.md",
+    "requires": [
+      "skill-8-message-formats-mt-to-iso-20022-2d848dc91f"
+    ],
+    "links": [
+      "skill-10-governance-sanctions-and-geopolitics-b188f7d6f9"
+    ]
+  },
+  {
+    "id": "skill-10-governance-sanctions-and-geopolitics-b188f7d6f9",
+    "purpose": "10 governance sanctions and geopolitics",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/005-10-governance-sanctions-and-geopolitics.md",
+    "requires": [
+      "skill-9-gpi-and-tracking-6899cfdf15"
+    ],
+    "links": [
+      "skill-11-alternatives-and-parallel-systems-7617cf48dc"
+    ]
+  },
+  {
+    "id": "skill-11-alternatives-and-parallel-systems-7617cf48dc",
+    "purpose": "11 alternatives and parallel systems",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/006-11-alternatives-and-parallel-systems.md",
+    "requires": [
+      "skill-10-governance-sanctions-and-geopolitics-b188f7d6f9"
+    ],
+    "links": []
+  }
+]

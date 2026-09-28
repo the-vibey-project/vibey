@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-thermoregulation-and-shelter-8850483816",
+    "purpose": "4 thermoregulation and shelter",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-shelter-water-fire-and-food/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-shelter-water-fire-and-food/001-4-thermoregulation-and-shelter.md",
+    "requires": [],
+    "links": [
+      "skill-5-water-defc602a4e"
+    ]
+  },
+  {
+    "id": "skill-5-water-defc602a4e",
+    "purpose": "5 water",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-shelter-water-fire-and-food/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-shelter-water-fire-and-food/002-5-water.md",
+    "requires": [
+      "skill-4-thermoregulation-and-shelter-8850483816"
+    ],
+    "links": [
+      "skill-6-fire-1cf6243b46"
+    ]
+  },
+  {
+    "id": "skill-6-fire-1cf6243b46",
+    "purpose": "6 fire",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-shelter-water-fire-and-food/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-shelter-water-fire-and-food/003-6-fire.md",
+    "requires": [
+      "skill-5-water-defc602a4e"
+    ],
+    "links": [
+      "skill-7-food-and-why-it-s-last-bebc08fc48"
+    ]
+  },
+  {
+    "id": "skill-7-food-and-why-it-s-last-bebc08fc48",
+    "purpose": "7 food and why it s last",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-shelter-water-fire-and-food/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-shelter-water-fire-and-food/004-7-food-and-why-it-s-last.md",
+    "requires": [
+      "skill-6-fire-1cf6243b46"
+    ],
+    "links": []
+  }
+]

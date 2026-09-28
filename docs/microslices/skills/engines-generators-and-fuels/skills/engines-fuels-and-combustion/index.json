@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-15-fuel-categories-aac303d5f4",
+    "purpose": "15 fuel categories",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-fuels-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-fuels-and-combustion/001-15-fuel-categories.md",
+    "requires": [],
+    "links": [
+      "skill-16-the-fuel-comparison-table-1e7ce1d531"
+    ]
+  },
+  {
+    "id": "skill-16-the-fuel-comparison-table-1e7ce1d531",
+    "purpose": "16 the fuel comparison table",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-fuels-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-fuels-and-combustion/002-16-the-fuel-comparison-table.md",
+    "requires": [
+      "skill-15-fuel-categories-aac303d5f4"
+    ],
+    "links": [
+      "skill-17-combustion-chemistry-9f8285b0b5"
+    ]
+  },
+  {
+    "id": "skill-17-combustion-chemistry-9f8285b0b5",
+    "purpose": "17 combustion chemistry",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-fuels-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-fuels-and-combustion/003-17-combustion-chemistry.md",
+    "requires": [
+      "skill-16-the-fuel-comparison-table-1e7ce1d531"
+    ],
+    "links": []
+  }
+]

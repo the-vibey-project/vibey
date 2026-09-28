@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-12-documents-and-entry-823e329a7d",
+    "purpose": "12 documents and entry",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/001-12-documents-and-entry.md",
+    "requires": [],
+    "links": [
+      "skill-13-travel-insurance-7c32995157"
+    ]
+  },
+  {
+    "id": "skill-13-travel-insurance-7c32995157",
+    "purpose": "13 travel insurance",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/002-13-travel-insurance.md",
+    "requires": [
+      "skill-12-documents-and-entry-823e329a7d"
+    ],
+    "links": [
+      "skill-14-health-3a1b73745a"
+    ]
+  },
+  {
+    "id": "skill-14-health-3a1b73745a",
+    "purpose": "14 health",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/003-14-health.md",
+    "requires": [
+      "skill-13-travel-insurance-7c32995157"
+    ],
+    "links": [
+      "skill-15-safety-in-proportion-af6503fe80"
+    ]
+  },
+  {
+    "id": "skill-15-safety-in-proportion-af6503fe80",
+    "purpose": "15 safety in proportion",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/004-15-safety-in-proportion.md",
+    "requires": [
+      "skill-14-health-3a1b73745a"
+    ],
+    "links": [
+      "skill-16-money-abroad-bdfc6dd440"
+    ]
+  },
+  {
+    "id": "skill-16-money-abroad-bdfc6dd440",
+    "purpose": "16 money abroad",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/005-16-money-abroad.md",
+    "requires": [
+      "skill-15-safety-in-proportion-af6503fe80"
+    ],
+    "links": []
+  }
+]

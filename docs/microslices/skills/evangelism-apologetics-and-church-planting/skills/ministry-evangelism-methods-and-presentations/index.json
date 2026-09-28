@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-3-methods-and-approaches-compared-5783d04a72",
+    "purpose": "3 methods and approaches compared",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations/001-3-methods-and-approaches-compared.md",
+    "requires": [],
+    "links": [
+      "skill-4-gospel-presentations-5792bb072c"
+    ]
+  },
+  {
+    "id": "skill-4-gospel-presentations-5792bb072c",
+    "purpose": "4 gospel presentations",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations/002-4-gospel-presentations.md",
+    "requires": [
+      "skill-3-methods-and-approaches-compared-5783d04a72"
+    ],
+    "links": [
+      "skill-choosing-in-practice-f3a90585a0"
+    ]
+  },
+  {
+    "id": "skill-choosing-in-practice-f3a90585a0",
+    "purpose": "choosing in practice",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations/003-choosing-in-practice.md",
+    "requires": [
+      "skill-4-gospel-presentations-5792bb072c"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-18-misconceptions-f662ad6a82",
+    "purpose": "18 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-reference/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-reference/001-18-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-19-numbers-84858c4e25"
+    ]
+  },
+  {
+    "id": "skill-19-numbers-84858c4e25",
+    "purpose": "19 numbers",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-reference/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-reference/002-19-numbers.md",
+    "requires": [
+      "skill-18-misconceptions-f662ad6a82"
+    ],
+    "links": [
+      "skill-20-books-2946a03220"
+    ]
+  },
+  {
+    "id": "skill-20-books-2946a03220",
+    "purpose": "20 books",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-reference/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-reference/003-20-books.md",
+    "requires": [
+      "skill-19-numbers-84858c4e25"
+    ],
+    "links": [
+      "skill-21-quick-reference-b72811d616"
+    ]
+  },
+  {
+    "id": "skill-21-quick-reference-b72811d616",
+    "purpose": "21 quick reference",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-reference/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-reference/004-21-quick-reference.md",
+    "requires": [
+      "skill-20-books-2946a03220"
+    ],
+    "links": [
+      "skill-22-method-0c1d23b8fa"
+    ]
+  },
+  {
+    "id": "skill-22-method-0c1d23b8fa",
+    "purpose": "22 method",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-reference/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-reference/005-22-method.md",
+    "requires": [
+      "skill-21-quick-reference-b72811d616"
+    ],
+    "links": []
+  }
+]

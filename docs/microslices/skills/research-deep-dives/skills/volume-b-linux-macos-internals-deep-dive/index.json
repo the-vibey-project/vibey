@@ -1,0 +1,214 @@
+[
+  {
+    "id": "skill-scope-2d3e18b68f",
+    "purpose": "scope",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/001-scope.md",
+    "requires": [],
+    "links": [
+      "skill-1-boot-and-initialization-6e057344a9"
+    ]
+  },
+  {
+    "id": "skill-1-boot-and-initialization-6e057344a9",
+    "purpose": "1 boot and initialization",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/002-1-boot-and-initialization.md",
+    "requires": [
+      "skill-scope-2d3e18b68f"
+    ],
+    "links": [
+      "skill-2-linux-kernel-e506b9d569"
+    ]
+  },
+  {
+    "id": "skill-2-linux-kernel-e506b9d569",
+    "purpose": "2 linux kernel",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/003-2-linux-kernel.md",
+    "requires": [
+      "skill-1-boot-and-initialization-6e057344a9"
+    ],
+    "links": [
+      "skill-3-processes-services-and-ipc-e1d6858daf"
+    ]
+  },
+  {
+    "id": "skill-3-processes-services-and-ipc-e1d6858daf",
+    "purpose": "3 processes services and ipc",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/004-3-processes-services-and-ipc.md",
+    "requires": [
+      "skill-2-linux-kernel-e506b9d569"
+    ],
+    "links": [
+      "skill-4-networking-and-security-d52cd9dfc8"
+    ]
+  },
+  {
+    "id": "skill-4-networking-and-security-d52cd9dfc8",
+    "purpose": "4 networking and security",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/005-4-networking-and-security.md",
+    "requires": [
+      "skill-3-processes-services-and-ipc-e1d6858daf"
+    ],
+    "links": [
+      "skill-5-ubuntu-29ae4479f8"
+    ]
+  },
+  {
+    "id": "skill-5-ubuntu-29ae4479f8",
+    "purpose": "5 ubuntu",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/006-5-ubuntu.md",
+    "requires": [
+      "skill-4-networking-and-security-d52cd9dfc8"
+    ],
+    "links": [
+      "skill-6-fedora-3c2d3cbb02"
+    ]
+  },
+  {
+    "id": "skill-6-fedora-3c2d3cbb02",
+    "purpose": "6 fedora",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/007-6-fedora.md",
+    "requires": [
+      "skill-5-ubuntu-29ae4479f8"
+    ],
+    "links": [
+      "skill-7-arch-linux-a2ca2ef159"
+    ]
+  },
+  {
+    "id": "skill-7-arch-linux-a2ca2ef159",
+    "purpose": "7 arch linux",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/008-7-arch-linux.md",
+    "requires": [
+      "skill-6-fedora-3c2d3cbb02"
+    ],
+    "links": [
+      "skill-8-languages-and-toolchains-899c26e659"
+    ]
+  },
+  {
+    "id": "skill-8-languages-and-toolchains-899c26e659",
+    "purpose": "8 languages and toolchains",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/009-8-languages-and-toolchains.md",
+    "requires": [
+      "skill-7-arch-linux-a2ca2ef159"
+    ],
+    "links": [
+      "skill-9-testing-and-debugging-b5348bd2c8"
+    ]
+  },
+  {
+    "id": "skill-9-testing-and-debugging-b5348bd2c8",
+    "purpose": "9 testing and debugging",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/010-9-testing-and-debugging.md",
+    "requires": [
+      "skill-8-languages-and-toolchains-899c26e659"
+    ],
+    "links": [
+      "skill-10-macos-architecture-f5c0d0844a"
+    ]
+  },
+  {
+    "id": "skill-10-macos-architecture-f5c0d0844a",
+    "purpose": "10 macos architecture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/011-10-macos-architecture.md",
+    "requires": [
+      "skill-9-testing-and-debugging-b5348bd2c8"
+    ],
+    "links": [
+      "skill-11-macos-boot-launch-storage-and-security-b2733bc5f1"
+    ]
+  },
+  {
+    "id": "skill-11-macos-boot-launch-storage-and-security-b2733bc5f1",
+    "purpose": "11 macos boot launch storage and security",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/012-11-macos-boot-launch-storage-and-security.md",
+    "requires": [
+      "skill-10-macos-architecture-f5c0d0844a"
+    ],
+    "links": [
+      "skill-12-drivers-and-system-extensions-650eeda3a2"
+    ]
+  },
+  {
+    "id": "skill-12-drivers-and-system-extensions-650eeda3a2",
+    "purpose": "12 drivers and system extensions",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/013-12-drivers-and-system-extensions.md",
+    "requires": [
+      "skill-11-macos-boot-launch-storage-and-security-b2733bc5f1"
+    ],
+    "links": [
+      "skill-13-macos-development-and-testing-8d752fb87a"
+    ]
+  },
+  {
+    "id": "skill-13-macos-development-and-testing-8d752fb87a",
+    "purpose": "13 macos development and testing",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/014-13-macos-development-and-testing.md",
+    "requires": [
+      "skill-12-drivers-and-system-extensions-650eeda3a2"
+    ],
+    "links": [
+      "skill-14-cross-platform-programming-849b572021"
+    ]
+  },
+  {
+    "id": "skill-14-cross-platform-programming-849b572021",
+    "purpose": "14 cross platform programming",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/015-14-cross-platform-programming.md",
+    "requires": [
+      "skill-13-macos-development-and-testing-8d752fb87a"
+    ],
+    "links": [
+      "skill-15-common-errors-f91d98f028"
+    ]
+  },
+  {
+    "id": "skill-15-common-errors-f91d98f028",
+    "purpose": "15 common errors",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/016-15-common-errors.md",
+    "requires": [
+      "skill-14-cross-platform-programming-849b572021"
+    ],
+    "links": [
+      "skill-16-recommended-learning-sequence-a9e4f70e4a"
+    ]
+  },
+  {
+    "id": "skill-16-recommended-learning-sequence-a9e4f70e4a",
+    "purpose": "16 recommended learning sequence",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/017-16-recommended-learning-sequence.md",
+    "requires": [
+      "skill-15-common-errors-f91d98f028"
+    ],
+    "links": [
+      "skill-limits-and-next-pass-f3a2aaac25"
+    ]
+  },
+  {
+    "id": "skill-limits-and-next-pass-f3a2aaac25",
+    "purpose": "limits and next pass",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/018-limits-and-next-pass.md",
+    "requires": [
+      "skill-16-recommended-learning-sequence-a9e4f70e4a"
+    ],
+    "links": []
+  }
+]

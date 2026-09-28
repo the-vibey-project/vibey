@@ -1,0 +1,202 @@
+[
+  {
+    "id": "skill-part-1-three-laws-unchanged-always-in-this-order-25a5e3a1fc",
+    "purpose": "part 1 three laws unchanged always in this order",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/001-part-1-three-laws-unchanged-always-in-this-order.md",
+    "requires": [],
+    "links": [
+      "skill-part-2-modernization-prime-directive-1f99f5803e"
+    ]
+  },
+  {
+    "id": "skill-part-2-modernization-prime-directive-1f99f5803e",
+    "purpose": "part 2 modernization prime directive",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/002-part-2-modernization-prime-directive.md",
+    "requires": [
+      "skill-part-1-three-laws-unchanged-always-in-this-order-25a5e3a1fc"
+    ],
+    "links": [
+      "skill-part-3-triage-priority-system-e89e7ec4d1"
+    ]
+  },
+  {
+    "id": "skill-part-3-triage-priority-system-e89e7ec4d1",
+    "purpose": "part 3 triage priority system",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/003-part-3-triage-priority-system.md",
+    "requires": [
+      "skill-part-2-modernization-prime-directive-1f99f5803e"
+    ],
+    "links": [
+      "skill-part-4-phase-0-codebase-assessment-run-before-touching-anything-8b8d8c01be"
+    ]
+  },
+  {
+    "id": "skill-part-4-phase-0-codebase-assessment-run-before-touching-anything-8b8d8c01be",
+    "purpose": "part 4 phase 0 codebase assessment run before touching anything",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/004-part-4-phase-0-codebase-assessment-run-before-touching-anything.md",
+    "requires": [
+      "skill-part-3-triage-priority-system-e89e7ec4d1"
+    ],
+    "links": [
+      "skill-codebase-assessment-date-repo-name-5640f06828"
+    ]
+  },
+  {
+    "id": "skill-codebase-assessment-date-repo-name-5640f06828",
+    "purpose": "codebase assessment date repo name",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/005-codebase-assessment-date-repo-name.md",
+    "requires": [
+      "skill-part-4-phase-0-codebase-assessment-run-before-touching-anything-8b8d8c01be"
+    ],
+    "links": [
+      "skill-part-5-phase-1-secrets-and-credentials-highest-priority-d9b8adb68c"
+    ]
+  },
+  {
+    "id": "skill-part-5-phase-1-secrets-and-credentials-highest-priority-d9b8adb68c",
+    "purpose": "part 5 phase 1 secrets and credentials highest priority",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/006-part-5-phase-1-secrets-and-credentials-highest-priority.md",
+    "requires": [
+      "skill-codebase-assessment-date-repo-name-5640f06828"
+    ],
+    "links": [
+      "skill-part-6-phase-2-authentication-and-authorization-migration-f452bf3ae5"
+    ]
+  },
+  {
+    "id": "skill-part-6-phase-2-authentication-and-authorization-migration-f452bf3ae5",
+    "purpose": "part 6 phase 2 authentication and authorization migration",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/007-part-6-phase-2-authentication-and-authorization-migration.md",
+    "requires": [
+      "skill-part-5-phase-1-secrets-and-credentials-highest-priority-d9b8adb68c"
+    ],
+    "links": [
+      "skill-part-7-phase-3-input-validation-and-query-safety-4b129cda19"
+    ]
+  },
+  {
+    "id": "skill-part-7-phase-3-input-validation-and-query-safety-4b129cda19",
+    "purpose": "part 7 phase 3 input validation and query safety",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/008-part-7-phase-3-input-validation-and-query-safety.md",
+    "requires": [
+      "skill-part-6-phase-2-authentication-and-authorization-migration-f452bf3ae5"
+    ],
+    "links": [
+      "skill-part-8-phase-4-architecture-refactoring-p3-priority-a0edb5dc21"
+    ]
+  },
+  {
+    "id": "skill-part-8-phase-4-architecture-refactoring-p3-priority-a0edb5dc21",
+    "purpose": "part 8 phase 4 architecture refactoring p3 priority",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/009-part-8-phase-4-architecture-refactoring-p3-priority.md",
+    "requires": [
+      "skill-part-7-phase-3-input-validation-and-query-safety-4b129cda19"
+    ],
+    "links": [
+      "skill-part-9-phase-5-test-coverage-and-security-tests-b1cf602c1b"
+    ]
+  },
+  {
+    "id": "skill-part-9-phase-5-test-coverage-and-security-tests-b1cf602c1b",
+    "purpose": "part 9 phase 5 test coverage and security tests",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/010-part-9-phase-5-test-coverage-and-security-tests.md",
+    "requires": [
+      "skill-part-8-phase-4-architecture-refactoring-p3-priority-a0edb5dc21"
+    ],
+    "links": [
+      "skill-part-10-phase-6-logging-and-observability-823177b59f"
+    ]
+  },
+  {
+    "id": "skill-part-10-phase-6-logging-and-observability-823177b59f",
+    "purpose": "part 10 phase 6 logging and observability",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/011-part-10-phase-6-logging-and-observability.md",
+    "requires": [
+      "skill-part-9-phase-5-test-coverage-and-security-tests-b1cf602c1b"
+    ],
+    "links": [
+      "skill-part-11-phase-7-devsecops-pipeline-installation-44f0bad30e"
+    ]
+  },
+  {
+    "id": "skill-part-11-phase-7-devsecops-pipeline-installation-44f0bad30e",
+    "purpose": "part 11 phase 7 devsecops pipeline installation",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/012-part-11-phase-7-devsecops-pipeline-installation.md",
+    "requires": [
+      "skill-part-10-phase-6-logging-and-observability-823177b59f"
+    ],
+    "links": [
+      "skill-part-12-phase-8-infrastructure-modernization-fcc20a52d3"
+    ]
+  },
+  {
+    "id": "skill-part-12-phase-8-infrastructure-modernization-fcc20a52d3",
+    "purpose": "part 12 phase 8 infrastructure modernization",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/013-part-12-phase-8-infrastructure-modernization.md",
+    "requires": [
+      "skill-part-11-phase-7-devsecops-pipeline-installation-44f0bad30e"
+    ],
+    "links": [
+      "skill-part-13-migration-execution-protocol-9-steps-5a5749d311"
+    ]
+  },
+  {
+    "id": "skill-part-13-migration-execution-protocol-9-steps-5a5749d311",
+    "purpose": "part 13 migration execution protocol 9 steps",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/014-part-13-migration-execution-protocol-9-steps.md",
+    "requires": [
+      "skill-part-12-phase-8-infrastructure-modernization-fcc20a52d3"
+    ],
+    "links": [
+      "skill-part-14-the-strangler-fig-pattern-10e8056681"
+    ]
+  },
+  {
+    "id": "skill-part-14-the-strangler-fig-pattern-10e8056681",
+    "purpose": "part 14 the strangler fig pattern",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/015-part-14-the-strangler-fig-pattern.md",
+    "requires": [
+      "skill-part-13-migration-execution-protocol-9-steps-5a5749d311"
+    ],
+    "links": [
+      "skill-part-15-things-to-never-do-during-modernization-50c770066b"
+    ]
+  },
+  {
+    "id": "skill-part-15-things-to-never-do-during-modernization-50c770066b",
+    "purpose": "part 15 things to never do during modernization",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/016-part-15-things-to-never-do-during-modernization.md",
+    "requires": [
+      "skill-part-14-the-strangler-fig-pattern-10e8056681"
+    ],
+    "links": [
+      "skill-part-16-migration-anti-patterns-5dacdb26d4"
+    ]
+  },
+  {
+    "id": "skill-part-16-migration-anti-patterns-5dacdb26d4",
+    "purpose": "part 16 migration anti patterns",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization/017-part-16-migration-anti-patterns.md",
+    "requires": [
+      "skill-part-15-things-to-never-do-during-modernization-50c770066b"
+    ],
+    "links": []
+  }
+]

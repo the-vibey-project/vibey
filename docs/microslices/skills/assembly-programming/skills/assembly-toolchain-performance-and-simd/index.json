@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-calling-conventions-and-abis-8daa8eea89",
+    "purpose": "6 calling conventions and abis",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-toolchain-performance-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-toolchain-performance-and-simd/001-6-calling-conventions-and-abis.md",
+    "requires": [],
+    "links": [
+      "skill-7-assemblers-and-toolchain-ac83728c71"
+    ]
+  },
+  {
+    "id": "skill-7-assemblers-and-toolchain-ac83728c71",
+    "purpose": "7 assemblers and toolchain",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-toolchain-performance-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-toolchain-performance-and-simd/002-7-assemblers-and-toolchain.md",
+    "requires": [
+      "skill-6-calling-conventions-and-abis-8daa8eea89"
+    ],
+    "links": [
+      "skill-8-reading-disassembly-d0b146299d"
+    ]
+  },
+  {
+    "id": "skill-8-reading-disassembly-d0b146299d",
+    "purpose": "8 reading disassembly",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-toolchain-performance-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-toolchain-performance-and-simd/003-8-reading-disassembly.md",
+    "requires": [
+      "skill-7-assemblers-and-toolchain-ac83728c71"
+    ],
+    "links": [
+      "skill-9-performance-9943efcadf"
+    ]
+  },
+  {
+    "id": "skill-9-performance-9943efcadf",
+    "purpose": "9 performance",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-toolchain-performance-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-toolchain-performance-and-simd/004-9-performance.md",
+    "requires": [
+      "skill-8-reading-disassembly-d0b146299d"
+    ],
+    "links": [
+      "skill-10-simd-and-vector-47c839c4b7"
+    ]
+  },
+  {
+    "id": "skill-10-simd-and-vector-47c839c4b7",
+    "purpose": "10 simd and vector",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-toolchain-performance-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-toolchain-performance-and-simd/005-10-simd-and-vector.md",
+    "requires": [
+      "skill-9-performance-9943efcadf"
+    ],
+    "links": []
+  }
+]

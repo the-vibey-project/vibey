@@ -1,0 +1,202 @@
+[
+  {
+    "id": "skill-three-laws-precedence-50aba028b9",
+    "purpose": "three laws precedence",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/001-three-laws-precedence.md",
+    "requires": [],
+    "links": [
+      "skill-scrum-fundamentals-f233a9bb68"
+    ]
+  },
+  {
+    "id": "skill-scrum-fundamentals-f233a9bb68",
+    "purpose": "scrum fundamentals",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/002-scrum-fundamentals.md",
+    "requires": [
+      "skill-three-laws-precedence-50aba028b9"
+    ],
+    "links": [
+      "skill-security-as-definition-of-done-7e172ba8c3"
+    ]
+  },
+  {
+    "id": "skill-security-as-definition-of-done-7e172ba8c3",
+    "purpose": "security as definition of done",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/003-security-as-definition-of-done.md",
+    "requires": [
+      "skill-scrum-fundamentals-f233a9bb68"
+    ],
+    "links": [
+      "skill-security-definition-of-done-checklist-3a99fcd6fb"
+    ]
+  },
+  {
+    "id": "skill-security-definition-of-done-checklist-3a99fcd6fb",
+    "purpose": "security definition of done checklist",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/004-security-definition-of-done-checklist.md",
+    "requires": [
+      "skill-security-as-definition-of-done-7e172ba8c3"
+    ],
+    "links": [
+      "skill-threat-modeling-in-sprint-planning-f30f4e68d6"
+    ]
+  },
+  {
+    "id": "skill-threat-modeling-in-sprint-planning-f30f4e68d6",
+    "purpose": "threat modeling in sprint planning",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/005-threat-modeling-in-sprint-planning.md",
+    "requires": [
+      "skill-security-definition-of-done-checklist-3a99fcd6fb"
+    ],
+    "links": [
+      "skill-security-champions-model-c81407b013"
+    ]
+  },
+  {
+    "id": "skill-security-champions-model-c81407b013",
+    "purpose": "security champions model",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/006-security-champions-model.md",
+    "requires": [
+      "skill-threat-modeling-in-sprint-planning-f30f4e68d6"
+    ],
+    "links": [
+      "skill-security-sprint-cadence-d23f5cd8fe"
+    ]
+  },
+  {
+    "id": "skill-security-sprint-cadence-d23f5cd8fe",
+    "purpose": "security sprint cadence",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/007-security-sprint-cadence.md",
+    "requires": [
+      "skill-security-champions-model-c81407b013"
+    ],
+    "links": [
+      "skill-psychological-safety-project-aristotle-047809b565"
+    ]
+  },
+  {
+    "id": "skill-psychological-safety-project-aristotle-047809b565",
+    "purpose": "psychological safety project aristotle",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/008-psychological-safety-project-aristotle.md",
+    "requires": [
+      "skill-security-sprint-cadence-d23f5cd8fe"
+    ],
+    "links": [
+      "skill-blameless-postmortems-8bd7bc8f98"
+    ]
+  },
+  {
+    "id": "skill-blameless-postmortems-8bd7bc8f98",
+    "purpose": "blameless postmortems",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/009-blameless-postmortems.md",
+    "requires": [
+      "skill-psychological-safety-project-aristotle-047809b565"
+    ],
+    "links": [
+      "skill-retrospective-formats-2f9e48afc1"
+    ]
+  },
+  {
+    "id": "skill-retrospective-formats-2f9e48afc1",
+    "purpose": "retrospective formats",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/010-retrospective-formats.md",
+    "requires": [
+      "skill-blameless-postmortems-8bd7bc8f98"
+    ],
+    "links": [
+      "skill-team-health-checks-cc57feb5a6"
+    ]
+  },
+  {
+    "id": "skill-team-health-checks-cc57feb5a6",
+    "purpose": "team health checks",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/011-team-health-checks.md",
+    "requires": [
+      "skill-retrospective-formats-2f9e48afc1"
+    ],
+    "links": [
+      "skill-architecture-decision-records-adrs-20540c61df"
+    ]
+  },
+  {
+    "id": "skill-architecture-decision-records-adrs-20540c61df",
+    "purpose": "architecture decision records adrs",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/012-architecture-decision-records-adrs.md",
+    "requires": [
+      "skill-team-health-checks-cc57feb5a6"
+    ],
+    "links": [
+      "skill-sprint-planning-checklist-with-security-gates-74aca8b11f"
+    ]
+  },
+  {
+    "id": "skill-sprint-planning-checklist-with-security-gates-74aca8b11f",
+    "purpose": "sprint planning checklist with security gates",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/013-sprint-planning-checklist-with-security-gates.md",
+    "requires": [
+      "skill-architecture-decision-records-adrs-20540c61df"
+    ],
+    "links": [
+      "skill-ai-coding-governance-in-agile-672fa992dc"
+    ]
+  },
+  {
+    "id": "skill-ai-coding-governance-in-agile-672fa992dc",
+    "purpose": "ai coding governance in agile",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/014-ai-coding-governance-in-agile.md",
+    "requires": [
+      "skill-sprint-planning-checklist-with-security-gates-74aca8b11f"
+    ],
+    "links": [
+      "skill-dora-metrics-2024-benchmarks-31f57b7c0f"
+    ]
+  },
+  {
+    "id": "skill-dora-metrics-2024-benchmarks-31f57b7c0f",
+    "purpose": "dora metrics 2024 benchmarks",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/015-dora-metrics-2024-benchmarks.md",
+    "requires": [
+      "skill-ai-coding-governance-in-agile-672fa992dc"
+    ],
+    "links": [
+      "skill-owasp-samm-integration-b368047388"
+    ]
+  },
+  {
+    "id": "skill-owasp-samm-integration-b368047388",
+    "purpose": "owasp samm integration",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/016-owasp-samm-integration.md",
+    "requires": [
+      "skill-dora-metrics-2024-benchmarks-31f57b7c0f"
+    ],
+    "links": [
+      "skill-security-debt-management-80d4512cfa"
+    ]
+  },
+  {
+    "id": "skill-security-debt-management-80d4512cfa",
+    "purpose": "security debt management",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile/017-security-debt-management.md",
+    "requires": [
+      "skill-owasp-samm-integration-b368047388"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-10-shortest-path-and-network-flow-8893b5918a",
+    "purpose": "10 shortest path and network flow",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/001-10-shortest-path-and-network-flow.md",
+    "requires": [],
+    "links": [
+      "skill-11-tsp-2318b51a3f"
+    ]
+  },
+  {
+    "id": "skill-11-tsp-2318b51a3f",
+    "purpose": "11 tsp",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/002-11-tsp.md",
+    "requires": [
+      "skill-10-shortest-path-and-network-flow-8893b5918a"
+    ],
+    "links": [
+      "skill-12-vehicle-routing-the-core-problem-7dceb87c5c"
+    ]
+  },
+  {
+    "id": "skill-12-vehicle-routing-the-core-problem-7dceb87c5c",
+    "purpose": "12 vehicle routing the core problem",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/003-12-vehicle-routing-the-core-problem.md",
+    "requires": [
+      "skill-11-tsp-2318b51a3f"
+    ],
+    "links": [
+      "skill-13-packing-and-loading-2605610209"
+    ]
+  },
+  {
+    "id": "skill-13-packing-and-loading-2605610209",
+    "purpose": "13 packing and loading",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/004-13-packing-and-loading.md",
+    "requires": [
+      "skill-12-vehicle-routing-the-core-problem-7dceb87c5c"
+    ],
+    "links": [
+      "skill-14-assignment-and-matching-065baa1dc2"
+    ]
+  },
+  {
+    "id": "skill-14-assignment-and-matching-065baa1dc2",
+    "purpose": "14 assignment and matching",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/005-14-assignment-and-matching.md",
+    "requires": [
+      "skill-13-packing-and-loading-2605610209"
+    ],
+    "links": [
+      "skill-15-scheduling-4d6c60f463"
+    ]
+  },
+  {
+    "id": "skill-15-scheduling-4d6c60f463",
+    "purpose": "15 scheduling",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/006-15-scheduling.md",
+    "requires": [
+      "skill-14-assignment-and-matching-065baa1dc2"
+    ],
+    "links": [
+      "skill-16-facility-location-and-network-design-43d135b9f3"
+    ]
+  },
+  {
+    "id": "skill-16-facility-location-and-network-design-43d135b9f3",
+    "purpose": "16 facility location and network design",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/007-16-facility-location-and-network-design.md",
+    "requires": [
+      "skill-15-scheduling-4d6c60f463"
+    ],
+    "links": []
+  }
+]

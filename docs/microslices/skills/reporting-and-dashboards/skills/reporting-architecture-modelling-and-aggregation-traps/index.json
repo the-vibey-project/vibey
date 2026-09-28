@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-a8d5d0d78b",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-architecture-ea924d1aca"
+    ]
+  },
+  {
+    "id": "skill-1-the-architecture-ea924d1aca",
+    "purpose": "1 the architecture",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/002-1-the-architecture.md",
+    "requires": [
+      "skill-0-routing-a8d5d0d78b"
+    ],
+    "links": [
+      "skill-2-dimensional-modelling-0fe3e94485"
+    ]
+  },
+  {
+    "id": "skill-2-dimensional-modelling-0fe3e94485",
+    "purpose": "2 dimensional modelling",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/003-2-dimensional-modelling.md",
+    "requires": [
+      "skill-1-the-architecture-ea924d1aca"
+    ],
+    "links": [
+      "skill-3-the-aggregation-traps-6b8b4375cd"
+    ]
+  },
+  {
+    "id": "skill-3-the-aggregation-traps-6b8b4375cd",
+    "purpose": "3 the aggregation traps",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/004-3-the-aggregation-traps.md",
+    "requires": [
+      "skill-2-dimensional-modelling-0fe3e94485"
+    ],
+    "links": [
+      "skill-4-metric-definition-pitfalls-c5891211cc"
+    ]
+  },
+  {
+    "id": "skill-4-metric-definition-pitfalls-c5891211cc",
+    "purpose": "4 metric definition pitfalls",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/005-4-metric-definition-pitfalls.md",
+    "requires": [
+      "skill-3-the-aggregation-traps-6b8b4375cd"
+    ],
+    "links": []
+  }
+]

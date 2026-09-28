@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-wi-fi-557f3a6933",
+    "purpose": "6 wi fi",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/001-6-wi-fi.md",
+    "requires": [],
+    "links": [
+      "skill-7-wi-fi-in-practice-888c8e8ed9"
+    ]
+  },
+  {
+    "id": "skill-7-wi-fi-in-practice-888c8e8ed9",
+    "purpose": "7 wi fi in practice",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/002-7-wi-fi-in-practice.md",
+    "requires": [
+      "skill-6-wi-fi-557f3a6933"
+    ],
+    "links": [
+      "skill-8-bluetooth-6c026af017"
+    ]
+  },
+  {
+    "id": "skill-8-bluetooth-6c026af017",
+    "purpose": "8 bluetooth",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/003-8-bluetooth.md",
+    "requires": [
+      "skill-7-wi-fi-in-practice-888c8e8ed9"
+    ],
+    "links": [
+      "skill-9-ble-programming-c4a14d643e"
+    ]
+  },
+  {
+    "id": "skill-9-ble-programming-c4a14d643e",
+    "purpose": "9 ble programming",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/004-9-ble-programming.md",
+    "requires": [
+      "skill-8-bluetooth-6c026af017"
+    ],
+    "links": [
+      "skill-10-nfc-and-rfid-15098ee9bb"
+    ]
+  },
+  {
+    "id": "skill-10-nfc-and-rfid-15098ee9bb",
+    "purpose": "10 nfc and rfid",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/005-10-nfc-and-rfid.md",
+    "requires": [
+      "skill-9-ble-programming-c4a14d643e"
+    ],
+    "links": []
+  }
+]

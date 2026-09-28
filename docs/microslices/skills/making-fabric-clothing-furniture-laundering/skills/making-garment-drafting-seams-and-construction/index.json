@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-8-grain-3d6c60cdd8",
+    "purpose": "8 grain",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/001-8-grain.md",
+    "requires": [],
+    "links": [
+      "skill-9-pattern-drafting-and-ease-f64c04987e"
+    ]
+  },
+  {
+    "id": "skill-9-pattern-drafting-and-ease-f64c04987e",
+    "purpose": "9 pattern drafting and ease",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/002-9-pattern-drafting-and-ease.md",
+    "requires": [
+      "skill-8-grain-3d6c60cdd8"
+    ],
+    "links": [
+      "skill-10-cutting-and-layout-cd69f76271"
+    ]
+  },
+  {
+    "id": "skill-10-cutting-and-layout-cd69f76271",
+    "purpose": "10 cutting and layout",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/003-10-cutting-and-layout.md",
+    "requires": [
+      "skill-9-pattern-drafting-and-ease-f64c04987e"
+    ],
+    "links": [
+      "skill-11-seams-and-stitches-47b7011003"
+    ]
+  },
+  {
+    "id": "skill-11-seams-and-stitches-47b7011003",
+    "purpose": "11 seams and stitches",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/004-11-seams-and-stitches.md",
+    "requires": [
+      "skill-10-cutting-and-layout-cd69f76271"
+    ],
+    "links": [
+      "skill-12-construction-order-306761e8db"
+    ]
+  },
+  {
+    "id": "skill-12-construction-order-306761e8db",
+    "purpose": "12 construction order",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/005-12-construction-order.md",
+    "requires": [
+      "skill-11-seams-and-stitches-47b7011003"
+    ],
+    "links": [
+      "skill-13-fitting-94d64b2f81"
+    ]
+  },
+  {
+    "id": "skill-13-fitting-94d64b2f81",
+    "purpose": "13 fitting",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/006-13-fitting.md",
+    "requires": [
+      "skill-12-construction-order-306761e8db"
+    ],
+    "links": [
+      "skill-14-machines-needles-and-thread-b8672865ee"
+    ]
+  },
+  {
+    "id": "skill-14-machines-needles-and-thread-b8672865ee",
+    "purpose": "14 machines needles and thread",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/007-14-machines-needles-and-thread.md",
+    "requires": [
+      "skill-13-fitting-94d64b2f81"
+    ],
+    "links": [
+      "skill-15-hand-sewing-d01f0e9764"
+    ]
+  },
+  {
+    "id": "skill-15-hand-sewing-d01f0e9764",
+    "purpose": "15 hand sewing",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/008-15-hand-sewing.md",
+    "requires": [
+      "skill-14-machines-needles-and-thread-b8672865ee"
+    ],
+    "links": []
+  }
+]

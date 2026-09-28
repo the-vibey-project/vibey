@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-scale-and-reliability-6387646ed1",
+    "purpose": "8 scale and reliability",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-scale-reliability-and-data-quality/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-scale-reliability-and-data-quality/001-8-scale-and-reliability.md",
+    "requires": [],
+    "links": [
+      "skill-9-data-quality-aacb2108bb"
+    ]
+  },
+  {
+    "id": "skill-9-data-quality-aacb2108bb",
+    "purpose": "9 data quality",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-scale-reliability-and-data-quality/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-scale-reliability-and-data-quality/002-9-data-quality.md",
+    "requires": [
+      "skill-8-scale-and-reliability-6387646ed1"
+    ],
+    "links": [
+      "skill-10-storage-and-operations-e9d31110c5"
+    ]
+  },
+  {
+    "id": "skill-10-storage-and-operations-e9d31110c5",
+    "purpose": "10 storage and operations",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-scale-reliability-and-data-quality/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-scale-reliability-and-data-quality/003-10-storage-and-operations.md",
+    "requires": [
+      "skill-9-data-quality-aacb2108bb"
+    ],
+    "links": []
+  }
+]

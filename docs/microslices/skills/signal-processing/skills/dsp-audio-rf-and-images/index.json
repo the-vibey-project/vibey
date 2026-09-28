@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-audio-and-speech-94e0feb365",
+    "purpose": "8 audio and speech",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-audio-rf-and-images/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-audio-rf-and-images/001-8-audio-and-speech.md",
+    "requires": [],
+    "links": [
+      "skill-9-rf-and-communications-44d4f48b46"
+    ]
+  },
+  {
+    "id": "skill-9-rf-and-communications-44d4f48b46",
+    "purpose": "9 rf and communications",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-audio-rf-and-images/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-audio-rf-and-images/002-9-rf-and-communications.md",
+    "requires": [
+      "skill-8-audio-and-speech-94e0feb365"
+    ],
+    "links": [
+      "skill-10-images-and-video-ba9cf5a77e"
+    ]
+  },
+  {
+    "id": "skill-10-images-and-video-ba9cf5a77e",
+    "purpose": "10 images and video",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-audio-rf-and-images/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-audio-rf-and-images/003-10-images-and-video.md",
+    "requires": [
+      "skill-9-rf-and-communications-44d4f48b46"
+    ],
+    "links": []
+  }
+]

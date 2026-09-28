@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-19-dimensional-analysis-3c3732957e",
+    "purpose": "19 dimensional analysis",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/001-19-dimensional-analysis.md",
+    "requires": [],
+    "links": [
+      "skill-20-internal-flow-1c776573e2"
+    ]
+  },
+  {
+    "id": "skill-20-internal-flow-1c776573e2",
+    "purpose": "20 internal flow",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/002-20-internal-flow.md",
+    "requires": [
+      "skill-19-dimensional-analysis-3c3732957e"
+    ],
+    "links": [
+      "skill-21-external-flow-and-drag-ab5dfc5de8"
+    ]
+  },
+  {
+    "id": "skill-21-external-flow-and-drag-ab5dfc5de8",
+    "purpose": "21 external flow and drag",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/003-21-external-flow-and-drag.md",
+    "requires": [
+      "skill-20-internal-flow-1c776573e2"
+    ],
+    "links": [
+      "skill-22-turbulence-294ce32103"
+    ]
+  },
+  {
+    "id": "skill-22-turbulence-294ce32103",
+    "purpose": "22 turbulence",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/004-22-turbulence.md",
+    "requires": [
+      "skill-21-external-flow-and-drag-ab5dfc5de8"
+    ],
+    "links": [
+      "skill-23-compressible-flow-e6a1406c98"
+    ]
+  },
+  {
+    "id": "skill-23-compressible-flow-e6a1406c98",
+    "purpose": "23 compressible flow",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/005-23-compressible-flow.md",
+    "requires": [
+      "skill-22-turbulence-294ce32103"
+    ],
+    "links": [
+      "skill-24-turbomachinery-8afba2a973"
+    ]
+  },
+  {
+    "id": "skill-24-turbomachinery-8afba2a973",
+    "purpose": "24 turbomachinery",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/006-24-turbomachinery.md",
+    "requires": [
+      "skill-23-compressible-flow-e6a1406c98"
+    ],
+    "links": []
+  }
+]

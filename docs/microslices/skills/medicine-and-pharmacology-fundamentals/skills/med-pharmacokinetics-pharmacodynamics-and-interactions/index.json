@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-7-pharmacokinetics-f236801b0a",
+    "purpose": "7 pharmacokinetics",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/001-7-pharmacokinetics.md",
+    "requires": [],
+    "links": [
+      "skill-8-pharmacodynamics-1abc8a014b"
+    ]
+  },
+  {
+    "id": "skill-8-pharmacodynamics-1abc8a014b",
+    "purpose": "8 pharmacodynamics",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/002-8-pharmacodynamics.md",
+    "requires": [
+      "skill-7-pharmacokinetics-f236801b0a"
+    ],
+    "links": [
+      "skill-9-dose-response-and-the-therapeutic-window-1b34a90e21"
+    ]
+  },
+  {
+    "id": "skill-9-dose-response-and-the-therapeutic-window-1b34a90e21",
+    "purpose": "9 dose response and the therapeutic window",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/003-9-dose-response-and-the-therapeutic-window.md",
+    "requires": [
+      "skill-8-pharmacodynamics-1abc8a014b"
+    ],
+    "links": [
+      "skill-10-drug-interactions-eee800f7a2"
+    ]
+  },
+  {
+    "id": "skill-10-drug-interactions-eee800f7a2",
+    "purpose": "10 drug interactions",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/004-10-drug-interactions.md",
+    "requires": [
+      "skill-9-dose-response-and-the-therapeutic-window-1b34a90e21"
+    ],
+    "links": [
+      "skill-11-variability-between-people-0a719be5b7"
+    ]
+  },
+  {
+    "id": "skill-11-variability-between-people-0a719be5b7",
+    "purpose": "11 variability between people",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/005-11-variability-between-people.md",
+    "requires": [
+      "skill-10-drug-interactions-eee800f7a2"
+    ],
+    "links": [
+      "skill-12-adverse-effects-e18f230a36"
+    ]
+  },
+  {
+    "id": "skill-12-adverse-effects-e18f230a36",
+    "purpose": "12 adverse effects",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/006-12-adverse-effects.md",
+    "requires": [
+      "skill-11-variability-between-people-0a719be5b7"
+    ],
+    "links": []
+  }
+]

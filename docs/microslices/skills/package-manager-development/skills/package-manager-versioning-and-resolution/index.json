@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-f93631263d",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-versioning-and-resolution/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-versioning-and-resolution/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-versions-and-constraints-0e6cc9b259"
+    ]
+  },
+  {
+    "id": "skill-1-versions-and-constraints-0e6cc9b259",
+    "purpose": "1 versions and constraints",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-versioning-and-resolution/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-versioning-and-resolution/002-1-versions-and-constraints.md",
+    "requires": [
+      "skill-0-routing-f93631263d"
+    ],
+    "links": [
+      "skill-2-the-manifest-273a55ce0c"
+    ]
+  },
+  {
+    "id": "skill-2-the-manifest-273a55ce0c",
+    "purpose": "2 the manifest",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-versioning-and-resolution/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-versioning-and-resolution/003-2-the-manifest.md",
+    "requires": [
+      "skill-1-versions-and-constraints-0e6cc9b259"
+    ],
+    "links": [
+      "skill-3-dependency-resolution-the-hard-part-d02d370a89"
+    ]
+  },
+  {
+    "id": "skill-3-dependency-resolution-the-hard-part-d02d370a89",
+    "purpose": "3 dependency resolution the hard part",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-versioning-and-resolution/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-versioning-and-resolution/004-3-dependency-resolution-the-hard-part.md",
+    "requires": [
+      "skill-2-the-manifest-273a55ce0c"
+    ],
+    "links": [
+      "skill-4-lockfiles-0d030f855d"
+    ]
+  },
+  {
+    "id": "skill-4-lockfiles-0d030f855d",
+    "purpose": "4 lockfiles",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-versioning-and-resolution/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-versioning-and-resolution/005-4-lockfiles.md",
+    "requires": [
+      "skill-3-dependency-resolution-the-hard-part-d02d370a89"
+    ],
+    "links": []
+  }
+]

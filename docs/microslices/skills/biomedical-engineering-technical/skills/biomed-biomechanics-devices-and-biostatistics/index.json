@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-biomechanics-5edaa27425",
+    "purpose": "10 biomechanics",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/001-10-biomechanics.md",
+    "requires": [],
+    "links": [
+      "skill-11-biomaterials-5d07363d2e"
+    ]
+  },
+  {
+    "id": "skill-11-biomaterials-5d07363d2e",
+    "purpose": "11 biomaterials",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/002-11-biomaterials.md",
+    "requires": [
+      "skill-10-biomechanics-5edaa27425"
+    ],
+    "links": [
+      "skill-12-tissue-engineering-586d86e0b2"
+    ]
+  },
+  {
+    "id": "skill-12-tissue-engineering-586d86e0b2",
+    "purpose": "12 tissue engineering",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/003-12-tissue-engineering.md",
+    "requires": [
+      "skill-11-biomaterials-5d07363d2e"
+    ],
+    "links": [
+      "skill-13-neural-interfaces-and-prosthetics-86bf595f85"
+    ]
+  },
+  {
+    "id": "skill-13-neural-interfaces-and-prosthetics-86bf595f85",
+    "purpose": "13 neural interfaces and prosthetics",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/004-13-neural-interfaces-and-prosthetics.md",
+    "requires": [
+      "skill-12-tissue-engineering-586d86e0b2"
+    ],
+    "links": [
+      "skill-14-lab-automation-and-instrumentation-841743ba70"
+    ]
+  },
+  {
+    "id": "skill-14-lab-automation-and-instrumentation-841743ba70",
+    "purpose": "14 lab automation and instrumentation",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/005-14-lab-automation-and-instrumentation.md",
+    "requires": [
+      "skill-13-neural-interfaces-and-prosthetics-86bf595f85"
+    ],
+    "links": [
+      "skill-15-biostatistics-afbf74cfb6"
+    ]
+  },
+  {
+    "id": "skill-15-biostatistics-afbf74cfb6",
+    "purpose": "15 biostatistics",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/006-15-biostatistics.md",
+    "requires": [
+      "skill-14-lab-automation-and-instrumentation-841743ba70"
+    ],
+    "links": []
+  }
+]

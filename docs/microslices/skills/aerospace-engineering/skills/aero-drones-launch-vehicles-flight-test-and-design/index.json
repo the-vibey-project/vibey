@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-drones-and-uas-da120ed3aa",
+    "purpose": "11 drones and uas",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/001-11-drones-and-uas.md",
+    "requires": [],
+    "links": [
+      "skill-12-launch-vehicles-8f651432d9"
+    ]
+  },
+  {
+    "id": "skill-12-launch-vehicles-8f651432d9",
+    "purpose": "12 launch vehicles",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/002-12-launch-vehicles.md",
+    "requires": [
+      "skill-11-drones-and-uas-da120ed3aa"
+    ],
+    "links": [
+      "skill-13-flight-test-and-certification-76d2ba78e8"
+    ]
+  },
+  {
+    "id": "skill-13-flight-test-and-certification-76d2ba78e8",
+    "purpose": "13 flight test and certification",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/003-13-flight-test-and-certification.md",
+    "requires": [
+      "skill-12-launch-vehicles-8f651432d9"
+    ],
+    "links": [
+      "skill-14-the-design-process-4ce115cf65"
+    ]
+  },
+  {
+    "id": "skill-14-the-design-process-4ce115cf65",
+    "purpose": "14 the design process",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/004-14-the-design-process.md",
+    "requires": [
+      "skill-13-flight-test-and-certification-76d2ba78e8"
+    ],
+    "links": []
+  }
+]

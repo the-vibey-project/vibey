@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-61d5b9f4a1",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-floating-point-and-numerical-foundations/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-floating-point-and-numerical-foundations/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-floating-point-59b31b9f68"
+    ]
+  },
+  {
+    "id": "skill-1-floating-point-59b31b9f68",
+    "purpose": "1 floating point",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-floating-point-and-numerical-foundations/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-floating-point-and-numerical-foundations/002-1-floating-point.md",
+    "requires": [
+      "skill-0-routing-61d5b9f4a1"
+    ],
+    "links": [
+      "skill-2-conditioning-and-stability-1e68a18599"
+    ]
+  },
+  {
+    "id": "skill-2-conditioning-and-stability-1e68a18599",
+    "purpose": "2 conditioning and stability",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-floating-point-and-numerical-foundations/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-floating-point-and-numerical-foundations/003-2-conditioning-and-stability.md",
+    "requires": [
+      "skill-1-floating-point-59b31b9f68"
+    ],
+    "links": [
+      "skill-3-the-substrate-blas-and-lapack-ab1bc3bcc7"
+    ]
+  },
+  {
+    "id": "skill-3-the-substrate-blas-and-lapack-ab1bc3bcc7",
+    "purpose": "3 the substrate blas and lapack",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-floating-point-and-numerical-foundations/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-floating-point-and-numerical-foundations/004-3-the-substrate-blas-and-lapack.md",
+    "requires": [
+      "skill-2-conditioning-and-stability-1e68a18599"
+    ],
+    "links": []
+  }
+]

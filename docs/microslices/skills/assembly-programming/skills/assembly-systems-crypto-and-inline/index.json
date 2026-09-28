@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-systems-assembly-f80b040c87",
+    "purpose": "11 systems assembly",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-systems-crypto-and-inline/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-systems-crypto-and-inline/001-11-systems-assembly.md",
+    "requires": [],
+    "links": [
+      "skill-12-cryptographic-and-constant-time-assembly-d972d30722"
+    ]
+  },
+  {
+    "id": "skill-12-cryptographic-and-constant-time-assembly-d972d30722",
+    "purpose": "12 cryptographic and constant time assembly",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-systems-crypto-and-inline/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-systems-crypto-and-inline/002-12-cryptographic-and-constant-time-assembly.md",
+    "requires": [
+      "skill-11-systems-assembly-f80b040c87"
+    ],
+    "links": [
+      "skill-13-inline-assembly-and-intrinsics-ead05708cd"
+    ]
+  },
+  {
+    "id": "skill-13-inline-assembly-and-intrinsics-ead05708cd",
+    "purpose": "13 inline assembly and intrinsics",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-systems-crypto-and-inline/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-systems-crypto-and-inline/003-13-inline-assembly-and-intrinsics.md",
+    "requires": [
+      "skill-12-cryptographic-and-constant-time-assembly-d972d30722"
+    ],
+    "links": [
+      "skill-14-debugging-testing-and-verification-c04e45f162"
+    ]
+  },
+  {
+    "id": "skill-14-debugging-testing-and-verification-c04e45f162",
+    "purpose": "14 debugging testing and verification",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-systems-crypto-and-inline/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-systems-crypto-and-inline/004-14-debugging-testing-and-verification.md",
+    "requires": [
+      "skill-13-inline-assembly-and-intrinsics-ead05708cd"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-7-cosmology-27bba8be7e",
+    "purpose": "7 cosmology",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-cosmology-and-astrophysics/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-cosmology-and-astrophysics/001-7-cosmology.md",
+    "requires": [],
+    "links": [
+      "skill-8-stellar-astrophysics-adbed39b83"
+    ]
+  },
+  {
+    "id": "skill-8-stellar-astrophysics-adbed39b83",
+    "purpose": "8 stellar astrophysics",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-cosmology-and-astrophysics/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-cosmology-and-astrophysics/002-8-stellar-astrophysics.md",
+    "requires": [
+      "skill-7-cosmology-27bba8be7e"
+    ],
+    "links": [
+      "skill-9-compact-objects-b7c7e679a3"
+    ]
+  },
+  {
+    "id": "skill-9-compact-objects-b7c7e679a3",
+    "purpose": "9 compact objects",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-cosmology-and-astrophysics/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-cosmology-and-astrophysics/003-9-compact-objects.md",
+    "requires": [
+      "skill-8-stellar-astrophysics-adbed39b83"
+    ],
+    "links": [
+      "skill-10-galaxies-dark-matter-structure-c3f662e9c9"
+    ]
+  },
+  {
+    "id": "skill-10-galaxies-dark-matter-structure-c3f662e9c9",
+    "purpose": "10 galaxies dark matter structure",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-cosmology-and-astrophysics/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-cosmology-and-astrophysics/004-10-galaxies-dark-matter-structure.md",
+    "requires": [
+      "skill-9-compact-objects-b7c7e679a3"
+    ],
+    "links": []
+  }
+]

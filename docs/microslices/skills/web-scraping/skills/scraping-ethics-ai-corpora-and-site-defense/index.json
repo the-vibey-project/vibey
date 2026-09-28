@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-11-operational-ethics-c7d2a3b4d3",
+    "purpose": "11 operational ethics",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense/001-11-operational-ethics.md",
+    "requires": [],
+    "links": [
+      "skill-12-scraping-for-ai-and-rag-235af83a87"
+    ]
+  },
+  {
+    "id": "skill-12-scraping-for-ai-and-rag-235af83a87",
+    "purpose": "12 scraping for ai and rag",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense/002-12-scraping-for-ai-and-rag.md",
+    "requires": [
+      "skill-11-operational-ethics-c7d2a3b4d3"
+    ],
+    "links": [
+      "skill-13-if-you-run-a-site-1039b90528"
+    ]
+  },
+  {
+    "id": "skill-13-if-you-run-a-site-1039b90528",
+    "purpose": "13 if you run a site",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense/003-13-if-you-run-a-site.md",
+    "requires": [
+      "skill-12-scraping-for-ai-and-rag-235af83a87"
+    ],
+    "links": []
+  }
+]

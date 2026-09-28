@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-anti-patterns-21e072011a",
+    "purpose": "13 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-reference/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-reference/001-13-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-14-numbers-fb12d9e49e"
+    ]
+  },
+  {
+    "id": "skill-14-numbers-fb12d9e49e",
+    "purpose": "14 numbers",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-reference/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-reference/002-14-numbers.md",
+    "requires": [
+      "skill-13-anti-patterns-21e072011a"
+    ],
+    "links": [
+      "skill-15-books-and-tools-45008b5f12"
+    ]
+  },
+  {
+    "id": "skill-15-books-and-tools-45008b5f12",
+    "purpose": "15 books and tools",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-reference/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-reference/003-15-books-and-tools.md",
+    "requires": [
+      "skill-14-numbers-fb12d9e49e"
+    ],
+    "links": [
+      "skill-16-what-actually-moved-verified-august-2026-65fb148eab"
+    ]
+  },
+  {
+    "id": "skill-16-what-actually-moved-verified-august-2026-65fb148eab",
+    "purpose": "16 what actually moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-reference/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-reference/004-16-what-actually-moved-verified-august-2026.md",
+    "requires": [
+      "skill-15-books-and-tools-45008b5f12"
+    ],
+    "links": [
+      "skill-17-quick-reference-03d1680271"
+    ]
+  },
+  {
+    "id": "skill-17-quick-reference-03d1680271",
+    "purpose": "17 quick reference",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-reference/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-reference/005-17-quick-reference.md",
+    "requires": [
+      "skill-16-what-actually-moved-verified-august-2026-65fb148eab"
+    ],
+    "links": [
+      "skill-18-method-4bd06f0dfe"
+    ]
+  },
+  {
+    "id": "skill-18-method-4bd06f0dfe",
+    "purpose": "18 method",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-reference/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-reference/006-18-method.md",
+    "requires": [
+      "skill-17-quick-reference-03d1680271"
+    ],
+    "links": []
+  }
+]

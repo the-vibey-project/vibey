@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-captions-and-accessibility-21b26772b1",
+    "purpose": "10 captions and accessibility",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-captions-podcasts-rights-and-qc/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-captions-podcasts-rights-and-qc/001-10-captions-and-accessibility.md",
+    "requires": [],
+    "links": [
+      "skill-11-podcast-infrastructure-edc2953ab9"
+    ]
+  },
+  {
+    "id": "skill-11-podcast-infrastructure-edc2953ab9",
+    "purpose": "11 podcast infrastructure",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-captions-podcasts-rights-and-qc/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-captions-podcasts-rights-and-qc/002-11-podcast-infrastructure.md",
+    "requires": [
+      "skill-10-captions-and-accessibility-21b26772b1"
+    ],
+    "links": [
+      "skill-12-metadata-identifiers-and-rights-1ea076bf16"
+    ]
+  },
+  {
+    "id": "skill-12-metadata-identifiers-and-rights-1ea076bf16",
+    "purpose": "12 metadata identifiers and rights",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-captions-podcasts-rights-and-qc/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-captions-podcasts-rights-and-qc/003-12-metadata-identifiers-and-rights.md",
+    "requires": [
+      "skill-11-podcast-infrastructure-edc2953ab9"
+    ],
+    "links": [
+      "skill-13-ai-generation-and-the-licensing-fight-8d9fcbfad2"
+    ]
+  },
+  {
+    "id": "skill-13-ai-generation-and-the-licensing-fight-8d9fcbfad2",
+    "purpose": "13 ai generation and the licensing fight",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-captions-podcasts-rights-and-qc/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-captions-podcasts-rights-and-qc/004-13-ai-generation-and-the-licensing-fight.md",
+    "requires": [
+      "skill-12-metadata-identifiers-and-rights-1ea076bf16"
+    ],
+    "links": [
+      "skill-14-testing-and-qc-f5a19ed54d"
+    ]
+  },
+  {
+    "id": "skill-14-testing-and-qc-f5a19ed54d",
+    "purpose": "14 testing and qc",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-captions-podcasts-rights-and-qc/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-captions-podcasts-rights-and-qc/005-14-testing-and-qc.md",
+    "requires": [
+      "skill-13-ai-generation-and-the-licensing-fight-8d9fcbfad2"
+    ],
+    "links": []
+  }
+]

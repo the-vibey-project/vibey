@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-22-compliance-and-certification-682b0aeae9",
+    "purpose": "22 compliance and certification",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security/001-22-compliance-and-certification.md",
+    "requires": [],
+    "links": [
+      "skill-23-accessibility-3b77d53865"
+    ]
+  },
+  {
+    "id": "skill-23-accessibility-3b77d53865",
+    "purpose": "23 accessibility",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security/002-23-accessibility.md",
+    "requires": [
+      "skill-22-compliance-and-certification-682b0aeae9"
+    ],
+    "links": [
+      "skill-24-peripheral-security-056e6d1850"
+    ]
+  },
+  {
+    "id": "skill-24-peripheral-security-056e6d1850",
+    "purpose": "24 peripheral security",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security/003-24-peripheral-security.md",
+    "requires": [
+      "skill-23-accessibility-3b77d53865"
+    ],
+    "links": []
+  }
+]

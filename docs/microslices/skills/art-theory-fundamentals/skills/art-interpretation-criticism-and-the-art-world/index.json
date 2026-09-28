@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-iconography-and-iconology-ae4bffa4ba",
+    "purpose": "17 iconography and iconology",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/001-17-iconography-and-iconology.md",
+    "requires": [],
+    "links": [
+      "skill-18-semiotics-80aa11fc32"
+    ]
+  },
+  {
+    "id": "skill-18-semiotics-80aa11fc32",
+    "purpose": "18 semiotics",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/002-18-semiotics.md",
+    "requires": [
+      "skill-17-iconography-and-iconology-ae4bffa4ba"
+    ],
+    "links": [
+      "skill-19-critical-lenses-853d3716b4"
+    ]
+  },
+  {
+    "id": "skill-19-critical-lenses-853d3716b4",
+    "purpose": "19 critical lenses",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/003-19-critical-lenses.md",
+    "requires": [
+      "skill-18-semiotics-80aa11fc32"
+    ],
+    "links": [
+      "skill-20-intention-and-the-author-00d9a7788d"
+    ]
+  },
+  {
+    "id": "skill-20-intention-and-the-author-00d9a7788d",
+    "purpose": "20 intention and the author",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/004-20-intention-and-the-author.md",
+    "requires": [
+      "skill-19-critical-lenses-853d3716b4"
+    ],
+    "links": [
+      "skill-21-how-to-actually-look-e8863990df"
+    ]
+  },
+  {
+    "id": "skill-21-how-to-actually-look-e8863990df",
+    "purpose": "21 how to actually look",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/005-21-how-to-actually-look.md",
+    "requires": [
+      "skill-20-intention-and-the-author-00d9a7788d"
+    ],
+    "links": [
+      "skill-22-the-art-world-and-market-be239844f6"
+    ]
+  },
+  {
+    "id": "skill-22-the-art-world-and-market-be239844f6",
+    "purpose": "22 the art world and market",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/006-22-the-art-world-and-market.md",
+    "requires": [
+      "skill-21-how-to-actually-look-e8863990df"
+    ],
+    "links": []
+  }
+]

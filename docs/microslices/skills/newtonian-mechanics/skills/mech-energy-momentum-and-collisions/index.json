@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-4-work-energy-power-15d7336605",
+    "purpose": "4 work energy power",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-energy-momentum-and-collisions/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-energy-momentum-and-collisions/001-4-work-energy-power.md",
+    "requires": [],
+    "links": [
+      "skill-5-momentum-and-collisions-1e3703ff6d"
+    ]
+  },
+  {
+    "id": "skill-5-momentum-and-collisions-1e3703ff6d",
+    "purpose": "5 momentum and collisions",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-energy-momentum-and-collisions/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-energy-momentum-and-collisions/002-5-momentum-and-collisions.md",
+    "requires": [
+      "skill-4-work-energy-power-15d7336605"
+    ],
+    "links": []
+  }
+]

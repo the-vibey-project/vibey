@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-16-how-business-investment-differs-9d625ad9f6",
+    "purpose": "16 how business investment differs",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/001-16-how-business-investment-differs.md",
+    "requires": [],
+    "links": [
+      "skill-17-capital-budgeting-11977fd243"
+    ]
+  },
+  {
+    "id": "skill-17-capital-budgeting-11977fd243",
+    "purpose": "17 capital budgeting",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/002-17-capital-budgeting.md",
+    "requires": [
+      "skill-16-how-business-investment-differs-9d625ad9f6"
+    ],
+    "links": [
+      "skill-18-cost-of-capital-615731d8e3"
+    ]
+  },
+  {
+    "id": "skill-18-cost-of-capital-615731d8e3",
+    "purpose": "18 cost of capital",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/003-18-cost-of-capital.md",
+    "requires": [
+      "skill-17-capital-budgeting-11977fd243"
+    ],
+    "links": [
+      "skill-19-capital-structure-9b61f97dc4"
+    ]
+  },
+  {
+    "id": "skill-19-capital-structure-9b61f97dc4",
+    "purpose": "19 capital structure",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/004-19-capital-structure.md",
+    "requires": [
+      "skill-18-cost-of-capital-615731d8e3"
+    ],
+    "links": [
+      "skill-20-business-cash-and-treasury-c08379e534"
+    ]
+  },
+  {
+    "id": "skill-20-business-cash-and-treasury-c08379e534",
+    "purpose": "20 business cash and treasury",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/005-20-business-cash-and-treasury.md",
+    "requires": [
+      "skill-19-capital-structure-9b61f97dc4"
+    ],
+    "links": [
+      "skill-21-valuation-7b1fae6629"
+    ]
+  },
+  {
+    "id": "skill-21-valuation-7b1fae6629",
+    "purpose": "21 valuation",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/006-21-valuation.md",
+    "requires": [
+      "skill-20-business-cash-and-treasury-c08379e534"
+    ],
+    "links": [
+      "skill-22-raising-capital-275da51439"
+    ]
+  },
+  {
+    "id": "skill-22-raising-capital-275da51439",
+    "purpose": "22 raising capital",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/007-22-raising-capital.md",
+    "requires": [
+      "skill-21-valuation-7b1fae6629"
+    ],
+    "links": []
+  }
+]

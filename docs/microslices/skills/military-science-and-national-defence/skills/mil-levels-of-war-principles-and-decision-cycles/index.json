@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-the-levels-of-war-82b17f68fb",
+    "purpose": "5 the levels of war",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles/001-5-the-levels-of-war.md",
+    "requires": [],
+    "links": [
+      "skill-6-principles-and-their-limits-4bbc930997"
+    ]
+  },
+  {
+    "id": "skill-6-principles-and-their-limits-4bbc930997",
+    "purpose": "6 principles and their limits",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles/002-6-principles-and-their-limits.md",
+    "requires": [
+      "skill-5-the-levels-of-war-82b17f68fb"
+    ],
+    "links": [
+      "skill-7-manoeuvre-attrition-and-decision-cycles-8a51304153"
+    ]
+  },
+  {
+    "id": "skill-7-manoeuvre-attrition-and-decision-cycles-8a51304153",
+    "purpose": "7 manoeuvre attrition and decision cycles",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles/003-7-manoeuvre-attrition-and-decision-cycles.md",
+    "requires": [
+      "skill-6-principles-and-their-limits-4bbc930997"
+    ],
+    "links": []
+  }
+]

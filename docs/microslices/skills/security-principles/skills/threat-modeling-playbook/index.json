@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-what-threat-modeling-is-and-why-it-exists-cb4cb99582",
+    "purpose": "what threat modeling is and why it exists",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/001-what-threat-modeling-is-and-why-it-exists.md",
+    "requires": [],
+    "links": [
+      "skill-stride-systematic-threat-enumeration-3d1ffad6be"
+    ]
+  },
+  {
+    "id": "skill-stride-systematic-threat-enumeration-3d1ffad6be",
+    "purpose": "stride systematic threat enumeration",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/002-stride-systematic-threat-enumeration.md",
+    "requires": [
+      "skill-what-threat-modeling-is-and-why-it-exists-cb4cb99582"
+    ],
+    "links": [
+      "skill-pasta-risk-centric-threat-modeling-cec8d3db65"
+    ]
+  },
+  {
+    "id": "skill-pasta-risk-centric-threat-modeling-cec8d3db65",
+    "purpose": "pasta risk centric threat modeling",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/003-pasta-risk-centric-threat-modeling.md",
+    "requires": [
+      "skill-stride-systematic-threat-enumeration-3d1ffad6be"
+    ],
+    "links": [
+      "skill-linddun-privacy-specific-threat-modeling-d3550d7879"
+    ]
+  },
+  {
+    "id": "skill-linddun-privacy-specific-threat-modeling-d3550d7879",
+    "purpose": "linddun privacy specific threat modeling",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/004-linddun-privacy-specific-threat-modeling.md",
+    "requires": [
+      "skill-pasta-risk-centric-threat-modeling-cec8d3db65"
+    ],
+    "links": [
+      "skill-attack-trees-modeling-attacker-goals-3d66723488"
+    ]
+  },
+  {
+    "id": "skill-attack-trees-modeling-attacker-goals-3d66723488",
+    "purpose": "attack trees modeling attacker goals",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/005-attack-trees-modeling-attacker-goals.md",
+    "requires": [
+      "skill-linddun-privacy-specific-threat-modeling-d3550d7879"
+    ],
+    "links": [
+      "skill-mitre-att-ck-intelligence-driven-threat-modeling-b495d5d542"
+    ]
+  },
+  {
+    "id": "skill-mitre-att-ck-intelligence-driven-threat-modeling-b495d5d542",
+    "purpose": "mitre att ck intelligence driven threat modeling",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/006-mitre-att-ck-intelligence-driven-threat-modeling.md",
+    "requires": [
+      "skill-attack-trees-modeling-attacker-goals-3d66723488"
+    ],
+    "links": [
+      "skill-practical-stride-in-agile-sprints-a8bb621a6a"
+    ]
+  },
+  {
+    "id": "skill-practical-stride-in-agile-sprints-a8bb621a6a",
+    "purpose": "practical stride in agile sprints",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/007-practical-stride-in-agile-sprints.md",
+    "requires": [
+      "skill-mitre-att-ck-intelligence-driven-threat-modeling-b495d5d542"
+    ],
+    "links": [
+      "skill-full-threat-model-document-structure-ce10b37165"
+    ]
+  },
+  {
+    "id": "skill-full-threat-model-document-structure-ce10b37165",
+    "purpose": "full threat model document structure",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/008-full-threat-model-document-structure.md",
+    "requires": [
+      "skill-practical-stride-in-agile-sprints-a8bb621a6a"
+    ],
+    "links": [
+      "skill-risk-rating-using-cvss-and-epss-together-c875d533c2"
+    ]
+  },
+  {
+    "id": "skill-risk-rating-using-cvss-and-epss-together-c875d533c2",
+    "purpose": "risk rating using cvss and epss together",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/009-risk-rating-using-cvss-and-epss-together.md",
+    "requires": [
+      "skill-full-threat-model-document-structure-ce10b37165"
+    ],
+    "links": [
+      "skill-common-threat-modeling-mistakes-293309546c"
+    ]
+  },
+  {
+    "id": "skill-common-threat-modeling-mistakes-293309546c",
+    "purpose": "common threat modeling mistakes",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/010-common-threat-modeling-mistakes.md",
+    "requires": [
+      "skill-risk-rating-using-cvss-and-epss-together-c875d533c2"
+    ],
+    "links": [
+      "skill-quick-reference-when-to-use-which-methodology-cc081e5a01"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-when-to-use-which-methodology-cc081e5a01",
+    "purpose": "quick reference when to use which methodology",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook/011-quick-reference-when-to-use-which-methodology.md",
+    "requires": [
+      "skill-common-threat-modeling-mistakes-293309546c"
+    ],
+    "links": []
+  }
+]

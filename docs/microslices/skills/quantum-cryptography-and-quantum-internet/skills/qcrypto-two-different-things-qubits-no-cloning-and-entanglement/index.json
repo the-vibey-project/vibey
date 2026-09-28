@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-cc1520aff4",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-two-completely-different-things-27c17c31ca"
+    ]
+  },
+  {
+    "id": "skill-1-two-completely-different-things-27c17c31ca",
+    "purpose": "1 two completely different things",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/002-1-two-completely-different-things.md",
+    "requires": [
+      "skill-0-routing-cc1520aff4"
+    ],
+    "links": [
+      "skill-2-qubits-and-measurement-f5d23f044b"
+    ]
+  },
+  {
+    "id": "skill-2-qubits-and-measurement-f5d23f044b",
+    "purpose": "2 qubits and measurement",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/003-2-qubits-and-measurement.md",
+    "requires": [
+      "skill-1-two-completely-different-things-27c17c31ca"
+    ],
+    "links": [
+      "skill-3-the-no-cloning-theorem-3e15946e77"
+    ]
+  },
+  {
+    "id": "skill-3-the-no-cloning-theorem-3e15946e77",
+    "purpose": "3 the no cloning theorem",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/004-3-the-no-cloning-theorem.md",
+    "requires": [
+      "skill-2-qubits-and-measurement-f5d23f044b"
+    ],
+    "links": [
+      "skill-4-entanglement-and-bell-inequalities-d2d1b3367f"
+    ]
+  },
+  {
+    "id": "skill-4-entanglement-and-bell-inequalities-d2d1b3367f",
+    "purpose": "4 entanglement and bell inequalities",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/005-4-entanglement-and-bell-inequalities.md",
+    "requires": [
+      "skill-3-the-no-cloning-theorem-3e15946e77"
+    ],
+    "links": [
+      "skill-5-quantum-channels-and-loss-bf582fda4a"
+    ]
+  },
+  {
+    "id": "skill-5-quantum-channels-and-loss-bf582fda4a",
+    "purpose": "5 quantum channels and loss",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/006-5-quantum-channels-and-loss.md",
+    "requires": [
+      "skill-4-entanglement-and-bell-inequalities-d2d1b3367f"
+    ],
+    "links": []
+  }
+]

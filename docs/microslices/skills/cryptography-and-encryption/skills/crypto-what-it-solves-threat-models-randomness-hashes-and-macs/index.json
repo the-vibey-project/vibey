@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-c67f7db199",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-cryptography-does-and-doesn-t-solve-16680e86a2"
+    ]
+  },
+  {
+    "id": "skill-1-what-cryptography-does-and-doesn-t-solve-16680e86a2",
+    "purpose": "1 what cryptography does and doesn t solve",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/002-1-what-cryptography-does-and-doesn-t-solve.md",
+    "requires": [
+      "skill-0-routing-c67f7db199"
+    ],
+    "links": [
+      "skill-2-threat-models-a9bfdedc85"
+    ]
+  },
+  {
+    "id": "skill-2-threat-models-a9bfdedc85",
+    "purpose": "2 threat models",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/003-2-threat-models.md",
+    "requires": [
+      "skill-1-what-cryptography-does-and-doesn-t-solve-16680e86a2"
+    ],
+    "links": [
+      "skill-3-randomness-96ff7fb286"
+    ]
+  },
+  {
+    "id": "skill-3-randomness-96ff7fb286",
+    "purpose": "3 randomness",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/004-3-randomness.md",
+    "requires": [
+      "skill-2-threat-models-a9bfdedc85"
+    ],
+    "links": [
+      "skill-4-hash-functions-9043ab7b66"
+    ]
+  },
+  {
+    "id": "skill-4-hash-functions-9043ab7b66",
+    "purpose": "4 hash functions",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/005-4-hash-functions.md",
+    "requires": [
+      "skill-3-randomness-96ff7fb286"
+    ],
+    "links": [
+      "skill-5-macs-68b1c6e114"
+    ]
+  },
+  {
+    "id": "skill-5-macs-68b1c6e114",
+    "purpose": "5 macs",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/006-5-macs.md",
+    "requires": [
+      "skill-4-hash-functions-9043ab7b66"
+    ],
+    "links": []
+  }
+]

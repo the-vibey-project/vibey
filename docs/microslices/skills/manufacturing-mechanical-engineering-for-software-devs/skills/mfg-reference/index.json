@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-25-what-s-live-verified-august-2026-1917266cea",
+    "purpose": "25 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/001-25-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-fac101d625"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-fac101d625",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-verified-august-2026-1917266cea"
+    ],
+    "links": [
+      "skill-27-numbers-48426d6cf8"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-48426d6cf8",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/003-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-fac101d625"
+    ],
+    "links": [
+      "skill-28-books-6832814b33"
+    ]
+  },
+  {
+    "id": "skill-28-books-6832814b33",
+    "purpose": "28 books",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/004-28-books.md",
+    "requires": [
+      "skill-27-numbers-48426d6cf8"
+    ],
+    "links": [
+      "skill-29-quick-reference-3b5321079d"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-3b5321079d",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/005-29-quick-reference.md",
+    "requires": [
+      "skill-28-books-6832814b33"
+    ],
+    "links": [
+      "skill-30-method-3429315842"
+    ]
+  },
+  {
+    "id": "skill-30-method-3429315842",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/006-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-3b5321079d"
+    ],
+    "links": []
+  }
+]

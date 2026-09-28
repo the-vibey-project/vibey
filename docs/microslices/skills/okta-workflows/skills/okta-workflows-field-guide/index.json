@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-tl-dr-05f51c8a04",
+    "purpose": "tl dr",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-field-guide/001-tl-dr.md",
+    "requires": [],
+    "links": [
+      "skill-key-findings-8d4ee09083"
+    ]
+  },
+  {
+    "id": "skill-key-findings-8d4ee09083",
+    "purpose": "key findings",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-field-guide/002-key-findings.md",
+    "requires": [
+      "skill-tl-dr-05f51c8a04"
+    ],
+    "links": [
+      "skill-recommendations-c339ad9224"
+    ]
+  },
+  {
+    "id": "skill-recommendations-c339ad9224",
+    "purpose": "recommendations",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-field-guide/003-recommendations.md",
+    "requires": [
+      "skill-key-findings-8d4ee09083"
+    ],
+    "links": [
+      "skill-recent-platform-changes-2025-2026-d2c6e03cc2"
+    ]
+  },
+  {
+    "id": "skill-recent-platform-changes-2025-2026-d2c6e03cc2",
+    "purpose": "recent platform changes 2025 2026",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-field-guide/004-recent-platform-changes-2025-2026.md",
+    "requires": [
+      "skill-recommendations-c339ad9224"
+    ],
+    "links": [
+      "skill-caveats-b51642095f"
+    ]
+  },
+  {
+    "id": "skill-caveats-b51642095f",
+    "purpose": "caveats",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-field-guide/005-caveats.md",
+    "requires": [
+      "skill-recent-platform-changes-2025-2026-d2c6e03cc2"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-0-routing-bf4d25b78e",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-reliability-gradient-8f0c73c37f"
+    ]
+  },
+  {
+    "id": "skill-1-the-reliability-gradient-8f0c73c37f",
+    "purpose": "1 the reliability gradient",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/002-1-the-reliability-gradient.md",
+    "requires": [
+      "skill-0-routing-bf4d25b78e"
+    ],
+    "links": [
+      "skill-2-memory-architecture-72a029430d"
+    ]
+  },
+  {
+    "id": "skill-2-memory-architecture-72a029430d",
+    "purpose": "2 memory architecture",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/003-2-memory-architecture.md",
+    "requires": [
+      "skill-1-the-reliability-gradient-8f0c73c37f"
+    ],
+    "links": [
+      "skill-3-cognitive-load-theory-f4060e7528"
+    ]
+  },
+  {
+    "id": "skill-3-cognitive-load-theory-f4060e7528",
+    "purpose": "3 cognitive load theory",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/004-3-cognitive-load-theory.md",
+    "requires": [
+      "skill-2-memory-architecture-72a029430d"
+    ],
+    "links": [
+      "skill-4-the-robust-effects-b8515e41df"
+    ]
+  },
+  {
+    "id": "skill-4-the-robust-effects-b8515e41df",
+    "purpose": "4 the robust effects",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/005-4-the-robust-effects.md",
+    "requires": [
+      "skill-3-cognitive-load-theory-f4060e7528"
+    ],
+    "links": [
+      "skill-5-prior-knowledge-schemas-and-expertise-8795b765ee"
+    ]
+  },
+  {
+    "id": "skill-5-prior-knowledge-schemas-and-expertise-8795b765ee",
+    "purpose": "5 prior knowledge schemas and expertise",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/006-5-prior-knowledge-schemas-and-expertise.md",
+    "requires": [
+      "skill-4-the-robust-effects-b8515e41df"
+    ],
+    "links": [
+      "skill-6-motivation-cba20938fb"
+    ]
+  },
+  {
+    "id": "skill-6-motivation-cba20938fb",
+    "purpose": "6 motivation",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/007-6-motivation.md",
+    "requires": [
+      "skill-5-prior-knowledge-schemas-and-expertise-8795b765ee"
+    ],
+    "links": [
+      "skill-7-metacognition-and-the-illusion-of-fluency-239220dfc8"
+    ]
+  },
+  {
+    "id": "skill-7-metacognition-and-the-illusion-of-fluency-239220dfc8",
+    "purpose": "7 metacognition and the illusion of fluency",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/008-7-metacognition-and-the-illusion-of-fluency.md",
+    "requires": [
+      "skill-6-motivation-cba20938fb"
+    ],
+    "links": []
+  }
+]

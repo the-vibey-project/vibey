@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-8-swing-trading-7e370a0ae0",
+    "purpose": "8 swing trading",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/001-8-swing-trading.md",
+    "requires": [],
+    "links": [
+      "skill-9-day-trading-d6ef257b70"
+    ]
+  },
+  {
+    "id": "skill-9-day-trading-d6ef257b70",
+    "purpose": "9 day trading",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/002-9-day-trading.md",
+    "requires": [
+      "skill-8-swing-trading-7e370a0ae0"
+    ],
+    "links": [
+      "skill-10-arbitrage-real-vs-apparent-cb8fd0a07f"
+    ]
+  },
+  {
+    "id": "skill-10-arbitrage-real-vs-apparent-cb8fd0a07f",
+    "purpose": "10 arbitrage real vs apparent",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/003-10-arbitrage-real-vs-apparent.md",
+    "requires": [
+      "skill-9-day-trading-d6ef257b70"
+    ],
+    "links": [
+      "skill-11-forex-acf0791b23"
+    ]
+  },
+  {
+    "id": "skill-11-forex-acf0791b23",
+    "purpose": "11 forex",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/004-11-forex.md",
+    "requires": [
+      "skill-10-arbitrage-real-vs-apparent-cb8fd0a07f"
+    ],
+    "links": [
+      "skill-12-defi-mechanics-7c1a4d91af"
+    ]
+  },
+  {
+    "id": "skill-12-defi-mechanics-7c1a4d91af",
+    "purpose": "12 defi mechanics",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/005-12-defi-mechanics.md",
+    "requires": [
+      "skill-11-forex-acf0791b23"
+    ],
+    "links": []
+  }
+]

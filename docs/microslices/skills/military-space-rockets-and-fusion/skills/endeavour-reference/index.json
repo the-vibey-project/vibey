@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-how-to-read-a-pointer-cebb306e31",
+    "purpose": "how to read a pointer",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-reference/001-how-to-read-a-pointer.md",
+    "requires": [],
+    "links": [
+      "skill-39-the-glossary-2d6896b621"
+    ]
+  },
+  {
+    "id": "skill-39-the-glossary-2d6896b621",
+    "purpose": "39 the glossary",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-reference/002-39-the-glossary.md",
+    "requires": [
+      "skill-how-to-read-a-pointer-cebb306e31"
+    ],
+    "links": [
+      "skill-40-further-reading-3fbbca2bd7"
+    ]
+  },
+  {
+    "id": "skill-40-further-reading-3fbbca2bd7",
+    "purpose": "40 further reading",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-reference/003-40-further-reading.md",
+    "requires": [
+      "skill-39-the-glossary-2d6896b621"
+    ],
+    "links": [
+      "skill-where-to-go-next-ea80861a10"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-ea80861a10",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-reference/004-where-to-go-next.md",
+    "requires": [
+      "skill-40-further-reading-3fbbca2bd7"
+    ],
+    "links": []
+  }
+]

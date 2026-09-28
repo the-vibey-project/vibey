@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-6231e1d3de",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-fundamentals-and-isas/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-fundamentals-and-isas/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-machine-model-43bdcbc0f5"
+    ]
+  },
+  {
+    "id": "skill-1-the-machine-model-43bdcbc0f5",
+    "purpose": "1 the machine model",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-fundamentals-and-isas/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-fundamentals-and-isas/002-1-the-machine-model.md",
+    "requires": [
+      "skill-0-routing-6231e1d3de"
+    ],
+    "links": [
+      "skill-2-x86-64-06d11e576f"
+    ]
+  },
+  {
+    "id": "skill-2-x86-64-06d11e576f",
+    "purpose": "2 x86 64",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-fundamentals-and-isas/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-fundamentals-and-isas/003-2-x86-64.md",
+    "requires": [
+      "skill-1-the-machine-model-43bdcbc0f5"
+    ],
+    "links": [
+      "skill-3-aarch64-arm64-637d2f7098"
+    ]
+  },
+  {
+    "id": "skill-3-aarch64-arm64-637d2f7098",
+    "purpose": "3 aarch64 arm64",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-fundamentals-and-isas/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-fundamentals-and-isas/004-3-aarch64-arm64.md",
+    "requires": [
+      "skill-2-x86-64-06d11e576f"
+    ],
+    "links": [
+      "skill-4-risc-v-158f761c5f"
+    ]
+  },
+  {
+    "id": "skill-4-risc-v-158f761c5f",
+    "purpose": "4 risc v",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-fundamentals-and-isas/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-fundamentals-and-isas/005-4-risc-v.md",
+    "requires": [
+      "skill-3-aarch64-arm64-637d2f7098"
+    ],
+    "links": [
+      "skill-5-other-isas-worth-knowing-4a37752128"
+    ]
+  },
+  {
+    "id": "skill-5-other-isas-worth-knowing-4a37752128",
+    "purpose": "5 other isas worth knowing",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-fundamentals-and-isas/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-fundamentals-and-isas/006-5-other-isas-worth-knowing.md",
+    "requires": [
+      "skill-4-risc-v-158f761c5f"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-51588c7d35",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-tool-is-not-the-process-4da4e2e372"
+    ]
+  },
+  {
+    "id": "skill-1-the-tool-is-not-the-process-4da4e2e372",
+    "purpose": "1 the tool is not the process",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/002-1-the-tool-is-not-the-process.md",
+    "requires": [
+      "skill-0-routing-51588c7d35"
+    ],
+    "links": [
+      "skill-2-git-s-data-model-5cf78d0cba"
+    ]
+  },
+  {
+    "id": "skill-2-git-s-data-model-5cf78d0cba",
+    "purpose": "2 git s data model",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/003-2-git-s-data-model.md",
+    "requires": [
+      "skill-1-the-tool-is-not-the-process-4da4e2e372"
+    ],
+    "links": [
+      "skill-3-branching-merging-rebasing-52167c7990"
+    ]
+  },
+  {
+    "id": "skill-3-branching-merging-rebasing-52167c7990",
+    "purpose": "3 branching merging rebasing",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/004-3-branching-merging-rebasing.md",
+    "requires": [
+      "skill-2-git-s-data-model-5cf78d0cba"
+    ],
+    "links": [
+      "skill-4-recovery-e110cedfcd"
+    ]
+  },
+  {
+    "id": "skill-4-recovery-e110cedfcd",
+    "purpose": "4 recovery",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/005-4-recovery.md",
+    "requires": [
+      "skill-3-branching-merging-rebasing-52167c7990"
+    ],
+    "links": []
+  }
+]

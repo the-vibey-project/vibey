@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-quirk-4-1-streaming-helper-flows-cannot-be-stopped-and-don-t-respect-deactivation-f508bad04d",
+    "purpose": "quirk 4 1 streaming helper flows cannot be stopped and don t respect deactivation",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-hooks-streaming/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-hooks-streaming/001-quirk-4-1-streaming-helper-flows-cannot-be-stopped-and-don-t-respect-deactivation.md",
+    "requires": [],
+    "links": [
+      "skill-quirk-4-2-streaming-helper-flow-contract-is-rigid-inputs-must-be-named-record-and-state-both-object-6d3f511981"
+    ]
+  },
+  {
+    "id": "skill-quirk-4-2-streaming-helper-flow-contract-is-rigid-inputs-must-be-named-record-and-state-both-object-6d3f511981",
+    "purpose": "quirk 4 2 streaming helper flow contract is rigid inputs must be named record and state both object",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-hooks-streaming/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-hooks-streaming/002-quirk-4-2-streaming-helper-flow-contract-is-rigid-inputs-must-be-named-record-and-state-both-object.md",
+    "requires": [
+      "skill-quirk-4-1-streaming-helper-flows-cannot-be-stopped-and-don-t-respect-deactivation-f508bad04d"
+    ],
+    "links": [
+      "skill-quirk-4-3-state-is-not-a-mutable-cross-page-accumulator-the-paginatedata-custom-parameter-limitation-5985dbdf1a"
+    ]
+  },
+  {
+    "id": "skill-quirk-4-3-state-is-not-a-mutable-cross-page-accumulator-the-paginatedata-custom-parameter-limitation-5985dbdf1a",
+    "purpose": "quirk 4 3 state is not a mutable cross page accumulator the paginatedata custom parameter limitation",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-hooks-streaming/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-hooks-streaming/003-quirk-4-3-state-is-not-a-mutable-cross-page-accumulator-the-paginatedata-custom-parameter-limitation.md",
+    "requires": [
+      "skill-quirk-4-2-streaming-helper-flow-contract-is-rigid-inputs-must-be-named-record-and-state-both-object-6d3f511981"
+    ],
+    "links": [
+      "skill-quirk-4-4-event-hook-hard-limits-and-no-ordering-guarantee-0cadf56166"
+    ]
+  },
+  {
+    "id": "skill-quirk-4-4-event-hook-hard-limits-and-no-ordering-guarantee-0cadf56166",
+    "purpose": "quirk 4 4 event hook hard limits and no ordering guarantee",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-hooks-streaming/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-hooks-streaming/004-quirk-4-4-event-hook-hard-limits-and-no-ordering-guarantee.md",
+    "requires": [
+      "skill-quirk-4-3-state-is-not-a-mutable-cross-page-accumulator-the-paginatedata-custom-parameter-limitation-5985dbdf1a"
+    ],
+    "links": [
+      "skill-quirk-4-5-api-endpoint-flows-drop-the-connection-at-60s-sync-120s-async-01f506191c"
+    ]
+  },
+  {
+    "id": "skill-quirk-4-5-api-endpoint-flows-drop-the-connection-at-60s-sync-120s-async-01f506191c",
+    "purpose": "quirk 4 5 api endpoint flows drop the connection at 60s sync 120s async",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-hooks-streaming/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-hooks-streaming/005-quirk-4-5-api-endpoint-flows-drop-the-connection-at-60s-sync-120s-async.md",
+    "requires": [
+      "skill-quirk-4-4-event-hook-hard-limits-and-no-ordering-guarantee-0cadf56166"
+    ],
+    "links": [
+      "skill-quirk-4-6-finding-the-calling-flow-from-a-helper-a9d596478c"
+    ]
+  },
+  {
+    "id": "skill-quirk-4-6-finding-the-calling-flow-from-a-helper-a9d596478c",
+    "purpose": "quirk 4 6 finding the calling flow from a helper",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-hooks-streaming/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-hooks-streaming/006-quirk-4-6-finding-the-calling-flow-from-a-helper.md",
+    "requires": [
+      "skill-quirk-4-5-api-endpoint-flows-drop-the-connection-at-60s-sync-120s-async-01f506191c"
+    ],
+    "links": []
+  }
+]

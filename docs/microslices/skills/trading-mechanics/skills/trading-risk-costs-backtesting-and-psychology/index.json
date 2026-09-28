@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-13-risk-and-position-sizing-7c13453806",
+    "purpose": "13 risk and position sizing",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/001-13-risk-and-position-sizing.md",
+    "requires": [],
+    "links": [
+      "skill-14-costs-and-frictions-9abd953352"
+    ]
+  },
+  {
+    "id": "skill-14-costs-and-frictions-9abd953352",
+    "purpose": "14 costs and frictions",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/002-14-costs-and-frictions.md",
+    "requires": [
+      "skill-13-risk-and-position-sizing-7c13453806"
+    ],
+    "links": [
+      "skill-15-backtesting-pitfalls-a65e638125"
+    ]
+  },
+  {
+    "id": "skill-15-backtesting-pitfalls-a65e638125",
+    "purpose": "15 backtesting pitfalls",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/003-15-backtesting-pitfalls.md",
+    "requires": [
+      "skill-14-costs-and-frictions-9abd953352"
+    ],
+    "links": [
+      "skill-16-psychology-and-harm-ca059d859f"
+    ]
+  },
+  {
+    "id": "skill-16-psychology-and-harm-ca059d859f",
+    "purpose": "16 psychology and harm",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/004-16-psychology-and-harm.md",
+    "requires": [
+      "skill-15-backtesting-pitfalls-a65e638125"
+    ],
+    "links": [
+      "skill-17-regulation-and-tax-3fab45ab5e"
+    ]
+  },
+  {
+    "id": "skill-17-regulation-and-tax-3fab45ab5e",
+    "purpose": "17 regulation and tax",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/005-17-regulation-and-tax.md",
+    "requires": [
+      "skill-16-psychology-and-harm-ca059d859f"
+    ],
+    "links": []
+  }
+]

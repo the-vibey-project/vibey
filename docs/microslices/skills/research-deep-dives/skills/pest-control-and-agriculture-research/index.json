@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-executive-summary-6221dfcf01",
+    "purpose": "executive summary",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/001-executive-summary.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-counts-as-a-pest-e3846be1db"
+    ]
+  },
+  {
+    "id": "skill-1-what-counts-as-a-pest-e3846be1db",
+    "purpose": "1 what counts as a pest",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/002-1-what-counts-as-a-pest.md",
+    "requires": [
+      "skill-executive-summary-6221dfcf01"
+    ],
+    "links": [
+      "skill-2-the-ipm-decision-cycle-1c8c66de65"
+    ]
+  },
+  {
+    "id": "skill-2-the-ipm-decision-cycle-1c8c66de65",
+    "purpose": "2 the ipm decision cycle",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/003-2-the-ipm-decision-cycle.md",
+    "requires": [
+      "skill-1-what-counts-as-a-pest-e3846be1db"
+    ],
+    "links": [
+      "skill-3-control-methods-22ecb6f9b2"
+    ]
+  },
+  {
+    "id": "skill-3-control-methods-22ecb6f9b2",
+    "purpose": "3 control methods",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/004-3-control-methods.md",
+    "requires": [
+      "skill-2-the-ipm-decision-cycle-1c8c66de65"
+    ],
+    "links": [
+      "skill-4-resistance-management-70ef63f559"
+    ]
+  },
+  {
+    "id": "skill-4-resistance-management-70ef63f559",
+    "purpose": "4 resistance management",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/005-4-resistance-management.md",
+    "requires": [
+      "skill-3-control-methods-22ecb6f9b2"
+    ],
+    "links": [
+      "skill-5-agriculture-specific-systems-9eceb17de1"
+    ]
+  },
+  {
+    "id": "skill-5-agriculture-specific-systems-9eceb17de1",
+    "purpose": "5 agriculture specific systems",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/006-5-agriculture-specific-systems.md",
+    "requires": [
+      "skill-4-resistance-management-70ef63f559"
+    ],
+    "links": [
+      "skill-6-ecology-and-tradeoffs-3a57c5b2a6"
+    ]
+  },
+  {
+    "id": "skill-6-ecology-and-tradeoffs-3a57c5b2a6",
+    "purpose": "6 ecology and tradeoffs",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/007-6-ecology-and-tradeoffs.md",
+    "requires": [
+      "skill-5-agriculture-specific-systems-9eceb17de1"
+    ],
+    "links": [
+      "skill-7-worker-food-and-public-safety-bf8e423444"
+    ]
+  },
+  {
+    "id": "skill-7-worker-food-and-public-safety-bf8e423444",
+    "purpose": "7 worker food and public safety",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/008-7-worker-food-and-public-safety.md",
+    "requires": [
+      "skill-6-ecology-and-tradeoffs-3a57c5b2a6"
+    ],
+    "links": [
+      "skill-8-technology-and-data-fde96fa681"
+    ]
+  },
+  {
+    "id": "skill-8-technology-and-data-fde96fa681",
+    "purpose": "8 technology and data",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/009-8-technology-and-data.md",
+    "requires": [
+      "skill-7-worker-food-and-public-safety-bf8e423444"
+    ],
+    "links": [
+      "skill-9-economics-and-decision-quality-5003b1de4d"
+    ]
+  },
+  {
+    "id": "skill-9-economics-and-decision-quality-5003b1de4d",
+    "purpose": "9 economics and decision quality",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/010-9-economics-and-decision-quality.md",
+    "requires": [
+      "skill-8-technology-and-data-fde96fa681"
+    ],
+    "links": [
+      "skill-10-research-and-extension-workflow-8e6c4104c6"
+    ]
+  },
+  {
+    "id": "skill-10-research-and-extension-workflow-8e6c4104c6",
+    "purpose": "10 research and extension workflow",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/011-10-research-and-extension-workflow.md",
+    "requires": [
+      "skill-9-economics-and-decision-quality-5003b1de4d"
+    ],
+    "links": [
+      "skill-11-common-myths-and-bad-practices-e702cb9339"
+    ]
+  },
+  {
+    "id": "skill-11-common-myths-and-bad-practices-e702cb9339",
+    "purpose": "11 common myths and bad practices",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/012-11-common-myths-and-bad-practices.md",
+    "requires": [
+      "skill-10-research-and-extension-workflow-8e6c4104c6"
+    ],
+    "links": [
+      "skill-12-a-practical-farm-ipm-template-c20b6cf44a"
+    ]
+  },
+  {
+    "id": "skill-12-a-practical-farm-ipm-template-c20b6cf44a",
+    "purpose": "12 a practical farm ipm template",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/013-12-a-practical-farm-ipm-template.md",
+    "requires": [
+      "skill-11-common-myths-and-bad-practices-e702cb9339"
+    ],
+    "links": [
+      "skill-bottom-line-b78047c755"
+    ]
+  },
+  {
+    "id": "skill-bottom-line-b78047c755",
+    "purpose": "bottom line",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research/014-bottom-line.md",
+    "requires": [
+      "skill-12-a-practical-farm-ipm-template-c20b6cf44a"
+    ],
+    "links": []
+  }
+]

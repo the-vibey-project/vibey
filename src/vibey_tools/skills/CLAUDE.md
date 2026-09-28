@@ -12,6 +12,10 @@ behind `vibey-skills index / search / packet / evaluate`) — but the deliverabl
 the Markdown and JSON that define the plugins. "Correctness" means valid manifests and
 accurate, well-triggered skill content.
 
+## Context microslices
+
+Every skill and guidance surface follows the [context microslice contract](https://github.com/the-vibey-project/vibey/blob/develop/docs/context-microslices.md): one purpose per slice, stable identity, provenance, explicit links, and measured retrieval budgets. Retrieve only the smallest sufficient linked set; never paste the whole catalogue or silently truncate requirements. Existing skills migrate incrementally and remain authoritative until replacement slices link back.
+
 ## Source of truth
 
 - [.claude-plugin/marketplace.json](https://github.com/the-vibey-project/vibey-skills/blob/main/.claude-plugin/marketplace.json) — the marketplace

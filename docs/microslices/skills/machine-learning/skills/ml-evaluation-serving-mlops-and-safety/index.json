@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-9-evaluation-bfbd2388f7",
+    "purpose": "9 evaluation",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/001-9-evaluation.md",
+    "requires": [],
+    "links": [
+      "skill-10-debugging-training-ecd081429a"
+    ]
+  },
+  {
+    "id": "skill-10-debugging-training-ecd081429a",
+    "purpose": "10 debugging training",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/002-10-debugging-training.md",
+    "requires": [
+      "skill-9-evaluation-bfbd2388f7"
+    ],
+    "links": [
+      "skill-11-inference-and-serving-9ddb9438ae"
+    ]
+  },
+  {
+    "id": "skill-11-inference-and-serving-9ddb9438ae",
+    "purpose": "11 inference and serving",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/003-11-inference-and-serving.md",
+    "requires": [
+      "skill-10-debugging-training-ecd081429a"
+    ],
+    "links": [
+      "skill-12-mlops-and-reproducibility-5c07757fa1"
+    ]
+  },
+  {
+    "id": "skill-12-mlops-and-reproducibility-5c07757fa1",
+    "purpose": "12 mlops and reproducibility",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/004-12-mlops-and-reproducibility.md",
+    "requires": [
+      "skill-11-inference-and-serving-9ddb9438ae"
+    ],
+    "links": [
+      "skill-13-hardware-and-cost-8ffda29c98"
+    ]
+  },
+  {
+    "id": "skill-13-hardware-and-cost-8ffda29c98",
+    "purpose": "13 hardware and cost",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/005-13-hardware-and-cost.md",
+    "requires": [
+      "skill-12-mlops-and-reproducibility-5c07757fa1"
+    ],
+    "links": [
+      "skill-14-interpretability-fairness-safety-981a21c568"
+    ]
+  },
+  {
+    "id": "skill-14-interpretability-fairness-safety-981a21c568",
+    "purpose": "14 interpretability fairness safety",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/006-14-interpretability-fairness-safety.md",
+    "requires": [
+      "skill-13-hardware-and-cost-8ffda29c98"
+    ],
+    "links": []
+  }
+]

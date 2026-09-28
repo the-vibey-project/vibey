@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-8-training-principles-c661ae478f",
+    "purpose": "8 training principles",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/001-8-training-principles.md",
+    "requires": [],
+    "links": [
+      "skill-9-strength-and-hypertrophy-1d01017daa"
+    ]
+  },
+  {
+    "id": "skill-9-strength-and-hypertrophy-1d01017daa",
+    "purpose": "9 strength and hypertrophy",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/002-9-strength-and-hypertrophy.md",
+    "requires": [
+      "skill-8-training-principles-c661ae478f"
+    ],
+    "links": [
+      "skill-10-endurance-d3287c3286"
+    ]
+  },
+  {
+    "id": "skill-10-endurance-d3287c3286",
+    "purpose": "10 endurance",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/003-10-endurance.md",
+    "requires": [
+      "skill-9-strength-and-hypertrophy-1d01017daa"
+    ],
+    "links": [
+      "skill-11-power-and-speed-e6c2df9f37"
+    ]
+  },
+  {
+    "id": "skill-11-power-and-speed-e6c2df9f37",
+    "purpose": "11 power and speed",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/004-11-power-and-speed.md",
+    "requires": [
+      "skill-10-endurance-d3287c3286"
+    ],
+    "links": [
+      "skill-12-flexibility-and-mobility-f3bef859b6"
+    ]
+  },
+  {
+    "id": "skill-12-flexibility-and-mobility-f3bef859b6",
+    "purpose": "12 flexibility and mobility",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/005-12-flexibility-and-mobility.md",
+    "requires": [
+      "skill-11-power-and-speed-e6c2df9f37"
+    ],
+    "links": [
+      "skill-13-recovery-and-sleep-10415ae0f0"
+    ]
+  },
+  {
+    "id": "skill-13-recovery-and-sleep-10415ae0f0",
+    "purpose": "13 recovery and sleep",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/006-13-recovery-and-sleep.md",
+    "requires": [
+      "skill-12-flexibility-and-mobility-f3bef859b6"
+    ],
+    "links": []
+  }
+]

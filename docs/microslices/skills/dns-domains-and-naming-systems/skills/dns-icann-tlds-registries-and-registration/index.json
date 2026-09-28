@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-13-icann-and-the-root-7106d185d8",
+    "purpose": "13 icann and the root",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/001-13-icann-and-the-root.md",
+    "requires": [],
+    "links": [
+      "skill-14-tld-types-d5bad7f0d3"
+    ]
+  },
+  {
+    "id": "skill-14-tld-types-d5bad7f0d3",
+    "purpose": "14 tld types",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/002-14-tld-types.md",
+    "requires": [
+      "skill-13-icann-and-the-root-7106d185d8"
+    ],
+    "links": [
+      "skill-15-the-registry-registrar-registrant-model-c33c4795d6"
+    ]
+  },
+  {
+    "id": "skill-15-the-registry-registrar-registrant-model-c33c4795d6",
+    "purpose": "15 the registry registrar registrant model",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/003-15-the-registry-registrar-registrant-model.md",
+    "requires": [
+      "skill-14-tld-types-d5bad7f0d3"
+    ],
+    "links": [
+      "skill-16-registration-mechanics-087b2f7db9"
+    ]
+  },
+  {
+    "id": "skill-16-registration-mechanics-087b2f7db9",
+    "purpose": "16 registration mechanics",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/004-16-registration-mechanics.md",
+    "requires": [
+      "skill-15-the-registry-registrar-registrant-model-c33c4795d6"
+    ],
+    "links": []
+  }
+]

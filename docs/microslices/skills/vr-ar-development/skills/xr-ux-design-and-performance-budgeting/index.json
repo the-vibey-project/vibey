@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-10-ux-design-for-3d-fa04a29e0e",
+    "purpose": "10 ux design for 3d",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-ux-design-and-performance-budgeting/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-ux-design-and-performance-budgeting/001-10-ux-design-for-3d.md",
+    "requires": [],
+    "links": [
+      "skill-11-performance-budgeting-02f5cdf40e"
+    ]
+  },
+  {
+    "id": "skill-11-performance-budgeting-02f5cdf40e",
+    "purpose": "11 performance budgeting",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-ux-design-and-performance-budgeting/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-ux-design-and-performance-budgeting/002-11-performance-budgeting.md",
+    "requires": [
+      "skill-10-ux-design-for-3d-fa04a29e0e"
+    ],
+    "links": []
+  }
+]

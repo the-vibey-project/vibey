@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-14-petroleum-geology-adbdaa21a6",
+    "purpose": "14 petroleum geology",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/001-14-petroleum-geology.md",
+    "requires": [],
+    "links": [
+      "skill-15-seismic-exploration-335eee0abf"
+    ]
+  },
+  {
+    "id": "skill-15-seismic-exploration-335eee0abf",
+    "purpose": "15 seismic exploration",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/002-15-seismic-exploration.md",
+    "requires": [
+      "skill-14-petroleum-geology-adbdaa21a6"
+    ],
+    "links": [
+      "skill-16-drilling-78edbaab39"
+    ]
+  },
+  {
+    "id": "skill-16-drilling-78edbaab39",
+    "purpose": "16 drilling",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/003-16-drilling.md",
+    "requires": [
+      "skill-15-seismic-exploration-335eee0abf"
+    ],
+    "links": [
+      "skill-17-well-control-d1da061524"
+    ]
+  },
+  {
+    "id": "skill-17-well-control-d1da061524",
+    "purpose": "17 well control",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/004-17-well-control.md",
+    "requires": [
+      "skill-16-drilling-78edbaab39"
+    ],
+    "links": [
+      "skill-18-completion-and-hydraulic-fracturing-434c7401f1"
+    ]
+  },
+  {
+    "id": "skill-18-completion-and-hydraulic-fracturing-434c7401f1",
+    "purpose": "18 completion and hydraulic fracturing",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/005-18-completion-and-hydraulic-fracturing.md",
+    "requires": [
+      "skill-17-well-control-d1da061524"
+    ],
+    "links": []
+  }
+]

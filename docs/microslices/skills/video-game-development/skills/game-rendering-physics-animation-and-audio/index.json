@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-rendering-c027ccd260",
+    "purpose": "4 rendering",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-rendering-physics-animation-and-audio/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-rendering-physics-animation-and-audio/001-4-rendering.md",
+    "requires": [],
+    "links": [
+      "skill-5-physics-and-collision-feecf85642"
+    ]
+  },
+  {
+    "id": "skill-5-physics-and-collision-feecf85642",
+    "purpose": "5 physics and collision",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-rendering-physics-animation-and-audio/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-rendering-physics-animation-and-audio/002-5-physics-and-collision.md",
+    "requires": [
+      "skill-4-rendering-c027ccd260"
+    ],
+    "links": [
+      "skill-6-animation-e0bfe0c01b"
+    ]
+  },
+  {
+    "id": "skill-6-animation-e0bfe0c01b",
+    "purpose": "6 animation",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-rendering-physics-animation-and-audio/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-rendering-physics-animation-and-audio/003-6-animation.md",
+    "requires": [
+      "skill-5-physics-and-collision-feecf85642"
+    ],
+    "links": [
+      "skill-7-audio-e6fb999462"
+    ]
+  },
+  {
+    "id": "skill-7-audio-e6fb999462",
+    "purpose": "7 audio",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-rendering-physics-animation-and-audio/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-rendering-physics-animation-and-audio/004-7-audio.md",
+    "requires": [
+      "skill-6-animation-e0bfe0c01b"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-intermediate-representations-cdb168f846",
+    "purpose": "5 intermediate representations",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-irs-optimization-and-backends/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-irs-optimization-and-backends/001-5-intermediate-representations.md",
+    "requires": [],
+    "links": [
+      "skill-6-optimization-dba4d38c9a"
+    ]
+  },
+  {
+    "id": "skill-6-optimization-dba4d38c9a",
+    "purpose": "6 optimization",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-irs-optimization-and-backends/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-irs-optimization-and-backends/002-6-optimization.md",
+    "requires": [
+      "skill-5-intermediate-representations-cdb168f846"
+    ],
+    "links": [
+      "skill-7-code-generation-and-backends-a03c48fa76"
+    ]
+  },
+  {
+    "id": "skill-7-code-generation-and-backends-a03c48fa76",
+    "purpose": "7 code generation and backends",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-irs-optimization-and-backends/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-irs-optimization-and-backends/003-7-code-generation-and-backends.md",
+    "requires": [
+      "skill-6-optimization-dba4d38c9a"
+    ],
+    "links": []
+  }
+]

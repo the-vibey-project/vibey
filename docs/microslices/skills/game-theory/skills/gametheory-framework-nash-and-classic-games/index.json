@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-57b8a38227",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-framework-nash-and-classic-games/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-framework-nash-and-classic-games/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-framework-075795fe51"
+    ]
+  },
+  {
+    "id": "skill-1-the-framework-075795fe51",
+    "purpose": "1 the framework",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-framework-nash-and-classic-games/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-framework-nash-and-classic-games/002-1-the-framework.md",
+    "requires": [
+      "skill-0-routing-57b8a38227"
+    ],
+    "links": [
+      "skill-2-representations-261d2c5048"
+    ]
+  },
+  {
+    "id": "skill-2-representations-261d2c5048",
+    "purpose": "2 representations",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-framework-nash-and-classic-games/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-framework-nash-and-classic-games/003-2-representations.md",
+    "requires": [
+      "skill-1-the-framework-075795fe51"
+    ],
+    "links": [
+      "skill-3-dominance-e50d2256fa"
+    ]
+  },
+  {
+    "id": "skill-3-dominance-e50d2256fa",
+    "purpose": "3 dominance",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-framework-nash-and-classic-games/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-framework-nash-and-classic-games/004-3-dominance.md",
+    "requires": [
+      "skill-2-representations-261d2c5048"
+    ],
+    "links": [
+      "skill-4-nash-equilibrium-b13656c708"
+    ]
+  },
+  {
+    "id": "skill-4-nash-equilibrium-b13656c708",
+    "purpose": "4 nash equilibrium",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-framework-nash-and-classic-games/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-framework-nash-and-classic-games/005-4-nash-equilibrium.md",
+    "requires": [
+      "skill-3-dominance-e50d2256fa"
+    ],
+    "links": [
+      "skill-5-the-classic-games-6c4d30e2ca"
+    ]
+  },
+  {
+    "id": "skill-5-the-classic-games-6c4d30e2ca",
+    "purpose": "5 the classic games",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-framework-nash-and-classic-games/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-framework-nash-and-classic-games/006-5-the-classic-games.md",
+    "requires": [
+      "skill-4-nash-equilibrium-b13656c708"
+    ],
+    "links": []
+  }
+]

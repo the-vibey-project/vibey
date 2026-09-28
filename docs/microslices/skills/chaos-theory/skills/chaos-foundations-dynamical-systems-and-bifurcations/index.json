@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-3d3746ba62",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-chaos-is-d3df5c872f"
+    ]
+  },
+  {
+    "id": "skill-1-what-chaos-is-d3df5c872f",
+    "purpose": "1 what chaos is",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/002-1-what-chaos-is.md",
+    "requires": [
+      "skill-0-routing-3d3746ba62"
+    ],
+    "links": [
+      "skill-2-dynamical-systems-bc9348511c"
+    ]
+  },
+  {
+    "id": "skill-2-dynamical-systems-bc9348511c",
+    "purpose": "2 dynamical systems",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/003-2-dynamical-systems.md",
+    "requires": [
+      "skill-1-what-chaos-is-d3df5c872f"
+    ],
+    "links": [
+      "skill-3-stability-and-linearization-6e637cca70"
+    ]
+  },
+  {
+    "id": "skill-3-stability-and-linearization-6e637cca70",
+    "purpose": "3 stability and linearization",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/004-3-stability-and-linearization.md",
+    "requires": [
+      "skill-2-dynamical-systems-bc9348511c"
+    ],
+    "links": [
+      "skill-4-bifurcations-a0af6760ea"
+    ]
+  },
+  {
+    "id": "skill-4-bifurcations-a0af6760ea",
+    "purpose": "4 bifurcations",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/005-4-bifurcations.md",
+    "requires": [
+      "skill-3-stability-and-linearization-6e637cca70"
+    ],
+    "links": []
+  }
+]

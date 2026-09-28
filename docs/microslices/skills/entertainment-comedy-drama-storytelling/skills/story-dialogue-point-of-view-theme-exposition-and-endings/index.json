@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-7-dialogue-e926dd1b24",
+    "purpose": "7 dialogue",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/001-7-dialogue.md",
+    "requires": [],
+    "links": [
+      "skill-8-point-of-view-and-narration-ce06830531"
+    ]
+  },
+  {
+    "id": "skill-8-point-of-view-and-narration-ce06830531",
+    "purpose": "8 point of view and narration",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/002-8-point-of-view-and-narration.md",
+    "requires": [
+      "skill-7-dialogue-e926dd1b24"
+    ],
+    "links": [
+      "skill-9-theme-20009ee789"
+    ]
+  },
+  {
+    "id": "skill-9-theme-20009ee789",
+    "purpose": "9 theme",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/003-9-theme.md",
+    "requires": [
+      "skill-8-point-of-view-and-narration-ce06830531"
+    ],
+    "links": [
+      "skill-10-exposition-be6e26b823"
+    ]
+  },
+  {
+    "id": "skill-10-exposition-be6e26b823",
+    "purpose": "10 exposition",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/004-10-exposition.md",
+    "requires": [
+      "skill-9-theme-20009ee789"
+    ],
+    "links": [
+      "skill-11-endings-4ec86a065d"
+    ]
+  },
+  {
+    "id": "skill-11-endings-4ec86a065d",
+    "purpose": "11 endings",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/005-11-endings.md",
+    "requires": [
+      "skill-10-exposition-be6e26b823"
+    ],
+    "links": []
+  }
+]

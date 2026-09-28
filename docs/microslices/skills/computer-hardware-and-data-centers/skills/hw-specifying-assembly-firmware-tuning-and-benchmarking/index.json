@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-specifying-a-build-f9e914e585",
+    "purpose": "10 specifying a build",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/001-10-specifying-a-build.md",
+    "requires": [],
+    "links": [
+      "skill-11-assembly-3a83a71026"
+    ]
+  },
+  {
+    "id": "skill-11-assembly-3a83a71026",
+    "purpose": "11 assembly",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/002-11-assembly.md",
+    "requires": [
+      "skill-10-specifying-a-build-f9e914e585"
+    ],
+    "links": [
+      "skill-12-firmware-and-boot-8e5651ffe5"
+    ]
+  },
+  {
+    "id": "skill-12-firmware-and-boot-8e5651ffe5",
+    "purpose": "12 firmware and boot",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/003-12-firmware-and-boot.md",
+    "requires": [
+      "skill-11-assembly-3a83a71026"
+    ],
+    "links": [
+      "skill-13-tuning-and-overclocking-honestly-24770cb634"
+    ]
+  },
+  {
+    "id": "skill-13-tuning-and-overclocking-honestly-24770cb634",
+    "purpose": "13 tuning and overclocking honestly",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/004-13-tuning-and-overclocking-honestly.md",
+    "requires": [
+      "skill-12-firmware-and-boot-8e5651ffe5"
+    ],
+    "links": [
+      "skill-14-troubleshooting-ad1ed73cf4"
+    ]
+  },
+  {
+    "id": "skill-14-troubleshooting-ad1ed73cf4",
+    "purpose": "14 troubleshooting",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/005-14-troubleshooting.md",
+    "requires": [
+      "skill-13-tuning-and-overclocking-honestly-24770cb634"
+    ],
+    "links": [
+      "skill-15-benchmarking-89834430a7"
+    ]
+  },
+  {
+    "id": "skill-15-benchmarking-89834430a7",
+    "purpose": "15 benchmarking",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/006-15-benchmarking.md",
+    "requires": [
+      "skill-14-troubleshooting-ad1ed73cf4"
+    ],
+    "links": []
+  }
+]

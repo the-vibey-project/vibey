@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-the-framing-for-part-iii-6cd24961ad",
+    "purpose": "the framing for part iii",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-soil-and-fertility/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-soil-and-fertility/001-the-framing-for-part-iii.md",
+    "requires": [],
+    "links": [
+      "skill-15-soil-science-09f211d521"
+    ]
+  },
+  {
+    "id": "skill-15-soil-science-09f211d521",
+    "purpose": "15 soil science",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-soil-and-fertility/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-soil-and-fertility/002-15-soil-science.md",
+    "requires": [
+      "skill-the-framing-for-part-iii-6cd24961ad"
+    ],
+    "links": [
+      "skill-16-fertility-management-fb1746a687"
+    ]
+  },
+  {
+    "id": "skill-16-fertility-management-fb1746a687",
+    "purpose": "16 fertility management",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-soil-and-fertility/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-soil-and-fertility/003-16-fertility-management.md",
+    "requires": [
+      "skill-15-soil-science-09f211d521"
+    ],
+    "links": [
+      "skill-cross-references-dda22276d1"
+    ]
+  },
+  {
+    "id": "skill-cross-references-dda22276d1",
+    "purpose": "cross references",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-soil-and-fertility/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-soil-and-fertility/004-cross-references.md",
+    "requires": [
+      "skill-16-fertility-management-fb1746a687"
+    ],
+    "links": []
+  }
+]

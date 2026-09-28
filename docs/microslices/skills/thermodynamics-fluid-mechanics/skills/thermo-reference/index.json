@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-29-what-s-live-verified-august-2026-6ee4e49644",
+    "purpose": "29 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference/001-29-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-30-anti-patterns-dd7d5f06db"
+    ]
+  },
+  {
+    "id": "skill-30-anti-patterns-dd7d5f06db",
+    "purpose": "30 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference/002-30-anti-patterns.md",
+    "requires": [
+      "skill-29-what-s-live-verified-august-2026-6ee4e49644"
+    ],
+    "links": [
+      "skill-31-misconceptions-27ee3c0006"
+    ]
+  },
+  {
+    "id": "skill-31-misconceptions-27ee3c0006",
+    "purpose": "31 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference/003-31-misconceptions.md",
+    "requires": [
+      "skill-30-anti-patterns-dd7d5f06db"
+    ],
+    "links": [
+      "skill-32-numbers-39feabc59d"
+    ]
+  },
+  {
+    "id": "skill-32-numbers-39feabc59d",
+    "purpose": "32 numbers",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference/004-32-numbers.md",
+    "requires": [
+      "skill-31-misconceptions-27ee3c0006"
+    ],
+    "links": [
+      "skill-33-books-9e7d10f824"
+    ]
+  },
+  {
+    "id": "skill-33-books-9e7d10f824",
+    "purpose": "33 books",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference/005-33-books.md",
+    "requires": [
+      "skill-32-numbers-39feabc59d"
+    ],
+    "links": [
+      "skill-34-quick-reference-512939f591"
+    ]
+  },
+  {
+    "id": "skill-34-quick-reference-512939f591",
+    "purpose": "34 quick reference",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference/006-34-quick-reference.md",
+    "requires": [
+      "skill-33-books-9e7d10f824"
+    ],
+    "links": [
+      "skill-35-method-4d9e2aa8bf"
+    ]
+  },
+  {
+    "id": "skill-35-method-4d9e2aa8bf",
+    "purpose": "35 method",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference/007-35-method.md",
+    "requires": [
+      "skill-34-quick-reference-512939f591"
+    ],
+    "links": []
+  }
+]

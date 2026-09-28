@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-adopt-the-new-architecture-now-the-legacy-bridge-is-end-of-life-6bbddb0c0d",
+    "purpose": "adopt the new architecture now the legacy bridge is end of life",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/001-adopt-the-new-architecture-now-the-legacy-bridge-is-end-of-life.md",
+    "requires": [],
+    "links": [
+      "skill-project-structure-state-management-180c0db662"
+    ]
+  },
+  {
+    "id": "skill-project-structure-state-management-180c0db662",
+    "purpose": "project structure state management",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/002-project-structure-state-management.md",
+    "requires": [
+      "skill-adopt-the-new-architecture-now-the-legacy-bridge-is-end-of-life-6bbddb0c0d"
+    ],
+    "links": [
+      "skill-navigation-0682fa5546"
+    ]
+  },
+  {
+    "id": "skill-navigation-0682fa5546",
+    "purpose": "navigation",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/003-navigation.md",
+    "requires": [
+      "skill-project-structure-state-management-180c0db662"
+    ],
+    "links": [
+      "skill-performance-d958701aa0"
+    ]
+  },
+  {
+    "id": "skill-performance-d958701aa0",
+    "purpose": "performance",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/004-performance.md",
+    "requires": [
+      "skill-navigation-0682fa5546"
+    ],
+    "links": [
+      "skill-testing-edea250b0b"
+    ]
+  },
+  {
+    "id": "skill-testing-edea250b0b",
+    "purpose": "testing",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/005-testing.md",
+    "requires": [
+      "skill-performance-d958701aa0"
+    ],
+    "links": [
+      "skill-expo-eas-69db33dbb0"
+    ]
+  },
+  {
+    "id": "skill-expo-eas-69db33dbb0",
+    "purpose": "expo eas",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/006-expo-eas.md",
+    "requires": [
+      "skill-testing-edea250b0b"
+    ],
+    "links": [
+      "skill-azure-integration-auth-d34b7603cd"
+    ]
+  },
+  {
+    "id": "skill-azure-integration-auth-d34b7603cd",
+    "purpose": "azure integration auth",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/007-azure-integration-auth.md",
+    "requires": [
+      "skill-expo-eas-69db33dbb0"
+    ],
+    "links": [
+      "skill-crash-observability-7be21867b0"
+    ]
+  },
+  {
+    "id": "skill-crash-observability-7be21867b0",
+    "purpose": "crash observability",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/008-crash-observability.md",
+    "requires": [
+      "skill-azure-integration-auth-d34b7603cd"
+    ],
+    "links": [
+      "skill-re-platform-off-app-center-retired-march-31-2025-9a1ae5aec4"
+    ]
+  },
+  {
+    "id": "skill-re-platform-off-app-center-retired-march-31-2025-9a1ae5aec4",
+    "purpose": "re platform off app center retired march 31 2025",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/009-re-platform-off-app-center-retired-march-31-2025.md",
+    "requires": [
+      "skill-crash-observability-7be21867b0"
+    ],
+    "links": [
+      "skill-cross-cutting-9dec0f69b3"
+    ]
+  },
+  {
+    "id": "skill-cross-cutting-9dec0f69b3",
+    "purpose": "cross cutting",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native/010-cross-cutting.md",
+    "requires": [
+      "skill-re-platform-off-app-center-retired-march-31-2025-9a1ae5aec4"
+    ],
+    "links": []
+  }
+]

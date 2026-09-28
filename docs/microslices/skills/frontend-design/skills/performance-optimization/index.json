@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-core-principle-3f97d4b15f",
+    "purpose": "core principle",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/performance-optimization/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/performance-optimization/001-core-principle.md",
+    "requires": [],
+    "links": [
+      "skill-python-performance-059ab084a9"
+    ]
+  },
+  {
+    "id": "skill-python-performance-059ab084a9",
+    "purpose": "python performance",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/performance-optimization/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/performance-optimization/002-python-performance.md",
+    "requires": [
+      "skill-core-principle-3f97d4b15f"
+    ],
+    "links": [
+      "skill-next-js-typescript-performance-341b4ed557"
+    ]
+  },
+  {
+    "id": "skill-next-js-typescript-performance-341b4ed557",
+    "purpose": "next js typescript performance",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/performance-optimization/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/performance-optimization/003-next-js-typescript-performance.md",
+    "requires": [
+      "skill-python-performance-059ab084a9"
+    ],
+    "links": [
+      "skill-azure-cloud-performance-ad6961f569"
+    ]
+  },
+  {
+    "id": "skill-azure-cloud-performance-ad6961f569",
+    "purpose": "azure cloud performance",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/performance-optimization/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/performance-optimization/004-azure-cloud-performance.md",
+    "requires": [
+      "skill-next-js-typescript-performance-341b4ed557"
+    ],
+    "links": [
+      "skill-staged-recommendations-027f25a117"
+    ]
+  },
+  {
+    "id": "skill-staged-recommendations-027f25a117",
+    "purpose": "staged recommendations",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/performance-optimization/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/performance-optimization/005-staged-recommendations.md",
+    "requires": [
+      "skill-azure-cloud-performance-ad6961f569"
+    ],
+    "links": [
+      "skill-caveats-bf18f292bf"
+    ]
+  },
+  {
+    "id": "skill-caveats-bf18f292bf",
+    "purpose": "caveats",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/performance-optimization/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/performance-optimization/006-caveats.md",
+    "requires": [
+      "skill-staged-recommendations-027f25a117"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-what-a-white-paper-actually-is-8d9df92d1f",
+    "purpose": "what a white paper actually is",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/001-what-a-white-paper-actually-is.md",
+    "requires": [],
+    "links": [
+      "skill-how-white-papers-differ-from-neighboring-genres-fd04a11117"
+    ]
+  },
+  {
+    "id": "skill-how-white-papers-differ-from-neighboring-genres-fd04a11117",
+    "purpose": "how white papers differ from neighboring genres",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/002-how-white-papers-differ-from-neighboring-genres.md",
+    "requires": [
+      "skill-what-a-white-paper-actually-is-8d9df92d1f"
+    ],
+    "links": [
+      "skill-the-three-rhetorical-foundations-a5ea70abbb"
+    ]
+  },
+  {
+    "id": "skill-the-three-rhetorical-foundations-a5ea70abbb",
+    "purpose": "the three rhetorical foundations",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/003-the-three-rhetorical-foundations.md",
+    "requires": [
+      "skill-how-white-papers-differ-from-neighboring-genres-fd04a11117"
+    ],
+    "links": [
+      "skill-audience-types-and-how-to-adapt-57903469e0"
+    ]
+  },
+  {
+    "id": "skill-audience-types-and-how-to-adapt-57903469e0",
+    "purpose": "audience types and how to adapt",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/004-audience-types-and-how-to-adapt.md",
+    "requires": [
+      "skill-the-three-rhetorical-foundations-a5ea70abbb"
+    ],
+    "links": [
+      "skill-classic-structure-for-the-corporate-white-paper-problem-solution-format-04b4a6047c"
+    ]
+  },
+  {
+    "id": "skill-classic-structure-for-the-corporate-white-paper-problem-solution-format-04b4a6047c",
+    "purpose": "classic structure for the corporate white paper problem solution format",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/005-classic-structure-for-the-corporate-white-paper-problem-solution-format.md",
+    "requires": [
+      "skill-audience-types-and-how-to-adapt-57903469e0"
+    ],
+    "links": [
+      "skill-academic-white-paper-structure-working-paper-technical-report-3b402eda96"
+    ]
+  },
+  {
+    "id": "skill-academic-white-paper-structure-working-paper-technical-report-3b402eda96",
+    "purpose": "academic white paper structure working paper technical report",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/006-academic-white-paper-structure-working-paper-technical-report.md",
+    "requires": [
+      "skill-classic-structure-for-the-corporate-white-paper-problem-solution-format-04b4a6047c"
+    ],
+    "links": [
+      "skill-evidence-standards-and-citation-538cc9f4dc"
+    ]
+  },
+  {
+    "id": "skill-evidence-standards-and-citation-538cc9f4dc",
+    "purpose": "evidence standards and citation",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/007-evidence-standards-and-citation.md",
+    "requires": [
+      "skill-academic-white-paper-structure-working-paper-technical-report-3b402eda96"
+    ],
+    "links": [
+      "skill-narrative-arc-the-story-beneath-the-structure-82b472e476"
+    ]
+  },
+  {
+    "id": "skill-narrative-arc-the-story-beneath-the-structure-82b472e476",
+    "purpose": "narrative arc the story beneath the structure",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/008-narrative-arc-the-story-beneath-the-structure.md",
+    "requires": [
+      "skill-evidence-standards-and-citation-538cc9f4dc"
+    ],
+    "links": [
+      "skill-the-most-common-mistakes-7a1f624036"
+    ]
+  },
+  {
+    "id": "skill-the-most-common-mistakes-7a1f624036",
+    "purpose": "the most common mistakes",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/009-the-most-common-mistakes.md",
+    "requires": [
+      "skill-narrative-arc-the-story-beneath-the-structure-82b472e476"
+    ],
+    "links": [
+      "skill-formatting-and-length-specifications-c21b42a022"
+    ]
+  },
+  {
+    "id": "skill-formatting-and-length-specifications-c21b42a022",
+    "purpose": "formatting and length specifications",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/010-formatting-and-length-specifications.md",
+    "requires": [
+      "skill-the-most-common-mistakes-7a1f624036"
+    ],
+    "links": [
+      "skill-toolchain-recommendations-6b1cdf3505"
+    ]
+  },
+  {
+    "id": "skill-toolchain-recommendations-6b1cdf3505",
+    "purpose": "toolchain recommendations",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing/011-toolchain-recommendations.md",
+    "requires": [
+      "skill-formatting-and-length-specifications-c21b42a022"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-the-framing-for-part-iv-62ba12965d",
+    "purpose": "the framing for part iv",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/001-the-framing-for-part-iv.md",
+    "requires": [],
+    "links": [
+      "skill-23-fusion-physics-the-candidate-reactions-and-the-lawson-criterion-57f66b235a"
+    ]
+  },
+  {
+    "id": "skill-23-fusion-physics-the-candidate-reactions-and-the-lawson-criterion-57f66b235a",
+    "purpose": "23 fusion physics the candidate reactions and the lawson criterion",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/002-23-fusion-physics-the-candidate-reactions-and-the-lawson-criterion.md",
+    "requires": [
+      "skill-the-framing-for-part-iv-62ba12965d"
+    ],
+    "links": [
+      "skill-24-magnetic-and-inertial-confinement-2657877a5e"
+    ]
+  },
+  {
+    "id": "skill-24-magnetic-and-inertial-confinement-2657877a5e",
+    "purpose": "24 magnetic and inertial confinement",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/003-24-magnetic-and-inertial-confinement.md",
+    "requires": [
+      "skill-23-fusion-physics-the-candidate-reactions-and-the-lawson-criterion-57f66b235a"
+    ],
+    "links": [
+      "skill-25-why-fusion-is-hard-to-engineer-and-the-nuclear-background-8b7dbe5f6e"
+    ]
+  },
+  {
+    "id": "skill-25-why-fusion-is-hard-to-engineer-and-the-nuclear-background-8b7dbe5f6e",
+    "purpose": "25 why fusion is hard to engineer and the nuclear background",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/004-25-why-fusion-is-hard-to-engineer-and-the-nuclear-background.md",
+    "requires": [
+      "skill-24-magnetic-and-inertial-confinement-2657877a5e"
+    ],
+    "links": []
+  }
+]

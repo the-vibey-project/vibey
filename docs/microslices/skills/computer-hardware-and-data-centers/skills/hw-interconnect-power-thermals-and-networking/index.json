@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-interconnect-348ceebf77",
+    "purpose": "6 interconnect",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/001-6-interconnect.md",
+    "requires": [],
+    "links": [
+      "skill-7-power-supplies-a2ed6be438"
+    ]
+  },
+  {
+    "id": "skill-7-power-supplies-a2ed6be438",
+    "purpose": "7 power supplies",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/002-7-power-supplies.md",
+    "requires": [
+      "skill-6-interconnect-348ceebf77"
+    ],
+    "links": [
+      "skill-8-thermals-c3bcc151e5"
+    ]
+  },
+  {
+    "id": "skill-8-thermals-c3bcc151e5",
+    "purpose": "8 thermals",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/003-8-thermals.md",
+    "requires": [
+      "skill-7-power-supplies-a2ed6be438"
+    ],
+    "links": [
+      "skill-9-networking-591a6c17a0"
+    ]
+  },
+  {
+    "id": "skill-9-networking-591a6c17a0",
+    "purpose": "9 networking",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/004-9-networking.md",
+    "requires": [
+      "skill-8-thermals-c3bcc151e5"
+    ],
+    "links": []
+  }
+]

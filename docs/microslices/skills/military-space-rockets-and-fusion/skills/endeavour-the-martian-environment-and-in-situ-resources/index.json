@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-the-framing-for-part-vi-5fd3c02544",
+    "purpose": "the framing for part vi",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/001-the-framing-for-part-vi.md",
+    "requires": [],
+    "links": [
+      "skill-29-the-martian-environment-engineering-parameters-34a90f1f1b"
+    ]
+  },
+  {
+    "id": "skill-29-the-martian-environment-engineering-parameters-34a90f1f1b",
+    "purpose": "29 the martian environment engineering parameters",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/002-29-the-martian-environment-engineering-parameters.md",
+    "requires": [
+      "skill-the-framing-for-part-vi-5fd3c02544"
+    ],
+    "links": [
+      "skill-30-mars-resources-and-in-situ-resource-utilisation-861d2a4f7b"
+    ]
+  },
+  {
+    "id": "skill-30-mars-resources-and-in-situ-resource-utilisation-861d2a4f7b",
+    "purpose": "30 mars resources and in situ resource utilisation",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/003-30-mars-resources-and-in-situ-resource-utilisation.md",
+    "requires": [
+      "skill-29-the-martian-environment-engineering-parameters-34a90f1f1b"
+    ],
+    "links": [
+      "skill-cross-references-78ff51f6b5"
+    ]
+  },
+  {
+    "id": "skill-cross-references-78ff51f6b5",
+    "purpose": "cross references",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/004-cross-references.md",
+    "requires": [
+      "skill-30-mars-resources-and-in-situ-resource-utilisation-861d2a4f7b"
+    ],
+    "links": []
+  }
+]

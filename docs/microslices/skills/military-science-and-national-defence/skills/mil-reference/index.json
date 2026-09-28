@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-checked-august-2026-dee39c5892",
+    "purpose": "26 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-reference/001-26-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-56711de1df"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-56711de1df",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-checked-august-2026-dee39c5892"
+    ],
+    "links": [
+      "skill-28-concepts-and-figures-aa17384069"
+    ]
+  },
+  {
+    "id": "skill-28-concepts-and-figures-aa17384069",
+    "purpose": "28 concepts and figures",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-reference/003-28-concepts-and-figures.md",
+    "requires": [
+      "skill-27-misconceptions-56711de1df"
+    ],
+    "links": [
+      "skill-29-sources-bb16879755"
+    ]
+  },
+  {
+    "id": "skill-29-sources-bb16879755",
+    "purpose": "29 sources",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-reference/004-29-sources.md",
+    "requires": [
+      "skill-28-concepts-and-figures-aa17384069"
+    ],
+    "links": [
+      "skill-30-quick-reference-a30a71a995"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-a30a71a995",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-sources-bb16879755"
+    ],
+    "links": [
+      "skill-31-method-c4e12941b7"
+    ]
+  },
+  {
+    "id": "skill-31-method-c4e12941b7",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-a30a71a995"
+    ],
+    "links": []
+  }
+]

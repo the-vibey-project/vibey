@@ -1,0 +1,3642 @@
+[
+  {
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-aerodynamics-airfoils-and-compressible-flow/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-aerodynamics-airfoils-and-compressible-flow",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-drones-launch-vehicles-flight-test-and-design",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-performance-stability-and-propulsion/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-performance-stability-and-propulsion",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-reference/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/delivery-velocity/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/delivery-velocity",
+    "count": 13
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape",
+    "count": 21
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering",
+    "count": 20
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization",
+    "count": 20
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents",
+    "count": 20
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-core-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-core-algorithms",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-data-structures/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-data-structures",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-foundations-and-machine-model/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-foundations-and-machine-model",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-reference/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-reference/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-what-arm-is-licensing-families-and-isa-generations",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-history-modernism-and-the-canon/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-history-modernism-and-the-canon",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-interpretation-criticism-and-the-art-world",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-reference/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-fundamentals-and-isas/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-fundamentals-and-isas",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-reference/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-systems-crypto-and-inline/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-systems-crypto-and-inline",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-toolchain-performance-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-toolchain-performance-and-simd",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-architecture-buses-and-autosar/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-architecture-buses-and-autosar",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-diagnostics-ota-and-adas/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-diagnostics-ota-and-adas",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-process-testing-domains-and-supply-chain/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-process-testing-domains-and-supply-chain",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-real-time-safety-and-cybersecurity/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-real-time-safety-and-cybersecurity",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-reference/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-framing-responsibility-identity-and-hierarchy/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-framing-responsibility-identity-and-hierarchy",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-compliance-security-and-remittance-costs/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-compliance-security-and-remittance-costs",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-correspondent-swift-iso20022-and-governance",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-payments-banks-reserves-and-settlement/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-payments-banks-reserves-and-settlement",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-reference/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-ripple-xrp-ledger-and-honest-assessment/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-ripple-xrp-ledger-and-honest-assessment",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-organic-chemistry-and-analytical-methods/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-organic-chemistry-and-analytical-methods",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-reference/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-reference",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-biomechanics-devices-and-biostatistics",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-clinical-data-ml-and-bioinformatics/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-clinical-data-ml-and-bioinformatics",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-reference/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-building-a-utxo-chain/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-building-a-utxo-chain",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-building-an-account-chain/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-building-an-account-chain",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-consensus-and-finality/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-consensus-and-finality",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-cryptographic-primitives/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-cryptographic-primitives",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-networking-and-tokenomics/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-networking-and-tokenomics",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-privacy-features/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-privacy-features",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-security-and-the-build-guide/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-security-and-the-build-guide",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-what-it-is-and-the-three-architectures/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-what-it-is-and-the-three-architectures",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-crops-rotation-pests-and-water",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-envelope-and-building-physics/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-envelope-and-building-physics",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-reference/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-reference",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-services-sequencing-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-services-sequencing-and-codes",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-site-structure-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-site-structure-and-materials",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-soil-and-fertility/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-soil-and-fertility",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-legal-contracts-ip-employment-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-legal-contracts-ip-employment-and-privacy",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-models-strategy-operations-and-financing",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-reference/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-design-tolerances-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-design-tolerances-and-materials",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-generative-automation-and-scanning/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-generative-automation-and-scanning",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-geometry-kernels-formats-and-code-cad/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-geometry-kernels-formats-and-code-cad",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-reference/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-slicing-pipeline-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-slicing-pipeline-and-processes",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-linear-algebra-foundations/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-linear-algebra-foundations",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-reference/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-detection-control-applications-and-computation/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-detection-control-applications-and-computation",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-foundations-dynamical-systems-and-bifurcations",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-reference/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reference/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-architecture-and-resilience/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-architecture-and-resilience",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-cost-security-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-cost-security-and-operations",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-models-providers-and-primitives/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-models-providers-and-primitives",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-reference/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-email-smtp-authentication-and-deliverability/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-email-smtp-authentication-and-deliverability",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-reference/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-webrtc-video-conferencing-team-platforms-and-push",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-interconnect-power-thermals-and-networking",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-specifying-assembly-firmware-tuning-and-benchmarking",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-compliance-accessibility-and-security",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-reference/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-science/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-science",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-reference/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-protocol-layer",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-security-testing-and-ops/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-security-testing-and-ops",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-smart-contract-development/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-smart-contract-development",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-what-it-solves-threat-models-randomness-hashes-and-macs",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-currency-audit-method/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-currency-audit-method",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-search-and-source-quality",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-weekly-pull-request/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-weekly-pull-request",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-architectural/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-architectural",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-distributed-concurrency-and-messaging/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-distributed-concurrency-and-messaging",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-foundations-gof-and-alternatives/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-foundations-gof-and-alternatives",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-llm-agentic-and-legacy-migration/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-llm-agentic-and-legacy-migration",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-reference/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-linux-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-linux-platform",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-macos-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-macos-platform",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure",
+    "count": 13
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/devsecops-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/devsecops-pipeline",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/github-atlassian/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/github-atlassian",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-devices-transistors-cmos-gates-and-power",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-reference/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-sequential-timing-metastability-cdc-and-hdl/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-sequential-timing-metastability-cdc-and-hdl",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-standard-cells-boolean-minimization-and-arithmetic/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-standard-cells-boolean-minimization-and-arithmetic",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-boards-and-platforms/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-boards-and-platforms",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-networking-enclosures-and-productization/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-networking-enclosures-and-productization",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-power-electronics-and-io/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-power-electronics-and-io",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-reference/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-software-build-and-debug/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-software-build-and-debug",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-icann-tlds-registries-and-registration",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-reference/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-payments-architecture-and-integration/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-payments-architecture-and-integration",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-reference/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-accounting-statements-accrual-and-ratios",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-methodology-and-microeconomics/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-methodology-and-microeconomics",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-reference/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-choosing-vim-neovim-and-emacs",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-extension-development/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-extension-development",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-reference/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-test-selection-safety-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-test-selection-safety-and-debugging",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-electrostatics-fields-potential-and-dielectrics/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-electrostatics-fields-potential-and-dielectrics",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-reference/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-reference/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-security-safety-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-security-safety-and-testing",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-silicon-and-firmware-models/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-silicon-and-firmware-models",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering",
+    "count": 15
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/research-methodology/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/research-methodology",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices",
+    "count": 13
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-fuels-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-fuels-and-combustion",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-generators-and-house-power/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-generators-and-house-power",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-rankine-steam-engines-and-turbines/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-rankine-steam-engines-and-turbines",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-safety-and-reference/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-safety-and-reference",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-acting-directing-medium-and-industry",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-dialogue-point-of-view-theme-exposition-and-endings",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-reference/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-rules-character-structure-and-scene/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-rules-character-structure-and-scene",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-arguments-for-god/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-arguments-for-god",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-resurrection-and-scripture/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-resurrection-and-scripture",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-church-planting",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-methods-and-presentations",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-preaching/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-preaching",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-reference/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-reference",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-teaching-and-discipleship",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-fuelling-supplements-and-health-first",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-programming-periodization-and-aging",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-reference/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-training-principles-strength-endurance-and-recovery",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reference/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-systems-child-development-and-parenting/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-systems-child-development-and-parenting",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-architecture-languages-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-architecture-languages-and-standards",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-fdir-time-telemetry-and-updates",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-processors-radiation-and-real-time/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-processors-radiation-and-real-time",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-reference/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-reference",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-live-evidence-and-reading-a-claim/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-live-evidence-and-reading-a-claim",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-macronutrients-vitamins-minerals-and-supplements",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-reference/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns",
+    "count": 16
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/performance-optimization/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/performance-optimization",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-cosmology-and-astrophysics/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-cosmology-and-astrophysics",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-measurement-problem-and-quantum-gravity/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-measurement-problem-and-quantum-gravity",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-framework-nash-and-classic-games/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-framework-nash-and-classic-games",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-reference/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-circuits-neuromodulation-and-neural-engineering",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-reference/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earthquakes-seismology-and-volcanism/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earthquakes-seismology-and-volcanism",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-reference/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-surface-processes-soils-and-hydrology/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-surface-processes-soils-and-hydrology",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-reference/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-routing-geocoding-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-routing-geocoding-and-positioning",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-git-data-model-branching-and-recovery",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-github-repos-reviews-actions-security-and-identity/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-github-repos-reviews-actions-security-and-identity",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-integration-metrics-and-anti-patterns/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-integration-metrics-and-anti-patterns",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-reference/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-reference",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-reference/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-electrical-networks-adas-ev-and-high-voltage-safety",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-reference/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-livestock-nutrition-health-and-welfare",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-reference/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-wildlife-management-and-hunting/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-wildlife-management-and-hunting",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-business-capital-budgeting-cost-of-capital-and-valuation",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-and-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-and-efficiency",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-fraud-alternatives-and-advisor-conflicts/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-fraud-alternatives-and-advisor-conflicts",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-reference/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-observability-troubleshooting-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-observability-troubleshooting-and-operations",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-packages-boot-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-packages-boot-and-hardening",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-reference/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-systemd-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-systemd-storage-and-networking",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-reference/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-rolling-stock-braking-capacity-and-service-types/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-rolling-stock-braking-capacity-and-service-types",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-signalling-interlocking-train-protection-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-signalling-interlocking-train-protection-and-safety",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-constraint-programming-metaheuristics-and-bounds",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-inventory-forecasting-operations-and-solvers",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-routing-packing-scheduling-and-network-design",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-adoption-governance-and-security/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-adoption-governance-and-security",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-integration-data-and-app-builders/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-integration-data-and-app-builders",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-lock-in-and-engineering-practice/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-lock-in-and-engineering-practice",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-reference/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-deep-learning-and-training/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-deep-learning-and-training",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-evaluation-serving-mlops-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-evaluation-serving-mlops-and-safety",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-framing-data-and-classical/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-framing-data-and-classical",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-reference/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-garment-drafting-seams-and-construction",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-reference/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-machine-elements-mechanisms-and-tolerances/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-machine-elements-mechanisms-and-tolerances",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-reference/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-shipyard-build-welding-launch-and-naval-vessels",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-floating-point-and-numerical-foundations/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-floating-point-and-numerical-foundations",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-reference/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-statistics-performance-and-reproducibility/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-statistics-performance-and-reproducibility",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-tooling-and-symbolic-computation/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-tooling-and-symbolic-computation",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-captions-podcasts-rights-and-qc/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-captions-podcasts-rights-and-qc",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-fundamentals-containers-and-codecs/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-fundamentals-containers-and-codecs",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-production-and-loudness/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-production-and-loudness",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-reference/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-transcoding-streaming-and-drm/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-transcoding-streaming-and-drm",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-cardiovascular-anti-infective-and-analgesia/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-cardiovascular-anti-infective-and-analgesia",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-pharmacokinetics-pharmacodynamics-and-interactions",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reading-the-field-physiology-and-clinical-reasoning",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-engineering-compute-and-regulated-software",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-qsar-admet-generative-models-and-validation",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-reference/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intelligence-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intelligence-and-procurement",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-levels-of-war-principles-and-decision-cycles",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-fusion-physics-confinement-and-engineering",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mars-mission-design-and-settlement/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mars-mission-design-and-settlement",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-military-theory-levels-of-war-and-deterrence",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-reference/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-reference",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-the-martian-environment-and-in-situ-resources",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-azure-deployment/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-azure-deployment",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-native-platforms/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-native-platforms",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-react-native/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-react-native",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-ux-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-ux-and-patterns",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-ethereum/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-ethereum",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-start-here-and-the-five-systems/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-start-here-and-the-five-systems",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-reference/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-characterization-materials-and-nanomedicine/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-characterization-materials-and-nanomedicine",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-computational-methods-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-computational-methods-and-safety",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-fabrication-and-semiconductor-process/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-fabrication-and-semiconductor-process",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-reference/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-scaling-laws-and-quantum-effects/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-scaling-laws-and-quantum-effects",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-conflict-analysis-mediation-adr-workplace-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-conflict-analysis-mediation-adr-workplace-and-ethics",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-reference/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-fundamentals",
+    "count": 15
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-energy-momentum-and-collisions/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-energy-momentum-and-collisions",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-reference/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fuel-cycle-waste-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fuel-cycle-waste-and-safety",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fusion-confinement-and-detection",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-mcp-server-landscape/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-mcp-server-landscape",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-branching/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-branching",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-connectors/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-connectors",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-deployment/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-deployment",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-error-handling/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-error-handling",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-execution-limits/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-execution-limits",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-field-guide",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-hooks-streaming/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-hooks-streaming",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-loops/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-loops",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-tables/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-tables",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-recycling-bioplastics-and-health-regulation/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-recycling-bioplastics-and-health-regulation",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-reference/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-architecture-and-code",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-shell-reference/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-shell-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-shell-scripting-and-userland",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-reference/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-registries-and-installation/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-registries-and-installation",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-supply-chain-and-workspaces/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-supply-chain-and-workspaces",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-ux-ecosystems-and-governance",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-versioning-and-resolution/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-versioning-and-resolution",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reading-research-and-zombie-ideas/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reading-research-and-zombie-ideas",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reference/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-reliability-memory-cognitive-load-and-robust-effects",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/penetration-testing/skills/pentest-authorization-scoping-and-methodology/SKILL.md",
+    "output": "docs/microslices/skills/penetration-testing/skills/pentest-authorization-scoping-and-methodology",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/penetration-testing/skills/pentest-disclosure-career-and-reference/SKILL.md",
+    "output": "docs/microslices/skills/penetration-testing/skills/pentest-disclosure-career-and-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/penetration-testing/skills/pentest-red-team-ai-and-reporting/SKILL.md",
+    "output": "docs/microslices/skills/penetration-testing/skills/pentest-red-team-ai-and-reporting",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/penetration-testing/skills/pentest-technical-domains/SKILL.md",
+    "output": "docs/microslices/skills/penetration-testing/skills/pentest-technical-domains",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-collective-action-commons-social-choice-and-voting",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-reference/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-what-the-field-establishes-power-the-state-and-theory/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-what-the-field-establishes-power-the-state-and-theory",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-ac-fundamentals-generation-and-grid/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-ac-fundamentals-generation-and-grid",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-inverters-storage-markets-and-datacenters/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-inverters-storage-markets-and-datacenters",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-reference/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-scada-ems-and-protocols/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-scada-ems-and-protocols",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-system-analysis-and-protection/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-system-analysis-and-protection",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks",
+    "count": 15
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-orientation-threat-models-and-landscape/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-orientation-threat-models-and-landscape",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-signal/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-signal",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-design-parsing-and-types/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-design-parsing-and-types",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-development-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-diagnostics-tooling-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-diagnostics-tooling-and-evolution",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-irs-optimization-and-backends/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-irs-optimization-and-backends",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-runtimes-interpreters-and-jits/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-runtimes-interpreters-and-jits",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-reference/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability",
+    "count": 18
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy",
+    "count": 13
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-applications-and-post-quantum-crypto/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-applications-and-post-quantum-crypto",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-foundations-and-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-foundations-and-algorithms",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-noise-error-correction-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-noise-error-correction-and-hardware",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-software-and-resource-estimation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-software-and-resource-estimation",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-bb84-entanglement-based-cv-qkd-and-key-distillation",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-two-different-things-qubits-no-cloning-and-entanglement",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-intuitions-spectrum-link-budget-and-tradeoffs/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-intuitions-spectrum-link-budget-and-tradeoffs",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-reference/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-spread-spectrum-ofdm-access-and-sdr",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-load-calculation-air-humidity-and-heat-pumps",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-access-control-embedded-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-access-control-embedded-and-testing",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-architecture-modelling-and-aggregation-traps",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-reference/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/actual-food-production-farm-to-food-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/actual-food-production-farm-to-food-research",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/land-water-air-management-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/land-water-air-management-and-agriculture-research",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/linux-ubuntu-arch-fedora-macos-internals-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/linux-ubuntu-arch-fedora-macos-internals-research",
+    "count": 21
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/pest-control-and-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/pest-control-and-agriculture-research",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/social-cultural-agriculture-farming-research",
+    "count": 19
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-b-linux-macos-internals-deep-dive",
+    "count": 18
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-c-cognition-recovery-community-deep-dive",
+    "count": 18
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive",
+    "count": 18
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive",
+    "count": 13
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis",
+    "count": 15
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/weather-management-cloud-seeding-agriculture-research",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-grade-deposits-exploration-and-reserves/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-grade-deposits-exploration-and-reserves",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-petroleum-geology-drilling-well-control-and-fracturing",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-production-offshore-refining-coal-economics-and-safety",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-reference/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-geometric-design-pavement-drainage-and-traffic",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-intersections-road-safety-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-intersections-road-safety-and-construction",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-reference/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-learning-simulation-and-fleets/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-learning-simulation-and-fleets",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-planning-control-and-manipulation/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-planning-control-and-manipulation",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-reference/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-safety-standards-and-deployment/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-safety-standards-and-deployment",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-stack-ros2-and-perception/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-stack-ros2-and-perception",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-aerodynamics-structures-guidance-and-reentry",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-equation-nozzles-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-equation-nozzles-and-combustion",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-orbital-mechanics-and-ascent/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-orbital-mechanics-and-ascent",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization",
+    "count": 17
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum",
+    "count": 20
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security",
+    "count": 13
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices",
+    "count": 22
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/threat-modeling-playbook/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/threat-modeling-playbook",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-cleanroom-lithography-deposition-etch-and-cmp",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-reference/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-audio-rf-and-images/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-audio-rf-and-images",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-implementation-tools-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-implementation-tools-and-testing",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-reference/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-sampling-frequency-domain-and-filters",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-reference/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-feed-graph-ranking-and-notifications",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-media-analytics-privacy-and-presence/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-media-analytics-privacy-and-presence",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-moderation-abuse-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-moderation-abuse-and-regulation",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-platform-apis-and-open-protocols/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-platform-apis-and-open-protocols",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-reference/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns",
+    "count": 44
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture",
+    "count": 14
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design",
+    "count": 23
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-attitude-propulsion-and-edl/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-attitude-propulsion-and-edl",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-human-factors-life-support-and-reliability/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-human-factors-life-support-and-reliability",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-mission-architecture-and-trajectory/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-mission-architecture-and-trajectory",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-power-thermal-comms-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-power-thermal-comms-and-navigation",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-reference/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-groups-community-facilitation-organizing-and-conflict/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-groups-community-facilitation-organizing-and-conflict",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-persuasion-and-the-ethics-of-influence/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-persuasion-and-the-ethics-of-influence",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-reference/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-navigation-signalling-and-field-medicine/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-navigation-signalling-and-field-medicine",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-planning-kit-practice-and-myths-that-kill/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-planning-kit-practice-and-myths-that-kill",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-reference/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-shelter-water-fire-and-food/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-shelter-water-fire-and-food",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-what-kills-psychology-and-priorities/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-what-kills-psychology-and-priorities",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-automata-regex-and-parsing/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-automata-regex-and-parsing",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-computability-and-complexity/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-computability-and-complexity",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-reference/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-type-systems-and-randomization/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-type-systems-and-randomization",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-dimensional-analysis-flows-turbulence-and-turbomachinery",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-heat-transfer-conduction-convection-radiation-and-exchangers/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-heat-transfer-conduction-convection-radiation-and-exchangers",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-reference/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-reference",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-attack-literature-and-threat-model/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-attack-literature-and-threat-model",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-censorship-circumvention-and-bridges/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-censorship-circumvention-and-bridges",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-network-consensus-guards-and-paths/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-network-consensus-guards-and-paths",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-onion-services-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-onion-services-and-hardening",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-protocol-circuits-and-cell-cryptography/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-protocol-circuits-and-cell-cryptography",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-asset-classes-derivatives-and-analysis/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-asset-classes-derivatives-and-analysis",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-evidence-microstructure-and-execution/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-evidence-microstructure-and-execution",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-reference/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-risk-costs-backtesting-and-psychology",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-styles-arbitrage-forex-and-defi",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-documents-insurance-health-safety-and-money",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-groups-long-term-travel-and-handling-disruption/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-groups-long-term-travel-and-handling-disruption",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-reference/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-trip-type-destination-constraints-and-budget/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-trip-type-destination-constraints-and-budget",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-design-systems-platforms-and-accessibility",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-reference/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-core/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-core",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-primitives/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-primitives",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-subpackages/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-subpackages",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-typescript/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-typescript",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-ai-networking-and-tools/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-ai-networking-and-tools",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-development-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-engines-loop-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-engines-loop-and-architecture",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-performance-feel-and-shipping/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-performance-feel-and-shipping",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-rendering-physics-animation-and-audio/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-rendering-physics-animation-and-audio",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-platforms-audio-and-comfort/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-platforms-audio-and-comfort",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-reference/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-ux-design-and-performance-budgeting/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-ux-design-and-performance-budgeting",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-atmosphere-radiation-thermodynamics-and-moisture/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-atmosphere-radiation-thermodynamics-and-moisture",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-dynamics-circulation-and-synoptic/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-dynamics-circulation-and-synoptic",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-observation-nwp-verification-and-machine-learning",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-reference/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-development-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-engine-architecture-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-engine-architecture-and-networking",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-extensions-platform-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-extensions-platform-and-standards",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-rendering-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-rendering-pipeline",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-security-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-security-and-privacy",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-ethics-ai-corpora-and-site-defense",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-legal-landscape-and-permissions/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-legal-landscape-and-permissions",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-scale-reliability-and-data-quality/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-scale-reliability-and-data-quality",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-tooling-extraction-and-blocking/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-tooling-extraction-and-blocking",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-reference/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-self-determination-motivation-goals-habits-and-willpower",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-and-debugging",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-reference/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-wifi-bluetooth-ble-nfc-and-rfid",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-materials-safety-reading-wood-and-stock/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-materials-safety-reading-wood-and-stock",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-reference/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing",
+    "count": 8
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing",
+    "count": 12
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-technical-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-technical-mechanics",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/white-paper-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/white-paper-writing",
+    "count": 11
+  }
+]

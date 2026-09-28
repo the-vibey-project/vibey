@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-19-what-cleaning-actually-is-b83cc77588",
+    "purpose": "19 what cleaning actually is",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/001-19-what-cleaning-actually-is.md",
+    "requires": [],
+    "links": [
+      "skill-20-surfactants-and-soil-types-9b468371a2"
+    ]
+  },
+  {
+    "id": "skill-20-surfactants-and-soil-types-9b468371a2",
+    "purpose": "20 surfactants and soil types",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/002-20-surfactants-and-soil-types.md",
+    "requires": [
+      "skill-19-what-cleaning-actually-is-b83cc77588"
+    ],
+    "links": [
+      "skill-21-water-hardness-46b9df3164"
+    ]
+  },
+  {
+    "id": "skill-21-water-hardness-46b9df3164",
+    "purpose": "21 water hardness",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/003-21-water-hardness.md",
+    "requires": [
+      "skill-20-surfactants-and-soil-types-9b468371a2"
+    ],
+    "links": [
+      "skill-22-cleaning-vs-sanitizing-vs-disinfecting-and-the-mixing-dangers-dd03f308a9"
+    ]
+  },
+  {
+    "id": "skill-22-cleaning-vs-sanitizing-vs-disinfecting-and-the-mixing-dangers-dd03f308a9",
+    "purpose": "22 cleaning vs sanitizing vs disinfecting and the mixing dangers",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/004-22-cleaning-vs-sanitizing-vs-disinfecting-and-the-mixing-dangers.md",
+    "requires": [
+      "skill-21-water-hardness-46b9df3164"
+    ],
+    "links": [
+      "skill-23-laundry-41a56b3bcc"
+    ]
+  },
+  {
+    "id": "skill-23-laundry-41a56b3bcc",
+    "purpose": "23 laundry",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/005-23-laundry.md",
+    "requires": [
+      "skill-22-cleaning-vs-sanitizing-vs-disinfecting-and-the-mixing-dangers-dd03f308a9"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-turbomachinery-and-cycles-2456b436fc",
+    "purpose": "4 turbomachinery and cycles",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants/001-4-turbomachinery-and-cycles.md",
+    "requires": [],
+    "links": [
+      "skill-5-heat-transfer-and-cooling-8143ab0d31"
+    ]
+  },
+  {
+    "id": "skill-5-heat-transfer-and-cooling-8143ab0d31",
+    "purpose": "5 heat transfer and cooling",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants/002-5-heat-transfer-and-cooling.md",
+    "requires": [
+      "skill-4-turbomachinery-and-cycles-2456b436fc"
+    ],
+    "links": [
+      "skill-6-propellants-cd15890d4a"
+    ]
+  },
+  {
+    "id": "skill-6-propellants-cd15890d4a",
+    "purpose": "6 propellants",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-turbomachinery-cooling-and-propellants/003-6-propellants.md",
+    "requires": [
+      "skill-5-heat-transfer-and-cooling-8143ab0d31"
+    ],
+    "links": []
+  }
+]

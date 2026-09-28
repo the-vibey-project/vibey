@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-1-mls-rfc-9420-and-wire-the-standards-track-finally-ships-e64265a4dd",
+    "purpose": "1 mls rfc 9420 and wire the standards track finally ships",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/001-1-mls-rfc-9420-and-wire-the-standards-track-finally-ships.md",
+    "requires": [],
+    "links": [
+      "skill-2-whatsapp-the-default-e2ee-of-the-planet-now-partially-pried-open-3a3336804e"
+    ]
+  },
+  {
+    "id": "skill-2-whatsapp-the-default-e2ee-of-the-planet-now-partially-pried-open-3a3336804e",
+    "purpose": "2 whatsapp the default e2ee of the planet now partially pried open",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/002-2-whatsapp-the-default-e2ee-of-the-planet-now-partially-pried-open.md",
+    "requires": [
+      "skill-1-mls-rfc-9420-and-wire-the-standards-track-finally-ships-e64265a4dd"
+    ],
+    "links": [
+      "skill-3-apple-imessage-the-post-quantum-pacesetter-3c0dc9effc"
+    ]
+  },
+  {
+    "id": "skill-3-apple-imessage-the-post-quantum-pacesetter-3c0dc9effc",
+    "purpose": "3 apple imessage the post quantum pacesetter",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/003-3-apple-imessage-the-post-quantum-pacesetter.md",
+    "requires": [
+      "skill-2-whatsapp-the-default-e2ee-of-the-planet-now-partially-pried-open-3a3336804e"
+    ],
+    "links": [
+      "skill-4-threema-the-swiss-paid-model-now-under-new-ownership-a84a5d480c"
+    ]
+  },
+  {
+    "id": "skill-4-threema-the-swiss-paid-model-now-under-new-ownership-a84a5d480c",
+    "purpose": "4 threema the swiss paid model now under new ownership",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/004-4-threema-the-swiss-paid-model-now-under-new-ownership.md",
+    "requires": [
+      "skill-3-apple-imessage-the-post-quantum-pacesetter-3c0dc9effc"
+    ],
+    "links": [
+      "skill-5-olvid-the-certification-play-e1adad2131"
+    ]
+  },
+  {
+    "id": "skill-5-olvid-the-certification-play-e1adad2131",
+    "purpose": "5 olvid the certification play",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/005-5-olvid-the-certification-play.md",
+    "requires": [
+      "skill-4-threema-the-swiss-paid-model-now-under-new-ownership-a84a5d480c"
+    ],
+    "links": [
+      "skill-6-simplex-the-no-identifiers-radical-94387cb375"
+    ]
+  },
+  {
+    "id": "skill-6-simplex-the-no-identifiers-radical-94387cb375",
+    "purpose": "6 simplex the no identifiers radical",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/006-6-simplex-the-no-identifiers-radical.md",
+    "requires": [
+      "skill-5-olvid-the-certification-play-e1adad2131"
+    ],
+    "links": [
+      "skill-7-session-onion-routed-messenger-on-crypto-incentivised-nodes-d47cd8f62d"
+    ]
+  },
+  {
+    "id": "skill-7-session-onion-routed-messenger-on-crypto-incentivised-nodes-d47cd8f62d",
+    "purpose": "7 session onion routed messenger on crypto incentivised nodes",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/007-7-session-onion-routed-messenger-on-crypto-incentivised-nodes.md",
+    "requires": [
+      "skill-6-simplex-the-no-identifiers-radical-94387cb375"
+    ],
+    "links": [
+      "skill-8-nostr-the-pub-sub-protocol-that-accidentally-wants-to-be-a-messenger-7361d5f0a2"
+    ]
+  },
+  {
+    "id": "skill-8-nostr-the-pub-sub-protocol-that-accidentally-wants-to-be-a-messenger-7361d5f0a2",
+    "purpose": "8 nostr the pub sub protocol that accidentally wants to be a messenger",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/008-8-nostr-the-pub-sub-protocol-that-accidentally-wants-to-be-a-messenger.md",
+    "requires": [
+      "skill-7-session-onion-routed-messenger-on-crypto-incentivised-nodes-d47cd8f62d"
+    ],
+    "links": [
+      "skill-9-xmpp-omemo-the-original-federation-quietly-maintained-a2f7ebb1a2"
+    ]
+  },
+  {
+    "id": "skill-9-xmpp-omemo-the-original-federation-quietly-maintained-a2f7ebb1a2",
+    "purpose": "9 xmpp omemo the original federation quietly maintained",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/009-9-xmpp-omemo-the-original-federation-quietly-maintained.md",
+    "requires": [
+      "skill-8-nostr-the-pub-sub-protocol-that-accidentally-wants-to-be-a-messenger-7361d5f0a2"
+    ],
+    "links": [
+      "skill-10-briar-the-no-network-messenger-in-maintenance-mode-f7995e5b83"
+    ]
+  },
+  {
+    "id": "skill-10-briar-the-no-network-messenger-in-maintenance-mode-f7995e5b83",
+    "purpose": "10 briar the no network messenger in maintenance mode",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/010-10-briar-the-no-network-messenger-in-maintenance-mode.md",
+    "requires": [
+      "skill-9-xmpp-omemo-the-original-federation-quietly-maintained-a2f7ebb1a2"
+    ],
+    "links": [
+      "skill-11-delta-chat-email-as-the-federated-mesh-aa27176352"
+    ]
+  },
+  {
+    "id": "skill-11-delta-chat-email-as-the-federated-mesh-aa27176352",
+    "purpose": "11 delta chat email as the federated mesh",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/011-11-delta-chat-email-as-the-federated-mesh.md",
+    "requires": [
+      "skill-10-briar-the-no-network-messenger-in-maintenance-mode-f7995e5b83"
+    ],
+    "links": [
+      "skill-12-the-dead-the-dormant-and-the-niche-8480a4c056"
+    ]
+  },
+  {
+    "id": "skill-12-the-dead-the-dormant-and-the-niche-8480a4c056",
+    "purpose": "12 the dead the dormant and the niche",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/012-12-the-dead-the-dormant-and-the-niche.md",
+    "requires": [
+      "skill-11-delta-chat-email-as-the-federated-mesh-aa27176352"
+    ],
+    "links": [
+      "skill-13-policy-annex-the-rules-that-shape-everything-above-verified-a880f3d028"
+    ]
+  },
+  {
+    "id": "skill-13-policy-annex-the-rules-that-shape-everything-above-verified-a880f3d028",
+    "purpose": "13 policy annex the rules that shape everything above verified",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/013-13-policy-annex-the-rules-that-shape-everything-above-verified.md",
+    "requires": [
+      "skill-12-the-dead-the-dormant-and-the-niche-8480a4c056"
+    ],
+    "links": [
+      "skill-sources-this-file-8aa87b2f99"
+    ]
+  },
+  {
+    "id": "skill-sources-this-file-8aa87b2f99",
+    "purpose": "sources this file",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-the-wider-field/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-the-wider-field/014-sources-this-file.md",
+    "requires": [
+      "skill-13-policy-annex-the-rules-that-shape-everything-above-verified-a880f3d028"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-14-cost-mechanics-a7cbc3e929",
+    "purpose": "14 cost mechanics",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/001-14-cost-mechanics.md",
+    "requires": [],
+    "links": [
+      "skill-15-reliability-regions-and-slas-c10ecd7848"
+    ]
+  },
+  {
+    "id": "skill-15-reliability-regions-and-slas-c10ecd7848",
+    "purpose": "15 reliability regions and slas",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/002-15-reliability-regions-and-slas.md",
+    "requires": [
+      "skill-14-cost-mechanics-a7cbc3e929"
+    ],
+    "links": [
+      "skill-16-infrastructure-as-code-4224de5a41"
+    ]
+  },
+  {
+    "id": "skill-16-infrastructure-as-code-4224de5a41",
+    "purpose": "16 infrastructure as code",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/003-16-infrastructure-as-code.md",
+    "requires": [
+      "skill-15-reliability-regions-and-slas-c10ecd7848"
+    ],
+    "links": [
+      "skill-17-lock-in-and-multi-cloud-honestly-c1fde39884"
+    ]
+  },
+  {
+    "id": "skill-17-lock-in-and-multi-cloud-honestly-c1fde39884",
+    "purpose": "17 lock in and multi cloud honestly",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/004-17-lock-in-and-multi-cloud-honestly.md",
+    "requires": [
+      "skill-16-infrastructure-as-code-4224de5a41"
+    ],
+    "links": [
+      "skill-18-migration-7bae3ab2fc"
+    ]
+  },
+  {
+    "id": "skill-18-migration-7bae3ab2fc",
+    "purpose": "18 migration",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-cost-reliability-iac-lock-in-and-migration/005-18-migration.md",
+    "requires": [
+      "skill-17-lock-in-and-multi-cloud-honestly-c1fde39884"
+    ],
+    "links": []
+  }
+]

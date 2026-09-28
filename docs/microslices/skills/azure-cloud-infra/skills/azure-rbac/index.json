@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-the-four-pillars-4289b75200",
+    "purpose": "the four pillars",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/001-the-four-pillars.md",
+    "requires": [],
+    "links": [
+      "skill-control-plane-vs-data-plane-the-1-production-incident-source-858cc7ef54"
+    ]
+  },
+  {
+    "id": "skill-control-plane-vs-data-plane-the-1-production-incident-source-858cc7ef54",
+    "purpose": "control plane vs data plane the 1 production incident source",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/002-control-plane-vs-data-plane-the-1-production-incident-source.md",
+    "requires": [
+      "skill-the-four-pillars-4289b75200"
+    ],
+    "links": [
+      "skill-scope-hierarchy-and-inheritance-fbbd4ac8ec"
+    ]
+  },
+  {
+    "id": "skill-scope-hierarchy-and-inheritance-fbbd4ac8ec",
+    "purpose": "scope hierarchy and inheritance",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/003-scope-hierarchy-and-inheritance.md",
+    "requires": [
+      "skill-control-plane-vs-data-plane-the-1-production-incident-source-858cc7ef54"
+    ],
+    "links": [
+      "skill-built-in-role-catalog-key-roles-1b7de826d2"
+    ]
+  },
+  {
+    "id": "skill-built-in-role-catalog-key-roles-1b7de826d2",
+    "purpose": "built in role catalog key roles",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/004-built-in-role-catalog-key-roles.md",
+    "requires": [
+      "skill-scope-hierarchy-and-inheritance-fbbd4ac8ec"
+    ],
+    "links": [
+      "skill-role-definition-structure-c18b99e499"
+    ]
+  },
+  {
+    "id": "skill-role-definition-structure-c18b99e499",
+    "purpose": "role definition structure",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/005-role-definition-structure.md",
+    "requires": [
+      "skill-built-in-role-catalog-key-roles-1b7de826d2"
+    ],
+    "links": [
+      "skill-managed-identity-patterns-zero-credential-architecture-dea0a5c6f9"
+    ]
+  },
+  {
+    "id": "skill-managed-identity-patterns-zero-credential-architecture-dea0a5c6f9",
+    "purpose": "managed identity patterns zero credential architecture",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/006-managed-identity-patterns-zero-credential-architecture.md",
+    "requires": [
+      "skill-role-definition-structure-c18b99e499"
+    ],
+    "links": [
+      "skill-github-actions-oidc-federation-recommended-no-stored-secrets-f82faa6f29"
+    ]
+  },
+  {
+    "id": "skill-github-actions-oidc-federation-recommended-no-stored-secrets-f82faa6f29",
+    "purpose": "github actions oidc federation recommended no stored secrets",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/007-github-actions-oidc-federation-recommended-no-stored-secrets.md",
+    "requires": [
+      "skill-managed-identity-patterns-zero-credential-architecture-dea0a5c6f9"
+    ],
+    "links": [
+      "skill-iac-bicep-patterns-for-role-assignments-c10e66a27f"
+    ]
+  },
+  {
+    "id": "skill-iac-bicep-patterns-for-role-assignments-c10e66a27f",
+    "purpose": "iac bicep patterns for role assignments",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/008-iac-bicep-patterns-for-role-assignments.md",
+    "requires": [
+      "skill-github-actions-oidc-federation-recommended-no-stored-secrets-f82faa6f29"
+    ],
+    "links": [
+      "skill-iac-terraform-patterns-1411762fb4"
+    ]
+  },
+  {
+    "id": "skill-iac-terraform-patterns-1411762fb4",
+    "purpose": "iac terraform patterns",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/009-iac-terraform-patterns.md",
+    "requires": [
+      "skill-iac-bicep-patterns-for-role-assignments-c10e66a27f"
+    ],
+    "links": [
+      "skill-azure-cli-quick-reference-6a9569eb18"
+    ]
+  },
+  {
+    "id": "skill-azure-cli-quick-reference-6a9569eb18",
+    "purpose": "azure cli quick reference",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/010-azure-cli-quick-reference.md",
+    "requires": [
+      "skill-iac-terraform-patterns-1411762fb4"
+    ],
+    "links": [
+      "skill-common-mistakes-and-production-incidents-03b560bef1"
+    ]
+  },
+  {
+    "id": "skill-common-mistakes-and-production-incidents-03b560bef1",
+    "purpose": "common mistakes and production incidents",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/011-common-mistakes-and-production-incidents.md",
+    "requires": [
+      "skill-azure-cli-quick-reference-6a9569eb18"
+    ],
+    "links": [
+      "skill-azure-rbac-vs-entra-id-roles-6beed49c87"
+    ]
+  },
+  {
+    "id": "skill-azure-rbac-vs-entra-id-roles-6beed49c87",
+    "purpose": "azure rbac vs entra id roles",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/012-azure-rbac-vs-entra-id-roles.md",
+    "requires": [
+      "skill-common-mistakes-and-production-incidents-03b560bef1"
+    ],
+    "links": [
+      "skill-best-practices-f274b432f9"
+    ]
+  },
+  {
+    "id": "skill-best-practices-f274b432f9",
+    "purpose": "best practices",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/013-best-practices.md",
+    "requires": [
+      "skill-azure-rbac-vs-entra-id-roles-6beed49c87"
+    ],
+    "links": [
+      "skill-auditing-kql-queries-b03929eed4"
+    ]
+  },
+  {
+    "id": "skill-auditing-kql-queries-b03929eed4",
+    "purpose": "auditing kql queries",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-rbac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-rbac/014-auditing-kql-queries.md",
+    "requires": [
+      "skill-best-practices-f274b432f9"
+    ],
+    "links": []
+  }
+]

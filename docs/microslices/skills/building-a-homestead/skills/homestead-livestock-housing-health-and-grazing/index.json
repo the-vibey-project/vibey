@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-housing-and-fencing-bf0064e7e5",
+    "purpose": "11 housing and fencing",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/001-11-housing-and-fencing.md",
+    "requires": [],
+    "links": [
+      "skill-12-herd-health-and-biosecurity-760166d8b2"
+    ]
+  },
+  {
+    "id": "skill-12-herd-health-and-biosecurity-760166d8b2",
+    "purpose": "12 herd health and biosecurity",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/002-12-herd-health-and-biosecurity.md",
+    "requires": [
+      "skill-11-housing-and-fencing-bf0064e7e5"
+    ],
+    "links": [
+      "skill-13-reproduction-and-breeding-f410b6c197"
+    ]
+  },
+  {
+    "id": "skill-13-reproduction-and-breeding-f410b6c197",
+    "purpose": "13 reproduction and breeding",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/003-13-reproduction-and-breeding.md",
+    "requires": [
+      "skill-12-herd-health-and-biosecurity-760166d8b2"
+    ],
+    "links": [
+      "skill-14-grazing-management-and-welfare-1c44b727af"
+    ]
+  },
+  {
+    "id": "skill-14-grazing-management-and-welfare-1c44b727af",
+    "purpose": "14 grazing management and welfare",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-housing-health-and-grazing/004-14-grazing-management-and-welfare.md",
+    "requires": [
+      "skill-13-reproduction-and-breeding-f410b6c197"
+    ],
+    "links": []
+  }
+]

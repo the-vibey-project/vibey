@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-16-misconceptions-f30e0c365e",
+    "purpose": "16 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-reference/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-reference/001-16-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-17-numbers-035eaa586b"
+    ]
+  },
+  {
+    "id": "skill-17-numbers-035eaa586b",
+    "purpose": "17 numbers",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-reference/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-reference/002-17-numbers.md",
+    "requires": [
+      "skill-16-misconceptions-f30e0c365e"
+    ],
+    "links": [
+      "skill-18-books-c523e824dc"
+    ]
+  },
+  {
+    "id": "skill-18-books-c523e824dc",
+    "purpose": "18 books",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-reference/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-reference/003-18-books.md",
+    "requires": [
+      "skill-17-numbers-035eaa586b"
+    ],
+    "links": [
+      "skill-19-quick-reference-18fbc49110"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-18fbc49110",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-reference/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-reference/004-19-quick-reference.md",
+    "requires": [
+      "skill-18-books-c523e824dc"
+    ],
+    "links": [
+      "skill-20-method-49a09fe19f"
+    ]
+  },
+  {
+    "id": "skill-20-method-49a09fe19f",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-reference/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-reference/005-20-method.md",
+    "requires": [
+      "skill-19-quick-reference-18fbc49110"
+    ],
+    "links": []
+  }
+]

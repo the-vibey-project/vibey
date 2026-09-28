@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-25-what-s-live-verified-august-2026-0f070b61ef",
+    "purpose": "25 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-reference/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-reference/001-25-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-124c73a077"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-124c73a077",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-reference/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-verified-august-2026-0f070b61ef"
+    ],
+    "links": [
+      "skill-27-books-fca5835763"
+    ]
+  },
+  {
+    "id": "skill-27-books-fca5835763",
+    "purpose": "27 books",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-reference/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-reference/003-27-books.md",
+    "requires": [
+      "skill-26-misconceptions-124c73a077"
+    ],
+    "links": [
+      "skill-28-quick-reference-1c4084e5cc"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-1c4084e5cc",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-reference/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-reference/004-28-quick-reference.md",
+    "requires": [
+      "skill-27-books-fca5835763"
+    ],
+    "links": [
+      "skill-29-method-bafdfcca4d"
+    ]
+  },
+  {
+    "id": "skill-29-method-bafdfcca4d",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-reference/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-reference/005-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-1c4084e5cc"
+    ],
+    "links": []
+  }
+]

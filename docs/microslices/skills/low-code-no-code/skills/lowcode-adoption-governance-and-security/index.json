@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-9-when-to-use-and-when-not-to-496245990d",
+    "purpose": "9 when to use and when not to",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-adoption-governance-and-security/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-adoption-governance-and-security/001-9-when-to-use-and-when-not-to.md",
+    "requires": [],
+    "links": [
+      "skill-10-governance-and-shadow-it-7cf26db979"
+    ]
+  },
+  {
+    "id": "skill-10-governance-and-shadow-it-7cf26db979",
+    "purpose": "10 governance and shadow it",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-adoption-governance-and-security/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-adoption-governance-and-security/002-10-governance-and-shadow-it.md",
+    "requires": [
+      "skill-9-when-to-use-and-when-not-to-496245990d"
+    ],
+    "links": [
+      "skill-11-licensing-and-cost-traps-7f2c804c01"
+    ]
+  },
+  {
+    "id": "skill-11-licensing-and-cost-traps-7f2c804c01",
+    "purpose": "11 licensing and cost traps",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-adoption-governance-and-security/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-adoption-governance-and-security/003-11-licensing-and-cost-traps.md",
+    "requires": [
+      "skill-10-governance-and-shadow-it-7cf26db979"
+    ],
+    "links": [
+      "skill-12-security-1112bc1cf9"
+    ]
+  },
+  {
+    "id": "skill-12-security-1112bc1cf9",
+    "purpose": "12 security",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-adoption-governance-and-security/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-adoption-governance-and-security/004-12-security.md",
+    "requires": [
+      "skill-11-licensing-and-cost-traps-7f2c804c01"
+    ],
+    "links": []
+  }
+]

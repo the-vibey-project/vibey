@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-17-whois-and-rdap-4d7d98f2ee",
+    "purpose": "17 whois and rdap",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/001-17-whois-and-rdap.md",
+    "requires": [],
+    "links": [
+      "skill-18-disputes-5a469f33dc"
+    ]
+  },
+  {
+    "id": "skill-18-disputes-5a469f33dc",
+    "purpose": "18 disputes",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/002-18-disputes.md",
+    "requires": [
+      "skill-17-whois-and-rdap-4d7d98f2ee"
+    ],
+    "links": [
+      "skill-19-domain-security-c29727734e"
+    ]
+  },
+  {
+    "id": "skill-19-domain-security-c29727734e",
+    "purpose": "19 domain security",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/003-19-domain-security.md",
+    "requires": [
+      "skill-18-disputes-5a469f33dc"
+    ],
+    "links": [
+      "skill-20-the-aftermarket-07a4850ce8"
+    ]
+  },
+  {
+    "id": "skill-20-the-aftermarket-07a4850ce8",
+    "purpose": "20 the aftermarket",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-whois-disputes-domain-security-and-aftermarket/004-20-the-aftermarket.md",
+    "requires": [
+      "skill-19-domain-security-c29727734e"
+    ],
+    "links": []
+  }
+]

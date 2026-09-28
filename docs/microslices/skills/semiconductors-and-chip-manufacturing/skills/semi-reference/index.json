@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-27-what-s-live-checked-august-2026-5b2be1741c",
+    "purpose": "27 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-reference/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-reference/001-27-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-28-misconceptions-480f24f425"
+    ]
+  },
+  {
+    "id": "skill-28-misconceptions-480f24f425",
+    "purpose": "28 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-reference/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-reference/002-28-misconceptions.md",
+    "requires": [
+      "skill-27-what-s-live-checked-august-2026-5b2be1741c"
+    ],
+    "links": [
+      "skill-29-numbers-0e3ac01db9"
+    ]
+  },
+  {
+    "id": "skill-29-numbers-0e3ac01db9",
+    "purpose": "29 numbers",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-reference/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-reference/003-29-numbers.md",
+    "requires": [
+      "skill-28-misconceptions-480f24f425"
+    ],
+    "links": [
+      "skill-30-sources-3253ebce07"
+    ]
+  },
+  {
+    "id": "skill-30-sources-3253ebce07",
+    "purpose": "30 sources",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-reference/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-reference/004-30-sources.md",
+    "requires": [
+      "skill-29-numbers-0e3ac01db9"
+    ],
+    "links": [
+      "skill-31-quick-reference-80f36a758c"
+    ]
+  },
+  {
+    "id": "skill-31-quick-reference-80f36a758c",
+    "purpose": "31 quick reference",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-reference/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-reference/005-31-quick-reference.md",
+    "requires": [
+      "skill-30-sources-3253ebce07"
+    ],
+    "links": [
+      "skill-32-method-1b790a9280"
+    ]
+  },
+  {
+    "id": "skill-32-method-1b790a9280",
+    "purpose": "32 method",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-reference/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-reference/006-32-method.md",
+    "requires": [
+      "skill-31-quick-reference-80f36a758c"
+    ],
+    "links": []
+  }
+]

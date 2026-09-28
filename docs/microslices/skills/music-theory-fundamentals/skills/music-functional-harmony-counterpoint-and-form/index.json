@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-functional-harmony-0d81fbea28",
+    "purpose": "10 functional harmony",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/001-10-functional-harmony.md",
+    "requires": [],
+    "links": [
+      "skill-11-cadence-and-phrase-1dead49972"
+    ]
+  },
+  {
+    "id": "skill-11-cadence-and-phrase-1dead49972",
+    "purpose": "11 cadence and phrase",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/002-11-cadence-and-phrase.md",
+    "requires": [
+      "skill-10-functional-harmony-0d81fbea28"
+    ],
+    "links": [
+      "skill-12-modulation-and-chromaticism-87ea0acc1b"
+    ]
+  },
+  {
+    "id": "skill-12-modulation-and-chromaticism-87ea0acc1b",
+    "purpose": "12 modulation and chromaticism",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/003-12-modulation-and-chromaticism.md",
+    "requires": [
+      "skill-11-cadence-and-phrase-1dead49972"
+    ],
+    "links": [
+      "skill-13-counterpoint-856990345e"
+    ]
+  },
+  {
+    "id": "skill-13-counterpoint-856990345e",
+    "purpose": "13 counterpoint",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/004-13-counterpoint.md",
+    "requires": [
+      "skill-12-modulation-and-chromaticism-87ea0acc1b"
+    ],
+    "links": [
+      "skill-14-form-3b0a7778ce"
+    ]
+  },
+  {
+    "id": "skill-14-form-3b0a7778ce",
+    "purpose": "14 form",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-functional-harmony-counterpoint-and-form/005-14-form.md",
+    "requires": [
+      "skill-13-counterpoint-856990345e"
+    ],
+    "links": []
+  }
+]

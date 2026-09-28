@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-17-geometry-5088736bb3",
+    "purpose": "17 geometry",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/001-17-geometry.md",
+    "requires": [],
+    "links": [
+      "skill-18-manifolds-f10e53c95b"
+    ]
+  },
+  {
+    "id": "skill-18-manifolds-f10e53c95b",
+    "purpose": "18 manifolds",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/002-18-manifolds.md",
+    "requires": [
+      "skill-17-geometry-5088736bb3"
+    ],
+    "links": [
+      "skill-19-tensors-done-properly-411640537b"
+    ]
+  },
+  {
+    "id": "skill-19-tensors-done-properly-411640537b",
+    "purpose": "19 tensors done properly",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/003-19-tensors-done-properly.md",
+    "requires": [
+      "skill-18-manifolds-f10e53c95b"
+    ],
+    "links": [
+      "skill-20-riemannian-geometry-1189c0a0d8"
+    ]
+  },
+  {
+    "id": "skill-20-riemannian-geometry-1189c0a0d8",
+    "purpose": "20 riemannian geometry",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/004-20-riemannian-geometry.md",
+    "requires": [
+      "skill-19-tensors-done-properly-411640537b"
+    ],
+    "links": [
+      "skill-21-lie-groups-and-algebras-c151760c46"
+    ]
+  },
+  {
+    "id": "skill-21-lie-groups-and-algebras-c151760c46",
+    "purpose": "21 lie groups and algebras",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-geometry-manifolds-tensors-and-lie-groups/005-21-lie-groups-and-algebras.md",
+    "requires": [
+      "skill-20-riemannian-geometry-1189c0a0d8"
+    ],
+    "links": []
+  }
+]

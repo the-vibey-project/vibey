@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-syscalls-and-the-userspace-abi-614d890180",
+    "purpose": "4 syscalls and the userspace abi",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/001-4-syscalls-and-the-userspace-abi.md",
+    "requires": [],
+    "links": [
+      "skill-5-ebpf-and-sched-ext-770664002c"
+    ]
+  },
+  {
+    "id": "skill-5-ebpf-and-sched-ext-770664002c",
+    "purpose": "5 ebpf and sched ext",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/002-5-ebpf-and-sched-ext.md",
+    "requires": [
+      "skill-4-syscalls-and-the-userspace-abi-614d890180"
+    ],
+    "links": [
+      "skill-6-boot-8ee5a95db5"
+    ]
+  },
+  {
+    "id": "skill-6-boot-8ee5a95db5",
+    "purpose": "6 boot",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/003-6-boot.md",
+    "requires": [
+      "skill-5-ebpf-and-sched-ext-770664002c"
+    ],
+    "links": [
+      "skill-7-init-cgroups-and-containers-c7a3caf2e8"
+    ]
+  },
+  {
+    "id": "skill-7-init-cgroups-and-containers-c7a3caf2e8",
+    "purpose": "7 init cgroups and containers",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-syscalls-ebpf-boot-and-init/004-7-init-cgroups-and-containers.md",
+    "requires": [
+      "skill-6-boot-8ee5a95db5"
+    ],
+    "links": []
+  }
+]

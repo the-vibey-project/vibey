@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-9-storage-1db28501f2",
+    "purpose": "9 storage",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/001-9-storage.md",
+    "requires": [],
+    "links": [
+      "skill-10-databases-1e4a91b933"
+    ]
+  },
+  {
+    "id": "skill-10-databases-1e4a91b933",
+    "purpose": "10 databases",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/002-10-databases.md",
+    "requires": [
+      "skill-9-storage-1db28501f2"
+    ],
+    "links": [
+      "skill-11-analytics-e379175f99"
+    ]
+  },
+  {
+    "id": "skill-11-analytics-e379175f99",
+    "purpose": "11 analytics",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/003-11-analytics.md",
+    "requires": [
+      "skill-10-databases-1e4a91b933"
+    ],
+    "links": [
+      "skill-12-ai-ml-services-607931e3af"
+    ]
+  },
+  {
+    "id": "skill-12-ai-ml-services-607931e3af",
+    "purpose": "12 ai ml services",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/004-12-ai-ml-services.md",
+    "requires": [
+      "skill-11-analytics-e379175f99"
+    ],
+    "links": [
+      "skill-13-observability-3dad571535"
+    ]
+  },
+  {
+    "id": "skill-13-observability-3dad571535",
+    "purpose": "13 observability",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-storage-databases-analytics-and-observability/005-13-observability.md",
+    "requires": [
+      "skill-12-ai-ml-services-607931e3af"
+    ],
+    "links": []
+  }
+]

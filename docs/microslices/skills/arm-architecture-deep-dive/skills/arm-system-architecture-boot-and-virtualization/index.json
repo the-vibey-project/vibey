@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-16-big-little-and-dynamiq-8ac7aa694f",
+    "purpose": "16 big little and dynamiq",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/001-16-big-little-and-dynamiq.md",
+    "requires": [],
+    "links": [
+      "skill-17-interrupts-and-timers-031b369577"
+    ]
+  },
+  {
+    "id": "skill-17-interrupts-and-timers-031b369577",
+    "purpose": "17 interrupts and timers",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/002-17-interrupts-and-timers.md",
+    "requires": [
+      "skill-16-big-little-and-dynamiq-8ac7aa694f"
+    ],
+    "links": [
+      "skill-18-interconnect-57bd56eacf"
+    ]
+  },
+  {
+    "id": "skill-18-interconnect-57bd56eacf",
+    "purpose": "18 interconnect",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/003-18-interconnect.md",
+    "requires": [
+      "skill-17-interrupts-and-timers-031b369577"
+    ],
+    "links": [
+      "skill-19-boot-and-firmware-on-arm-5425cd273b"
+    ]
+  },
+  {
+    "id": "skill-19-boot-and-firmware-on-arm-5425cd273b",
+    "purpose": "19 boot and firmware on arm",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/004-19-boot-and-firmware-on-arm.md",
+    "requires": [
+      "skill-18-interconnect-57bd56eacf"
+    ],
+    "links": [
+      "skill-20-virtualization-cb041ab467"
+    ]
+  },
+  {
+    "id": "skill-20-virtualization-cb041ab467",
+    "purpose": "20 virtualization",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-system-architecture-boot-and-virtualization/005-20-virtualization.md",
+    "requires": [
+      "skill-19-boot-and-firmware-on-arm-5425cd273b"
+    ],
+    "links": []
+  }
+]

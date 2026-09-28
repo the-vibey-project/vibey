@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-diagnostics-d0352fede1",
+    "purpose": "8 diagnostics",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-diagnostics-ota-and-adas/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-diagnostics-ota-and-adas/001-8-diagnostics.md",
+    "requires": [],
+    "links": [
+      "skill-9-flashing-and-ota-0e162e1b01"
+    ]
+  },
+  {
+    "id": "skill-9-flashing-and-ota-0e162e1b01",
+    "purpose": "9 flashing and ota",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-diagnostics-ota-and-adas/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-diagnostics-ota-and-adas/002-9-flashing-and-ota.md",
+    "requires": [
+      "skill-8-diagnostics-d0352fede1"
+    ],
+    "links": [
+      "skill-10-adas-and-autonomy-2c60d92366"
+    ]
+  },
+  {
+    "id": "skill-10-adas-and-autonomy-2c60d92366",
+    "purpose": "10 adas and autonomy",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-diagnostics-ota-and-adas/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-diagnostics-ota-and-adas/003-10-adas-and-autonomy.md",
+    "requires": [
+      "skill-9-flashing-and-ota-0e162e1b01"
+    ],
+    "links": []
+  }
+]

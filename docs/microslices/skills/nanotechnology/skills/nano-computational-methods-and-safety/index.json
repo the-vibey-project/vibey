@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-10-computational-nanoscience-8b2f901a6e",
+    "purpose": "10 computational nanoscience",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-computational-methods-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-computational-methods-and-safety/001-10-computational-nanoscience.md",
+    "requires": [],
+    "links": [
+      "skill-11-safety-and-environmental-behaviour-6105b2e710"
+    ]
+  },
+  {
+    "id": "skill-11-safety-and-environmental-behaviour-6105b2e710",
+    "purpose": "11 safety and environmental behaviour",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-computational-methods-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-computational-methods-and-safety/002-11-safety-and-environmental-behaviour.md",
+    "requires": [
+      "skill-10-computational-nanoscience-8b2f901a6e"
+    ],
+    "links": []
+  }
+]

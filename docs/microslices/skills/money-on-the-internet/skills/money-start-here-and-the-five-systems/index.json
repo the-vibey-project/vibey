@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-how-this-pack-was-built-and-how-to-trust-it-18cccd4865",
+    "purpose": "how this pack was built and how to trust it",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-start-here-and-the-five-systems/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-start-here-and-the-five-systems/001-how-this-pack-was-built-and-how-to-trust-it.md",
+    "requires": [],
+    "links": [
+      "skill-the-five-systems-positioned-86d7be206d"
+    ]
+  },
+  {
+    "id": "skill-the-five-systems-positioned-86d7be206d",
+    "purpose": "the five systems positioned",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-start-here-and-the-five-systems/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-start-here-and-the-five-systems/002-the-five-systems-positioned.md",
+    "requires": [
+      "skill-how-this-pack-was-built-and-how-to-trust-it-18cccd4865"
+    ],
+    "links": [
+      "skill-learning-paths-depending-on-what-you-want-b8b86cc82d"
+    ]
+  },
+  {
+    "id": "skill-learning-paths-depending-on-what-you-want-b8b86cc82d",
+    "purpose": "learning paths depending on what you want",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-start-here-and-the-five-systems/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-start-here-and-the-five-systems/003-learning-paths-depending-on-what-you-want.md",
+    "requires": [
+      "skill-the-five-systems-positioned-86d7be206d"
+    ],
+    "links": [
+      "skill-the-rest-of-the-set-d186f16af8"
+    ]
+  },
+  {
+    "id": "skill-the-rest-of-the-set-d186f16af8",
+    "purpose": "the rest of the set",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-start-here-and-the-five-systems/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-start-here-and-the-five-systems/004-the-rest-of-the-set.md",
+    "requires": [
+      "skill-learning-paths-depending-on-what-you-want-b8b86cc82d"
+    ],
+    "links": []
+  }
+]

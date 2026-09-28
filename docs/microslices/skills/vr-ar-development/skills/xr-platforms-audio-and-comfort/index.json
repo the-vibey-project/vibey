@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-platforms-and-apis-faf7e1b8ff",
+    "purpose": "7 platforms and apis",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-platforms-audio-and-comfort/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-platforms-audio-and-comfort/001-7-platforms-and-apis.md",
+    "requires": [],
+    "links": [
+      "skill-8-spatial-audio-fe755091ef"
+    ]
+  },
+  {
+    "id": "skill-8-spatial-audio-fe755091ef",
+    "purpose": "8 spatial audio",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-platforms-audio-and-comfort/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-platforms-audio-and-comfort/002-8-spatial-audio.md",
+    "requires": [
+      "skill-7-platforms-and-apis-faf7e1b8ff"
+    ],
+    "links": [
+      "skill-9-comfort-safety-accessibility-8dc168e9f4"
+    ]
+  },
+  {
+    "id": "skill-9-comfort-safety-accessibility-8dc168e9f4",
+    "purpose": "9 comfort safety accessibility",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-platforms-audio-and-comfort/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-platforms-audio-and-comfort/003-9-comfort-safety-accessibility.md",
+    "requires": [
+      "skill-8-spatial-audio-fe755091ef"
+    ],
+    "links": []
+  }
+]

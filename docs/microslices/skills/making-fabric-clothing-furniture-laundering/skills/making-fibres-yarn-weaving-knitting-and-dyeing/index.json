@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-0-routing-a7356ae67b",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-fibres-578af867c0"
+    ]
+  },
+  {
+    "id": "skill-1-fibres-578af867c0",
+    "purpose": "1 fibres",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/002-1-fibres.md",
+    "requires": [
+      "skill-0-routing-a7356ae67b"
+    ],
+    "links": [
+      "skill-2-yarn-and-spinning-39c0994f8f"
+    ]
+  },
+  {
+    "id": "skill-2-yarn-and-spinning-39c0994f8f",
+    "purpose": "2 yarn and spinning",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/003-2-yarn-and-spinning.md",
+    "requires": [
+      "skill-1-fibres-578af867c0"
+    ],
+    "links": [
+      "skill-3-weaving-46ee81d77d"
+    ]
+  },
+  {
+    "id": "skill-3-weaving-46ee81d77d",
+    "purpose": "3 weaving",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/004-3-weaving.md",
+    "requires": [
+      "skill-2-yarn-and-spinning-39c0994f8f"
+    ],
+    "links": [
+      "skill-4-knitting-6312e3324b"
+    ]
+  },
+  {
+    "id": "skill-4-knitting-6312e3324b",
+    "purpose": "4 knitting",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/005-4-knitting.md",
+    "requires": [
+      "skill-3-weaving-46ee81d77d"
+    ],
+    "links": [
+      "skill-5-nonwovens-and-felt-1eced5c8eb"
+    ]
+  },
+  {
+    "id": "skill-5-nonwovens-and-felt-1eced5c8eb",
+    "purpose": "5 nonwovens and felt",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/006-5-nonwovens-and-felt.md",
+    "requires": [
+      "skill-4-knitting-6312e3324b"
+    ],
+    "links": [
+      "skill-6-dyeing-and-finishing-bfc3cd82d9"
+    ]
+  },
+  {
+    "id": "skill-6-dyeing-and-finishing-bfc3cd82d9",
+    "purpose": "6 dyeing and finishing",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/007-6-dyeing-and-finishing.md",
+    "requires": [
+      "skill-5-nonwovens-and-felt-1eced5c8eb"
+    ],
+    "links": [
+      "skill-7-fabric-properties-caa995502a"
+    ]
+  },
+  {
+    "id": "skill-7-fabric-properties-caa995502a",
+    "purpose": "7 fabric properties",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-fibres-yarn-weaving-knitting-and-dyeing/008-7-fabric-properties.md",
+    "requires": [
+      "skill-6-dyeing-and-finishing-bfc3cd82d9"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-behaviour-genetics-f2fe9d76d1",
+    "purpose": "10 behaviour genetics",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/001-10-behaviour-genetics.md",
+    "requires": [],
+    "links": [
+      "skill-11-discipline-2f248132a5"
+    ]
+  },
+  {
+    "id": "skill-11-discipline-2f248132a5",
+    "purpose": "11 discipline",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/002-11-discipline.md",
+    "requires": [
+      "skill-10-behaviour-genetics-f2fe9d76d1"
+    ],
+    "links": [
+      "skill-12-siblings-and-birth-order-5ed1dd9f06"
+    ]
+  },
+  {
+    "id": "skill-12-siblings-and-birth-order-5ed1dd9f06",
+    "purpose": "12 siblings and birth order",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/003-12-siblings-and-birth-order.md",
+    "requires": [
+      "skill-11-discipline-2f248132a5"
+    ],
+    "links": [
+      "skill-13-family-structure-contested-territory-c01a28b202"
+    ]
+  },
+  {
+    "id": "skill-13-family-structure-contested-territory-c01a28b202",
+    "purpose": "13 family structure contested territory",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/004-13-family-structure-contested-territory.md",
+    "requires": [
+      "skill-12-siblings-and-birth-order-5ed1dd9f06"
+    ],
+    "links": [
+      "skill-14-adversity-and-resilience-3ecf39487e"
+    ]
+  },
+  {
+    "id": "skill-14-adversity-and-resilience-3ecf39487e",
+    "purpose": "14 adversity and resilience",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/005-14-adversity-and-resilience.md",
+    "requires": [
+      "skill-13-family-structure-contested-territory-c01a28b202"
+    ],
+    "links": [
+      "skill-15-caregiving-and-aging-b2ac4059b7"
+    ]
+  },
+  {
+    "id": "skill-15-caregiving-and-aging-b2ac4059b7",
+    "purpose": "15 caregiving and aging",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-behaviour-genetics-structure-and-caregiving/006-15-caregiving-and-aging.md",
+    "requires": [
+      "skill-14-adversity-and-resilience-3ecf39487e"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-18-engine-anatomy-and-the-rebuild-process-c525d46130",
+    "purpose": "18 engine anatomy and the rebuild process",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances/001-18-engine-anatomy-and-the-rebuild-process.md",
+    "requires": [],
+    "links": [
+      "skill-19-engine-management-and-forced-induction-17f5911b32"
+    ]
+  },
+  {
+    "id": "skill-19-engine-management-and-forced-induction-17f5911b32",
+    "purpose": "19 engine management and forced induction",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances/002-19-engine-management-and-forced-induction.md",
+    "requires": [
+      "skill-18-engine-anatomy-and-the-rebuild-process-c525d46130"
+    ],
+    "links": [
+      "skill-20-materials-manufacturing-and-tolerances-f7ed44b9ed"
+    ]
+  },
+  {
+    "id": "skill-20-materials-manufacturing-and-tolerances-f7ed44b9ed",
+    "purpose": "20 materials manufacturing and tolerances",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-rebuilding-engines-materials-and-tolerances/003-20-materials-manufacturing-and-tolerances.md",
+    "requires": [
+      "skill-19-engine-management-and-forced-induction-17f5911b32"
+    ],
+    "links": []
+  }
+]

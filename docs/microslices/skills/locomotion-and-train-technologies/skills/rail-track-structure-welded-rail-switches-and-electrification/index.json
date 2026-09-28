@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-track-structure-52edd86b7d",
+    "purpose": "10 track structure",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/001-10-track-structure.md",
+    "requires": [],
+    "links": [
+      "skill-11-continuous-welded-rail-and-thermal-stress-f861d5e59a"
+    ]
+  },
+  {
+    "id": "skill-11-continuous-welded-rail-and-thermal-stress-f861d5e59a",
+    "purpose": "11 continuous welded rail and thermal stress",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/002-11-continuous-welded-rail-and-thermal-stress.md",
+    "requires": [
+      "skill-10-track-structure-52edd86b7d"
+    ],
+    "links": [
+      "skill-12-switches-and-crossings-33ed01a795"
+    ]
+  },
+  {
+    "id": "skill-12-switches-and-crossings-33ed01a795",
+    "purpose": "12 switches and crossings",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/003-12-switches-and-crossings.md",
+    "requires": [
+      "skill-11-continuous-welded-rail-and-thermal-stress-f861d5e59a"
+    ],
+    "links": [
+      "skill-13-electrification-infrastructure-b298acc182"
+    ]
+  },
+  {
+    "id": "skill-13-electrification-infrastructure-b298acc182",
+    "purpose": "13 electrification infrastructure",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-track-structure-welded-rail-switches-and-electrification/004-13-electrification-infrastructure.md",
+    "requires": [
+      "skill-12-switches-and-crossings-33ed01a795"
+    ],
+    "links": []
+  }
+]

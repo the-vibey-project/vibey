@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-11-orbital-mechanics-vis-viva-manoeuvres-and-perturbations-325f2023fb",
+    "purpose": "11 orbital mechanics vis viva manoeuvres and perturbations",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/001-11-orbital-mechanics-vis-viva-manoeuvres-and-perturbations.md",
+    "requires": [],
+    "links": [
+      "skill-12-the-ascent-trajectory-and-the-v-budget-eadd2b2c32"
+    ]
+  },
+  {
+    "id": "skill-12-the-ascent-trajectory-and-the-v-budget-eadd2b2c32",
+    "purpose": "12 the ascent trajectory and the v budget",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/002-12-the-ascent-trajectory-and-the-v-budget.md",
+    "requires": [
+      "skill-11-orbital-mechanics-vis-viva-manoeuvres-and-perturbations-325f2023fb"
+    ],
+    "links": [
+      "skill-13-aerodynamic-loads-and-thin-walled-structures-06799f35c8"
+    ]
+  },
+  {
+    "id": "skill-13-aerodynamic-loads-and-thin-walled-structures-06799f35c8",
+    "purpose": "13 aerodynamic loads and thin walled structures",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/003-13-aerodynamic-loads-and-thin-walled-structures.md",
+    "requires": [
+      "skill-12-the-ascent-trajectory-and-the-v-budget-eadd2b2c32"
+    ],
+    "links": [
+      "skill-14-guidance-and-control-c3e724f2f2"
+    ]
+  },
+  {
+    "id": "skill-14-guidance-and-control-c3e724f2f2",
+    "purpose": "14 guidance and control",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/004-14-guidance-and-control.md",
+    "requires": [
+      "skill-13-aerodynamic-loads-and-thin-walled-structures-06799f35c8"
+    ],
+    "links": [
+      "skill-15-reentry-physics-c14a072dcf"
+    ]
+  },
+  {
+    "id": "skill-15-reentry-physics-c14a072dcf",
+    "purpose": "15 reentry physics",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/005-15-reentry-physics.md",
+    "requires": [
+      "skill-14-guidance-and-control-c3e724f2f2"
+    ],
+    "links": [
+      "skill-16-failure-physics-and-normalization-of-deviance-19616a3876"
+    ]
+  },
+  {
+    "id": "skill-16-failure-physics-and-normalization-of-deviance-19616a3876",
+    "purpose": "16 failure physics and normalization of deviance",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-orbits-ascent-structures-and-reentry/006-16-failure-physics-and-normalization-of-deviance.md",
+    "requires": [
+      "skill-15-reentry-physics-c14a072dcf"
+    ],
+    "links": []
+  }
+]

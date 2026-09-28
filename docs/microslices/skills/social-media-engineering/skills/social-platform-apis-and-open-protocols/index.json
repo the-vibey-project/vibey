@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-0-routing-f5fd29e1f5",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-platform-apis-and-open-protocols/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-platform-apis-and-open-protocols/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-platform-apis-eb32247b43"
+    ]
+  },
+  {
+    "id": "skill-1-platform-apis-eb32247b43",
+    "purpose": "1 platform apis",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-platform-apis-and-open-protocols/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-platform-apis-and-open-protocols/002-1-platform-apis.md",
+    "requires": [
+      "skill-0-routing-f5fd29e1f5"
+    ],
+    "links": [
+      "skill-2-open-protocols-02e21e1f8c"
+    ]
+  },
+  {
+    "id": "skill-2-open-protocols-02e21e1f8c",
+    "purpose": "2 open protocols",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-platform-apis-and-open-protocols/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-platform-apis-and-open-protocols/003-2-open-protocols.md",
+    "requires": [
+      "skill-1-platform-apis-eb32247b43"
+    ],
+    "links": []
+  }
+]

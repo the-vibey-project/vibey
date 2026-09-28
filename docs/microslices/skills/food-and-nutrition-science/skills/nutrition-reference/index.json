@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-26-misconceptions-2761e2fcfe",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-reference/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-reference/001-26-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-27-numbers-1a08afdf1b"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-1a08afdf1b",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-reference/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-reference/002-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-2761e2fcfe"
+    ],
+    "links": [
+      "skill-28-sources-c0f0633936"
+    ]
+  },
+  {
+    "id": "skill-28-sources-c0f0633936",
+    "purpose": "28 sources",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-reference/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-reference/003-28-sources.md",
+    "requires": [
+      "skill-27-numbers-1a08afdf1b"
+    ],
+    "links": [
+      "skill-29-quick-reference-325ac9af9f"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-325ac9af9f",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-reference/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-reference/004-29-quick-reference.md",
+    "requires": [
+      "skill-28-sources-c0f0633936"
+    ],
+    "links": [
+      "skill-30-method-303cd24a21"
+    ]
+  },
+  {
+    "id": "skill-30-method-303cd24a21",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-reference/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-reference/005-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-325ac9af9f"
+    ],
+    "links": []
+  }
+]

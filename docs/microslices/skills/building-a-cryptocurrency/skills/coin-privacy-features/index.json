@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-6-privacy-features-building-toward-monero-b52315b4af",
+    "purpose": "6 privacy features building toward monero",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-privacy-features/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-privacy-features/001-6-privacy-features-building-toward-monero.md",
+    "requires": [],
+    "links": []
+  }
+]

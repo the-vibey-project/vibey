@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-9-the-problem-of-evil-0890fd1cd4",
+    "purpose": "9 the problem of evil",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview/001-9-the-problem-of-evil.md",
+    "requires": [],
+    "links": [
+      "skill-10-responding-to-common-objections-f8bd691a8e"
+    ]
+  },
+  {
+    "id": "skill-10-responding-to-common-objections-f8bd691a8e",
+    "purpose": "10 responding to common objections",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview/002-10-responding-to-common-objections.md",
+    "requires": [
+      "skill-9-the-problem-of-evil-0890fd1cd4"
+    ],
+    "links": [
+      "skill-11-worldview-engagement-the-three-methods-and-the-most-important-skill-326a891b12"
+    ]
+  },
+  {
+    "id": "skill-11-worldview-engagement-the-three-methods-and-the-most-important-skill-326a891b12",
+    "purpose": "11 worldview engagement the three methods and the most important skill",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-evil-objections-and-worldview/003-11-worldview-engagement-the-three-methods-and-the-most-important-skill.md",
+    "requires": [
+      "skill-10-responding-to-common-objections-f8bd691a8e"
+    ],
+    "links": []
+  }
+]

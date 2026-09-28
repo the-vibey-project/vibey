@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-16-neurological-and-psychiatric-d155695790",
+    "purpose": "16 neurological and psychiatric",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/001-16-neurological-and-psychiatric.md",
+    "requires": [],
+    "links": [
+      "skill-17-endocrine-and-metabolic-5eff531c43"
+    ]
+  },
+  {
+    "id": "skill-17-endocrine-and-metabolic-5eff531c43",
+    "purpose": "17 endocrine and metabolic",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/002-17-endocrine-and-metabolic.md",
+    "requires": [
+      "skill-16-neurological-and-psychiatric-d155695790"
+    ],
+    "links": [
+      "skill-18-immunology-and-biologics-66a3b18353"
+    ]
+  },
+  {
+    "id": "skill-18-immunology-and-biologics-66a3b18353",
+    "purpose": "18 immunology and biologics",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/003-18-immunology-and-biologics.md",
+    "requires": [
+      "skill-17-endocrine-and-metabolic-5eff531c43"
+    ],
+    "links": [
+      "skill-19-oncology-26d6f7a6a5"
+    ]
+  },
+  {
+    "id": "skill-19-oncology-26d6f7a6a5",
+    "purpose": "19 oncology",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-drug-classes-neuro-endocrine-immunology-and-oncology/004-19-oncology.md",
+    "requires": [
+      "skill-18-immunology-and-biologics-66a3b18353"
+    ],
+    "links": []
+  }
+]

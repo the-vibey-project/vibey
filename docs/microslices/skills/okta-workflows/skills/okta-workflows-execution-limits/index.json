@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-quirk-6-1-key-platform-hard-limits-34fc3f7e73",
+    "purpose": "quirk 6 1 key platform hard limits",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-execution-limits/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-execution-limits/001-quirk-6-1-key-platform-hard-limits.md",
+    "requires": [],
+    "links": [
+      "skill-quirk-6-2-active-flow-count-is-plan-gated-6e40363e1e"
+    ]
+  },
+  {
+    "id": "skill-quirk-6-2-active-flow-count-is-plan-gated-6e40363e1e",
+    "purpose": "quirk 6 2 active flow count is plan gated",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-execution-limits/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-execution-limits/002-quirk-6-2-active-flow-count-is-plan-gated.md",
+    "requires": [
+      "skill-quirk-6-1-key-platform-hard-limits-34fc3f7e73"
+    ],
+    "links": [
+      "skill-quirk-6-3-automated-flow-throttling-is-now-a-platform-feature-a9ca6c9d30"
+    ]
+  },
+  {
+    "id": "skill-quirk-6-3-automated-flow-throttling-is-now-a-platform-feature-a9ca6c9d30",
+    "purpose": "quirk 6 3 automated flow throttling is now a platform feature",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-execution-limits/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-execution-limits/003-quirk-6-3-automated-flow-throttling-is-now-a-platform-feature.md",
+    "requires": [
+      "skill-quirk-6-2-active-flow-count-is-plan-gated-6e40363e1e"
+    ],
+    "links": [
+      "skill-quirk-6-4-export-flow-rate-limits-15-min-window-a50f89c982"
+    ]
+  },
+  {
+    "id": "skill-quirk-6-4-export-flow-rate-limits-15-min-window-a50f89c982",
+    "purpose": "quirk 6 4 export flow rate limits 15 min window",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-execution-limits/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-execution-limits/004-quirk-6-4-export-flow-rate-limits-15-min-window.md",
+    "requires": [
+      "skill-quirk-6-3-automated-flow-throttling-is-now-a-platform-feature-a9ca6c9d30"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-the-xr-rendering-pipeline-ca2256c541",
+    "purpose": "4 the xr rendering pipeline",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding/001-4-the-xr-rendering-pipeline.md",
+    "requires": [],
+    "links": [
+      "skill-5-input-and-interaction-17085c4c8b"
+    ]
+  },
+  {
+    "id": "skill-5-input-and-interaction-17085c4c8b",
+    "purpose": "5 input and interaction",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding/002-5-input-and-interaction.md",
+    "requires": [
+      "skill-4-the-xr-rendering-pipeline-ca2256c541"
+    ],
+    "links": [
+      "skill-6-ar-spatial-understanding-94f6c56e47"
+    ]
+  },
+  {
+    "id": "skill-6-ar-spatial-understanding-94f6c56e47",
+    "purpose": "6 ar spatial understanding",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-rendering-input-and-spatial-understanding/003-6-ar-spatial-understanding.md",
+    "requires": [
+      "skill-5-input-and-interaction-17085c4c8b"
+    ],
+    "links": []
+  }
+]

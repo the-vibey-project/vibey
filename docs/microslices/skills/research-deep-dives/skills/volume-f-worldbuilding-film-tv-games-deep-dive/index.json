@@ -1,0 +1,202 @@
+[
+  {
+    "id": "skill-1-worldbuilding-is-a-causal-system-47fe78be01",
+    "purpose": "1 worldbuilding is a causal system",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/001-1-worldbuilding-is-a-causal-system.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-world-bible-6fbd9ab95e"
+    ]
+  },
+  {
+    "id": "skill-2-the-world-bible-6fbd9ab95e",
+    "purpose": "2 the world bible",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/002-2-the-world-bible.md",
+    "requires": [
+      "skill-1-worldbuilding-is-a-causal-system-47fe78be01"
+    ],
+    "links": [
+      "skill-3-history-institutions-and-lived-texture-77d0e80c4b"
+    ]
+  },
+  {
+    "id": "skill-3-history-institutions-and-lived-texture-77d0e80c4b",
+    "purpose": "3 history institutions and lived texture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/003-3-history-institutions-and-lived-texture.md",
+    "requires": [
+      "skill-2-the-world-bible-6fbd9ab95e"
+    ],
+    "links": [
+      "skill-4-characters-as-agents-in-systems-4749c6cc89"
+    ]
+  },
+  {
+    "id": "skill-4-characters-as-agents-in-systems-4749c6cc89",
+    "purpose": "4 characters as agents in systems",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/004-4-characters-as-agents-in-systems.md",
+    "requires": [
+      "skill-3-history-institutions-and-lived-texture-77d0e80c4b"
+    ],
+    "links": [
+      "skill-5-trilogy-architecture-42d5c6422f"
+    ]
+  },
+  {
+    "id": "skill-5-trilogy-architecture-42d5c6422f",
+    "purpose": "5 trilogy architecture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/005-5-trilogy-architecture.md",
+    "requires": [
+      "skill-4-characters-as-agents-in-systems-4749c6cc89"
+    ],
+    "links": [
+      "skill-6-film-adaptation-f1208b0eb3"
+    ]
+  },
+  {
+    "id": "skill-6-film-adaptation-f1208b0eb3",
+    "purpose": "6 film adaptation",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/006-6-film-adaptation.md",
+    "requires": [
+      "skill-5-trilogy-architecture-42d5c6422f"
+    ],
+    "links": [
+      "skill-7-television-and-streaming-006b8dcbc2"
+    ]
+  },
+  {
+    "id": "skill-7-television-and-streaming-006b8dcbc2",
+    "purpose": "7 television and streaming",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/007-7-television-and-streaming.md",
+    "requires": [
+      "skill-6-film-adaptation-f1208b0eb3"
+    ],
+    "links": [
+      "skill-8-games-and-interactive-worlds-6ed9b99bc9"
+    ]
+  },
+  {
+    "id": "skill-8-games-and-interactive-worlds-6ed9b99bc9",
+    "purpose": "8 games and interactive worlds",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/008-8-games-and-interactive-worlds.md",
+    "requires": [
+      "skill-7-television-and-streaming-006b8dcbc2"
+    ],
+    "links": [
+      "skill-9-transmedia-16bb9b825e"
+    ]
+  },
+  {
+    "id": "skill-9-transmedia-16bb9b825e",
+    "purpose": "9 transmedia",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/009-9-transmedia.md",
+    "requires": [
+      "skill-8-games-and-interactive-worlds-6ed9b99bc9"
+    ],
+    "links": [
+      "skill-10-production-pipeline-bdf9ff3414"
+    ]
+  },
+  {
+    "id": "skill-10-production-pipeline-bdf9ff3414",
+    "purpose": "10 production pipeline",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/010-10-production-pipeline.md",
+    "requires": [
+      "skill-9-transmedia-16bb9b825e"
+    ],
+    "links": [
+      "skill-11-rights-labor-and-business-34e259fb06"
+    ]
+  },
+  {
+    "id": "skill-11-rights-labor-and-business-34e259fb06",
+    "purpose": "11 rights labor and business",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/011-11-rights-labor-and-business.md",
+    "requires": [
+      "skill-10-production-pipeline-bdf9ff3414"
+    ],
+    "links": [
+      "skill-12-continuity-and-change-control-343482d075"
+    ]
+  },
+  {
+    "id": "skill-12-continuity-and-change-control-343482d075",
+    "purpose": "12 continuity and change control",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/012-12-continuity-and-change-control.md",
+    "requires": [
+      "skill-11-rights-labor-and-business-34e259fb06"
+    ],
+    "links": [
+      "skill-13-audience-and-theme-dfe1d20147"
+    ]
+  },
+  {
+    "id": "skill-13-audience-and-theme-dfe1d20147",
+    "purpose": "13 audience and theme",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/013-13-audience-and-theme.md",
+    "requires": [
+      "skill-12-continuity-and-change-control-343482d075"
+    ],
+    "links": [
+      "skill-14-common-failures-6464c416a4"
+    ]
+  },
+  {
+    "id": "skill-14-common-failures-6464c416a4",
+    "purpose": "14 common failures",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/014-14-common-failures.md",
+    "requires": [
+      "skill-13-audience-and-theme-dfe1d20147"
+    ],
+    "links": [
+      "skill-15-practical-creation-workflow-5458212b13"
+    ]
+  },
+  {
+    "id": "skill-15-practical-creation-workflow-5458212b13",
+    "purpose": "15 practical creation workflow",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/015-15-practical-creation-workflow.md",
+    "requires": [
+      "skill-14-common-failures-6464c416a4"
+    ],
+    "links": [
+      "skill-sources-1bf89fd023"
+    ]
+  },
+  {
+    "id": "skill-sources-1bf89fd023",
+    "purpose": "sources",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/016-sources.md",
+    "requires": [
+      "skill-15-practical-creation-workflow-5458212b13"
+    ],
+    "links": [
+      "skill-limits-0367a0396a"
+    ]
+  },
+  {
+    "id": "skill-limits-0367a0396a",
+    "purpose": "limits",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-f-worldbuilding-film-tv-games-deep-dive/017-limits.md",
+    "requires": [
+      "skill-sources-1bf89fd023"
+    ],
+    "links": []
+  }
+]

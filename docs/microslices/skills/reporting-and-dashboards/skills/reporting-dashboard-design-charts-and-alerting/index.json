@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-9-dashboard-design-87aa5eb11c",
+    "purpose": "9 dashboard design",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting/001-9-dashboard-design.md",
+    "requires": [],
+    "links": [
+      "skill-10-chart-selection-03668a9586"
+    ]
+  },
+  {
+    "id": "skill-10-chart-selection-03668a9586",
+    "purpose": "10 chart selection",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting/002-10-chart-selection.md",
+    "requires": [
+      "skill-9-dashboard-design-87aa5eb11c"
+    ],
+    "links": [
+      "skill-11-alerting-cb1cafe075"
+    ]
+  },
+  {
+    "id": "skill-11-alerting-cb1cafe075",
+    "purpose": "11 alerting",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-dashboard-design-charts-and-alerting/003-11-alerting.md",
+    "requires": [
+      "skill-10-chart-selection-03668a9586"
+    ],
+    "links": []
+  }
+]

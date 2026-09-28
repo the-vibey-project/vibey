@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-neuron-biophysics-and-synapses-a3bccd6f39",
+    "purpose": "7 neuron biophysics and synapses",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding/001-7-neuron-biophysics-and-synapses.md",
+    "requires": [],
+    "links": [
+      "skill-8-plasticity-f49ae19a33"
+    ]
+  },
+  {
+    "id": "skill-8-plasticity-f49ae19a33",
+    "purpose": "8 plasticity",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding/002-8-plasticity.md",
+    "requires": [
+      "skill-7-neuron-biophysics-and-synapses-a3bccd6f39"
+    ],
+    "links": [
+      "skill-9-neural-coding-dfa2e30272"
+    ]
+  },
+  {
+    "id": "skill-9-neural-coding-dfa2e30272",
+    "purpose": "9 neural coding",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-neuron-biophysics-plasticity-and-coding/003-9-neural-coding.md",
+    "requires": [
+      "skill-8-plasticity-f49ae19a33"
+    ],
+    "links": []
+  }
+]

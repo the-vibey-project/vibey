@@ -1,0 +1,214 @@
+[
+  {
+    "id": "skill-1-political-science-84d94816e0",
+    "purpose": "1 political science",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/001-1-political-science.md",
+    "requires": [],
+    "links": [
+      "skill-2-historical-political-science-2b7cd18abb"
+    ]
+  },
+  {
+    "id": "skill-2-historical-political-science-2b7cd18abb",
+    "purpose": "2 historical political science",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/002-2-historical-political-science.md",
+    "requires": [
+      "skill-1-political-science-84d94816e0"
+    ],
+    "links": [
+      "skill-3-cultural-studies-f3eb5ac03c"
+    ]
+  },
+  {
+    "id": "skill-3-cultural-studies-f3eb5ac03c",
+    "purpose": "3 cultural studies",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/003-3-cultural-studies.md",
+    "requires": [
+      "skill-2-historical-political-science-2b7cd18abb"
+    ],
+    "links": [
+      "skill-4-philosophy-and-argument-6c8f45f7d7"
+    ]
+  },
+  {
+    "id": "skill-4-philosophy-and-argument-6c8f45f7d7",
+    "purpose": "4 philosophy and argument",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/004-4-philosophy-and-argument.md",
+    "requires": [
+      "skill-3-cultural-studies-f3eb5ac03c"
+    ],
+    "links": [
+      "skill-5-ontology-74b418f374"
+    ]
+  },
+  {
+    "id": "skill-5-ontology-74b418f374",
+    "purpose": "5 ontology",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/005-5-ontology.md",
+    "requires": [
+      "skill-4-philosophy-and-argument-6c8f45f7d7"
+    ],
+    "links": [
+      "skill-6-axiology-ethics-and-value-3471d0508f"
+    ]
+  },
+  {
+    "id": "skill-6-axiology-ethics-and-value-3471d0508f",
+    "purpose": "6 axiology ethics and value",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/006-6-axiology-ethics-and-value.md",
+    "requires": [
+      "skill-5-ontology-74b418f374"
+    ],
+    "links": [
+      "skill-7-philosophy-of-mind-2ea292aa91"
+    ]
+  },
+  {
+    "id": "skill-7-philosophy-of-mind-2ea292aa91",
+    "purpose": "7 philosophy of mind",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/007-7-philosophy-of-mind.md",
+    "requires": [
+      "skill-6-axiology-ethics-and-value-3471d0508f"
+    ],
+    "links": [
+      "skill-8-science-and-scientific-knowledge-e1f2f0a4dc"
+    ]
+  },
+  {
+    "id": "skill-8-science-and-scientific-knowledge-e1f2f0a4dc",
+    "purpose": "8 science and scientific knowledge",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/008-8-science-and-scientific-knowledge.md",
+    "requires": [
+      "skill-7-philosophy-of-mind-2ea292aa91"
+    ],
+    "links": [
+      "skill-9-mathematics-7d675cffdf"
+    ]
+  },
+  {
+    "id": "skill-9-mathematics-7d675cffdf",
+    "purpose": "9 mathematics",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/009-9-mathematics.md",
+    "requires": [
+      "skill-8-science-and-scientific-knowledge-e1f2f0a4dc"
+    ],
+    "links": [
+      "skill-10-engineering-4c74d028eb"
+    ]
+  },
+  {
+    "id": "skill-10-engineering-4c74d028eb",
+    "purpose": "10 engineering",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/010-10-engineering.md",
+    "requires": [
+      "skill-9-mathematics-7d675cffdf"
+    ],
+    "links": [
+      "skill-11-technology-and-sociotechnical-systems-a80b5d6799"
+    ]
+  },
+  {
+    "id": "skill-11-technology-and-sociotechnical-systems-a80b5d6799",
+    "purpose": "11 technology and sociotechnical systems",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/011-11-technology-and-sociotechnical-systems.md",
+    "requires": [
+      "skill-10-engineering-4c74d028eb"
+    ],
+    "links": [
+      "skill-12-measurement-and-standards-2b7156fa40"
+    ]
+  },
+  {
+    "id": "skill-12-measurement-and-standards-2b7156fa40",
+    "purpose": "12 measurement and standards",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/012-12-measurement-and-standards.md",
+    "requires": [
+      "skill-11-technology-and-sociotechnical-systems-a80b5d6799"
+    ],
+    "links": [
+      "skill-13-technology-governance-security-and-privacy-33a6df7e76"
+    ]
+  },
+  {
+    "id": "skill-13-technology-governance-security-and-privacy-33a6df7e76",
+    "purpose": "13 technology governance security and privacy",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/013-13-technology-governance-security-and-privacy.md",
+    "requires": [
+      "skill-12-measurement-and-standards-2b7156fa40"
+    ],
+    "links": [
+      "skill-14-interdisciplinary-integration-1556e6cb24"
+    ]
+  },
+  {
+    "id": "skill-14-interdisciplinary-integration-1556e6cb24",
+    "purpose": "14 interdisciplinary integration",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/014-14-interdisciplinary-integration.md",
+    "requires": [
+      "skill-13-technology-governance-security-and-privacy-33a6df7e76"
+    ],
+    "links": [
+      "skill-15-common-errors-cf8911f8d3"
+    ]
+  },
+  {
+    "id": "skill-15-common-errors-cf8911f8d3",
+    "purpose": "15 common errors",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/015-15-common-errors.md",
+    "requires": [
+      "skill-14-interdisciplinary-integration-1556e6cb24"
+    ],
+    "links": [
+      "skill-16-research-workflow-7e18ad3385"
+    ]
+  },
+  {
+    "id": "skill-16-research-workflow-7e18ad3385",
+    "purpose": "16 research workflow",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/016-16-research-workflow.md",
+    "requires": [
+      "skill-15-common-errors-cf8911f8d3"
+    ],
+    "links": [
+      "skill-core-sources-7656ae606f"
+    ]
+  },
+  {
+    "id": "skill-core-sources-7656ae606f",
+    "purpose": "core sources",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/017-core-sources.md",
+    "requires": [
+      "skill-16-research-workflow-7e18ad3385"
+    ],
+    "links": [
+      "skill-limits-c5eae0fdf9"
+    ]
+  },
+  {
+    "id": "skill-limits-c5eae0fdf9",
+    "purpose": "limits",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/018-limits.md",
+    "requires": [
+      "skill-core-sources-7656ae606f"
+    ],
+    "links": []
+  }
+]

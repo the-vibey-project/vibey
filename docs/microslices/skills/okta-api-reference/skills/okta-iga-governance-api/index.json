@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-base-url-and-versioning-8db4ea607d",
+    "purpose": "base url and versioning",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api/001-base-url-and-versioning.md",
+    "requires": [],
+    "links": [
+      "skill-authentication-oauth-2-0-only-no-ssws-support-abfe60f450"
+    ]
+  },
+  {
+    "id": "skill-authentication-oauth-2-0-only-no-ssws-support-abfe60f450",
+    "purpose": "authentication oauth 2 0 only no ssws support",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api/002-authentication-oauth-2-0-only-no-ssws-support.md",
+    "requires": [
+      "skill-base-url-and-versioning-8db4ea607d"
+    ],
+    "links": [
+      "skill-resource-surface-c9671154fe"
+    ]
+  },
+  {
+    "id": "skill-resource-surface-c9671154fe",
+    "purpose": "resource surface",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api/003-resource-surface.md",
+    "requires": [
+      "skill-authentication-oauth-2-0-only-no-ssws-support-abfe60f450"
+    ],
+    "links": [
+      "skill-availability-caveats-f3f88ab983"
+    ]
+  },
+  {
+    "id": "skill-availability-caveats-f3f88ab983",
+    "purpose": "availability caveats",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api/004-availability-caveats.md",
+    "requires": [
+      "skill-resource-surface-c9671154fe"
+    ],
+    "links": [
+      "skill-no-dedicated-python-sdk-36924bd4aa"
+    ]
+  },
+  {
+    "id": "skill-no-dedicated-python-sdk-36924bd4aa",
+    "purpose": "no dedicated python sdk",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api/005-no-dedicated-python-sdk.md",
+    "requires": [
+      "skill-availability-caveats-f3f88ab983"
+    ],
+    "links": [
+      "skill-alternatives-to-a-python-sdk-b095bb780d"
+    ]
+  },
+  {
+    "id": "skill-alternatives-to-a-python-sdk-b095bb780d",
+    "purpose": "alternatives to a python sdk",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api/006-alternatives-to-a-python-sdk.md",
+    "requires": [
+      "skill-no-dedicated-python-sdk-36924bd4aa"
+    ],
+    "links": [
+      "skill-practical-guidance-9ab950a8a0"
+    ]
+  },
+  {
+    "id": "skill-practical-guidance-9ab950a8a0",
+    "purpose": "practical guidance",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-iga-governance-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-iga-governance-api/007-practical-guidance.md",
+    "requires": [
+      "skill-alternatives-to-a-python-sdk-b095bb780d"
+    ],
+    "links": []
+  }
+]

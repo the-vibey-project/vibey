@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-12-how-comedy-works-9532836204",
+    "purpose": "12 how comedy works",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/001-12-how-comedy-works.md",
+    "requires": [],
+    "links": [
+      "skill-13-joke-mechanics-d7e9836f56"
+    ]
+  },
+  {
+    "id": "skill-13-joke-mechanics-d7e9836f56",
+    "purpose": "13 joke mechanics",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/002-13-joke-mechanics.md",
+    "requires": [
+      "skill-12-how-comedy-works-9532836204"
+    ],
+    "links": [
+      "skill-14-comedic-structure-9483ba2805"
+    ]
+  },
+  {
+    "id": "skill-14-comedic-structure-9483ba2805",
+    "purpose": "14 comedic structure",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/003-14-comedic-structure.md",
+    "requires": [
+      "skill-13-joke-mechanics-d7e9836f56"
+    ],
+    "links": [
+      "skill-15-character-comedy-and-status-ba3c859eb4"
+    ]
+  },
+  {
+    "id": "skill-15-character-comedy-and-status-ba3c859eb4",
+    "purpose": "15 character comedy and status",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/004-15-character-comedy-and-status.md",
+    "requires": [
+      "skill-14-comedic-structure-9483ba2805"
+    ],
+    "links": [
+      "skill-16-improv-582ab02a16"
+    ]
+  },
+  {
+    "id": "skill-16-improv-582ab02a16",
+    "purpose": "16 improv",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/005-16-improv.md",
+    "requires": [
+      "skill-15-character-comedy-and-status-ba3c859eb4"
+    ],
+    "links": [
+      "skill-17-standup-4db2a41737"
+    ]
+  },
+  {
+    "id": "skill-17-standup-4db2a41737",
+    "purpose": "17 standup",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/006-17-standup.md",
+    "requires": [
+      "skill-16-improv-582ab02a16"
+    ],
+    "links": [
+      "skill-18-timing-17343997d5"
+    ]
+  },
+  {
+    "id": "skill-18-timing-17343997d5",
+    "purpose": "18 timing",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/007-18-timing.md",
+    "requires": [
+      "skill-17-standup-4db2a41737"
+    ],
+    "links": [
+      "skill-19-offence-honestly-cb13ed449a"
+    ]
+  },
+  {
+    "id": "skill-19-offence-honestly-cb13ed449a",
+    "purpose": "19 offence honestly",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-comedy-jokes-improv-standup-and-timing/008-19-offence-honestly.md",
+    "requires": [
+      "skill-18-timing-17343997d5"
+    ],
+    "links": []
+  }
+]

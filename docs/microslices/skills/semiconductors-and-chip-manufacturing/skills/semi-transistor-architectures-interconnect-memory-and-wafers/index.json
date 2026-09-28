@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-transistor-architectures-a07aa81560",
+    "purpose": "6 transistor architectures",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/001-6-transistor-architectures.md",
+    "requires": [],
+    "links": [
+      "skill-7-interconnect-4968b8a435"
+    ]
+  },
+  {
+    "id": "skill-7-interconnect-4968b8a435",
+    "purpose": "7 interconnect",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/002-7-interconnect.md",
+    "requires": [
+      "skill-6-transistor-architectures-a07aa81560"
+    ],
+    "links": [
+      "skill-8-memory-d71cdea313"
+    ]
+  },
+  {
+    "id": "skill-8-memory-d71cdea313",
+    "purpose": "8 memory",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/003-8-memory.md",
+    "requires": [
+      "skill-7-interconnect-4968b8a435"
+    ],
+    "links": [
+      "skill-9-from-sand-to-wafer-f48c6474cc"
+    ]
+  },
+  {
+    "id": "skill-9-from-sand-to-wafer-f48c6474cc",
+    "purpose": "9 from sand to wafer",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-transistor-architectures-interconnect-memory-and-wafers/004-9-from-sand-to-wafer.md",
+    "requires": [
+      "skill-8-memory-d71cdea313"
+    ],
+    "links": []
+  }
+]

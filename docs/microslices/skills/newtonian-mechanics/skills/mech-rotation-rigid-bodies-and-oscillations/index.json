@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-6-rotation-47790d8830",
+    "purpose": "6 rotation",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations/001-6-rotation.md",
+    "requires": [],
+    "links": [
+      "skill-7-rigid-bodies-and-gyroscopes-b99c2bd943"
+    ]
+  },
+  {
+    "id": "skill-7-rigid-bodies-and-gyroscopes-b99c2bd943",
+    "purpose": "7 rigid bodies and gyroscopes",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations/002-7-rigid-bodies-and-gyroscopes.md",
+    "requires": [
+      "skill-6-rotation-47790d8830"
+    ],
+    "links": [
+      "skill-8-oscillations-and-resonance-53bb0796b4"
+    ]
+  },
+  {
+    "id": "skill-8-oscillations-and-resonance-53bb0796b4",
+    "purpose": "8 oscillations and resonance",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-rotation-rigid-bodies-and-oscillations/003-8-oscillations-and-resonance.md",
+    "requires": [
+      "skill-7-rigid-bodies-and-gyroscopes-b99c2bd943"
+    ],
+    "links": []
+  }
+]

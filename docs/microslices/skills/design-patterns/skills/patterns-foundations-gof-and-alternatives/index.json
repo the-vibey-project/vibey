@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-03eb98c976",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-foundations-gof-and-alternatives/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-foundations-gof-and-alternatives/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-a-pattern-is-443befc37a"
+    ]
+  },
+  {
+    "id": "skill-1-what-a-pattern-is-443befc37a",
+    "purpose": "1 what a pattern is",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-foundations-gof-and-alternatives/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-foundations-gof-and-alternatives/002-1-what-a-pattern-is.md",
+    "requires": [
+      "skill-0-routing-03eb98c976"
+    ],
+    "links": [
+      "skill-2-the-honest-critique-of-gof-9b4c8fde81"
+    ]
+  },
+  {
+    "id": "skill-2-the-honest-critique-of-gof-9b4c8fde81",
+    "purpose": "2 the honest critique of gof",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-foundations-gof-and-alternatives/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-foundations-gof-and-alternatives/003-2-the-honest-critique-of-gof.md",
+    "requires": [
+      "skill-1-what-a-pattern-is-443befc37a"
+    ],
+    "links": [
+      "skill-3-the-gof-audit-52facdaa30"
+    ]
+  },
+  {
+    "id": "skill-3-the-gof-audit-52facdaa30",
+    "purpose": "3 the gof audit",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-foundations-gof-and-alternatives/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-foundations-gof-and-alternatives/004-3-the-gof-audit.md",
+    "requires": [
+      "skill-2-the-honest-critique-of-gof-9b4c8fde81"
+    ],
+    "links": [
+      "skill-4-functional-and-data-oriented-alternatives-2d0b55ce92"
+    ]
+  },
+  {
+    "id": "skill-4-functional-and-data-oriented-alternatives-2d0b55ce92",
+    "purpose": "4 functional and data oriented alternatives",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-foundations-gof-and-alternatives/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-foundations-gof-and-alternatives/005-4-functional-and-data-oriented-alternatives.md",
+    "requires": [
+      "skill-3-the-gof-audit-52facdaa30"
+    ],
+    "links": [
+      "skill-5-dependency-injection-and-inversion-71ff27d785"
+    ]
+  },
+  {
+    "id": "skill-5-dependency-injection-and-inversion-71ff27d785",
+    "purpose": "5 dependency injection and inversion",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-foundations-gof-and-alternatives/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-foundations-gof-and-alternatives/006-5-dependency-injection-and-inversion.md",
+    "requires": [
+      "skill-4-functional-and-data-oriented-alternatives-2d0b55ce92"
+    ],
+    "links": []
+  }
+]

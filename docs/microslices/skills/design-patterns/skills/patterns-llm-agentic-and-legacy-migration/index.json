@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-12-llm-and-agentic-patterns-ff50762ffc",
+    "purpose": "12 llm and agentic patterns",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-llm-agentic-and-legacy-migration/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-llm-agentic-and-legacy-migration/001-12-llm-and-agentic-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-13-migration-and-legacy-patterns-3cdd3c8ddc"
+    ]
+  },
+  {
+    "id": "skill-13-migration-and-legacy-patterns-3cdd3c8ddc",
+    "purpose": "13 migration and legacy patterns",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-llm-agentic-and-legacy-migration/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-llm-agentic-and-legacy-migration/002-13-migration-and-legacy-patterns.md",
+    "requires": [
+      "skill-12-llm-and-agentic-patterns-ff50762ffc"
+    ],
+    "links": []
+  }
+]

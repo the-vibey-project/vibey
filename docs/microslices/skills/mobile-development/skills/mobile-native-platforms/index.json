@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-ios-swift-swiftui-555b4d2b3d",
+    "purpose": "ios swift swiftui",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-native-platforms/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-native-platforms/001-ios-swift-swiftui.md",
+    "requires": [],
+    "links": [
+      "skill-android-kotlin-jetpack-compose-34507e7782"
+    ]
+  },
+  {
+    "id": "skill-android-kotlin-jetpack-compose-34507e7782",
+    "purpose": "android kotlin jetpack compose",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-native-platforms/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-native-platforms/002-android-kotlin-jetpack-compose.md",
+    "requires": [
+      "skill-ios-swift-swiftui-555b4d2b3d"
+    ],
+    "links": []
+  }
+]

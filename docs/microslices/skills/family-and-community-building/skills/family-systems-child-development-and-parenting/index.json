@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-family-systems-cf4689c6f4",
+    "purpose": "6 family systems",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-systems-child-development-and-parenting/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-systems-child-development-and-parenting/001-6-family-systems.md",
+    "requires": [],
+    "links": [
+      "skill-7-family-roles-and-life-stages-83c7345047"
+    ]
+  },
+  {
+    "id": "skill-7-family-roles-and-life-stages-83c7345047",
+    "purpose": "7 family roles and life stages",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-systems-child-development-and-parenting/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-systems-child-development-and-parenting/002-7-family-roles-and-life-stages.md",
+    "requires": [
+      "skill-6-family-systems-cf4689c6f4"
+    ],
+    "links": [
+      "skill-8-child-development-edc16004ee"
+    ]
+  },
+  {
+    "id": "skill-8-child-development-edc16004ee",
+    "purpose": "8 child development",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-systems-child-development-and-parenting/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-systems-child-development-and-parenting/003-8-child-development.md",
+    "requires": [
+      "skill-7-family-roles-and-life-stages-83c7345047"
+    ],
+    "links": [
+      "skill-9-parenting-4283f55326"
+    ]
+  },
+  {
+    "id": "skill-9-parenting-4283f55326",
+    "purpose": "9 parenting",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-systems-child-development-and-parenting/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-systems-child-development-and-parenting/004-9-parenting.md",
+    "requires": [
+      "skill-8-child-development-edc16004ee"
+    ],
+    "links": []
+  }
+]

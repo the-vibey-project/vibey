@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-14-learning-it-b9d7607d1d",
+    "purpose": "14 learning it",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference/001-14-learning-it.md",
+    "requires": [],
+    "links": [
+      "skill-15-myths-and-anti-patterns-4afb01dfd9"
+    ]
+  },
+  {
+    "id": "skill-15-myths-and-anti-patterns-4afb01dfd9",
+    "purpose": "15 myths and anti patterns",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference/002-15-myths-and-anti-patterns.md",
+    "requires": [
+      "skill-14-learning-it-b9d7607d1d"
+    ],
+    "links": [
+      "skill-16-contested-questions-ce782b808c"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-ce782b808c",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference/003-16-contested-questions.md",
+    "requires": [
+      "skill-15-myths-and-anti-patterns-4afb01dfd9"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-e0ebc6b3b2"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-e0ebc6b3b2",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference/004-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-ce782b808c"
+    ],
+    "links": [
+      "skill-18-the-canon-d4393d5958"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-d4393d5958",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference/005-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-e0ebc6b3b2"
+    ],
+    "links": [
+      "skill-19-quick-reference-31f48abeba"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-31f48abeba",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference/006-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-d4393d5958"
+    ],
+    "links": [
+      "skill-20-sources-and-method-bf462cdfbe"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-bf462cdfbe",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-reference/007-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-31f48abeba"
+    ],
+    "links": []
+  }
+]

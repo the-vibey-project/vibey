@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-networking-d0d3745678",
+    "purpose": "5 networking",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/001-5-networking.md",
+    "requires": [],
+    "links": [
+      "skill-6-compute-ebfbe0e368"
+    ]
+  },
+  {
+    "id": "skill-6-compute-ebfbe0e368",
+    "purpose": "6 compute",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/002-6-compute.md",
+    "requires": [
+      "skill-5-networking-d0d3745678"
+    ],
+    "links": [
+      "skill-7-containers-and-kubernetes-5a6b6757bd"
+    ]
+  },
+  {
+    "id": "skill-7-containers-and-kubernetes-5a6b6757bd",
+    "purpose": "7 containers and kubernetes",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/003-7-containers-and-kubernetes.md",
+    "requires": [
+      "skill-6-compute-ebfbe0e368"
+    ],
+    "links": [
+      "skill-8-serverless-cd3ad0f337"
+    ]
+  },
+  {
+    "id": "skill-8-serverless-cd3ad0f337",
+    "purpose": "8 serverless",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-networking-compute-containers-and-serverless/004-8-serverless.md",
+    "requires": [
+      "skill-7-containers-and-kubernetes-5a6b6757bd"
+    ],
+    "links": []
+  }
+]

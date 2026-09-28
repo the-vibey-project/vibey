@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-5-handbook-2-running-infrastructure-the-network-thanks-you-7acb76ec1f",
+    "purpose": "13 5 handbook 2 running infrastructure the network thanks you",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/001-13-5-handbook-2-running-infrastructure-the-network-thanks-you.md",
+    "requires": [],
+    "links": [
+      "skill-handbook-3-networking-patterns-048535e438"
+    ]
+  },
+  {
+    "id": "skill-handbook-3-networking-patterns-048535e438",
+    "purpose": "handbook 3 networking patterns",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/002-handbook-3-networking-patterns.md",
+    "requires": [
+      "skill-13-5-handbook-2-running-infrastructure-the-network-thanks-you-7acb76ec1f"
+    ],
+    "links": [
+      "skill-handbook-4-hardware-builds-e0052f71ac"
+    ]
+  },
+  {
+    "id": "skill-handbook-4-hardware-builds-e0052f71ac",
+    "purpose": "handbook 4 hardware builds",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/003-handbook-4-hardware-builds.md",
+    "requires": [
+      "skill-handbook-3-networking-patterns-048535e438"
+    ],
+    "links": [
+      "skill-handbook-5-verification-monitoring-checklist-6c2221b818"
+    ]
+  },
+  {
+    "id": "skill-handbook-5-verification-monitoring-checklist-6c2221b818",
+    "purpose": "handbook 5 verification monitoring checklist",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/004-handbook-5-verification-monitoring-checklist.md",
+    "requires": [
+      "skill-handbook-4-hardware-builds-e0052f71ac"
+    ],
+    "links": [
+      "skill-handbook-6-legal-ethical-abuse-handling-box-f4499e049b"
+    ]
+  },
+  {
+    "id": "skill-handbook-6-legal-ethical-abuse-handling-box-f4499e049b",
+    "purpose": "handbook 6 legal ethical abuse handling box",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/005-handbook-6-legal-ethical-abuse-handling-box.md",
+    "requires": [
+      "skill-handbook-5-verification-monitoring-checklist-6c2221b818"
+    ],
+    "links": [
+      "skill-where-to-go-next-5e9ccbc7cc"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-5e9ccbc7cc",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-running-relays-bridges-and-hardware/006-where-to-go-next.md",
+    "requires": [
+      "skill-handbook-6-legal-ethical-abuse-handling-box-f4499e049b"
+    ],
+    "links": []
+  }
+]

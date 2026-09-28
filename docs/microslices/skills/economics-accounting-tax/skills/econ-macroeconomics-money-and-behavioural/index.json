@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-macroeconomics-24d6b8df82",
+    "purpose": "5 macroeconomics",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/001-5-macroeconomics.md",
+    "requires": [],
+    "links": [
+      "skill-6-money-and-monetary-policy-27af5eedc7"
+    ]
+  },
+  {
+    "id": "skill-6-money-and-monetary-policy-27af5eedc7",
+    "purpose": "6 money and monetary policy",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/002-6-money-and-monetary-policy.md",
+    "requires": [
+      "skill-5-macroeconomics-24d6b8df82"
+    ],
+    "links": [
+      "skill-7-fiscal-policy-and-debt-6bb2021479"
+    ]
+  },
+  {
+    "id": "skill-7-fiscal-policy-and-debt-6bb2021479",
+    "purpose": "7 fiscal policy and debt",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/003-7-fiscal-policy-and-debt.md",
+    "requires": [
+      "skill-6-money-and-monetary-policy-27af5eedc7"
+    ],
+    "links": [
+      "skill-8-trade-and-growth-f943ac4106"
+    ]
+  },
+  {
+    "id": "skill-8-trade-and-growth-f943ac4106",
+    "purpose": "8 trade and growth",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/004-8-trade-and-growth.md",
+    "requires": [
+      "skill-7-fiscal-policy-and-debt-6bb2021479"
+    ],
+    "links": [
+      "skill-9-behavioural-findings-176a7b7b8c"
+    ]
+  },
+  {
+    "id": "skill-9-behavioural-findings-176a7b7b8c",
+    "purpose": "9 behavioural findings",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-macroeconomics-money-and-behavioural/005-9-behavioural-findings.md",
+    "requires": [
+      "skill-8-trade-and-growth-f943ac4106"
+    ],
+    "links": []
+  }
+]

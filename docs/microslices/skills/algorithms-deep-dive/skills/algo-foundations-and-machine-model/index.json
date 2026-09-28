@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-0-routing-76d3272140",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-foundations-and-machine-model/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-foundations-and-machine-model/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-choosing-b2a655545d"
+    ]
+  },
+  {
+    "id": "skill-1-choosing-b2a655545d",
+    "purpose": "1 choosing",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-foundations-and-machine-model/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-foundations-and-machine-model/002-1-choosing.md",
+    "requires": [
+      "skill-0-routing-76d3272140"
+    ],
+    "links": [
+      "skill-2-the-machine-you-are-actually-programming-5042ea6ca7"
+    ]
+  },
+  {
+    "id": "skill-2-the-machine-you-are-actually-programming-5042ea6ca7",
+    "purpose": "2 the machine you are actually programming",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-foundations-and-machine-model/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-foundations-and-machine-model/003-2-the-machine-you-are-actually-programming.md",
+    "requires": [
+      "skill-1-choosing-b2a655545d"
+    ],
+    "links": []
+  }
+]

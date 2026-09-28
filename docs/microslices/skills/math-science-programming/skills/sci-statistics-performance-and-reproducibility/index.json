@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-statistics-and-uncertainty-b70b7cd8ad",
+    "purpose": "10 statistics and uncertainty",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-statistics-performance-and-reproducibility/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-statistics-performance-and-reproducibility/001-10-statistics-and-uncertainty.md",
+    "requires": [],
+    "links": [
+      "skill-11-performance-and-parallelism-36e18650e2"
+    ]
+  },
+  {
+    "id": "skill-11-performance-and-parallelism-36e18650e2",
+    "purpose": "11 performance and parallelism",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-statistics-performance-and-reproducibility/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-statistics-performance-and-reproducibility/002-11-performance-and-parallelism.md",
+    "requires": [
+      "skill-10-statistics-and-uncertainty-b70b7cd8ad"
+    ],
+    "links": [
+      "skill-12-data-i-o-and-units-4adaa9e87b"
+    ]
+  },
+  {
+    "id": "skill-12-data-i-o-and-units-4adaa9e87b",
+    "purpose": "12 data i o and units",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-statistics-performance-and-reproducibility/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-statistics-performance-and-reproducibility/003-12-data-i-o-and-units.md",
+    "requires": [
+      "skill-11-performance-and-parallelism-36e18650e2"
+    ],
+    "links": [
+      "skill-13-testing-and-verification-a58519bdbd"
+    ]
+  },
+  {
+    "id": "skill-13-testing-and-verification-a58519bdbd",
+    "purpose": "13 testing and verification",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-statistics-performance-and-reproducibility/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-statistics-performance-and-reproducibility/004-13-testing-and-verification.md",
+    "requires": [
+      "skill-12-data-i-o-and-units-4adaa9e87b"
+    ],
+    "links": [
+      "skill-14-reproducibility-793922bcb7"
+    ]
+  },
+  {
+    "id": "skill-14-reproducibility-793922bcb7",
+    "purpose": "14 reproducibility",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-statistics-performance-and-reproducibility/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-statistics-performance-and-reproducibility/005-14-reproducibility.md",
+    "requires": [
+      "skill-13-testing-and-verification-a58519bdbd"
+    ],
+    "links": []
+  }
+]

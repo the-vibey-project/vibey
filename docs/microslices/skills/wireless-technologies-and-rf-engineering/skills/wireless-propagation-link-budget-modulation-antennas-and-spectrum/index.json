@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-f1f5801aa2",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-why-wireless-is-hard-62eb1e0716"
+    ]
+  },
+  {
+    "id": "skill-1-why-wireless-is-hard-62eb1e0716",
+    "purpose": "1 why wireless is hard",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/002-1-why-wireless-is-hard.md",
+    "requires": [
+      "skill-0-routing-f1f5801aa2"
+    ],
+    "links": [
+      "skill-2-propagation-and-the-link-budget-7a4c4eab1c"
+    ]
+  },
+  {
+    "id": "skill-2-propagation-and-the-link-budget-7a4c4eab1c",
+    "purpose": "2 propagation and the link budget",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/003-2-propagation-and-the-link-budget.md",
+    "requires": [
+      "skill-1-why-wireless-is-hard-62eb1e0716"
+    ],
+    "links": [
+      "skill-3-modulation-and-multiple-access-0fc55eaf3d"
+    ]
+  },
+  {
+    "id": "skill-3-modulation-and-multiple-access-0fc55eaf3d",
+    "purpose": "3 modulation and multiple access",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/004-3-modulation-and-multiple-access.md",
+    "requires": [
+      "skill-2-propagation-and-the-link-budget-7a4c4eab1c"
+    ],
+    "links": [
+      "skill-4-antennas-e643a11461"
+    ]
+  },
+  {
+    "id": "skill-4-antennas-e643a11461",
+    "purpose": "4 antennas",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/005-4-antennas.md",
+    "requires": [
+      "skill-3-modulation-and-multiple-access-0fc55eaf3d"
+    ],
+    "links": [
+      "skill-5-spectrum-and-regulation-662251d1a0"
+    ]
+  },
+  {
+    "id": "skill-5-spectrum-and-regulation-662251d1a0",
+    "purpose": "5 spectrum and regulation",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/006-5-spectrum-and-regulation.md",
+    "requires": [
+      "skill-4-antennas-e643a11461"
+    ],
+    "links": []
+  }
+]

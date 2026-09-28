@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-da43b3b0b4",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-where-the-bottleneck-actually-lives-99d9be43b9"
+    ]
+  },
+  {
+    "id": "skill-1-where-the-bottleneck-actually-lives-99d9be43b9",
+    "purpose": "1 where the bottleneck actually lives",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/002-1-where-the-bottleneck-actually-lives.md",
+    "requires": [
+      "skill-0-routing-da43b3b0b4"
+    ],
+    "links": [
+      "skill-2-cpu-architecture-ce51bc2c95"
+    ]
+  },
+  {
+    "id": "skill-2-cpu-architecture-ce51bc2c95",
+    "purpose": "2 cpu architecture",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/003-2-cpu-architecture.md",
+    "requires": [
+      "skill-1-where-the-bottleneck-actually-lives-99d9be43b9"
+    ],
+    "links": [
+      "skill-3-the-memory-hierarchy-acc9d0e180"
+    ]
+  },
+  {
+    "id": "skill-3-the-memory-hierarchy-acc9d0e180",
+    "purpose": "3 the memory hierarchy",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/004-3-the-memory-hierarchy.md",
+    "requires": [
+      "skill-2-cpu-architecture-ce51bc2c95"
+    ],
+    "links": [
+      "skill-4-gpus-and-accelerators-74f38901dd"
+    ]
+  },
+  {
+    "id": "skill-4-gpus-and-accelerators-74f38901dd",
+    "purpose": "4 gpus and accelerators",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/005-4-gpus-and-accelerators.md",
+    "requires": [
+      "skill-3-the-memory-hierarchy-acc9d0e180"
+    ],
+    "links": [
+      "skill-5-storage-eb804f9ff8"
+    ]
+  },
+  {
+    "id": "skill-5-storage-eb804f9ff8",
+    "purpose": "5 storage",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-bottlenecks-cpu-memory-gpu-and-storage/006-5-storage.md",
+    "requires": [
+      "skill-4-gpus-and-accelerators-74f38901dd"
+    ],
+    "links": []
+  }
+]

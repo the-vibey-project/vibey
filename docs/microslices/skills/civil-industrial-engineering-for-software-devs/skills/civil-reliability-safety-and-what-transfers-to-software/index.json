@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-scheduling-inventory-and-supply-chain-dab8c099fd",
+    "purpose": "17 scheduling inventory and supply chain",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/001-17-scheduling-inventory-and-supply-chain.md",
+    "requires": [],
+    "links": [
+      "skill-18-human-factors-and-ergonomics-bc131ff60b"
+    ]
+  },
+  {
+    "id": "skill-18-human-factors-and-ergonomics-bc131ff60b",
+    "purpose": "18 human factors and ergonomics",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/002-18-human-factors-and-ergonomics.md",
+    "requires": [
+      "skill-17-scheduling-inventory-and-supply-chain-dab8c099fd"
+    ],
+    "links": [
+      "skill-19-reliability-engineering-e11d53ceff"
+    ]
+  },
+  {
+    "id": "skill-19-reliability-engineering-e11d53ceff",
+    "purpose": "19 reliability engineering",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/003-19-reliability-engineering.md",
+    "requires": [
+      "skill-18-human-factors-and-ergonomics-bc131ff60b"
+    ],
+    "links": [
+      "skill-20-safety-engineering-349ef869c4"
+    ]
+  },
+  {
+    "id": "skill-20-safety-engineering-349ef869c4",
+    "purpose": "20 safety engineering",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/004-20-safety-engineering.md",
+    "requires": [
+      "skill-19-reliability-engineering-e11d53ceff"
+    ],
+    "links": [
+      "skill-21-what-transfers-well-f20e862ea2"
+    ]
+  },
+  {
+    "id": "skill-21-what-transfers-well-f20e862ea2",
+    "purpose": "21 what transfers well",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/005-21-what-transfers-well.md",
+    "requires": [
+      "skill-20-safety-engineering-349ef869c4"
+    ],
+    "links": [
+      "skill-22-what-doesn-t-transfer-honestly-a19c25489f"
+    ]
+  },
+  {
+    "id": "skill-22-what-doesn-t-transfer-honestly-a19c25489f",
+    "purpose": "22 what doesn t transfer honestly",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reliability-safety-and-what-transfers-to-software/006-22-what-doesn-t-transfer-honestly.md",
+    "requires": [
+      "skill-21-what-transfers-well-f20e862ea2"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-why-go-public-e8961f5c72",
+    "purpose": "14 why go public",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/001-14-why-go-public.md",
+    "requires": [],
+    "links": [
+      "skill-15-ipo-mechanics-3abcfacd6d"
+    ]
+  },
+  {
+    "id": "skill-15-ipo-mechanics-3abcfacd6d",
+    "purpose": "15 ipo mechanics",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/002-15-ipo-mechanics.md",
+    "requires": [
+      "skill-14-why-go-public-e8961f5c72"
+    ],
+    "links": [
+      "skill-16-alternatives-83a19dc3e3"
+    ]
+  },
+  {
+    "id": "skill-16-alternatives-83a19dc3e3",
+    "purpose": "16 alternatives",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/003-16-alternatives.md",
+    "requires": [
+      "skill-15-ipo-mechanics-3abcfacd6d"
+    ],
+    "links": [
+      "skill-17-post-ipo-raising-07e01c5ed9"
+    ]
+  },
+  {
+    "id": "skill-17-post-ipo-raising-07e01c5ed9",
+    "purpose": "17 post ipo raising",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/004-17-post-ipo-raising.md",
+    "requires": [
+      "skill-16-alternatives-83a19dc3e3"
+    ],
+    "links": [
+      "skill-18-public-debt-fffbe89f4d"
+    ]
+  },
+  {
+    "id": "skill-18-public-debt-fffbe89f4d",
+    "purpose": "18 public debt",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/005-18-public-debt.md",
+    "requires": [
+      "skill-17-post-ipo-raising-07e01c5ed9"
+    ],
+    "links": [
+      "skill-19-securities-regulation-7a82d80c43"
+    ]
+  },
+  {
+    "id": "skill-19-securities-regulation-7a82d80c43",
+    "purpose": "19 securities regulation",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-public-markets-and-securities-regulation/006-19-securities-regulation.md",
+    "requires": [
+      "skill-18-public-debt-fffbe89f4d"
+    ],
+    "links": []
+  }
+]

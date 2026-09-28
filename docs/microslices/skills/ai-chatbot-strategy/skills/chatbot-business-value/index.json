@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-the-central-argument-2f5544eb5b",
+    "purpose": "the central argument",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/001-the-central-argument.md",
+    "requires": [],
+    "links": [
+      "skill-five-core-findings-on-chatbot-performance-4731507e2e"
+    ]
+  },
+  {
+    "id": "skill-five-core-findings-on-chatbot-performance-4731507e2e",
+    "purpose": "five core findings on chatbot performance",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/002-five-core-findings-on-chatbot-performance.md",
+    "requires": [
+      "skill-the-central-argument-2f5544eb5b"
+    ],
+    "links": [
+      "skill-industry-roi-case-studies-7ceb70e74c"
+    ]
+  },
+  {
+    "id": "skill-industry-roi-case-studies-7ceb70e74c",
+    "purpose": "industry roi case studies",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/003-industry-roi-case-studies.md",
+    "requires": [
+      "skill-five-core-findings-on-chatbot-performance-4731507e2e"
+    ],
+    "links": [
+      "skill-revenue-generation-vs-cost-reduction-the-framing-that-determines-roi-16046f75bb"
+    ]
+  },
+  {
+    "id": "skill-revenue-generation-vs-cost-reduction-the-framing-that-determines-roi-16046f75bb",
+    "purpose": "revenue generation vs cost reduction the framing that determines roi",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/004-revenue-generation-vs-cost-reduction-the-framing-that-determines-roi.md",
+    "requires": [
+      "skill-industry-roi-case-studies-7ceb70e74c"
+    ],
+    "links": [
+      "skill-cost-tiers-and-budget-framework-b9ebd938e6"
+    ]
+  },
+  {
+    "id": "skill-cost-tiers-and-budget-framework-b9ebd938e6",
+    "purpose": "cost tiers and budget framework",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/005-cost-tiers-and-budget-framework.md",
+    "requires": [
+      "skill-revenue-generation-vs-cost-reduction-the-framing-that-determines-roi-16046f75bb"
+    ],
+    "links": [
+      "skill-the-four-pillars-of-chatbot-readiness-458e0953a1"
+    ]
+  },
+  {
+    "id": "skill-the-four-pillars-of-chatbot-readiness-458e0953a1",
+    "purpose": "the four pillars of chatbot readiness",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/006-the-four-pillars-of-chatbot-readiness.md",
+    "requires": [
+      "skill-cost-tiers-and-budget-framework-b9ebd938e6"
+    ],
+    "links": [
+      "skill-when-not-to-build-a-chatbot-ba3e0d6c93"
+    ]
+  },
+  {
+    "id": "skill-when-not-to-build-a-chatbot-ba3e0d6c93",
+    "purpose": "when not to build a chatbot",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/007-when-not-to-build-a-chatbot.md",
+    "requires": [
+      "skill-the-four-pillars-of-chatbot-readiness-458e0953a1"
+    ],
+    "links": [
+      "skill-defining-organizational-goals-the-smart-framework-applied-703dd41cf0"
+    ]
+  },
+  {
+    "id": "skill-defining-organizational-goals-the-smart-framework-applied-703dd41cf0",
+    "purpose": "defining organizational goals the smart framework applied",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/008-defining-organizational-goals-the-smart-framework-applied.md",
+    "requires": [
+      "skill-when-not-to-build-a-chatbot-ba3e0d6c93"
+    ],
+    "links": [
+      "skill-the-five-phase-discovery-to-deployment-process-b5a12cc265"
+    ]
+  },
+  {
+    "id": "skill-the-five-phase-discovery-to-deployment-process-b5a12cc265",
+    "purpose": "the five phase discovery to deployment process",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/009-the-five-phase-discovery-to-deployment-process.md",
+    "requires": [
+      "skill-defining-organizational-goals-the-smart-framework-applied-703dd41cf0"
+    ],
+    "links": [
+      "skill-handling-limited-data-what-to-do-when-you-cannot-build-a-comprehensive-knowledge-base-f8181e7122"
+    ]
+  },
+  {
+    "id": "skill-handling-limited-data-what-to-do-when-you-cannot-build-a-comprehensive-knowledge-base-f8181e7122",
+    "purpose": "handling limited data what to do when you cannot build a comprehensive knowledge base",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/010-handling-limited-data-what-to-do-when-you-cannot-build-a-comprehensive-knowledge-base.md",
+    "requires": [
+      "skill-the-five-phase-discovery-to-deployment-process-b5a12cc265"
+    ],
+    "links": [
+      "skill-investment-decision-questions-for-engineering-partners-bf82c82b2b"
+    ]
+  },
+  {
+    "id": "skill-investment-decision-questions-for-engineering-partners-bf82c82b2b",
+    "purpose": "investment decision questions for engineering partners",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/011-investment-decision-questions-for-engineering-partners.md",
+    "requires": [
+      "skill-handling-limited-data-what-to-do-when-you-cannot-build-a-comprehensive-knowledge-base-f8181e7122"
+    ],
+    "links": [
+      "skill-the-roi-calculation-both-sides-7a1b4d60f4"
+    ]
+  },
+  {
+    "id": "skill-the-roi-calculation-both-sides-7a1b4d60f4",
+    "purpose": "the roi calculation both sides",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/012-the-roi-calculation-both-sides.md",
+    "requires": [
+      "skill-investment-decision-questions-for-engineering-partners-bf82c82b2b"
+    ],
+    "links": [
+      "skill-key-research-citations-f0447d1805"
+    ]
+  },
+  {
+    "id": "skill-key-research-citations-f0447d1805",
+    "purpose": "key research citations",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/013-key-research-citations.md",
+    "requires": [
+      "skill-the-roi-calculation-both-sides-7a1b4d60f4"
+    ],
+    "links": [
+      "skill-quick-reference-the-knowledge-first-principle-4c577155e8"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-the-knowledge-first-principle-4c577155e8",
+    "purpose": "quick reference the knowledge first principle",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-business-value/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-business-value/014-quick-reference-the-knowledge-first-principle.md",
+    "requires": [
+      "skill-key-research-citations-f0447d1805"
+    ],
+    "links": []
+  }
+]

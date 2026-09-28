@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-23-regulatory-63ff32a0bb",
+    "purpose": "23 regulatory",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/001-23-regulatory.md",
+    "requires": [],
+    "links": [
+      "skill-24-what-moved-verified-august-2026-4179363e5a"
+    ]
+  },
+  {
+    "id": "skill-24-what-moved-verified-august-2026-4179363e5a",
+    "purpose": "24 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/002-24-what-moved-verified-august-2026.md",
+    "requires": [
+      "skill-23-regulatory-63ff32a0bb"
+    ],
+    "links": [
+      "skill-25-security-4e22411d6b"
+    ]
+  },
+  {
+    "id": "skill-25-security-4e22411d6b",
+    "purpose": "25 security",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/003-25-security.md",
+    "requires": [
+      "skill-24-what-moved-verified-august-2026-4179363e5a"
+    ],
+    "links": [
+      "skill-26-debugging-rf-from-software-d46e5f9449"
+    ]
+  },
+  {
+    "id": "skill-26-debugging-rf-from-software-d46e5f9449",
+    "purpose": "26 debugging rf from software",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-regulatory-security-and-debugging/004-26-debugging-rf-from-software.md",
+    "requires": [
+      "skill-25-security-4e22411d6b"
+    ],
+    "links": []
+  }
+]

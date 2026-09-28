@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-zero-sum-and-minimax-f1c4ecfd6d",
+    "purpose": "6 zero sum and minimax",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/001-6-zero-sum-and-minimax.md",
+    "requires": [],
+    "links": [
+      "skill-7-sequential-games-08712c42d0"
+    ]
+  },
+  {
+    "id": "skill-7-sequential-games-08712c42d0",
+    "purpose": "7 sequential games",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/002-7-sequential-games.md",
+    "requires": [
+      "skill-6-zero-sum-and-minimax-f1c4ecfd6d"
+    ],
+    "links": [
+      "skill-8-repeated-games-d5454f07a3"
+    ]
+  },
+  {
+    "id": "skill-8-repeated-games-d5454f07a3",
+    "purpose": "8 repeated games",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/003-8-repeated-games.md",
+    "requires": [
+      "skill-7-sequential-games-08712c42d0"
+    ],
+    "links": [
+      "skill-9-incomplete-information-ff86740fbd"
+    ]
+  },
+  {
+    "id": "skill-9-incomplete-information-ff86740fbd",
+    "purpose": "9 incomplete information",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-zero-sum-sequential-repeated-and-information/004-9-incomplete-information.md",
+    "requires": [
+      "skill-8-repeated-games-d5454f07a3"
+    ],
+    "links": []
+  }
+]

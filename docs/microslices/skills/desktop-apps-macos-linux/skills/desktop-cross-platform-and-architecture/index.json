@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-cross-platform-frameworks-137f615b20",
+    "purpose": "7 cross platform frameworks",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture/001-7-cross-platform-frameworks.md",
+    "requires": [],
+    "links": [
+      "skill-8-application-architecture-and-patterns-1b88ff0dc8"
+    ]
+  },
+  {
+    "id": "skill-8-application-architecture-and-patterns-1b88ff0dc8",
+    "purpose": "8 application architecture and patterns",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture/002-8-application-architecture-and-patterns.md",
+    "requires": [
+      "skill-7-cross-platform-frameworks-137f615b20"
+    ],
+    "links": [
+      "skill-9-the-desktop-idioms-what-makes-an-app-feel-native-39eaf1e604"
+    ]
+  },
+  {
+    "id": "skill-9-the-desktop-idioms-what-makes-an-app-feel-native-39eaf1e604",
+    "purpose": "9 the desktop idioms what makes an app feel native",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-cross-platform-and-architecture/003-9-the-desktop-idioms-what-makes-an-app-feel-native.md",
+    "requires": [
+      "skill-8-application-architecture-and-patterns-1b88ff0dc8"
+    ],
+    "links": []
+  }
+]

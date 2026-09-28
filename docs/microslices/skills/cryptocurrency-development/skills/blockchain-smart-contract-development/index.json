@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-4-the-evm-d7618d8d17",
+    "purpose": "4 the evm",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-smart-contract-development/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-smart-contract-development/001-4-the-evm.md",
+    "requires": [],
+    "links": [
+      "skill-5-solidity-and-the-contract-languages-3b618ce5a9"
+    ]
+  },
+  {
+    "id": "skill-5-solidity-and-the-contract-languages-3b618ce5a9",
+    "purpose": "5 solidity and the contract languages",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-smart-contract-development/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-smart-contract-development/002-5-solidity-and-the-contract-languages.md",
+    "requires": [
+      "skill-4-the-evm-d7618d8d17"
+    ],
+    "links": [
+      "skill-6-contract-architecture-6e0a379add"
+    ]
+  },
+  {
+    "id": "skill-6-contract-architecture-6e0a379add",
+    "purpose": "6 contract architecture",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-smart-contract-development/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-smart-contract-development/003-6-contract-architecture.md",
+    "requires": [
+      "skill-5-solidity-and-the-contract-languages-3b618ce5a9"
+    ],
+    "links": [
+      "skill-7-standards-c0759fdcf2"
+    ]
+  },
+  {
+    "id": "skill-7-standards-c0759fdcf2",
+    "purpose": "7 standards",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-smart-contract-development/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-smart-contract-development/004-7-standards.md",
+    "requires": [
+      "skill-6-contract-architecture-6e0a379add"
+    ],
+    "links": [
+      "skill-8-defi-primitives-and-mev-1b32e4d00f"
+    ]
+  },
+  {
+    "id": "skill-8-defi-primitives-and-mev-1b32e4d00f",
+    "purpose": "8 defi primitives and mev",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-smart-contract-development/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-smart-contract-development/005-8-defi-primitives-and-mev.md",
+    "requires": [
+      "skill-7-standards-c0759fdcf2"
+    ],
+    "links": []
+  }
+]

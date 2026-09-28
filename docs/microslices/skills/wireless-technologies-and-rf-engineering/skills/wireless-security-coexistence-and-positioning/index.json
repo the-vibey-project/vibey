@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-22-wireless-security-339d0f6975",
+    "purpose": "22 wireless security",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning/001-22-wireless-security.md",
+    "requires": [],
+    "links": [
+      "skill-23-coexistence-0935160e1d"
+    ]
+  },
+  {
+    "id": "skill-23-coexistence-0935160e1d",
+    "purpose": "23 coexistence",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning/002-23-coexistence.md",
+    "requires": [
+      "skill-22-wireless-security-339d0f6975"
+    ],
+    "links": [
+      "skill-24-positioning-and-sensing-12ef0f723b"
+    ]
+  },
+  {
+    "id": "skill-24-positioning-and-sensing-12ef0f723b",
+    "purpose": "24 positioning and sensing",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-security-coexistence-and-positioning/003-24-positioning-and-sensing.md",
+    "requires": [
+      "skill-23-coexistence-0935160e1d"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-9-the-process-families-aa0e580b19",
+    "purpose": "9 the process families",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/001-9-the-process-families.md",
+    "requires": [],
+    "links": [
+      "skill-10-casting-and-forming-47bbbcb21f"
+    ]
+  },
+  {
+    "id": "skill-10-casting-and-forming-47bbbcb21f",
+    "purpose": "10 casting and forming",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/002-10-casting-and-forming.md",
+    "requires": [
+      "skill-9-the-process-families-aa0e580b19"
+    ],
+    "links": [
+      "skill-11-machining-55ef8929f3"
+    ]
+  },
+  {
+    "id": "skill-11-machining-55ef8929f3",
+    "purpose": "11 machining",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/003-11-machining.md",
+    "requires": [
+      "skill-10-casting-and-forming-47bbbcb21f"
+    ],
+    "links": [
+      "skill-12-joining-f46c479225"
+    ]
+  },
+  {
+    "id": "skill-12-joining-f46c479225",
+    "purpose": "12 joining",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/004-12-joining.md",
+    "requires": [
+      "skill-11-machining-55ef8929f3"
+    ],
+    "links": [
+      "skill-13-additive-manufacturing-36a35baf34"
+    ]
+  },
+  {
+    "id": "skill-13-additive-manufacturing-36a35baf34",
+    "purpose": "13 additive manufacturing",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/005-13-additive-manufacturing.md",
+    "requires": [
+      "skill-12-joining-f46c479225"
+    ],
+    "links": [
+      "skill-14-injection-moulding-f1de7646f9"
+    ]
+  },
+  {
+    "id": "skill-14-injection-moulding-f1de7646f9",
+    "purpose": "14 injection moulding",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/006-14-injection-moulding.md",
+    "requires": [
+      "skill-13-additive-manufacturing-36a35baf34"
+    ],
+    "links": [
+      "skill-15-sheet-metal-b3605ceb2a"
+    ]
+  },
+  {
+    "id": "skill-15-sheet-metal-b3605ceb2a",
+    "purpose": "15 sheet metal",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/007-15-sheet-metal.md",
+    "requires": [
+      "skill-14-injection-moulding-f1de7646f9"
+    ],
+    "links": [
+      "skill-16-surface-treatment-c91fc12a41"
+    ]
+  },
+  {
+    "id": "skill-16-surface-treatment-c91fc12a41",
+    "purpose": "16 surface treatment",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-process-families-machining-additive-and-moulding/008-16-surface-treatment.md",
+    "requires": [
+      "skill-15-sheet-metal-b3605ceb2a"
+    ],
+    "links": []
+  }
+]

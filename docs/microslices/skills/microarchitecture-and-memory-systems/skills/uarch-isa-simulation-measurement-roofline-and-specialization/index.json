@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-20-isa-design-11689599ef",
+    "purpose": "20 isa design",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/001-20-isa-design.md",
+    "requires": [],
+    "links": [
+      "skill-21-simulation-and-modelling-82074833cc"
+    ]
+  },
+  {
+    "id": "skill-21-simulation-and-modelling-82074833cc",
+    "purpose": "21 simulation and modelling",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/002-21-simulation-and-modelling.md",
+    "requires": [
+      "skill-20-isa-design-11689599ef"
+    ],
+    "links": [
+      "skill-22-measuring-it-407fbb402b"
+    ]
+  },
+  {
+    "id": "skill-22-measuring-it-407fbb402b",
+    "purpose": "22 measuring it",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/003-22-measuring-it.md",
+    "requires": [
+      "skill-21-simulation-and-modelling-82074833cc"
+    ],
+    "links": [
+      "skill-23-roofline-and-fundamental-limits-abf5a4bc78"
+    ]
+  },
+  {
+    "id": "skill-23-roofline-and-fundamental-limits-abf5a4bc78",
+    "purpose": "23 roofline and fundamental limits",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/004-23-roofline-and-fundamental-limits.md",
+    "requires": [
+      "skill-22-measuring-it-407fbb402b"
+    ],
+    "links": [
+      "skill-24-specialization-9433486afc"
+    ]
+  },
+  {
+    "id": "skill-24-specialization-9433486afc",
+    "purpose": "24 specialization",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-isa-simulation-measurement-roofline-and-specialization/005-24-specialization.md",
+    "requires": [
+      "skill-23-roofline-and-fundamental-limits-abf5a4bc78"
+    ],
+    "links": []
+  }
+]

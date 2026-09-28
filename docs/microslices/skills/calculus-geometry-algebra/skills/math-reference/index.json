@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-22-misconceptions-9add343b62",
+    "purpose": "22 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-reference/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-reference/001-22-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-23-formulas-b9f90779e1"
+    ]
+  },
+  {
+    "id": "skill-23-formulas-b9f90779e1",
+    "purpose": "23 formulas",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-reference/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-reference/002-23-formulas.md",
+    "requires": [
+      "skill-22-misconceptions-9add343b62"
+    ],
+    "links": [
+      "skill-24-books-a80dd8c174"
+    ]
+  },
+  {
+    "id": "skill-24-books-a80dd8c174",
+    "purpose": "24 books",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-reference/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-reference/003-24-books.md",
+    "requires": [
+      "skill-23-formulas-b9f90779e1"
+    ],
+    "links": [
+      "skill-25-quick-reference-566e38b952"
+    ]
+  },
+  {
+    "id": "skill-25-quick-reference-566e38b952",
+    "purpose": "25 quick reference",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-reference/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-reference/004-25-quick-reference.md",
+    "requires": [
+      "skill-24-books-a80dd8c174"
+    ],
+    "links": [
+      "skill-26-method-67af4155b8"
+    ]
+  },
+  {
+    "id": "skill-26-method-67af4155b8",
+    "purpose": "26 method",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-reference/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-reference/005-26-method.md",
+    "requires": [
+      "skill-25-quick-reference-566e38b952"
+    ],
+    "links": []
+  }
+]

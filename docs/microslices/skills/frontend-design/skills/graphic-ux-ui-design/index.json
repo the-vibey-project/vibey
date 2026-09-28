@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-evidence-summary-cb007730a9",
+    "purpose": "evidence summary",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/001-evidence-summary.md",
+    "requires": [],
+    "links": [
+      "skill-visual-design-fundamentals-d7d4e76546"
+    ]
+  },
+  {
+    "id": "skill-visual-design-fundamentals-d7d4e76546",
+    "purpose": "visual design fundamentals",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/002-visual-design-fundamentals.md",
+    "requires": [
+      "skill-evidence-summary-cb007730a9"
+    ],
+    "links": [
+      "skill-component-and-interaction-patterns-8ecf9a6773"
+    ]
+  },
+  {
+    "id": "skill-component-and-interaction-patterns-8ecf9a6773",
+    "purpose": "component and interaction patterns",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/003-component-and-interaction-patterns.md",
+    "requires": [
+      "skill-visual-design-fundamentals-d7d4e76546"
+    ],
+    "links": [
+      "skill-accessibility-and-inclusive-design-797cb256bc"
+    ]
+  },
+  {
+    "id": "skill-accessibility-and-inclusive-design-797cb256bc",
+    "purpose": "accessibility and inclusive design",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/004-accessibility-and-inclusive-design.md",
+    "requires": [
+      "skill-component-and-interaction-patterns-8ecf9a6773"
+    ],
+    "links": [
+      "skill-ux-research-methods-d447f3d3aa"
+    ]
+  },
+  {
+    "id": "skill-ux-research-methods-d447f3d3aa",
+    "purpose": "ux research methods",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/005-ux-research-methods.md",
+    "requires": [
+      "skill-accessibility-and-inclusive-design-797cb256bc"
+    ],
+    "links": [
+      "skill-design-systems-a613791c3d"
+    ]
+  },
+  {
+    "id": "skill-design-systems-a613791c3d",
+    "purpose": "design systems",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/006-design-systems.md",
+    "requires": [
+      "skill-ux-research-methods-d447f3d3aa"
+    ],
+    "links": [
+      "skill-ai-design-tools-honest-assessment-d5312f2185"
+    ]
+  },
+  {
+    "id": "skill-ai-design-tools-honest-assessment-d5312f2185",
+    "purpose": "ai design tools honest assessment",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/007-ai-design-tools-honest-assessment.md",
+    "requires": [
+      "skill-design-systems-a613791c3d"
+    ],
+    "links": [
+      "skill-anti-patterns-and-dark-patterns-be3fb0ce0d"
+    ]
+  },
+  {
+    "id": "skill-anti-patterns-and-dark-patterns-be3fb0ce0d",
+    "purpose": "anti patterns and dark patterns",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/008-anti-patterns-and-dark-patterns.md",
+    "requires": [
+      "skill-ai-design-tools-honest-assessment-d5312f2185"
+    ],
+    "links": [
+      "skill-staged-recommendations-a9655d4c54"
+    ]
+  },
+  {
+    "id": "skill-staged-recommendations-a9655d4c54",
+    "purpose": "staged recommendations",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/graphic-ux-ui-design/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/graphic-ux-ui-design/009-staged-recommendations.md",
+    "requires": [
+      "skill-anti-patterns-and-dark-patterns-be3fb0ce0d"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-6-what-current-actually-is-f4b4c281ba",
+    "purpose": "6 what current actually is",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/001-6-what-current-actually-is.md",
+    "requires": [],
+    "links": [
+      "skill-7-resistance-and-ohm-s-law-938bbb280c"
+    ]
+  },
+  {
+    "id": "skill-7-resistance-and-ohm-s-law-938bbb280c",
+    "purpose": "7 resistance and ohm s law",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/002-7-resistance-and-ohm-s-law.md",
+    "requires": [
+      "skill-6-what-current-actually-is-f4b4c281ba"
+    ],
+    "links": [
+      "skill-8-where-the-energy-actually-flows-52b7b66e5c"
+    ]
+  },
+  {
+    "id": "skill-8-where-the-energy-actually-flows-52b7b66e5c",
+    "purpose": "8 where the energy actually flows",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/003-8-where-the-energy-actually-flows.md",
+    "requires": [
+      "skill-7-resistance-and-ohm-s-law-938bbb280c"
+    ],
+    "links": [
+      "skill-9-circuit-theory-and-its-validity-550f5a05b9"
+    ]
+  },
+  {
+    "id": "skill-9-circuit-theory-and-its-validity-550f5a05b9",
+    "purpose": "9 circuit theory and its validity",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/004-9-circuit-theory-and-its-validity.md",
+    "requires": [
+      "skill-8-where-the-energy-actually-flows-52b7b66e5c"
+    ],
+    "links": [
+      "skill-10-ac-and-impedance-220fbadecd"
+    ]
+  },
+  {
+    "id": "skill-10-ac-and-impedance-220fbadecd",
+    "purpose": "10 ac and impedance",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/005-10-ac-and-impedance.md",
+    "requires": [
+      "skill-9-circuit-theory-and-its-validity-550f5a05b9"
+    ],
+    "links": [
+      "skill-11-power-rms-and-power-factor-30fda20587"
+    ]
+  },
+  {
+    "id": "skill-11-power-rms-and-power-factor-30fda20587",
+    "purpose": "11 power rms and power factor",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-current-energy-flow-circuits-and-ac/006-11-power-rms-and-power-factor.md",
+    "requires": [
+      "skill-10-ac-and-impedance-220fbadecd"
+    ],
+    "links": []
+  }
+]

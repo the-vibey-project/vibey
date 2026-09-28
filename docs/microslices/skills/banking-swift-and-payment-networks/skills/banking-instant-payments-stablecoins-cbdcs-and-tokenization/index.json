@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-17-instant-payment-systems-ef41ab8c45",
+    "purpose": "17 instant payment systems",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/001-17-instant-payment-systems.md",
+    "requires": [],
+    "links": [
+      "skill-18-stablecoins-480b754bf5"
+    ]
+  },
+  {
+    "id": "skill-18-stablecoins-480b754bf5",
+    "purpose": "18 stablecoins",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/002-18-stablecoins.md",
+    "requires": [
+      "skill-17-instant-payment-systems-ef41ab8c45"
+    ],
+    "links": [
+      "skill-19-cbdcs-8ffce6a0fa"
+    ]
+  },
+  {
+    "id": "skill-19-cbdcs-8ffce6a0fa",
+    "purpose": "19 cbdcs",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/003-19-cbdcs.md",
+    "requires": [
+      "skill-18-stablecoins-480b754bf5"
+    ],
+    "links": [
+      "skill-20-tokenized-deposits-and-wholesale-settlement-24e5669023"
+    ]
+  },
+  {
+    "id": "skill-20-tokenized-deposits-and-wholesale-settlement-24e5669023",
+    "purpose": "20 tokenized deposits and wholesale settlement",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-instant-payments-stablecoins-cbdcs-and-tokenization/004-20-tokenized-deposits-and-wholesale-settlement.md",
+    "requires": [
+      "skill-19-cbdcs-8ffce6a0fa"
+    ],
+    "links": []
+  }
+]

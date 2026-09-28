@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-7c5fb3cec1",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-automata-regex-and-parsing/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-automata-regex-and-parsing/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-automata-and-the-chomsky-hierarchy-64c9561cd6"
+    ]
+  },
+  {
+    "id": "skill-1-automata-and-the-chomsky-hierarchy-64c9561cd6",
+    "purpose": "1 automata and the chomsky hierarchy",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-automata-regex-and-parsing/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-automata-regex-and-parsing/002-1-automata-and-the-chomsky-hierarchy.md",
+    "requires": [
+      "skill-0-routing-7c5fb3cec1"
+    ],
+    "links": [
+      "skill-2-regular-expressions-in-practice-f334609083"
+    ]
+  },
+  {
+    "id": "skill-2-regular-expressions-in-practice-f334609083",
+    "purpose": "2 regular expressions in practice",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-automata-regex-and-parsing/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-automata-regex-and-parsing/003-2-regular-expressions-in-practice.md",
+    "requires": [
+      "skill-1-automata-and-the-chomsky-hierarchy-64c9561cd6"
+    ],
+    "links": [
+      "skill-3-parsing-and-grammars-c027eb0969"
+    ]
+  },
+  {
+    "id": "skill-3-parsing-and-grammars-c027eb0969",
+    "purpose": "3 parsing and grammars",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-automata-regex-and-parsing/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-automata-regex-and-parsing/004-3-parsing-and-grammars.md",
+    "requires": [
+      "skill-2-regular-expressions-in-practice-f334609083"
+    ],
+    "links": []
+  }
+]

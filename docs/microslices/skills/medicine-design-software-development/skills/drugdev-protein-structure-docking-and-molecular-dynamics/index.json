@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-8-protein-structure-c7160378f2",
+    "purpose": "8 protein structure",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/001-8-protein-structure.md",
+    "requires": [],
+    "links": [
+      "skill-9-structure-prediction-235c3dc197"
+    ]
+  },
+  {
+    "id": "skill-9-structure-prediction-235c3dc197",
+    "purpose": "9 structure prediction",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/002-9-structure-prediction.md",
+    "requires": [
+      "skill-8-protein-structure-c7160378f2"
+    ],
+    "links": [
+      "skill-10-docking-e5b9961981"
+    ]
+  },
+  {
+    "id": "skill-10-docking-e5b9961981",
+    "purpose": "10 docking",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/003-10-docking.md",
+    "requires": [
+      "skill-9-structure-prediction-235c3dc197"
+    ],
+    "links": [
+      "skill-11-molecular-dynamics-705ed12bb0"
+    ]
+  },
+  {
+    "id": "skill-11-molecular-dynamics-705ed12bb0",
+    "purpose": "11 molecular dynamics",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/004-11-molecular-dynamics.md",
+    "requires": [
+      "skill-10-docking-e5b9961981"
+    ],
+    "links": [
+      "skill-12-free-energy-methods-ed4e55e806"
+    ]
+  },
+  {
+    "id": "skill-12-free-energy-methods-ed4e55e806",
+    "purpose": "12 free energy methods",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-protein-structure-docking-and-molecular-dynamics/005-12-free-energy-methods.md",
+    "requires": [
+      "skill-11-molecular-dynamics-705ed12bb0"
+    ],
+    "links": []
+  }
+]

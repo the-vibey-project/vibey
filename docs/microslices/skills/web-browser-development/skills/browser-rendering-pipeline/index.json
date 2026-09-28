@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-html-parsing-and-the-dom-e7947ec6a5",
+    "purpose": "4 html parsing and the dom",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-rendering-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-rendering-pipeline/001-4-html-parsing-and-the-dom.md",
+    "requires": [],
+    "links": [
+      "skill-5-css-and-style-dd8f2a97f1"
+    ]
+  },
+  {
+    "id": "skill-5-css-and-style-dd8f2a97f1",
+    "purpose": "5 css and style",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-rendering-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-rendering-pipeline/002-5-css-and-style.md",
+    "requires": [
+      "skill-4-html-parsing-and-the-dom-e7947ec6a5"
+    ],
+    "links": [
+      "skill-6-layout-paint-and-compositing-762ef5074f"
+    ]
+  },
+  {
+    "id": "skill-6-layout-paint-and-compositing-762ef5074f",
+    "purpose": "6 layout paint and compositing",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-rendering-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-rendering-pipeline/003-6-layout-paint-and-compositing.md",
+    "requires": [
+      "skill-5-css-and-style-dd8f2a97f1"
+    ],
+    "links": [
+      "skill-7-javascript-integration-aca3e44e21"
+    ]
+  },
+  {
+    "id": "skill-7-javascript-integration-aca3e44e21",
+    "purpose": "7 javascript integration",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-rendering-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-rendering-pipeline/004-7-javascript-integration.md",
+    "requires": [
+      "skill-6-layout-paint-and-compositing-762ef5074f"
+    ],
+    "links": []
+  }
+]

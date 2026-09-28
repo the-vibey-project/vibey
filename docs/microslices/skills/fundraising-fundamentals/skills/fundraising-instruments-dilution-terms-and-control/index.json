@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-the-capital-ladder-48f616fc50",
+    "purpose": "5 the capital ladder",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/001-5-the-capital-ladder.md",
+    "requires": [],
+    "links": [
+      "skill-6-instruments-70534dcea5"
+    ]
+  },
+  {
+    "id": "skill-6-instruments-70534dcea5",
+    "purpose": "6 instruments",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/002-6-instruments.md",
+    "requires": [
+      "skill-5-the-capital-ladder-48f616fc50"
+    ],
+    "links": [
+      "skill-7-dilution-and-cap-table-math-68de035488"
+    ]
+  },
+  {
+    "id": "skill-7-dilution-and-cap-table-math-68de035488",
+    "purpose": "7 dilution and cap table math",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/003-7-dilution-and-cap-table-math.md",
+    "requires": [
+      "skill-6-instruments-70534dcea5"
+    ],
+    "links": [
+      "skill-8-term-sheet-economics-fbeeecf170"
+    ]
+  },
+  {
+    "id": "skill-8-term-sheet-economics-fbeeecf170",
+    "purpose": "8 term sheet economics",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/004-8-term-sheet-economics.md",
+    "requires": [
+      "skill-7-dilution-and-cap-table-math-68de035488"
+    ],
+    "links": [
+      "skill-9-control-and-governance-bdd3ea8b7b"
+    ]
+  },
+  {
+    "id": "skill-9-control-and-governance-bdd3ea8b7b",
+    "purpose": "9 control and governance",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-instruments-dilution-terms-and-control/005-9-control-and-governance.md",
+    "requires": [
+      "skill-8-term-sheet-economics-fbeeecf170"
+    ],
+    "links": []
+  }
+]

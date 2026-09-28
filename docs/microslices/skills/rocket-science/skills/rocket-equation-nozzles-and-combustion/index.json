@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-4856aa310d",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-equation-nozzles-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-equation-nozzles-and-combustion/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-rocket-equation-f7a680a92e"
+    ]
+  },
+  {
+    "id": "skill-1-the-rocket-equation-f7a680a92e",
+    "purpose": "1 the rocket equation",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-equation-nozzles-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-equation-nozzles-and-combustion/002-1-the-rocket-equation.md",
+    "requires": [
+      "skill-0-routing-4856aa310d"
+    ],
+    "links": [
+      "skill-2-nozzle-thermodynamics-2d5121858c"
+    ]
+  },
+  {
+    "id": "skill-2-nozzle-thermodynamics-2d5121858c",
+    "purpose": "2 nozzle thermodynamics",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-equation-nozzles-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-equation-nozzles-and-combustion/003-2-nozzle-thermodynamics.md",
+    "requires": [
+      "skill-1-the-rocket-equation-f7a680a92e"
+    ],
+    "links": [
+      "skill-3-combustion-chamber-cb88c806e3"
+    ]
+  },
+  {
+    "id": "skill-3-combustion-chamber-cb88c806e3",
+    "purpose": "3 combustion chamber",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-equation-nozzles-and-combustion/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-equation-nozzles-and-combustion/004-3-combustion-chamber.md",
+    "requires": [
+      "skill-2-nozzle-thermodynamics-2d5121858c"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-a5945ef4d1",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-molecular-genetics-4d4ead2b57"
+    ]
+  },
+  {
+    "id": "skill-1-molecular-genetics-4d4ead2b57",
+    "purpose": "1 molecular genetics",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/002-1-molecular-genetics.md",
+    "requires": [
+      "skill-0-routing-a5945ef4d1"
+    ],
+    "links": [
+      "skill-2-gene-regulation-and-epigenetics-03563d1278"
+    ]
+  },
+  {
+    "id": "skill-2-gene-regulation-and-epigenetics-03563d1278",
+    "purpose": "2 gene regulation and epigenetics",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/003-2-gene-regulation-and-epigenetics.md",
+    "requires": [
+      "skill-1-molecular-genetics-4d4ead2b57"
+    ],
+    "links": [
+      "skill-3-mutation-variation-inheritance-01609af8b5"
+    ]
+  },
+  {
+    "id": "skill-3-mutation-variation-inheritance-01609af8b5",
+    "purpose": "3 mutation variation inheritance",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-molecular-genetics-and-regulation/004-3-mutation-variation-inheritance.md",
+    "requires": [
+      "skill-2-gene-regulation-and-epigenetics-03563d1278"
+    ],
+    "links": []
+  }
+]

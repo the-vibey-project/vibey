@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-3-arrays-and-sequences-fb56bba55a",
+    "purpose": "3 arrays and sequences",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-data-structures/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-data-structures/001-3-arrays-and-sequences.md",
+    "requires": [],
+    "links": [
+      "skill-4-hash-tables-300dc0e57b"
+    ]
+  },
+  {
+    "id": "skill-4-hash-tables-300dc0e57b",
+    "purpose": "4 hash tables",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-data-structures/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-data-structures/002-4-hash-tables.md",
+    "requires": [
+      "skill-3-arrays-and-sequences-fb56bba55a"
+    ],
+    "links": [
+      "skill-5-trees-and-ordered-structures-804ed6ec93"
+    ]
+  },
+  {
+    "id": "skill-5-trees-and-ordered-structures-804ed6ec93",
+    "purpose": "5 trees and ordered structures",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-data-structures/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-data-structures/003-5-trees-and-ordered-structures.md",
+    "requires": [
+      "skill-4-hash-tables-300dc0e57b"
+    ],
+    "links": [
+      "skill-6-heaps-and-priority-queues-b0c0aaaba3"
+    ]
+  },
+  {
+    "id": "skill-6-heaps-and-priority-queues-b0c0aaaba3",
+    "purpose": "6 heaps and priority queues",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-data-structures/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-data-structures/004-6-heaps-and-priority-queues.md",
+    "requires": [
+      "skill-5-trees-and-ordered-structures-804ed6ec93"
+    ],
+    "links": []
+  }
+]

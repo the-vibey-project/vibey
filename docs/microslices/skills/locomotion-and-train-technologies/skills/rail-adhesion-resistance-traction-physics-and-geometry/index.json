@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-ee1b6cc1dc",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-adhesion-and-resistance-c0a0e6d6f5"
+    ]
+  },
+  {
+    "id": "skill-1-adhesion-and-resistance-c0a0e6d6f5",
+    "purpose": "1 adhesion and resistance",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/002-1-adhesion-and-resistance.md",
+    "requires": [
+      "skill-0-routing-ee1b6cc1dc"
+    ],
+    "links": [
+      "skill-2-traction-and-braking-6cc50082ed"
+    ]
+  },
+  {
+    "id": "skill-2-traction-and-braking-6cc50082ed",
+    "purpose": "2 traction and braking",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/003-2-traction-and-braking.md",
+    "requires": [
+      "skill-1-adhesion-and-resistance-c0a0e6d6f5"
+    ],
+    "links": [
+      "skill-3-the-wheel-rail-interface-2b8fe97ba9"
+    ]
+  },
+  {
+    "id": "skill-3-the-wheel-rail-interface-2b8fe97ba9",
+    "purpose": "3 the wheel rail interface",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/004-3-the-wheel-rail-interface.md",
+    "requires": [
+      "skill-2-traction-and-braking-6cc50082ed"
+    ],
+    "links": [
+      "skill-4-gradients-curves-and-cant-df4cca0bcc"
+    ]
+  },
+  {
+    "id": "skill-4-gradients-curves-and-cant-df4cca0bcc",
+    "purpose": "4 gradients curves and cant",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-adhesion-resistance-traction-physics-and-geometry/005-4-gradients-curves-and-cant.md",
+    "requires": [
+      "skill-3-the-wheel-rail-interface-2b8fe97ba9"
+    ],
+    "links": []
+  }
+]

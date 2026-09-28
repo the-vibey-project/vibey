@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-16-designing-a-custom-peripheral-afaea6c199",
+    "purpose": "16 designing a custom peripheral",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/001-16-designing-a-custom-peripheral.md",
+    "requires": [],
+    "links": [
+      "skill-17-firmware-b57ef2da16"
+    ]
+  },
+  {
+    "id": "skill-17-firmware-b57ef2da16",
+    "purpose": "17 firmware",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/002-17-firmware.md",
+    "requires": [
+      "skill-16-designing-a-custom-peripheral-afaea6c199"
+    ],
+    "links": [
+      "skill-18-pcb-and-mechanical-design-60162855c8"
+    ]
+  },
+  {
+    "id": "skill-18-pcb-and-mechanical-design-60162855c8",
+    "purpose": "18 pcb and mechanical design",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/003-18-pcb-and-mechanical-design.md",
+    "requires": [
+      "skill-17-firmware-b57ef2da16"
+    ],
+    "links": [
+      "skill-19-enumeration-and-debugging-5b93883665"
+    ]
+  },
+  {
+    "id": "skill-19-enumeration-and-debugging-5b93883665",
+    "purpose": "19 enumeration and debugging",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/004-19-enumeration-and-debugging.md",
+    "requires": [
+      "skill-18-pcb-and-mechanical-design-60162855c8"
+    ],
+    "links": [
+      "skill-20-drivers-and-os-integration-e4838fa83e"
+    ]
+  },
+  {
+    "id": "skill-20-drivers-and-os-integration-e4838fa83e",
+    "purpose": "20 drivers and os integration",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/005-20-drivers-and-os-integration.md",
+    "requires": [
+      "skill-19-enumeration-and-debugging-5b93883665"
+    ],
+    "links": [
+      "skill-21-measuring-latency-64bb759a23"
+    ]
+  },
+  {
+    "id": "skill-21-measuring-latency-64bb759a23",
+    "purpose": "21 measuring latency",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-designing-firmware-pcb-and-debugging/006-21-measuring-latency.md",
+    "requires": [
+      "skill-20-drivers-and-os-integration-e4838fa83e"
+    ],
+    "links": []
+  }
+]

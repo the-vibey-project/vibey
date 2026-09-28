@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-4-power-system-analysis-e9d8115bb5",
+    "purpose": "4 power system analysis",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-system-analysis-and-protection/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-system-analysis-and-protection/001-4-power-system-analysis.md",
+    "requires": [],
+    "links": [
+      "skill-5-protection-and-relaying-03fa27ac86"
+    ]
+  },
+  {
+    "id": "skill-5-protection-and-relaying-03fa27ac86",
+    "purpose": "5 protection and relaying",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-system-analysis-and-protection/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-system-analysis-and-protection/002-5-protection-and-relaying.md",
+    "requires": [
+      "skill-4-power-system-analysis-e9d8115bb5"
+    ],
+    "links": []
+  }
+]

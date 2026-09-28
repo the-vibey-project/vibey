@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-asset-classes-01365b528f",
+    "purpose": "6 asset classes",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/001-6-asset-classes.md",
+    "requires": [],
+    "links": [
+      "skill-7-factors-7b2fd7e08c"
+    ]
+  },
+  {
+    "id": "skill-7-factors-7b2fd7e08c",
+    "purpose": "7 factors",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/002-7-factors.md",
+    "requires": [
+      "skill-6-asset-classes-01365b528f"
+    ],
+    "links": [
+      "skill-8-costs-2bacaf1d0e"
+    ]
+  },
+  {
+    "id": "skill-8-costs-2bacaf1d0e",
+    "purpose": "8 costs",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/003-8-costs.md",
+    "requires": [
+      "skill-7-factors-7b2fd7e08c"
+    ],
+    "links": [
+      "skill-9-tax-concepts-cedabc91e8"
+    ]
+  },
+  {
+    "id": "skill-9-tax-concepts-cedabc91e8",
+    "purpose": "9 tax concepts",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/004-9-tax-concepts.md",
+    "requires": [
+      "skill-8-costs-2bacaf1d0e"
+    ],
+    "links": [
+      "skill-10-asset-allocation-588a4ab645"
+    ]
+  },
+  {
+    "id": "skill-10-asset-allocation-588a4ab645",
+    "purpose": "10 asset allocation",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/005-10-asset-allocation.md",
+    "requires": [
+      "skill-9-tax-concepts-cedabc91e8"
+    ],
+    "links": []
+  }
+]

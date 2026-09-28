@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-16-maxwell-s-equations-f9dfa06e3f",
+    "purpose": "16 maxwell s equations",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/001-16-maxwell-s-equations.md",
+    "requires": [],
+    "links": [
+      "skill-17-electromagnetic-waves-97210391d8"
+    ]
+  },
+  {
+    "id": "skill-17-electromagnetic-waves-97210391d8",
+    "purpose": "17 electromagnetic waves",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/002-17-electromagnetic-waves.md",
+    "requires": [
+      "skill-16-maxwell-s-equations-f9dfa06e3f"
+    ],
+    "links": [
+      "skill-18-transmission-lines-35c11fc111"
+    ]
+  },
+  {
+    "id": "skill-18-transmission-lines-35c11fc111",
+    "purpose": "18 transmission lines",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/003-18-transmission-lines.md",
+    "requires": [
+      "skill-17-electromagnetic-waves-97210391d8"
+    ],
+    "links": [
+      "skill-19-magnetism-as-relativistic-electrostatics-b94cd43cbd"
+    ]
+  },
+  {
+    "id": "skill-19-magnetism-as-relativistic-electrostatics-b94cd43cbd",
+    "purpose": "19 magnetism as relativistic electrostatics",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-maxwell-waves-transmission-lines-and-relativity/004-19-magnetism-as-relativistic-electrostatics.md",
+    "requires": [
+      "skill-18-transmission-lines-35c11fc111"
+    ],
+    "links": []
+  }
+]

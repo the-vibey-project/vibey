@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-image-formation-and-calibration-ea1be9776e",
+    "purpose": "8 image formation and calibration",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry/001-8-image-formation-and-calibration.md",
+    "requires": [],
+    "links": [
+      "skill-9-classical-computer-vision-35e5debbe6"
+    ]
+  },
+  {
+    "id": "skill-9-classical-computer-vision-35e5debbe6",
+    "purpose": "9 classical computer vision",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry/002-9-classical-computer-vision.md",
+    "requires": [
+      "skill-8-image-formation-and-calibration-ea1be9776e"
+    ],
+    "links": [
+      "skill-10-multiple-view-geometry-e360b169a5"
+    ]
+  },
+  {
+    "id": "skill-10-multiple-view-geometry-e360b169a5",
+    "purpose": "10 multiple view geometry",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-image-formation-classical-vision-and-geometry/003-10-multiple-view-geometry.md",
+    "requires": [
+      "skill-9-classical-computer-vision-35e5debbe6"
+    ],
+    "links": []
+  }
+]

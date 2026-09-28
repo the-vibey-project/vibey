@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-steam-briefly-for-the-mechanism-3a809ede41",
+    "purpose": "5 steam briefly for the mechanism",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/001-5-steam-briefly-for-the-mechanism.md",
+    "requires": [],
+    "links": [
+      "skill-6-diesel-traction-7a194fa82f"
+    ]
+  },
+  {
+    "id": "skill-6-diesel-traction-7a194fa82f",
+    "purpose": "6 diesel traction",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/002-6-diesel-traction.md",
+    "requires": [
+      "skill-5-steam-briefly-for-the-mechanism-3a809ede41"
+    ],
+    "links": [
+      "skill-7-electric-traction-d953b97410"
+    ]
+  },
+  {
+    "id": "skill-7-electric-traction-d953b97410",
+    "purpose": "7 electric traction",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/003-7-electric-traction.md",
+    "requires": [
+      "skill-6-diesel-traction-7a194fa82f"
+    ],
+    "links": [
+      "skill-8-power-electronics-and-regeneration-29c356578d"
+    ]
+  },
+  {
+    "id": "skill-8-power-electronics-and-regeneration-29c356578d",
+    "purpose": "8 power electronics and regeneration",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/004-8-power-electronics-and-regeneration.md",
+    "requires": [
+      "skill-7-electric-traction-d953b97410"
+    ],
+    "links": [
+      "skill-9-alternative-traction-d3b7809d70"
+    ]
+  },
+  {
+    "id": "skill-9-alternative-traction-d3b7809d70",
+    "purpose": "9 alternative traction",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-steam-diesel-electric-and-alternative-traction/005-9-alternative-traction.md",
+    "requires": [
+      "skill-8-power-electronics-and-regeneration-29c356578d"
+    ],
+    "links": []
+  }
+]

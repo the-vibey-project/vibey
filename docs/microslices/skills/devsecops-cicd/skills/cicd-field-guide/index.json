@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-the-four-defining-shifts-2015-2025-pipeline-ae02ac914a",
+    "purpose": "the four defining shifts 2015 2025 pipeline",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/001-the-four-defining-shifts-2015-2025-pipeline.md",
+    "requires": [],
+    "links": [
+      "skill-dora-metrics-the-evidence-base-ee785c9856"
+    ]
+  },
+  {
+    "id": "skill-dora-metrics-the-evidence-base-ee785c9856",
+    "purpose": "dora metrics the evidence base",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/002-dora-metrics-the-evidence-base.md",
+    "requires": [
+      "skill-the-four-defining-shifts-2015-2025-pipeline-ae02ac914a"
+    ],
+    "links": [
+      "skill-platform-selection-1a8ec9df4f"
+    ]
+  },
+  {
+    "id": "skill-platform-selection-1a8ec9df4f",
+    "purpose": "platform selection",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/003-platform-selection.md",
+    "requires": [
+      "skill-dora-metrics-the-evidence-base-ee785c9856"
+    ],
+    "links": [
+      "skill-branching-strategy-a377b868dd"
+    ]
+  },
+  {
+    "id": "skill-branching-strategy-a377b868dd",
+    "purpose": "branching strategy",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/004-branching-strategy.md",
+    "requires": [
+      "skill-platform-selection-1a8ec9df4f"
+    ],
+    "links": [
+      "skill-security-the-highest-leverage-action-d281b75233"
+    ]
+  },
+  {
+    "id": "skill-security-the-highest-leverage-action-d281b75233",
+    "purpose": "security the highest leverage action",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/005-security-the-highest-leverage-action.md",
+    "requires": [
+      "skill-branching-strategy-a377b868dd"
+    ],
+    "links": [
+      "skill-gitops-and-progressive-delivery-kubernetes-standard-bbc74c9386"
+    ]
+  },
+  {
+    "id": "skill-gitops-and-progressive-delivery-kubernetes-standard-bbc74c9386",
+    "purpose": "gitops and progressive delivery kubernetes standard",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/006-gitops-and-progressive-delivery-kubernetes-standard.md",
+    "requires": [
+      "skill-security-the-highest-leverage-action-d281b75233"
+    ],
+    "links": [
+      "skill-pipeline-architecture-principles-0492ed9816"
+    ]
+  },
+  {
+    "id": "skill-pipeline-architecture-principles-0492ed9816",
+    "purpose": "pipeline architecture principles",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/007-pipeline-architecture-principles.md",
+    "requires": [
+      "skill-gitops-and-progressive-delivery-kubernetes-standard-bbc74c9386"
+    ],
+    "links": [
+      "skill-monorepo-ci-cd-at-scale-15bf54a5c2"
+    ]
+  },
+  {
+    "id": "skill-monorepo-ci-cd-at-scale-15bf54a5c2",
+    "purpose": "monorepo ci cd at scale",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/008-monorepo-ci-cd-at-scale.md",
+    "requires": [
+      "skill-pipeline-architecture-principles-0492ed9816"
+    ],
+    "links": [
+      "skill-testing-in-ci-cd-43013e4028"
+    ]
+  },
+  {
+    "id": "skill-testing-in-ci-cd-43013e4028",
+    "purpose": "testing in ci cd",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/009-testing-in-ci-cd.md",
+    "requires": [
+      "skill-monorepo-ci-cd-at-scale-15bf54a5c2"
+    ],
+    "links": [
+      "skill-database-migrations-in-ci-d37ba1492b"
+    ]
+  },
+  {
+    "id": "skill-database-migrations-in-ci-d37ba1492b",
+    "purpose": "database migrations in ci",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/010-database-migrations-in-ci.md",
+    "requires": [
+      "skill-testing-in-ci-cd-43013e4028"
+    ],
+    "links": [
+      "skill-ai-assisted-ci-cd-5e66af1cce"
+    ]
+  },
+  {
+    "id": "skill-ai-assisted-ci-cd-5e66af1cce",
+    "purpose": "ai assisted ci cd",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/011-ai-assisted-ci-cd.md",
+    "requires": [
+      "skill-database-migrations-in-ci-d37ba1492b"
+    ],
+    "links": [
+      "skill-platform-engineering-and-internal-developer-platforms-c5e6326e9d"
+    ]
+  },
+  {
+    "id": "skill-platform-engineering-and-internal-developer-platforms-c5e6326e9d",
+    "purpose": "platform engineering and internal developer platforms",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/012-platform-engineering-and-internal-developer-platforms.md",
+    "requires": [
+      "skill-ai-assisted-ci-cd-5e66af1cce"
+    ],
+    "links": [
+      "skill-iac-in-pipelines-3b733bb3b9"
+    ]
+  },
+  {
+    "id": "skill-iac-in-pipelines-3b733bb3b9",
+    "purpose": "iac in pipelines",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/013-iac-in-pipelines.md",
+    "requires": [
+      "skill-platform-engineering-and-internal-developer-platforms-c5e6326e9d"
+    ],
+    "links": [
+      "skill-staged-implementation-roadmap-a978d36de3"
+    ]
+  },
+  {
+    "id": "skill-staged-implementation-roadmap-a978d36de3",
+    "purpose": "staged implementation roadmap",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/cicd-field-guide/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/cicd-field-guide/014-staged-implementation-roadmap.md",
+    "requires": [
+      "skill-iac-in-pipelines-3b733bb3b9"
+    ],
+    "links": []
+  }
+]

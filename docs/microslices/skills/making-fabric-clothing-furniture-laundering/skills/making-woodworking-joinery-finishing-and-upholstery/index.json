@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-16-wood-movement-6f389b35ba",
+    "purpose": "16 wood movement",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/001-16-wood-movement.md",
+    "requires": [],
+    "links": [
+      "skill-17-joinery-74d094a99b"
+    ]
+  },
+  {
+    "id": "skill-17-joinery-74d094a99b",
+    "purpose": "17 joinery",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/002-17-joinery.md",
+    "requires": [
+      "skill-16-wood-movement-6f389b35ba"
+    ],
+    "links": [
+      "skill-18-adhesives-and-fasteners-0bd06c1cb6"
+    ]
+  },
+  {
+    "id": "skill-18-adhesives-and-fasteners-0bd06c1cb6",
+    "purpose": "18 adhesives and fasteners",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/003-18-adhesives-and-fasteners.md",
+    "requires": [
+      "skill-17-joinery-74d094a99b"
+    ],
+    "links": [
+      "skill-19-wood-finishing-6ab6825c2b"
+    ]
+  },
+  {
+    "id": "skill-19-wood-finishing-6ab6825c2b",
+    "purpose": "19 wood finishing",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/004-19-wood-finishing.md",
+    "requires": [
+      "skill-18-adhesives-and-fasteners-0bd06c1cb6"
+    ],
+    "links": [
+      "skill-20-upholstery-18a9ef4776"
+    ]
+  },
+  {
+    "id": "skill-20-upholstery-18a9ef4776",
+    "purpose": "20 upholstery",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/005-20-upholstery.md",
+    "requires": [
+      "skill-19-wood-finishing-6ab6825c2b"
+    ],
+    "links": [
+      "skill-21-seating-and-frames-80a37989fd"
+    ]
+  },
+  {
+    "id": "skill-21-seating-and-frames-80a37989fd",
+    "purpose": "21 seating and frames",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-woodworking-joinery-finishing-and-upholstery/006-21-seating-and-frames.md",
+    "requires": [
+      "skill-20-upholstery-18a9ef4776"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-6-mechanisms-31cd0a672d",
+    "purpose": "6 mechanisms",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/001-6-mechanisms.md",
+    "requires": [],
+    "links": [
+      "skill-7-reaction-classes-84fb678694"
+    ]
+  },
+  {
+    "id": "skill-7-reaction-classes-84fb678694",
+    "purpose": "7 reaction classes",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/002-7-reaction-classes.md",
+    "requires": [
+      "skill-6-mechanisms-31cd0a672d"
+    ],
+    "links": [
+      "skill-8-aromaticity-ecadd972ac"
+    ]
+  },
+  {
+    "id": "skill-8-aromaticity-ecadd972ac",
+    "purpose": "8 aromaticity",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/003-8-aromaticity.md",
+    "requires": [
+      "skill-7-reaction-classes-84fb678694"
+    ],
+    "links": [
+      "skill-9-kinetic-vs-thermodynamic-control-6b2c17fb40"
+    ]
+  },
+  {
+    "id": "skill-9-kinetic-vs-thermodynamic-control-6b2c17fb40",
+    "purpose": "9 kinetic vs thermodynamic control",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/004-9-kinetic-vs-thermodynamic-control.md",
+    "requires": [
+      "skill-8-aromaticity-ecadd972ac"
+    ],
+    "links": [
+      "skill-10-characterization-9c93ea3358"
+    ]
+  },
+  {
+    "id": "skill-10-characterization-9c93ea3358",
+    "purpose": "10 characterization",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/005-10-characterization.md",
+    "requires": [
+      "skill-9-kinetic-vs-thermodynamic-control-6b2c17fb40"
+    ],
+    "links": [
+      "skill-11-synthesis-strategy-f334dc554b"
+    ]
+  },
+  {
+    "id": "skill-11-synthesis-strategy-f334dc554b",
+    "purpose": "11 synthesis strategy",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/006-11-synthesis-strategy.md",
+    "requires": [
+      "skill-10-characterization-9c93ea3358"
+    ],
+    "links": [
+      "skill-12-green-chemistry-a3c4cc45b0"
+    ]
+  },
+  {
+    "id": "skill-12-green-chemistry-a3c4cc45b0",
+    "purpose": "12 green chemistry",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-mechanisms-reactions-characterization-and-synthesis/007-12-green-chemistry.md",
+    "requires": [
+      "skill-11-synthesis-strategy-f334dc554b"
+    ],
+    "links": []
+  }
+]

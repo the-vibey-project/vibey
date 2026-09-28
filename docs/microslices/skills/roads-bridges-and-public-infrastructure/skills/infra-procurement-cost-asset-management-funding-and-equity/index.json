@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-19-procurement-and-delivery-ce5041b536",
+    "purpose": "19 procurement and delivery",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/001-19-procurement-and-delivery.md",
+    "requires": [],
+    "links": [
+      "skill-20-cost-estimation-and-optimism-bias-04627b64ce"
+    ]
+  },
+  {
+    "id": "skill-20-cost-estimation-and-optimism-bias-04627b64ce",
+    "purpose": "20 cost estimation and optimism bias",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/002-20-cost-estimation-and-optimism-bias.md",
+    "requires": [
+      "skill-19-procurement-and-delivery-ce5041b536"
+    ],
+    "links": [
+      "skill-21-asset-management-3336020e40"
+    ]
+  },
+  {
+    "id": "skill-21-asset-management-3336020e40",
+    "purpose": "21 asset management",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/003-21-asset-management.md",
+    "requires": [
+      "skill-20-cost-estimation-and-optimism-bias-04627b64ce"
+    ],
+    "links": [
+      "skill-22-funding-and-finance-502a6654e3"
+    ]
+  },
+  {
+    "id": "skill-22-funding-and-finance-502a6654e3",
+    "purpose": "22 funding and finance",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/004-22-funding-and-finance.md",
+    "requires": [
+      "skill-21-asset-management-3336020e40"
+    ],
+    "links": [
+      "skill-23-environmental-review-and-permitting-8c90c3297d"
+    ]
+  },
+  {
+    "id": "skill-23-environmental-review-and-permitting-8c90c3297d",
+    "purpose": "23 environmental review and permitting",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/005-23-environmental-review-and-permitting.md",
+    "requires": [
+      "skill-22-funding-and-finance-502a6654e3"
+    ],
+    "links": [
+      "skill-24-resilience-and-climate-adaptation-2989133899"
+    ]
+  },
+  {
+    "id": "skill-24-resilience-and-climate-adaptation-2989133899",
+    "purpose": "24 resilience and climate adaptation",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/006-24-resilience-and-climate-adaptation.md",
+    "requires": [
+      "skill-23-environmental-review-and-permitting-8c90c3297d"
+    ],
+    "links": [
+      "skill-25-induced-demand-b5ba4aea28"
+    ]
+  },
+  {
+    "id": "skill-25-induced-demand-b5ba4aea28",
+    "purpose": "25 induced demand",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/007-25-induced-demand.md",
+    "requires": [
+      "skill-24-resilience-and-climate-adaptation-2989133899"
+    ],
+    "links": [
+      "skill-26-the-distributional-legacy-a692394d6a"
+    ]
+  },
+  {
+    "id": "skill-26-the-distributional-legacy-a692394d6a",
+    "purpose": "26 the distributional legacy",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-procurement-cost-asset-management-funding-and-equity/008-26-the-distributional-legacy.md",
+    "requires": [
+      "skill-25-induced-demand-b5ba4aea28"
+    ],
+    "links": []
+  }
+]

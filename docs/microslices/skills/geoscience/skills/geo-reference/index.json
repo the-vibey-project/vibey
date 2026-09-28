@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-what-observation-recently-changed-verified-august-2026-9368c67b72",
+    "purpose": "17 what observation recently changed verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-reference/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-reference/001-17-what-observation-recently-changed-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-18-misconceptions-c6b4d1624e"
+    ]
+  },
+  {
+    "id": "skill-18-misconceptions-c6b4d1624e",
+    "purpose": "18 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-reference/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-reference/002-18-misconceptions.md",
+    "requires": [
+      "skill-17-what-observation-recently-changed-verified-august-2026-9368c67b72"
+    ],
+    "links": [
+      "skill-19-numbers-712e3cd33e"
+    ]
+  },
+  {
+    "id": "skill-19-numbers-712e3cd33e",
+    "purpose": "19 numbers",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-reference/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-reference/003-19-numbers.md",
+    "requires": [
+      "skill-18-misconceptions-c6b4d1624e"
+    ],
+    "links": [
+      "skill-20-books-4f792c0a66"
+    ]
+  },
+  {
+    "id": "skill-20-books-4f792c0a66",
+    "purpose": "20 books",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-reference/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-reference/004-20-books.md",
+    "requires": [
+      "skill-19-numbers-712e3cd33e"
+    ],
+    "links": [
+      "skill-21-quick-reference-5a14a278be"
+    ]
+  },
+  {
+    "id": "skill-21-quick-reference-5a14a278be",
+    "purpose": "21 quick reference",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-reference/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-reference/005-21-quick-reference.md",
+    "requires": [
+      "skill-20-books-4f792c0a66"
+    ],
+    "links": [
+      "skill-22-method-497f86744c"
+    ]
+  },
+  {
+    "id": "skill-22-method-497f86744c",
+    "purpose": "22 method",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-reference/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-reference/006-22-method.md",
+    "requires": [
+      "skill-21-quick-reference-5a14a278be"
+    ],
+    "links": []
+  }
+]

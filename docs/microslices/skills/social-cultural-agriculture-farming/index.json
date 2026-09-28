@@ -1,0 +1,226 @@
+[
+  {
+    "id": "skill-research-brief-19066529e7",
+    "purpose": "research brief",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/001-research-brief.md",
+    "requires": [],
+    "links": [
+      "skill-1-a-multi-level-map-9407543261"
+    ]
+  },
+  {
+    "id": "skill-1-a-multi-level-map-9407543261",
+    "purpose": "1 a multi level map",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/002-1-a-multi-level-map.md",
+    "requires": [
+      "skill-research-brief-19066529e7"
+    ],
+    "links": [
+      "skill-2-personal-dimensions-e58af629ad"
+    ]
+  },
+  {
+    "id": "skill-2-personal-dimensions-e58af629ad",
+    "purpose": "2 personal dimensions",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/003-2-personal-dimensions.md",
+    "requires": [
+      "skill-1-a-multi-level-map-9407543261"
+    ],
+    "links": [
+      "skill-3-household-and-family-farming-4de6b9a5ff"
+    ]
+  },
+  {
+    "id": "skill-3-household-and-family-farming-4de6b9a5ff",
+    "purpose": "3 household and family farming",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/004-3-household-and-family-farming.md",
+    "requires": [
+      "skill-2-personal-dimensions-e58af629ad"
+    ],
+    "links": [
+      "skill-4-gender-and-social-norms-48910beade"
+    ]
+  },
+  {
+    "id": "skill-4-gender-and-social-norms-48910beade",
+    "purpose": "4 gender and social norms",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/005-4-gender-and-social-norms.md",
+    "requires": [
+      "skill-3-household-and-family-farming-4de6b9a5ff"
+    ],
+    "links": [
+      "skill-5-youth-aging-and-generational-renewal-4128a4d46e"
+    ]
+  },
+  {
+    "id": "skill-5-youth-aging-and-generational-renewal-4128a4d46e",
+    "purpose": "5 youth aging and generational renewal",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/006-5-youth-aging-and-generational-renewal.md",
+    "requires": [
+      "skill-4-gender-and-social-norms-48910beade"
+    ],
+    "links": [
+      "skill-6-labor-migration-and-employment-relations-4c3942cb55"
+    ]
+  },
+  {
+    "id": "skill-6-labor-migration-and-employment-relations-4c3942cb55",
+    "purpose": "6 labor migration and employment relations",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/007-6-labor-migration-and-employment-relations.md",
+    "requires": [
+      "skill-5-youth-aging-and-generational-renewal-4128a4d46e"
+    ],
+    "links": [
+      "skill-7-cooperation-trust-and-social-capital-df153eaf70"
+    ]
+  },
+  {
+    "id": "skill-7-cooperation-trust-and-social-capital-df153eaf70",
+    "purpose": "7 cooperation trust and social capital",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/008-7-cooperation-trust-and-social-capital.md",
+    "requires": [
+      "skill-6-labor-migration-and-employment-relations-4c3942cb55"
+    ],
+    "links": [
+      "skill-8-land-tenure-race-class-and-power-8f61dc9dce"
+    ]
+  },
+  {
+    "id": "skill-8-land-tenure-race-class-and-power-8f61dc9dce",
+    "purpose": "8 land tenure race class and power",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/009-8-land-tenure-race-class-and-power.md",
+    "requires": [
+      "skill-7-cooperation-trust-and-social-capital-df153eaf70"
+    ],
+    "links": [
+      "skill-9-indigenous-and-place-based-knowledge-51e8a749fc"
+    ]
+  },
+  {
+    "id": "skill-9-indigenous-and-place-based-knowledge-51e8a749fc",
+    "purpose": "9 indigenous and place based knowledge",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/010-9-indigenous-and-place-based-knowledge.md",
+    "requires": [
+      "skill-8-land-tenure-race-class-and-power-8f61dc9dce"
+    ],
+    "links": [
+      "skill-10-rural-community-systems-7e2cab2ff6"
+    ]
+  },
+  {
+    "id": "skill-10-rural-community-systems-7e2cab2ff6",
+    "purpose": "10 rural community systems",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/011-10-rural-community-systems.md",
+    "requires": [
+      "skill-9-indigenous-and-place-based-knowledge-51e8a749fc"
+    ],
+    "links": [
+      "skill-11-culture-food-religion-and-meaning-34ee4f8765"
+    ]
+  },
+  {
+    "id": "skill-11-culture-food-religion-and-meaning-34ee4f8765",
+    "purpose": "11 culture food religion and meaning",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/012-11-culture-food-religion-and-meaning.md",
+    "requires": [
+      "skill-10-rural-community-systems-7e2cab2ff6"
+    ],
+    "links": [
+      "skill-12-markets-institutions-and-value-chains-ab95ba90a7"
+    ]
+  },
+  {
+    "id": "skill-12-markets-institutions-and-value-chains-ab95ba90a7",
+    "purpose": "12 markets institutions and value chains",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/013-12-markets-institutions-and-value-chains.md",
+    "requires": [
+      "skill-11-culture-food-religion-and-meaning-34ee4f8765"
+    ],
+    "links": [
+      "skill-13-social-dimensions-of-technology-and-innovation-45610c3cfb"
+    ]
+  },
+  {
+    "id": "skill-13-social-dimensions-of-technology-and-innovation-45610c3cfb",
+    "purpose": "13 social dimensions of technology and innovation",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/014-13-social-dimensions-of-technology-and-innovation.md",
+    "requires": [
+      "skill-12-markets-institutions-and-value-chains-ab95ba90a7"
+    ],
+    "links": [
+      "skill-14-conflict-cooperation-and-environmental-justice-728996cc28"
+    ]
+  },
+  {
+    "id": "skill-14-conflict-cooperation-and-environmental-justice-728996cc28",
+    "purpose": "14 conflict cooperation and environmental justice",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/015-14-conflict-cooperation-and-environmental-justice.md",
+    "requires": [
+      "skill-13-social-dimensions-of-technology-and-innovation-45610c3cfb"
+    ],
+    "links": [
+      "skill-15-how-to-research-agriculture-s-social-world-b1882c4f8f"
+    ]
+  },
+  {
+    "id": "skill-15-how-to-research-agriculture-s-social-world-b1882c4f8f",
+    "purpose": "15 how to research agriculture s social world",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/016-15-how-to-research-agriculture-s-social-world.md",
+    "requires": [
+      "skill-14-conflict-cooperation-and-environmental-justice-728996cc28"
+    ],
+    "links": [
+      "skill-16-practical-design-principles-for-equitable-agriculture-730536c568"
+    ]
+  },
+  {
+    "id": "skill-16-practical-design-principles-for-equitable-agriculture-730536c568",
+    "purpose": "16 practical design principles for equitable agriculture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/017-16-practical-design-principles-for-equitable-agriculture.md",
+    "requires": [
+      "skill-15-how-to-research-agriculture-s-social-world-b1882c4f8f"
+    ],
+    "links": [
+      "skill-17-common-myths-37f03606e9"
+    ]
+  },
+  {
+    "id": "skill-17-common-myths-37f03606e9",
+    "purpose": "17 common myths",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/018-17-common-myths.md",
+    "requires": [
+      "skill-16-practical-design-principles-for-equitable-agriculture-730536c568"
+    ],
+    "links": [
+      "skill-research-note-12f9df93dc"
+    ]
+  },
+  {
+    "id": "skill-research-note-12f9df93dc",
+    "purpose": "research note",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/social-cultural-agriculture-farming-research/SKILL.md",
+    "output": "docs/microslices/skills/social-cultural-agriculture-farming/019-research-note.md",
+    "requires": [
+      "skill-17-common-myths-37f03606e9"
+    ],
+    "links": []
+  }
+]

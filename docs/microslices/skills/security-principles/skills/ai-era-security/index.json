@@ -1,0 +1,154 @@
+[
+  {
+    "id": "skill-quick-reference-principle-efda402f1d",
+    "purpose": "quick reference principle",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/001-quick-reference-principle.md",
+    "requires": [],
+    "links": [
+      "skill-section-1-modern-framework-updates-what-changed-2024-2025-6e9007474a"
+    ]
+  },
+  {
+    "id": "skill-section-1-modern-framework-updates-what-changed-2024-2025-6e9007474a",
+    "purpose": "section 1 modern framework updates what changed 2024 2025",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/002-section-1-modern-framework-updates-what-changed-2024-2025.md",
+    "requires": [
+      "skill-quick-reference-principle-efda402f1d"
+    ],
+    "links": [
+      "skill-section-2-ai-threat-landscape-aabc5d33bb"
+    ]
+  },
+  {
+    "id": "skill-section-2-ai-threat-landscape-aabc5d33bb",
+    "purpose": "section 2 ai threat landscape",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/003-section-2-ai-threat-landscape.md",
+    "requires": [
+      "skill-section-1-modern-framework-updates-what-changed-2024-2025-6e9007474a"
+    ],
+    "links": [
+      "skill-section-3-ai-security-frameworks-2024-2026-canon-d88b25468b"
+    ]
+  },
+  {
+    "id": "skill-section-3-ai-security-frameworks-2024-2026-canon-d88b25468b",
+    "purpose": "section 3 ai security frameworks 2024 2026 canon",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/004-section-3-ai-security-frameworks-2024-2026-canon.md",
+    "requires": [
+      "skill-section-2-ai-threat-landscape-aabc5d33bb"
+    ],
+    "links": [
+      "skill-section-4-owasp-agentic-top-10-december-2025-f698dac083"
+    ]
+  },
+  {
+    "id": "skill-section-4-owasp-agentic-top-10-december-2025-f698dac083",
+    "purpose": "section 4 owasp agentic top 10 december 2025",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/005-section-4-owasp-agentic-top-10-december-2025.md",
+    "requires": [
+      "skill-section-3-ai-security-frameworks-2024-2026-canon-d88b25468b"
+    ],
+    "links": [
+      "skill-section-5-documented-real-world-agentic-incidents-2025-2026-aecc3404b8"
+    ]
+  },
+  {
+    "id": "skill-section-5-documented-real-world-agentic-incidents-2025-2026-aecc3404b8",
+    "purpose": "section 5 documented real world agentic incidents 2025 2026",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/006-section-5-documented-real-world-agentic-incidents-2025-2026.md",
+    "requires": [
+      "skill-section-4-owasp-agentic-top-10-december-2025-f698dac083"
+    ],
+    "links": [
+      "skill-section-6-controls-for-agentic-systems-4eacbc54c6"
+    ]
+  },
+  {
+    "id": "skill-section-6-controls-for-agentic-systems-4eacbc54c6",
+    "purpose": "section 6 controls for agentic systems",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/007-section-6-controls-for-agentic-systems.md",
+    "requires": [
+      "skill-section-5-documented-real-world-agentic-incidents-2025-2026-aecc3404b8"
+    ],
+    "links": [
+      "skill-section-7-post-quantum-cryptography-pqc-401de13328"
+    ]
+  },
+  {
+    "id": "skill-section-7-post-quantum-cryptography-pqc-401de13328",
+    "purpose": "section 7 post quantum cryptography pqc",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/008-section-7-post-quantum-cryptography-pqc.md",
+    "requires": [
+      "skill-section-6-controls-for-agentic-systems-4eacbc54c6"
+    ],
+    "links": [
+      "skill-section-8-10-point-agentic-security-design-checklist-9a315ee0f1"
+    ]
+  },
+  {
+    "id": "skill-section-8-10-point-agentic-security-design-checklist-9a315ee0f1",
+    "purpose": "section 8 10 point agentic security design checklist",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/009-section-8-10-point-agentic-security-design-checklist.md",
+    "requires": [
+      "skill-section-7-post-quantum-cryptography-pqc-401de13328"
+    ],
+    "links": [
+      "skill-threat-modeling-reference-stride-applied-to-ai-agents-6b9d6c6fee"
+    ]
+  },
+  {
+    "id": "skill-threat-modeling-reference-stride-applied-to-ai-agents-6b9d6c6fee",
+    "purpose": "threat modeling reference stride applied to ai agents",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/010-threat-modeling-reference-stride-applied-to-ai-agents.md",
+    "requires": [
+      "skill-section-8-10-point-agentic-security-design-checklist-9a315ee0f1"
+    ],
+    "links": [
+      "skill-rag-security-pattern-d327e92958"
+    ]
+  },
+  {
+    "id": "skill-rag-security-pattern-d327e92958",
+    "purpose": "rag security pattern",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/011-rag-security-pattern.md",
+    "requires": [
+      "skill-threat-modeling-reference-stride-applied-to-ai-agents-6b9d6c6fee"
+    ],
+    "links": [
+      "skill-eu-ai-act-compliance-checklist-cdc9bcd4c9"
+    ]
+  },
+  {
+    "id": "skill-eu-ai-act-compliance-checklist-cdc9bcd4c9",
+    "purpose": "eu ai act compliance checklist",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/012-eu-ai-act-compliance-checklist.md",
+    "requires": [
+      "skill-rag-security-pattern-d327e92958"
+    ],
+    "links": [
+      "skill-key-caveats-8679b744ae"
+    ]
+  },
+  {
+    "id": "skill-key-caveats-8679b744ae",
+    "purpose": "key caveats",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-era-security/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-era-security/013-key-caveats.md",
+    "requires": [
+      "skill-eu-ai-act-compliance-checklist-cdc9bcd4c9"
+    ],
+    "links": []
+  }
+]

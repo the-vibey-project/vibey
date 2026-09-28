@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-19-anti-patterns-758bf8cf72",
+    "purpose": "19 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/001-19-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-20-service-equivalence-f4861e878c"
+    ]
+  },
+  {
+    "id": "skill-20-service-equivalence-f4861e878c",
+    "purpose": "20 service equivalence",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/002-20-service-equivalence.md",
+    "requires": [
+      "skill-19-anti-patterns-758bf8cf72"
+    ],
+    "links": [
+      "skill-21-what-moved-verified-august-2026-88c6f1660d"
+    ]
+  },
+  {
+    "id": "skill-21-what-moved-verified-august-2026-88c6f1660d",
+    "purpose": "21 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/003-21-what-moved-verified-august-2026.md",
+    "requires": [
+      "skill-20-service-equivalence-f4861e878c"
+    ],
+    "links": [
+      "skill-22-misconceptions-0fcd67b324"
+    ]
+  },
+  {
+    "id": "skill-22-misconceptions-0fcd67b324",
+    "purpose": "22 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/004-22-misconceptions.md",
+    "requires": [
+      "skill-21-what-moved-verified-august-2026-88c6f1660d"
+    ],
+    "links": [
+      "skill-23-numbers-09cc6570a0"
+    ]
+  },
+  {
+    "id": "skill-23-numbers-09cc6570a0",
+    "purpose": "23 numbers",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/005-23-numbers.md",
+    "requires": [
+      "skill-22-misconceptions-0fcd67b324"
+    ],
+    "links": [
+      "skill-24-resources-4326d8d739"
+    ]
+  },
+  {
+    "id": "skill-24-resources-4326d8d739",
+    "purpose": "24 resources",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/006-24-resources.md",
+    "requires": [
+      "skill-23-numbers-09cc6570a0"
+    ],
+    "links": [
+      "skill-25-quick-reference-e7e814c791"
+    ]
+  },
+  {
+    "id": "skill-25-quick-reference-e7e814c791",
+    "purpose": "25 quick reference",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/007-25-quick-reference.md",
+    "requires": [
+      "skill-24-resources-4326d8d739"
+    ],
+    "links": [
+      "skill-26-method-f82251813d"
+    ]
+  },
+  {
+    "id": "skill-26-method-f82251813d",
+    "purpose": "26 method",
+    "source": "src/vibey_tools/skills/plugins/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/SKILL.md",
+    "output": "docs/microslices/skills/aws-gcp-azure-deep-dive/skills/hyperscaler-reference/008-26-method.md",
+    "requires": [
+      "skill-25-quick-reference-e7e814c791"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-process-and-toolchain-01fdb9fa6f",
+    "purpose": "11 process and toolchain",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-process-testing-domains-and-supply-chain/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-process-testing-domains-and-supply-chain/001-11-process-and-toolchain.md",
+    "requires": [],
+    "links": [
+      "skill-12-testing-cde13d451c"
+    ]
+  },
+  {
+    "id": "skill-12-testing-cde13d451c",
+    "purpose": "12 testing",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-process-testing-domains-and-supply-chain/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-process-testing-domains-and-supply-chain/002-12-testing.md",
+    "requires": [
+      "skill-11-process-and-toolchain-01fdb9fa6f"
+    ],
+    "links": [
+      "skill-13-the-domains-2952fddafb"
+    ]
+  },
+  {
+    "id": "skill-13-the-domains-2952fddafb",
+    "purpose": "13 the domains",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-process-testing-domains-and-supply-chain/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-process-testing-domains-and-supply-chain/003-13-the-domains.md",
+    "requires": [
+      "skill-12-testing-cde13d451c"
+    ],
+    "links": [
+      "skill-14-supply-chain-reality-66ae9408db"
+    ]
+  },
+  {
+    "id": "skill-14-supply-chain-reality-66ae9408db",
+    "purpose": "14 supply chain reality",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-process-testing-domains-and-supply-chain/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-process-testing-domains-and-supply-chain/004-14-supply-chain-reality.md",
+    "requires": [
+      "skill-13-the-domains-2952fddafb"
+    ],
+    "links": []
+  }
+]

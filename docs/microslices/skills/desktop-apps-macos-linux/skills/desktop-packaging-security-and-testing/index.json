@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-packaging-and-distribution-85a52656fc",
+    "purpose": "10 packaging and distribution",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/001-10-packaging-and-distribution.md",
+    "requires": [],
+    "links": [
+      "skill-11-auto-update-5e76479800"
+    ]
+  },
+  {
+    "id": "skill-11-auto-update-5e76479800",
+    "purpose": "11 auto update",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/002-11-auto-update.md",
+    "requires": [
+      "skill-10-packaging-and-distribution-85a52656fc"
+    ],
+    "links": [
+      "skill-12-security-sandboxing-and-privacy-fcb530a478"
+    ]
+  },
+  {
+    "id": "skill-12-security-sandboxing-and-privacy-fcb530a478",
+    "purpose": "12 security sandboxing and privacy",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/003-12-security-sandboxing-and-privacy.md",
+    "requires": [
+      "skill-11-auto-update-5e76479800"
+    ],
+    "links": [
+      "skill-13-testing-debugging-and-ci-9f8b60962a"
+    ]
+  },
+  {
+    "id": "skill-13-testing-debugging-and-ci-9f8b60962a",
+    "purpose": "13 testing debugging and ci",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-packaging-security-and-testing/004-13-testing-debugging-and-ci.md",
+    "requires": [
+      "skill-12-security-sandboxing-and-privacy-fcb530a478"
+    ],
+    "links": []
+  }
+]

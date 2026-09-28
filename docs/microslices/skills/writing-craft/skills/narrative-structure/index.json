@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-the-foundational-distinction-c67bae627f",
+    "purpose": "the foundational distinction",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/001-the-foundational-distinction.md",
+    "requires": [],
+    "links": [
+      "skill-campbell-s-17-stages-the-psychological-grammar-46420eb22e"
+    ]
+  },
+  {
+    "id": "skill-campbell-s-17-stages-the-psychological-grammar-46420eb22e",
+    "purpose": "campbell s 17 stages the psychological grammar",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/002-campbell-s-17-stages-the-psychological-grammar.md",
+    "requires": [
+      "skill-the-foundational-distinction-c67bae627f"
+    ],
+    "links": [
+      "skill-the-jungian-substrate-why-it-works-21e04858fc"
+    ]
+  },
+  {
+    "id": "skill-the-jungian-substrate-why-it-works-21e04858fc",
+    "purpose": "the jungian substrate why it works",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/003-the-jungian-substrate-why-it-works.md",
+    "requires": [
+      "skill-campbell-s-17-stages-the-psychological-grammar-46420eb22e"
+    ],
+    "links": [
+      "skill-vogler-s-12-stages-and-8-archetypes-the-working-version-ceb3c90054"
+    ]
+  },
+  {
+    "id": "skill-vogler-s-12-stages-and-8-archetypes-the-working-version-ceb3c90054",
+    "purpose": "vogler s 12 stages and 8 archetypes the working version",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/004-vogler-s-12-stages-and-8-archetypes-the-working-version.md",
+    "requires": [
+      "skill-the-jungian-substrate-why-it-works-21e04858fc"
+    ],
+    "links": [
+      "skill-blake-snyder-s-save-the-cat-15-beats-00313e6d6d"
+    ]
+  },
+  {
+    "id": "skill-blake-snyder-s-save-the-cat-15-beats-00313e6d6d",
+    "purpose": "blake snyder s save the cat 15 beats",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/005-blake-snyder-s-save-the-cat-15-beats.md",
+    "requires": [
+      "skill-vogler-s-12-stages-and-8-archetypes-the-working-version-ceb3c90054"
+    ],
+    "links": [
+      "skill-comparative-framework-analysis-804abd53c3"
+    ]
+  },
+  {
+    "id": "skill-comparative-framework-analysis-804abd53c3",
+    "purpose": "comparative framework analysis",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/006-comparative-framework-analysis.md",
+    "requires": [
+      "skill-blake-snyder-s-save-the-cat-15-beats-00313e6d6d"
+    ],
+    "links": [
+      "skill-storybrand-the-correct-non-fiction-adaptation-7397a88945"
+    ]
+  },
+  {
+    "id": "skill-storybrand-the-correct-non-fiction-adaptation-7397a88945",
+    "purpose": "storybrand the correct non fiction adaptation",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/007-storybrand-the-correct-non-fiction-adaptation.md",
+    "requires": [
+      "skill-comparative-framework-analysis-804abd53c3"
+    ],
+    "links": [
+      "skill-application-to-white-papers-and-thought-leadership-1ae928b26f"
+    ]
+  },
+  {
+    "id": "skill-application-to-white-papers-and-thought-leadership-1ae928b26f",
+    "purpose": "application to white papers and thought leadership",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/008-application-to-white-papers-and-thought-leadership.md",
+    "requires": [
+      "skill-storybrand-the-correct-non-fiction-adaptation-7397a88945"
+    ],
+    "links": [
+      "skill-common-failure-modes-1db2f5ed52"
+    ]
+  },
+  {
+    "id": "skill-common-failure-modes-1db2f5ed52",
+    "purpose": "common failure modes",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/009-common-failure-modes.md",
+    "requires": [
+      "skill-application-to-white-papers-and-thought-leadership-1ae928b26f"
+    ],
+    "links": [
+      "skill-academic-critiques-what-to-hold-lightly-341e002131"
+    ]
+  },
+  {
+    "id": "skill-academic-critiques-what-to-hold-lightly-341e002131",
+    "purpose": "academic critiques what to hold lightly",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/010-academic-critiques-what-to-hold-lightly.md",
+    "requires": [
+      "skill-common-failure-modes-1db2f5ed52"
+    ],
+    "links": [
+      "skill-quick-reference-framework-selection-guide-3fbec92c77"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-framework-selection-guide-3fbec92c77",
+    "purpose": "quick reference framework selection guide",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/narrative-structure/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/narrative-structure/011-quick-reference-framework-selection-guide.md",
+    "requires": [
+      "skill-academic-critiques-what-to-hold-lightly-341e002131"
+    ],
+    "links": []
+  }
+]

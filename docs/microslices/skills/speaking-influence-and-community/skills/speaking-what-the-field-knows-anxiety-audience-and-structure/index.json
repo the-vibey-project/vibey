@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-1d427b1870",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-this-field-actually-knows-87c4c237cf"
+    ]
+  },
+  {
+    "id": "skill-1-what-this-field-actually-knows-87c4c237cf",
+    "purpose": "1 what this field actually knows",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/002-1-what-this-field-actually-knows.md",
+    "requires": [
+      "skill-0-routing-1d427b1870"
+    ],
+    "links": [
+      "skill-2-speech-anxiety-c0115a7225"
+    ]
+  },
+  {
+    "id": "skill-2-speech-anxiety-c0115a7225",
+    "purpose": "2 speech anxiety",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/003-2-speech-anxiety.md",
+    "requires": [
+      "skill-1-what-this-field-actually-knows-87c4c237cf"
+    ],
+    "links": [
+      "skill-3-audience-and-purpose-22542757b3"
+    ]
+  },
+  {
+    "id": "skill-3-audience-and-purpose-22542757b3",
+    "purpose": "3 audience and purpose",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/004-3-audience-and-purpose.md",
+    "requires": [
+      "skill-2-speech-anxiety-c0115a7225"
+    ],
+    "links": [
+      "skill-4-structure-f14b345b04"
+    ]
+  },
+  {
+    "id": "skill-4-structure-f14b345b04",
+    "purpose": "4 structure",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/005-4-structure.md",
+    "requires": [
+      "skill-3-audience-and-purpose-22542757b3"
+    ],
+    "links": [
+      "skill-5-openings-and-closings-64146d9877"
+    ]
+  },
+  {
+    "id": "skill-5-openings-and-closings-64146d9877",
+    "purpose": "5 openings and closings",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-what-the-field-knows-anxiety-audience-and-structure/006-5-openings-and-closings.md",
+    "requires": [
+      "skill-4-structure-f14b345b04"
+    ],
+    "links": []
+  }
+]

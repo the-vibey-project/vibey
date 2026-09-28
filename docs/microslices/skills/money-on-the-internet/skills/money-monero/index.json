@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-1-what-it-is-and-the-honest-trade-421a7d6e77",
+    "purpose": "1 what it is and the honest trade",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/001-1-what-it-is-and-the-honest-trade.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-privacy-stack-durable-356e0ce8a9"
+    ]
+  },
+  {
+    "id": "skill-2-the-privacy-stack-durable-356e0ce8a9",
+    "purpose": "2 the privacy stack durable",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/002-2-the-privacy-stack-durable.md",
+    "requires": [
+      "skill-1-what-it-is-and-the-honest-trade-421a7d6e77"
+    ],
+    "links": [
+      "skill-3-fcmp-the-upgrade-that-matters-and-its-real-status-versioned-verify-before-relying-478518c59d"
+    ]
+  },
+  {
+    "id": "skill-3-fcmp-the-upgrade-that-matters-and-its-real-status-versioned-verify-before-relying-478518c59d",
+    "purpose": "3 fcmp the upgrade that matters and its real status versioned verify before relying",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/003-3-fcmp-the-upgrade-that-matters-and-its-real-status-versioned-verify-before-relying.md",
+    "requires": [
+      "skill-2-the-privacy-stack-durable-356e0ce8a9"
+    ],
+    "links": [
+      "skill-4-the-qubic-affair-aug-2025-what-a-51-attack-actually-looks-like-contested-interpretation-bf03d70fb7"
+    ]
+  },
+  {
+    "id": "skill-4-the-qubic-affair-aug-2025-what-a-51-attack-actually-looks-like-contested-interpretation-bf03d70fb7",
+    "purpose": "4 the qubic affair aug 2025 what a 51 attack actually looks like contested interpretation",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/004-4-the-qubic-affair-aug-2025-what-a-51-attack-actually-looks-like-contested-interpretation.md",
+    "requires": [
+      "skill-3-fcmp-the-upgrade-that-matters-and-its-real-status-versioned-verify-before-relying-478518c59d"
+    ],
+    "links": [
+      "skill-5-using-monero-in-2026-access-is-the-hard-part-a1ba946370"
+    ]
+  },
+  {
+    "id": "skill-5-using-monero-in-2026-access-is-the-hard-part-a1ba946370",
+    "purpose": "5 using monero in 2026 access is the hard part",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/005-5-using-monero-in-2026-access-is-the-hard-part.md",
+    "requires": [
+      "skill-4-the-qubic-affair-aug-2025-what-a-51-attack-actually-looks-like-contested-interpretation-bf03d70fb7"
+    ],
+    "links": [
+      "skill-6-developing-on-monero-02ab03f199"
+    ]
+  },
+  {
+    "id": "skill-6-developing-on-monero-02ab03f199",
+    "purpose": "6 developing on monero",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/006-6-developing-on-monero.md",
+    "requires": [
+      "skill-5-using-monero-in-2026-access-is-the-hard-part-a1ba946370"
+    ],
+    "links": [
+      "skill-7-assessment-contested-by-nature-613787c9a3"
+    ]
+  },
+  {
+    "id": "skill-7-assessment-contested-by-nature-613787c9a3",
+    "purpose": "7 assessment contested by nature",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/007-7-assessment-contested-by-nature.md",
+    "requires": [
+      "skill-6-developing-on-monero-02ab03f199"
+    ],
+    "links": [
+      "skill-sources-as-of-16-sep-2026-03da8fcc6e"
+    ]
+  },
+  {
+    "id": "skill-sources-as-of-16-sep-2026-03da8fcc6e",
+    "purpose": "sources as of 16 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-monero/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-monero/008-sources-as-of-16-sep-2026.md",
+    "requires": [
+      "skill-7-assessment-contested-by-nature-613787c9a3"
+    ],
+    "links": []
+  }
+]

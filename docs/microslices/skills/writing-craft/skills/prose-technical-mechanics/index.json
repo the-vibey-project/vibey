@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-part-one-word-choice-diction-e53e0796fc",
+    "purpose": "part one word choice diction",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-technical-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-technical-mechanics/001-part-one-word-choice-diction.md",
+    "requires": [],
+    "links": [
+      "skill-part-two-word-placement-and-sentence-mechanics-1e1b70a570"
+    ]
+  },
+  {
+    "id": "skill-part-two-word-placement-and-sentence-mechanics-1e1b70a570",
+    "purpose": "part two word placement and sentence mechanics",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-technical-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-technical-mechanics/002-part-two-word-placement-and-sentence-mechanics.md",
+    "requires": [
+      "skill-part-one-word-choice-diction-e53e0796fc"
+    ],
+    "links": [
+      "skill-part-three-paragraph-and-argument-mechanics-eaeb199c24"
+    ]
+  },
+  {
+    "id": "skill-part-three-paragraph-and-argument-mechanics-eaeb199c24",
+    "purpose": "part three paragraph and argument mechanics",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-technical-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-technical-mechanics/003-part-three-paragraph-and-argument-mechanics.md",
+    "requires": [
+      "skill-part-two-word-placement-and-sentence-mechanics-1e1b70a570"
+    ],
+    "links": [
+      "skill-part-four-masters-and-their-mechanics-f313e757cb"
+    ]
+  },
+  {
+    "id": "skill-part-four-masters-and-their-mechanics-f313e757cb",
+    "purpose": "part four masters and their mechanics",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-technical-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-technical-mechanics/004-part-four-masters-and-their-mechanics.md",
+    "requires": [
+      "skill-part-three-paragraph-and-argument-mechanics-eaeb199c24"
+    ],
+    "links": [
+      "skill-quick-reference-diagnostic-questions-02c687c129"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-diagnostic-questions-02c687c129",
+    "purpose": "quick reference diagnostic questions",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-technical-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-technical-mechanics/005-quick-reference-diagnostic-questions.md",
+    "requires": [
+      "skill-part-four-masters-and-their-mechanics-f313e757cb"
+    ],
+    "links": []
+  }
+]

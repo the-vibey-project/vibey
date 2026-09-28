@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-resistance-and-powering-1b0c42714d",
+    "purpose": "5 resistance and powering",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/001-5-resistance-and-powering.md",
+    "requires": [],
+    "links": [
+      "skill-6-propulsion-f42cf24295"
+    ]
+  },
+  {
+    "id": "skill-6-propulsion-f42cf24295",
+    "purpose": "6 propulsion",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/002-6-propulsion.md",
+    "requires": [
+      "skill-5-resistance-and-powering-1b0c42714d"
+    ],
+    "links": [
+      "skill-7-seakeeping-2c20c4da9c"
+    ]
+  },
+  {
+    "id": "skill-7-seakeeping-2c20c4da9c",
+    "purpose": "7 seakeeping",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/003-7-seakeeping.md",
+    "requires": [
+      "skill-6-propulsion-f42cf24295"
+    ],
+    "links": [
+      "skill-8-manoeuvring-07474a86d8"
+    ]
+  },
+  {
+    "id": "skill-8-manoeuvring-07474a86d8",
+    "purpose": "8 manoeuvring",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-resistance-propulsion-seakeeping-and-manoeuvring/004-8-manoeuvring.md",
+    "requires": [
+      "skill-7-seakeeping-2c20c4da9c"
+    ],
+    "links": []
+  }
+]

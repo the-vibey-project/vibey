@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-24-what-s-live-verified-august-2026-1fd225292a",
+    "purpose": "24 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-reference/001-24-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-25-misconceptions-96b1a13ef9"
+    ]
+  },
+  {
+    "id": "skill-25-misconceptions-96b1a13ef9",
+    "purpose": "25 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-reference/002-25-misconceptions.md",
+    "requires": [
+      "skill-24-what-s-live-verified-august-2026-1fd225292a"
+    ],
+    "links": [
+      "skill-26-numbers-9523322014"
+    ]
+  },
+  {
+    "id": "skill-26-numbers-9523322014",
+    "purpose": "26 numbers",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-reference/003-26-numbers.md",
+    "requires": [
+      "skill-25-misconceptions-96b1a13ef9"
+    ],
+    "links": [
+      "skill-27-tools-and-resources-67a142893d"
+    ]
+  },
+  {
+    "id": "skill-27-tools-and-resources-67a142893d",
+    "purpose": "27 tools and resources",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-reference/004-27-tools-and-resources.md",
+    "requires": [
+      "skill-26-numbers-9523322014"
+    ],
+    "links": [
+      "skill-28-quick-reference-633c11751a"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-633c11751a",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-reference/005-28-quick-reference.md",
+    "requires": [
+      "skill-27-tools-and-resources-67a142893d"
+    ],
+    "links": [
+      "skill-29-method-1cefc60924"
+    ]
+  },
+  {
+    "id": "skill-29-method-1cefc60924",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-reference/006-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-633c11751a"
+    ],
+    "links": []
+  }
+]

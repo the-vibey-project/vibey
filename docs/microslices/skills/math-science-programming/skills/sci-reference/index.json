@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-053ce7d4bd",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-reference/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-b4fc0fecdf"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-b4fc0fecdf",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-reference/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-053ce7d4bd"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-b101cffa6a"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-b101cffa6a",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-reference/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-b4fc0fecdf"
+    ],
+    "links": [
+      "skill-18-the-canon-e6ede1a78c"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-e6ede1a78c",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-reference/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-b101cffa6a"
+    ],
+    "links": [
+      "skill-19-quick-reference-3613ba3c78"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-3613ba3c78",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-reference/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-e6ede1a78c"
+    ],
+    "links": [
+      "skill-20-sources-and-method-8f64c281a2"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-8f64c281a2",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-reference/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-3613ba3c78"
+    ],
+    "links": []
+  }
+]

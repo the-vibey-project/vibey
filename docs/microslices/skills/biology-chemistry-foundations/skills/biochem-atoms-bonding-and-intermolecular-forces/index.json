@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-128ae0e67e",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-atoms-and-periodicity-1a9326490d"
+    ]
+  },
+  {
+    "id": "skill-1-atoms-and-periodicity-1a9326490d",
+    "purpose": "1 atoms and periodicity",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/002-1-atoms-and-periodicity.md",
+    "requires": [
+      "skill-0-routing-128ae0e67e"
+    ],
+    "links": [
+      "skill-2-bonding-and-geometry-76db2be63f"
+    ]
+  },
+  {
+    "id": "skill-2-bonding-and-geometry-76db2be63f",
+    "purpose": "2 bonding and geometry",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/003-2-bonding-and-geometry.md",
+    "requires": [
+      "skill-1-atoms-and-periodicity-1a9326490d"
+    ],
+    "links": [
+      "skill-3-intermolecular-forces-phases-solutions-a57b46e7de"
+    ]
+  },
+  {
+    "id": "skill-3-intermolecular-forces-phases-solutions-a57b46e7de",
+    "purpose": "3 intermolecular forces phases solutions",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-atoms-bonding-and-intermolecular-forces/004-3-intermolecular-forces-phases-solutions.md",
+    "requires": [
+      "skill-2-bonding-and-geometry-76db2be63f"
+    ],
+    "links": []
+  }
+]

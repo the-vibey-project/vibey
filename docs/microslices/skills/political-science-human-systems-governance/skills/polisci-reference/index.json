@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-checked-august-2026-63bdda150c",
+    "purpose": "26 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-reference/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-reference/001-26-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-bea1b52073"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-bea1b52073",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-reference/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-checked-august-2026-63bdda150c"
+    ],
+    "links": [
+      "skill-28-numbers-and-named-results-da03794bd2"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-and-named-results-da03794bd2",
+    "purpose": "28 numbers and named results",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-reference/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-reference/003-28-numbers-and-named-results.md",
+    "requires": [
+      "skill-27-misconceptions-bea1b52073"
+    ],
+    "links": [
+      "skill-29-books-and-sources-e95724d972"
+    ]
+  },
+  {
+    "id": "skill-29-books-and-sources-e95724d972",
+    "purpose": "29 books and sources",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-reference/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-reference/004-29-books-and-sources.md",
+    "requires": [
+      "skill-28-numbers-and-named-results-da03794bd2"
+    ],
+    "links": [
+      "skill-30-quick-reference-22718ea1bb"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-22718ea1bb",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-reference/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-books-and-sources-e95724d972"
+    ],
+    "links": [
+      "skill-31-method-daca87aa7d"
+    ]
+  },
+  {
+    "id": "skill-31-method-daca87aa7d",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-reference/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-22718ea1bb"
+    ],
+    "links": []
+  }
+]

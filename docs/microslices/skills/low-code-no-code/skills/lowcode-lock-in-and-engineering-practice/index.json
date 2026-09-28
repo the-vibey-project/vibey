@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-13-escape-hatches-and-lock-in-ec9dfa5390",
+    "purpose": "13 escape hatches and lock in",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-lock-in-and-engineering-practice/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-lock-in-and-engineering-practice/001-13-escape-hatches-and-lock-in.md",
+    "requires": [],
+    "links": [
+      "skill-14-engineering-practice-inside-low-code-0dc3dc6b0c"
+    ]
+  },
+  {
+    "id": "skill-14-engineering-practice-inside-low-code-0dc3dc6b0c",
+    "purpose": "14 engineering practice inside low code",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-lock-in-and-engineering-practice/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-lock-in-and-engineering-practice/002-14-engineering-practice-inside-low-code.md",
+    "requires": [
+      "skill-13-escape-hatches-and-lock-in-ec9dfa5390"
+    ],
+    "links": []
+  }
+]

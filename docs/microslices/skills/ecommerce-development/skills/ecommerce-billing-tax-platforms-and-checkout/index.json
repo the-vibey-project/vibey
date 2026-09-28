@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-9-subscriptions-and-billing-f3165c31c5",
+    "purpose": "9 subscriptions and billing",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/001-9-subscriptions-and-billing.md",
+    "requires": [],
+    "links": [
+      "skill-10-marketplaces-and-multi-party-payments-da2bffdb03"
+    ]
+  },
+  {
+    "id": "skill-10-marketplaces-and-multi-party-payments-da2bffdb03",
+    "purpose": "10 marketplaces and multi party payments",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/002-10-marketplaces-and-multi-party-payments.md",
+    "requires": [
+      "skill-9-subscriptions-and-billing-f3165c31c5"
+    ],
+    "links": [
+      "skill-11-tax-and-cross-border-c9972da7e1"
+    ]
+  },
+  {
+    "id": "skill-11-tax-and-cross-border-c9972da7e1",
+    "purpose": "11 tax and cross border",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/003-11-tax-and-cross-border.md",
+    "requires": [
+      "skill-10-marketplaces-and-multi-party-payments-da2bffdb03"
+    ],
+    "links": [
+      "skill-12-the-platform-layer-ad4c530a06"
+    ]
+  },
+  {
+    "id": "skill-12-the-platform-layer-ad4c530a06",
+    "purpose": "12 the platform layer",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/004-12-the-platform-layer.md",
+    "requires": [
+      "skill-11-tax-and-cross-border-c9972da7e1"
+    ],
+    "links": [
+      "skill-13-catalog-cart-and-checkout-a8752b82f8"
+    ]
+  },
+  {
+    "id": "skill-13-catalog-cart-and-checkout-a8752b82f8",
+    "purpose": "13 catalog cart and checkout",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/005-13-catalog-cart-and-checkout.md",
+    "requires": [
+      "skill-12-the-platform-layer-ad4c530a06"
+    ],
+    "links": [
+      "skill-14-agentic-commerce-893ac8a9b0"
+    ]
+  },
+  {
+    "id": "skill-14-agentic-commerce-893ac8a9b0",
+    "purpose": "14 agentic commerce",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-billing-tax-platforms-and-checkout/006-14-agentic-commerce.md",
+    "requires": [
+      "skill-13-catalog-cart-and-checkout-a8752b82f8"
+    ],
+    "links": []
+  }
+]

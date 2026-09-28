@@ -1,0 +1,238 @@
+[
+  {
+    "id": "skill-the-decision-framework-1601e239ac",
+    "purpose": "the decision framework",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/001-the-decision-framework.md",
+    "requires": [],
+    "links": [
+      "skill-rag-fundamentals-6f3492eac5"
+    ]
+  },
+  {
+    "id": "skill-rag-fundamentals-6f3492eac5",
+    "purpose": "rag fundamentals",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/002-rag-fundamentals.md",
+    "requires": [
+      "skill-the-decision-framework-1601e239ac"
+    ],
+    "links": [
+      "skill-document-parsing-honest-comparison-b0d0c2ee35"
+    ]
+  },
+  {
+    "id": "skill-document-parsing-honest-comparison-b0d0c2ee35",
+    "purpose": "document parsing honest comparison",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/003-document-parsing-honest-comparison.md",
+    "requires": [
+      "skill-rag-fundamentals-6f3492eac5"
+    ],
+    "links": [
+      "skill-chunking-the-highest-roi-lever-ce059dcf62"
+    ]
+  },
+  {
+    "id": "skill-chunking-the-highest-roi-lever-ce059dcf62",
+    "purpose": "chunking the highest roi lever",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/004-chunking-the-highest-roi-lever.md",
+    "requires": [
+      "skill-document-parsing-honest-comparison-b0d0c2ee35"
+    ],
+    "links": [
+      "skill-embedding-models-2026-fe4d373f9b"
+    ]
+  },
+  {
+    "id": "skill-embedding-models-2026-fe4d373f9b",
+    "purpose": "embedding models 2026",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/005-embedding-models-2026.md",
+    "requires": [
+      "skill-chunking-the-highest-roi-lever-ce059dcf62"
+    ],
+    "links": [
+      "skill-vector-databases-honest-selection-guide-c0719ac20d"
+    ]
+  },
+  {
+    "id": "skill-vector-databases-honest-selection-guide-c0719ac20d",
+    "purpose": "vector databases honest selection guide",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/006-vector-databases-honest-selection-guide.md",
+    "requires": [
+      "skill-embedding-models-2026-fe4d373f9b"
+    ],
+    "links": [
+      "skill-retrieval-strategies-21e8cb5c41"
+    ]
+  },
+  {
+    "id": "skill-retrieval-strategies-21e8cb5c41",
+    "purpose": "retrieval strategies",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/007-retrieval-strategies.md",
+    "requires": [
+      "skill-vector-databases-honest-selection-guide-c0719ac20d"
+    ],
+    "links": [
+      "skill-reranking-e2ac188267"
+    ]
+  },
+  {
+    "id": "skill-reranking-e2ac188267",
+    "purpose": "reranking",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/008-reranking.md",
+    "requires": [
+      "skill-retrieval-strategies-21e8cb5c41"
+    ],
+    "links": [
+      "skill-context-assembly-generation-21b8339a4d"
+    ]
+  },
+  {
+    "id": "skill-context-assembly-generation-21b8339a4d",
+    "purpose": "context assembly generation",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/009-context-assembly-generation.md",
+    "requires": [
+      "skill-reranking-e2ac188267"
+    ],
+    "links": [
+      "skill-advanced-rag-patterns-35d40777d0"
+    ]
+  },
+  {
+    "id": "skill-advanced-rag-patterns-35d40777d0",
+    "purpose": "advanced rag patterns",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/010-advanced-rag-patterns.md",
+    "requires": [
+      "skill-context-assembly-generation-21b8339a4d"
+    ],
+    "links": [
+      "skill-rag-evaluation-489316c9f0"
+    ]
+  },
+  {
+    "id": "skill-rag-evaluation-489316c9f0",
+    "purpose": "rag evaluation",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/011-rag-evaluation.md",
+    "requires": [
+      "skill-advanced-rag-patterns-35d40777d0"
+    ],
+    "links": [
+      "skill-azure-ai-search-deep-dive-91a7480313"
+    ]
+  },
+  {
+    "id": "skill-azure-ai-search-deep-dive-91a7480313",
+    "purpose": "azure ai search deep dive",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/012-azure-ai-search-deep-dive.md",
+    "requires": [
+      "skill-rag-evaluation-489316c9f0"
+    ],
+    "links": [
+      "skill-ai-agent-fundamentals-b3879d5844"
+    ]
+  },
+  {
+    "id": "skill-ai-agent-fundamentals-b3879d5844",
+    "purpose": "ai agent fundamentals",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/013-ai-agent-fundamentals.md",
+    "requires": [
+      "skill-azure-ai-search-deep-dive-91a7480313"
+    ],
+    "links": [
+      "skill-agent-frameworks-c7f465a44d"
+    ]
+  },
+  {
+    "id": "skill-agent-frameworks-c7f465a44d",
+    "purpose": "agent frameworks",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/014-agent-frameworks.md",
+    "requires": [
+      "skill-ai-agent-fundamentals-b3879d5844"
+    ],
+    "links": [
+      "skill-mcp-model-context-protocol-c7a2214409"
+    ]
+  },
+  {
+    "id": "skill-mcp-model-context-protocol-c7a2214409",
+    "purpose": "mcp model context protocol",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/015-mcp-model-context-protocol.md",
+    "requires": [
+      "skill-agent-frameworks-c7f465a44d"
+    ],
+    "links": [
+      "skill-multi-agent-systems-b0ac2ceacf"
+    ]
+  },
+  {
+    "id": "skill-multi-agent-systems-b0ac2ceacf",
+    "purpose": "multi agent systems",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/016-multi-agent-systems.md",
+    "requires": [
+      "skill-mcp-model-context-protocol-c7a2214409"
+    ],
+    "links": [
+      "skill-agentic-system-design-security-a3eeb4b322"
+    ]
+  },
+  {
+    "id": "skill-agentic-system-design-security-a3eeb4b322",
+    "purpose": "agentic system design security",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/017-agentic-system-design-security.md",
+    "requires": [
+      "skill-multi-agent-systems-b0ac2ceacf"
+    ],
+    "links": [
+      "skill-emerging-patterns-893d12ab17"
+    ]
+  },
+  {
+    "id": "skill-emerging-patterns-893d12ab17",
+    "purpose": "emerging patterns",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/018-emerging-patterns.md",
+    "requires": [
+      "skill-agentic-system-design-security-a3eeb4b322"
+    ],
+    "links": [
+      "skill-anti-patterns-to-avoid-c3f0a25a8b"
+    ]
+  },
+  {
+    "id": "skill-anti-patterns-to-avoid-c3f0a25a8b",
+    "purpose": "anti patterns to avoid",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/019-anti-patterns-to-avoid.md",
+    "requires": [
+      "skill-emerging-patterns-893d12ab17"
+    ],
+    "links": [
+      "skill-staged-implementation-roadmap-5678f10d22"
+    ]
+  },
+  {
+    "id": "skill-staged-implementation-roadmap-5678f10d22",
+    "purpose": "staged implementation roadmap",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/rag-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/rag-and-agents/020-staged-implementation-roadmap.md",
+    "requires": [
+      "skill-anti-patterns-to-avoid-c3f0a25a8b"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-crop-production-484ca7ec74",
+    "purpose": "17 crop production",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/001-17-crop-production.md",
+    "requires": [],
+    "links": [
+      "skill-18-crop-rotation-multiple-jobs-at-once-306a4abdd7"
+    ]
+  },
+  {
+    "id": "skill-18-crop-rotation-multiple-jobs-at-once-306a4abdd7",
+    "purpose": "18 crop rotation multiple jobs at once",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/002-18-crop-rotation-multiple-jobs-at-once.md",
+    "requires": [
+      "skill-17-crop-production-484ca7ec74"
+    ],
+    "links": [
+      "skill-19-integrated-pest-management-ipm-7caf277a98"
+    ]
+  },
+  {
+    "id": "skill-19-integrated-pest-management-ipm-7caf277a98",
+    "purpose": "19 integrated pest management ipm",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/003-19-integrated-pest-management-ipm.md",
+    "requires": [
+      "skill-18-crop-rotation-multiple-jobs-at-once-306a4abdd7"
+    ],
+    "links": [
+      "skill-20-water-and-irrigation-2080a7b9fc"
+    ]
+  },
+  {
+    "id": "skill-20-water-and-irrigation-2080a7b9fc",
+    "purpose": "20 water and irrigation",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/004-20-water-and-irrigation.md",
+    "requires": [
+      "skill-19-integrated-pest-management-ipm-7caf277a98"
+    ],
+    "links": [
+      "skill-21-farming-systems-honestly-c1cf0d2f67"
+    ]
+  },
+  {
+    "id": "skill-21-farming-systems-honestly-c1cf0d2f67",
+    "purpose": "21 farming systems honestly",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/005-21-farming-systems-honestly.md",
+    "requires": [
+      "skill-20-water-and-irrigation-2080a7b9fc"
+    ],
+    "links": [
+      "skill-22-the-crop-growing-checklist-e38c6c97fb"
+    ]
+  },
+  {
+    "id": "skill-22-the-crop-growing-checklist-e38c6c97fb",
+    "purpose": "22 the crop growing checklist",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-crops-rotation-pests-and-water/006-22-the-crop-growing-checklist.md",
+    "requires": [
+      "skill-21-farming-systems-honestly-c1cf0d2f67"
+    ],
+    "links": []
+  }
+]

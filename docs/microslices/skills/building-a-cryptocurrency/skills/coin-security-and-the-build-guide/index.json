@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-9-security-what-actually-loses-money-15b470d80e",
+    "purpose": "9 security what actually loses money",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-security-and-the-build-guide/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-security-and-the-build-guide/001-9-security-what-actually-loses-money.md",
+    "requires": [],
+    "links": [
+      "skill-10-practical-building-guide-200a436140"
+    ]
+  },
+  {
+    "id": "skill-10-practical-building-guide-200a436140",
+    "purpose": "10 practical building guide",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-security-and-the-build-guide/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-security-and-the-build-guide/002-10-practical-building-guide.md",
+    "requires": [
+      "skill-9-security-what-actually-loses-money-15b470d80e"
+    ],
+    "links": []
+  }
+]

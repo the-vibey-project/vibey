@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-thermodynamics-683f09e075",
+    "purpose": "4 thermodynamics",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/001-4-thermodynamics.md",
+    "requires": [],
+    "links": [
+      "skill-5-kinetics-b5ed0c30d7"
+    ]
+  },
+  {
+    "id": "skill-5-kinetics-b5ed0c30d7",
+    "purpose": "5 kinetics",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/002-5-kinetics.md",
+    "requires": [
+      "skill-4-thermodynamics-683f09e075"
+    ],
+    "links": [
+      "skill-6-equilibrium-and-acid-base-6b427f6150"
+    ]
+  },
+  {
+    "id": "skill-6-equilibrium-and-acid-base-6b427f6150",
+    "purpose": "6 equilibrium and acid base",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/003-6-equilibrium-and-acid-base.md",
+    "requires": [
+      "skill-5-kinetics-b5ed0c30d7"
+    ],
+    "links": [
+      "skill-7-redox-and-electrochemistry-7f8f48fe92"
+    ]
+  },
+  {
+    "id": "skill-7-redox-and-electrochemistry-7f8f48fe92",
+    "purpose": "7 redox and electrochemistry",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-thermodynamics-kinetics-and-equilibrium/004-7-redox-and-electrochemistry.md",
+    "requires": [
+      "skill-6-equilibrium-and-acid-base-6b427f6150"
+    ],
+    "links": []
+  }
+]

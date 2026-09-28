@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-what-this-skill-does-d68e277239",
+    "purpose": "what this skill does",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/001-what-this-skill-does.md",
+    "requires": [],
+    "links": [
+      "skill-framework-overview-c4b60e976d"
+    ]
+  },
+  {
+    "id": "skill-framework-overview-c4b60e976d",
+    "purpose": "framework overview",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/002-framework-overview.md",
+    "requires": [
+      "skill-what-this-skill-does-d68e277239"
+    ],
+    "links": [
+      "skill-the-14-control-families-ad18b18d3c"
+    ]
+  },
+  {
+    "id": "skill-the-14-control-families-ad18b18d3c",
+    "purpose": "the 14 control families",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/003-the-14-control-families.md",
+    "requires": [
+      "skill-framework-overview-c4b60e976d"
+    ],
+    "links": [
+      "skill-sprs-score-system-2a42f8675e"
+    ]
+  },
+  {
+    "id": "skill-sprs-score-system-2a42f8675e",
+    "purpose": "sprs score system",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/004-sprs-score-system.md",
+    "requires": [
+      "skill-the-14-control-families-ad18b18d3c"
+    ],
+    "links": [
+      "skill-self-assessment-methodology-8c70848f7c"
+    ]
+  },
+  {
+    "id": "skill-self-assessment-methodology-8c70848f7c",
+    "purpose": "self assessment methodology",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/005-self-assessment-methodology.md",
+    "requires": [
+      "skill-sprs-score-system-2a42f8675e"
+    ],
+    "links": [
+      "skill-poa-m-structure-33060b98cc"
+    ]
+  },
+  {
+    "id": "skill-poa-m-structure-33060b98cc",
+    "purpose": "poa m structure",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/006-poa-m-structure.md",
+    "requires": [
+      "skill-self-assessment-methodology-8c70848f7c"
+    ],
+    "links": [
+      "skill-common-control-deficiencies-and-remediation-patterns-062bdb33e0"
+    ]
+  },
+  {
+    "id": "skill-common-control-deficiencies-and-remediation-patterns-062bdb33e0",
+    "purpose": "common control deficiencies and remediation patterns",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/007-common-control-deficiencies-and-remediation-patterns.md",
+    "requires": [
+      "skill-poa-m-structure-33060b98cc"
+    ],
+    "links": [
+      "skill-relationship-to-cmmc-level-2-4241d6dc39"
+    ]
+  },
+  {
+    "id": "skill-relationship-to-cmmc-level-2-4241d6dc39",
+    "purpose": "relationship to cmmc level 2",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/008-relationship-to-cmmc-level-2.md",
+    "requires": [
+      "skill-common-control-deficiencies-and-remediation-patterns-062bdb33e0"
+    ],
+    "links": [
+      "skill-quick-reference-all-110-controls-by-family-28f742e013"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-all-110-controls-by-family-28f742e013",
+    "purpose": "quick reference all 110 controls by family",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/009-quick-reference-all-110-controls-by-family.md",
+    "requires": [
+      "skill-relationship-to-cmmc-level-2-4241d6dc39"
+    ],
+    "links": [
+      "skill-assessment-conversation-starters-c4bb40fb83"
+    ]
+  },
+  {
+    "id": "skill-assessment-conversation-starters-c4bb40fb83",
+    "purpose": "assessment conversation starters",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/010-assessment-conversation-starters.md",
+    "requires": [
+      "skill-quick-reference-all-110-controls-by-family-28f742e013"
+    ],
+    "links": [
+      "skill-evidence-checklist-for-common-controls-4c327531e1"
+    ]
+  },
+  {
+    "id": "skill-evidence-checklist-for-common-controls-4c327531e1",
+    "purpose": "evidence checklist for common controls",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/nist-800-171/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/nist-800-171/011-evidence-checklist-for-common-controls.md",
+    "requires": [
+      "skill-assessment-conversation-starters-c4bb40fb83"
+    ],
+    "links": []
+  }
+]

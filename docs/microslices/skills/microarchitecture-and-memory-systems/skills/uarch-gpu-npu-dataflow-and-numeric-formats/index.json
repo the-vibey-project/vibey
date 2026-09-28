@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-gpu-microarchitecture-b7d127b156",
+    "purpose": "11 gpu microarchitecture",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/001-11-gpu-microarchitecture.md",
+    "requires": [],
+    "links": [
+      "skill-12-gpu-memory-systems-f3c1f929b2"
+    ]
+  },
+  {
+    "id": "skill-12-gpu-memory-systems-f3c1f929b2",
+    "purpose": "12 gpu memory systems",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/002-12-gpu-memory-systems.md",
+    "requires": [
+      "skill-11-gpu-microarchitecture-b7d127b156"
+    ],
+    "links": [
+      "skill-13-npus-and-dataflow-architectures-2b6c89ea98"
+    ]
+  },
+  {
+    "id": "skill-13-npus-and-dataflow-architectures-2b6c89ea98",
+    "purpose": "13 npus and dataflow architectures",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/003-13-npus-and-dataflow-architectures.md",
+    "requires": [
+      "skill-12-gpu-memory-systems-f3c1f929b2"
+    ],
+    "links": [
+      "skill-14-numeric-formats-d6eb78708a"
+    ]
+  },
+  {
+    "id": "skill-14-numeric-formats-d6eb78708a",
+    "purpose": "14 numeric formats",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-gpu-npu-dataflow-and-numeric-formats/004-14-numeric-formats.md",
+    "requires": [
+      "skill-13-npus-and-dataflow-architectures-2b6c89ea98"
+    ],
+    "links": []
+  }
+]

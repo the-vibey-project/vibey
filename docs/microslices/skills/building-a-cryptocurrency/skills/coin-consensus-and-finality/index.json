@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-3-consensus-mechanisms-how-the-network-agrees-8f3dd61f03",
+    "purpose": "3 consensus mechanisms how the network agrees",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-consensus-and-finality/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-consensus-and-finality/001-3-consensus-mechanisms-how-the-network-agrees.md",
+    "requires": [],
+    "links": []
+  }
+]

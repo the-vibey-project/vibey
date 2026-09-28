@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-56841de476",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-platform-landscape-775d8a4035"
+    ]
+  },
+  {
+    "id": "skill-1-the-platform-landscape-775d8a4035",
+    "purpose": "1 the platform landscape",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/002-1-the-platform-landscape.md",
+    "requires": [
+      "skill-0-routing-56841de476"
+    ],
+    "links": [
+      "skill-2-the-10-foot-ui-ba1b6789fc"
+    ]
+  },
+  {
+    "id": "skill-2-the-10-foot-ui-ba1b6789fc",
+    "purpose": "2 the 10 foot ui",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/003-2-the-10-foot-ui.md",
+    "requires": [
+      "skill-1-the-platform-landscape-775d8a4035"
+    ],
+    "links": [
+      "skill-3-focus-and-input-411efcd90c"
+    ]
+  },
+  {
+    "id": "skill-3-focus-and-input-411efcd90c",
+    "purpose": "3 focus and input",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-platforms-and-10-foot-ui/004-3-focus-and-input.md",
+    "requires": [
+      "skill-2-the-10-foot-ui-ba1b6789fc"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-5-building-an-ethereum-style-coin-account-pos-evm-bb36222dff",
+    "purpose": "5 building an ethereum style coin account pos evm",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-building-an-account-chain/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-building-an-account-chain/001-5-building-an-ethereum-style-coin-account-pos-evm.md",
+    "requires": [],
+    "links": []
+  }
+]

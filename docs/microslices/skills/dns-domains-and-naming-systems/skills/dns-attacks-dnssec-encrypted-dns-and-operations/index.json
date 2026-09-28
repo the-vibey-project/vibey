@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-6-caching-and-ttl-60cc068ac9",
+    "purpose": "6 caching and ttl",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/001-6-caching-and-ttl.md",
+    "requires": [],
+    "links": [
+      "skill-7-attacks-on-dns-fbd7b8c62a"
+    ]
+  },
+  {
+    "id": "skill-7-attacks-on-dns-fbd7b8c62a",
+    "purpose": "7 attacks on dns",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/002-7-attacks-on-dns.md",
+    "requires": [
+      "skill-6-caching-and-ttl-60cc068ac9"
+    ],
+    "links": [
+      "skill-8-dnssec-25e814d0dc"
+    ]
+  },
+  {
+    "id": "skill-8-dnssec-25e814d0dc",
+    "purpose": "8 dnssec",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/003-8-dnssec.md",
+    "requires": [
+      "skill-7-attacks-on-dns-fbd7b8c62a"
+    ],
+    "links": [
+      "skill-9-encrypted-dns-936017aa21"
+    ]
+  },
+  {
+    "id": "skill-9-encrypted-dns-936017aa21",
+    "purpose": "9 encrypted dns",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/004-9-encrypted-dns.md",
+    "requires": [
+      "skill-8-dnssec-25e814d0dc"
+    ],
+    "links": [
+      "skill-10-modern-extensions-43b4004523"
+    ]
+  },
+  {
+    "id": "skill-10-modern-extensions-43b4004523",
+    "purpose": "10 modern extensions",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/005-10-modern-extensions.md",
+    "requires": [
+      "skill-9-encrypted-dns-936017aa21"
+    ],
+    "links": [
+      "skill-11-operations-53aac4f13c"
+    ]
+  },
+  {
+    "id": "skill-11-operations-53aac4f13c",
+    "purpose": "11 operations",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/006-11-operations.md",
+    "requires": [
+      "skill-10-modern-extensions-43b4004523"
+    ],
+    "links": [
+      "skill-12-dns-as-infrastructure-b30deaa498"
+    ]
+  },
+  {
+    "id": "skill-12-dns-as-infrastructure-b30deaa498",
+    "purpose": "12 dns as infrastructure",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-attacks-dnssec-encrypted-dns-and-operations/007-12-dns-as-infrastructure.md",
+    "requires": [
+      "skill-11-operations-53aac4f13c"
+    ],
+    "links": []
+  }
+]

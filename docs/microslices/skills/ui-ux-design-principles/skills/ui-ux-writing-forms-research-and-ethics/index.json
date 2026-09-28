@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-content-and-ux-writing-da276c49a0",
+    "purpose": "10 content and ux writing",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/001-10-content-and-ux-writing.md",
+    "requires": [],
+    "links": [
+      "skill-11-forms-onboarding-and-conversion-7db671e793"
+    ]
+  },
+  {
+    "id": "skill-11-forms-onboarding-and-conversion-7db671e793",
+    "purpose": "11 forms onboarding and conversion",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/002-11-forms-onboarding-and-conversion.md",
+    "requires": [
+      "skill-10-content-and-ux-writing-da276c49a0"
+    ],
+    "links": [
+      "skill-12-research-and-evaluation-59954690dd"
+    ]
+  },
+  {
+    "id": "skill-12-research-and-evaluation-59954690dd",
+    "purpose": "12 research and evaluation",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/003-12-research-and-evaluation.md",
+    "requires": [
+      "skill-11-forms-onboarding-and-conversion-7db671e793"
+    ],
+    "links": [
+      "skill-13-ethics-persuasion-and-dark-patterns-7be0195082"
+    ]
+  },
+  {
+    "id": "skill-13-ethics-persuasion-and-dark-patterns-7be0195082",
+    "purpose": "13 ethics persuasion and dark patterns",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/004-13-ethics-persuasion-and-dark-patterns.md",
+    "requires": [
+      "skill-12-research-and-evaluation-59954690dd"
+    ],
+    "links": [
+      "skill-14-ai-era-interfaces-0724d40f99"
+    ]
+  },
+  {
+    "id": "skill-14-ai-era-interfaces-0724d40f99",
+    "purpose": "14 ai era interfaces",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/005-14-ai-era-interfaces.md",
+    "requires": [
+      "skill-13-ethics-persuasion-and-dark-patterns-7be0195082"
+    ],
+    "links": []
+  }
+]

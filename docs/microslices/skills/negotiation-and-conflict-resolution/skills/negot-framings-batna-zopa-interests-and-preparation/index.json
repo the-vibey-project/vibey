@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-474d17fd3a",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-two-framings-bbe82cd8d3"
+    ]
+  },
+  {
+    "id": "skill-1-two-framings-bbe82cd8d3",
+    "purpose": "1 two framings",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/002-1-two-framings.md",
+    "requires": [
+      "skill-0-routing-474d17fd3a"
+    ],
+    "links": [
+      "skill-2-distributive-and-integrative-7e3612b4da"
+    ]
+  },
+  {
+    "id": "skill-2-distributive-and-integrative-7e3612b4da",
+    "purpose": "2 distributive and integrative",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/003-2-distributive-and-integrative.md",
+    "requires": [
+      "skill-1-two-framings-bbe82cd8d3"
+    ],
+    "links": [
+      "skill-3-batna-reservation-value-and-zopa-d951553f94"
+    ]
+  },
+  {
+    "id": "skill-3-batna-reservation-value-and-zopa-d951553f94",
+    "purpose": "3 batna reservation value and zopa",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/004-3-batna-reservation-value-and-zopa.md",
+    "requires": [
+      "skill-2-distributive-and-integrative-7e3612b4da"
+    ],
+    "links": [
+      "skill-4-interests-positions-and-issues-3703017c33"
+    ]
+  },
+  {
+    "id": "skill-4-interests-positions-and-issues-3703017c33",
+    "purpose": "4 interests positions and issues",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/005-4-interests-positions-and-issues.md",
+    "requires": [
+      "skill-3-batna-reservation-value-and-zopa-d951553f94"
+    ],
+    "links": [
+      "skill-5-preparation-13574de791"
+    ]
+  },
+  {
+    "id": "skill-5-preparation-13574de791",
+    "purpose": "5 preparation",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-framings-batna-zopa-interests-and-preparation/006-5-preparation.md",
+    "requires": [
+      "skill-4-interests-positions-and-issues-3703017c33"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-0-routing-0fc706fa3b",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-how-to-read-claims-in-this-field-8d643f4979"
+    ]
+  },
+  {
+    "id": "skill-1-how-to-read-claims-in-this-field-8d643f4979",
+    "purpose": "1 how to read claims in this field",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/002-1-how-to-read-claims-in-this-field.md",
+    "requires": [
+      "skill-0-routing-0fc706fa3b"
+    ],
+    "links": [
+      "skill-2-muscle-structure-0b0f7adafe"
+    ]
+  },
+  {
+    "id": "skill-2-muscle-structure-0b0f7adafe",
+    "purpose": "2 muscle structure",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/003-2-muscle-structure.md",
+    "requires": [
+      "skill-1-how-to-read-claims-in-this-field-8d643f4979"
+    ],
+    "links": [
+      "skill-3-energy-systems-91e5d5766b"
+    ]
+  },
+  {
+    "id": "skill-3-energy-systems-91e5d5766b",
+    "purpose": "3 energy systems",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/004-3-energy-systems.md",
+    "requires": [
+      "skill-2-muscle-structure-0b0f7adafe"
+    ],
+    "links": [
+      "skill-4-cardiovascular-and-respiratory-518c2c48d0"
+    ]
+  },
+  {
+    "id": "skill-4-cardiovascular-and-respiratory-518c2c48d0",
+    "purpose": "4 cardiovascular and respiratory",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/005-4-cardiovascular-and-respiratory.md",
+    "requires": [
+      "skill-3-energy-systems-91e5d5766b"
+    ],
+    "links": [
+      "skill-5-endocrine-23f642672f"
+    ]
+  },
+  {
+    "id": "skill-5-endocrine-23f642672f",
+    "purpose": "5 endocrine",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/006-5-endocrine.md",
+    "requires": [
+      "skill-4-cardiovascular-and-respiratory-518c2c48d0"
+    ],
+    "links": [
+      "skill-6-neural-adaptation-and-motor-control-5429bb88c6"
+    ]
+  },
+  {
+    "id": "skill-6-neural-adaptation-and-motor-control-5429bb88c6",
+    "purpose": "6 neural adaptation and motor control",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/007-6-neural-adaptation-and-motor-control.md",
+    "requires": [
+      "skill-5-endocrine-23f642672f"
+    ],
+    "links": [
+      "skill-7-thermoregulation-and-hydration-20ddc6b947"
+    ]
+  },
+  {
+    "id": "skill-7-thermoregulation-and-hydration-20ddc6b947",
+    "purpose": "7 thermoregulation and hydration",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-physiology-muscle-energy-and-body-systems/008-7-thermoregulation-and-hydration.md",
+    "requires": [
+      "skill-6-neural-adaptation-and-motor-control-5429bb88c6"
+    ],
+    "links": []
+  }
+]

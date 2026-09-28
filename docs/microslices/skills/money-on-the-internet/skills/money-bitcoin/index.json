@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-1-what-it-is-93e2a2ccad",
+    "purpose": "1 what it is",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/001-1-what-it-is.md",
+    "requires": [],
+    "links": [
+      "skill-2-protocol-mechanics-that-matter-5a07c6ec5c"
+    ]
+  },
+  {
+    "id": "skill-2-protocol-mechanics-that-matter-5a07c6ec5c",
+    "purpose": "2 protocol mechanics that matter",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/002-2-protocol-mechanics-that-matter.md",
+    "requires": [
+      "skill-1-what-it-is-93e2a2ccad"
+    ],
+    "links": [
+      "skill-3-using-bitcoin-well-aae06dc179"
+    ]
+  },
+  {
+    "id": "skill-3-using-bitcoin-well-aae06dc179",
+    "purpose": "3 using bitcoin well",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/003-3-using-bitcoin-well.md",
+    "requires": [
+      "skill-2-protocol-mechanics-that-matter-5a07c6ec5c"
+    ],
+    "links": [
+      "skill-4-the-lightning-network-payments-layer-2d4ceb5891"
+    ]
+  },
+  {
+    "id": "skill-4-the-lightning-network-payments-layer-2d4ceb5891",
+    "purpose": "4 the lightning network payments layer",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/004-4-the-lightning-network-payments-layer.md",
+    "requires": [
+      "skill-3-using-bitcoin-well-aae06dc179"
+    ],
+    "links": [
+      "skill-5-mining-economics-in-2026-the-part-nobody-predicts-well-5ab1870986"
+    ]
+  },
+  {
+    "id": "skill-5-mining-economics-in-2026-the-part-nobody-predicts-well-5ab1870986",
+    "purpose": "5 mining economics in 2026 the part nobody predicts well",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/005-5-mining-economics-in-2026-the-part-nobody-predicts-well.md",
+    "requires": [
+      "skill-4-the-lightning-network-payments-layer-2d4ceb5891"
+    ],
+    "links": [
+      "skill-6-developing-on-bitcoin-89b6bc1d2d"
+    ]
+  },
+  {
+    "id": "skill-6-developing-on-bitcoin-89b6bc1d2d",
+    "purpose": "6 developing on bitcoin",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/006-6-developing-on-bitcoin.md",
+    "requires": [
+      "skill-5-mining-economics-in-2026-the-part-nobody-predicts-well-5ab1870986"
+    ],
+    "links": [
+      "skill-7-governance-what-the-v30-fight-taught-2025-contested-ca7068edee"
+    ]
+  },
+  {
+    "id": "skill-7-governance-what-the-v30-fight-taught-2025-contested-ca7068edee",
+    "purpose": "7 governance what the v30 fight taught 2025 contested",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/007-7-governance-what-the-v30-fight-taught-2025-contested.md",
+    "requires": [
+      "skill-6-developing-on-bitcoin-89b6bc1d2d"
+    ],
+    "links": [
+      "skill-sources-as-of-16-sep-2026-008bf5bc39"
+    ]
+  },
+  {
+    "id": "skill-sources-as-of-16-sep-2026-008bf5bc39",
+    "purpose": "sources as of 16 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-bitcoin/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-bitcoin/008-sources-as-of-16-sep-2026.md",
+    "requires": [
+      "skill-7-governance-what-the-v30-fight-taught-2025-contested-ca7068edee"
+    ],
+    "links": []
+  }
+]

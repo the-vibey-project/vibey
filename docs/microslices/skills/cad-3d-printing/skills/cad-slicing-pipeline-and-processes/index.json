@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-5-the-slicing-pipeline-fcbe3de4aa",
+    "purpose": "5 the slicing pipeline",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-slicing-pipeline-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-slicing-pipeline-and-processes/001-5-the-slicing-pipeline.md",
+    "requires": [],
+    "links": [
+      "skill-6-the-processes-2ef7dac410"
+    ]
+  },
+  {
+    "id": "skill-6-the-processes-2ef7dac410",
+    "purpose": "6 the processes",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-slicing-pipeline-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-slicing-pipeline-and-processes/002-6-the-processes.md",
+    "requires": [
+      "skill-5-the-slicing-pipeline-fcbe3de4aa"
+    ],
+    "links": []
+  }
+]

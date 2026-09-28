@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-16-flow-6c4ec28c2f",
+    "purpose": "16 flow",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/001-16-flow.md",
+    "requires": [],
+    "links": [
+      "skill-17-procrastination-72139e38b0"
+    ]
+  },
+  {
+    "id": "skill-17-procrastination-72139e38b0",
+    "purpose": "17 procrastination",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/002-17-procrastination.md",
+    "requires": [
+      "skill-16-flow-6c4ec28c2f"
+    ],
+    "links": [
+      "skill-18-meaning-and-happiness-come-apart-bc360009ca"
+    ]
+  },
+  {
+    "id": "skill-18-meaning-and-happiness-come-apart-bc360009ca",
+    "purpose": "18 meaning and happiness come apart",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/003-18-meaning-and-happiness-come-apart.md",
+    "requires": [
+      "skill-17-procrastination-72139e38b0"
+    ],
+    "links": [
+      "skill-19-sources-of-meaning-4d006934ed"
+    ]
+  },
+  {
+    "id": "skill-19-sources-of-meaning-4d006934ed",
+    "purpose": "19 sources of meaning",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/004-19-sources-of-meaning.md",
+    "requires": [
+      "skill-18-meaning-and-happiness-come-apart-bc360009ca"
+    ],
+    "links": [
+      "skill-20-work-vocation-and-calling-c565486dc4"
+    ]
+  },
+  {
+    "id": "skill-20-work-vocation-and-calling-c565486dc4",
+    "purpose": "20 work vocation and calling",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/005-20-work-vocation-and-calling.md",
+    "requires": [
+      "skill-19-sources-of-meaning-4d006934ed"
+    ],
+    "links": [
+      "skill-21-adversity-and-growth-9c59b0cdb3"
+    ]
+  },
+  {
+    "id": "skill-21-adversity-and-growth-9c59b0cdb3",
+    "purpose": "21 adversity and growth",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/006-21-adversity-and-growth.md",
+    "requires": [
+      "skill-20-work-vocation-and-calling-c565486dc4"
+    ],
+    "links": [
+      "skill-22-finitude-a35b5792b4"
+    ]
+  },
+  {
+    "id": "skill-22-finitude-a35b5792b4",
+    "purpose": "22 finitude",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-flow-procrastination-meaning-purpose-and-adversity/007-22-finitude.md",
+    "requires": [
+      "skill-21-adversity-and-growth-9c59b0cdb3"
+    ],
+    "links": []
+  }
+]

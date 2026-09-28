@@ -1,0 +1,154 @@
+[
+  {
+    "id": "skill-tl-dr-decision-guide-02c53ea61c",
+    "purpose": "tl dr decision guide",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/001-tl-dr-decision-guide.md",
+    "requires": [],
+    "links": [
+      "skill-the-critical-azure-oidc-gap-e299adaabb"
+    ]
+  },
+  {
+    "id": "skill-the-critical-azure-oidc-gap-e299adaabb",
+    "purpose": "the critical azure oidc gap",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/002-the-critical-azure-oidc-gap.md",
+    "requires": [
+      "skill-tl-dr-decision-guide-02c53ea61c"
+    ],
+    "links": [
+      "skill-mitigation-options-for-azure-authentication-38f22c0d8d"
+    ]
+  },
+  {
+    "id": "skill-mitigation-options-for-azure-authentication-38f22c0d8d",
+    "purpose": "mitigation options for azure authentication",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/003-mitigation-options-for-azure-authentication.md",
+    "requires": [
+      "skill-the-critical-azure-oidc-gap-e299adaabb"
+    ],
+    "links": [
+      "skill-pipeline-model-and-core-mechanics-efd6c170fc"
+    ]
+  },
+  {
+    "id": "skill-pipeline-model-and-core-mechanics-efd6c170fc",
+    "purpose": "pipeline model and core mechanics",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/004-pipeline-model-and-core-mechanics.md",
+    "requires": [
+      "skill-mitigation-options-for-azure-authentication-38f22c0d8d"
+    ],
+    "links": [
+      "skill-azure-pipes-reference-dfda999f50"
+    ]
+  },
+  {
+    "id": "skill-azure-pipes-reference-dfda999f50",
+    "purpose": "azure pipes reference",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/005-azure-pipes-reference.md",
+    "requires": [
+      "skill-pipeline-model-and-core-mechanics-efd6c170fc"
+    ],
+    "links": [
+      "skill-deployment-environments-and-variables-d0485c9322"
+    ]
+  },
+  {
+    "id": "skill-deployment-environments-and-variables-d0485c9322",
+    "purpose": "deployment environments and variables",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/006-deployment-environments-and-variables.md",
+    "requires": [
+      "skill-azure-pipes-reference-dfda999f50"
+    ],
+    "links": [
+      "skill-yaml-anchors-for-in-repo-reuse-8cab47e16f"
+    ]
+  },
+  {
+    "id": "skill-yaml-anchors-for-in-repo-reuse-8cab47e16f",
+    "purpose": "yaml anchors for in repo reuse",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/007-yaml-anchors-for-in-repo-reuse.md",
+    "requires": [
+      "skill-deployment-environments-and-variables-d0485c9322"
+    ],
+    "links": [
+      "skill-runners-hosted-vs-self-hosted-e79a3588ad"
+    ]
+  },
+  {
+    "id": "skill-runners-hosted-vs-self-hosted-e79a3588ad",
+    "purpose": "runners hosted vs self hosted",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/008-runners-hosted-vs-self-hosted.md",
+    "requires": [
+      "skill-yaml-anchors-for-in-repo-reuse-8cab47e16f"
+    ],
+    "links": [
+      "skill-pricing-may-2026-atlassian-list-c3a16ac651"
+    ]
+  },
+  {
+    "id": "skill-pricing-may-2026-atlassian-list-c3a16ac651",
+    "purpose": "pricing may 2026 atlassian list",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/009-pricing-may-2026-atlassian-list.md",
+    "requires": [
+      "skill-runners-hosted-vs-self-hosted-e79a3588ad"
+    ],
+    "links": [
+      "skill-comparison-bitbucket-vs-github-actions-vs-azure-devops-f249455729"
+    ]
+  },
+  {
+    "id": "skill-comparison-bitbucket-vs-github-actions-vs-azure-devops-f249455729",
+    "purpose": "comparison bitbucket vs github actions vs azure devops",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/010-comparison-bitbucket-vs-github-actions-vs-azure-devops.md",
+    "requires": [
+      "skill-pricing-may-2026-atlassian-list-c3a16ac651"
+    ],
+    "links": [
+      "skill-known-limitations-and-gotchas-eea0d53e7f"
+    ]
+  },
+  {
+    "id": "skill-known-limitations-and-gotchas-eea0d53e7f",
+    "purpose": "known limitations and gotchas",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/011-known-limitations-and-gotchas.md",
+    "requires": [
+      "skill-comparison-bitbucket-vs-github-actions-vs-azure-devops-f249455729"
+    ],
+    "links": [
+      "skill-security-scanning-integration-3b88587eb7"
+    ]
+  },
+  {
+    "id": "skill-security-scanning-integration-3b88587eb7",
+    "purpose": "security scanning integration",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/012-security-scanning-integration.md",
+    "requires": [
+      "skill-known-limitations-and-gotchas-eea0d53e7f"
+    ],
+    "links": [
+      "skill-recommendations-by-team-profile-36d40bd4e5"
+    ]
+  },
+  {
+    "id": "skill-recommendations-by-team-profile-36d40bd4e5",
+    "purpose": "recommendations by team profile",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure/013-recommendations-by-team-profile.md",
+    "requires": [
+      "skill-security-scanning-integration-3b88587eb7"
+    ],
+    "links": []
+  }
+]

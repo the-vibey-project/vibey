@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-9-constitutional-design-51d082470a",
+    "purpose": "9 constitutional design",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/001-9-constitutional-design.md",
+    "requires": [],
+    "links": [
+      "skill-10-electoral-systems-in-practice-f5bcb5e554"
+    ]
+  },
+  {
+    "id": "skill-10-electoral-systems-in-practice-f5bcb5e554",
+    "purpose": "10 electoral systems in practice",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/002-10-electoral-systems-in-practice.md",
+    "requires": [
+      "skill-9-constitutional-design-51d082470a"
+    ],
+    "links": [
+      "skill-11-executives-and-legislatures-feb547d5e7"
+    ]
+  },
+  {
+    "id": "skill-11-executives-and-legislatures-feb547d5e7",
+    "purpose": "11 executives and legislatures",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/003-11-executives-and-legislatures.md",
+    "requires": [
+      "skill-10-electoral-systems-in-practice-f5bcb5e554"
+    ],
+    "links": [
+      "skill-12-federalism-6c7ec777da"
+    ]
+  },
+  {
+    "id": "skill-12-federalism-6c7ec777da",
+    "purpose": "12 federalism",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/004-12-federalism.md",
+    "requires": [
+      "skill-11-executives-and-legislatures-feb547d5e7"
+    ],
+    "links": [
+      "skill-13-courts-and-judicial-review-ea6ed5817a"
+    ]
+  },
+  {
+    "id": "skill-13-courts-and-judicial-review-ea6ed5817a",
+    "purpose": "13 courts and judicial review",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-constitutional-design-electoral-systems-and-institutions/005-13-courts-and-judicial-review.md",
+    "requires": [
+      "skill-12-federalism-6c7ec777da"
+    ],
+    "links": []
+  }
+]

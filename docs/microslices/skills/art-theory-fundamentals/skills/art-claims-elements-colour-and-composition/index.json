@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-0-routing-797a216b7d",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-kind-of-claim-is-this-3c03344c0b"
+    ]
+  },
+  {
+    "id": "skill-1-what-kind-of-claim-is-this-3c03344c0b",
+    "purpose": "1 what kind of claim is this",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/002-1-what-kind-of-claim-is-this.md",
+    "requires": [
+      "skill-0-routing-797a216b7d"
+    ],
+    "links": [
+      "skill-2-the-elements-03017aef03"
+    ]
+  },
+  {
+    "id": "skill-2-the-elements-03017aef03",
+    "purpose": "2 the elements",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/003-2-the-elements.md",
+    "requires": [
+      "skill-1-what-kind-of-claim-is-this-3c03344c0b"
+    ],
+    "links": [
+      "skill-3-value-3acc588a32"
+    ]
+  },
+  {
+    "id": "skill-3-value-3acc588a32",
+    "purpose": "3 value",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/004-3-value.md",
+    "requires": [
+      "skill-2-the-elements-03017aef03"
+    ],
+    "links": [
+      "skill-4-colour-0fb2d958c9"
+    ]
+  },
+  {
+    "id": "skill-4-colour-0fb2d958c9",
+    "purpose": "4 colour",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/005-4-colour.md",
+    "requires": [
+      "skill-3-value-3acc588a32"
+    ],
+    "links": [
+      "skill-5-composition-5e306c65d4"
+    ]
+  },
+  {
+    "id": "skill-5-composition-5e306c65d4",
+    "purpose": "5 composition",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/006-5-composition.md",
+    "requires": [
+      "skill-4-colour-0fb2d958c9"
+    ],
+    "links": [
+      "skill-6-pictorial-space-ee7015f5dc"
+    ]
+  },
+  {
+    "id": "skill-6-pictorial-space-ee7015f5dc",
+    "purpose": "6 pictorial space",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/007-6-pictorial-space.md",
+    "requires": [
+      "skill-5-composition-5e306c65d4"
+    ],
+    "links": [
+      "skill-7-medium-and-materiality-70938f22ac"
+    ]
+  },
+  {
+    "id": "skill-7-medium-and-materiality-70938f22ac",
+    "purpose": "7 medium and materiality",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-claims-elements-colour-and-composition/008-7-medium-and-materiality.md",
+    "requires": [
+      "skill-6-pictorial-space-ee7015f5dc"
+    ],
+    "links": []
+  }
+]

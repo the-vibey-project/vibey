@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-the-semantic-layer-d355433096",
+    "purpose": "5 the semantic layer",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/001-5-the-semantic-layer.md",
+    "requires": [],
+    "links": [
+      "skill-6-time-handling-b541e8aed2"
+    ]
+  },
+  {
+    "id": "skill-6-time-handling-b541e8aed2",
+    "purpose": "6 time handling",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/002-6-time-handling.md",
+    "requires": [
+      "skill-5-the-semantic-layer-d355433096"
+    ],
+    "links": [
+      "skill-7-query-performance-ddc69f6aec"
+    ]
+  },
+  {
+    "id": "skill-7-query-performance-ddc69f6aec",
+    "purpose": "7 query performance",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/003-7-query-performance.md",
+    "requires": [
+      "skill-6-time-handling-b541e8aed2"
+    ],
+    "links": [
+      "skill-8-caching-and-freshness-cc07085fc7"
+    ]
+  },
+  {
+    "id": "skill-8-caching-and-freshness-cc07085fc7",
+    "purpose": "8 caching and freshness",
+    "source": "src/vibey_tools/skills/plugins/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/reporting-and-dashboards/skills/reporting-semantic-layer-time-and-performance/004-8-caching-and-freshness.md",
+    "requires": [
+      "skill-7-query-performance-ddc69f6aec"
+    ],
+    "links": []
+  }
+]

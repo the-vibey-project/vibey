@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-relativity-73dd6ae7cf",
+    "purpose": "4 relativity",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves/001-4-relativity.md",
+    "requires": [],
+    "links": [
+      "skill-5-black-holes-3ff236d34b"
+    ]
+  },
+  {
+    "id": "skill-5-black-holes-3ff236d34b",
+    "purpose": "5 black holes",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves/002-5-black-holes.md",
+    "requires": [
+      "skill-4-relativity-73dd6ae7cf"
+    ],
+    "links": [
+      "skill-6-gravitational-waves-2214faac0b"
+    ]
+  },
+  {
+    "id": "skill-6-gravitational-waves-2214faac0b",
+    "purpose": "6 gravitational waves",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-relativity-black-holes-and-gravitational-waves/003-6-gravitational-waves.md",
+    "requires": [
+      "skill-5-black-holes-3ff236d34b"
+    ],
+    "links": []
+  }
+]

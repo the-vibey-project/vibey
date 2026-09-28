@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-motion-planning-9a936cfa40",
+    "purpose": "5 motion planning",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-planning-control-and-manipulation/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-planning-control-and-manipulation/001-5-motion-planning.md",
+    "requires": [],
+    "links": [
+      "skill-6-control-c97f2c17a7"
+    ]
+  },
+  {
+    "id": "skill-6-control-c97f2c17a7",
+    "purpose": "6 control",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-planning-control-and-manipulation/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-planning-control-and-manipulation/002-6-control.md",
+    "requires": [
+      "skill-5-motion-planning-9a936cfa40"
+    ],
+    "links": [
+      "skill-7-manipulation-59df12bd8e"
+    ]
+  },
+  {
+    "id": "skill-7-manipulation-59df12bd8e",
+    "purpose": "7 manipulation",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-planning-control-and-manipulation/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-planning-control-and-manipulation/003-7-manipulation.md",
+    "requires": [
+      "skill-6-control-c97f2c17a7"
+    ],
+    "links": []
+  }
+]

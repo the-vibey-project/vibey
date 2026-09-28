@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-sms-0962ce6633",
+    "purpose": "13 sms",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/001-13-sms.md",
+    "requires": [],
+    "links": [
+      "skill-14-mms-b3091e018c"
+    ]
+  },
+  {
+    "id": "skill-14-mms-b3091e018c",
+    "purpose": "14 mms",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/002-14-mms.md",
+    "requires": [
+      "skill-13-sms-0962ce6633"
+    ],
+    "links": [
+      "skill-15-rcs-7140ef0b94"
+    ]
+  },
+  {
+    "id": "skill-15-rcs-7140ef0b94",
+    "purpose": "15 rcs",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/003-15-rcs.md",
+    "requires": [
+      "skill-14-mms-b3091e018c"
+    ],
+    "links": [
+      "skill-16-the-signal-protocol-55e2dcd3cc"
+    ]
+  },
+  {
+    "id": "skill-16-the-signal-protocol-55e2dcd3cc",
+    "purpose": "16 the signal protocol",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/004-16-the-signal-protocol.md",
+    "requires": [
+      "skill-15-rcs-7140ef0b94"
+    ],
+    "links": [
+      "skill-17-the-messaging-landscape-ea19aee3ca"
+    ]
+  },
+  {
+    "id": "skill-17-the-messaging-landscape-ea19aee3ca",
+    "purpose": "17 the messaging landscape",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/005-17-the-messaging-landscape.md",
+    "requires": [
+      "skill-16-the-signal-protocol-55e2dcd3cc"
+    ],
+    "links": [
+      "skill-18-imessage-and-facetime-2c4813ad78"
+    ]
+  },
+  {
+    "id": "skill-18-imessage-and-facetime-2c4813ad78",
+    "purpose": "18 imessage and facetime",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-sms-rcs-signal-protocol-and-messaging-apps/006-18-imessage-and-facetime.md",
+    "requires": [
+      "skill-17-the-messaging-landscape-ea19aee3ca"
+    ],
+    "links": []
+  }
+]

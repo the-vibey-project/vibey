@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-fluid-properties-b3adcf22db",
+    "purpose": "13 fluid properties",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/001-13-fluid-properties.md",
+    "requires": [],
+    "links": [
+      "skill-14-statics-08206264b4"
+    ]
+  },
+  {
+    "id": "skill-14-statics-08206264b4",
+    "purpose": "14 statics",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/002-14-statics.md",
+    "requires": [
+      "skill-13-fluid-properties-b3adcf22db"
+    ],
+    "links": [
+      "skill-15-the-control-volume-5fcd89c0f1"
+    ]
+  },
+  {
+    "id": "skill-15-the-control-volume-5fcd89c0f1",
+    "purpose": "15 the control volume",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/003-15-the-control-volume.md",
+    "requires": [
+      "skill-14-statics-08206264b4"
+    ],
+    "links": [
+      "skill-16-bernoulli-and-the-lift-myth-5d87c07053"
+    ]
+  },
+  {
+    "id": "skill-16-bernoulli-and-the-lift-myth-5d87c07053",
+    "purpose": "16 bernoulli and the lift myth",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/004-16-bernoulli-and-the-lift-myth.md",
+    "requires": [
+      "skill-15-the-control-volume-5fcd89c0f1"
+    ],
+    "links": [
+      "skill-17-navier-stokes-7401d82682"
+    ]
+  },
+  {
+    "id": "skill-17-navier-stokes-7401d82682",
+    "purpose": "17 navier stokes",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/005-17-navier-stokes.md",
+    "requires": [
+      "skill-16-bernoulli-and-the-lift-myth-5d87c07053"
+    ],
+    "links": [
+      "skill-18-boundary-layers-eca1ca34f7"
+    ]
+  },
+  {
+    "id": "skill-18-boundary-layers-eca1ca34f7",
+    "purpose": "18 boundary layers",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes/006-18-boundary-layers.md",
+    "requires": [
+      "skill-17-navier-stokes-7401d82682"
+    ],
+    "links": []
+  }
+]

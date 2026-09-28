@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-12-type-systems-logic-and-verification-4d5ccab59a",
+    "purpose": "12 type systems logic and verification",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-type-systems-and-randomization/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-type-systems-and-randomization/001-12-type-systems-logic-and-verification.md",
+    "requires": [],
+    "links": [
+      "skill-13-randomness-approximation-and-heuristics-139de28a6c"
+    ]
+  },
+  {
+    "id": "skill-13-randomness-approximation-and-heuristics-139de28a6c",
+    "purpose": "13 randomness approximation and heuristics",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-type-systems-and-randomization/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-type-systems-and-randomization/002-13-randomness-approximation-and-heuristics.md",
+    "requires": [
+      "skill-12-type-systems-logic-and-verification-4d5ccab59a"
+    ],
+    "links": []
+  }
+]

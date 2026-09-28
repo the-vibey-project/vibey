@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-vector-extensions-b317a92a3c",
+    "purpose": "10 vector extensions",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/001-10-vector-extensions.md",
+    "requires": [],
+    "links": [
+      "skill-11-atomics-and-synchronization-e0d96328c9"
+    ]
+  },
+  {
+    "id": "skill-11-atomics-and-synchronization-e0d96328c9",
+    "purpose": "11 atomics and synchronization",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/002-11-atomics-and-synchronization.md",
+    "requires": [
+      "skill-10-vector-extensions-b317a92a3c"
+    ],
+    "links": [
+      "skill-12-floating-point-and-numerics-99f75889ce"
+    ]
+  },
+  {
+    "id": "skill-12-floating-point-and-numerics-99f75889ce",
+    "purpose": "12 floating point and numerics",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/003-12-floating-point-and-numerics.md",
+    "requires": [
+      "skill-11-atomics-and-synchronization-e0d96328c9"
+    ],
+    "links": [
+      "skill-13-trustzone-ffaeb2124b"
+    ]
+  },
+  {
+    "id": "skill-13-trustzone-ffaeb2124b",
+    "purpose": "13 trustzone",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/004-13-trustzone.md",
+    "requires": [
+      "skill-12-floating-point-and-numerics-99f75889ce"
+    ],
+    "links": [
+      "skill-14-pointer-authentication-bti-and-mte-06b0de8b99"
+    ]
+  },
+  {
+    "id": "skill-14-pointer-authentication-bti-and-mte-06b0de8b99",
+    "purpose": "14 pointer authentication bti and mte",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/005-14-pointer-authentication-bti-and-mte.md",
+    "requires": [
+      "skill-13-trustzone-ffaeb2124b"
+    ],
+    "links": [
+      "skill-15-cca-and-realms-ad1d3faa2e"
+    ]
+  },
+  {
+    "id": "skill-15-cca-and-realms-ad1d3faa2e",
+    "purpose": "15 cca and realms",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-vectors-atomics-numerics-and-security-architecture/006-15-cca-and-realms.md",
+    "requires": [
+      "skill-14-pointer-authentication-bti-and-mte-06b0de8b99"
+    ],
+    "links": []
+  }
+]

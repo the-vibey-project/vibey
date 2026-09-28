@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-23-what-end-to-end-encryption-actually-protects-3fe4b41571",
+    "purpose": "23 what end to end encryption actually protects",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/001-23-what-end-to-end-encryption-actually-protects.md",
+    "requires": [],
+    "links": [
+      "skill-24-metadata-f2fb7a6a60"
+    ]
+  },
+  {
+    "id": "skill-24-metadata-f2fb7a6a60",
+    "purpose": "24 metadata",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/002-24-metadata.md",
+    "requires": [
+      "skill-23-what-end-to-end-encryption-actually-protects-3fe4b41571"
+    ],
+    "links": [
+      "skill-25-interoperability-and-regulation-5d0a3dab02"
+    ]
+  },
+  {
+    "id": "skill-25-interoperability-and-regulation-5d0a3dab02",
+    "purpose": "25 interoperability and regulation",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/003-25-interoperability-and-regulation.md",
+    "requires": [
+      "skill-24-metadata-f2fb7a6a60"
+    ],
+    "links": [
+      "skill-26-the-encryption-policy-debate-8e1bc72fc6"
+    ]
+  },
+  {
+    "id": "skill-26-the-encryption-policy-debate-8e1bc72fc6",
+    "purpose": "26 the encryption policy debate",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/004-26-the-encryption-policy-debate.md",
+    "requires": [
+      "skill-25-interoperability-and-regulation-5d0a3dab02"
+    ],
+    "links": [
+      "skill-27-emergency-calling-and-reliability-1ce1cb25b1"
+    ]
+  },
+  {
+    "id": "skill-27-emergency-calling-and-reliability-1ce1cb25b1",
+    "purpose": "27 emergency calling and reliability",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-encryption-metadata-interoperability-and-policy/005-27-emergency-calling-and-reliability.md",
+    "requires": [
+      "skill-26-the-encryption-policy-debate-8e1bc72fc6"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-biases-c2f9536fef",
+    "purpose": "11 biases",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/001-11-biases.md",
+    "requires": [],
+    "links": [
+      "skill-12-emotion-c7b49a6e1c"
+    ]
+  },
+  {
+    "id": "skill-12-emotion-c7b49a6e1c",
+    "purpose": "12 emotion",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/002-12-emotion.md",
+    "requires": [
+      "skill-11-biases-c2f9536fef"
+    ],
+    "links": [
+      "skill-13-fairness-and-standards-abf0985723"
+    ]
+  },
+  {
+    "id": "skill-13-fairness-and-standards-abf0985723",
+    "purpose": "13 fairness and standards",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/003-13-fairness-and-standards.md",
+    "requires": [
+      "skill-12-emotion-c7b49a6e1c"
+    ],
+    "links": [
+      "skill-14-trust-and-reputation-b5933dca97"
+    ]
+  },
+  {
+    "id": "skill-14-trust-and-reputation-b5933dca97",
+    "purpose": "14 trust and reputation",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-biases-emotion-fairness-and-trust/004-14-trust-and-reputation.md",
+    "requires": [
+      "skill-13-fairness-and-standards-abf0985723"
+    ],
+    "links": []
+  }
+]

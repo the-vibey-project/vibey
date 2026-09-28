@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-b5956c0f40",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-epistemic-situation-5f019647a2"
+    ]
+  },
+  {
+    "id": "skill-1-the-epistemic-situation-5f019647a2",
+    "purpose": "1 the epistemic situation",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/002-1-the-epistemic-situation.md",
+    "requires": [
+      "skill-0-routing-b5956c0f40"
+    ],
+    "links": [
+      "skill-2-why-these-fields-are-hard-3fe1250632"
+    ]
+  },
+  {
+    "id": "skill-2-why-these-fields-are-hard-3fe1250632",
+    "purpose": "2 why these fields are hard",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/003-2-why-these-fields-are-hard.md",
+    "requires": [
+      "skill-1-the-epistemic-situation-5f019647a2"
+    ],
+    "links": [
+      "skill-3-what-reform-changed-700eec5223"
+    ]
+  },
+  {
+    "id": "skill-3-what-reform-changed-700eec5223",
+    "purpose": "3 what reform changed",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-epistemic-situation-and-replication-reform/004-3-what-reform-changed.md",
+    "requires": [
+      "skill-2-why-these-fields-are-hard-3fe1250632"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-6-what-apologetics-is-and-the-arguments-for-god-s-existence-3bc92e5860",
+    "purpose": "6 what apologetics is and the arguments for god s existence",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-arguments-for-god/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-arguments-for-god/001-6-what-apologetics-is-and-the-arguments-for-god-s-existence.md",
+    "requires": [],
+    "links": [
+      "skill-where-the-rest-of-this-lives-eb47b53dd7"
+    ]
+  },
+  {
+    "id": "skill-where-the-rest-of-this-lives-eb47b53dd7",
+    "purpose": "where the rest of this lives",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-arguments-for-god/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-arguments-for-god/002-where-the-rest-of-this-lives.md",
+    "requires": [
+      "skill-6-what-apologetics-is-and-the-arguments-for-god-s-existence-3bc92e5860"
+    ],
+    "links": []
+  }
+]

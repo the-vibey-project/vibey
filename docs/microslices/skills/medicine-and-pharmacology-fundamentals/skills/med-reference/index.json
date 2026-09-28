@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-27-what-s-live-checked-august-2026-418d0f293c",
+    "purpose": "27 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reference/001-27-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-28-misconceptions-100f5c03b6"
+    ]
+  },
+  {
+    "id": "skill-28-misconceptions-100f5c03b6",
+    "purpose": "28 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reference/002-28-misconceptions.md",
+    "requires": [
+      "skill-27-what-s-live-checked-august-2026-418d0f293c"
+    ],
+    "links": [
+      "skill-29-numbers-and-concepts-9e2a68ef66"
+    ]
+  },
+  {
+    "id": "skill-29-numbers-and-concepts-9e2a68ef66",
+    "purpose": "29 numbers and concepts",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reference/003-29-numbers-and-concepts.md",
+    "requires": [
+      "skill-28-misconceptions-100f5c03b6"
+    ],
+    "links": [
+      "skill-30-sources-aba43ab692"
+    ]
+  },
+  {
+    "id": "skill-30-sources-aba43ab692",
+    "purpose": "30 sources",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reference/004-30-sources.md",
+    "requires": [
+      "skill-29-numbers-and-concepts-9e2a68ef66"
+    ],
+    "links": [
+      "skill-31-quick-reference-38a6d632ea"
+    ]
+  },
+  {
+    "id": "skill-31-quick-reference-38a6d632ea",
+    "purpose": "31 quick reference",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reference/005-31-quick-reference.md",
+    "requires": [
+      "skill-30-sources-aba43ab692"
+    ],
+    "links": [
+      "skill-32-method-9f9e63486f"
+    ]
+  },
+  {
+    "id": "skill-32-method-9f9e63486f",
+    "purpose": "32 method",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-reference/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-reference/006-32-method.md",
+    "requires": [
+      "skill-31-quick-reference-38a6d632ea"
+    ],
+    "links": []
+  }
+]

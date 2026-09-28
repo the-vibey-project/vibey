@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-accessibility-7dea3074b1",
+    "purpose": "11 accessibility",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/001-11-accessibility.md",
+    "requires": [],
+    "links": [
+      "skill-12-energy-and-comfort-eb0e263733"
+    ]
+  },
+  {
+    "id": "skill-12-energy-and-comfort-eb0e263733",
+    "purpose": "12 energy and comfort",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/002-12-energy-and-comfort.md",
+    "requires": [
+      "skill-11-accessibility-7dea3074b1"
+    ],
+    "links": [
+      "skill-13-drawings-specifications-and-bim-9a1948e01d"
+    ]
+  },
+  {
+    "id": "skill-13-drawings-specifications-and-bim-9a1948e01d",
+    "purpose": "13 drawings specifications and bim",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/003-13-drawings-specifications-and-bim.md",
+    "requires": [
+      "skill-12-energy-and-comfort-eb0e263733"
+    ],
+    "links": [
+      "skill-14-codes-and-permitting-0a5cfb291c"
+    ]
+  },
+  {
+    "id": "skill-14-codes-and-permitting-0a5cfb291c",
+    "purpose": "14 codes and permitting",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-accessibility-energy-drawings-bim-and-codes/004-14-codes-and-permitting.md",
+    "requires": [
+      "skill-13-drawings-specifications-and-bim-9a1948e01d"
+    ],
+    "links": []
+  }
+]

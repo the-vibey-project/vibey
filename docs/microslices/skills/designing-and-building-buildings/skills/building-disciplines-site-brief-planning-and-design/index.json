@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-a1b02158e8",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-disciplines-and-the-lifecycle-50248c678e"
+    ]
+  },
+  {
+    "id": "skill-1-the-disciplines-and-the-lifecycle-50248c678e",
+    "purpose": "1 the disciplines and the lifecycle",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/002-1-the-disciplines-and-the-lifecycle.md",
+    "requires": [
+      "skill-0-routing-a1b02158e8"
+    ],
+    "links": [
+      "skill-2-site-and-ground-e12dfe25bd"
+    ]
+  },
+  {
+    "id": "skill-2-site-and-ground-e12dfe25bd",
+    "purpose": "2 site and ground",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/003-2-site-and-ground.md",
+    "requires": [
+      "skill-1-the-disciplines-and-the-lifecycle-50248c678e"
+    ],
+    "links": [
+      "skill-3-brief-and-programming-f760a2b0e2"
+    ]
+  },
+  {
+    "id": "skill-3-brief-and-programming-f760a2b0e2",
+    "purpose": "3 brief and programming",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/004-3-brief-and-programming.md",
+    "requires": [
+      "skill-2-site-and-ground-e12dfe25bd"
+    ],
+    "links": [
+      "skill-4-planning-zoning-and-entitlement-188363e2c2"
+    ]
+  },
+  {
+    "id": "skill-4-planning-zoning-and-entitlement-188363e2c2",
+    "purpose": "4 planning zoning and entitlement",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/005-4-planning-zoning-and-entitlement.md",
+    "requires": [
+      "skill-3-brief-and-programming-f760a2b0e2"
+    ],
+    "links": [
+      "skill-5-architectural-design-823a9789c4"
+    ]
+  },
+  {
+    "id": "skill-5-architectural-design-823a9789c4",
+    "purpose": "5 architectural design",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-disciplines-site-brief-planning-and-design/006-5-architectural-design.md",
+    "requires": [
+      "skill-4-planning-zoning-and-entitlement-188363e2c2"
+    ],
+    "links": []
+  }
+]

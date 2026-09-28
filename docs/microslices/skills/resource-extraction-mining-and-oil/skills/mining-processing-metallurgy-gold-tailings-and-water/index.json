@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-9-mineral-processing-09c83f9b4d",
+    "purpose": "9 mineral processing",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/001-9-mineral-processing.md",
+    "requires": [],
+    "links": [
+      "skill-10-extractive-metallurgy-ca843666f2"
+    ]
+  },
+  {
+    "id": "skill-10-extractive-metallurgy-ca843666f2",
+    "purpose": "10 extractive metallurgy",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/002-10-extractive-metallurgy.md",
+    "requires": [
+      "skill-9-mineral-processing-09c83f9b4d"
+    ],
+    "links": [
+      "skill-11-gold-0e7fbea977"
+    ]
+  },
+  {
+    "id": "skill-11-gold-0e7fbea977",
+    "purpose": "11 gold",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/003-11-gold.md",
+    "requires": [
+      "skill-10-extractive-metallurgy-ca843666f2"
+    ],
+    "links": [
+      "skill-12-tailings-d19dcbf9b2"
+    ]
+  },
+  {
+    "id": "skill-12-tailings-d19dcbf9b2",
+    "purpose": "12 tailings",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/004-12-tailings.md",
+    "requires": [
+      "skill-11-gold-0e7fbea977"
+    ],
+    "links": [
+      "skill-13-water-and-drainage-d7ada6ba73"
+    ]
+  },
+  {
+    "id": "skill-13-water-and-drainage-d7ada6ba73",
+    "purpose": "13 water and drainage",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-processing-metallurgy-gold-tailings-and-water/005-13-water-and-drainage.md",
+    "requires": [
+      "skill-12-tailings-d19dcbf9b2"
+    ],
+    "links": []
+  }
+]

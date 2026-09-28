@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-25-what-s-live-verified-august-2026-c2fd83c536",
+    "purpose": "25 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference/001-25-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-anti-patterns-b8c3562f0a"
+    ]
+  },
+  {
+    "id": "skill-26-anti-patterns-b8c3562f0a",
+    "purpose": "26 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference/002-26-anti-patterns.md",
+    "requires": [
+      "skill-25-what-s-live-verified-august-2026-c2fd83c536"
+    ],
+    "links": [
+      "skill-27-misconceptions-5ee43cf33f"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-5ee43cf33f",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference/003-27-misconceptions.md",
+    "requires": [
+      "skill-26-anti-patterns-b8c3562f0a"
+    ],
+    "links": [
+      "skill-28-numbers-f2602bb9ec"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-f2602bb9ec",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference/004-28-numbers.md",
+    "requires": [
+      "skill-27-misconceptions-5ee43cf33f"
+    ],
+    "links": [
+      "skill-29-books-53af209527"
+    ]
+  },
+  {
+    "id": "skill-29-books-53af209527",
+    "purpose": "29 books",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference/005-29-books.md",
+    "requires": [
+      "skill-28-numbers-f2602bb9ec"
+    ],
+    "links": [
+      "skill-30-quick-reference-f7c9c240cd"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-f7c9c240cd",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference/006-30-quick-reference.md",
+    "requires": [
+      "skill-29-books-53af209527"
+    ],
+    "links": [
+      "skill-31-method-730408f990"
+    ]
+  },
+  {
+    "id": "skill-31-method-730408f990",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-reference/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-reference/007-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-f7c9c240cd"
+    ],
+    "links": []
+  }
+]

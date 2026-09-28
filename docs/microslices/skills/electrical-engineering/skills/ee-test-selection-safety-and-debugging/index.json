@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-12-test-equipment-984b6f376a",
+    "purpose": "12 test equipment",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-test-selection-safety-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-test-selection-safety-and-debugging/001-12-test-equipment.md",
+    "requires": [],
+    "links": [
+      "skill-13-datasheets-and-selection-1877b5a1af"
+    ]
+  },
+  {
+    "id": "skill-13-datasheets-and-selection-1877b5a1af",
+    "purpose": "13 datasheets and selection",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-test-selection-safety-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-test-selection-safety-and-debugging/002-13-datasheets-and-selection.md",
+    "requires": [
+      "skill-12-test-equipment-984b6f376a"
+    ],
+    "links": [
+      "skill-14-safety-41d60f128d"
+    ]
+  },
+  {
+    "id": "skill-14-safety-41d60f128d",
+    "purpose": "14 safety",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-test-selection-safety-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-test-selection-safety-and-debugging/003-14-safety.md",
+    "requires": [
+      "skill-13-datasheets-and-selection-1877b5a1af"
+    ],
+    "links": [
+      "skill-15-debugging-hardware-4fc0818311"
+    ]
+  },
+  {
+    "id": "skill-15-debugging-hardware-4fc0818311",
+    "purpose": "15 debugging hardware",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-test-selection-safety-and-debugging/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-test-selection-safety-and-debugging/004-15-debugging-hardware.md",
+    "requires": [
+      "skill-14-safety-41d60f128d"
+    ],
+    "links": []
+  }
+]

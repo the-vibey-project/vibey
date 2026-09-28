@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-23-what-s-live-verified-august-2026-0e930df786",
+    "purpose": "23 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reference/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reference/001-23-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-24-misconceptions-55ea9e899a"
+    ]
+  },
+  {
+    "id": "skill-24-misconceptions-55ea9e899a",
+    "purpose": "24 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reference/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reference/002-24-misconceptions.md",
+    "requires": [
+      "skill-23-what-s-live-verified-august-2026-0e930df786"
+    ],
+    "links": [
+      "skill-25-numbers-9d93346e35"
+    ]
+  },
+  {
+    "id": "skill-25-numbers-9d93346e35",
+    "purpose": "25 numbers",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reference/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reference/003-25-numbers.md",
+    "requires": [
+      "skill-24-misconceptions-55ea9e899a"
+    ],
+    "links": [
+      "skill-26-books-13fbc1337b"
+    ]
+  },
+  {
+    "id": "skill-26-books-13fbc1337b",
+    "purpose": "26 books",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reference/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reference/004-26-books.md",
+    "requires": [
+      "skill-25-numbers-9d93346e35"
+    ],
+    "links": [
+      "skill-27-quick-reference-d410b1915a"
+    ]
+  },
+  {
+    "id": "skill-27-quick-reference-d410b1915a",
+    "purpose": "27 quick reference",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reference/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reference/005-27-quick-reference.md",
+    "requires": [
+      "skill-26-books-13fbc1337b"
+    ],
+    "links": [
+      "skill-28-method-60183a105e"
+    ]
+  },
+  {
+    "id": "skill-28-method-60183a105e",
+    "purpose": "28 method",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-reference/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-reference/006-28-method.md",
+    "requires": [
+      "skill-27-quick-reference-d410b1915a"
+    ],
+    "links": []
+  }
+]

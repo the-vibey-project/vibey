@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-26-satellite-and-space-probe-design-types-and-orbits-bf7b914aba",
+    "purpose": "26 satellite and space probe design types and orbits",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments/001-26-satellite-and-space-probe-design-types-and-orbits.md",
+    "requires": [],
+    "links": [
+      "skill-27-flight-software-fdir-command-and-telemetry-and-in-flight-update-559741efc0"
+    ]
+  },
+  {
+    "id": "skill-27-flight-software-fdir-command-and-telemetry-and-in-flight-update-559741efc0",
+    "purpose": "27 flight software fdir command and telemetry and in flight update",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments/002-27-flight-software-fdir-command-and-telemetry-and-in-flight-update.md",
+    "requires": [
+      "skill-26-satellite-and-space-probe-design-types-and-orbits-bf7b914aba"
+    ],
+    "links": [
+      "skill-28-scientific-instrumentation-and-planetary-protection-9b8c0e136b"
+    ]
+  },
+  {
+    "id": "skill-28-scientific-instrumentation-and-planetary-protection-9b8c0e136b",
+    "purpose": "28 scientific instrumentation and planetary protection",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-satellites-flight-software-and-instruments/003-28-scientific-instrumentation-and-planetary-protection.md",
+    "requires": [
+      "skill-27-flight-software-fdir-command-and-telemetry-and-in-flight-update-559741efc0"
+    ],
+    "links": []
+  }
+]

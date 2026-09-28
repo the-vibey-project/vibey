@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-implementation-bcd0d69bff",
+    "purpose": "11 implementation",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-implementation-tools-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-implementation-tools-and-testing/001-11-implementation.md",
+    "requires": [],
+    "links": [
+      "skill-12-tools-1df57576ad"
+    ]
+  },
+  {
+    "id": "skill-12-tools-1df57576ad",
+    "purpose": "12 tools",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-implementation-tools-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-implementation-tools-and-testing/002-12-tools.md",
+    "requires": [
+      "skill-11-implementation-bcd0d69bff"
+    ],
+    "links": [
+      "skill-13-testing-and-debugging-dsp-71e8245439"
+    ]
+  },
+  {
+    "id": "skill-13-testing-and-debugging-dsp-71e8245439",
+    "purpose": "13 testing and debugging dsp",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-implementation-tools-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-implementation-tools-and-testing/003-13-testing-and-debugging-dsp.md",
+    "requires": [
+      "skill-12-tools-1df57576ad"
+    ],
+    "links": [
+      "skill-14-sensors-and-physical-signals-c188047cd9"
+    ]
+  },
+  {
+    "id": "skill-14-sensors-and-physical-signals-c188047cd9",
+    "purpose": "14 sensors and physical signals",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-implementation-tools-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-implementation-tools-and-testing/004-14-sensors-and-physical-signals.md",
+    "requires": [
+      "skill-13-testing-and-debugging-dsp-71e8245439"
+    ],
+    "links": []
+  }
+]

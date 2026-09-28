@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-quirk-2-1-unbounded-for-each-async-concurrency-floods-downstream-rate-limits-3966088057",
+    "purpose": "quirk 2 1 unbounded for each async concurrency floods downstream rate limits",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-loops/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-loops/001-quirk-2-1-unbounded-for-each-async-concurrency-floods-downstream-rate-limits.md",
+    "requires": [],
+    "links": [
+      "skill-quirk-2-2-for-each-ignore-errors-only-ignores-errors-from-the-parent-s-perspective-30413b3f3c"
+    ]
+  },
+  {
+    "id": "skill-quirk-2-2-for-each-ignore-errors-only-ignores-errors-from-the-parent-s-perspective-30413b3f3c",
+    "purpose": "quirk 2 2 for each ignore errors only ignores errors from the parent s perspective",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-loops/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-loops/002-quirk-2-2-for-each-ignore-errors-only-ignores-errors-from-the-parent-s-perspective.md",
+    "requires": [
+      "skill-quirk-2-1-unbounded-for-each-async-concurrency-floods-downstream-rate-limits-3966088057"
+    ],
+    "links": [
+      "skill-quirk-2-3-plain-for-each-returns-no-outputs-aba3a12725"
+    ]
+  },
+  {
+    "id": "skill-quirk-2-3-plain-for-each-returns-no-outputs-aba3a12725",
+    "purpose": "quirk 2 3 plain for each returns no outputs",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-loops/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-loops/003-quirk-2-3-plain-for-each-returns-no-outputs.md",
+    "requires": [
+      "skill-quirk-2-2-for-each-ignore-errors-only-ignores-errors-from-the-parent-s-perspective-30413b3f3c"
+    ],
+    "links": [
+      "skill-quirk-2-4-deeply-nested-iteration-cards-can-trigger-cpu-time-throttling-68e7853084"
+    ]
+  },
+  {
+    "id": "skill-quirk-2-4-deeply-nested-iteration-cards-can-trigger-cpu-time-throttling-68e7853084",
+    "purpose": "quirk 2 4 deeply nested iteration cards can trigger cpu time throttling",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-loops/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-loops/004-quirk-2-4-deeply-nested-iteration-cards-can-trigger-cpu-time-throttling.md",
+    "requires": [
+      "skill-quirk-2-3-plain-for-each-returns-no-outputs-aba3a12725"
+    ],
+    "links": [
+      "skill-quirk-2-5-filter-direction-substring-gotcha-7b43767c21"
+    ]
+  },
+  {
+    "id": "skill-quirk-2-5-filter-direction-substring-gotcha-7b43767c21",
+    "purpose": "quirk 2 5 filter direction substring gotcha",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-loops/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-loops/005-quirk-2-5-filter-direction-substring-gotcha.md",
+    "requires": [
+      "skill-quirk-2-4-deeply-nested-iteration-cards-can-trigger-cpu-time-throttling-68e7853084"
+    ],
+    "links": []
+  }
+]

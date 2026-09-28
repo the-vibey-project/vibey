@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-0b2cd95d56",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-reference/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-655fd56384"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-655fd56384",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-reference/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-0b2cd95d56"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-ea6b93725b"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-ea6b93725b",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-reference/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-655fd56384"
+    ],
+    "links": [
+      "skill-18-the-canon-0a92840fb3"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-0a92840fb3",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-reference/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-ea6b93725b"
+    ],
+    "links": [
+      "skill-19-quick-reference-4a63153f92"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-4a63153f92",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-reference/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-0a92840fb3"
+    ],
+    "links": [
+      "skill-20-sources-and-method-b161936671"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-b161936671",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-reference/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-4a63153f92"
+    ],
+    "links": []
+  }
+]

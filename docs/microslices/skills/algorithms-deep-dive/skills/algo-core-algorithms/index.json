@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-7-sorting-596359c307",
+    "purpose": "7 sorting",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-core-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-core-algorithms/001-7-sorting.md",
+    "requires": [],
+    "links": [
+      "skill-8-searching-and-indexing-aad33f628c"
+    ]
+  },
+  {
+    "id": "skill-8-searching-and-indexing-aad33f628c",
+    "purpose": "8 searching and indexing",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-core-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-core-algorithms/002-8-searching-and-indexing.md",
+    "requires": [
+      "skill-7-sorting-596359c307"
+    ],
+    "links": [
+      "skill-9-graphs-501de76684"
+    ]
+  },
+  {
+    "id": "skill-9-graphs-501de76684",
+    "purpose": "9 graphs",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-core-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-core-algorithms/003-9-graphs.md",
+    "requires": [
+      "skill-8-searching-and-indexing-aad33f628c"
+    ],
+    "links": [
+      "skill-10-strings-and-text-3706ed1403"
+    ]
+  },
+  {
+    "id": "skill-10-strings-and-text-3706ed1403",
+    "purpose": "10 strings and text",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-core-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-core-algorithms/004-10-strings-and-text.md",
+    "requires": [
+      "skill-9-graphs-501de76684"
+    ],
+    "links": [
+      "skill-11-dynamic-programming-greedy-and-amortization-931fdeef9d"
+    ]
+  },
+  {
+    "id": "skill-11-dynamic-programming-greedy-and-amortization-931fdeef9d",
+    "purpose": "11 dynamic programming greedy and amortization",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-core-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-core-algorithms/005-11-dynamic-programming-greedy-and-amortization.md",
+    "requires": [
+      "skill-10-strings-and-text-3706ed1403"
+    ],
+    "links": []
+  }
+]

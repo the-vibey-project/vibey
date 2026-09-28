@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-21-network-architecture-7cb7bea1e5",
+    "purpose": "21 network architecture",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/001-21-network-architecture.md",
+    "requires": [],
+    "links": [
+      "skill-22-storage-at-scale-bb237dc58a"
+    ]
+  },
+  {
+    "id": "skill-22-storage-at-scale-bb237dc58a",
+    "purpose": "22 storage at scale",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/002-22-storage-at-scale.md",
+    "requires": [
+      "skill-21-network-architecture-7cb7bea1e5"
+    ],
+    "links": [
+      "skill-23-failure-at-scale-9aa5db441a"
+    ]
+  },
+  {
+    "id": "skill-23-failure-at-scale-9aa5db441a",
+    "purpose": "23 failure at scale",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/003-23-failure-at-scale.md",
+    "requires": [
+      "skill-22-storage-at-scale-bb237dc58a"
+    ],
+    "links": [
+      "skill-24-operations-f04e2206d7"
+    ]
+  },
+  {
+    "id": "skill-24-operations-f04e2206d7",
+    "purpose": "24 operations",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/004-24-operations.md",
+    "requires": [
+      "skill-23-failure-at-scale-9aa5db441a"
+    ],
+    "links": [
+      "skill-25-ai-infrastructure-specifics-0427de2955"
+    ]
+  },
+  {
+    "id": "skill-25-ai-infrastructure-specifics-0427de2955",
+    "purpose": "25 ai infrastructure specifics",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-network-storage-failure-and-operations/005-25-ai-infrastructure-specifics.md",
+    "requires": [
+      "skill-24-operations-f04e2206d7"
+    ],
+    "links": []
+  }
+]

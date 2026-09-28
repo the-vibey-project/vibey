@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-eb011c3bf1",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-reference/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-29c2831a7b"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-29c2831a7b",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-reference/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-eb011c3bf1"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-2433908836"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-2433908836",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-reference/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-29c2831a7b"
+    ],
+    "links": [
+      "skill-18-the-canon-933053fc02"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-933053fc02",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-reference/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-2433908836"
+    ],
+    "links": [
+      "skill-19-quick-reference-bd73541889"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-bd73541889",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-reference/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-933053fc02"
+    ],
+    "links": [
+      "skill-20-sources-and-method-6e2756f787"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-6e2756f787",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-reference/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-bd73541889"
+    ],
+    "links": []
+  }
+]

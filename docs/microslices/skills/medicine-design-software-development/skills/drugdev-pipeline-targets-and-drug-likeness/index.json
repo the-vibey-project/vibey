@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-e87626fd45",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-pipeline-and-where-software-helps-9cd9a67cac"
+    ]
+  },
+  {
+    "id": "skill-1-the-pipeline-and-where-software-helps-9cd9a67cac",
+    "purpose": "1 the pipeline and where software helps",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/002-1-the-pipeline-and-where-software-helps.md",
+    "requires": [
+      "skill-0-routing-e87626fd45"
+    ],
+    "links": [
+      "skill-2-targets-and-modalities-3dbb671865"
+    ]
+  },
+  {
+    "id": "skill-2-targets-and-modalities-3dbb671865",
+    "purpose": "2 targets and modalities",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/003-2-targets-and-modalities.md",
+    "requires": [
+      "skill-1-the-pipeline-and-where-software-helps-9cd9a67cac"
+    ],
+    "links": [
+      "skill-3-what-makes-a-molecule-a-drug-b0c816b08e"
+    ]
+  },
+  {
+    "id": "skill-3-what-makes-a-molecule-a-drug-b0c816b08e",
+    "purpose": "3 what makes a molecule a drug",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-pipeline-targets-and-drug-likeness/004-3-what-makes-a-molecule-a-drug.md",
+    "requires": [
+      "skill-2-targets-and-modalities-3dbb671865"
+    ],
+    "links": []
+  }
+]

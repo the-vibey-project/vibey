@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-5abe096d66",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-how-to-read-claims-in-this-field-088c4323fa"
+    ]
+  },
+  {
+    "id": "skill-1-how-to-read-claims-in-this-field-088c4323fa",
+    "purpose": "1 how to read claims in this field",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/002-1-how-to-read-claims-in-this-field.md",
+    "requires": [
+      "skill-0-routing-5abe096d66"
+    ],
+    "links": [
+      "skill-2-attachment-854adc223d"
+    ]
+  },
+  {
+    "id": "skill-2-attachment-854adc223d",
+    "purpose": "2 attachment",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/003-2-attachment.md",
+    "requires": [
+      "skill-1-how-to-read-claims-in-this-field-088c4323fa"
+    ],
+    "links": [
+      "skill-3-couple-relationships-what-predicts-stability-95bdcf561a"
+    ]
+  },
+  {
+    "id": "skill-3-couple-relationships-what-predicts-stability-95bdcf561a",
+    "purpose": "3 couple relationships what predicts stability",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/004-3-couple-relationships-what-predicts-stability.md",
+    "requires": [
+      "skill-2-attachment-854adc223d"
+    ],
+    "links": [
+      "skill-4-conflict-and-repair-ae66732062"
+    ]
+  },
+  {
+    "id": "skill-4-conflict-and-repair-ae66732062",
+    "purpose": "4 conflict and repair",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/005-4-conflict-and-repair.md",
+    "requires": [
+      "skill-3-couple-relationships-what-predicts-stability-95bdcf561a"
+    ],
+    "links": [
+      "skill-5-transitions-and-dissolution-7476d70ccd"
+    ]
+  },
+  {
+    "id": "skill-5-transitions-and-dissolution-7476d70ccd",
+    "purpose": "5 transitions and dissolution",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reading-claims-attachment-and-couple-relationships/006-5-transitions-and-dissolution.md",
+    "requires": [
+      "skill-4-conflict-and-repair-ae66732062"
+    ],
+    "links": []
+  }
+]

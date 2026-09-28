@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-9-the-derivative-27dad5bf72",
+    "purpose": "9 the derivative",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/001-9-the-derivative.md",
+    "requires": [],
+    "links": [
+      "skill-10-integration-78fd6c9f2f"
+    ]
+  },
+  {
+    "id": "skill-10-integration-78fd6c9f2f",
+    "purpose": "10 integration",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/002-10-integration.md",
+    "requires": [
+      "skill-9-the-derivative-27dad5bf72"
+    ],
+    "links": [
+      "skill-11-series-and-taylor-approximation-64c180bbe8"
+    ]
+  },
+  {
+    "id": "skill-11-series-and-taylor-approximation-64c180bbe8",
+    "purpose": "11 series and taylor approximation",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/003-11-series-and-taylor-approximation.md",
+    "requires": [
+      "skill-10-integration-78fd6c9f2f"
+    ],
+    "links": [
+      "skill-12-multivariable-calculus-87d6860d6f"
+    ]
+  },
+  {
+    "id": "skill-12-multivariable-calculus-87d6860d6f",
+    "purpose": "12 multivariable calculus",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/004-12-multivariable-calculus.md",
+    "requires": [
+      "skill-11-series-and-taylor-approximation-64c180bbe8"
+    ],
+    "links": [
+      "skill-13-vector-calculus-9e215a01b3"
+    ]
+  },
+  {
+    "id": "skill-13-vector-calculus-9e215a01b3",
+    "purpose": "13 vector calculus",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-calculus-and-vector-calculus/005-13-vector-calculus.md",
+    "requires": [
+      "skill-12-multivariable-calculus-87d6860d6f"
+    ],
+    "links": []
+  }
+]

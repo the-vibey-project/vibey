@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-11-performance-bc6ed17f80",
+    "purpose": "11 performance",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-performance-feel-and-shipping/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-performance-feel-and-shipping/001-11-performance.md",
+    "requires": [],
+    "links": [
+      "skill-12-game-feel-988ec6f0e7"
+    ]
+  },
+  {
+    "id": "skill-12-game-feel-988ec6f0e7",
+    "purpose": "12 game feel",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-performance-feel-and-shipping/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-performance-feel-and-shipping/002-12-game-feel.md",
+    "requires": [
+      "skill-11-performance-bc6ed17f80"
+    ],
+    "links": [
+      "skill-13-build-test-and-ship-f2064e5dfd"
+    ]
+  },
+  {
+    "id": "skill-13-build-test-and-ship-f2064e5dfd",
+    "purpose": "13 build test and ship",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-performance-feel-and-shipping/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-performance-feel-and-shipping/003-13-build-test-and-ship.md",
+    "requires": [
+      "skill-12-game-feel-988ec6f0e7"
+    ],
+    "links": [
+      "skill-14-production-and-scope-6b5e585b92"
+    ]
+  },
+  {
+    "id": "skill-14-production-and-scope-6b5e585b92",
+    "purpose": "14 production and scope",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-performance-feel-and-shipping/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-performance-feel-and-shipping/004-14-production-and-scope.md",
+    "requires": [
+      "skill-13-build-test-and-ship-f2064e5dfd"
+    ],
+    "links": [
+      "skill-15-the-business-context-12239a706c"
+    ]
+  },
+  {
+    "id": "skill-15-the-business-context-12239a706c",
+    "purpose": "15 the business context",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-performance-feel-and-shipping/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-performance-feel-and-shipping/005-15-the-business-context.md",
+    "requires": [
+      "skill-14-production-and-scope-6b5e585b92"
+    ],
+    "links": []
+  }
+]

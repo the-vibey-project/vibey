@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-anti-patterns-9c567e5762",
+    "purpose": "14 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-reference/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-reference/001-14-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-15-contested-questions-1ef970f6be"
+    ]
+  },
+  {
+    "id": "skill-15-contested-questions-1ef970f6be",
+    "purpose": "15 contested questions",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-reference/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-reference/002-15-contested-questions.md",
+    "requires": [
+      "skill-14-anti-patterns-9c567e5762"
+    ],
+    "links": [
+      "skill-16-currency-snapshot-verified-august-2026-79175ff51c"
+    ]
+  },
+  {
+    "id": "skill-16-currency-snapshot-verified-august-2026-79175ff51c",
+    "purpose": "16 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-reference/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-reference/003-16-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-15-contested-questions-1ef970f6be"
+    ],
+    "links": [
+      "skill-17-the-canon-9b3cddd875"
+    ]
+  },
+  {
+    "id": "skill-17-the-canon-9b3cddd875",
+    "purpose": "17 the canon",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-reference/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-reference/004-17-the-canon.md",
+    "requires": [
+      "skill-16-currency-snapshot-verified-august-2026-79175ff51c"
+    ],
+    "links": [
+      "skill-18-quick-reference-793df50c98"
+    ]
+  },
+  {
+    "id": "skill-18-quick-reference-793df50c98",
+    "purpose": "18 quick reference",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-reference/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-reference/005-18-quick-reference.md",
+    "requires": [
+      "skill-17-the-canon-9b3cddd875"
+    ],
+    "links": [
+      "skill-19-sources-and-method-ed1b6e5dd9"
+    ]
+  },
+  {
+    "id": "skill-19-sources-and-method-ed1b6e5dd9",
+    "purpose": "19 sources and method",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-reference/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-reference/006-19-sources-and-method.md",
+    "requires": [
+      "skill-18-quick-reference-793df50c98"
+    ],
+    "links": []
+  }
+]

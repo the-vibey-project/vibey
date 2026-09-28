@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-verified-august-2026-316adf20d2",
+    "purpose": "26 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-reference/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-reference/001-26-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-16cf837f74"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-16cf837f74",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-reference/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-verified-august-2026-316adf20d2"
+    ],
+    "links": [
+      "skill-28-numbers-a654b665b4"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-a654b665b4",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-reference/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-reference/003-28-numbers.md",
+    "requires": [
+      "skill-27-misconceptions-16cf837f74"
+    ],
+    "links": [
+      "skill-29-resources-ccf57c32a2"
+    ]
+  },
+  {
+    "id": "skill-29-resources-ccf57c32a2",
+    "purpose": "29 resources",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-reference/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-reference/004-29-resources.md",
+    "requires": [
+      "skill-28-numbers-a654b665b4"
+    ],
+    "links": [
+      "skill-30-quick-reference-4e8e86c9bd"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-4e8e86c9bd",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-reference/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-resources-ccf57c32a2"
+    ],
+    "links": [
+      "skill-31-method-f67c59603f"
+    ]
+  },
+  {
+    "id": "skill-31-method-f67c59603f",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-reference/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-4e8e86c9bd"
+    ],
+    "links": []
+  }
+]

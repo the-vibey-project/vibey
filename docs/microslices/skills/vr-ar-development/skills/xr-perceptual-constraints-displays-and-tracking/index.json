@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-7eba785dfa",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-perceptual-constraints-c277bfa210"
+    ]
+  },
+  {
+    "id": "skill-1-the-perceptual-constraints-c277bfa210",
+    "purpose": "1 the perceptual constraints",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/002-1-the-perceptual-constraints.md",
+    "requires": [
+      "skill-0-routing-7eba785dfa"
+    ],
+    "links": [
+      "skill-2-displays-and-optics-f374770dd2"
+    ]
+  },
+  {
+    "id": "skill-2-displays-and-optics-f374770dd2",
+    "purpose": "2 displays and optics",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/003-2-displays-and-optics.md",
+    "requires": [
+      "skill-1-the-perceptual-constraints-c277bfa210"
+    ],
+    "links": [
+      "skill-3-tracking-f3ef506358"
+    ]
+  },
+  {
+    "id": "skill-3-tracking-f3ef506358",
+    "purpose": "3 tracking",
+    "source": "src/vibey_tools/skills/plugins/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/vr-ar-development/skills/xr-perceptual-constraints-displays-and-tracking/004-3-tracking.md",
+    "requires": [
+      "skill-2-displays-and-optics-f374770dd2"
+    ],
+    "links": []
+  }
+]

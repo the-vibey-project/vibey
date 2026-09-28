@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-dynamics-the-balances-61b91f6ba7",
+    "purpose": "5 dynamics the balances",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-dynamics-circulation-and-synoptic/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-dynamics-circulation-and-synoptic/001-5-dynamics-the-balances.md",
+    "requires": [],
+    "links": [
+      "skill-6-general-circulation-fd2200e57a"
+    ]
+  },
+  {
+    "id": "skill-6-general-circulation-fd2200e57a",
+    "purpose": "6 general circulation",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-dynamics-circulation-and-synoptic/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-dynamics-circulation-and-synoptic/002-6-general-circulation.md",
+    "requires": [
+      "skill-5-dynamics-the-balances-61b91f6ba7"
+    ],
+    "links": [
+      "skill-7-synoptic-meteorology-7d5cf1c6ae"
+    ]
+  },
+  {
+    "id": "skill-7-synoptic-meteorology-7d5cf1c6ae",
+    "purpose": "7 synoptic meteorology",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-dynamics-circulation-and-synoptic/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-dynamics-circulation-and-synoptic/003-7-synoptic-meteorology.md",
+    "requires": [
+      "skill-6-general-circulation-fd2200e57a"
+    ],
+    "links": []
+  }
+]

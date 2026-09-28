@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-22-what-s-live-verified-august-2026-9d547b2723",
+    "purpose": "22 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing/001-22-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-23-injury-and-load-management-b271d2191b"
+    ]
+  },
+  {
+    "id": "skill-23-injury-and-load-management-b271d2191b",
+    "purpose": "23 injury and load management",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing/002-23-injury-and-load-management.md",
+    "requires": [
+      "skill-22-what-s-live-verified-august-2026-9d547b2723"
+    ],
+    "links": [
+      "skill-24-testing-4a9c8cddf0"
+    ]
+  },
+  {
+    "id": "skill-24-testing-4a9c8cddf0",
+    "purpose": "24 testing",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-live-evidence-injury-and-testing/003-24-testing.md",
+    "requires": [
+      "skill-23-injury-and-load-management-b271d2191b"
+    ],
+    "links": []
+  }
+]

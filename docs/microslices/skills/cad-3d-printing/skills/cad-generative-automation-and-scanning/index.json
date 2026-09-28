@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-10-generative-design-and-lattices-e6c3d068a1",
+    "purpose": "10 generative design and lattices",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-generative-automation-and-scanning/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-generative-automation-and-scanning/001-10-generative-design-and-lattices.md",
+    "requires": [],
+    "links": [
+      "skill-11-automation-pipelines-465dce7a9b"
+    ]
+  },
+  {
+    "id": "skill-11-automation-pipelines-465dce7a9b",
+    "purpose": "11 automation pipelines",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-generative-automation-and-scanning/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-generative-automation-and-scanning/002-11-automation-pipelines.md",
+    "requires": [
+      "skill-10-generative-design-and-lattices-e6c3d068a1"
+    ],
+    "links": [
+      "skill-12-scanning-and-reverse-engineering-f28d9d6700"
+    ]
+  },
+  {
+    "id": "skill-12-scanning-and-reverse-engineering-f28d9d6700",
+    "purpose": "12 scanning and reverse engineering",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-generative-automation-and-scanning/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-generative-automation-and-scanning/003-12-scanning-and-reverse-engineering.md",
+    "requires": [
+      "skill-11-automation-pipelines-465dce7a9b"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-8-fdir-802e1f6675",
+    "purpose": "8 fdir",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/001-8-fdir.md",
+    "requires": [],
+    "links": [
+      "skill-9-time-and-clocks-d1af8fec66"
+    ]
+  },
+  {
+    "id": "skill-9-time-and-clocks-d1af8fec66",
+    "purpose": "9 time and clocks",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/002-9-time-and-clocks.md",
+    "requires": [
+      "skill-8-fdir-802e1f6675"
+    ],
+    "links": [
+      "skill-10-command-and-telemetry-2986c1116f"
+    ]
+  },
+  {
+    "id": "skill-10-command-and-telemetry-2986c1116f",
+    "purpose": "10 command and telemetry",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/003-10-command-and-telemetry.md",
+    "requires": [
+      "skill-9-time-and-clocks-d1af8fec66"
+    ],
+    "links": [
+      "skill-11-data-handling-and-in-flight-update-6dd1c92e56"
+    ]
+  },
+  {
+    "id": "skill-11-data-handling-and-in-flight-update-6dd1c92e56",
+    "purpose": "11 data handling and in flight update",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-fdir-time-telemetry-and-updates/004-11-data-handling-and-in-flight-update.md",
+    "requires": [
+      "skill-10-command-and-telemetry-2986c1116f"
+    ],
+    "links": []
+  }
+]

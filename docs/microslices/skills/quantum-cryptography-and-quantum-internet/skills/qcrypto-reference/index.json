@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-24-what-s-live-checked-august-2026-0c8ff4161b",
+    "purpose": "24 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/001-24-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-25-misconceptions-1fb9ca2159"
+    ]
+  },
+  {
+    "id": "skill-25-misconceptions-1fb9ca2159",
+    "purpose": "25 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/002-25-misconceptions.md",
+    "requires": [
+      "skill-24-what-s-live-checked-august-2026-0c8ff4161b"
+    ],
+    "links": [
+      "skill-26-numbers-b1b8e53c15"
+    ]
+  },
+  {
+    "id": "skill-26-numbers-b1b8e53c15",
+    "purpose": "26 numbers",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/003-26-numbers.md",
+    "requires": [
+      "skill-25-misconceptions-1fb9ca2159"
+    ],
+    "links": [
+      "skill-27-sources-1f833e963d"
+    ]
+  },
+  {
+    "id": "skill-27-sources-1f833e963d",
+    "purpose": "27 sources",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/004-27-sources.md",
+    "requires": [
+      "skill-26-numbers-b1b8e53c15"
+    ],
+    "links": [
+      "skill-28-quick-reference-93a13448cd"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-93a13448cd",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/005-28-quick-reference.md",
+    "requires": [
+      "skill-27-sources-1f833e963d"
+    ],
+    "links": [
+      "skill-29-method-fb6e827e7e"
+    ]
+  },
+  {
+    "id": "skill-29-method-fb6e827e7e",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-reference/006-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-93a13448cd"
+    ],
+    "links": []
+  }
+]

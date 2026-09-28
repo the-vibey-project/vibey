@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-part-1-before-a-line-of-code-is-written-a4cdeaa038",
+    "purpose": "part 1 before a line of code is written",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/001-part-1-before-a-line-of-code-is-written.md",
+    "requires": [],
+    "links": [
+      "skill-part-2-the-four-functional-layers-f8328be3f9"
+    ]
+  },
+  {
+    "id": "skill-part-2-the-four-functional-layers-f8328be3f9",
+    "purpose": "part 2 the four functional layers",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/002-part-2-the-four-functional-layers.md",
+    "requires": [
+      "skill-part-1-before-a-line-of-code-is-written-a4cdeaa038"
+    ],
+    "links": [
+      "skill-part-3-data-foundation-and-the-knowledge-base-step-5-4324e589cf"
+    ]
+  },
+  {
+    "id": "skill-part-3-data-foundation-and-the-knowledge-base-step-5-4324e589cf",
+    "purpose": "part 3 data foundation and the knowledge base step 5",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/003-part-3-data-foundation-and-the-knowledge-base-step-5.md",
+    "requires": [
+      "skill-part-2-the-four-functional-layers-f8328be3f9"
+    ],
+    "links": [
+      "skill-part-4-integration-architecture-step-7-d2839e78d5"
+    ]
+  },
+  {
+    "id": "skill-part-4-integration-architecture-step-7-d2839e78d5",
+    "purpose": "part 4 integration architecture step 7",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/004-part-4-integration-architecture-step-7.md",
+    "requires": [
+      "skill-part-3-data-foundation-and-the-knowledge-base-step-5-4324e589cf"
+    ],
+    "links": [
+      "skill-part-5-the-cost-spectrum-cfc70eccde"
+    ]
+  },
+  {
+    "id": "skill-part-5-the-cost-spectrum-cfc70eccde",
+    "purpose": "part 5 the cost spectrum",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/005-part-5-the-cost-spectrum.md",
+    "requires": [
+      "skill-part-4-integration-architecture-step-7-d2839e78d5"
+    ],
+    "links": [
+      "skill-part-6-hallucination-causes-mechanisms-and-mitigation-084bdb4174"
+    ]
+  },
+  {
+    "id": "skill-part-6-hallucination-causes-mechanisms-and-mitigation-084bdb4174",
+    "purpose": "part 6 hallucination causes mechanisms and mitigation",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/006-part-6-hallucination-causes-mechanisms-and-mitigation.md",
+    "requires": [
+      "skill-part-5-the-cost-spectrum-cfc70eccde"
+    ],
+    "links": [
+      "skill-part-7-the-three-layer-guardrail-framework-7e9be6e42f"
+    ]
+  },
+  {
+    "id": "skill-part-7-the-three-layer-guardrail-framework-7e9be6e42f",
+    "purpose": "part 7 the three layer guardrail framework",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/007-part-7-the-three-layer-guardrail-framework.md",
+    "requires": [
+      "skill-part-6-hallucination-causes-mechanisms-and-mitigation-084bdb4174"
+    ],
+    "links": [
+      "skill-part-8-data-privacy-and-security-architecture-632bc63def"
+    ]
+  },
+  {
+    "id": "skill-part-8-data-privacy-and-security-architecture-632bc63def",
+    "purpose": "part 8 data privacy and security architecture",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/008-part-8-data-privacy-and-security-architecture.md",
+    "requires": [
+      "skill-part-7-the-three-layer-guardrail-framework-7e9be6e42f"
+    ],
+    "links": [
+      "skill-part-9-the-five-category-accuracy-evaluation-framework-1374ec35bb"
+    ]
+  },
+  {
+    "id": "skill-part-9-the-five-category-accuracy-evaluation-framework-1374ec35bb",
+    "purpose": "part 9 the five category accuracy evaluation framework",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/009-part-9-the-five-category-accuracy-evaluation-framework.md",
+    "requires": [
+      "skill-part-8-data-privacy-and-security-architecture-632bc63def"
+    ],
+    "links": [
+      "skill-part-10-organizational-readiness-0e3b24512c"
+    ]
+  },
+  {
+    "id": "skill-part-10-organizational-readiness-0e3b24512c",
+    "purpose": "part 10 organizational readiness",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/010-part-10-organizational-readiness.md",
+    "requires": [
+      "skill-part-9-the-five-category-accuracy-evaluation-framework-1374ec35bb"
+    ],
+    "links": [
+      "skill-part-11-the-five-phase-build-process-discovery-to-production-6398ff12b8"
+    ]
+  },
+  {
+    "id": "skill-part-11-the-five-phase-build-process-discovery-to-production-6398ff12b8",
+    "purpose": "part 11 the five phase build process discovery to production",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/011-part-11-the-five-phase-build-process-discovery-to-production.md",
+    "requires": [
+      "skill-part-10-organizational-readiness-0e3b24512c"
+    ],
+    "links": [
+      "skill-part-12-industry-case-studies-and-benchmarks-dced279a5e"
+    ]
+  },
+  {
+    "id": "skill-part-12-industry-case-studies-and-benchmarks-dced279a5e",
+    "purpose": "part 12 industry case studies and benchmarks",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/012-part-12-industry-case-studies-and-benchmarks.md",
+    "requires": [
+      "skill-part-11-the-five-phase-build-process-discovery-to-production-6398ff12b8"
+    ],
+    "links": [
+      "skill-part-13-five-key-findings-summary-85ff1227f7"
+    ]
+  },
+  {
+    "id": "skill-part-13-five-key-findings-summary-85ff1227f7",
+    "purpose": "part 13 five key findings summary",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/013-part-13-five-key-findings-summary.md",
+    "requires": [
+      "skill-part-12-industry-case-studies-and-benchmarks-dced279a5e"
+    ],
+    "links": [
+      "skill-vendor-evaluation-checklist-c06c52532f"
+    ]
+  },
+  {
+    "id": "skill-vendor-evaluation-checklist-c06c52532f",
+    "purpose": "vendor evaluation checklist",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/chatbot-build-and-deploy/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/chatbot-build-and-deploy/014-vendor-evaluation-checklist.md",
+    "requires": [
+      "skill-part-13-five-key-findings-summary-85ff1227f7"
+    ],
+    "links": []
+  }
+]

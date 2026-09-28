@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-migration-a72474a0b5",
+    "purpose": "10 migration",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/001-10-migration.md",
+    "requires": [],
+    "links": [
+      "skill-11-sovereignty-the-eu-data-act-and-egress-2a3eecc79a"
+    ]
+  },
+  {
+    "id": "skill-11-sovereignty-the-eu-data-act-and-egress-2a3eecc79a",
+    "purpose": "11 sovereignty the eu data act and egress",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/002-11-sovereignty-the-eu-data-act-and-egress.md",
+    "requires": [
+      "skill-10-migration-a72474a0b5"
+    ],
+    "links": [
+      "skill-12-multi-cloud-and-lock-in-45b76b10cb"
+    ]
+  },
+  {
+    "id": "skill-12-multi-cloud-and-lock-in-45b76b10cb",
+    "purpose": "12 multi cloud and lock in",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/003-12-multi-cloud-and-lock-in.md",
+    "requires": [
+      "skill-11-sovereignty-the-eu-data-act-and-egress-2a3eecc79a"
+    ],
+    "links": [
+      "skill-13-ai-workloads-8cb59c9637"
+    ]
+  },
+  {
+    "id": "skill-13-ai-workloads-8cb59c9637",
+    "purpose": "13 ai workloads",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/004-13-ai-workloads.md",
+    "requires": [
+      "skill-12-multi-cloud-and-lock-in-45b76b10cb"
+    ],
+    "links": [
+      "skill-14-sustainability-eff16ba1f7"
+    ]
+  },
+  {
+    "id": "skill-14-sustainability-eff16ba1f7",
+    "purpose": "14 sustainability",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-migration-sovereignty-and-ai-workloads/005-14-sustainability.md",
+    "requires": [
+      "skill-13-ai-workloads-8cb59c9637"
+    ],
+    "links": []
+  }
+]

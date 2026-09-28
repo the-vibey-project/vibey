@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-19-class-flag-and-imo-6c945beecb",
+    "purpose": "19 class flag and imo",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/001-19-class-flag-and-imo.md",
+    "requires": [],
+    "links": [
+      "skill-20-safety-regulation-79e305dc6d"
+    ]
+  },
+  {
+    "id": "skill-20-safety-regulation-79e305dc6d",
+    "purpose": "20 safety regulation",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/002-20-safety-regulation.md",
+    "requires": [
+      "skill-19-class-flag-and-imo-6c945beecb"
+    ],
+    "links": [
+      "skill-21-small-craft-and-boatbuilding-9d9119c7ca"
+    ]
+  },
+  {
+    "id": "skill-21-small-craft-and-boatbuilding-9d9119c7ca",
+    "purpose": "21 small craft and boatbuilding",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/003-21-small-craft-and-boatbuilding.md",
+    "requires": [
+      "skill-20-safety-regulation-79e305dc6d"
+    ],
+    "links": [
+      "skill-22-operation-drydock-and-end-of-life-36890c4640"
+    ]
+  },
+  {
+    "id": "skill-22-operation-drydock-and-end-of-life-36890c4640",
+    "purpose": "22 operation drydock and end of life",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/004-22-operation-drydock-and-end-of-life.md",
+    "requires": [
+      "skill-21-small-craft-and-boatbuilding-9d9119c7ca"
+    ],
+    "links": [
+      "skill-23-why-ships-are-lost-ce7704446b"
+    ]
+  },
+  {
+    "id": "skill-23-why-ships-are-lost-ce7704446b",
+    "purpose": "23 why ships are lost",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-class-flag-imo-safety-operations-and-losses/005-23-why-ships-are-lost.md",
+    "requires": [
+      "skill-22-operation-drydock-and-end-of-life-36890c4640"
+    ],
+    "links": []
+  }
+]

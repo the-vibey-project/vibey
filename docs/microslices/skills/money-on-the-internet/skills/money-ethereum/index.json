@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-1-the-mental-model-c002de618f",
+    "purpose": "1 the mental model",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-ethereum/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-ethereum/001-1-the-mental-model.md",
+    "requires": [],
+    "links": [
+      "skill-2-proof-of-stake-and-the-two-process-node-durable-5419876112"
+    ]
+  },
+  {
+    "id": "skill-2-proof-of-stake-and-the-two-process-node-durable-5419876112",
+    "purpose": "2 proof of stake and the two process node durable",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-ethereum/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-ethereum/002-2-proof-of-stake-and-the-two-process-node-durable.md",
+    "requires": [
+      "skill-1-the-mental-model-c002de618f"
+    ],
+    "links": [
+      "skill-3-upgrades-what-s-shipped-what-s-next-heavily-dated-ee59412b9e"
+    ]
+  },
+  {
+    "id": "skill-3-upgrades-what-s-shipped-what-s-next-heavily-dated-ee59412b9e",
+    "purpose": "3 upgrades what s shipped what s next heavily dated",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-ethereum/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-ethereum/003-3-upgrades-what-s-shipped-what-s-next-heavily-dated.md",
+    "requires": [
+      "skill-2-proof-of-stake-and-the-two-process-node-durable-5419876112"
+    ],
+    "links": [
+      "skill-4-using-ethereum-cec8448ef7"
+    ]
+  },
+  {
+    "id": "skill-4-using-ethereum-cec8448ef7",
+    "purpose": "4 using ethereum",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-ethereum/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-ethereum/004-4-using-ethereum.md",
+    "requires": [
+      "skill-3-upgrades-what-s-shipped-what-s-next-heavily-dated-ee59412b9e"
+    ],
+    "links": [
+      "skill-5-developing-on-ethereum-8b99c151b8"
+    ]
+  },
+  {
+    "id": "skill-5-developing-on-ethereum-8b99c151b8",
+    "purpose": "5 developing on ethereum",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-ethereum/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-ethereum/005-5-developing-on-ethereum.md",
+    "requires": [
+      "skill-4-using-ethereum-cec8448ef7"
+    ],
+    "links": [
+      "skill-sources-as-of-16-sep-2026-8abb461292"
+    ]
+  },
+  {
+    "id": "skill-sources-as-of-16-sep-2026-8abb461292",
+    "purpose": "sources as of 16 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-ethereum/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-ethereum/006-sources-as-of-16-sep-2026.md",
+    "requires": [
+      "skill-5-developing-on-ethereum-8b99c151b8"
+    ],
+    "links": []
+  }
+]

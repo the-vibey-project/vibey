@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-1-the-architecture-fundamentals-stable-39bb4ac43b",
+    "purpose": "1 the architecture fundamentals stable",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/001-1-the-architecture-fundamentals-stable.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-durov-prosecution-and-the-compliance-turn-verified-6541fdef7e"
+    ]
+  },
+  {
+    "id": "skill-2-the-durov-prosecution-and-the-compliance-turn-verified-6541fdef7e",
+    "purpose": "2 the durov prosecution and the compliance turn verified",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/002-2-the-durov-prosecution-and-the-compliance-turn-verified.md",
+    "requires": [
+      "skill-1-the-architecture-fundamentals-stable-39bb4ac43b"
+    ],
+    "links": [
+      "skill-3-scale-and-economics-verified-with-the-usual-caveat-5422b4b95f"
+    ]
+  },
+  {
+    "id": "skill-3-scale-and-economics-verified-with-the-usual-caveat-5422b4b95f",
+    "purpose": "3 scale and economics verified with the usual caveat",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/003-3-scale-and-economics-verified-with-the-usual-caveat.md",
+    "requires": [
+      "skill-2-the-durov-prosecution-and-the-compliance-turn-verified-6541fdef7e"
+    ],
+    "links": [
+      "skill-4-geopolitical-squeeze-verified-1964ff8caf"
+    ]
+  },
+  {
+    "id": "skill-4-geopolitical-squeeze-verified-1964ff8caf",
+    "purpose": "4 geopolitical squeeze verified",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/004-4-geopolitical-squeeze-verified.md",
+    "requires": [
+      "skill-3-scale-and-economics-verified-with-the-usual-caveat-5422b4b95f"
+    ],
+    "links": [
+      "skill-5-operator-perspective-operating-on-telegram-db76d8b353"
+    ]
+  },
+  {
+    "id": "skill-5-operator-perspective-operating-on-telegram-db76d8b353",
+    "purpose": "5 operator perspective operating on telegram",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/005-5-operator-perspective-operating-on-telegram.md",
+    "requires": [
+      "skill-4-geopolitical-squeeze-verified-1964ff8caf"
+    ],
+    "links": [
+      "skill-6-developer-perspective-the-richest-ecosystem-with-a-leash-e260655397"
+    ]
+  },
+  {
+    "id": "skill-6-developer-perspective-the-richest-ecosystem-with-a-leash-e260655397",
+    "purpose": "6 developer perspective the richest ecosystem with a leash",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/006-6-developer-perspective-the-richest-ecosystem-with-a-leash.md",
+    "requires": [
+      "skill-5-operator-perspective-operating-on-telegram-db76d8b353"
+    ],
+    "links": [
+      "skill-7-honest-verdict-1ba9b423e2"
+    ]
+  },
+  {
+    "id": "skill-7-honest-verdict-1ba9b423e2",
+    "purpose": "7 honest verdict",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/007-7-honest-verdict.md",
+    "requires": [
+      "skill-6-developer-perspective-the-richest-ecosystem-with-a-leash-e260655397"
+    ],
+    "links": [
+      "skill-sources-this-file-24b42e9848"
+    ]
+  },
+  {
+    "id": "skill-sources-this-file-24b42e9848",
+    "purpose": "sources this file",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-telegram/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-telegram/008-sources-this-file.md",
+    "requires": [
+      "skill-7-honest-verdict-1ba9b423e2"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-24-what-s-live-verified-august-2026-101a9c6926",
+    "purpose": "24 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference/001-24-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-25-anti-patterns-22c488f5de"
+    ]
+  },
+  {
+    "id": "skill-25-anti-patterns-22c488f5de",
+    "purpose": "25 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference/002-25-anti-patterns.md",
+    "requires": [
+      "skill-24-what-s-live-verified-august-2026-101a9c6926"
+    ],
+    "links": [
+      "skill-26-misconceptions-8ceca638ab"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-8ceca638ab",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference/003-26-misconceptions.md",
+    "requires": [
+      "skill-25-anti-patterns-22c488f5de"
+    ],
+    "links": [
+      "skill-27-numbers-c87f1623de"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-c87f1623de",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference/004-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-8ceca638ab"
+    ],
+    "links": [
+      "skill-28-resources-1a3b819107"
+    ]
+  },
+  {
+    "id": "skill-28-resources-1a3b819107",
+    "purpose": "28 resources",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference/005-28-resources.md",
+    "requires": [
+      "skill-27-numbers-c87f1623de"
+    ],
+    "links": [
+      "skill-29-quick-reference-8e6b503a97"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-8e6b503a97",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference/006-29-quick-reference.md",
+    "requires": [
+      "skill-28-resources-1a3b819107"
+    ],
+    "links": [
+      "skill-30-method-c6b59cac30"
+    ]
+  },
+  {
+    "id": "skill-30-method-c6b59cac30",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-reference/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-reference/007-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-8e6b503a97"
+    ],
+    "links": []
+  }
+]

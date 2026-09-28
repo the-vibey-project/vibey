@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-11898a4145",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-why-nutrition-science-is-hard-4816fb3a26"
+    ]
+  },
+  {
+    "id": "skill-1-why-nutrition-science-is-hard-4816fb3a26",
+    "purpose": "1 why nutrition science is hard",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/002-1-why-nutrition-science-is-hard.md",
+    "requires": [
+      "skill-0-routing-11898a4145"
+    ],
+    "links": [
+      "skill-2-confounding-and-study-design-60e06a4da9"
+    ]
+  },
+  {
+    "id": "skill-2-confounding-and-study-design-60e06a4da9",
+    "purpose": "2 confounding and study design",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/003-2-confounding-and-study-design.md",
+    "requires": [
+      "skill-1-why-nutrition-science-is-hard-4816fb3a26"
+    ],
+    "links": [
+      "skill-3-the-measurement-problem-2c281b5a17"
+    ]
+  },
+  {
+    "id": "skill-3-the-measurement-problem-2c281b5a17",
+    "purpose": "3 the measurement problem",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-epistemics-study-design-and-measurement/004-3-the-measurement-problem.md",
+    "requires": [
+      "skill-2-confounding-and-study-design-60e06a4da9"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-12-audio-interfaces-0a99455689",
+    "purpose": "12 audio interfaces",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/001-12-audio-interfaces.md",
+    "requires": [],
+    "links": [
+      "skill-13-printers-and-scanners-dc0ca49b59"
+    ]
+  },
+  {
+    "id": "skill-13-printers-and-scanners-dc0ca49b59",
+    "purpose": "13 printers and scanners",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/002-13-printers-and-scanners.md",
+    "requires": [
+      "skill-12-audio-interfaces-0a99455689"
+    ],
+    "links": [
+      "skill-14-storage-capture-and-everything-else-4fb324bfba"
+    ]
+  },
+  {
+    "id": "skill-14-storage-capture-and-everything-else-4fb324bfba",
+    "purpose": "14 storage capture and everything else",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/003-14-storage-capture-and-everything-else.md",
+    "requires": [
+      "skill-13-printers-and-scanners-dc0ca49b59"
+    ],
+    "links": [
+      "skill-15-controllers-and-haptics-e7d35579b6"
+    ]
+  },
+  {
+    "id": "skill-15-controllers-and-haptics-e7d35579b6",
+    "purpose": "15 controllers and haptics",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-audio-printers-storage-controllers-and-haptics/004-15-controllers-and-haptics.md",
+    "requires": [
+      "skill-14-storage-capture-and-everything-else-4fb324bfba"
+    ],
+    "links": []
+  }
+]

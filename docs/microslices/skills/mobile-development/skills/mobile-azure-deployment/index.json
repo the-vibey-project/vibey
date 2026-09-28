@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-intune-mdm-mam-3fa4205cc1",
+    "purpose": "intune mdm mam",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-azure-deployment/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-azure-deployment/001-intune-mdm-mam.md",
+    "requires": [],
+    "links": [
+      "skill-backend-data-tier-d767de03b8"
+    ]
+  },
+  {
+    "id": "skill-backend-data-tier-d767de03b8",
+    "purpose": "backend data tier",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-azure-deployment/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-azure-deployment/002-backend-data-tier.md",
+    "requires": [
+      "skill-intune-mdm-mam-3fa4205cc1"
+    ],
+    "links": [
+      "skill-ci-cd-after-app-center-retired-march-31-2025-49e257290b"
+    ]
+  },
+  {
+    "id": "skill-ci-cd-after-app-center-retired-march-31-2025-49e257290b",
+    "purpose": "ci cd after app center retired march 31 2025",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-azure-deployment/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-azure-deployment/003-ci-cd-after-app-center-retired-march-31-2025.md",
+    "requires": [
+      "skill-backend-data-tier-d767de03b8"
+    ],
+    "links": [
+      "skill-observability-tie-in-32be950088"
+    ]
+  },
+  {
+    "id": "skill-observability-tie-in-32be950088",
+    "purpose": "observability tie in",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-azure-deployment/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-azure-deployment/004-observability-tie-in.md",
+    "requires": [
+      "skill-ci-cd-after-app-center-retired-march-31-2025-49e257290b"
+    ],
+    "links": [
+      "skill-recommended-staging-1f9166e358"
+    ]
+  },
+  {
+    "id": "skill-recommended-staging-1f9166e358",
+    "purpose": "recommended staging",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-azure-deployment/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-azure-deployment/005-recommended-staging.md",
+    "requires": [
+      "skill-observability-tie-in-32be950088"
+    ],
+    "links": []
+  }
+]

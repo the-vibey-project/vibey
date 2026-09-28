@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-3-feed-and-timeline-architecture-a2b42050b1",
+    "purpose": "3 feed and timeline architecture",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/001-3-feed-and-timeline-architecture.md",
+    "requires": [],
+    "links": [
+      "skill-4-the-social-graph-6ddbd4cf5b"
+    ]
+  },
+  {
+    "id": "skill-4-the-social-graph-6ddbd4cf5b",
+    "purpose": "4 the social graph",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/002-4-the-social-graph.md",
+    "requires": [
+      "skill-3-feed-and-timeline-architecture-a2b42050b1"
+    ],
+    "links": [
+      "skill-5-ranking-and-recommendation-b0c477387c"
+    ]
+  },
+  {
+    "id": "skill-5-ranking-and-recommendation-b0c477387c",
+    "purpose": "5 ranking and recommendation",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/003-5-ranking-and-recommendation.md",
+    "requires": [
+      "skill-4-the-social-graph-6ddbd4cf5b"
+    ],
+    "links": [
+      "skill-6-notifications-and-real-time-3d5c86bd57"
+    ]
+  },
+  {
+    "id": "skill-6-notifications-and-real-time-3d5c86bd57",
+    "purpose": "6 notifications and real time",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-feed-graph-ranking-and-notifications/004-6-notifications-and-real-time.md",
+    "requires": [
+      "skill-5-ranking-and-recommendation-b0c477387c"
+    ],
+    "links": []
+  }
+]

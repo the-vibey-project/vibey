@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-15-analytical-methods-14e45235df",
+    "purpose": "15 analytical methods",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/001-15-analytical-methods.md",
+    "requires": [],
+    "links": [
+      "skill-16-melody-136e46aa2c"
+    ]
+  },
+  {
+    "id": "skill-16-melody-136e46aa2c",
+    "purpose": "16 melody",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/002-16-melody.md",
+    "requires": [
+      "skill-15-analytical-methods-14e45235df"
+    ],
+    "links": [
+      "skill-17-jazz-harmony-0bff255c42"
+    ]
+  },
+  {
+    "id": "skill-17-jazz-harmony-0bff255c42",
+    "purpose": "17 jazz harmony",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/003-17-jazz-harmony.md",
+    "requires": [
+      "skill-16-melody-136e46aa2c"
+    ],
+    "links": [
+      "skill-18-popular-music-68e47a9720"
+    ]
+  },
+  {
+    "id": "skill-18-popular-music-68e47a9720",
+    "purpose": "18 popular music",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/004-18-popular-music.md",
+    "requires": [
+      "skill-17-jazz-harmony-0bff255c42"
+    ],
+    "links": [
+      "skill-19-non-western-systems-95a25a2979"
+    ]
+  },
+  {
+    "id": "skill-19-non-western-systems-95a25a2979",
+    "purpose": "19 non western systems",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/005-19-non-western-systems.md",
+    "requires": [
+      "skill-18-popular-music-68e47a9720"
+    ],
+    "links": [
+      "skill-20-twentieth-century-and-after-dbabe6b394"
+    ]
+  },
+  {
+    "id": "skill-20-twentieth-century-and-after-dbabe6b394",
+    "purpose": "20 twentieth century and after",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/006-20-twentieth-century-and-after.md",
+    "requires": [
+      "skill-19-non-western-systems-95a25a2979"
+    ],
+    "links": [
+      "skill-21-music-and-meaning-ac5a738fd1"
+    ]
+  },
+  {
+    "id": "skill-21-music-and-meaning-ac5a738fd1",
+    "purpose": "21 music and meaning",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-analysis-jazz-popular-non-western-and-meaning/007-21-music-and-meaning.md",
+    "requires": [
+      "skill-20-twentieth-century-and-after-dbabe6b394"
+    ],
+    "links": []
+  }
+]

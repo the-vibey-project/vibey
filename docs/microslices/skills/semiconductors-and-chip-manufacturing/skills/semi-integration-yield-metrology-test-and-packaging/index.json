@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-16-process-integration-218a8cb63c",
+    "purpose": "16 process integration",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/001-16-process-integration.md",
+    "requires": [],
+    "links": [
+      "skill-17-yield-eb314ca3c3"
+    ]
+  },
+  {
+    "id": "skill-17-yield-eb314ca3c3",
+    "purpose": "17 yield",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/002-17-yield.md",
+    "requires": [
+      "skill-16-process-integration-218a8cb63c"
+    ],
+    "links": [
+      "skill-18-metrology-and-inspection-a91354f730"
+    ]
+  },
+  {
+    "id": "skill-18-metrology-and-inspection-a91354f730",
+    "purpose": "18 metrology and inspection",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/003-18-metrology-and-inspection.md",
+    "requires": [
+      "skill-17-yield-eb314ca3c3"
+    ],
+    "links": [
+      "skill-19-test-f91287a331"
+    ]
+  },
+  {
+    "id": "skill-19-test-f91287a331",
+    "purpose": "19 test",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/004-19-test.md",
+    "requires": [
+      "skill-18-metrology-and-inspection-a91354f730"
+    ],
+    "links": [
+      "skill-20-advanced-packaging-43fc30df1f"
+    ]
+  },
+  {
+    "id": "skill-20-advanced-packaging-43fc30df1f",
+    "purpose": "20 advanced packaging",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-integration-yield-metrology-test-and-packaging/005-20-advanced-packaging.md",
+    "requires": [
+      "skill-19-test-f91287a331"
+    ],
+    "links": []
+  }
+]

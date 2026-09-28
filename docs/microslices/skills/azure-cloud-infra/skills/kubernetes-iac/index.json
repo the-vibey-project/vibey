@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-core-principle-separation-of-concerns-19153397de",
+    "purpose": "core principle separation of concerns",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/001-core-principle-separation-of-concerns.md",
+    "requires": [],
+    "links": [
+      "skill-gitops-the-operational-model-b0bab2a443"
+    ]
+  },
+  {
+    "id": "skill-gitops-the-operational-model-b0bab2a443",
+    "purpose": "gitops the operational model",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/002-gitops-the-operational-model.md",
+    "requires": [
+      "skill-core-principle-separation-of-concerns-19153397de"
+    ],
+    "links": [
+      "skill-helm-chart-design-c98e31b83c"
+    ]
+  },
+  {
+    "id": "skill-helm-chart-design-c98e31b83c",
+    "purpose": "helm chart design",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/003-helm-chart-design.md",
+    "requires": [
+      "skill-gitops-the-operational-model-b0bab2a443"
+    ],
+    "links": [
+      "skill-kustomize-overlays-and-patches-5480ec6daa"
+    ]
+  },
+  {
+    "id": "skill-kustomize-overlays-and-patches-5480ec6daa",
+    "purpose": "kustomize overlays and patches",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/004-kustomize-overlays-and-patches.md",
+    "requires": [
+      "skill-helm-chart-design-c98e31b83c"
+    ],
+    "links": [
+      "skill-terraform-for-aks-provisioning-20b00e2bbb"
+    ]
+  },
+  {
+    "id": "skill-terraform-for-aks-provisioning-20b00e2bbb",
+    "purpose": "terraform for aks provisioning",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/005-terraform-for-aks-provisioning.md",
+    "requires": [
+      "skill-kustomize-overlays-and-patches-5480ec6daa"
+    ],
+    "links": [
+      "skill-bicep-azure-native-alternative-c0f0d41e6d"
+    ]
+  },
+  {
+    "id": "skill-bicep-azure-native-alternative-c0f0d41e6d",
+    "purpose": "bicep azure native alternative",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/006-bicep-azure-native-alternative.md",
+    "requires": [
+      "skill-terraform-for-aks-provisioning-20b00e2bbb"
+    ],
+    "links": [
+      "skill-aks-security-hardening-eccb2957dc"
+    ]
+  },
+  {
+    "id": "skill-aks-security-hardening-eccb2957dc",
+    "purpose": "aks security hardening",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/007-aks-security-hardening.md",
+    "requires": [
+      "skill-bicep-azure-native-alternative-c0f0d41e6d"
+    ],
+    "links": [
+      "skill-node-pool-design-08e852584a"
+    ]
+  },
+  {
+    "id": "skill-node-pool-design-08e852584a",
+    "purpose": "node pool design",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/008-node-pool-design.md",
+    "requires": [
+      "skill-aks-security-hardening-eccb2957dc"
+    ],
+    "links": [
+      "skill-upgrade-strategy-6b3449855a"
+    ]
+  },
+  {
+    "id": "skill-upgrade-strategy-6b3449855a",
+    "purpose": "upgrade strategy",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/009-upgrade-strategy.md",
+    "requires": [
+      "skill-node-pool-design-08e852584a"
+    ],
+    "links": [
+      "skill-environment-promotion-pattern-176e8946c7"
+    ]
+  },
+  {
+    "id": "skill-environment-promotion-pattern-176e8946c7",
+    "purpose": "environment promotion pattern",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/010-environment-promotion-pattern.md",
+    "requires": [
+      "skill-upgrade-strategy-6b3449855a"
+    ],
+    "links": [
+      "skill-production-workload-checklist-0c887abb40"
+    ]
+  },
+  {
+    "id": "skill-production-workload-checklist-0c887abb40",
+    "purpose": "production workload checklist",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/011-production-workload-checklist.md",
+    "requires": [
+      "skill-environment-promotion-pattern-176e8946c7"
+    ],
+    "links": [
+      "skill-secret-management-options-334c62ddae"
+    ]
+  },
+  {
+    "id": "skill-secret-management-options-334c62ddae",
+    "purpose": "secret management options",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/kubernetes-iac/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/kubernetes-iac/012-secret-management-options.md",
+    "requires": [
+      "skill-production-workload-checklist-0c887abb40"
+    ],
+    "links": []
+  }
+]

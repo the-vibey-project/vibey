@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-2-cryptographic-primitives-the-building-blocks-cd47e1f0bc",
+    "purpose": "2 cryptographic primitives the building blocks",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-cryptographic-primitives/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-cryptographic-primitives/001-2-cryptographic-primitives-the-building-blocks.md",
+    "requires": [],
+    "links": []
+  }
+]

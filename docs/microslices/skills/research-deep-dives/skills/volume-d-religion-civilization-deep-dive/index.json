@@ -1,0 +1,202 @@
+[
+  {
+    "id": "skill-method-fb02f6a28c",
+    "purpose": "method",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/001-method.md",
+    "requires": [],
+    "links": [
+      "skill-1-catholic-doctrine-5372dfb93c"
+    ]
+  },
+  {
+    "id": "skill-1-catholic-doctrine-5372dfb93c",
+    "purpose": "1 catholic doctrine",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/002-1-catholic-doctrine.md",
+    "requires": [
+      "skill-method-fb02f6a28c"
+    ],
+    "links": [
+      "skill-2-catholic-history-and-social-life-36b6bdd487"
+    ]
+  },
+  {
+    "id": "skill-2-catholic-history-and-social-life-36b6bdd487",
+    "purpose": "2 catholic history and social life",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/003-2-catholic-history-and-social-life.md",
+    "requires": [
+      "skill-1-catholic-doctrine-5372dfb93c"
+    ],
+    "links": [
+      "skill-3-greek-orthodox-doctrine-df6d8af921"
+    ]
+  },
+  {
+    "id": "skill-3-greek-orthodox-doctrine-df6d8af921",
+    "purpose": "3 greek orthodox doctrine",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/004-3-greek-orthodox-doctrine.md",
+    "requires": [
+      "skill-2-catholic-history-and-social-life-36b6bdd487"
+    ],
+    "links": [
+      "skill-4-greek-orthodox-history-and-social-life-1ef7ba8e0e"
+    ]
+  },
+  {
+    "id": "skill-4-greek-orthodox-history-and-social-life-1ef7ba8e0e",
+    "purpose": "4 greek orthodox history and social life",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/005-4-greek-orthodox-history-and-social-life.md",
+    "requires": [
+      "skill-3-greek-orthodox-doctrine-df6d8af921"
+    ],
+    "links": [
+      "skill-5-protestant-doctrine-b2ee988e3a"
+    ]
+  },
+  {
+    "id": "skill-5-protestant-doctrine-b2ee988e3a",
+    "purpose": "5 protestant doctrine",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/006-5-protestant-doctrine.md",
+    "requires": [
+      "skill-4-greek-orthodox-history-and-social-life-1ef7ba8e0e"
+    ],
+    "links": [
+      "skill-6-protestant-history-and-culture-9280522226"
+    ]
+  },
+  {
+    "id": "skill-6-protestant-history-and-culture-9280522226",
+    "purpose": "6 protestant history and culture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/007-6-protestant-history-and-culture.md",
+    "requires": [
+      "skill-5-protestant-doctrine-b2ee988e3a"
+    ],
+    "links": [
+      "skill-7-ancient-jewish-history-26e316a1bc"
+    ]
+  },
+  {
+    "id": "skill-7-ancient-jewish-history-26e316a1bc",
+    "purpose": "7 ancient jewish history",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/008-7-ancient-jewish-history.md",
+    "requires": [
+      "skill-6-protestant-history-and-culture-9280522226"
+    ],
+    "links": [
+      "skill-8-the-first-200-300-years-of-christianity-f8b83c5595"
+    ]
+  },
+  {
+    "id": "skill-8-the-first-200-300-years-of-christianity-f8b83c5595",
+    "purpose": "8 the first 200 300 years of christianity",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/009-8-the-first-200-300-years-of-christianity.md",
+    "requires": [
+      "skill-7-ancient-jewish-history-26e316a1bc"
+    ],
+    "links": [
+      "skill-9-roman-history-37f2ba65d4"
+    ]
+  },
+  {
+    "id": "skill-9-roman-history-37f2ba65d4",
+    "purpose": "9 roman history",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/010-9-roman-history.md",
+    "requires": [
+      "skill-8-the-first-200-300-years-of-christianity-f8b83c5595"
+    ],
+    "links": [
+      "skill-10-german-history-and-culture-5ac9d0b223"
+    ]
+  },
+  {
+    "id": "skill-10-german-history-and-culture-5ac9d0b223",
+    "purpose": "10 german history and culture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/011-10-german-history-and-culture.md",
+    "requires": [
+      "skill-9-roman-history-37f2ba65d4"
+    ],
+    "links": [
+      "skill-11-holy-roman-empire-4520d092e0"
+    ]
+  },
+  {
+    "id": "skill-11-holy-roman-empire-4520d092e0",
+    "purpose": "11 holy roman empire",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/012-11-holy-roman-empire.md",
+    "requires": [
+      "skill-10-german-history-and-culture-5ac9d0b223"
+    ],
+    "links": [
+      "skill-12-aryan-history-and-the-nazi-racial-invention-85adcf0e3d"
+    ]
+  },
+  {
+    "id": "skill-12-aryan-history-and-the-nazi-racial-invention-85adcf0e3d",
+    "purpose": "12 aryan history and the nazi racial invention",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/013-12-aryan-history-and-the-nazi-racial-invention.md",
+    "requires": [
+      "skill-11-holy-roman-empire-4520d092e0"
+    ],
+    "links": [
+      "skill-13-comparative-analytical-framework-f8c4c3fc32"
+    ]
+  },
+  {
+    "id": "skill-13-comparative-analytical-framework-f8c4c3fc32",
+    "purpose": "13 comparative analytical framework",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/014-13-comparative-analytical-framework.md",
+    "requires": [
+      "skill-12-aryan-history-and-the-nazi-racial-invention-85adcf0e3d"
+    ],
+    "links": [
+      "skill-14-common-errors-89efb92b20"
+    ]
+  },
+  {
+    "id": "skill-14-common-errors-89efb92b20",
+    "purpose": "14 common errors",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/015-14-common-errors.md",
+    "requires": [
+      "skill-13-comparative-analytical-framework-f8c4c3fc32"
+    ],
+    "links": [
+      "skill-15-core-source-set-1beb2b6e15"
+    ]
+  },
+  {
+    "id": "skill-15-core-source-set-1beb2b6e15",
+    "purpose": "15 core source set",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/016-15-core-source-set.md",
+    "requires": [
+      "skill-14-common-errors-89efb92b20"
+    ],
+    "links": [
+      "skill-limits-b6e2f7125e"
+    ]
+  },
+  {
+    "id": "skill-limits-b6e2f7125e",
+    "purpose": "limits",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-d-religion-civilization-deep-dive/017-limits.md",
+    "requires": [
+      "skill-15-core-source-set-1beb2b6e15"
+    ],
+    "links": []
+  }
+]

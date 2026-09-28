@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-20-advanced-constructions-2236bb94d5",
+    "purpose": "20 advanced constructions",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy/001-20-advanced-constructions.md",
+    "requires": [],
+    "links": [
+      "skill-21-blockchain-cryptography-9fd0b38522"
+    ]
+  },
+  {
+    "id": "skill-21-blockchain-cryptography-9fd0b38522",
+    "purpose": "21 blockchain cryptography",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy/002-21-blockchain-cryptography.md",
+    "requires": [
+      "skill-20-advanced-constructions-2236bb94d5"
+    ],
+    "links": [
+      "skill-22-law-and-policy-dc576c9e89"
+    ]
+  },
+  {
+    "id": "skill-22-law-and-policy-dc576c9e89",
+    "purpose": "22 law and policy",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-advanced-constructions-blockchain-and-policy/003-22-law-and-policy.md",
+    "requires": [
+      "skill-21-blockchain-cryptography-9fd0b38522"
+    ],
+    "links": []
+  }
+]

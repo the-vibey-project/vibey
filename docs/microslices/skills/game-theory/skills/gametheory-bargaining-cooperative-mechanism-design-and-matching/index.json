@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-bargaining-5af17d095b",
+    "purpose": "10 bargaining",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/001-10-bargaining.md",
+    "requires": [],
+    "links": [
+      "skill-11-cooperative-game-theory-67e7a68c7b"
+    ]
+  },
+  {
+    "id": "skill-11-cooperative-game-theory-67e7a68c7b",
+    "purpose": "11 cooperative game theory",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/002-11-cooperative-game-theory.md",
+    "requires": [
+      "skill-10-bargaining-5af17d095b"
+    ],
+    "links": [
+      "skill-12-mechanism-design-and-auctions-0de48cdb19"
+    ]
+  },
+  {
+    "id": "skill-12-mechanism-design-and-auctions-0de48cdb19",
+    "purpose": "12 mechanism design and auctions",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/003-12-mechanism-design-and-auctions.md",
+    "requires": [
+      "skill-11-cooperative-game-theory-67e7a68c7b"
+    ],
+    "links": [
+      "skill-13-matching-markets-622179f1f9"
+    ]
+  },
+  {
+    "id": "skill-13-matching-markets-622179f1f9",
+    "purpose": "13 matching markets",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-bargaining-cooperative-mechanism-design-and-matching/004-13-matching-markets.md",
+    "requires": [
+      "skill-12-mechanism-design-and-auctions-0de48cdb19"
+    ],
+    "links": []
+  }
+]

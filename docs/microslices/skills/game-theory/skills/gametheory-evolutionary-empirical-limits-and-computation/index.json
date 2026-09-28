@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-14-evolutionary-game-theory-c4ecbeea23",
+    "purpose": "14 evolutionary game theory",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation/001-14-evolutionary-game-theory.md",
+    "requires": [],
+    "links": [
+      "skill-15-where-the-theory-fails-empirically-3c77d8944e"
+    ]
+  },
+  {
+    "id": "skill-15-where-the-theory-fails-empirically-3c77d8944e",
+    "purpose": "15 where the theory fails empirically",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation/002-15-where-the-theory-fails-empirically.md",
+    "requires": [
+      "skill-14-evolutionary-game-theory-c4ecbeea23"
+    ],
+    "links": [
+      "skill-16-computational-game-theory-4a1fdf389d"
+    ]
+  },
+  {
+    "id": "skill-16-computational-game-theory-4a1fdf389d",
+    "purpose": "16 computational game theory",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-evolutionary-empirical-limits-and-computation/003-16-computational-game-theory.md",
+    "requires": [
+      "skill-15-where-the-theory-fails-empirically-3c77d8944e"
+    ],
+    "links": []
+  }
+]

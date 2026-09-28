@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-anti-patterns-5ac6b1afb4",
+    "purpose": "13 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-reference/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-reference/001-13-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-14-numbers-ff99caf5fd"
+    ]
+  },
+  {
+    "id": "skill-14-numbers-ff99caf5fd",
+    "purpose": "14 numbers",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-reference/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-reference/002-14-numbers.md",
+    "requires": [
+      "skill-13-anti-patterns-5ac6b1afb4"
+    ],
+    "links": [
+      "skill-15-what-actually-moved-verified-august-2026-5fd9c36f8a"
+    ]
+  },
+  {
+    "id": "skill-15-what-actually-moved-verified-august-2026-5fd9c36f8a",
+    "purpose": "15 what actually moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-reference/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-reference/003-15-what-actually-moved-verified-august-2026.md",
+    "requires": [
+      "skill-14-numbers-ff99caf5fd"
+    ],
+    "links": [
+      "skill-16-books-f91124d028"
+    ]
+  },
+  {
+    "id": "skill-16-books-f91124d028",
+    "purpose": "16 books",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-reference/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-reference/004-16-books.md",
+    "requires": [
+      "skill-15-what-actually-moved-verified-august-2026-5fd9c36f8a"
+    ],
+    "links": [
+      "skill-17-quick-reference-a25bd2d8a3"
+    ]
+  },
+  {
+    "id": "skill-17-quick-reference-a25bd2d8a3",
+    "purpose": "17 quick reference",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-reference/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-reference/005-17-quick-reference.md",
+    "requires": [
+      "skill-16-books-f91124d028"
+    ],
+    "links": [
+      "skill-18-method-ee087900f4"
+    ]
+  },
+  {
+    "id": "skill-18-method-ee087900f4",
+    "purpose": "18 method",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-reference/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-reference/006-18-method.md",
+    "requires": [
+      "skill-17-quick-reference-a25bd2d8a3"
+    ],
+    "links": []
+  }
+]

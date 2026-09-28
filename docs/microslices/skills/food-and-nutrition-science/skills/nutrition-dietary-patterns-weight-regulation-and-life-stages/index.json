@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-19-dietary-patterns-954752fd66",
+    "purpose": "19 dietary patterns",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/001-19-dietary-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-20-popular-diets-assessed-331befc8b8"
+    ]
+  },
+  {
+    "id": "skill-20-popular-diets-assessed-331befc8b8",
+    "purpose": "20 popular diets assessed",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/002-20-popular-diets-assessed.md",
+    "requires": [
+      "skill-19-dietary-patterns-954752fd66"
+    ],
+    "links": [
+      "skill-21-weight-regulation-9d2358c7e6"
+    ]
+  },
+  {
+    "id": "skill-21-weight-regulation-9d2358c7e6",
+    "purpose": "21 weight regulation",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/003-21-weight-regulation.md",
+    "requires": [
+      "skill-20-popular-diets-assessed-331befc8b8"
+    ],
+    "links": [
+      "skill-22-disordered-eating-77cf919992"
+    ]
+  },
+  {
+    "id": "skill-22-disordered-eating-77cf919992",
+    "purpose": "22 disordered eating",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/004-22-disordered-eating.md",
+    "requires": [
+      "skill-21-weight-regulation-9d2358c7e6"
+    ],
+    "links": [
+      "skill-23-life-stages-e9cae72ecb"
+    ]
+  },
+  {
+    "id": "skill-23-life-stages-e9cae72ecb",
+    "purpose": "23 life stages",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-dietary-patterns-weight-regulation-and-life-stages/005-23-life-stages.md",
+    "requires": [
+      "skill-22-disordered-eating-77cf919992"
+    ],
+    "links": []
+  }
+]

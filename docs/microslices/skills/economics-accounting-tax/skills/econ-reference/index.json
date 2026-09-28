@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-20-misconceptions-9db3593717",
+    "purpose": "20 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-reference/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-reference/001-20-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-21-what-moved-verified-august-2026-8d88bc19b4"
+    ]
+  },
+  {
+    "id": "skill-21-what-moved-verified-august-2026-8d88bc19b4",
+    "purpose": "21 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-reference/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-reference/002-21-what-moved-verified-august-2026.md",
+    "requires": [
+      "skill-20-misconceptions-9db3593717"
+    ],
+    "links": [
+      "skill-22-books-7639887cd2"
+    ]
+  },
+  {
+    "id": "skill-22-books-7639887cd2",
+    "purpose": "22 books",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-reference/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-reference/003-22-books.md",
+    "requires": [
+      "skill-21-what-moved-verified-august-2026-8d88bc19b4"
+    ],
+    "links": [
+      "skill-23-quick-reference-4fc4ebe2e5"
+    ]
+  },
+  {
+    "id": "skill-23-quick-reference-4fc4ebe2e5",
+    "purpose": "23 quick reference",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-reference/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-reference/004-23-quick-reference.md",
+    "requires": [
+      "skill-22-books-7639887cd2"
+    ],
+    "links": [
+      "skill-24-method-87972a062e"
+    ]
+  },
+  {
+    "id": "skill-24-method-87972a062e",
+    "purpose": "24 method",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-reference/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-reference/005-24-method.md",
+    "requires": [
+      "skill-23-quick-reference-4fc4ebe2e5"
+    ],
+    "links": []
+  }
+]

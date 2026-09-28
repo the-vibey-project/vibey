@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-12-pathogens-and-temperature-808a026279",
+    "purpose": "12 pathogens and temperature",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/001-12-pathogens-and-temperature.md",
+    "requires": [],
+    "links": [
+      "skill-13-haccp-fbd76251cf"
+    ]
+  },
+  {
+    "id": "skill-13-haccp-fbd76251cf",
+    "purpose": "13 haccp",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/002-13-haccp.md",
+    "requires": [
+      "skill-12-pathogens-and-temperature-808a026279"
+    ],
+    "links": [
+      "skill-14-cross-contamination-and-allergens-e3043f020e"
+    ]
+  },
+  {
+    "id": "skill-14-cross-contamination-and-allergens-e3043f020e",
+    "purpose": "14 cross contamination and allergens",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/003-14-cross-contamination-and-allergens.md",
+    "requires": [
+      "skill-13-haccp-fbd76251cf"
+    ],
+    "links": [
+      "skill-15-kitchen-organization-12a7565efd"
+    ]
+  },
+  {
+    "id": "skill-15-kitchen-organization-12a7565efd",
+    "purpose": "15 kitchen organization",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/004-15-kitchen-organization.md",
+    "requires": [
+      "skill-14-cross-contamination-and-allergens-e3043f020e"
+    ],
+    "links": [
+      "skill-16-restaurant-economics-0de0c8a087"
+    ]
+  },
+  {
+    "id": "skill-16-restaurant-economics-0de0c8a087",
+    "purpose": "16 restaurant economics",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/005-16-restaurant-economics.md",
+    "requires": [
+      "skill-15-kitchen-organization-12a7565efd"
+    ],
+    "links": [
+      "skill-17-menu-engineering-0989763c07"
+    ]
+  },
+  {
+    "id": "skill-17-menu-engineering-0989763c07",
+    "purpose": "17 menu engineering",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/006-17-menu-engineering.md",
+    "requires": [
+      "skill-16-restaurant-economics-0de0c8a087"
+    ],
+    "links": [
+      "skill-18-regulation-and-inspection-9caec1a81a"
+    ]
+  },
+  {
+    "id": "skill-18-regulation-and-inspection-9caec1a81a",
+    "purpose": "18 regulation and inspection",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-food-safety-and-food-service/007-18-regulation-and-inspection.md",
+    "requires": [
+      "skill-17-menu-engineering-0989763c07"
+    ],
+    "links": []
+  }
+]

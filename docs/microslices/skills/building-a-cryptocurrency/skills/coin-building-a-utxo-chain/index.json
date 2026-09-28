@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-4-building-a-bitcoin-style-coin-utxo-pow-script-768a75d047",
+    "purpose": "4 building a bitcoin style coin utxo pow script",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-building-a-utxo-chain/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-building-a-utxo-chain/001-4-building-a-bitcoin-style-coin-utxo-pow-script.md",
+    "requires": [],
+    "links": []
+  }
+]

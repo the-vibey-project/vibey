@@ -1,0 +1,154 @@
+[
+  {
+    "id": "skill-model-selection-d0917f5661",
+    "purpose": "model selection",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/001-model-selection.md",
+    "requires": [],
+    "links": [
+      "skill-requirements-engineering-in-the-sdlc-f1b5518a27"
+    ]
+  },
+  {
+    "id": "skill-requirements-engineering-in-the-sdlc-f1b5518a27",
+    "purpose": "requirements engineering in the sdlc",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/002-requirements-engineering-in-the-sdlc.md",
+    "requires": [
+      "skill-model-selection-d0917f5661"
+    ],
+    "links": [
+      "skill-architecture-as-a-continuous-concern-05f42ce907"
+    ]
+  },
+  {
+    "id": "skill-architecture-as-a-continuous-concern-05f42ce907",
+    "purpose": "architecture as a continuous concern",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/003-architecture-as-a-continuous-concern.md",
+    "requires": [
+      "skill-requirements-engineering-in-the-sdlc-f1b5518a27"
+    ],
+    "links": [
+      "skill-development-practices-709fe97ccf"
+    ]
+  },
+  {
+    "id": "skill-development-practices-709fe97ccf",
+    "purpose": "development practices",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/004-development-practices.md",
+    "requires": [
+      "skill-architecture-as-a-continuous-concern-05f42ce907"
+    ],
+    "links": [
+      "skill-version-control-and-branching-eb2eac9257"
+    ]
+  },
+  {
+    "id": "skill-version-control-and-branching-eb2eac9257",
+    "purpose": "version control and branching",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/005-version-control-and-branching.md",
+    "requires": [
+      "skill-development-practices-709fe97ccf"
+    ],
+    "links": [
+      "skill-testing-strategy-9d73af50bf"
+    ]
+  },
+  {
+    "id": "skill-testing-strategy-9d73af50bf",
+    "purpose": "testing strategy",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/006-testing-strategy.md",
+    "requires": [
+      "skill-version-control-and-branching-eb2eac9257"
+    ],
+    "links": [
+      "skill-ci-cd-and-devops-83df6db94b"
+    ]
+  },
+  {
+    "id": "skill-ci-cd-and-devops-83df6db94b",
+    "purpose": "ci cd and devops",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/007-ci-cd-and-devops.md",
+    "requires": [
+      "skill-testing-strategy-9d73af50bf"
+    ],
+    "links": [
+      "skill-code-quality-and-tech-debt-54b22f1b74"
+    ]
+  },
+  {
+    "id": "skill-code-quality-and-tech-debt-54b22f1b74",
+    "purpose": "code quality and tech debt",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/008-code-quality-and-tech-debt.md",
+    "requires": [
+      "skill-ci-cd-and-devops-83df6db94b"
+    ],
+    "links": [
+      "skill-release-and-operations-fe87400815"
+    ]
+  },
+  {
+    "id": "skill-release-and-operations-fe87400815",
+    "purpose": "release and operations",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/009-release-and-operations.md",
+    "requires": [
+      "skill-code-quality-and-tech-debt-54b22f1b74"
+    ],
+    "links": [
+      "skill-observability-c2dfad5042"
+    ]
+  },
+  {
+    "id": "skill-observability-c2dfad5042",
+    "purpose": "observability",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/010-observability.md",
+    "requires": [
+      "skill-release-and-operations-fe87400815"
+    ],
+    "links": [
+      "skill-ai-assisted-development-2024-2026-2680760d69"
+    ]
+  },
+  {
+    "id": "skill-ai-assisted-development-2024-2026-2680760d69",
+    "purpose": "ai assisted development 2024 2026",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/011-ai-assisted-development-2024-2026.md",
+    "requires": [
+      "skill-observability-c2dfad5042"
+    ],
+    "links": [
+      "skill-team-structures-82e9accd17"
+    ]
+  },
+  {
+    "id": "skill-team-structures-82e9accd17",
+    "purpose": "team structures",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/012-team-structures.md",
+    "requires": [
+      "skill-ai-assisted-development-2024-2026-2680760d69"
+    ],
+    "links": [
+      "skill-key-evidence-and-caveats-7c643a08ac"
+    ]
+  },
+  {
+    "id": "skill-key-evidence-and-caveats-7c643a08ac",
+    "purpose": "key evidence and caveats",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/sdlc-practices/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/sdlc-practices/013-key-evidence-and-caveats.md",
+    "requires": [
+      "skill-team-structures-82e9accd17"
+    ],
+    "links": []
+  }
+]

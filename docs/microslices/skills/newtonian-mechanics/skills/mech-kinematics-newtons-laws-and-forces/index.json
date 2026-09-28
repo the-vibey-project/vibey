@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-2a0bf50fb4",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-kinematics-5c770f960e"
+    ]
+  },
+  {
+    "id": "skill-1-kinematics-5c770f960e",
+    "purpose": "1 kinematics",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/002-1-kinematics.md",
+    "requires": [
+      "skill-0-routing-2a0bf50fb4"
+    ],
+    "links": [
+      "skill-2-newton-s-laws-ea158a6436"
+    ]
+  },
+  {
+    "id": "skill-2-newton-s-laws-ea158a6436",
+    "purpose": "2 newton s laws",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/003-2-newton-s-laws.md",
+    "requires": [
+      "skill-1-kinematics-5c770f960e"
+    ],
+    "links": [
+      "skill-3-the-forces-d1f682ca43"
+    ]
+  },
+  {
+    "id": "skill-3-the-forces-d1f682ca43",
+    "purpose": "3 the forces",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-kinematics-newtons-laws-and-forces/004-3-the-forces.md",
+    "requires": [
+      "skill-2-newton-s-laws-ea158a6436"
+    ],
+    "links": []
+  }
+]

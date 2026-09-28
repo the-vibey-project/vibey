@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-9-fractals-and-dimension-bbfc8d6ec4",
+    "purpose": "9 fractals and dimension",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos/001-9-fractals-and-dimension.md",
+    "requires": [],
+    "links": [
+      "skill-10-poincar-sections-and-symbolic-dynamics-0e3fe813d5"
+    ]
+  },
+  {
+    "id": "skill-10-poincar-sections-and-symbolic-dynamics-0e3fe813d5",
+    "purpose": "10 poincar sections and symbolic dynamics",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos/002-10-poincar-sections-and-symbolic-dynamics.md",
+    "requires": [
+      "skill-9-fractals-and-dimension-bbfc8d6ec4"
+    ],
+    "links": [
+      "skill-11-hamiltonian-chaos-and-kam-9923a346cc"
+    ]
+  },
+  {
+    "id": "skill-11-hamiltonian-chaos-and-kam-9923a346cc",
+    "purpose": "11 hamiltonian chaos and kam",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-fractals-poincare-and-hamiltonian-chaos/003-11-hamiltonian-chaos-and-kam.md",
+    "requires": [
+      "skill-10-poincar-sections-and-symbolic-dynamics-0e3fe813d5"
+    ],
+    "links": []
+  }
+]

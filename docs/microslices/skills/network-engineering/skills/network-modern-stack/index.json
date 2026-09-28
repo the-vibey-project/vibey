@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-the-protocol-stack-in-2026-301e97ecd3",
+    "purpose": "the protocol stack in 2026",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/001-the-protocol-stack-in-2026.md",
+    "requires": [],
+    "links": [
+      "skill-spine-leaf-dominance-and-east-west-traffic-4fa9b06328"
+    ]
+  },
+  {
+    "id": "skill-spine-leaf-dominance-and-east-west-traffic-4fa9b06328",
+    "purpose": "spine leaf dominance and east west traffic",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/002-spine-leaf-dominance-and-east-west-traffic.md",
+    "requires": [
+      "skill-the-protocol-stack-in-2026-301e97ecd3"
+    ],
+    "links": [
+      "skill-ebpf-the-kernel-programmable-network-primitive-58e3bd207f"
+    ]
+  },
+  {
+    "id": "skill-ebpf-the-kernel-programmable-network-primitive-58e3bd207f",
+    "purpose": "ebpf the kernel programmable network primitive",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/003-ebpf-the-kernel-programmable-network-primitive.md",
+    "requires": [
+      "skill-spine-leaf-dominance-and-east-west-traffic-4fa9b06328"
+    ],
+    "links": [
+      "skill-cilium-the-production-kubernetes-networking-standard-e4f4f44786"
+    ]
+  },
+  {
+    "id": "skill-cilium-the-production-kubernetes-networking-standard-e4f4f44786",
+    "purpose": "cilium the production kubernetes networking standard",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/004-cilium-the-production-kubernetes-networking-standard.md",
+    "requires": [
+      "skill-ebpf-the-kernel-programmable-network-primitive-58e3bd207f"
+    ],
+    "links": [
+      "skill-aks-networking-the-complete-decision-guide-2067eddce0"
+    ]
+  },
+  {
+    "id": "skill-aks-networking-the-complete-decision-guide-2067eddce0",
+    "purpose": "aks networking the complete decision guide",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/005-aks-networking-the-complete-decision-guide.md",
+    "requires": [
+      "skill-cilium-the-production-kubernetes-networking-standard-e4f4f44786"
+    ],
+    "links": [
+      "skill-spiffe-spire-cryptographic-workload-identity-5df13ab509"
+    ]
+  },
+  {
+    "id": "skill-spiffe-spire-cryptographic-workload-identity-5df13ab509",
+    "purpose": "spiffe spire cryptographic workload identity",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/006-spiffe-spire-cryptographic-workload-identity.md",
+    "requires": [
+      "skill-aks-networking-the-complete-decision-guide-2067eddce0"
+    ],
+    "links": [
+      "skill-zero-trust-networking-in-production-dbd7f416f3"
+    ]
+  },
+  {
+    "id": "skill-zero-trust-networking-in-production-dbd7f416f3",
+    "purpose": "zero trust networking in production",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/007-zero-trust-networking-in-production.md",
+    "requires": [
+      "skill-spiffe-spire-cryptographic-workload-identity-5df13ab509"
+    ],
+    "links": [
+      "skill-service-meshes-when-to-use-which-c2e5c49ab7"
+    ]
+  },
+  {
+    "id": "skill-service-meshes-when-to-use-which-c2e5c49ab7",
+    "purpose": "service meshes when to use which",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/008-service-meshes-when-to-use-which.md",
+    "requires": [
+      "skill-zero-trust-networking-in-production-dbd7f416f3"
+    ],
+    "links": [
+      "skill-network-observability-0d261d5e05"
+    ]
+  },
+  {
+    "id": "skill-network-observability-0d261d5e05",
+    "purpose": "network observability",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/009-network-observability.md",
+    "requires": [
+      "skill-service-meshes-when-to-use-which-c2e5c49ab7"
+    ],
+    "links": [
+      "skill-chaos-engineering-for-networks-7918e2f652"
+    ]
+  },
+  {
+    "id": "skill-chaos-engineering-for-networks-7918e2f652",
+    "purpose": "chaos engineering for networks",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/010-chaos-engineering-for-networks.md",
+    "requires": [
+      "skill-network-observability-0d261d5e05"
+    ],
+    "links": [
+      "skill-python-network-automation-379d08f99d"
+    ]
+  },
+  {
+    "id": "skill-python-network-automation-379d08f99d",
+    "purpose": "python network automation",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/011-python-network-automation.md",
+    "requires": [
+      "skill-chaos-engineering-for-networks-7918e2f652"
+    ],
+    "links": [
+      "skill-the-five-convergent-gold-standards-for-2026-26a4a36d16"
+    ]
+  },
+  {
+    "id": "skill-the-five-convergent-gold-standards-for-2026-26a4a36d16",
+    "purpose": "the five convergent gold standards for 2026",
+    "source": "src/vibey_tools/skills/plugins/network-engineering/skills/network-modern-stack/SKILL.md",
+    "output": "docs/microslices/skills/network-engineering/skills/network-modern-stack/012-the-five-convergent-gold-standards-for-2026.md",
+    "requires": [
+      "skill-python-network-automation-379d08f99d"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-17-implementation-failure-modes-437bbf838d",
+    "purpose": "17 implementation failure modes",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility/001-17-implementation-failure-modes.md",
+    "requires": [],
+    "links": [
+      "skill-18-key-management-e7c3b326bc"
+    ]
+  },
+  {
+    "id": "skill-18-key-management-e7c3b326bc",
+    "purpose": "18 key management",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility/002-18-key-management.md",
+    "requires": [
+      "skill-17-implementation-failure-modes-437bbf838d"
+    ],
+    "links": [
+      "skill-19-crypto-agility-1bf2251582"
+    ]
+  },
+  {
+    "id": "skill-19-crypto-agility-1bf2251582",
+    "purpose": "19 crypto agility",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-implementation-failures-key-management-and-agility/003-19-crypto-agility.md",
+    "requires": [
+      "skill-18-key-management-e7c3b326bc"
+    ],
+    "links": []
+  }
+]

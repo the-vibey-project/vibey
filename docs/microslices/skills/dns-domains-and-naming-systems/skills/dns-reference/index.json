@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-checked-august-2026-88298d680c",
+    "purpose": "26 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-reference/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-reference/001-26-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-e3974e3337"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-e3974e3337",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-reference/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-checked-august-2026-88298d680c"
+    ],
+    "links": [
+      "skill-28-numbers-and-dates-57884117c8"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-and-dates-57884117c8",
+    "purpose": "28 numbers and dates",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-reference/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-reference/003-28-numbers-and-dates.md",
+    "requires": [
+      "skill-27-misconceptions-e3974e3337"
+    ],
+    "links": [
+      "skill-29-sources-852ad2ca58"
+    ]
+  },
+  {
+    "id": "skill-29-sources-852ad2ca58",
+    "purpose": "29 sources",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-reference/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-reference/004-29-sources.md",
+    "requires": [
+      "skill-28-numbers-and-dates-57884117c8"
+    ],
+    "links": [
+      "skill-30-quick-reference-e1b33825df"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-e1b33825df",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-reference/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-sources-852ad2ca58"
+    ],
+    "links": [
+      "skill-31-method-0b8f48c9e6"
+    ]
+  },
+  {
+    "id": "skill-31-method-0b8f48c9e6",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-reference/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-e1b33825df"
+    ],
+    "links": []
+  }
+]

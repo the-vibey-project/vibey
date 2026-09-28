@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-31-mars-mission-design-windows-edl-communications-and-surface-power-8ca7ce05e7",
+    "purpose": "31 mars mission design windows edl communications and surface power",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mars-mission-design-and-settlement/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mars-mission-design-and-settlement/001-31-mars-mission-design-windows-edl-communications-and-surface-power.md",
+    "requires": [],
+    "links": [
+      "skill-32-mars-settlement-habitats-mobility-eclss-closure-and-the-psychological-challenge-114c15aa10"
+    ]
+  },
+  {
+    "id": "skill-32-mars-settlement-habitats-mobility-eclss-closure-and-the-psychological-challenge-114c15aa10",
+    "purpose": "32 mars settlement habitats mobility eclss closure and the psychological challenge",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mars-mission-design-and-settlement/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mars-mission-design-and-settlement/002-32-mars-settlement-habitats-mobility-eclss-closure-and-the-psychological-challenge.md",
+    "requires": [
+      "skill-31-mars-mission-design-windows-edl-communications-and-surface-power-8ca7ce05e7"
+    ],
+    "links": []
+  }
+]

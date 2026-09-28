@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-f4a0cdc3de",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-engine-architecture-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-engine-architecture-and-networking/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-engine-landscape-9fffda8f79"
+    ]
+  },
+  {
+    "id": "skill-1-the-engine-landscape-9fffda8f79",
+    "purpose": "1 the engine landscape",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-engine-architecture-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-engine-architecture-and-networking/002-1-the-engine-landscape.md",
+    "requires": [
+      "skill-0-routing-f4a0cdc3de"
+    ],
+    "links": [
+      "skill-2-process-model-ipc-and-sandboxing-d1fb104f6f"
+    ]
+  },
+  {
+    "id": "skill-2-process-model-ipc-and-sandboxing-d1fb104f6f",
+    "purpose": "2 process model ipc and sandboxing",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-engine-architecture-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-engine-architecture-and-networking/003-2-process-model-ipc-and-sandboxing.md",
+    "requires": [
+      "skill-1-the-engine-landscape-9fffda8f79"
+    ],
+    "links": [
+      "skill-3-networking-326883cfb7"
+    ]
+  },
+  {
+    "id": "skill-3-networking-326883cfb7",
+    "purpose": "3 networking",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-engine-architecture-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-engine-architecture-and-networking/004-3-networking.md",
+    "requires": [
+      "skill-2-process-model-ipc-and-sandboxing-d1fb104f6f"
+    ],
+    "links": []
+  }
+]

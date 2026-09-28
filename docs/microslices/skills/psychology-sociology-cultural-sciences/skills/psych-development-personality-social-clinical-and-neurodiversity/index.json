@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-9-development-214e348c95",
+    "purpose": "9 development",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/001-9-development.md",
+    "requires": [],
+    "links": [
+      "skill-10-personality-566306e401"
+    ]
+  },
+  {
+    "id": "skill-10-personality-566306e401",
+    "purpose": "10 personality",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/002-10-personality.md",
+    "requires": [
+      "skill-9-development-214e348c95"
+    ],
+    "links": [
+      "skill-11-motivation-0c1ecb5c81"
+    ]
+  },
+  {
+    "id": "skill-11-motivation-0c1ecb5c81",
+    "purpose": "11 motivation",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/003-11-motivation.md",
+    "requires": [
+      "skill-10-personality-566306e401"
+    ],
+    "links": [
+      "skill-12-social-psychology-73dfdb52dc"
+    ]
+  },
+  {
+    "id": "skill-12-social-psychology-73dfdb52dc",
+    "purpose": "12 social psychology",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/004-12-social-psychology.md",
+    "requires": [
+      "skill-11-motivation-0c1ecb5c81"
+    ],
+    "links": [
+      "skill-13-clinical-psychology-and-what-actually-works-179e431370"
+    ]
+  },
+  {
+    "id": "skill-13-clinical-psychology-and-what-actually-works-179e431370",
+    "purpose": "13 clinical psychology and what actually works",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/005-13-clinical-psychology-and-what-actually-works.md",
+    "requires": [
+      "skill-12-social-psychology-73dfdb52dc"
+    ],
+    "links": [
+      "skill-14-intelligence-c6df317518"
+    ]
+  },
+  {
+    "id": "skill-14-intelligence-c6df317518",
+    "purpose": "14 intelligence",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/006-14-intelligence.md",
+    "requires": [
+      "skill-13-clinical-psychology-and-what-actually-works-179e431370"
+    ],
+    "links": [
+      "skill-15-neurodiversity-905b4c5024"
+    ]
+  },
+  {
+    "id": "skill-15-neurodiversity-905b4c5024",
+    "purpose": "15 neurodiversity",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-development-personality-social-clinical-and-neurodiversity/007-15-neurodiversity.md",
+    "requires": [
+      "skill-14-intelligence-c6df317518"
+    ],
+    "links": []
+  }
+]

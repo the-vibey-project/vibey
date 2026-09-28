@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-linux-desktop-architecture-ece1614b4a",
+    "purpose": "4 linux desktop architecture",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-linux-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-linux-platform/001-4-linux-desktop-architecture.md",
+    "requires": [],
+    "links": [
+      "skill-5-linux-ui-toolkits-28f8c97fc2"
+    ]
+  },
+  {
+    "id": "skill-5-linux-ui-toolkits-28f8c97fc2",
+    "purpose": "5 linux ui toolkits",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-linux-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-linux-platform/002-5-linux-ui-toolkits.md",
+    "requires": [
+      "skill-4-linux-desktop-architecture-ece1614b4a"
+    ],
+    "links": [
+      "skill-6-wayland-and-x11-9c7ace5e9b"
+    ]
+  },
+  {
+    "id": "skill-6-wayland-and-x11-9c7ace5e9b",
+    "purpose": "6 wayland and x11",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-linux-platform/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-linux-platform/003-6-wayland-and-x11.md",
+    "requires": [
+      "skill-5-linux-ui-toolkits-28f8c97fc2"
+    ],
+    "links": []
+  }
+]

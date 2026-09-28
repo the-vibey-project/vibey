@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-structural-systems-654b32115d",
+    "purpose": "6 structural systems",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/001-6-structural-systems.md",
+    "requires": [],
+    "links": [
+      "skill-7-foundations-922e1aae3b"
+    ]
+  },
+  {
+    "id": "skill-7-foundations-922e1aae3b",
+    "purpose": "7 foundations",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/002-7-foundations.md",
+    "requires": [
+      "skill-6-structural-systems-654b32115d"
+    ],
+    "links": [
+      "skill-8-envelope-and-building-physics-2c485bd607"
+    ]
+  },
+  {
+    "id": "skill-8-envelope-and-building-physics-2c485bd607",
+    "purpose": "8 envelope and building physics",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/003-8-envelope-and-building-physics.md",
+    "requires": [
+      "skill-7-foundations-922e1aae3b"
+    ],
+    "links": [
+      "skill-9-building-services-a28f047f8d"
+    ]
+  },
+  {
+    "id": "skill-9-building-services-a28f047f8d",
+    "purpose": "9 building services",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/004-9-building-services.md",
+    "requires": [
+      "skill-8-envelope-and-building-physics-2c485bd607"
+    ],
+    "links": [
+      "skill-10-fire-safety-017bde5e0a"
+    ]
+  },
+  {
+    "id": "skill-10-fire-safety-017bde5e0a",
+    "purpose": "10 fire safety",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-structure-foundations-envelope-services-and-fire/005-10-fire-safety.md",
+    "requires": [
+      "skill-9-building-services-a28f047f8d"
+    ],
+    "links": []
+  }
+]

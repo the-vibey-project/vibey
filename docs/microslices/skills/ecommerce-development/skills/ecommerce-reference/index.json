@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-989a3eeeb0",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-reference/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-e3d9ce0f7a"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-e3d9ce0f7a",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-reference/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-989a3eeeb0"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-8d8b8883e3"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-8d8b8883e3",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-reference/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-e3d9ce0f7a"
+    ],
+    "links": [
+      "skill-18-the-canon-829f69bb7e"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-829f69bb7e",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-reference/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-8d8b8883e3"
+    ],
+    "links": [
+      "skill-19-quick-reference-47a309d270"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-47a309d270",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-reference/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-829f69bb7e"
+    ],
+    "links": [
+      "skill-20-sources-and-method-d80cf0ca69"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-d80cf0ca69",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-reference/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-47a309d270"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-14-periodization-0c8de6728c",
+    "purpose": "14 periodization",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/001-14-periodization.md",
+    "requires": [],
+    "links": [
+      "skill-15-resistance-programming-variables-800de599c0"
+    ]
+  },
+  {
+    "id": "skill-15-resistance-programming-variables-800de599c0",
+    "purpose": "15 resistance programming variables",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/002-15-resistance-programming-variables.md",
+    "requires": [
+      "skill-14-periodization-0c8de6728c"
+    ],
+    "links": [
+      "skill-16-what-actually-matters-ordered-dbd618fbca"
+    ]
+  },
+  {
+    "id": "skill-16-what-actually-matters-ordered-dbd618fbca",
+    "purpose": "16 what actually matters ordered",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/003-16-what-actually-matters-ordered.md",
+    "requires": [
+      "skill-15-resistance-programming-variables-800de599c0"
+    ],
+    "links": [
+      "skill-17-concurrent-training-88c81524c7"
+    ]
+  },
+  {
+    "id": "skill-17-concurrent-training-88c81524c7",
+    "purpose": "17 concurrent training",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/004-17-concurrent-training.md",
+    "requires": [
+      "skill-16-what-actually-matters-ordered-dbd618fbca"
+    ],
+    "links": [
+      "skill-18-aging-and-sarcopenia-12124f7d7c"
+    ]
+  },
+  {
+    "id": "skill-18-aging-and-sarcopenia-12124f7d7c",
+    "purpose": "18 aging and sarcopenia",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-programming-periodization-and-aging/005-18-aging-and-sarcopenia.md",
+    "requires": [
+      "skill-17-concurrent-training-88c81524c7"
+    ],
+    "links": []
+  }
+]

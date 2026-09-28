@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-fusion-physics-9faa027cb1",
+    "purpose": "10 fusion physics",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/001-10-fusion-physics.md",
+    "requires": [],
+    "links": [
+      "skill-11-magnetic-confinement-8391164954"
+    ]
+  },
+  {
+    "id": "skill-11-magnetic-confinement-8391164954",
+    "purpose": "11 magnetic confinement",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/002-11-magnetic-confinement.md",
+    "requires": [
+      "skill-10-fusion-physics-9faa027cb1"
+    ],
+    "links": [
+      "skill-12-inertial-confinement-778170fa92"
+    ]
+  },
+  {
+    "id": "skill-12-inertial-confinement-778170fa92",
+    "purpose": "12 inertial confinement",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/003-12-inertial-confinement.md",
+    "requires": [
+      "skill-11-magnetic-confinement-8391164954"
+    ],
+    "links": [
+      "skill-13-why-fusion-is-hard-to-engineer-9d2c103dff"
+    ]
+  },
+  {
+    "id": "skill-13-why-fusion-is-hard-to-engineer-9d2c103dff",
+    "purpose": "13 why fusion is hard to engineer",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/004-13-why-fusion-is-hard-to-engineer.md",
+    "requires": [
+      "skill-12-inertial-confinement-778170fa92"
+    ],
+    "links": [
+      "skill-14-detection-and-measurement-4e7cd28f47"
+    ]
+  },
+  {
+    "id": "skill-14-detection-and-measurement-4e7cd28f47",
+    "purpose": "14 detection and measurement",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fusion-confinement-and-detection/005-14-detection-and-measurement.md",
+    "requires": [
+      "skill-13-why-fusion-is-hard-to-engineer-9d2c103dff"
+    ],
+    "links": []
+  }
+]

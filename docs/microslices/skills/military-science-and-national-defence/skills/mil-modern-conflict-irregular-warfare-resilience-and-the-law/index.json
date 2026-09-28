@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-19-unmanned-systems-ed0ab32327",
+    "purpose": "19 unmanned systems",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/001-19-unmanned-systems.md",
+    "requires": [],
+    "links": [
+      "skill-20-cyber-and-space-b784f61734"
+    ]
+  },
+  {
+    "id": "skill-20-cyber-and-space-b784f61734",
+    "purpose": "20 cyber and space",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/002-20-cyber-and-space.md",
+    "requires": [
+      "skill-19-unmanned-systems-ed0ab32327"
+    ],
+    "links": [
+      "skill-21-information-operations-78e3f1b4a2"
+    ]
+  },
+  {
+    "id": "skill-21-information-operations-78e3f1b4a2",
+    "purpose": "21 information operations",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/003-21-information-operations.md",
+    "requires": [
+      "skill-20-cyber-and-space-b784f61734"
+    ],
+    "links": [
+      "skill-22-irregular-warfare-3916cee5b7"
+    ]
+  },
+  {
+    "id": "skill-22-irregular-warfare-3916cee5b7",
+    "purpose": "22 irregular warfare",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/004-22-irregular-warfare.md",
+    "requires": [
+      "skill-21-information-operations-78e3f1b4a2"
+    ],
+    "links": [
+      "skill-23-total-defence-and-societal-resilience-842176c14a"
+    ]
+  },
+  {
+    "id": "skill-23-total-defence-and-societal-resilience-842176c14a",
+    "purpose": "23 total defence and societal resilience",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/005-23-total-defence-and-societal-resilience.md",
+    "requires": [
+      "skill-22-irregular-warfare-3916cee5b7"
+    ],
+    "links": [
+      "skill-24-civil-military-relations-e00820d297"
+    ]
+  },
+  {
+    "id": "skill-24-civil-military-relations-e00820d297",
+    "purpose": "24 civil military relations",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/006-24-civil-military-relations.md",
+    "requires": [
+      "skill-23-total-defence-and-societal-resilience-842176c14a"
+    ],
+    "links": [
+      "skill-25-the-law-of-armed-conflict-2eac2249cd"
+    ]
+  },
+  {
+    "id": "skill-25-the-law-of-armed-conflict-2eac2249cd",
+    "purpose": "25 the law of armed conflict",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-modern-conflict-irregular-warfare-resilience-and-the-law/007-25-the-law-of-armed-conflict.md",
+    "requires": [
+      "skill-24-civil-military-relations-e00820d297"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-6-architecture-e022c8b192",
+    "purpose": "6 architecture",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/001-6-architecture.md",
+    "requires": [],
+    "links": [
+      "skill-7-configuration-and-workspaces-a321bfcd88"
+    ]
+  },
+  {
+    "id": "skill-7-configuration-and-workspaces-a321bfcd88",
+    "purpose": "7 configuration and workspaces",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/002-7-configuration-and-workspaces.md",
+    "requires": [
+      "skill-6-architecture-e022c8b192"
+    ],
+    "links": [
+      "skill-8-remote-development-a120d18a0e"
+    ]
+  },
+  {
+    "id": "skill-8-remote-development-a120d18a0e",
+    "purpose": "8 remote development",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/003-8-remote-development.md",
+    "requires": [
+      "skill-7-configuration-and-workspaces-a321bfcd88"
+    ],
+    "links": [
+      "skill-9-lsp-the-change-that-mattered-7f98230fe6"
+    ]
+  },
+  {
+    "id": "skill-9-lsp-the-change-that-mattered-7f98230fe6",
+    "purpose": "9 lsp the change that mattered",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/004-9-lsp-the-change-that-mattered.md",
+    "requires": [
+      "skill-8-remote-development-a120d18a0e"
+    ],
+    "links": [
+      "skill-10-dap-3e74b8b457"
+    ]
+  },
+  {
+    "id": "skill-10-dap-3e74b8b457",
+    "purpose": "10 dap",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/005-10-dap.md",
+    "requires": [
+      "skill-9-lsp-the-change-that-mattered-7f98230fe6"
+    ],
+    "links": [
+      "skill-11-tree-sitter-875860f7df"
+    ]
+  },
+  {
+    "id": "skill-11-tree-sitter-875860f7df",
+    "purpose": "11 tree sitter",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-vscode-architecture-and-the-protocol-layer/006-11-tree-sitter.md",
+    "requires": [
+      "skill-10-dap-3e74b8b457"
+    ],
+    "links": []
+  }
+]

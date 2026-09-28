@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-spatial-indexing-1504c38831",
+    "purpose": "4 spatial indexing",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/001-4-spatial-indexing.md",
+    "requires": [],
+    "links": [
+      "skill-5-spatial-databases-36767c2936"
+    ]
+  },
+  {
+    "id": "skill-5-spatial-databases-36767c2936",
+    "purpose": "5 spatial databases",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/002-5-spatial-databases.md",
+    "requires": [
+      "skill-4-spatial-indexing-1504c38831"
+    ],
+    "links": [
+      "skill-6-tiling-bfc76d418b"
+    ]
+  },
+  {
+    "id": "skill-6-tiling-bfc76d418b",
+    "purpose": "6 tiling",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/003-6-tiling.md",
+    "requires": [
+      "skill-5-spatial-databases-36767c2936"
+    ],
+    "links": [
+      "skill-7-rendering-4e314a674b"
+    ]
+  },
+  {
+    "id": "skill-7-rendering-4e314a674b",
+    "purpose": "7 rendering",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-indexing-databases-tiling-and-rendering/004-7-rendering.md",
+    "requires": [
+      "skill-6-tiling-bfc76d418b"
+    ],
+    "links": []
+  }
+]

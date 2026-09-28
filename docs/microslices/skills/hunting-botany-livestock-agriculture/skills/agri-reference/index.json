@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-28-what-s-live-verified-august-2026-b9d568c185",
+    "purpose": "28 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-reference/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-reference/001-28-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-29-misconceptions-dcb544eb17"
+    ]
+  },
+  {
+    "id": "skill-29-misconceptions-dcb544eb17",
+    "purpose": "29 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-reference/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-reference/002-29-misconceptions.md",
+    "requires": [
+      "skill-28-what-s-live-verified-august-2026-b9d568c185"
+    ],
+    "links": [
+      "skill-30-numbers-9628c0ed48"
+    ]
+  },
+  {
+    "id": "skill-30-numbers-9628c0ed48",
+    "purpose": "30 numbers",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-reference/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-reference/003-30-numbers.md",
+    "requires": [
+      "skill-29-misconceptions-dcb544eb17"
+    ],
+    "links": [
+      "skill-31-books-a239dab2f4"
+    ]
+  },
+  {
+    "id": "skill-31-books-a239dab2f4",
+    "purpose": "31 books",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-reference/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-reference/004-31-books.md",
+    "requires": [
+      "skill-30-numbers-9628c0ed48"
+    ],
+    "links": [
+      "skill-32-quick-reference-ac578f28ee"
+    ]
+  },
+  {
+    "id": "skill-32-quick-reference-ac578f28ee",
+    "purpose": "32 quick reference",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-reference/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-reference/005-32-quick-reference.md",
+    "requires": [
+      "skill-31-books-a239dab2f4"
+    ],
+    "links": [
+      "skill-33-method-a31837ea6b"
+    ]
+  },
+  {
+    "id": "skill-33-method-a31837ea6b",
+    "purpose": "33 method",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-reference/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-reference/006-33-method.md",
+    "requires": [
+      "skill-32-quick-reference-ac578f28ee"
+    ],
+    "links": []
+  }
+]

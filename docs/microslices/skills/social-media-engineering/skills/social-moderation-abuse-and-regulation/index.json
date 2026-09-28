@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-moderation-at-scale-cec37c1536",
+    "purpose": "7 moderation at scale",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-moderation-abuse-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-moderation-abuse-and-regulation/001-7-moderation-at-scale.md",
+    "requires": [],
+    "links": [
+      "skill-8-spam-bots-and-abuse-a36b61dcc5"
+    ]
+  },
+  {
+    "id": "skill-8-spam-bots-and-abuse-a36b61dcc5",
+    "purpose": "8 spam bots and abuse",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-moderation-abuse-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-moderation-abuse-and-regulation/002-8-spam-bots-and-abuse.md",
+    "requires": [
+      "skill-7-moderation-at-scale-cec37c1536"
+    ],
+    "links": [
+      "skill-9-regulation-and-compliance-16c6366c59"
+    ]
+  },
+  {
+    "id": "skill-9-regulation-and-compliance-16c6366c59",
+    "purpose": "9 regulation and compliance",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-moderation-abuse-and-regulation/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-moderation-abuse-and-regulation/003-9-regulation-and-compliance.md",
+    "requires": [
+      "skill-8-spam-bots-and-abuse-a36b61dcc5"
+    ],
+    "links": []
+  }
+]

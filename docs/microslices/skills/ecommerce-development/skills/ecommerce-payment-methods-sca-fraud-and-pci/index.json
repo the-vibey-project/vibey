@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-payment-methods-and-rails-0e05aab9fc",
+    "purpose": "5 payment methods and rails",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/001-5-payment-methods-and-rails.md",
+    "requires": [],
+    "links": [
+      "skill-6-sca-3-d-secure-and-authorization-rates-aec0629dff"
+    ]
+  },
+  {
+    "id": "skill-6-sca-3-d-secure-and-authorization-rates-aec0629dff",
+    "purpose": "6 sca 3 d secure and authorization rates",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/002-6-sca-3-d-secure-and-authorization-rates.md",
+    "requires": [
+      "skill-5-payment-methods-and-rails-0e05aab9fc"
+    ],
+    "links": [
+      "skill-7-fraud-and-disputes-8301679835"
+    ]
+  },
+  {
+    "id": "skill-7-fraud-and-disputes-8301679835",
+    "purpose": "7 fraud and disputes",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/003-7-fraud-and-disputes.md",
+    "requires": [
+      "skill-6-sca-3-d-secure-and-authorization-rates-aec0629dff"
+    ],
+    "links": [
+      "skill-8-pci-dss-and-security-da9e3e817b"
+    ]
+  },
+  {
+    "id": "skill-8-pci-dss-and-security-da9e3e817b",
+    "purpose": "8 pci dss and security",
+    "source": "src/vibey_tools/skills/plugins/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/SKILL.md",
+    "output": "docs/microslices/skills/ecommerce-development/skills/ecommerce-payment-methods-sca-fraud-and-pci/004-8-pci-dss-and-security.md",
+    "requires": [
+      "skill-7-fraud-and-disputes-8301679835"
+    ],
+    "links": []
+  }
+]

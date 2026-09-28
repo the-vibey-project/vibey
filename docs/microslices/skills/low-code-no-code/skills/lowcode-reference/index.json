@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-07301b4f77",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-reference/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-578663929e"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-578663929e",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-reference/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-07301b4f77"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-8f7cddb53f"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-8f7cddb53f",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-reference/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-578663929e"
+    ],
+    "links": [
+      "skill-18-resources-2205de41e0"
+    ]
+  },
+  {
+    "id": "skill-18-resources-2205de41e0",
+    "purpose": "18 resources",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-reference/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-reference/004-18-resources.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-8f7cddb53f"
+    ],
+    "links": [
+      "skill-19-quick-reference-6bc8a12809"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-6bc8a12809",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-reference/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-resources-2205de41e0"
+    ],
+    "links": [
+      "skill-20-sources-and-method-4148cbbc09"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-4148cbbc09",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-reference/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-6bc8a12809"
+    ],
+    "links": []
+  }
+]

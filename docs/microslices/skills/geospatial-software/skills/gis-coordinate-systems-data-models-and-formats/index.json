@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-a7bcc3627a",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-coordinate-systems-read-this-first-12c8733c5a"
+    ]
+  },
+  {
+    "id": "skill-1-coordinate-systems-read-this-first-12c8733c5a",
+    "purpose": "1 coordinate systems read this first",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/002-1-coordinate-systems-read-this-first.md",
+    "requires": [
+      "skill-0-routing-a7bcc3627a"
+    ],
+    "links": [
+      "skill-2-data-models-772243b077"
+    ]
+  },
+  {
+    "id": "skill-2-data-models-772243b077",
+    "purpose": "2 data models",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/003-2-data-models.md",
+    "requires": [
+      "skill-1-coordinate-systems-read-this-first-12c8733c5a"
+    ],
+    "links": [
+      "skill-3-file-formats-85ad4ea723"
+    ]
+  },
+  {
+    "id": "skill-3-file-formats-85ad4ea723",
+    "purpose": "3 file formats",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-coordinate-systems-data-models-and-formats/004-3-file-formats.md",
+    "requires": [
+      "skill-2-data-models-772243b077"
+    ],
+    "links": []
+  }
+]

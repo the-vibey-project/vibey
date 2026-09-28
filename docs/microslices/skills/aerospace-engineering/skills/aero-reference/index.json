@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-misconceptions-b7d82ed609",
+    "purpose": "15 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-reference/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-reference/001-15-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-16-what-moved-verified-august-2026-ef39e0a7a4"
+    ]
+  },
+  {
+    "id": "skill-16-what-moved-verified-august-2026-ef39e0a7a4",
+    "purpose": "16 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-reference/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-reference/002-16-what-moved-verified-august-2026.md",
+    "requires": [
+      "skill-15-misconceptions-b7d82ed609"
+    ],
+    "links": [
+      "skill-17-numbers-87f8215675"
+    ]
+  },
+  {
+    "id": "skill-17-numbers-87f8215675",
+    "purpose": "17 numbers",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-reference/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-reference/003-17-numbers.md",
+    "requires": [
+      "skill-16-what-moved-verified-august-2026-ef39e0a7a4"
+    ],
+    "links": [
+      "skill-18-books-7f8d2270b9"
+    ]
+  },
+  {
+    "id": "skill-18-books-7f8d2270b9",
+    "purpose": "18 books",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-reference/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-reference/004-18-books.md",
+    "requires": [
+      "skill-17-numbers-87f8215675"
+    ],
+    "links": [
+      "skill-19-quick-reference-72f285262f"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-72f285262f",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-reference/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-books-7f8d2270b9"
+    ],
+    "links": [
+      "skill-20-method-4f6f58d9ef"
+    ]
+  },
+  {
+    "id": "skill-20-method-4f6f58d9ef",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-reference/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-reference/006-20-method.md",
+    "requires": [
+      "skill-19-quick-reference-72f285262f"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-the-sales-process-129e4158e3",
+    "purpose": "10 the sales process",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/001-10-the-sales-process.md",
+    "requires": [],
+    "links": [
+      "skill-11-qualification-b13fee97e8"
+    ]
+  },
+  {
+    "id": "skill-11-qualification-b13fee97e8",
+    "purpose": "11 qualification",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/002-11-qualification.md",
+    "requires": [
+      "skill-10-the-sales-process-129e4158e3"
+    ],
+    "links": [
+      "skill-12-negotiation-cad0c3a617"
+    ]
+  },
+  {
+    "id": "skill-12-negotiation-cad0c3a617",
+    "purpose": "12 negotiation",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/003-12-negotiation.md",
+    "requires": [
+      "skill-11-qualification-b13fee97e8"
+    ],
+    "links": [
+      "skill-13-sales-management-861c3a2e29"
+    ]
+  },
+  {
+    "id": "skill-13-sales-management-861c3a2e29",
+    "purpose": "13 sales management",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-sales-process-qualification-and-negotiation/004-13-sales-management.md",
+    "requires": [
+      "skill-12-negotiation-cad0c3a617"
+    ],
+    "links": []
+  }
+]

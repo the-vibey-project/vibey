@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-media-handling-909f221321",
+    "purpose": "10 media handling",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-media-analytics-privacy-and-presence/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-media-analytics-privacy-and-presence/001-10-media-handling.md",
+    "requires": [],
+    "links": [
+      "skill-11-analytics-and-experimentation-a02ce4fbf8"
+    ]
+  },
+  {
+    "id": "skill-11-analytics-and-experimentation-a02ce4fbf8",
+    "purpose": "11 analytics and experimentation",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-media-analytics-privacy-and-presence/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-media-analytics-privacy-and-presence/002-11-analytics-and-experimentation.md",
+    "requires": [
+      "skill-10-media-handling-909f221321"
+    ],
+    "links": [
+      "skill-12-privacy-and-data-ed5850248d"
+    ]
+  },
+  {
+    "id": "skill-12-privacy-and-data-ed5850248d",
+    "purpose": "12 privacy and data",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-media-analytics-privacy-and-presence/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-media-analytics-privacy-and-presence/003-12-privacy-and-data.md",
+    "requires": [
+      "skill-11-analytics-and-experimentation-a02ce4fbf8"
+    ],
+    "links": [
+      "skill-13-your-own-presence-as-a-developer-b6dbd8a998"
+    ]
+  },
+  {
+    "id": "skill-13-your-own-presence-as-a-developer-b6dbd8a998",
+    "purpose": "13 your own presence as a developer",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-media-analytics-privacy-and-presence/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-media-analytics-privacy-and-presence/004-13-your-own-presence-as-a-developer.md",
+    "requires": [
+      "skill-12-privacy-and-data-ed5850248d"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-87eeba3c05",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-reference/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-e9b03d7d84"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-e9b03d7d84",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-reference/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-87eeba3c05"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-41a96e5e78"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-41a96e5e78",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-reference/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-e9b03d7d84"
+    ],
+    "links": [
+      "skill-18-the-canon-c810504b12"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-c810504b12",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-reference/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-41a96e5e78"
+    ],
+    "links": [
+      "skill-19-quick-reference-c1c93840e1"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-c1c93840e1",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-reference/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-c810504b12"
+    ],
+    "links": [
+      "skill-20-sources-and-method-f462f6af9c"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-f462f6af9c",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-reference/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-c1c93840e1"
+    ],
+    "links": []
+  }
+]

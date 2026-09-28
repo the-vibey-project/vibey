@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-packages-and-distributions-9f08e3fe53",
+    "purpose": "7 packages and distributions",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-packages-boot-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-packages-boot-and-hardening/001-7-packages-and-distributions.md",
+    "requires": [],
+    "links": [
+      "skill-8-boot-2b413c594f"
+    ]
+  },
+  {
+    "id": "skill-8-boot-2b413c594f",
+    "purpose": "8 boot",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-packages-boot-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-packages-boot-and-hardening/002-8-boot.md",
+    "requires": [
+      "skill-7-packages-and-distributions-9f08e3fe53"
+    ],
+    "links": [
+      "skill-9-security-hardening-28d7f03aba"
+    ]
+  },
+  {
+    "id": "skill-9-security-hardening-28d7f03aba",
+    "purpose": "9 security hardening",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-packages-boot-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-packages-boot-and-hardening/003-9-security-hardening.md",
+    "requires": [
+      "skill-8-boot-2b413c594f"
+    ],
+    "links": []
+  }
+]

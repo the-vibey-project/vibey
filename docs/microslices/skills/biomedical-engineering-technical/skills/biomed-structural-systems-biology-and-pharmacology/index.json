@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-structural-biology-0fb8c24163",
+    "purpose": "6 structural biology",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/001-6-structural-biology.md",
+    "requires": [],
+    "links": [
+      "skill-7-systems-biology-4bf74f83b0"
+    ]
+  },
+  {
+    "id": "skill-7-systems-biology-4bf74f83b0",
+    "purpose": "7 systems biology",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/002-7-systems-biology.md",
+    "requires": [
+      "skill-6-structural-biology-0fb8c24163"
+    ],
+    "links": [
+      "skill-8-pk-pd-4378cf5f70"
+    ]
+  },
+  {
+    "id": "skill-8-pk-pd-4378cf5f70",
+    "purpose": "8 pk pd",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/003-8-pk-pd.md",
+    "requires": [
+      "skill-7-systems-biology-4bf74f83b0"
+    ],
+    "links": [
+      "skill-9-physiological-models-4e282638ff"
+    ]
+  },
+  {
+    "id": "skill-9-physiological-models-4e282638ff",
+    "purpose": "9 physiological models",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-structural-systems-biology-and-pharmacology/004-9-physiological-models.md",
+    "requires": [
+      "skill-8-pk-pd-4378cf5f70"
+    ],
+    "links": []
+  }
+]

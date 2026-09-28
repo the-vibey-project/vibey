@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-7-what-actually-holds-up-18b6f840f3",
+    "purpose": "7 what actually holds up",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/001-7-what-actually-holds-up.md",
+    "requires": [],
+    "links": [
+      "skill-8-relationships-7889908e87"
+    ]
+  },
+  {
+    "id": "skill-8-relationships-7889908e87",
+    "purpose": "8 relationships",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/002-8-relationships.md",
+    "requires": [
+      "skill-7-what-actually-holds-up-18b6f840f3"
+    ],
+    "links": [
+      "skill-9-sleep-movement-and-the-physical-substrate-53326d1551"
+    ]
+  },
+  {
+    "id": "skill-9-sleep-movement-and-the-physical-substrate-53326d1551",
+    "purpose": "9 sleep movement and the physical substrate",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/003-9-sleep-movement-and-the-physical-substrate.md",
+    "requires": [
+      "skill-8-relationships-7889908e87"
+    ],
+    "links": [
+      "skill-10-time-and-attention-eaab09a707"
+    ]
+  },
+  {
+    "id": "skill-10-time-and-attention-eaab09a707",
+    "purpose": "10 time and attention",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-what-holds-up-relationships-sleep-and-attention/004-10-time-and-attention.md",
+    "requires": [
+      "skill-9-sleep-movement-and-the-physical-substrate-53326d1551"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-29-what-s-live-verified-august-2026-94a1109cb8",
+    "purpose": "29 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-reference/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-reference/001-29-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-30-misconceptions-4ce6a6161e"
+    ]
+  },
+  {
+    "id": "skill-30-misconceptions-4ce6a6161e",
+    "purpose": "30 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-reference/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-reference/002-30-misconceptions.md",
+    "requires": [
+      "skill-29-what-s-live-verified-august-2026-94a1109cb8"
+    ],
+    "links": [
+      "skill-31-numbers-3381cc780f"
+    ]
+  },
+  {
+    "id": "skill-31-numbers-3381cc780f",
+    "purpose": "31 numbers",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-reference/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-reference/003-31-numbers.md",
+    "requires": [
+      "skill-30-misconceptions-4ce6a6161e"
+    ],
+    "links": [
+      "skill-32-books-8d0925dc9b"
+    ]
+  },
+  {
+    "id": "skill-32-books-8d0925dc9b",
+    "purpose": "32 books",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-reference/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-reference/004-32-books.md",
+    "requires": [
+      "skill-31-numbers-3381cc780f"
+    ],
+    "links": [
+      "skill-33-quick-reference-1a4bbd8c19"
+    ]
+  },
+  {
+    "id": "skill-33-quick-reference-1a4bbd8c19",
+    "purpose": "33 quick reference",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-reference/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-reference/005-33-quick-reference.md",
+    "requires": [
+      "skill-32-books-8d0925dc9b"
+    ],
+    "links": [
+      "skill-34-method-28a2fd4aa5"
+    ]
+  },
+  {
+    "id": "skill-34-method-28a2fd4aa5",
+    "purpose": "34 method",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-reference/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-reference/006-34-method.md",
+    "requires": [
+      "skill-33-quick-reference-1a4bbd8c19"
+    ],
+    "links": []
+  }
+]

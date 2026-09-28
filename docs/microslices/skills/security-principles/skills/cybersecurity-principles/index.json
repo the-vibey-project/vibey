@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-the-insight-that-matters-most-37b5834963",
+    "purpose": "the insight that matters most",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/001-the-insight-that-matters-most.md",
+    "requires": [],
+    "links": [
+      "skill-the-saltzer-schroeder-eight-principles-d6169a079e"
+    ]
+  },
+  {
+    "id": "skill-the-saltzer-schroeder-eight-principles-d6169a079e",
+    "purpose": "the saltzer schroeder eight principles",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/002-the-saltzer-schroeder-eight-principles.md",
+    "requires": [
+      "skill-the-insight-that-matters-most-37b5834963"
+    ],
+    "links": [
+      "skill-the-cia-triad-what-security-protects-2f84706f8a"
+    ]
+  },
+  {
+    "id": "skill-the-cia-triad-what-security-protects-2f84706f8a",
+    "purpose": "the cia triad what security protects",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/003-the-cia-triad-what-security-protects.md",
+    "requires": [
+      "skill-the-saltzer-schroeder-eight-principles-d6169a079e"
+    ],
+    "links": [
+      "skill-aaa-authentication-authorization-and-accounting-7fe93cb775"
+    ]
+  },
+  {
+    "id": "skill-aaa-authentication-authorization-and-accounting-7fe93cb775",
+    "purpose": "aaa authentication authorization and accounting",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/004-aaa-authentication-authorization-and-accounting.md",
+    "requires": [
+      "skill-the-cia-triad-what-security-protects-2f84706f8a"
+    ],
+    "links": [
+      "skill-zero-trust-philosophy-history-and-what-it-is-not-153984fad2"
+    ]
+  },
+  {
+    "id": "skill-zero-trust-philosophy-history-and-what-it-is-not-153984fad2",
+    "purpose": "zero trust philosophy history and what it is not",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/005-zero-trust-philosophy-history-and-what-it-is-not.md",
+    "requires": [
+      "skill-aaa-authentication-authorization-and-accounting-7fe93cb775"
+    ],
+    "links": [
+      "skill-defense-in-depth-e93f580d0c"
+    ]
+  },
+  {
+    "id": "skill-defense-in-depth-e93f580d0c",
+    "purpose": "defense in depth",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/006-defense-in-depth.md",
+    "requires": [
+      "skill-zero-trust-philosophy-history-and-what-it-is-not-153984fad2"
+    ],
+    "links": [
+      "skill-modern-framework-updates-2024-2026-358ff98161"
+    ]
+  },
+  {
+    "id": "skill-modern-framework-updates-2024-2026-358ff98161",
+    "purpose": "modern framework updates 2024 2026",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/007-modern-framework-updates-2024-2026.md",
+    "requires": [
+      "skill-defense-in-depth-e93f580d0c"
+    ],
+    "links": [
+      "skill-financial-context-why-principles-violations-are-expensive-8a52bf8367"
+    ]
+  },
+  {
+    "id": "skill-financial-context-why-principles-violations-are-expensive-8a52bf8367",
+    "purpose": "financial context why principles violations are expensive",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/008-financial-context-why-principles-violations-are-expensive.md",
+    "requires": [
+      "skill-modern-framework-updates-2024-2026-358ff98161"
+    ],
+    "links": [
+      "skill-building-the-mental-model-the-threat-landscape-b0d2fc1d3e"
+    ]
+  },
+  {
+    "id": "skill-building-the-mental-model-the-threat-landscape-b0d2fc1d3e",
+    "purpose": "building the mental model the threat landscape",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/009-building-the-mental-model-the-threat-landscape.md",
+    "requires": [
+      "skill-financial-context-why-principles-violations-are-expensive-8a52bf8367"
+    ],
+    "links": [
+      "skill-ai-era-relevance-bb9f736e95"
+    ]
+  },
+  {
+    "id": "skill-ai-era-relevance-bb9f736e95",
+    "purpose": "ai era relevance",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/010-ai-era-relevance.md",
+    "requires": [
+      "skill-building-the-mental-model-the-threat-landscape-b0d2fc1d3e"
+    ],
+    "links": [
+      "skill-the-three-structural-realities-of-all-security-work-872f6a0961"
+    ]
+  },
+  {
+    "id": "skill-the-three-structural-realities-of-all-security-work-872f6a0961",
+    "purpose": "the three structural realities of all security work",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/011-the-three-structural-realities-of-all-security-work.md",
+    "requires": [
+      "skill-ai-era-relevance-bb9f736e95"
+    ],
+    "links": [
+      "skill-quick-reference-principles-to-scenarios-4685eeb41d"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-principles-to-scenarios-4685eeb41d",
+    "purpose": "quick reference principles to scenarios",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/cybersecurity-principles/012-quick-reference-principles-to-scenarios.md",
+    "requires": [
+      "skill-the-three-structural-realities-of-all-security-work-872f6a0961"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-transmissions-4ed4112168",
+    "purpose": "10 transmissions",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/001-10-transmissions.md",
+    "requires": [],
+    "links": [
+      "skill-11-driveline-and-differentials-56b4d06004"
+    ]
+  },
+  {
+    "id": "skill-11-driveline-and-differentials-56b4d06004",
+    "purpose": "11 driveline and differentials",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/002-11-driveline-and-differentials.md",
+    "requires": [
+      "skill-10-transmissions-4ed4112168"
+    ],
+    "links": [
+      "skill-12-suspension-4d9873c9dd"
+    ]
+  },
+  {
+    "id": "skill-12-suspension-4d9873c9dd",
+    "purpose": "12 suspension",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/003-12-suspension.md",
+    "requires": [
+      "skill-11-driveline-and-differentials-56b4d06004"
+    ],
+    "links": [
+      "skill-13-steering-and-alignment-dd29f508a0"
+    ]
+  },
+  {
+    "id": "skill-13-steering-and-alignment-dd29f508a0",
+    "purpose": "13 steering and alignment",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/004-13-steering-and-alignment.md",
+    "requires": [
+      "skill-12-suspension-4d9873c9dd"
+    ],
+    "links": [
+      "skill-14-brakes-5dba5f2e3a"
+    ]
+  },
+  {
+    "id": "skill-14-brakes-5dba5f2e3a",
+    "purpose": "14 brakes",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/005-14-brakes.md",
+    "requires": [
+      "skill-13-steering-and-alignment-dd29f508a0"
+    ],
+    "links": [
+      "skill-15-tyres-cf5ebbacd3"
+    ]
+  },
+  {
+    "id": "skill-15-tyres-cf5ebbacd3",
+    "purpose": "15 tyres",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-transmissions-driveline-suspension-steering-brakes-and-tyres/006-15-tyres.md",
+    "requires": [
+      "skill-14-brakes-5dba5f2e3a"
+    ],
+    "links": []
+  }
+]

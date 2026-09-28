@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-checked-august-2026-3425a6a385",
+    "purpose": "26 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-reference/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-reference/001-26-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-4eac353a50"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-4eac353a50",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-reference/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-checked-august-2026-3425a6a385"
+    ],
+    "links": [
+      "skill-28-numbers-1ea9d4e624"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-1ea9d4e624",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-reference/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-reference/003-28-numbers.md",
+    "requires": [
+      "skill-27-misconceptions-4eac353a50"
+    ],
+    "links": [
+      "skill-29-sources-940bdb0e3f"
+    ]
+  },
+  {
+    "id": "skill-29-sources-940bdb0e3f",
+    "purpose": "29 sources",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-reference/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-reference/004-29-sources.md",
+    "requires": [
+      "skill-28-numbers-1ea9d4e624"
+    ],
+    "links": [
+      "skill-30-quick-reference-b696dfabf0"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-b696dfabf0",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-reference/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-sources-940bdb0e3f"
+    ],
+    "links": [
+      "skill-31-method-4a8ab76477"
+    ]
+  },
+  {
+    "id": "skill-31-method-4a8ab76477",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-reference/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-b696dfabf0"
+    ],
+    "links": []
+  }
+]

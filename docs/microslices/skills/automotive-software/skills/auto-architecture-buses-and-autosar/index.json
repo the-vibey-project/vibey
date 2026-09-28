@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-52e5ba424c",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-architecture-buses-and-autosar/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-architecture-buses-and-autosar/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-makes-it-different-b38eb12c4f"
+    ]
+  },
+  {
+    "id": "skill-1-what-makes-it-different-b38eb12c4f",
+    "purpose": "1 what makes it different",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-architecture-buses-and-autosar/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-architecture-buses-and-autosar/002-1-what-makes-it-different.md",
+    "requires": [
+      "skill-0-routing-52e5ba424c"
+    ],
+    "links": [
+      "skill-2-e-e-architecture-71d8441289"
+    ]
+  },
+  {
+    "id": "skill-2-e-e-architecture-71d8441289",
+    "purpose": "2 e e architecture",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-architecture-buses-and-autosar/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-architecture-buses-and-autosar/003-2-e-e-architecture.md",
+    "requires": [
+      "skill-1-what-makes-it-different-b38eb12c4f"
+    ],
+    "links": [
+      "skill-3-buses-and-networking-a343fc18a6"
+    ]
+  },
+  {
+    "id": "skill-3-buses-and-networking-a343fc18a6",
+    "purpose": "3 buses and networking",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-architecture-buses-and-autosar/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-architecture-buses-and-autosar/004-3-buses-and-networking.md",
+    "requires": [
+      "skill-2-e-e-architecture-71d8441289"
+    ],
+    "links": [
+      "skill-4-autosar-c351c3177b"
+    ]
+  },
+  {
+    "id": "skill-4-autosar-c351c3177b",
+    "purpose": "4 autosar",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-architecture-buses-and-autosar/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-architecture-buses-and-autosar/005-4-autosar.md",
+    "requires": [
+      "skill-3-buses-and-networking-a343fc18a6"
+    ],
+    "links": []
+  }
+]

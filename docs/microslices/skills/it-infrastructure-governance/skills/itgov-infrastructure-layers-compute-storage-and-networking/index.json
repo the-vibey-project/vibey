@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-f940dd52d3",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-layers-06964e8a32"
+    ]
+  },
+  {
+    "id": "skill-1-the-layers-06964e8a32",
+    "purpose": "1 the layers",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/002-1-the-layers.md",
+    "requires": [
+      "skill-0-routing-f940dd52d3"
+    ],
+    "links": [
+      "skill-2-compute-and-virtualization-ebf237b364"
+    ]
+  },
+  {
+    "id": "skill-2-compute-and-virtualization-ebf237b364",
+    "purpose": "2 compute and virtualization",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/003-2-compute-and-virtualization.md",
+    "requires": [
+      "skill-1-the-layers-06964e8a32"
+    ],
+    "links": [
+      "skill-3-storage-6c9137c57a"
+    ]
+  },
+  {
+    "id": "skill-3-storage-6c9137c57a",
+    "purpose": "3 storage",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/004-3-storage.md",
+    "requires": [
+      "skill-2-compute-and-virtualization-ebf237b364"
+    ],
+    "links": [
+      "skill-4-networking-93a6cbf897"
+    ]
+  },
+  {
+    "id": "skill-4-networking-93a6cbf897",
+    "purpose": "4 networking",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-infrastructure-layers-compute-storage-and-networking/005-4-networking.md",
+    "requires": [
+      "skill-3-storage-6c9137c57a"
+    ],
+    "links": []
+  }
+]

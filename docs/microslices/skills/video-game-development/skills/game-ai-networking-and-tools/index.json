@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-gameplay-ai-3d38f8b1fe",
+    "purpose": "8 gameplay ai",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-ai-networking-and-tools/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-ai-networking-and-tools/001-8-gameplay-ai.md",
+    "requires": [],
+    "links": [
+      "skill-9-networking-0486640ecc"
+    ]
+  },
+  {
+    "id": "skill-9-networking-0486640ecc",
+    "purpose": "9 networking",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-ai-networking-and-tools/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-ai-networking-and-tools/002-9-networking.md",
+    "requires": [
+      "skill-8-gameplay-ai-3d38f8b1fe"
+    ],
+    "links": [
+      "skill-10-tools-and-pipeline-1d1fd9c6ac"
+    ]
+  },
+  {
+    "id": "skill-10-tools-and-pipeline-1d1fd9c6ac",
+    "purpose": "10 tools and pipeline",
+    "source": "src/vibey_tools/skills/plugins/video-game-development/skills/game-ai-networking-and-tools/SKILL.md",
+    "output": "docs/microslices/skills/video-game-development/skills/game-ai-networking-and-tools/003-10-tools-and-pipeline.md",
+    "requires": [
+      "skill-9-networking-0486640ecc"
+    ],
+    "links": []
+  }
+]

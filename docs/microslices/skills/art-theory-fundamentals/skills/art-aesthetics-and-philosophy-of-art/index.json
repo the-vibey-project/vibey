@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-8-the-questions-cd92b472cd",
+    "purpose": "8 the questions",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/001-8-the-questions.md",
+    "requires": [],
+    "links": [
+      "skill-9-beauty-and-the-sublime-df3ed4547c"
+    ]
+  },
+  {
+    "id": "skill-9-beauty-and-the-sublime-df3ed4547c",
+    "purpose": "9 beauty and the sublime",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/002-9-beauty-and-the-sublime.md",
+    "requires": [
+      "skill-8-the-questions-cd92b472cd"
+    ],
+    "links": [
+      "skill-10-taste-and-judgement-c20ee3b9ec"
+    ]
+  },
+  {
+    "id": "skill-10-taste-and-judgement-c20ee3b9ec",
+    "purpose": "10 taste and judgement",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/003-10-taste-and-judgement.md",
+    "requires": [
+      "skill-9-beauty-and-the-sublime-df3ed4547c"
+    ],
+    "links": [
+      "skill-11-theories-of-art-2ba32ede01"
+    ]
+  },
+  {
+    "id": "skill-11-theories-of-art-2ba32ede01",
+    "purpose": "11 theories of art",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/004-11-theories-of-art.md",
+    "requires": [
+      "skill-10-taste-and-judgement-c20ee3b9ec"
+    ],
+    "links": [
+      "skill-12-the-definition-problem-3980be65c8"
+    ]
+  },
+  {
+    "id": "skill-12-the-definition-problem-3980be65c8",
+    "purpose": "12 the definition problem",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/005-12-the-definition-problem.md",
+    "requires": [
+      "skill-11-theories-of-art-2ba32ede01"
+    ],
+    "links": [
+      "skill-13-art-and-ethics-e7e2432310"
+    ]
+  },
+  {
+    "id": "skill-13-art-and-ethics-e7e2432310",
+    "purpose": "13 art and ethics",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-aesthetics-and-philosophy-of-art/006-13-art-and-ethics.md",
+    "requires": [
+      "skill-12-the-definition-problem-3980be65c8"
+    ],
+    "links": []
+  }
+]

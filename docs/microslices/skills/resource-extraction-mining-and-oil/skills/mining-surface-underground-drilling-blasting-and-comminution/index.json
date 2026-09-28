@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-surface-mining-a8d31c5426",
+    "purpose": "5 surface mining",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/001-5-surface-mining.md",
+    "requires": [],
+    "links": [
+      "skill-6-underground-mining-38b748159e"
+    ]
+  },
+  {
+    "id": "skill-6-underground-mining-38b748159e",
+    "purpose": "6 underground mining",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/002-6-underground-mining.md",
+    "requires": [
+      "skill-5-surface-mining-a8d31c5426"
+    ],
+    "links": [
+      "skill-7-drilling-and-blasting-ba580a7db0"
+    ]
+  },
+  {
+    "id": "skill-7-drilling-and-blasting-ba580a7db0",
+    "purpose": "7 drilling and blasting",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/003-7-drilling-and-blasting.md",
+    "requires": [
+      "skill-6-underground-mining-38b748159e"
+    ],
+    "links": [
+      "skill-8-comminution-cd7b426cfb"
+    ]
+  },
+  {
+    "id": "skill-8-comminution-cd7b426cfb",
+    "purpose": "8 comminution",
+    "source": "src/vibey_tools/skills/plugins/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/SKILL.md",
+    "output": "docs/microslices/skills/resource-extraction-mining-and-oil/skills/mining-surface-underground-drilling-blasting-and-comminution/004-8-comminution.md",
+    "requires": [
+      "skill-7-drilling-and-blasting-ba580a7db0"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-24-wastewater-treatment-461900d026",
+    "purpose": "24 wastewater treatment",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/001-24-wastewater-treatment.md",
+    "requires": [],
+    "links": [
+      "skill-25-the-waste-hierarchy-dd915140c7"
+    ]
+  },
+  {
+    "id": "skill-25-the-waste-hierarchy-dd915140c7",
+    "purpose": "25 the waste hierarchy",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/002-25-the-waste-hierarchy.md",
+    "requires": [
+      "skill-24-wastewater-treatment-461900d026"
+    ],
+    "links": [
+      "skill-26-landfills-f0bc969f6a"
+    ]
+  },
+  {
+    "id": "skill-26-landfills-f0bc969f6a",
+    "purpose": "26 landfills",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/003-26-landfills.md",
+    "requires": [
+      "skill-25-the-waste-hierarchy-dd915140c7"
+    ],
+    "links": [
+      "skill-27-recycling-honestly-9b14b55416"
+    ]
+  },
+  {
+    "id": "skill-27-recycling-honestly-9b14b55416",
+    "purpose": "27 recycling honestly",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/004-27-recycling-honestly.md",
+    "requires": [
+      "skill-26-landfills-f0bc969f6a"
+    ],
+    "links": [
+      "skill-28-composting-and-organics-0aac2f94ca"
+    ]
+  },
+  {
+    "id": "skill-28-composting-and-organics-0aac2f94ca",
+    "purpose": "28 composting and organics",
+    "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/SKILL.md",
+    "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-wastewater-and-waste-management/005-28-composting-and-organics.md",
+    "requires": [
+      "skill-27-recycling-honestly-9b14b55416"
+    ],
+    "links": []
+  }
+]

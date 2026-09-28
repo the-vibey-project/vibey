@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-19-regimes-and-transitions-12e76db511",
+    "purpose": "19 regimes and transitions",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/001-19-regimes-and-transitions.md",
+    "requires": [],
+    "links": [
+      "skill-20-state-capacity-a29216e6b9"
+    ]
+  },
+  {
+    "id": "skill-20-state-capacity-a29216e6b9",
+    "purpose": "20 state capacity",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/002-20-state-capacity.md",
+    "requires": [
+      "skill-19-regimes-and-transitions-12e76db511"
+    ],
+    "links": [
+      "skill-21-corruption-4ce00f44a6"
+    ]
+  },
+  {
+    "id": "skill-21-corruption-4ce00f44a6",
+    "purpose": "21 corruption",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/003-21-corruption.md",
+    "requires": [
+      "skill-20-state-capacity-a29216e6b9"
+    ],
+    "links": [
+      "skill-22-ir-theory-f07683e5f0"
+    ]
+  },
+  {
+    "id": "skill-22-ir-theory-f07683e5f0",
+    "purpose": "22 ir theory",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/004-22-ir-theory.md",
+    "requires": [
+      "skill-21-corruption-4ce00f44a6"
+    ],
+    "links": [
+      "skill-23-conflict-security-and-cooperation-b5becbf511"
+    ]
+  },
+  {
+    "id": "skill-23-conflict-security-and-cooperation-b5becbf511",
+    "purpose": "23 conflict security and cooperation",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/005-23-conflict-security-and-cooperation.md",
+    "requires": [
+      "skill-22-ir-theory-f07683e5f0"
+    ],
+    "links": [
+      "skill-24-the-policy-process-6760af0879"
+    ]
+  },
+  {
+    "id": "skill-24-the-policy-process-6760af0879",
+    "purpose": "24 the policy process",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/006-24-the-policy-process.md",
+    "requires": [
+      "skill-23-conflict-security-and-cooperation-b5becbf511"
+    ],
+    "links": [
+      "skill-25-the-field-s-own-problems-0001350c70"
+    ]
+  },
+  {
+    "id": "skill-25-the-field-s-own-problems-0001350c70",
+    "purpose": "25 the field s own problems",
+    "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/SKILL.md",
+    "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-regimes-state-capacity-corruption-ir-and-field-problems/007-25-the-field-s-own-problems.md",
+    "requires": [
+      "skill-24-the-policy-process-6760af0879"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-noise-and-the-nisq-era-69c489f1e4",
+    "purpose": "4 noise and the nisq era",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-noise-error-correction-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-noise-error-correction-and-hardware/001-4-noise-and-the-nisq-era.md",
+    "requires": [],
+    "links": [
+      "skill-5-error-correction-and-fault-tolerance-bbd626470d"
+    ]
+  },
+  {
+    "id": "skill-5-error-correction-and-fault-tolerance-bbd626470d",
+    "purpose": "5 error correction and fault tolerance",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-noise-error-correction-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-noise-error-correction-and-hardware/002-5-error-correction-and-fault-tolerance.md",
+    "requires": [
+      "skill-4-noise-and-the-nisq-era-69c489f1e4"
+    ],
+    "links": [
+      "skill-6-hardware-modalities-a4ab1862ef"
+    ]
+  },
+  {
+    "id": "skill-6-hardware-modalities-a4ab1862ef",
+    "purpose": "6 hardware modalities",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-noise-error-correction-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-noise-error-correction-and-hardware/003-6-hardware-modalities.md",
+    "requires": [
+      "skill-5-error-correction-and-fault-tolerance-bbd626470d"
+    ],
+    "links": [
+      "skill-7-where-the-hardware-actually-is-ab62833892"
+    ]
+  },
+  {
+    "id": "skill-7-where-the-hardware-actually-is-ab62833892",
+    "purpose": "7 where the hardware actually is",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-noise-error-correction-and-hardware/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-noise-error-correction-and-hardware/004-7-where-the-hardware-actually-is.md",
+    "requires": [
+      "skill-6-hardware-modalities-a4ab1862ef"
+    ],
+    "links": []
+  }
+]

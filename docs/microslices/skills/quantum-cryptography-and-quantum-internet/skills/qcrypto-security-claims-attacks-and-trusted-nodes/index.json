@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-what-unconditional-security-actually-claims-5c9fe833b3",
+    "purpose": "10 what unconditional security actually claims",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/001-10-what-unconditional-security-actually-claims.md",
+    "requires": [],
+    "links": [
+      "skill-11-attacks-on-real-qkd-systems-644c7ac985"
+    ]
+  },
+  {
+    "id": "skill-11-attacks-on-real-qkd-systems-644c7ac985",
+    "purpose": "11 attacks on real qkd systems",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/002-11-attacks-on-real-qkd-systems.md",
+    "requires": [
+      "skill-10-what-unconditional-security-actually-claims-5c9fe833b3"
+    ],
+    "links": [
+      "skill-12-closing-the-device-gap-60a5d6a970"
+    ]
+  },
+  {
+    "id": "skill-12-closing-the-device-gap-60a5d6a970",
+    "purpose": "12 closing the device gap",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/003-12-closing-the-device-gap.md",
+    "requires": [
+      "skill-11-attacks-on-real-qkd-systems-644c7ac985"
+    ],
+    "links": [
+      "skill-13-trusted-nodes-a9e4b11045"
+    ]
+  },
+  {
+    "id": "skill-13-trusted-nodes-a9e4b11045",
+    "purpose": "13 trusted nodes",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-security-claims-attacks-and-trusted-nodes/004-13-trusted-nodes.md",
+    "requires": [
+      "skill-12-closing-the-device-gap-60a5d6a970"
+    ],
+    "links": []
+  }
+]

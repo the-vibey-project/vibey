@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-8-explicit-instruction-vs-discovery-47d1f7c981",
+    "purpose": "8 explicit instruction vs discovery",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/001-8-explicit-instruction-vs-discovery.md",
+    "requires": [],
+    "links": [
+      "skill-9-worked-examples-and-fading-9f6e709819"
+    ]
+  },
+  {
+    "id": "skill-9-worked-examples-and-fading-9f6e709819",
+    "purpose": "9 worked examples and fading",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/002-9-worked-examples-and-fading.md",
+    "requires": [
+      "skill-8-explicit-instruction-vs-discovery-47d1f7c981"
+    ],
+    "links": [
+      "skill-10-explaining-and-modelling-2ff04d6c12"
+    ]
+  },
+  {
+    "id": "skill-10-explaining-and-modelling-2ff04d6c12",
+    "purpose": "10 explaining and modelling",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/003-10-explaining-and-modelling.md",
+    "requires": [
+      "skill-9-worked-examples-and-fading-9f6e709819"
+    ],
+    "links": [
+      "skill-11-questioning-and-checking-understanding-a7112f5b62"
+    ]
+  },
+  {
+    "id": "skill-11-questioning-and-checking-understanding-a7112f5b62",
+    "purpose": "11 questioning and checking understanding",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/004-11-questioning-and-checking-understanding.md",
+    "requires": [
+      "skill-10-explaining-and-modelling-2ff04d6c12"
+    ],
+    "links": [
+      "skill-12-feedback-b32f83481c"
+    ]
+  },
+  {
+    "id": "skill-12-feedback-b32f83481c",
+    "purpose": "12 feedback",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/005-12-feedback.md",
+    "requires": [
+      "skill-11-questioning-and-checking-understanding-a7112f5b62"
+    ],
+    "links": [
+      "skill-13-assessment-703a8c9c65"
+    ]
+  },
+  {
+    "id": "skill-13-assessment-703a8c9c65",
+    "purpose": "13 assessment",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/006-13-assessment.md",
+    "requires": [
+      "skill-12-feedback-b32f83481c"
+    ],
+    "links": []
+  }
+]

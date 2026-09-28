@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-4-perception-and-attention-b760676511",
+    "purpose": "4 perception and attention",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/001-4-perception-and-attention.md",
+    "requires": [],
+    "links": [
+      "skill-5-memory-dde57d3201"
+    ]
+  },
+  {
+    "id": "skill-5-memory-dde57d3201",
+    "purpose": "5 memory",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/002-5-memory.md",
+    "requires": [
+      "skill-4-perception-and-attention-b760676511"
+    ],
+    "links": [
+      "skill-6-learning-and-conditioning-2c5b4cfb8f"
+    ]
+  },
+  {
+    "id": "skill-6-learning-and-conditioning-2c5b4cfb8f",
+    "purpose": "6 learning and conditioning",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/003-6-learning-and-conditioning.md",
+    "requires": [
+      "skill-5-memory-dde57d3201"
+    ],
+    "links": [
+      "skill-7-cognition-reasoning-and-bias-386cc059df"
+    ]
+  },
+  {
+    "id": "skill-7-cognition-reasoning-and-bias-386cc059df",
+    "purpose": "7 cognition reasoning and bias",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/004-7-cognition-reasoning-and-bias.md",
+    "requires": [
+      "skill-6-learning-and-conditioning-2c5b4cfb8f"
+    ],
+    "links": [
+      "skill-8-emotion-6f6d3fb4af"
+    ]
+  },
+  {
+    "id": "skill-8-emotion-6f6d3fb4af",
+    "purpose": "8 emotion",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-perception-memory-learning-cognition-and-emotion/005-8-emotion.md",
+    "requires": [
+      "skill-7-cognition-reasoning-and-bias-386cc059df"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-video-playback-9bb7f7d810",
+    "purpose": "4 video playback",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/001-4-video-playback.md",
+    "requires": [],
+    "links": [
+      "skill-5-drm-1fdcb204a4"
+    ]
+  },
+  {
+    "id": "skill-5-drm-1fdcb204a4",
+    "purpose": "5 drm",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/002-5-drm.md",
+    "requires": [
+      "skill-4-video-playback-9bb7f7d810"
+    ],
+    "links": [
+      "skill-6-performance-and-memory-5c7ff64553"
+    ]
+  },
+  {
+    "id": "skill-6-performance-and-memory-5c7ff64553",
+    "purpose": "6 performance and memory",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/003-6-performance-and-memory.md",
+    "requires": [
+      "skill-5-drm-1fdcb204a4"
+    ],
+    "links": [
+      "skill-7-lifecycle-deep-linking-and-discovery-fe1da2b1ef"
+    ]
+  },
+  {
+    "id": "skill-7-lifecycle-deep-linking-and-discovery-fe1da2b1ef",
+    "purpose": "7 lifecycle deep linking and discovery",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-playback-drm-and-performance/004-7-lifecycle-deep-linking-and-discovery.md",
+    "requires": [
+      "skill-6-performance-and-memory-5c7ff64553"
+    ],
+    "links": []
+  }
+]

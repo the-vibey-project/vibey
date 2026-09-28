@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-spatial-analysis-12e2cf65fd",
+    "purpose": "11 spatial analysis",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/001-11-spatial-analysis.md",
+    "requires": [],
+    "links": [
+      "skill-12-remote-sensing-0c5b3a12bd"
+    ]
+  },
+  {
+    "id": "skill-12-remote-sensing-0c5b3a12bd",
+    "purpose": "12 remote sensing",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/002-12-remote-sensing.md",
+    "requires": [
+      "skill-11-spatial-analysis-12e2cf65fd"
+    ],
+    "links": [
+      "skill-13-data-sources-b53f3c1a1c"
+    ]
+  },
+  {
+    "id": "skill-13-data-sources-b53f3c1a1c",
+    "purpose": "13 data sources",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/003-13-data-sources.md",
+    "requires": [
+      "skill-12-remote-sensing-0c5b3a12bd"
+    ],
+    "links": [
+      "skill-14-privacy-4a9ac42790"
+    ]
+  },
+  {
+    "id": "skill-14-privacy-4a9ac42790",
+    "purpose": "14 privacy",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-spatial-analysis-remote-sensing-and-privacy/004-14-privacy.md",
+    "requires": [
+      "skill-13-data-sources-b53f3c1a1c"
+    ],
+    "links": []
+  }
+]

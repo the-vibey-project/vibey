@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-tl-dr-00d59351ef",
+    "purpose": "tl dr",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-mcp-server-landscape/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-mcp-server-landscape/001-tl-dr.md",
+    "requires": [],
+    "links": [
+      "skill-official-server-okta-okta-mcp-server-6770c465f6"
+    ]
+  },
+  {
+    "id": "skill-official-server-okta-okta-mcp-server-6770c465f6",
+    "purpose": "official server okta okta mcp server",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-mcp-server-landscape/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-mcp-server-landscape/002-official-server-okta-okta-mcp-server.md",
+    "requires": [
+      "skill-tl-dr-00d59351ef"
+    ],
+    "links": [
+      "skill-third-party-alternatives-core-platform-not-okta-published-1d350bb72e"
+    ]
+  },
+  {
+    "id": "skill-third-party-alternatives-core-platform-not-okta-published-1d350bb72e",
+    "purpose": "third party alternatives core platform not okta published",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-mcp-server-landscape/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-mcp-server-landscape/003-third-party-alternatives-core-platform-not-okta-published.md",
+    "requires": [
+      "skill-official-server-okta-okta-mcp-server-6770c465f6"
+    ],
+    "links": [
+      "skill-the-one-iga-focused-mcp-project-2b806612f5"
+    ]
+  },
+  {
+    "id": "skill-the-one-iga-focused-mcp-project-2b806612f5",
+    "purpose": "the one iga focused mcp project",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-mcp-server-landscape/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-mcp-server-landscape/004-the-one-iga-focused-mcp-project.md",
+    "requires": [
+      "skill-third-party-alternatives-core-platform-not-okta-published-1d350bb72e"
+    ],
+    "links": [
+      "skill-no-okta-affiliated-iga-mcp-server-exists-58da8cc08c"
+    ]
+  },
+  {
+    "id": "skill-no-okta-affiliated-iga-mcp-server-exists-58da8cc08c",
+    "purpose": "no okta affiliated iga mcp server exists",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-mcp-server-landscape/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-mcp-server-landscape/005-no-okta-affiliated-iga-mcp-server-exists.md",
+    "requires": [
+      "skill-the-one-iga-focused-mcp-project-2b806612f5"
+    ],
+    "links": [
+      "skill-practical-guidance-f8534fb6b5"
+    ]
+  },
+  {
+    "id": "skill-practical-guidance-f8534fb6b5",
+    "purpose": "practical guidance",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-mcp-server-landscape/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-mcp-server-landscape/006-practical-guidance.md",
+    "requires": [
+      "skill-no-okta-affiliated-iga-mcp-server-exists-58da8cc08c"
+    ],
+    "links": []
+  }
+]

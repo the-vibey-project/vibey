@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-computability-what-you-cannot-do-c1d36c8bf6",
+    "purpose": "4 computability what you cannot do",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-computability-and-complexity/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-computability-and-complexity/001-4-computability-what-you-cannot-do.md",
+    "requires": [],
+    "links": [
+      "skill-5-complexity-classes-a018974ce3"
+    ]
+  },
+  {
+    "id": "skill-5-complexity-classes-a018974ce3",
+    "purpose": "5 complexity classes",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-computability-and-complexity/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-computability-and-complexity/002-5-complexity-classes.md",
+    "requires": [
+      "skill-4-computability-what-you-cannot-do-c1d36c8bf6"
+    ],
+    "links": [
+      "skill-6-your-problem-is-np-hard-now-what-26f15bc1fa"
+    ]
+  },
+  {
+    "id": "skill-6-your-problem-is-np-hard-now-what-26f15bc1fa",
+    "purpose": "6 your problem is np hard now what",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-computability-and-complexity/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-computability-and-complexity/003-6-your-problem-is-np-hard-now-what.md",
+    "requires": [
+      "skill-5-complexity-classes-a018974ce3"
+    ],
+    "links": [
+      "skill-7-sat-smt-and-solvers-853b252172"
+    ]
+  },
+  {
+    "id": "skill-7-sat-smt-and-solvers-853b252172",
+    "purpose": "7 sat smt and solvers",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-computability-and-complexity/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-computability-and-complexity/004-7-sat-smt-and-solvers.md",
+    "requires": [
+      "skill-6-your-problem-is-np-hard-now-what-26f15bc1fa"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-11-observation-ec7d1e1c01",
+    "purpose": "11 observation",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/001-11-observation.md",
+    "requires": [],
+    "links": [
+      "skill-12-numerical-weather-prediction-23f2b2eb55"
+    ]
+  },
+  {
+    "id": "skill-12-numerical-weather-prediction-23f2b2eb55",
+    "purpose": "12 numerical weather prediction",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/002-12-numerical-weather-prediction.md",
+    "requires": [
+      "skill-11-observation-ec7d1e1c01"
+    ],
+    "links": [
+      "skill-13-forecast-verification-3cdc572a23"
+    ]
+  },
+  {
+    "id": "skill-13-forecast-verification-3cdc572a23",
+    "purpose": "13 forecast verification",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/003-13-forecast-verification.md",
+    "requires": [
+      "skill-12-numerical-weather-prediction-23f2b2eb55"
+    ],
+    "links": [
+      "skill-14-predictability-and-chaos-5e7e4101f4"
+    ]
+  },
+  {
+    "id": "skill-14-predictability-and-chaos-5e7e4101f4",
+    "purpose": "14 predictability and chaos",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/004-14-predictability-and-chaos.md",
+    "requires": [
+      "skill-13-forecast-verification-3cdc572a23"
+    ],
+    "links": [
+      "skill-15-machine-learning-weather-prediction-24aae19645"
+    ]
+  },
+  {
+    "id": "skill-15-machine-learning-weather-prediction-24aae19645",
+    "purpose": "15 machine learning weather prediction",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/005-15-machine-learning-weather-prediction.md",
+    "requires": [
+      "skill-14-predictability-and-chaos-5e7e4101f4"
+    ],
+    "links": [
+      "skill-16-weather-vs-climate-81a3aa3d66"
+    ]
+  },
+  {
+    "id": "skill-16-weather-vs-climate-81a3aa3d66",
+    "purpose": "16 weather vs climate",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-observation-nwp-verification-and-machine-learning/006-16-weather-vs-climate.md",
+    "requires": [
+      "skill-15-machine-learning-weather-prediction-24aae19645"
+    ],
+    "links": []
+  }
+]

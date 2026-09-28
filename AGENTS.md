@@ -14,6 +14,10 @@ engines and tools included (ADR-0037, ADR-0069); the apps are `krypton-app`. Pyt
 "how do I..." lives in a skill below; every "why was it built this way"
 lives in `docs/architecture/decisions/`.
 
+Context-bearing material follows the proposed microslice contract in [ADR-0075](https://github.com/the-vibey-project/vibey/blob/develop/docs/architecture/decisions/0075-context-microslices-and-linked-surfaces.md)
+and [docs/context-microslices.md](https://github.com/the-vibey-project/vibey/blob/develop/docs/context-microslices.md):
+small identified slices, explicit links, measured budgets, and no silent truncation.
+
 ## Non-negotiables
 
 - **Never block a worker on a human.** Human input is a *parked job* plus a

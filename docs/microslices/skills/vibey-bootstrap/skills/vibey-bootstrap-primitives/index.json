@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-3-python-v2-tier-1-primitives-always-on-stdlib-only-aaedecf92d",
+    "purpose": "3 python v2 tier 1 primitives always on stdlib only",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-primitives/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-primitives/001-3-python-v2-tier-1-primitives-always-on-stdlib-only.md",
+    "requires": [],
+    "links": [
+      "skill-4-python-logging-transports-v2-1-v3-0-ten-sinks-35043b1537"
+    ]
+  },
+  {
+    "id": "skill-4-python-logging-transports-v2-1-v3-0-ten-sinks-35043b1537",
+    "purpose": "4 python logging transports v2 1 v3 0 ten sinks",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-primitives/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-primitives/002-4-python-logging-transports-v2-1-v3-0-ten-sinks.md",
+    "requires": [
+      "skill-3-python-v2-tier-1-primitives-always-on-stdlib-only-aaedecf92d"
+    ],
+    "links": []
+  }
+]

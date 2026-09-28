@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-misconceptions-014a617bc3",
+    "purpose": "15 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-reference/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-reference/001-15-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-16-what-moved-verified-august-2026-f534542668"
+    ]
+  },
+  {
+    "id": "skill-16-what-moved-verified-august-2026-f534542668",
+    "purpose": "16 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-reference/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-reference/002-16-what-moved-verified-august-2026.md",
+    "requires": [
+      "skill-15-misconceptions-014a617bc3"
+    ],
+    "links": [
+      "skill-17-numbers-71efa8cf31"
+    ]
+  },
+  {
+    "id": "skill-17-numbers-71efa8cf31",
+    "purpose": "17 numbers",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-reference/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-reference/003-17-numbers.md",
+    "requires": [
+      "skill-16-what-moved-verified-august-2026-f534542668"
+    ],
+    "links": [
+      "skill-18-books-and-tools-ed79645aac"
+    ]
+  },
+  {
+    "id": "skill-18-books-and-tools-ed79645aac",
+    "purpose": "18 books and tools",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-reference/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-reference/004-18-books-and-tools.md",
+    "requires": [
+      "skill-17-numbers-71efa8cf31"
+    ],
+    "links": [
+      "skill-19-quick-reference-8a8f7dff43"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-8a8f7dff43",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-reference/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-books-and-tools-ed79645aac"
+    ],
+    "links": [
+      "skill-20-method-2c703cdce7"
+    ]
+  },
+  {
+    "id": "skill-20-method-2c703cdce7",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-reference/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-reference/006-20-method.md",
+    "requires": [
+      "skill-19-quick-reference-8a8f7dff43"
+    ],
+    "links": []
+  }
+]

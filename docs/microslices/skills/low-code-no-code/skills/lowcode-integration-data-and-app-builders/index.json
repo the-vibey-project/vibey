@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-integration-and-ipaas-197b2880bf",
+    "purpose": "5 integration and ipaas",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-integration-data-and-app-builders/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-integration-data-and-app-builders/001-5-integration-and-ipaas.md",
+    "requires": [],
+    "links": [
+      "skill-6-data-pipelines-and-etl-3bb0780c08"
+    ]
+  },
+  {
+    "id": "skill-6-data-pipelines-and-etl-3bb0780c08",
+    "purpose": "6 data pipelines and etl",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-integration-data-and-app-builders/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-integration-data-and-app-builders/002-6-data-pipelines-and-etl.md",
+    "requires": [
+      "skill-5-integration-and-ipaas-197b2880bf"
+    ],
+    "links": [
+      "skill-7-app-builders-91098e0210"
+    ]
+  },
+  {
+    "id": "skill-7-app-builders-91098e0210",
+    "purpose": "7 app builders",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-integration-data-and-app-builders/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-integration-data-and-app-builders/003-7-app-builders.md",
+    "requires": [
+      "skill-6-data-pipelines-and-etl-3bb0780c08"
+    ],
+    "links": [
+      "skill-8-rpa-bedbfd7096"
+    ]
+  },
+  {
+    "id": "skill-8-rpa-bedbfd7096",
+    "purpose": "8 rpa",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-integration-data-and-app-builders/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-integration-data-and-app-builders/004-8-rpa.md",
+    "requires": [
+      "skill-7-app-builders-91098e0210"
+    ],
+    "links": []
+  }
+]

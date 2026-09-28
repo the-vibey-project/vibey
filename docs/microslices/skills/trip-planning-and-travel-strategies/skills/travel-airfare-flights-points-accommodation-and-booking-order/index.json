@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-6-how-airfare-pricing-actually-works-ec69fe3154",
+    "purpose": "6 how airfare pricing actually works",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/001-6-how-airfare-pricing-actually-works.md",
+    "requires": [],
+    "links": [
+      "skill-7-flight-strategy-2d604fd8ec"
+    ]
+  },
+  {
+    "id": "skill-7-flight-strategy-2d604fd8ec",
+    "purpose": "7 flight strategy",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/002-7-flight-strategy.md",
+    "requires": [
+      "skill-6-how-airfare-pricing-actually-works-ec69fe3154"
+    ],
+    "links": [
+      "skill-8-points-and-miles-honestly-9c89b18abf"
+    ]
+  },
+  {
+    "id": "skill-8-points-and-miles-honestly-9c89b18abf",
+    "purpose": "8 points and miles honestly",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/003-8-points-and-miles-honestly.md",
+    "requires": [
+      "skill-7-flight-strategy-2d604fd8ec"
+    ],
+    "links": [
+      "skill-9-accommodation-ebb475d144"
+    ]
+  },
+  {
+    "id": "skill-9-accommodation-ebb475d144",
+    "purpose": "9 accommodation",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/004-9-accommodation.md",
+    "requires": [
+      "skill-8-points-and-miles-honestly-9c89b18abf"
+    ],
+    "links": [
+      "skill-10-ground-transport-b7eb88792e"
+    ]
+  },
+  {
+    "id": "skill-10-ground-transport-b7eb88792e",
+    "purpose": "10 ground transport",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/005-10-ground-transport.md",
+    "requires": [
+      "skill-9-accommodation-ebb475d144"
+    ],
+    "links": [
+      "skill-11-booking-order-and-optionality-eb16e63e22"
+    ]
+  },
+  {
+    "id": "skill-11-booking-order-and-optionality-eb16e63e22",
+    "purpose": "11 booking order and optionality",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-airfare-flights-points-accommodation-and-booking-order/006-11-booking-order-and-optionality.md",
+    "requires": [
+      "skill-10-ground-transport-b7eb88792e"
+    ],
+    "links": []
+  }
+]

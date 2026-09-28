@@ -1,0 +1,154 @@
+[
+  {
+    "id": "skill-1-what-an-egpu-is-52de06731c",
+    "purpose": "1 what an egpu is",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/001-1-what-an-egpu-is.md",
+    "requires": [],
+    "links": [
+      "skill-2-interface-and-enclosure-constraints-ab596c36d6"
+    ]
+  },
+  {
+    "id": "skill-2-interface-and-enclosure-constraints-ab596c36d6",
+    "purpose": "2 interface and enclosure constraints",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/002-2-interface-and-enclosure-constraints.md",
+    "requires": [
+      "skill-1-what-an-egpu-is-52de06731c"
+    ],
+    "links": [
+      "skill-3-linux-architecture-7725430551"
+    ]
+  },
+  {
+    "id": "skill-3-linux-architecture-7725430551",
+    "purpose": "3 linux architecture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/003-3-linux-architecture.md",
+    "requires": [
+      "skill-2-interface-and-enclosure-constraints-ab596c36d6"
+    ],
+    "links": [
+      "skill-4-macos-compatibility-22054ec87f"
+    ]
+  },
+  {
+    "id": "skill-4-macos-compatibility-22054ec87f",
+    "purpose": "4 macos compatibility",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/004-4-macos-compatibility.md",
+    "requires": [
+      "skill-3-linux-architecture-7725430551"
+    ],
+    "links": [
+      "skill-5-workload-fit-007396fc70"
+    ]
+  },
+  {
+    "id": "skill-5-workload-fit-007396fc70",
+    "purpose": "5 workload fit",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/005-5-workload-fit.md",
+    "requires": [
+      "skill-4-macos-compatibility-22054ec87f"
+    ],
+    "links": [
+      "skill-6-gpu-vendor-and-api-considerations-d6ebf28be3"
+    ]
+  },
+  {
+    "id": "skill-6-gpu-vendor-and-api-considerations-d6ebf28be3",
+    "purpose": "6 gpu vendor and api considerations",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/006-6-gpu-vendor-and-api-considerations.md",
+    "requires": [
+      "skill-5-workload-fit-007396fc70"
+    ],
+    "links": [
+      "skill-7-linux-setup-and-test-method-fe5478ce57"
+    ]
+  },
+  {
+    "id": "skill-7-linux-setup-and-test-method-fe5478ce57",
+    "purpose": "7 linux setup and test method",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/007-7-linux-setup-and-test-method.md",
+    "requires": [
+      "skill-6-gpu-vendor-and-api-considerations-d6ebf28be3"
+    ],
+    "links": [
+      "skill-8-macos-setup-and-test-method-ed9c28a504"
+    ]
+  },
+  {
+    "id": "skill-8-macos-setup-and-test-method-ed9c28a504",
+    "purpose": "8 macos setup and test method",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/008-8-macos-setup-and-test-method.md",
+    "requires": [
+      "skill-7-linux-setup-and-test-method-fe5478ce57"
+    ],
+    "links": [
+      "skill-9-cost-model-093841fb62"
+    ]
+  },
+  {
+    "id": "skill-9-cost-model-093841fb62",
+    "purpose": "9 cost model",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/009-9-cost-model.md",
+    "requires": [
+      "skill-8-macos-setup-and-test-method-ed9c28a504"
+    ],
+    "links": [
+      "skill-10-security-and-maintenance-c340490a33"
+    ]
+  },
+  {
+    "id": "skill-10-security-and-maintenance-c340490a33",
+    "purpose": "10 security and maintenance",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/010-10-security-and-maintenance.md",
+    "requires": [
+      "skill-9-cost-model-093841fb62"
+    ],
+    "links": [
+      "skill-11-decision-matrix-ff18b33204"
+    ]
+  },
+  {
+    "id": "skill-11-decision-matrix-ff18b33204",
+    "purpose": "11 decision matrix",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/011-11-decision-matrix.md",
+    "requires": [
+      "skill-10-security-and-maintenance-c340490a33"
+    ],
+    "links": [
+      "skill-12-sources-2bc0b162f6"
+    ]
+  },
+  {
+    "id": "skill-12-sources-2bc0b162f6",
+    "purpose": "12 sources",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/012-12-sources.md",
+    "requires": [
+      "skill-11-decision-matrix-ff18b33204"
+    ],
+    "links": [
+      "skill-limits-e0756c1d46"
+    ]
+  },
+  {
+    "id": "skill-limits-e0756c1d46",
+    "purpose": "limits",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-g-egpu-linux-macos-deep-dive/013-limits.md",
+    "requires": [
+      "skill-12-sources-2bc0b162f6"
+    ],
+    "links": []
+  }
+]

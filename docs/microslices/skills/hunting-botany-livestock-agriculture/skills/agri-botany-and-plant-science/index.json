@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-0-routing-4141de1e37",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-plant-structure-1ecaec8b88"
+    ]
+  },
+  {
+    "id": "skill-1-plant-structure-1ecaec8b88",
+    "purpose": "1 plant structure",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/002-1-plant-structure.md",
+    "requires": [
+      "skill-0-routing-4141de1e37"
+    ],
+    "links": [
+      "skill-2-photosynthesis-and-the-three-pathways-a8f9ee4131"
+    ]
+  },
+  {
+    "id": "skill-2-photosynthesis-and-the-three-pathways-a8f9ee4131",
+    "purpose": "2 photosynthesis and the three pathways",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/003-2-photosynthesis-and-the-three-pathways.md",
+    "requires": [
+      "skill-1-plant-structure-1ecaec8b88"
+    ],
+    "links": [
+      "skill-3-water-relations-1548bef966"
+    ]
+  },
+  {
+    "id": "skill-3-water-relations-1548bef966",
+    "purpose": "3 water relations",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/004-3-water-relations.md",
+    "requires": [
+      "skill-2-photosynthesis-and-the-three-pathways-a8f9ee4131"
+    ],
+    "links": [
+      "skill-4-plant-nutrition-d093f4f638"
+    ]
+  },
+  {
+    "id": "skill-4-plant-nutrition-d093f4f638",
+    "purpose": "4 plant nutrition",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/005-4-plant-nutrition.md",
+    "requires": [
+      "skill-3-water-relations-1548bef966"
+    ],
+    "links": [
+      "skill-5-reproduction-and-pollination-619b5c8ced"
+    ]
+  },
+  {
+    "id": "skill-5-reproduction-and-pollination-619b5c8ced",
+    "purpose": "5 reproduction and pollination",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/006-5-reproduction-and-pollination.md",
+    "requires": [
+      "skill-4-plant-nutrition-d093f4f638"
+    ],
+    "links": [
+      "skill-6-ecology-and-succession-c601716929"
+    ]
+  },
+  {
+    "id": "skill-6-ecology-and-succession-c601716929",
+    "purpose": "6 ecology and succession",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/007-6-ecology-and-succession.md",
+    "requires": [
+      "skill-5-reproduction-and-pollination-619b5c8ced"
+    ],
+    "links": [
+      "skill-7-identification-and-a-hard-limit-aa7f203392"
+    ]
+  },
+  {
+    "id": "skill-7-identification-and-a-hard-limit-aa7f203392",
+    "purpose": "7 identification and a hard limit",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/008-7-identification-and-a-hard-limit.md",
+    "requires": [
+      "skill-6-ecology-and-succession-c601716929"
+    ],
+    "links": [
+      "skill-8-plant-pathology-77ed5a9a2f"
+    ]
+  },
+  {
+    "id": "skill-8-plant-pathology-77ed5a9a2f",
+    "purpose": "8 plant pathology",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/009-8-plant-pathology.md",
+    "requires": [
+      "skill-7-identification-and-a-hard-limit-aa7f203392"
+    ],
+    "links": [
+      "skill-9-weeds-0d92d36457"
+    ]
+  },
+  {
+    "id": "skill-9-weeds-0d92d36457",
+    "purpose": "9 weeds",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-botany-and-plant-science/010-9-weeds.md",
+    "requires": [
+      "skill-8-plant-pathology-77ed5a9a2f"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-20-the-firmware-landscape-f947e2419d",
+    "purpose": "20 the firmware landscape",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/001-20-the-firmware-landscape.md",
+    "requires": [],
+    "links": [
+      "skill-21-the-boot-sequence-883be5cb1d"
+    ]
+  },
+  {
+    "id": "skill-21-the-boot-sequence-883be5cb1d",
+    "purpose": "21 the boot sequence",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/002-21-the-boot-sequence.md",
+    "requires": [
+      "skill-20-the-firmware-landscape-f947e2419d"
+    ],
+    "links": [
+      "skill-22-root-of-trust-and-verified-boot-1e35a0ada5"
+    ]
+  },
+  {
+    "id": "skill-22-root-of-trust-and-verified-boot-1e35a0ada5",
+    "purpose": "22 root of trust and verified boot",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/003-22-root-of-trust-and-verified-boot.md",
+    "requires": [
+      "skill-21-the-boot-sequence-883be5cb1d"
+    ],
+    "links": [
+      "skill-23-acpi-and-platform-interfaces-9c9d2cc3c8"
+    ]
+  },
+  {
+    "id": "skill-23-acpi-and-platform-interfaces-9c9d2cc3c8",
+    "purpose": "23 acpi and platform interfaces",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/004-23-acpi-and-platform-interfaces.md",
+    "requires": [
+      "skill-22-root-of-trust-and-verified-boot-1e35a0ada5"
+    ],
+    "links": [
+      "skill-24-embedded-firmware-practice-8933cbe46f"
+    ]
+  },
+  {
+    "id": "skill-24-embedded-firmware-practice-8933cbe46f",
+    "purpose": "24 embedded firmware practice",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/005-24-embedded-firmware-practice.md",
+    "requires": [
+      "skill-23-acpi-and-platform-interfaces-9c9d2cc3c8"
+    ],
+    "links": [
+      "skill-25-firmware-security-de5b152236"
+    ]
+  },
+  {
+    "id": "skill-25-firmware-security-de5b152236",
+    "purpose": "25 firmware security",
+    "source": "src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/SKILL.md",
+    "output": "docs/microslices/skills/digital-logic-and-firmware-engineering/skills/logic-firmware-boot-root-of-trust-embedded-practice-and-security/006-25-firmware-security.md",
+    "requires": [
+      "skill-24-embedded-firmware-practice-8933cbe46f"
+    ],
+    "links": []
+  }
+]

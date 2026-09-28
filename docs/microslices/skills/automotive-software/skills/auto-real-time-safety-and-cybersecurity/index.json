@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-real-time-and-scheduling-6256ce9ef2",
+    "purpose": "5 real time and scheduling",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-real-time-safety-and-cybersecurity/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-real-time-safety-and-cybersecurity/001-5-real-time-and-scheduling.md",
+    "requires": [],
+    "links": [
+      "skill-6-functional-safety-iso-26262-6140994c36"
+    ]
+  },
+  {
+    "id": "skill-6-functional-safety-iso-26262-6140994c36",
+    "purpose": "6 functional safety iso 26262",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-real-time-safety-and-cybersecurity/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-real-time-safety-and-cybersecurity/002-6-functional-safety-iso-26262.md",
+    "requires": [
+      "skill-5-real-time-and-scheduling-6256ce9ef2"
+    ],
+    "links": [
+      "skill-7-cybersecurity-and-regulation-e0856c030b"
+    ]
+  },
+  {
+    "id": "skill-7-cybersecurity-and-regulation-e0856c030b",
+    "purpose": "7 cybersecurity and regulation",
+    "source": "src/vibey_tools/skills/plugins/automotive-software/skills/auto-real-time-safety-and-cybersecurity/SKILL.md",
+    "output": "docs/microslices/skills/automotive-software/skills/auto-real-time-safety-and-cybersecurity/003-7-cybersecurity-and-regulation.md",
+    "requires": [
+      "skill-6-functional-safety-iso-26262-6140994c36"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-12-listening-c3a1474179",
+    "purpose": "12 listening",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/001-12-listening.md",
+    "requires": [],
+    "links": [
+      "skill-13-rapport-and-trust-dfdd488eb5"
+    ]
+  },
+  {
+    "id": "skill-13-rapport-and-trust-dfdd488eb5",
+    "purpose": "13 rapport and trust",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/002-13-rapport-and-trust.md",
+    "requires": [
+      "skill-12-listening-c3a1474179"
+    ],
+    "links": [
+      "skill-14-difficult-conversations-8f6f90d5ec"
+    ]
+  },
+  {
+    "id": "skill-14-difficult-conversations-8f6f90d5ec",
+    "purpose": "14 difficult conversations",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/003-14-difficult-conversations.md",
+    "requires": [
+      "skill-13-rapport-and-trust-dfdd488eb5"
+    ],
+    "links": [
+      "skill-15-negotiation-9e7447b7f3"
+    ]
+  },
+  {
+    "id": "skill-15-negotiation-9e7447b7f3",
+    "purpose": "15 negotiation",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/004-15-negotiation.md",
+    "requires": [
+      "skill-14-difficult-conversations-8f6f90d5ec"
+    ],
+    "links": [
+      "skill-16-feedback-2f8f5e9578"
+    ]
+  },
+  {
+    "id": "skill-16-feedback-2f8f5e9578",
+    "purpose": "16 feedback",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/005-16-feedback.md",
+    "requires": [
+      "skill-15-negotiation-9e7447b7f3"
+    ],
+    "links": [
+      "skill-17-conflict-5812b5ae06"
+    ]
+  },
+  {
+    "id": "skill-17-conflict-5812b5ae06",
+    "purpose": "17 conflict",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/006-17-conflict.md",
+    "requires": [
+      "skill-16-feedback-2f8f5e9578"
+    ],
+    "links": []
+  }
+]

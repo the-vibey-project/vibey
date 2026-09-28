@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-1a9cbb30b4",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-why-carbon-7efcc6b0a0"
+    ]
+  },
+  {
+    "id": "skill-1-why-carbon-7efcc6b0a0",
+    "purpose": "1 why carbon",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/002-1-why-carbon.md",
+    "requires": [
+      "skill-0-routing-1a9cbb30b4"
+    ],
+    "links": [
+      "skill-2-bonding-and-structure-28bb05f22c"
+    ]
+  },
+  {
+    "id": "skill-2-bonding-and-structure-28bb05f22c",
+    "purpose": "2 bonding and structure",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/003-2-bonding-and-structure.md",
+    "requires": [
+      "skill-1-why-carbon-7efcc6b0a0"
+    ],
+    "links": [
+      "skill-3-functional-groups-3aa268194b"
+    ]
+  },
+  {
+    "id": "skill-3-functional-groups-3aa268194b",
+    "purpose": "3 functional groups",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/004-3-functional-groups.md",
+    "requires": [
+      "skill-2-bonding-and-structure-28bb05f22c"
+    ],
+    "links": [
+      "skill-4-stereochemistry-2f2e7b518b"
+    ]
+  },
+  {
+    "id": "skill-4-stereochemistry-2f2e7b518b",
+    "purpose": "4 stereochemistry",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/005-4-stereochemistry.md",
+    "requires": [
+      "skill-3-functional-groups-3aa268194b"
+    ],
+    "links": [
+      "skill-5-acidity-and-basicity-9acdfdb5a1"
+    ]
+  },
+  {
+    "id": "skill-5-acidity-and-basicity-9acdfdb5a1",
+    "purpose": "5 acidity and basicity",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-carbon-bonding-functional-groups-and-stereochemistry/006-5-acidity-and-basicity.md",
+    "requires": [
+      "skill-4-stereochemistry-2f2e7b518b"
+    ],
+    "links": []
+  }
+]

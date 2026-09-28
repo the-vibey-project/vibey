@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-hard-tactics-and-responses-2f44844d57",
+    "purpose": "15 hard tactics and responses",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/001-15-hard-tactics-and-responses.md",
+    "requires": [],
+    "links": [
+      "skill-16-multiparty-negotiation-818a60f57b"
+    ]
+  },
+  {
+    "id": "skill-16-multiparty-negotiation-818a60f57b",
+    "purpose": "16 multiparty negotiation",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/002-16-multiparty-negotiation.md",
+    "requires": [
+      "skill-15-hard-tactics-and-responses-2f44844d57"
+    ],
+    "links": [
+      "skill-17-agents-teams-and-mandate-e32f9ba84f"
+    ]
+  },
+  {
+    "id": "skill-17-agents-teams-and-mandate-e32f9ba84f",
+    "purpose": "17 agents teams and mandate",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/003-17-agents-teams-and-mandate.md",
+    "requires": [
+      "skill-16-multiparty-negotiation-818a60f57b"
+    ],
+    "links": [
+      "skill-18-culture-ad085ec49b"
+    ]
+  },
+  {
+    "id": "skill-18-culture-ad085ec49b",
+    "purpose": "18 culture",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/004-18-culture.md",
+    "requires": [
+      "skill-17-agents-teams-and-mandate-e32f9ba84f"
+    ],
+    "links": [
+      "skill-19-power-asymmetry-2fa98bde47"
+    ]
+  },
+  {
+    "id": "skill-19-power-asymmetry-2fa98bde47",
+    "purpose": "19 power asymmetry",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/005-19-power-asymmetry.md",
+    "requires": [
+      "skill-18-culture-ad085ec49b"
+    ],
+    "links": [
+      "skill-20-written-and-remote-911aa8ff42"
+    ]
+  },
+  {
+    "id": "skill-20-written-and-remote-911aa8ff42",
+    "purpose": "20 written and remote",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-hard-tactics-multiparty-culture-power-and-remote/006-20-written-and-remote.md",
+    "requires": [
+      "skill-19-power-asymmetry-2fa98bde47"
+    ],
+    "links": []
+  }
+]

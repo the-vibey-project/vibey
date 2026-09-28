@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-executive-synthesis-413e665e68",
+    "purpose": "executive synthesis",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/001-executive-synthesis.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-a-world-is-made-of-d0b3ade9ef"
+    ]
+  },
+  {
+    "id": "skill-1-what-a-world-is-made-of-d0b3ade9ef",
+    "purpose": "1 what a world is made of",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/002-1-what-a-world-is-made-of.md",
+    "requires": [
+      "skill-executive-synthesis-413e665e68"
+    ],
+    "links": [
+      "skill-2-from-setting-to-story-c09d594aeb"
+    ]
+  },
+  {
+    "id": "skill-2-from-setting-to-story-c09d594aeb",
+    "purpose": "2 from setting to story",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/003-2-from-setting-to-story.md",
+    "requires": [
+      "skill-1-what-a-world-is-made-of-d0b3ade9ef"
+    ],
+    "links": [
+      "skill-3-writing-a-trilogy-ac657ddf3b"
+    ]
+  },
+  {
+    "id": "skill-3-writing-a-trilogy-ac657ddf3b",
+    "purpose": "3 writing a trilogy",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/004-3-writing-a-trilogy.md",
+    "requires": [
+      "skill-2-from-setting-to-story-c09d594aeb"
+    ],
+    "links": [
+      "skill-4-medium-specific-worldbuilding-296786b60f"
+    ]
+  },
+  {
+    "id": "skill-4-medium-specific-worldbuilding-296786b60f",
+    "purpose": "4 medium specific worldbuilding",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/005-4-medium-specific-worldbuilding.md",
+    "requires": [
+      "skill-3-writing-a-trilogy-ac657ddf3b"
+    ],
+    "links": [
+      "skill-5-transmedia-and-franchise-design-55c7c868a0"
+    ]
+  },
+  {
+    "id": "skill-5-transmedia-and-franchise-design-55c7c868a0",
+    "purpose": "5 transmedia and franchise design",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/006-5-transmedia-and-franchise-design.md",
+    "requires": [
+      "skill-4-medium-specific-worldbuilding-296786b60f"
+    ],
+    "links": [
+      "skill-6-production-and-collaboration-8b0e444119"
+    ]
+  },
+  {
+    "id": "skill-6-production-and-collaboration-8b0e444119",
+    "purpose": "6 production and collaboration",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/007-6-production-and-collaboration.md",
+    "requires": [
+      "skill-5-transmedia-and-franchise-design-55c7c868a0"
+    ],
+    "links": [
+      "skill-7-common-failure-modes-3704d74223"
+    ]
+  },
+  {
+    "id": "skill-7-common-failure-modes-3704d74223",
+    "purpose": "7 common failure modes",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/008-7-common-failure-modes.md",
+    "requires": [
+      "skill-6-production-and-collaboration-8b0e444119"
+    ],
+    "links": [
+      "skill-8-a-disciplined-creation-workflow-04a4f4e50f"
+    ]
+  },
+  {
+    "id": "skill-8-a-disciplined-creation-workflow-04a4f4e50f",
+    "purpose": "8 a disciplined creation workflow",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/009-8-a-disciplined-creation-workflow.md",
+    "requires": [
+      "skill-7-common-failure-modes-3704d74223"
+    ],
+    "links": [
+      "skill-high-value-reading-and-viewing-path-0066a084ab"
+    ]
+  },
+  {
+    "id": "skill-high-value-reading-and-viewing-path-0066a084ab",
+    "purpose": "high value reading and viewing path",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/010-high-value-reading-and-viewing-path.md",
+    "requires": [
+      "skill-8-a-disciplined-creation-workflow-04a4f4e50f"
+    ],
+    "links": [
+      "skill-bottom-line-24bef80185"
+    ]
+  },
+  {
+    "id": "skill-bottom-line-24bef80185",
+    "purpose": "bottom line",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/worldbuilding-trilogies-and-transmedia-research/011-bottom-line.md",
+    "requires": [
+      "skill-high-value-reading-and-viewing-path-0066a084ab"
+    ],
+    "links": []
+  }
+]

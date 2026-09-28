@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-021e214561",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-models-providers-and-primitives/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-models-providers-and-primitives/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-models-a7ef649f53"
+    ]
+  },
+  {
+    "id": "skill-1-models-a7ef649f53",
+    "purpose": "1 models",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-models-providers-and-primitives/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-models-providers-and-primitives/002-1-models.md",
+    "requires": [
+      "skill-0-routing-021e214561"
+    ],
+    "links": [
+      "skill-2-the-provider-landscape-aaf38a3bc3"
+    ]
+  },
+  {
+    "id": "skill-2-the-provider-landscape-aaf38a3bc3",
+    "purpose": "2 the provider landscape",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-models-providers-and-primitives/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-models-providers-and-primitives/003-2-the-provider-landscape.md",
+    "requires": [
+      "skill-1-models-a7ef649f53"
+    ],
+    "links": [
+      "skill-3-the-primitives-6e343867d6"
+    ]
+  },
+  {
+    "id": "skill-3-the-primitives-6e343867d6",
+    "purpose": "3 the primitives",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-models-providers-and-primitives/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-models-providers-and-primitives/004-3-the-primitives.md",
+    "requires": [
+      "skill-2-the-provider-landscape-aaf38a3bc3"
+    ],
+    "links": []
+  }
+]

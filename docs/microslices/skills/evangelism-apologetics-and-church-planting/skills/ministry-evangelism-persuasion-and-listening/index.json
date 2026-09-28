@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-the-framing-for-part-i-e3ba13ece0",
+    "purpose": "the framing for part i",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/001-the-framing-for-part-i.md",
+    "requires": [],
+    "links": [
+      "skill-1-evangelism-as-a-communication-task-and-what-the-persuasion-evidence-says-700a4fdfab"
+    ]
+  },
+  {
+    "id": "skill-1-evangelism-as-a-communication-task-and-what-the-persuasion-evidence-says-700a4fdfab",
+    "purpose": "1 evangelism as a communication task and what the persuasion evidence says",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/002-1-evangelism-as-a-communication-task-and-what-the-persuasion-evidence-says.md",
+    "requires": [
+      "skill-the-framing-for-part-i-e3ba13ece0"
+    ],
+    "links": [
+      "skill-2-listening-earning-the-right-to-be-heard-and-spiritual-conversations-8db2d214be"
+    ]
+  },
+  {
+    "id": "skill-2-listening-earning-the-right-to-be-heard-and-spiritual-conversations-8db2d214be",
+    "purpose": "2 listening earning the right to be heard and spiritual conversations",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/003-2-listening-earning-the-right-to-be-heard-and-spiritual-conversations.md",
+    "requires": [
+      "skill-1-evangelism-as-a-communication-task-and-what-the-persuasion-evidence-says-700a4fdfab"
+    ],
+    "links": [
+      "skill-cross-references-2808e93b20"
+    ]
+  },
+  {
+    "id": "skill-cross-references-2808e93b20",
+    "purpose": "cross references",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-persuasion-and-listening/004-cross-references.md",
+    "requires": [
+      "skill-2-listening-earning-the-right-to-be-heard-and-spiritual-conversations-8db2d214be"
+    ],
+    "links": []
+  }
+]

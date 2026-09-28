@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-10-soil-9452a4942e",
+    "purpose": "10 soil",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/001-10-soil.md",
+    "requires": [],
+    "links": [
+      "skill-11-fertility-management-e379a2d28b"
+    ]
+  },
+  {
+    "id": "skill-11-fertility-management-e379a2d28b",
+    "purpose": "11 fertility management",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/002-11-fertility-management.md",
+    "requires": [
+      "skill-10-soil-9452a4942e"
+    ],
+    "links": [
+      "skill-12-crop-production-1fa94163ef"
+    ]
+  },
+  {
+    "id": "skill-12-crop-production-1fa94163ef",
+    "purpose": "12 crop production",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/003-12-crop-production.md",
+    "requires": [
+      "skill-11-fertility-management-e379a2d28b"
+    ],
+    "links": [
+      "skill-13-integrated-pest-management-116d278652"
+    ]
+  },
+  {
+    "id": "skill-13-integrated-pest-management-116d278652",
+    "purpose": "13 integrated pest management",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/004-13-integrated-pest-management.md",
+    "requires": [
+      "skill-12-crop-production-1fa94163ef"
+    ],
+    "links": [
+      "skill-14-water-and-irrigation-9668f340f4"
+    ]
+  },
+  {
+    "id": "skill-14-water-and-irrigation-9668f340f4",
+    "purpose": "14 water and irrigation",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/005-14-water-and-irrigation.md",
+    "requires": [
+      "skill-13-integrated-pest-management-116d278652"
+    ],
+    "links": [
+      "skill-15-breeding-and-genetics-473c8322af"
+    ]
+  },
+  {
+    "id": "skill-15-breeding-and-genetics-473c8322af",
+    "purpose": "15 breeding and genetics",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/006-15-breeding-and-genetics.md",
+    "requires": [
+      "skill-14-water-and-irrigation-9668f340f4"
+    ],
+    "links": [
+      "skill-16-farming-systems-honestly-d6ebe78a7f"
+    ]
+  },
+  {
+    "id": "skill-16-farming-systems-honestly-d6ebe78a7f",
+    "purpose": "16 farming systems honestly",
+    "source": "src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/SKILL.md",
+    "output": "docs/microslices/skills/hunting-botany-livestock-agriculture/skills/agri-soil-fertility-and-crop-production/007-16-farming-systems-honestly.md",
+    "requires": [
+      "skill-15-breeding-and-genetics-473c8322af"
+    ],
+    "links": []
+  }
+]

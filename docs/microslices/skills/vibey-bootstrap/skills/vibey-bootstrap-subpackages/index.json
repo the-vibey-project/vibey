@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-python-v2-tier-2-tier-3-subpackages-opt-in-62e6334ff0",
+    "purpose": "5 python v2 tier 2 tier 3 subpackages opt in",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-subpackages/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-subpackages/001-5-python-v2-tier-2-tier-3-subpackages-opt-in.md",
+    "requires": [],
+    "links": [
+      "skill-6-python-end-to-end-recipes-10f02ecb06"
+    ]
+  },
+  {
+    "id": "skill-6-python-end-to-end-recipes-10f02ecb06",
+    "purpose": "6 python end to end recipes",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-subpackages/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-subpackages/002-6-python-end-to-end-recipes.md",
+    "requires": [
+      "skill-5-python-v2-tier-2-tier-3-subpackages-opt-in-62e6334ff0"
+    ],
+    "links": [
+      "skill-7-python-v4-0-0-runtime-modules-opt-in-820fde5df1"
+    ]
+  },
+  {
+    "id": "skill-7-python-v4-0-0-runtime-modules-opt-in-820fde5df1",
+    "purpose": "7 python v4 0 0 runtime modules opt in",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-subpackages/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-subpackages/003-7-python-v4-0-0-runtime-modules-opt-in.md",
+    "requires": [
+      "skill-6-python-end-to-end-recipes-10f02ecb06"
+    ],
+    "links": []
+  }
+]

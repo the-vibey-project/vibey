@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-92a8c8081a",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-protocol-layer/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-protocol-layer-a8e23e2532"
+    ]
+  },
+  {
+    "id": "skill-1-the-protocol-layer-a8e23e2532",
+    "purpose": "1 the protocol layer",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-protocol-layer/002-1-the-protocol-layer.md",
+    "requires": [
+      "skill-0-routing-92a8c8081a"
+    ],
+    "links": [
+      "skill-2-nodes-and-clients-c48cfe2369"
+    ]
+  },
+  {
+    "id": "skill-2-nodes-and-clients-c48cfe2369",
+    "purpose": "2 nodes and clients",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-protocol-layer/003-2-nodes-and-clients.md",
+    "requires": [
+      "skill-1-the-protocol-layer-a8e23e2532"
+    ],
+    "links": [
+      "skill-3-protocol-upgrades-and-the-eip-process-5b33abdf25"
+    ]
+  },
+  {
+    "id": "skill-3-protocol-upgrades-and-the-eip-process-5b33abdf25",
+    "purpose": "3 protocol upgrades and the eip process",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-protocol-layer/004-3-protocol-upgrades-and-the-eip-process.md",
+    "requires": [
+      "skill-2-nodes-and-clients-c48cfe2369"
+    ],
+    "links": [
+      "skill-11-layer-2-and-building-a-chain-54ab40b2d8"
+    ]
+  },
+  {
+    "id": "skill-11-layer-2-and-building-a-chain-54ab40b2d8",
+    "purpose": "11 layer 2 and building a chain",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-protocol-layer/005-11-layer-2-and-building-a-chain.md",
+    "requires": [
+      "skill-3-protocol-upgrades-and-the-eip-process-5b33abdf25"
+    ],
+    "links": [
+      "skill-12-cross-chain-a5e9cc9aa6"
+    ]
+  },
+  {
+    "id": "skill-12-cross-chain-a5e9cc9aa6",
+    "purpose": "12 cross chain",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-protocol-layer/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-protocol-layer/006-12-cross-chain.md",
+    "requires": [
+      "skill-11-layer-2-and-building-a-chain-54ab40b2d8"
+    ],
+    "links": []
+  }
+]

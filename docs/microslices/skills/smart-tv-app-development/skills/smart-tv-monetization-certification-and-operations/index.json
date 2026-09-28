@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-8-monetization-942c9328b2",
+    "purpose": "8 monetization",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/001-8-monetization.md",
+    "requires": [],
+    "links": [
+      "skill-9-ctv-advertising-3d5d66ee1f"
+    ]
+  },
+  {
+    "id": "skill-9-ctv-advertising-3d5d66ee1f",
+    "purpose": "9 ctv advertising",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/002-9-ctv-advertising.md",
+    "requires": [
+      "skill-8-monetization-942c9328b2"
+    ],
+    "links": [
+      "skill-10-certification-and-submission-ef44880496"
+    ]
+  },
+  {
+    "id": "skill-10-certification-and-submission-ef44880496",
+    "purpose": "10 certification and submission",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/003-10-certification-and-submission.md",
+    "requires": [
+      "skill-9-ctv-advertising-3d5d66ee1f"
+    ],
+    "links": [
+      "skill-11-testing-0fb434fb2d"
+    ]
+  },
+  {
+    "id": "skill-11-testing-0fb434fb2d",
+    "purpose": "11 testing",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/004-11-testing.md",
+    "requires": [
+      "skill-10-certification-and-submission-ef44880496"
+    ],
+    "links": [
+      "skill-12-analytics-and-qoe-e7e6e98f0a"
+    ]
+  },
+  {
+    "id": "skill-12-analytics-and-qoe-e7e6e98f0a",
+    "purpose": "12 analytics and qoe",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/005-12-analytics-and-qoe.md",
+    "requires": [
+      "skill-11-testing-0fb434fb2d"
+    ],
+    "links": [
+      "skill-13-cross-platform-strategy-a802491a86"
+    ]
+  },
+  {
+    "id": "skill-13-cross-platform-strategy-a802491a86",
+    "purpose": "13 cross platform strategy",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/006-13-cross-platform-strategy.md",
+    "requires": [
+      "skill-12-analytics-and-qoe-e7e6e98f0a"
+    ],
+    "links": [
+      "skill-14-accessibility-privacy-and-regulation-220d7c8731"
+    ]
+  },
+  {
+    "id": "skill-14-accessibility-privacy-and-regulation-220d7c8731",
+    "purpose": "14 accessibility privacy and regulation",
+    "source": "src/vibey_tools/skills/plugins/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/SKILL.md",
+    "output": "docs/microslices/skills/smart-tv-app-development/skills/smart-tv-monetization-certification-and-operations/007-14-accessibility-privacy-and-regulation.md",
+    "requires": [
+      "skill-13-cross-platform-strategy-a802491a86"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-7-orbital-mechanics-3109771761",
+    "purpose": "7 orbital mechanics",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-orbital-mechanics-and-ascent/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-orbital-mechanics-and-ascent/001-7-orbital-mechanics.md",
+    "requires": [],
+    "links": [
+      "skill-8-ascent-trajectory-e0899e4ffb"
+    ]
+  },
+  {
+    "id": "skill-8-ascent-trajectory-e0899e4ffb",
+    "purpose": "8 ascent trajectory",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-orbital-mechanics-and-ascent/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-orbital-mechanics-and-ascent/002-8-ascent-trajectory.md",
+    "requires": [
+      "skill-7-orbital-mechanics-3109771761"
+    ],
+    "links": []
+  }
+]

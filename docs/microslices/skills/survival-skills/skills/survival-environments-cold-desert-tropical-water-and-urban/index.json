@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-13-cold-environments-e9d61d0dd2",
+    "purpose": "13 cold environments",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/001-13-cold-environments.md",
+    "requires": [],
+    "links": [
+      "skill-14-desert-adda0f813d"
+    ]
+  },
+  {
+    "id": "skill-14-desert-adda0f813d",
+    "purpose": "14 desert",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/002-14-desert.md",
+    "requires": [
+      "skill-13-cold-environments-e9d61d0dd2"
+    ],
+    "links": [
+      "skill-15-tropical-b5c1521f0f"
+    ]
+  },
+  {
+    "id": "skill-15-tropical-b5c1521f0f",
+    "purpose": "15 tropical",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/003-15-tropical.md",
+    "requires": [
+      "skill-14-desert-adda0f813d"
+    ],
+    "links": [
+      "skill-16-water-and-maritime-c2cc932c7d"
+    ]
+  },
+  {
+    "id": "skill-16-water-and-maritime-c2cc932c7d",
+    "purpose": "16 water and maritime",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/004-16-water-and-maritime.md",
+    "requires": [
+      "skill-15-tropical-b5c1521f0f"
+    ],
+    "links": [
+      "skill-17-urban-and-disaster-742698cae9"
+    ]
+  },
+  {
+    "id": "skill-17-urban-and-disaster-742698cae9",
+    "purpose": "17 urban and disaster",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-environments-cold-desert-tropical-water-and-urban/005-17-urban-and-disaster.md",
+    "requires": [
+      "skill-16-water-and-maritime-c2cc932c7d"
+    ],
+    "links": []
+  }
+]

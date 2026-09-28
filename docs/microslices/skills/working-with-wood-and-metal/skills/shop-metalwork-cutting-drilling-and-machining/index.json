@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-metal-in-the-shop-4597a2795d",
+    "purpose": "13 metal in the shop",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/001-13-metal-in-the-shop.md",
+    "requires": [],
+    "links": [
+      "skill-14-what-changes-when-you-work-metal-9fb6ca7cbc"
+    ]
+  },
+  {
+    "id": "skill-14-what-changes-when-you-work-metal-9fb6ca7cbc",
+    "purpose": "14 what changes when you work metal",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/002-14-what-changes-when-you-work-metal.md",
+    "requires": [
+      "skill-13-metal-in-the-shop-4597a2795d"
+    ],
+    "links": [
+      "skill-15-marking-out-24c22356c3"
+    ]
+  },
+  {
+    "id": "skill-15-marking-out-24c22356c3",
+    "purpose": "15 marking out",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/003-15-marking-out.md",
+    "requires": [
+      "skill-14-what-changes-when-you-work-metal-9fb6ca7cbc"
+    ],
+    "links": [
+      "skill-16-cutting-metal-f20523f879"
+    ]
+  },
+  {
+    "id": "skill-16-cutting-metal-f20523f879",
+    "purpose": "16 cutting metal",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/004-16-cutting-metal.md",
+    "requires": [
+      "skill-15-marking-out-24c22356c3"
+    ],
+    "links": [
+      "skill-17-drilling-and-tapping-7743c78143"
+    ]
+  },
+  {
+    "id": "skill-17-drilling-and-tapping-7743c78143",
+    "purpose": "17 drilling and tapping",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/005-17-drilling-and-tapping.md",
+    "requires": [
+      "skill-16-cutting-metal-f20523f879"
+    ],
+    "links": [
+      "skill-18-manual-machining-dbe88a70c6"
+    ]
+  },
+  {
+    "id": "skill-18-manual-machining-dbe88a70c6",
+    "purpose": "18 manual machining",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-metalwork-cutting-drilling-and-machining/006-18-manual-machining.md",
+    "requires": [
+      "skill-17-drilling-and-tapping-7743c78143"
+    ],
+    "links": []
+  }
+]

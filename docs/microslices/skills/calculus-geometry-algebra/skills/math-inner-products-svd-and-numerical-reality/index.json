@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-inner-products-and-orthogonality-c9d2893bd6",
+    "purpose": "5 inner products and orthogonality",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/001-5-inner-products-and-orthogonality.md",
+    "requires": [],
+    "links": [
+      "skill-6-spectral-theorem-and-svd-8d6d3237d0"
+    ]
+  },
+  {
+    "id": "skill-6-spectral-theorem-and-svd-8d6d3237d0",
+    "purpose": "6 spectral theorem and svd",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/002-6-spectral-theorem-and-svd.md",
+    "requires": [
+      "skill-5-inner-products-and-orthogonality-c9d2893bd6"
+    ],
+    "links": [
+      "skill-7-matrix-factorizations-2f0e33a861"
+    ]
+  },
+  {
+    "id": "skill-7-matrix-factorizations-2f0e33a861",
+    "purpose": "7 matrix factorizations",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/003-7-matrix-factorizations.md",
+    "requires": [
+      "skill-6-spectral-theorem-and-svd-8d6d3237d0"
+    ],
+    "links": [
+      "skill-8-conditioning-and-numerical-reality-7426d5ead6"
+    ]
+  },
+  {
+    "id": "skill-8-conditioning-and-numerical-reality-7426d5ead6",
+    "purpose": "8 conditioning and numerical reality",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-inner-products-svd-and-numerical-reality/004-8-conditioning-and-numerical-reality.md",
+    "requires": [
+      "skill-7-matrix-factorizations-2f0e33a861"
+    ],
+    "links": []
+  }
+]

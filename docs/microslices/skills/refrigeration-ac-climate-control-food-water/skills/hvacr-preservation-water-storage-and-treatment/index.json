@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-22-preservation-without-refrigeration-16eff8ac59",
+    "purpose": "22 preservation without refrigeration",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment/001-22-preservation-without-refrigeration.md",
+    "requires": [],
+    "links": [
+      "skill-23-water-storage-301218a5c6"
+    ]
+  },
+  {
+    "id": "skill-23-water-storage-301218a5c6",
+    "purpose": "23 water storage",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment/002-23-water-storage.md",
+    "requires": [
+      "skill-22-preservation-without-refrigeration-16eff8ac59"
+    ],
+    "links": [
+      "skill-24-water-treatment-0978afa6e3"
+    ]
+  },
+  {
+    "id": "skill-24-water-treatment-0978afa6e3",
+    "purpose": "24 water treatment",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-preservation-water-storage-and-treatment/003-24-water-treatment.md",
+    "requires": [
+      "skill-23-water-storage-301218a5c6"
+    ],
+    "links": []
+  }
+]

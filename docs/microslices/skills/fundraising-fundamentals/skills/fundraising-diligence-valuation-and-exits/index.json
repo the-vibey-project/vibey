@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-10-non-dilutive-and-debt-56b93b4041",
+    "purpose": "10 non dilutive and debt",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/001-10-non-dilutive-and-debt.md",
+    "requires": [],
+    "links": [
+      "skill-11-diligence-66caac28f6"
+    ]
+  },
+  {
+    "id": "skill-11-diligence-66caac28f6",
+    "purpose": "11 diligence",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/002-11-diligence.md",
+    "requires": [
+      "skill-10-non-dilutive-and-debt-56b93b4041"
+    ],
+    "links": [
+      "skill-12-valuation-of-private-companies-22c95e1c32"
+    ]
+  },
+  {
+    "id": "skill-12-valuation-of-private-companies-22c95e1c32",
+    "purpose": "12 valuation of private companies",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/003-12-valuation-of-private-companies.md",
+    "requires": [
+      "skill-11-diligence-66caac28f6"
+    ],
+    "links": [
+      "skill-13-secondaries-and-exits-d047ad78e5"
+    ]
+  },
+  {
+    "id": "skill-13-secondaries-and-exits-d047ad78e5",
+    "purpose": "13 secondaries and exits",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-diligence-valuation-and-exits/004-13-secondaries-and-exits.md",
+    "requires": [
+      "skill-12-valuation-of-private-companies-22c95e1c32"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-23-what-s-live-verified-august-2026-e38bea2c3c",
+    "purpose": "23 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-reference/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-reference/001-23-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-24-misconceptions-5f0dc5346e"
+    ]
+  },
+  {
+    "id": "skill-24-misconceptions-5f0dc5346e",
+    "purpose": "24 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-reference/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-reference/002-24-misconceptions.md",
+    "requires": [
+      "skill-23-what-s-live-verified-august-2026-e38bea2c3c"
+    ],
+    "links": [
+      "skill-25-numbers-482414a304"
+    ]
+  },
+  {
+    "id": "skill-25-numbers-482414a304",
+    "purpose": "25 numbers",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-reference/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-reference/003-25-numbers.md",
+    "requires": [
+      "skill-24-misconceptions-5f0dc5346e"
+    ],
+    "links": [
+      "skill-26-sources-6c6eed0a71"
+    ]
+  },
+  {
+    "id": "skill-26-sources-6c6eed0a71",
+    "purpose": "26 sources",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-reference/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-reference/004-26-sources.md",
+    "requires": [
+      "skill-25-numbers-482414a304"
+    ],
+    "links": [
+      "skill-27-quick-reference-66eef9609d"
+    ]
+  },
+  {
+    "id": "skill-27-quick-reference-66eef9609d",
+    "purpose": "27 quick reference",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-reference/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-reference/005-27-quick-reference.md",
+    "requires": [
+      "skill-26-sources-6c6eed0a71"
+    ],
+    "links": [
+      "skill-28-method-afd0294fc1"
+    ]
+  },
+  {
+    "id": "skill-28-method-afd0294fc1",
+    "purpose": "28 method",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-reference/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-reference/006-28-method.md",
+    "requires": [
+      "skill-27-quick-reference-66eef9609d"
+    ],
+    "links": []
+  }
+]

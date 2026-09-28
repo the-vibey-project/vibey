@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-aarch64-5c0e340783",
+    "purpose": "5 aarch64",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/001-5-aarch64.md",
+    "requires": [],
+    "links": [
+      "skill-6-instruction-set-characteristics-7455ae0ad0"
+    ]
+  },
+  {
+    "id": "skill-6-instruction-set-characteristics-7455ae0ad0",
+    "purpose": "6 instruction set characteristics",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/002-6-instruction-set-characteristics.md",
+    "requires": [
+      "skill-5-aarch64-5c0e340783"
+    ],
+    "links": [
+      "skill-7-exception-levels-901f596968"
+    ]
+  },
+  {
+    "id": "skill-7-exception-levels-901f596968",
+    "purpose": "7 exception levels",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/003-7-exception-levels.md",
+    "requires": [
+      "skill-6-instruction-set-characteristics-7455ae0ad0"
+    ],
+    "links": [
+      "skill-8-the-memory-model-c7464a05fc"
+    ]
+  },
+  {
+    "id": "skill-8-the-memory-model-c7464a05fc",
+    "purpose": "8 the memory model",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/004-8-the-memory-model.md",
+    "requires": [
+      "skill-7-exception-levels-901f596968"
+    ],
+    "links": [
+      "skill-9-mmu-and-translation-f9ba1ef00d"
+    ]
+  },
+  {
+    "id": "skill-9-mmu-and-translation-f9ba1ef00d",
+    "purpose": "9 mmu and translation",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-aarch64-exception-levels-memory-model-and-mmu/005-9-mmu-and-translation.md",
+    "requires": [
+      "skill-8-the-memory-model-c7464a05fc"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-9-bridge-types-and-structural-logic-e21793d2fd",
+    "purpose": "9 bridge types and structural logic",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/001-9-bridge-types-and-structural-logic.md",
+    "requires": [],
+    "links": [
+      "skill-10-loads-and-load-rating-b32bc8790b"
+    ]
+  },
+  {
+    "id": "skill-10-loads-and-load-rating-b32bc8790b",
+    "purpose": "10 loads and load rating",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/002-10-loads-and-load-rating.md",
+    "requires": [
+      "skill-9-bridge-types-and-structural-logic-e21793d2fd"
+    ],
+    "links": [
+      "skill-11-materials-and-details-7bf34ebec3"
+    ]
+  },
+  {
+    "id": "skill-11-materials-and-details-7bf34ebec3",
+    "purpose": "11 materials and details",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/003-11-materials-and-details.md",
+    "requires": [
+      "skill-10-loads-and-load-rating-b32bc8790b"
+    ],
+    "links": [
+      "skill-12-bridge-failure-modes-021b931017"
+    ]
+  },
+  {
+    "id": "skill-12-bridge-failure-modes-021b931017",
+    "purpose": "12 bridge failure modes",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/004-12-bridge-failure-modes.md",
+    "requires": [
+      "skill-11-materials-and-details-7bf34ebec3"
+    ],
+    "links": [
+      "skill-13-inspection-and-condition-rating-2ac06da221"
+    ]
+  },
+  {
+    "id": "skill-13-inspection-and-condition-rating-2ac06da221",
+    "purpose": "13 inspection and condition rating",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-bridges-types-loads-failure-modes-and-inspection/005-13-inspection-and-condition-rating.md",
+    "requires": [
+      "skill-12-bridge-failure-modes-021b931017"
+    ],
+    "links": []
+  }
+]

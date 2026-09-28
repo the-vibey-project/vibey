@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-quirk-8-1-export-strips-connections-and-table-data-schema-only-cf719000c0",
+    "purpose": "quirk 8 1 export strips connections and table data schema only",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-deployment/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-deployment/001-quirk-8-1-export-strips-connections-and-table-data-schema-only.md",
+    "requires": [],
+    "links": [
+      "skill-quirk-8-2-broken-references-require-manual-remapping-on-import-e64441aad4"
+    ]
+  },
+  {
+    "id": "skill-quirk-8-2-broken-references-require-manual-remapping-on-import-e64441aad4",
+    "purpose": "quirk 8 2 broken references require manual remapping on import",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-deployment/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-deployment/002-quirk-8-2-broken-references-require-manual-remapping-on-import.md",
+    "requires": [
+      "skill-quirk-8-1-export-strips-connections-and-table-data-schema-only-cf719000c0"
+    ],
+    "links": [
+      "skill-quirk-8-3-flopack-template-schema-rules-a1e74216ae"
+    ]
+  },
+  {
+    "id": "skill-quirk-8-3-flopack-template-schema-rules-a1e74216ae",
+    "purpose": "quirk 8 3 flopack template schema rules",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-deployment/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-deployment/003-quirk-8-3-flopack-template-schema-rules.md",
+    "requires": [
+      "skill-quirk-8-2-broken-references-require-manual-remapping-on-import-e64441aad4"
+    ],
+    "links": [
+      "skill-quirk-8-4-max-folder-depth-5-duplicate-folder-doesn-t-copy-table-data-5a2356949a"
+    ]
+  },
+  {
+    "id": "skill-quirk-8-4-max-folder-depth-5-duplicate-folder-doesn-t-copy-table-data-5a2356949a",
+    "purpose": "quirk 8 4 max folder depth 5 duplicate folder doesn t copy table data",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-deployment/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-deployment/004-quirk-8-4-max-folder-depth-5-duplicate-folder-doesn-t-copy-table-data.md",
+    "requires": [
+      "skill-quirk-8-3-flopack-template-schema-rules-a1e74216ae"
+    ],
+    "links": []
+  }
+]

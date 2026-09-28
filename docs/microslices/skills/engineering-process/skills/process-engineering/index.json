@@ -1,0 +1,178 @@
+[
+  {
+    "id": "skill-core-principle-context-fit-over-framework-loyalty-2a8773d571",
+    "purpose": "core principle context fit over framework loyalty",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/001-core-principle-context-fit-over-framework-loyalty.md",
+    "requires": [],
+    "links": [
+      "skill-cynefin-framework-the-meta-framework-for-method-selection-a013cc0b4b"
+    ]
+  },
+  {
+    "id": "skill-cynefin-framework-the-meta-framework-for-method-selection-a013cc0b4b",
+    "purpose": "cynefin framework the meta framework for method selection",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/002-cynefin-framework-the-meta-framework-for-method-selection.md",
+    "requires": [
+      "skill-core-principle-context-fit-over-framework-loyalty-2a8773d571"
+    ],
+    "links": [
+      "skill-the-empirical-reality-what-the-evidence-actually-supports-f4e1511c18"
+    ]
+  },
+  {
+    "id": "skill-the-empirical-reality-what-the-evidence-actually-supports-f4e1511c18",
+    "purpose": "the empirical reality what the evidence actually supports",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/003-the-empirical-reality-what-the-evidence-actually-supports.md",
+    "requires": [
+      "skill-cynefin-framework-the-meta-framework-for-method-selection-a013cc0b4b"
+    ],
+    "links": [
+      "skill-agile-foundations-ec9f1a0149"
+    ]
+  },
+  {
+    "id": "skill-agile-foundations-ec9f1a0149",
+    "purpose": "agile foundations",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/004-agile-foundations.md",
+    "requires": [
+      "skill-the-empirical-reality-what-the-evidence-actually-supports-f4e1511c18"
+    ],
+    "links": [
+      "skill-scrum-2020-scrum-guide-a69b0172b4"
+    ]
+  },
+  {
+    "id": "skill-scrum-2020-scrum-guide-a69b0172b4",
+    "purpose": "scrum 2020 scrum guide",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/005-scrum-2020-scrum-guide.md",
+    "requires": [
+      "skill-agile-foundations-ec9f1a0149"
+    ],
+    "links": [
+      "skill-kanban-and-flow-metrics-321305dfed"
+    ]
+  },
+  {
+    "id": "skill-kanban-and-flow-metrics-321305dfed",
+    "purpose": "kanban and flow metrics",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/006-kanban-and-flow-metrics.md",
+    "requires": [
+      "skill-scrum-2020-scrum-guide-a69b0172b4"
+    ],
+    "links": [
+      "skill-scaled-agile-frameworks-edbccdb1f5"
+    ]
+  },
+  {
+    "id": "skill-scaled-agile-frameworks-edbccdb1f5",
+    "purpose": "scaled agile frameworks",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/007-scaled-agile-frameworks.md",
+    "requires": [
+      "skill-kanban-and-flow-metrics-321305dfed"
+    ],
+    "links": [
+      "skill-traditional-predictive-project-management-604aefe16b"
+    ]
+  },
+  {
+    "id": "skill-traditional-predictive-project-management-604aefe16b",
+    "purpose": "traditional predictive project management",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/008-traditional-predictive-project-management.md",
+    "requires": [
+      "skill-scaled-agile-frameworks-edbccdb1f5"
+    ],
+    "links": [
+      "skill-lean-six-sigma-and-continuous-improvement-09d687cb3b"
+    ]
+  },
+  {
+    "id": "skill-lean-six-sigma-and-continuous-improvement-09d687cb3b",
+    "purpose": "lean six sigma and continuous improvement",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/009-lean-six-sigma-and-continuous-improvement.md",
+    "requires": [
+      "skill-traditional-predictive-project-management-604aefe16b"
+    ],
+    "links": [
+      "skill-modern-product-and-delivery-frameworks-b5a6772f04"
+    ]
+  },
+  {
+    "id": "skill-modern-product-and-delivery-frameworks-b5a6772f04",
+    "purpose": "modern product and delivery frameworks",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/010-modern-product-and-delivery-frameworks.md",
+    "requires": [
+      "skill-lean-six-sigma-and-continuous-improvement-09d687cb3b"
+    ],
+    "links": [
+      "skill-flow-engineering-and-delivery-metrics-a9b03e6530"
+    ]
+  },
+  {
+    "id": "skill-flow-engineering-and-delivery-metrics-a9b03e6530",
+    "purpose": "flow engineering and delivery metrics",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/011-flow-engineering-and-delivery-metrics.md",
+    "requires": [
+      "skill-modern-product-and-delivery-frameworks-b5a6772f04"
+    ],
+    "links": [
+      "skill-team-dynamics-and-organizational-design-fdc7f9a0f0"
+    ]
+  },
+  {
+    "id": "skill-team-dynamics-and-organizational-design-fdc7f9a0f0",
+    "purpose": "team dynamics and organizational design",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/012-team-dynamics-and-organizational-design.md",
+    "requires": [
+      "skill-flow-engineering-and-delivery-metrics-a9b03e6530"
+    ],
+    "links": [
+      "skill-ai-s-impact-on-process-engineering-2024-2026-63f1e5949a"
+    ]
+  },
+  {
+    "id": "skill-ai-s-impact-on-process-engineering-2024-2026-63f1e5949a",
+    "purpose": "ai s impact on process engineering 2024 2026",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/013-ai-s-impact-on-process-engineering-2024-2026.md",
+    "requires": [
+      "skill-team-dynamics-and-organizational-design-fdc7f9a0f0"
+    ],
+    "links": [
+      "skill-recommendations-by-stage-ee178cc65f"
+    ]
+  },
+  {
+    "id": "skill-recommendations-by-stage-ee178cc65f",
+    "purpose": "recommendations by stage",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/014-recommendations-by-stage.md",
+    "requires": [
+      "skill-ai-s-impact-on-process-engineering-2024-2026-63f1e5949a"
+    ],
+    "links": [
+      "skill-key-caveats-b460037cef"
+    ]
+  },
+  {
+    "id": "skill-key-caveats-b460037cef",
+    "purpose": "key caveats",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/process-engineering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/process-engineering/015-key-caveats.md",
+    "requires": [
+      "skill-recommendations-by-stage-ee178cc65f"
+    ],
+    "links": []
+  }
+]

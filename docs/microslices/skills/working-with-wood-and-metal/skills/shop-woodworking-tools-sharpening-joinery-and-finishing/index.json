@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-5-layout-and-marking-7d34d95d76",
+    "purpose": "5 layout and marking",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/001-5-layout-and-marking.md",
+    "requires": [],
+    "links": [
+      "skill-6-hand-tools-a1970ef55a"
+    ]
+  },
+  {
+    "id": "skill-6-hand-tools-a1970ef55a",
+    "purpose": "6 hand tools",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/002-6-hand-tools.md",
+    "requires": [
+      "skill-5-layout-and-marking-7d34d95d76"
+    ],
+    "links": [
+      "skill-7-sharpening-1de68cba1b"
+    ]
+  },
+  {
+    "id": "skill-7-sharpening-1de68cba1b",
+    "purpose": "7 sharpening",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/003-7-sharpening.md",
+    "requires": [
+      "skill-6-hand-tools-a1970ef55a"
+    ],
+    "links": [
+      "skill-8-machines-ad8819ef2d"
+    ]
+  },
+  {
+    "id": "skill-8-machines-ad8819ef2d",
+    "purpose": "8 machines",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/004-8-machines.md",
+    "requires": [
+      "skill-7-sharpening-1de68cba1b"
+    ],
+    "links": [
+      "skill-9-the-table-saw-be53142ced"
+    ]
+  },
+  {
+    "id": "skill-9-the-table-saw-be53142ced",
+    "purpose": "9 the table saw",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/005-9-the-table-saw.md",
+    "requires": [
+      "skill-8-machines-ad8819ef2d"
+    ],
+    "links": [
+      "skill-10-joinery-technique-9160a1c06c"
+    ]
+  },
+  {
+    "id": "skill-10-joinery-technique-9160a1c06c",
+    "purpose": "10 joinery technique",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/006-10-joinery-technique.md",
+    "requires": [
+      "skill-9-the-table-saw-be53142ced"
+    ],
+    "links": [
+      "skill-11-glue-ups-7c6bb6204c"
+    ]
+  },
+  {
+    "id": "skill-11-glue-ups-7c6bb6204c",
+    "purpose": "11 glue ups",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/007-11-glue-ups.md",
+    "requires": [
+      "skill-10-joinery-technique-9160a1c06c"
+    ],
+    "links": [
+      "skill-12-wood-finishing-93554d877e"
+    ]
+  },
+  {
+    "id": "skill-12-wood-finishing-93554d877e",
+    "purpose": "12 wood finishing",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-woodworking-tools-sharpening-joinery-and-finishing/008-12-wood-finishing.md",
+    "requires": [
+      "skill-11-glue-ups-7c6bb6204c"
+    ],
+    "links": []
+  }
+]

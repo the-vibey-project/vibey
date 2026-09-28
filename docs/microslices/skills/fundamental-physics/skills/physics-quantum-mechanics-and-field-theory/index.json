@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-6f61860dc1",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-quantum-mechanics-formalism-224b6e7506"
+    ]
+  },
+  {
+    "id": "skill-1-quantum-mechanics-formalism-224b6e7506",
+    "purpose": "1 quantum mechanics formalism",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/002-1-quantum-mechanics-formalism.md",
+    "requires": [
+      "skill-0-routing-6f61860dc1"
+    ],
+    "links": [
+      "skill-2-solved-systems-and-structure-1c9821f41d"
+    ]
+  },
+  {
+    "id": "skill-2-solved-systems-and-structure-1c9821f41d",
+    "purpose": "2 solved systems and structure",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/003-2-solved-systems-and-structure.md",
+    "requires": [
+      "skill-1-quantum-mechanics-formalism-224b6e7506"
+    ],
+    "links": [
+      "skill-3-quantum-field-theory-dbc5ffc09a"
+    ]
+  },
+  {
+    "id": "skill-3-quantum-field-theory-dbc5ffc09a",
+    "purpose": "3 quantum field theory",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-quantum-mechanics-and-field-theory/004-3-quantum-field-theory.md",
+    "requires": [
+      "skill-2-solved-systems-and-structure-1c9821f41d"
+    ],
+    "links": []
+  }
+]

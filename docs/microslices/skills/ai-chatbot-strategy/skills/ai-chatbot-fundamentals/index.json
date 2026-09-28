@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-core-principle-2dd54967bd",
+    "purpose": "core principle",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/001-core-principle.md",
+    "requires": [],
+    "links": [
+      "skill-part-1-what-ai-actually-is-93651246a1"
+    ]
+  },
+  {
+    "id": "skill-part-1-what-ai-actually-is-93651246a1",
+    "purpose": "part 1 what ai actually is",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/002-part-1-what-ai-actually-is.md",
+    "requires": [
+      "skill-core-principle-2dd54967bd"
+    ],
+    "links": [
+      "skill-part-2-the-ai-type-taxonomy-dd42f04795"
+    ]
+  },
+  {
+    "id": "skill-part-2-the-ai-type-taxonomy-dd42f04795",
+    "purpose": "part 2 the ai type taxonomy",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/003-part-2-the-ai-type-taxonomy.md",
+    "requires": [
+      "skill-part-1-what-ai-actually-is-93651246a1"
+    ],
+    "links": [
+      "skill-part-3-the-ml-deep-learning-transformer-hierarchy-768f8ab713"
+    ]
+  },
+  {
+    "id": "skill-part-3-the-ml-deep-learning-transformer-hierarchy-768f8ab713",
+    "purpose": "part 3 the ml deep learning transformer hierarchy",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/004-part-3-the-ml-deep-learning-transformer-hierarchy.md",
+    "requires": [
+      "skill-part-2-the-ai-type-taxonomy-dd42f04795"
+    ],
+    "links": [
+      "skill-part-4-datasets-and-how-ai-learns-e1ca61186b"
+    ]
+  },
+  {
+    "id": "skill-part-4-datasets-and-how-ai-learns-e1ca61186b",
+    "purpose": "part 4 datasets and how ai learns",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/005-part-4-datasets-and-how-ai-learns.md",
+    "requires": [
+      "skill-part-3-the-ml-deep-learning-transformer-hierarchy-768f8ab713"
+    ],
+    "links": [
+      "skill-part-5-prompt-engineering-4ae62b4295"
+    ]
+  },
+  {
+    "id": "skill-part-5-prompt-engineering-4ae62b4295",
+    "purpose": "part 5 prompt engineering",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/006-part-5-prompt-engineering.md",
+    "requires": [
+      "skill-part-4-datasets-and-how-ai-learns-e1ca61186b"
+    ],
+    "links": [
+      "skill-part-6-chatbot-architecture-the-seven-component-pipeline-13b72f1284"
+    ]
+  },
+  {
+    "id": "skill-part-6-chatbot-architecture-the-seven-component-pipeline-13b72f1284",
+    "purpose": "part 6 chatbot architecture the seven component pipeline",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/007-part-6-chatbot-architecture-the-seven-component-pipeline.md",
+    "requires": [
+      "skill-part-5-prompt-engineering-4ae62b4295"
+    ],
+    "links": [
+      "skill-part-7-how-chatbots-process-language-nlp-mechanics-90e584bd61"
+    ]
+  },
+  {
+    "id": "skill-part-7-how-chatbots-process-language-nlp-mechanics-90e584bd61",
+    "purpose": "part 7 how chatbots process language nlp mechanics",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/008-part-7-how-chatbots-process-language-nlp-mechanics.md",
+    "requires": [
+      "skill-part-6-chatbot-architecture-the-seven-component-pipeline-13b72f1284"
+    ],
+    "links": [
+      "skill-part-8-the-three-ingredients-behind-high-performance-0a359831bc"
+    ]
+  },
+  {
+    "id": "skill-part-8-the-three-ingredients-behind-high-performance-0a359831bc",
+    "purpose": "part 8 the three ingredients behind high performance",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/009-part-8-the-three-ingredients-behind-high-performance.md",
+    "requires": [
+      "skill-part-7-how-chatbots-process-language-nlp-mechanics-90e584bd61"
+    ],
+    "links": [
+      "skill-part-9-business-value-of-chatbots-2010309458"
+    ]
+  },
+  {
+    "id": "skill-part-9-business-value-of-chatbots-2010309458",
+    "purpose": "part 9 business value of chatbots",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/010-part-9-business-value-of-chatbots.md",
+    "requires": [
+      "skill-part-8-the-three-ingredients-behind-high-performance-0a359831bc"
+    ],
+    "links": [
+      "skill-part-10-the-human-automation-boundary-0b663b69be"
+    ]
+  },
+  {
+    "id": "skill-part-10-the-human-automation-boundary-0b663b69be",
+    "purpose": "part 10 the human automation boundary",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/011-part-10-the-human-automation-boundary.md",
+    "requires": [
+      "skill-part-9-business-value-of-chatbots-2010309458"
+    ],
+    "links": [
+      "skill-strategic-summary-what-separates-a-35-chatbot-from-an-85-chatbot-978b766882"
+    ]
+  },
+  {
+    "id": "skill-strategic-summary-what-separates-a-35-chatbot-from-an-85-chatbot-978b766882",
+    "purpose": "strategic summary what separates a 35 chatbot from an 85 chatbot",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/ai-chatbot-fundamentals/012-strategic-summary-what-separates-a-35-chatbot-from-an-85-chatbot.md",
+    "requires": [
+      "skill-part-10-the-human-automation-boundary-0b663b69be"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,262 @@
+[
+  {
+    "id": "skill-the-three-core-truths-170fd88f9f",
+    "purpose": "the three core truths",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/001-the-three-core-truths.md",
+    "requires": [],
+    "links": [
+      "skill-owasp-llm-top-10-2025-edition-6ec23902cb"
+    ]
+  },
+  {
+    "id": "skill-owasp-llm-top-10-2025-edition-6ec23902cb",
+    "purpose": "owasp llm top 10 2025 edition",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/002-owasp-llm-top-10-2025-edition.md",
+    "requires": [
+      "skill-the-three-core-truths-170fd88f9f"
+    ],
+    "links": [
+      "skill-prompt-injection-llm01-2025-the-unfixable-risk-0bac2abfd2"
+    ]
+  },
+  {
+    "id": "skill-prompt-injection-llm01-2025-the-unfixable-risk-0bac2abfd2",
+    "purpose": "prompt injection llm01 2025 the unfixable risk",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/003-prompt-injection-llm01-2025-the-unfixable-risk.md",
+    "requires": [
+      "skill-owasp-llm-top-10-2025-edition-6ec23902cb"
+    ],
+    "links": [
+      "skill-output-sanitization-llm05-2025-improper-output-handling-dbb59d9f40"
+    ]
+  },
+  {
+    "id": "skill-output-sanitization-llm05-2025-improper-output-handling-dbb59d9f40",
+    "purpose": "output sanitization llm05 2025 improper output handling",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/004-output-sanitization-llm05-2025-improper-output-handling.md",
+    "requires": [
+      "skill-prompt-injection-llm01-2025-the-unfixable-risk-0bac2abfd2"
+    ],
+    "links": [
+      "skill-guardrail-architectures-ddc15ef222"
+    ]
+  },
+  {
+    "id": "skill-guardrail-architectures-ddc15ef222",
+    "purpose": "guardrail architectures",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/005-guardrail-architectures.md",
+    "requires": [
+      "skill-output-sanitization-llm05-2025-improper-output-handling-dbb59d9f40"
+    ],
+    "links": [
+      "skill-rag-security-llm08-2025-f3c5605bc9"
+    ]
+  },
+  {
+    "id": "skill-rag-security-llm08-2025-f3c5605bc9",
+    "purpose": "rag security llm08 2025",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/006-rag-security-llm08-2025.md",
+    "requires": [
+      "skill-guardrail-architectures-ddc15ef222"
+    ],
+    "links": [
+      "skill-agentic-ai-security-llm06-2025-owasp-asi-top-10-5e21a166f3"
+    ]
+  },
+  {
+    "id": "skill-agentic-ai-security-llm06-2025-owasp-asi-top-10-5e21a166f3",
+    "purpose": "agentic ai security llm06 2025 owasp asi top 10",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/007-agentic-ai-security-llm06-2025-owasp-asi-top-10.md",
+    "requires": [
+      "skill-rag-security-llm08-2025-f3c5605bc9"
+    ],
+    "links": [
+      "skill-mcp-security-new-under-secured-layer-baec8d2947"
+    ]
+  },
+  {
+    "id": "skill-mcp-security-new-under-secured-layer-baec8d2947",
+    "purpose": "mcp security new under secured layer",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/008-mcp-security-new-under-secured-layer.md",
+    "requires": [
+      "skill-agentic-ai-security-llm06-2025-owasp-asi-top-10-5e21a166f3"
+    ],
+    "links": [
+      "skill-secrets-management-for-ai-services-7902448662"
+    ]
+  },
+  {
+    "id": "skill-secrets-management-for-ai-services-7902448662",
+    "purpose": "secrets management for ai services",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/009-secrets-management-for-ai-services.md",
+    "requires": [
+      "skill-mcp-security-new-under-secured-layer-baec8d2947"
+    ],
+    "links": [
+      "skill-denial-of-wallet-llm10-2025-unbounded-consumption-0370c770f1"
+    ]
+  },
+  {
+    "id": "skill-denial-of-wallet-llm10-2025-unbounded-consumption-0370c770f1",
+    "purpose": "denial of wallet llm10 2025 unbounded consumption",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/010-denial-of-wallet-llm10-2025-unbounded-consumption.md",
+    "requires": [
+      "skill-secrets-management-for-ai-services-7902448662"
+    ],
+    "links": [
+      "skill-critical-next-js-react-cves-2025-2026-64d6893eaf"
+    ]
+  },
+  {
+    "id": "skill-critical-next-js-react-cves-2025-2026-64d6893eaf",
+    "purpose": "critical next js react cves 2025 2026",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/011-critical-next-js-react-cves-2025-2026.md",
+    "requires": [
+      "skill-denial-of-wallet-llm10-2025-unbounded-consumption-0370c770f1"
+    ],
+    "links": [
+      "skill-python-security-patterns-acfb5f9875"
+    ]
+  },
+  {
+    "id": "skill-python-security-patterns-acfb5f9875",
+    "purpose": "python security patterns",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/012-python-security-patterns.md",
+    "requires": [
+      "skill-critical-next-js-react-cves-2025-2026-64d6893eaf"
+    ],
+    "links": [
+      "skill-typescript-next-js-security-patterns-29d8bad069"
+    ]
+  },
+  {
+    "id": "skill-typescript-next-js-security-patterns-29d8bad069",
+    "purpose": "typescript next js security patterns",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/013-typescript-next-js-security-patterns.md",
+    "requires": [
+      "skill-python-security-patterns-acfb5f9875"
+    ],
+    "links": [
+      "skill-ai-model-supply-chain-llm03-2025-0f0cf804e1"
+    ]
+  },
+  {
+    "id": "skill-ai-model-supply-chain-llm03-2025-0f0cf804e1",
+    "purpose": "ai model supply chain llm03 2025",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/014-ai-model-supply-chain-llm03-2025.md",
+    "requires": [
+      "skill-typescript-next-js-security-patterns-29d8bad069"
+    ],
+    "links": [
+      "skill-supply-chain-security-sbom-sigstore-provenance-cfd3213d9f"
+    ]
+  },
+  {
+    "id": "skill-supply-chain-security-sbom-sigstore-provenance-cfd3213d9f",
+    "purpose": "supply chain security sbom sigstore provenance",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/015-supply-chain-security-sbom-sigstore-provenance.md",
+    "requires": [
+      "skill-ai-model-supply-chain-llm03-2025-0f0cf804e1"
+    ],
+    "links": [
+      "skill-vibe-coding-ai-generated-code-risks-29ad309f77"
+    ]
+  },
+  {
+    "id": "skill-vibe-coding-ai-generated-code-risks-29ad309f77",
+    "purpose": "vibe coding ai generated code risks",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/016-vibe-coding-ai-generated-code-risks.md",
+    "requires": [
+      "skill-supply-chain-security-sbom-sigstore-provenance-cfd3213d9f"
+    ],
+    "links": [
+      "skill-ai-threat-modeling-frameworks-6d52cddeff"
+    ]
+  },
+  {
+    "id": "skill-ai-threat-modeling-frameworks-6d52cddeff",
+    "purpose": "ai threat modeling frameworks",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/017-ai-threat-modeling-frameworks.md",
+    "requires": [
+      "skill-vibe-coding-ai-generated-code-risks-29ad309f77"
+    ],
+    "links": [
+      "skill-zero-trust-principles-for-ai-systems-30d9023531"
+    ]
+  },
+  {
+    "id": "skill-zero-trust-principles-for-ai-systems-30d9023531",
+    "purpose": "zero trust principles for ai systems",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/018-zero-trust-principles-for-ai-systems.md",
+    "requires": [
+      "skill-ai-threat-modeling-frameworks-6d52cddeff"
+    ],
+    "links": [
+      "skill-container-and-kubernetes-security-c9f74b3f20"
+    ]
+  },
+  {
+    "id": "skill-container-and-kubernetes-security-c9f74b3f20",
+    "purpose": "container and kubernetes security",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/019-container-and-kubernetes-security.md",
+    "requires": [
+      "skill-zero-trust-principles-for-ai-systems-30d9023531"
+    ],
+    "links": [
+      "skill-observability-for-security-90d8f12867"
+    ]
+  },
+  {
+    "id": "skill-observability-for-security-90d8f12867",
+    "purpose": "observability for security",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/020-observability-for-security.md",
+    "requires": [
+      "skill-container-and-kubernetes-security-c9f74b3f20"
+    ],
+    "links": [
+      "skill-staged-implementation-roadmap-19c96234f0"
+    ]
+  },
+  {
+    "id": "skill-staged-implementation-roadmap-19c96234f0",
+    "purpose": "staged implementation roadmap",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/021-staged-implementation-roadmap.md",
+    "requires": [
+      "skill-observability-for-security-90d8f12867"
+    ],
+    "links": [
+      "skill-the-first-rule-517515289e"
+    ]
+  },
+  {
+    "id": "skill-the-first-rule-517515289e",
+    "purpose": "the first rule",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/ai-security-practices/022-the-first-rule.md",
+    "requires": [
+      "skill-staged-implementation-roadmap-19c96234f0"
+    ],
+    "links": []
+  }
+]

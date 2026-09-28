@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-10-biomolecules-4b1d8c57b8",
+    "purpose": "10 biomolecules",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/001-10-biomolecules.md",
+    "requires": [],
+    "links": [
+      "skill-11-enzymes-687f0788cc"
+    ]
+  },
+  {
+    "id": "skill-11-enzymes-687f0788cc",
+    "purpose": "11 enzymes",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/002-11-enzymes.md",
+    "requires": [
+      "skill-10-biomolecules-4b1d8c57b8"
+    ],
+    "links": [
+      "skill-12-bioenergetics-and-metabolism-c28340dba3"
+    ]
+  },
+  {
+    "id": "skill-12-bioenergetics-and-metabolism-c28340dba3",
+    "purpose": "12 bioenergetics and metabolism",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/003-12-bioenergetics-and-metabolism.md",
+    "requires": [
+      "skill-11-enzymes-687f0788cc"
+    ],
+    "links": [
+      "skill-13-membranes-and-transport-d6b5b11dd5"
+    ]
+  },
+  {
+    "id": "skill-13-membranes-and-transport-d6b5b11dd5",
+    "purpose": "13 membranes and transport",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/004-13-membranes-and-transport.md",
+    "requires": [
+      "skill-12-bioenergetics-and-metabolism-c28340dba3"
+    ],
+    "links": [
+      "skill-14-cell-architecture-6a88ecb50e"
+    ]
+  },
+  {
+    "id": "skill-14-cell-architecture-6a88ecb50e",
+    "purpose": "14 cell architecture",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/005-14-cell-architecture.md",
+    "requires": [
+      "skill-13-membranes-and-transport-d6b5b11dd5"
+    ],
+    "links": [
+      "skill-15-cell-cycle-and-signalling-574678ff11"
+    ]
+  },
+  {
+    "id": "skill-15-cell-cycle-and-signalling-574678ff11",
+    "purpose": "15 cell cycle and signalling",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/006-15-cell-cycle-and-signalling.md",
+    "requires": [
+      "skill-14-cell-architecture-6a88ecb50e"
+    ],
+    "links": [
+      "skill-16-evolution-026c0e917a"
+    ]
+  },
+  {
+    "id": "skill-16-evolution-026c0e917a",
+    "purpose": "16 evolution",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-biomolecules-cells-and-evolution/007-16-evolution.md",
+    "requires": [
+      "skill-15-cell-cycle-and-signalling-574678ff11"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-8-the-pstn-1dbd7e1790",
+    "purpose": "8 the pstn",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/001-8-the-pstn.md",
+    "requires": [],
+    "links": [
+      "skill-9-ss7-and-its-security-problem-814eaa106d"
+    ]
+  },
+  {
+    "id": "skill-9-ss7-and-its-security-problem-814eaa106d",
+    "purpose": "9 ss7 and its security problem",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/002-9-ss7-and-its-security-problem.md",
+    "requires": [
+      "skill-8-the-pstn-1dbd7e1790"
+    ],
+    "links": [
+      "skill-10-voip-and-sip-6a0d7b8a6f"
+    ]
+  },
+  {
+    "id": "skill-10-voip-and-sip-6a0d7b8a6f",
+    "purpose": "10 voip and sip",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/003-10-voip-and-sip.md",
+    "requires": [
+      "skill-9-ss7-and-its-security-problem-814eaa106d"
+    ],
+    "links": [
+      "skill-11-volte-and-vonr-9d55e4d667"
+    ]
+  },
+  {
+    "id": "skill-11-volte-and-vonr-9d55e4d667",
+    "purpose": "11 volte and vonr",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/004-11-volte-and-vonr.md",
+    "requires": [
+      "skill-10-voip-and-sip-6a0d7b8a6f"
+    ],
+    "links": [
+      "skill-12-caller-id-spoofing-and-robocalls-85e85678f3"
+    ]
+  },
+  {
+    "id": "skill-12-caller-id-spoofing-and-robocalls-85e85678f3",
+    "purpose": "12 caller id spoofing and robocalls",
+    "source": "src/vibey_tools/skills/plugins/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/SKILL.md",
+    "output": "docs/microslices/skills/communication-technologies/skills/comms-telephony-pstn-ss7-voip-and-caller-id/005-12-caller-id-spoofing-and-robocalls.md",
+    "requires": [
+      "skill-11-volte-and-vonr-9d55e4d667"
+    ],
+    "links": []
+  }
+]

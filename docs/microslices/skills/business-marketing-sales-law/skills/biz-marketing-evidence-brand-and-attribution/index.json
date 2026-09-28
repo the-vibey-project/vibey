@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-fundamentals-950a6b184b",
+    "purpose": "5 fundamentals",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/001-5-fundamentals.md",
+    "requires": [],
+    "links": [
+      "skill-6-what-the-evidence-actually-shows-200d4b4f4f"
+    ]
+  },
+  {
+    "id": "skill-6-what-the-evidence-actually-shows-200d4b4f4f",
+    "purpose": "6 what the evidence actually shows",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/002-6-what-the-evidence-actually-shows.md",
+    "requires": [
+      "skill-5-fundamentals-950a6b184b"
+    ],
+    "links": [
+      "skill-7-brand-and-advertising-3866cef073"
+    ]
+  },
+  {
+    "id": "skill-7-brand-and-advertising-3866cef073",
+    "purpose": "7 brand and advertising",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/003-7-brand-and-advertising.md",
+    "requires": [
+      "skill-6-what-the-evidence-actually-shows-200d4b4f4f"
+    ],
+    "links": [
+      "skill-8-measurement-and-attribution-ef43132267"
+    ]
+  },
+  {
+    "id": "skill-8-measurement-and-attribution-ef43132267",
+    "purpose": "8 measurement and attribution",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/004-8-measurement-and-attribution.md",
+    "requires": [
+      "skill-7-brand-and-advertising-3866cef073"
+    ],
+    "links": [
+      "skill-9-channels-4a6b813015"
+    ]
+  },
+  {
+    "id": "skill-9-channels-4a6b813015",
+    "purpose": "9 channels",
+    "source": "src/vibey_tools/skills/plugins/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/SKILL.md",
+    "output": "docs/microslices/skills/business-marketing-sales-law/skills/biz-marketing-evidence-brand-and-attribution/005-9-channels.md",
+    "requires": [
+      "skill-8-measurement-and-attribution-ef43132267"
+    ],
+    "links": []
+  }
+]

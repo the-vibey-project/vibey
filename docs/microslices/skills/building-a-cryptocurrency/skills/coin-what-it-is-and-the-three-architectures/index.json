@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-1-what-a-cryptocurrency-actually-is-e7c306d4a9",
+    "purpose": "1 what a cryptocurrency actually is",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-what-it-is-and-the-three-architectures/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-what-it-is-and-the-three-architectures/001-1-what-a-cryptocurrency-actually-is.md",
+    "requires": [],
+    "links": []
+  }
+]

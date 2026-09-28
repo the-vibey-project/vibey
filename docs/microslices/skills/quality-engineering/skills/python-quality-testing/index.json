@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-test-shape-models-choosing-the-right-distribution-8c550ebcea",
+    "purpose": "test shape models choosing the right distribution",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/001-test-shape-models-choosing-the-right-distribution.md",
+    "requires": [],
+    "links": [
+      "skill-smurf-evaluating-test-portfolio-health-e5e2ac8235"
+    ]
+  },
+  {
+    "id": "skill-smurf-evaluating-test-portfolio-health-e5e2ac8235",
+    "purpose": "smurf evaluating test portfolio health",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/002-smurf-evaluating-test-portfolio-health.md",
+    "requires": [
+      "skill-test-shape-models-choosing-the-right-distribution-8c550ebcea"
+    ],
+    "links": [
+      "skill-iso-iec-25010-2023-quality-characteristics-1d07042353"
+    ]
+  },
+  {
+    "id": "skill-iso-iec-25010-2023-quality-characteristics-1d07042353",
+    "purpose": "iso iec 25010 2023 quality characteristics",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/003-iso-iec-25010-2023-quality-characteristics.md",
+    "requires": [
+      "skill-smurf-evaluating-test-portfolio-health-e5e2ac8235"
+    ],
+    "links": [
+      "skill-black-box-test-design-techniques-1d068a0615"
+    ]
+  },
+  {
+    "id": "skill-black-box-test-design-techniques-1d068a0615",
+    "purpose": "black box test design techniques",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/004-black-box-test-design-techniques.md",
+    "requires": [
+      "skill-iso-iec-25010-2023-quality-characteristics-1d07042353"
+    ],
+    "links": [
+      "skill-pytest-the-complete-reference-dd27bcd55e"
+    ]
+  },
+  {
+    "id": "skill-pytest-the-complete-reference-dd27bcd55e",
+    "purpose": "pytest the complete reference",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/005-pytest-the-complete-reference.md",
+    "requires": [
+      "skill-black-box-test-design-techniques-1d068a0615"
+    ],
+    "links": [
+      "skill-tdd-red-green-refactor-72bf781e1e"
+    ]
+  },
+  {
+    "id": "skill-tdd-red-green-refactor-72bf781e1e",
+    "purpose": "tdd red green refactor",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/006-tdd-red-green-refactor.md",
+    "requires": [
+      "skill-pytest-the-complete-reference-dd27bcd55e"
+    ],
+    "links": [
+      "skill-bdd-with-pytest-bdd-df49ce9f51"
+    ]
+  },
+  {
+    "id": "skill-bdd-with-pytest-bdd-df49ce9f51",
+    "purpose": "bdd with pytest bdd",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/007-bdd-with-pytest-bdd.md",
+    "requires": [
+      "skill-tdd-red-green-refactor-72bf781e1e"
+    ],
+    "links": [
+      "skill-contract-testing-with-pact-886c18bf74"
+    ]
+  },
+  {
+    "id": "skill-contract-testing-with-pact-886c18bf74",
+    "purpose": "contract testing with pact",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/008-contract-testing-with-pact.md",
+    "requires": [
+      "skill-bdd-with-pytest-bdd-df49ce9f51"
+    ],
+    "links": [
+      "skill-property-based-testing-with-hypothesis-34767fbc51"
+    ]
+  },
+  {
+    "id": "skill-property-based-testing-with-hypothesis-34767fbc51",
+    "purpose": "property based testing with hypothesis",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/009-property-based-testing-with-hypothesis.md",
+    "requires": [
+      "skill-contract-testing-with-pact-886c18bf74"
+    ],
+    "links": [
+      "skill-mutation-testing-1ec2aedb26"
+    ]
+  },
+  {
+    "id": "skill-mutation-testing-1ec2aedb26",
+    "purpose": "mutation testing",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/010-mutation-testing.md",
+    "requires": [
+      "skill-property-based-testing-with-hypothesis-34767fbc51"
+    ],
+    "links": [
+      "skill-static-analysis-the-ruff-led-stack-0ac1d5e4c5"
+    ]
+  },
+  {
+    "id": "skill-static-analysis-the-ruff-led-stack-0ac1d5e4c5",
+    "purpose": "static analysis the ruff led stack",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/011-static-analysis-the-ruff-led-stack.md",
+    "requires": [
+      "skill-mutation-testing-1ec2aedb26"
+    ],
+    "links": [
+      "skill-azure-cloud-native-testing-2e886e185f"
+    ]
+  },
+  {
+    "id": "skill-azure-cloud-native-testing-2e886e185f",
+    "purpose": "azure cloud native testing",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/012-azure-cloud-native-testing.md",
+    "requires": [
+      "skill-static-analysis-the-ruff-led-stack-0ac1d5e4c5"
+    ],
+    "links": [
+      "skill-azure-devops-pipeline-for-python-68aa18180b"
+    ]
+  },
+  {
+    "id": "skill-azure-devops-pipeline-for-python-68aa18180b",
+    "purpose": "azure devops pipeline for python",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/013-azure-devops-pipeline-for-python.md",
+    "requires": [
+      "skill-azure-cloud-native-testing-2e886e185f"
+    ],
+    "links": [
+      "skill-coverage-targets-and-thresholds-55251a4804"
+    ]
+  },
+  {
+    "id": "skill-coverage-targets-and-thresholds-55251a4804",
+    "purpose": "coverage targets and thresholds",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/python-quality-testing/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/python-quality-testing/014-coverage-targets-and-thresholds.md",
+    "requires": [
+      "skill-azure-devops-pipeline-for-python-68aa18180b"
+    ],
+    "links": []
+  }
+]

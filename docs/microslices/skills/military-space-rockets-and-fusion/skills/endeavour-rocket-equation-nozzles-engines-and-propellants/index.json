@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-the-three-facts-that-generate-rocket-engineering-76672f2c79",
+    "purpose": "the three facts that generate rocket engineering",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/001-the-three-facts-that-generate-rocket-engineering.md",
+    "requires": [],
+    "links": [
+      "skill-7-the-rocket-equation-staging-and-thrust-859667a789"
+    ]
+  },
+  {
+    "id": "skill-7-the-rocket-equation-staging-and-thrust-859667a789",
+    "purpose": "7 the rocket equation staging and thrust",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/002-7-the-rocket-equation-staging-and-thrust.md",
+    "requires": [
+      "skill-the-three-facts-that-generate-rocket-engineering-76672f2c79"
+    ],
+    "links": [
+      "skill-8-nozzle-thermodynamics-the-c-c-f-factorization-and-the-combustion-chamber-eaf6cdcfc6"
+    ]
+  },
+  {
+    "id": "skill-8-nozzle-thermodynamics-the-c-c-f-factorization-and-the-combustion-chamber-eaf6cdcfc6",
+    "purpose": "8 nozzle thermodynamics the c c f factorization and the combustion chamber",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/003-8-nozzle-thermodynamics-the-c-c-f-factorization-and-the-combustion-chamber.md",
+    "requires": [
+      "skill-7-the-rocket-equation-staging-and-thrust-859667a789"
+    ],
+    "links": [
+      "skill-9-turbomachinery-engine-cycles-and-cooling-ca34e541a4"
+    ]
+  },
+  {
+    "id": "skill-9-turbomachinery-engine-cycles-and-cooling-ca34e541a4",
+    "purpose": "9 turbomachinery engine cycles and cooling",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/004-9-turbomachinery-engine-cycles-and-cooling.md",
+    "requires": [
+      "skill-8-nozzle-thermodynamics-the-c-c-f-factorization-and-the-combustion-chamber-eaf6cdcfc6"
+    ],
+    "links": [
+      "skill-10-propellants-and-density-impulse-5ffc757a7d"
+    ]
+  },
+  {
+    "id": "skill-10-propellants-and-density-impulse-5ffc757a7d",
+    "purpose": "10 propellants and density impulse",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/005-10-propellants-and-density-impulse.md",
+    "requires": [
+      "skill-9-turbomachinery-engine-cycles-and-cooling-ca34e541a4"
+    ],
+    "links": [
+      "skill-quick-reference-45bf6d3664"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-45bf6d3664",
+    "purpose": "quick reference",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-rocket-equation-nozzles-engines-and-propellants/006-quick-reference.md",
+    "requires": [
+      "skill-10-propellants-and-density-impulse-5ffc757a7d"
+    ],
+    "links": []
+  }
+]

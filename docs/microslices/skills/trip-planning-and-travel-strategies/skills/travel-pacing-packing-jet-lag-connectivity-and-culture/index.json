@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-itinerary-pacing-3b688aca7c",
+    "purpose": "17 itinerary pacing",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/001-17-itinerary-pacing.md",
+    "requires": [],
+    "links": [
+      "skill-18-packing-2e3ca28ccb"
+    ]
+  },
+  {
+    "id": "skill-18-packing-2e3ca28ccb",
+    "purpose": "18 packing",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/002-18-packing.md",
+    "requires": [
+      "skill-17-itinerary-pacing-3b688aca7c"
+    ],
+    "links": [
+      "skill-19-jet-lag-f5fd37ad8a"
+    ]
+  },
+  {
+    "id": "skill-19-jet-lag-f5fd37ad8a",
+    "purpose": "19 jet lag",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/003-19-jet-lag.md",
+    "requires": [
+      "skill-18-packing-2e3ca28ccb"
+    ],
+    "links": [
+      "skill-20-connectivity-and-navigation-a4674b7231"
+    ]
+  },
+  {
+    "id": "skill-20-connectivity-and-navigation-a4674b7231",
+    "purpose": "20 connectivity and navigation",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/004-20-connectivity-and-navigation.md",
+    "requires": [
+      "skill-19-jet-lag-f5fd37ad8a"
+    ],
+    "links": [
+      "skill-21-language-and-culture-eb76437a64"
+    ]
+  },
+  {
+    "id": "skill-21-language-and-culture-eb76437a64",
+    "purpose": "21 language and culture",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/005-21-language-and-culture.md",
+    "requires": [
+      "skill-20-connectivity-and-navigation-a4674b7231"
+    ],
+    "links": [
+      "skill-22-food-and-water-9f9e5b77a0"
+    ]
+  },
+  {
+    "id": "skill-22-food-and-water-9f9e5b77a0",
+    "purpose": "22 food and water",
+    "source": "src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/SKILL.md",
+    "output": "docs/microslices/skills/trip-planning-and-travel-strategies/skills/travel-pacing-packing-jet-lag-connectivity-and-culture/006-22-food-and-water.md",
+    "requires": [
+      "skill-21-language-and-culture-eb76437a64"
+    ],
+    "links": []
+  }
+]

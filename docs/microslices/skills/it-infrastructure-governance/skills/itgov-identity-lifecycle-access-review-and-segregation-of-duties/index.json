@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-9-identity-lifecycle-joiner-mover-leaver-c255d736fb",
+    "purpose": "9 identity lifecycle joiner mover leaver",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties/001-9-identity-lifecycle-joiner-mover-leaver.md",
+    "requires": [],
+    "links": [
+      "skill-10-access-review-and-certification-c69c54d683"
+    ]
+  },
+  {
+    "id": "skill-10-access-review-and-certification-c69c54d683",
+    "purpose": "10 access review and certification",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties/002-10-access-review-and-certification.md",
+    "requires": [
+      "skill-9-identity-lifecycle-joiner-mover-leaver-c255d736fb"
+    ],
+    "links": [
+      "skill-11-segregation-of-duties-1d9ac53f33"
+    ]
+  },
+  {
+    "id": "skill-11-segregation-of-duties-1d9ac53f33",
+    "purpose": "11 segregation of duties",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-identity-lifecycle-access-review-and-segregation-of-duties/003-11-segregation-of-duties.md",
+    "requires": [
+      "skill-10-access-review-and-certification-c69c54d683"
+    ],
+    "links": []
+  }
+]

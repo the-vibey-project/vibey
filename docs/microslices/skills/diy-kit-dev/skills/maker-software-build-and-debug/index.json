@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-the-software-layer-7bd50055ad",
+    "purpose": "8 the software layer",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-software-build-and-debug/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-software-build-and-debug/001-8-the-software-layer.md",
+    "requires": [],
+    "links": [
+      "skill-9-building-it-physically-ef13a49de0"
+    ]
+  },
+  {
+    "id": "skill-9-building-it-physically-ef13a49de0",
+    "purpose": "9 building it physically",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-software-build-and-debug/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-software-build-and-debug/002-9-building-it-physically.md",
+    "requires": [
+      "skill-8-the-software-layer-7bd50055ad"
+    ],
+    "links": [
+      "skill-10-debugging-hardware-a011fcbc60"
+    ]
+  },
+  {
+    "id": "skill-10-debugging-hardware-a011fcbc60",
+    "purpose": "10 debugging hardware",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-software-build-and-debug/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-software-build-and-debug/003-10-debugging-hardware.md",
+    "requires": [
+      "skill-9-building-it-physically-ef13a49de0"
+    ],
+    "links": []
+  }
+]

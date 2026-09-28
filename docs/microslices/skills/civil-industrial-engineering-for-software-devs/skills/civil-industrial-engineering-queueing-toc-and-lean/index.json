@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-11-what-industrial-engineering-actually-is-5694cadd39",
+    "purpose": "11 what industrial engineering actually is",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/001-11-what-industrial-engineering-actually-is.md",
+    "requires": [],
+    "links": [
+      "skill-12-queueing-theory-and-little-s-law-8f0aad9790"
+    ]
+  },
+  {
+    "id": "skill-12-queueing-theory-and-little-s-law-8f0aad9790",
+    "purpose": "12 queueing theory and little s law",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/002-12-queueing-theory-and-little-s-law.md",
+    "requires": [
+      "skill-11-what-industrial-engineering-actually-is-5694cadd39"
+    ],
+    "links": [
+      "skill-13-theory-of-constraints-c1173e078b"
+    ]
+  },
+  {
+    "id": "skill-13-theory-of-constraints-c1173e078b",
+    "purpose": "13 theory of constraints",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/003-13-theory-of-constraints.md",
+    "requires": [
+      "skill-12-queueing-theory-and-little-s-law-8f0aad9790"
+    ],
+    "links": [
+      "skill-14-lean-and-the-toyota-production-system-6e9efebacd"
+    ]
+  },
+  {
+    "id": "skill-14-lean-and-the-toyota-production-system-6e9efebacd",
+    "purpose": "14 lean and the toyota production system",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/004-14-lean-and-the-toyota-production-system.md",
+    "requires": [
+      "skill-13-theory-of-constraints-c1173e078b"
+    ],
+    "links": [
+      "skill-15-six-sigma-and-statistical-process-control-2127d6bdf2"
+    ]
+  },
+  {
+    "id": "skill-15-six-sigma-and-statistical-process-control-2127d6bdf2",
+    "purpose": "15 six sigma and statistical process control",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/005-15-six-sigma-and-statistical-process-control.md",
+    "requires": [
+      "skill-14-lean-and-the-toyota-production-system-6e9efebacd"
+    ],
+    "links": [
+      "skill-16-work-measurement-and-standard-work-9dbd0bcb3d"
+    ]
+  },
+  {
+    "id": "skill-16-work-measurement-and-standard-work-9dbd0bcb3d",
+    "purpose": "16 work measurement and standard work",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-industrial-engineering-queueing-toc-and-lean/006-16-work-measurement-and-standard-work.md",
+    "requires": [
+      "skill-15-six-sigma-and-statistical-process-control-2127d6bdf2"
+    ],
+    "links": []
+  }
+]

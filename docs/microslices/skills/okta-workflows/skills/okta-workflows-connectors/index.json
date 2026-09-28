@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-okta-connector-fc8833e9b9",
+    "purpose": "okta connector",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-connectors/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-connectors/001-okta-connector.md",
+    "requires": [],
+    "links": [
+      "skill-azure-ad-microsoft-entra-id-connector-531e51af99"
+    ]
+  },
+  {
+    "id": "skill-azure-ad-microsoft-entra-id-connector-531e51af99",
+    "purpose": "azure ad microsoft entra id connector",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-connectors/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-connectors/002-azure-ad-microsoft-entra-id-connector.md",
+    "requires": [
+      "skill-okta-connector-fc8833e9b9"
+    ],
+    "links": []
+  }
+]

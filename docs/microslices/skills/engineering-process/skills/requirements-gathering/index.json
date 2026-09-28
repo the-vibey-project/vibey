@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-core-framework-9977ce2216",
+    "purpose": "core framework",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/001-core-framework.md",
+    "requires": [],
+    "links": [
+      "skill-right-sizing-the-method-6d309c5ac8"
+    ]
+  },
+  {
+    "id": "skill-right-sizing-the-method-6d309c5ac8",
+    "purpose": "right sizing the method",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/002-right-sizing-the-method.md",
+    "requires": [
+      "skill-core-framework-9977ce2216"
+    ],
+    "links": [
+      "skill-stakeholder-analysis-1398bb22b6"
+    ]
+  },
+  {
+    "id": "skill-stakeholder-analysis-1398bb22b6",
+    "purpose": "stakeholder analysis",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/003-stakeholder-analysis.md",
+    "requires": [
+      "skill-right-sizing-the-method-6d309c5ac8"
+    ],
+    "links": [
+      "skill-elicitation-techniques-b12fcc9423"
+    ]
+  },
+  {
+    "id": "skill-elicitation-techniques-b12fcc9423",
+    "purpose": "elicitation techniques",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/004-elicitation-techniques.md",
+    "requires": [
+      "skill-stakeholder-analysis-1398bb22b6"
+    ],
+    "links": [
+      "skill-domain-modeling-6572b20258"
+    ]
+  },
+  {
+    "id": "skill-domain-modeling-6572b20258",
+    "purpose": "domain modeling",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/005-domain-modeling.md",
+    "requires": [
+      "skill-elicitation-techniques-b12fcc9423"
+    ],
+    "links": [
+      "skill-prioritization-frameworks-b02a8af4b7"
+    ]
+  },
+  {
+    "id": "skill-prioritization-frameworks-b02a8af4b7",
+    "purpose": "prioritization frameworks",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/006-prioritization-frameworks.md",
+    "requires": [
+      "skill-domain-modeling-6572b20258"
+    ],
+    "links": [
+      "skill-nfr-specification-e5c6c10682"
+    ]
+  },
+  {
+    "id": "skill-nfr-specification-e5c6c10682",
+    "purpose": "nfr specification",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/007-nfr-specification.md",
+    "requires": [
+      "skill-prioritization-frameworks-b02a8af4b7"
+    ],
+    "links": [
+      "skill-validation-and-analysis-cc33d7c0fa"
+    ]
+  },
+  {
+    "id": "skill-validation-and-analysis-cc33d7c0fa",
+    "purpose": "validation and analysis",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/008-validation-and-analysis.md",
+    "requires": [
+      "skill-nfr-specification-e5c6c10682"
+    ],
+    "links": [
+      "skill-documentation-standards-0b0f1bcfe4"
+    ]
+  },
+  {
+    "id": "skill-documentation-standards-0b0f1bcfe4",
+    "purpose": "documentation standards",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/009-documentation-standards.md",
+    "requires": [
+      "skill-validation-and-analysis-cc33d7c0fa"
+    ],
+    "links": [
+      "skill-special-contexts-018af83196"
+    ]
+  },
+  {
+    "id": "skill-special-contexts-018af83196",
+    "purpose": "special contexts",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/010-special-contexts.md",
+    "requires": [
+      "skill-documentation-standards-0b0f1bcfe4"
+    ],
+    "links": [
+      "skill-continuous-discovery-teresa-torres-ae4963bfc2"
+    ]
+  },
+  {
+    "id": "skill-continuous-discovery-teresa-torres-ae4963bfc2",
+    "purpose": "continuous discovery teresa torres",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/011-continuous-discovery-teresa-torres.md",
+    "requires": [
+      "skill-special-contexts-018af83196"
+    ],
+    "links": [
+      "skill-ai-assisted-requirements-engineering-2024-2026-f1ea784c4a"
+    ]
+  },
+  {
+    "id": "skill-ai-assisted-requirements-engineering-2024-2026-f1ea784c4a",
+    "purpose": "ai assisted requirements engineering 2024 2026",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/012-ai-assisted-requirements-engineering-2024-2026.md",
+    "requires": [
+      "skill-continuous-discovery-teresa-torres-ae4963bfc2"
+    ],
+    "links": [
+      "skill-tooling-ecosystem-2026-dfd3f3400f"
+    ]
+  },
+  {
+    "id": "skill-tooling-ecosystem-2026-dfd3f3400f",
+    "purpose": "tooling ecosystem 2026",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/013-tooling-ecosystem-2026.md",
+    "requires": [
+      "skill-ai-assisted-requirements-engineering-2024-2026-f1ea784c4a"
+    ],
+    "links": [
+      "skill-key-evidence-and-caveats-9e3bff7dfb"
+    ]
+  },
+  {
+    "id": "skill-key-evidence-and-caveats-9e3bff7dfb",
+    "purpose": "key evidence and caveats",
+    "source": "src/vibey_tools/skills/plugins/engineering-process/skills/requirements-gathering/SKILL.md",
+    "output": "docs/microslices/skills/engineering-process/skills/requirements-gathering/014-key-evidence-and-caveats.md",
+    "requires": [
+      "skill-tooling-ecosystem-2026-dfd3f3400f"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-3b715e7079",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-shell-reference/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-shell-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-0ab2d6f525"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-0ab2d6f525",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-shell-reference/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-shell-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-3b715e7079"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-2d5bd2992a"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-2d5bd2992a",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-shell-reference/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-shell-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-0ab2d6f525"
+    ],
+    "links": [
+      "skill-18-the-canon-9b5a2f6566"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-9b5a2f6566",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-shell-reference/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-shell-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-2d5bd2992a"
+    ],
+    "links": [
+      "skill-19-quick-reference-2dd61e90a8"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-2dd61e90a8",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-shell-reference/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-shell-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-9b5a2f6566"
+    ],
+    "links": [
+      "skill-20-sources-and-method-509813b24b"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-509813b24b",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-shell-reference/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-shell-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-2dd61e90a8"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-1-the-protocol-fundamentals-stable-9c05e1c9e4",
+    "purpose": "1 the protocol fundamentals stable",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element/001-1-the-protocol-fundamentals-stable.md",
+    "requires": [],
+    "links": [
+      "skill-2-matrix-2-0-verified-and-where-it-stands-in-sept-2026-84446e49d5"
+    ]
+  },
+  {
+    "id": "skill-2-matrix-2-0-verified-and-where-it-stands-in-sept-2026-84446e49d5",
+    "purpose": "2 matrix 2 0 verified and where it stands in sept 2026",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element/002-2-matrix-2-0-verified-and-where-it-stands-in-sept-2026.md",
+    "requires": [
+      "skill-1-the-protocol-fundamentals-stable-9c05e1c9e4"
+    ],
+    "links": [
+      "skill-3-the-ecosystem-organisations-money-and-who-s-maintaining-what-verified-f8dec783ce"
+    ]
+  },
+  {
+    "id": "skill-3-the-ecosystem-organisations-money-and-who-s-maintaining-what-verified-f8dec783ce",
+    "purpose": "3 the ecosystem organisations money and who s maintaining what verified",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element/003-3-the-ecosystem-organisations-money-and-who-s-maintaining-what-verified.md",
+    "requires": [
+      "skill-2-matrix-2-0-verified-and-where-it-stands-in-sept-2026-84446e49d5"
+    ],
+    "links": [
+      "skill-4-operator-handbook-running-a-homeserver-the-perspective-nobody-else-can-offer-79e1cd26f8"
+    ]
+  },
+  {
+    "id": "skill-4-operator-handbook-running-a-homeserver-the-perspective-nobody-else-can-offer-79e1cd26f8",
+    "purpose": "4 operator handbook running a homeserver the perspective nobody else can offer",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element/004-4-operator-handbook-running-a-homeserver-the-perspective-nobody-else-can-offer.md",
+    "requires": [
+      "skill-3-the-ecosystem-organisations-money-and-who-s-maintaining-what-verified-f8dec783ce"
+    ],
+    "links": [
+      "skill-5-developer-perspective-bdf0fc09a3"
+    ]
+  },
+  {
+    "id": "skill-5-developer-perspective-bdf0fc09a3",
+    "purpose": "5 developer perspective",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element/005-5-developer-perspective.md",
+    "requires": [
+      "skill-4-operator-handbook-running-a-homeserver-the-perspective-nobody-else-can-offer-79e1cd26f8"
+    ],
+    "links": [
+      "skill-6-verdict-1d0598d182"
+    ]
+  },
+  {
+    "id": "skill-6-verdict-1d0598d182",
+    "purpose": "6 verdict",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element/006-6-verdict.md",
+    "requires": [
+      "skill-5-developer-perspective-bdf0fc09a3"
+    ],
+    "links": [
+      "skill-sources-this-file-81812533fc"
+    ]
+  },
+  {
+    "id": "skill-sources-this-file-81812533fc",
+    "purpose": "sources this file",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-matrix-and-element/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-matrix-and-element/007-sources-this-file.md",
+    "requires": [
+      "skill-6-verdict-1d0598d182"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-14-why-food-spoils-7da36d7273",
+    "purpose": "14 why food spoils",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/001-14-why-food-spoils.md",
+    "requires": [],
+    "links": [
+      "skill-15-the-chain-as-a-system-f3ef28dcee"
+    ]
+  },
+  {
+    "id": "skill-15-the-chain-as-a-system-f3ef28dcee",
+    "purpose": "15 the chain as a system",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/002-15-the-chain-as-a-system.md",
+    "requires": [
+      "skill-14-why-food-spoils-7da36d7273"
+    ],
+    "links": [
+      "skill-16-temperature-limits-ff045be24b"
+    ]
+  },
+  {
+    "id": "skill-16-temperature-limits-ff045be24b",
+    "purpose": "16 temperature limits",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/003-16-temperature-limits.md",
+    "requires": [
+      "skill-15-the-chain-as-a-system-f3ef28dcee"
+    ],
+    "links": [
+      "skill-17-chilling-and-freezing-f1b9a46130"
+    ]
+  },
+  {
+    "id": "skill-17-chilling-and-freezing-f1b9a46130",
+    "purpose": "17 chilling and freezing",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/004-17-chilling-and-freezing.md",
+    "requires": [
+      "skill-16-temperature-limits-ff045be24b"
+    ],
+    "links": [
+      "skill-18-controlled-and-modified-atmosphere-a1d4dec0b7"
+    ]
+  },
+  {
+    "id": "skill-18-controlled-and-modified-atmosphere-a1d4dec0b7",
+    "purpose": "18 controlled and modified atmosphere",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/005-18-controlled-and-modified-atmosphere.md",
+    "requires": [
+      "skill-17-chilling-and-freezing-f1b9a46130"
+    ],
+    "links": [
+      "skill-19-transport-refrigeration-0f958334b3"
+    ]
+  },
+  {
+    "id": "skill-19-transport-refrigeration-0f958334b3",
+    "purpose": "19 transport refrigeration",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/006-19-transport-refrigeration.md",
+    "requires": [
+      "skill-18-controlled-and-modified-atmosphere-a1d4dec0b7"
+    ],
+    "links": [
+      "skill-20-monitoring-and-validation-17c16f31ce"
+    ]
+  },
+  {
+    "id": "skill-20-monitoring-and-validation-17c16f31ce",
+    "purpose": "20 monitoring and validation",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/007-20-monitoring-and-validation.md",
+    "requires": [
+      "skill-19-transport-refrigeration-0f958334b3"
+    ],
+    "links": [
+      "skill-21-pharmaceutical-cold-chain-862ac5c010"
+    ]
+  },
+  {
+    "id": "skill-21-pharmaceutical-cold-chain-862ac5c010",
+    "purpose": "21 pharmaceutical cold chain",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cold-chain-temperature-limits-and-validation/008-21-pharmaceutical-cold-chain.md",
+    "requires": [
+      "skill-20-monitoring-and-validation-17c16f31ce"
+    ],
+    "links": []
+  }
+]

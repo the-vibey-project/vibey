@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-24-what-s-live-checked-august-2026-f21b7b38d0",
+    "purpose": "24 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-reference/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-reference/001-24-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-25-misconceptions-d2d869c60a"
+    ]
+  },
+  {
+    "id": "skill-25-misconceptions-d2d869c60a",
+    "purpose": "25 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-reference/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-reference/002-25-misconceptions.md",
+    "requires": [
+      "skill-24-what-s-live-checked-august-2026-f21b7b38d0"
+    ],
+    "links": [
+      "skill-26-numbers-01afc4696e"
+    ]
+  },
+  {
+    "id": "skill-26-numbers-01afc4696e",
+    "purpose": "26 numbers",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-reference/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-reference/003-26-numbers.md",
+    "requires": [
+      "skill-25-misconceptions-d2d869c60a"
+    ],
+    "links": [
+      "skill-27-sources-040e124670"
+    ]
+  },
+  {
+    "id": "skill-27-sources-040e124670",
+    "purpose": "27 sources",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-reference/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-reference/004-27-sources.md",
+    "requires": [
+      "skill-26-numbers-01afc4696e"
+    ],
+    "links": [
+      "skill-28-quick-reference-29fa2d1eba"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-29fa2d1eba",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-reference/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-reference/005-28-quick-reference.md",
+    "requires": [
+      "skill-27-sources-040e124670"
+    ],
+    "links": [
+      "skill-29-method-f4e1cc7f32"
+    ]
+  },
+  {
+    "id": "skill-29-method-f4e1cc7f32",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-reference/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-reference/006-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-29fa2d1eba"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-fission-physics-89ff8cf537",
+    "purpose": "5 fission physics",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types/001-5-fission-physics.md",
+    "requires": [],
+    "links": [
+      "skill-6-reactor-physics-526157a5af"
+    ]
+  },
+  {
+    "id": "skill-6-reactor-physics-526157a5af",
+    "purpose": "6 reactor physics",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types/002-6-reactor-physics.md",
+    "requires": [
+      "skill-5-fission-physics-89ff8cf537"
+    ],
+    "links": [
+      "skill-7-reactor-types-70582a2380"
+    ]
+  },
+  {
+    "id": "skill-7-reactor-types-70582a2380",
+    "purpose": "7 reactor types",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fission-reactor-physics-and-reactor-types/003-7-reactor-types.md",
+    "requires": [
+      "skill-6-reactor-physics-526157a5af"
+    ],
+    "links": []
+  }
+]

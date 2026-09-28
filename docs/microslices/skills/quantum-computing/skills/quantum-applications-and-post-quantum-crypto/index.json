@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-11-applications-eb3cf9f7fe",
+    "purpose": "11 applications",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-applications-and-post-quantum-crypto/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-applications-and-post-quantum-crypto/001-11-applications.md",
+    "requires": [],
+    "links": [
+      "skill-12-quantum-networking-and-sensing-dce2c7ef2e"
+    ]
+  },
+  {
+    "id": "skill-12-quantum-networking-and-sensing-dce2c7ef2e",
+    "purpose": "12 quantum networking and sensing",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-applications-and-post-quantum-crypto/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-applications-and-post-quantum-crypto/002-12-quantum-networking-and-sensing.md",
+    "requires": [
+      "skill-11-applications-eb3cf9f7fe"
+    ],
+    "links": [
+      "skill-13-post-quantum-cryptography-246c9f6706"
+    ]
+  },
+  {
+    "id": "skill-13-post-quantum-cryptography-246c9f6706",
+    "purpose": "13 post quantum cryptography",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-applications-and-post-quantum-crypto/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-applications-and-post-quantum-crypto/003-13-post-quantum-cryptography.md",
+    "requires": [
+      "skill-12-quantum-networking-and-sensing-dce2c7ef2e"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-cdc85a380f",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-transforms-and-projective-geometry-13dcf23f1f"
+    ]
+  },
+  {
+    "id": "skill-1-transforms-and-projective-geometry-13dcf23f1f",
+    "purpose": "1 transforms and projective geometry",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/002-1-transforms-and-projective-geometry.md",
+    "requires": [
+      "skill-0-routing-cdc85a380f"
+    ],
+    "links": [
+      "skill-2-rasterization-330f988324"
+    ]
+  },
+  {
+    "id": "skill-2-rasterization-330f988324",
+    "purpose": "2 rasterization",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/003-2-rasterization.md",
+    "requires": [
+      "skill-1-transforms-and-projective-geometry-13dcf23f1f"
+    ],
+    "links": [
+      "skill-3-shading-and-pbr-9a061209f6"
+    ]
+  },
+  {
+    "id": "skill-3-shading-and-pbr-9a061209f6",
+    "purpose": "3 shading and pbr",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/004-3-shading-and-pbr.md",
+    "requires": [
+      "skill-2-rasterization-330f988324"
+    ],
+    "links": [
+      "skill-4-ray-tracing-and-the-rendering-equation-0089667957"
+    ]
+  },
+  {
+    "id": "skill-4-ray-tracing-and-the-rendering-equation-0089667957",
+    "purpose": "4 ray tracing and the rendering equation",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/005-4-ray-tracing-and-the-rendering-equation.md",
+    "requires": [
+      "skill-3-shading-and-pbr-9a061209f6"
+    ],
+    "links": []
+  }
+]

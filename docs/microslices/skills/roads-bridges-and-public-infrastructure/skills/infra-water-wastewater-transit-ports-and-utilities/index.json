@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-14-water-supply-836e690de8",
+    "purpose": "14 water supply",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/001-14-water-supply.md",
+    "requires": [],
+    "links": [
+      "skill-15-wastewater-and-stormwater-f92d3e5f6a"
+    ]
+  },
+  {
+    "id": "skill-15-wastewater-and-stormwater-f92d3e5f6a",
+    "purpose": "15 wastewater and stormwater",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/002-15-wastewater-and-stormwater.md",
+    "requires": [
+      "skill-14-water-supply-836e690de8"
+    ],
+    "links": [
+      "skill-16-transit-1656d6ce5e"
+    ]
+  },
+  {
+    "id": "skill-16-transit-1656d6ce5e",
+    "purpose": "16 transit",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/003-16-transit.md",
+    "requires": [
+      "skill-15-wastewater-and-stormwater-f92d3e5f6a"
+    ],
+    "links": [
+      "skill-17-ports-rail-and-airports-f4d95b900b"
+    ]
+  },
+  {
+    "id": "skill-17-ports-rail-and-airports-f4d95b900b",
+    "purpose": "17 ports rail and airports",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/004-17-ports-rail-and-airports.md",
+    "requires": [
+      "skill-16-transit-1656d6ce5e"
+    ],
+    "links": [
+      "skill-18-utility-coordination-db2fea4e6a"
+    ]
+  },
+  {
+    "id": "skill-18-utility-coordination-db2fea4e6a",
+    "purpose": "18 utility coordination",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-water-wastewater-transit-ports-and-utilities/005-18-utility-coordination.md",
+    "requires": [
+      "skill-17-ports-rail-and-airports-f4d95b900b"
+    ],
+    "links": []
+  }
+]

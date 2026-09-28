@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-the-default-answer-is-no-change-bdce511c63",
+    "purpose": "the default answer is no change",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-currency-audit-method/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-currency-audit-method/001-the-default-answer-is-no-change.md",
+    "requires": [],
+    "links": [
+      "skill-the-three-durability-tiers-ae599ef06b"
+    ]
+  },
+  {
+    "id": "skill-the-three-durability-tiers-ae599ef06b",
+    "purpose": "the three durability tiers",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-currency-audit-method/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-currency-audit-method/002-the-three-durability-tiers.md",
+    "requires": [
+      "skill-the-default-answer-is-no-change-bdce511c63"
+    ],
+    "links": [
+      "skill-what-counts-as-a-finding-e29459d6e8"
+    ]
+  },
+  {
+    "id": "skill-what-counts-as-a-finding-e29459d6e8",
+    "purpose": "what counts as a finding",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-currency-audit-method/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-currency-audit-method/003-what-counts-as-a-finding.md",
+    "requires": [
+      "skill-the-three-durability-tiers-ae599ef06b"
+    ],
+    "links": [
+      "skill-the-decision-procedure-9c3879bc89"
+    ]
+  },
+  {
+    "id": "skill-the-decision-procedure-9c3879bc89",
+    "purpose": "the decision procedure",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-currency-audit-method/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-currency-audit-method/004-the-decision-procedure.md",
+    "requires": [
+      "skill-what-counts-as-a-finding-e29459d6e8"
+    ],
+    "links": [
+      "skill-scoping-a-run-50588e8e57"
+    ]
+  },
+  {
+    "id": "skill-scoping-a-run-50588e8e57",
+    "purpose": "scoping a run",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-currency-audit-method/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-currency-audit-method/005-scoping-a-run.md",
+    "requires": [
+      "skill-the-decision-procedure-9c3879bc89"
+    ],
+    "links": [
+      "skill-what-this-audit-is-not-338071cd8b"
+    ]
+  },
+  {
+    "id": "skill-what-this-audit-is-not-338071cd8b",
+    "purpose": "what this audit is not",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-currency-audit-method/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-currency-audit-method/006-what-this-audit-is-not.md",
+    "requires": [
+      "skill-scoping-a-run-50588e8e57"
+    ],
+    "links": []
+  }
+]

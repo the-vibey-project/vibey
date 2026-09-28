@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-053ae37fde",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-dns-is-for-e0585e14c4"
+    ]
+  },
+  {
+    "id": "skill-1-what-dns-is-for-e0585e14c4",
+    "purpose": "1 what dns is for",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/002-1-what-dns-is-for.md",
+    "requires": [
+      "skill-0-routing-053ae37fde"
+    ],
+    "links": [
+      "skill-2-the-namespace-c69b07636b"
+    ]
+  },
+  {
+    "id": "skill-2-the-namespace-c69b07636b",
+    "purpose": "2 the namespace",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/003-2-the-namespace.md",
+    "requires": [
+      "skill-1-what-dns-is-for-e0585e14c4"
+    ],
+    "links": [
+      "skill-3-resolution-31f0d7a086"
+    ]
+  },
+  {
+    "id": "skill-3-resolution-31f0d7a086",
+    "purpose": "3 resolution",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/004-3-resolution.md",
+    "requires": [
+      "skill-2-the-namespace-c69b07636b"
+    ],
+    "links": [
+      "skill-4-record-types-e482acf209"
+    ]
+  },
+  {
+    "id": "skill-4-record-types-e482acf209",
+    "purpose": "4 record types",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/005-4-record-types.md",
+    "requires": [
+      "skill-3-resolution-31f0d7a086"
+    ],
+    "links": [
+      "skill-5-zones-delegation-and-glue-fff60db48e"
+    ]
+  },
+  {
+    "id": "skill-5-zones-delegation-and-glue-fff60db48e",
+    "purpose": "5 zones delegation and glue",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-namespace-resolution-records-and-zones/006-5-zones-delegation-and-glue.md",
+    "requires": [
+      "skill-4-record-types-e482acf209"
+    ],
+    "links": []
+  }
+]

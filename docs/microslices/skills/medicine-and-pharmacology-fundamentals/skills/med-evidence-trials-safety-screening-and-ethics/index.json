@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-20-evidence-based-medicine-5edb5fe7a7",
+    "purpose": "20 evidence based medicine",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/001-20-evidence-based-medicine.md",
+    "requires": [],
+    "links": [
+      "skill-21-trial-methodology-and-its-pathologies-79630c8a4e"
+    ]
+  },
+  {
+    "id": "skill-21-trial-methodology-and-its-pathologies-79630c8a4e",
+    "purpose": "21 trial methodology and its pathologies",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/002-21-trial-methodology-and-its-pathologies.md",
+    "requires": [
+      "skill-20-evidence-based-medicine-5edb5fe7a7"
+    ],
+    "links": [
+      "skill-22-drug-development-and-regulation-0a76da539a"
+    ]
+  },
+  {
+    "id": "skill-22-drug-development-and-regulation-0a76da539a",
+    "purpose": "22 drug development and regulation",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/003-22-drug-development-and-regulation.md",
+    "requires": [
+      "skill-21-trial-methodology-and-its-pathologies-79630c8a4e"
+    ],
+    "links": [
+      "skill-23-patient-safety-c4495d0061"
+    ]
+  },
+  {
+    "id": "skill-23-patient-safety-c4495d0061",
+    "purpose": "23 patient safety",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/004-23-patient-safety.md",
+    "requires": [
+      "skill-22-drug-development-and-regulation-0a76da539a"
+    ],
+    "links": [
+      "skill-24-screening-23129b0be3"
+    ]
+  },
+  {
+    "id": "skill-24-screening-23129b0be3",
+    "purpose": "24 screening",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/005-24-screening.md",
+    "requires": [
+      "skill-23-patient-safety-c4495d0061"
+    ],
+    "links": [
+      "skill-25-public-health-versus-clinical-medicine-4f102b1579"
+    ]
+  },
+  {
+    "id": "skill-25-public-health-versus-clinical-medicine-4f102b1579",
+    "purpose": "25 public health versus clinical medicine",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/006-25-public-health-versus-clinical-medicine.md",
+    "requires": [
+      "skill-24-screening-23129b0be3"
+    ],
+    "links": [
+      "skill-26-ethics-8e6cf9994d"
+    ]
+  },
+  {
+    "id": "skill-26-ethics-8e6cf9994d",
+    "purpose": "26 ethics",
+    "source": "src/vibey_tools/skills/plugins/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/medicine-and-pharmacology-fundamentals/skills/med-evidence-trials-safety-screening-and-ethics/007-26-ethics.md",
+    "requires": [
+      "skill-25-public-health-versus-clinical-medicine-4f102b1579"
+    ],
+    "links": []
+  }
+]

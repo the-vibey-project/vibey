@@ -1,0 +1,154 @@
+[
+  {
+    "id": "skill-test-shape-models-match-your-architecture-642ec36b9c",
+    "purpose": "test shape models match your architecture",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/001-test-shape-models-match-your-architecture.md",
+    "requires": [],
+    "links": [
+      "skill-smurf-test-portfolio-health-evaluation-c360743786"
+    ]
+  },
+  {
+    "id": "skill-smurf-test-portfolio-health-evaluation-c360743786",
+    "purpose": "smurf test portfolio health evaluation",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/002-smurf-test-portfolio-health-evaluation.md",
+    "requires": [
+      "skill-test-shape-models-match-your-architecture-642ec36b9c"
+    ],
+    "links": [
+      "skill-tdd-vs-bdd-vs-atdd-when-to-use-each-c76976e23a"
+    ]
+  },
+  {
+    "id": "skill-tdd-vs-bdd-vs-atdd-when-to-use-each-c76976e23a",
+    "purpose": "tdd vs bdd vs atdd when to use each",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/003-tdd-vs-bdd-vs-atdd-when-to-use-each.md",
+    "requires": [
+      "skill-smurf-test-portfolio-health-evaluation-c360743786"
+    ],
+    "links": [
+      "skill-consumer-driven-contract-testing-bf5fe2b3f9"
+    ]
+  },
+  {
+    "id": "skill-consumer-driven-contract-testing-bf5fe2b3f9",
+    "purpose": "consumer driven contract testing",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/004-consumer-driven-contract-testing.md",
+    "requires": [
+      "skill-tdd-vs-bdd-vs-atdd-when-to-use-each-c76976e23a"
+    ],
+    "links": [
+      "skill-property-based-testing-with-hypothesis-00be087fe4"
+    ]
+  },
+  {
+    "id": "skill-property-based-testing-with-hypothesis-00be087fe4",
+    "purpose": "property based testing with hypothesis",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/005-property-based-testing-with-hypothesis.md",
+    "requires": [
+      "skill-consumer-driven-contract-testing-bf5fe2b3f9"
+    ],
+    "links": [
+      "skill-mutation-testing-validating-your-test-suite-93dbce25ed"
+    ]
+  },
+  {
+    "id": "skill-mutation-testing-validating-your-test-suite-93dbce25ed",
+    "purpose": "mutation testing validating your test suite",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/006-mutation-testing-validating-your-test-suite.md",
+    "requires": [
+      "skill-property-based-testing-with-hypothesis-00be087fe4"
+    ],
+    "links": [
+      "skill-test-doubles-mock-vs-stub-vs-spy-vs-fake-08d5f98e2d"
+    ]
+  },
+  {
+    "id": "skill-test-doubles-mock-vs-stub-vs-spy-vs-fake-08d5f98e2d",
+    "purpose": "test doubles mock vs stub vs spy vs fake",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/007-test-doubles-mock-vs-stub-vs-spy-vs-fake.md",
+    "requires": [
+      "skill-mutation-testing-validating-your-test-suite-93dbce25ed"
+    ],
+    "links": [
+      "skill-anti-patterns-1327788ce4"
+    ]
+  },
+  {
+    "id": "skill-anti-patterns-1327788ce4",
+    "purpose": "anti patterns",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/008-anti-patterns.md",
+    "requires": [
+      "skill-test-doubles-mock-vs-stub-vs-spy-vs-fake-08d5f98e2d"
+    ],
+    "links": [
+      "skill-test-data-management-fa76c76ab6"
+    ]
+  },
+  {
+    "id": "skill-test-data-management-fa76c76ab6",
+    "purpose": "test data management",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/009-test-data-management.md",
+    "requires": [
+      "skill-anti-patterns-1327788ce4"
+    ],
+    "links": [
+      "skill-performance-testing-strategy-5501763d28"
+    ]
+  },
+  {
+    "id": "skill-performance-testing-strategy-5501763d28",
+    "purpose": "performance testing strategy",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/010-performance-testing-strategy.md",
+    "requires": [
+      "skill-test-data-management-fa76c76ab6"
+    ],
+    "links": [
+      "skill-security-testing-integration-a3cc83ba37"
+    ]
+  },
+  {
+    "id": "skill-security-testing-integration-a3cc83ba37",
+    "purpose": "security testing integration",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/011-security-testing-integration.md",
+    "requires": [
+      "skill-performance-testing-strategy-5501763d28"
+    ],
+    "links": [
+      "skill-assessing-test-suite-health-diagnostic-questions-2047556988"
+    ]
+  },
+  {
+    "id": "skill-assessing-test-suite-health-diagnostic-questions-2047556988",
+    "purpose": "assessing test suite health diagnostic questions",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/012-assessing-test-suite-health-diagnostic-questions.md",
+    "requires": [
+      "skill-security-testing-integration-a3cc83ba37"
+    ],
+    "links": [
+      "skill-test-strategy-document-one-page-template-2416aa5af8"
+    ]
+  },
+  {
+    "id": "skill-test-strategy-document-one-page-template-2416aa5af8",
+    "purpose": "test strategy document one page template",
+    "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/test-strategy/SKILL.md",
+    "output": "docs/microslices/skills/quality-engineering/skills/test-strategy/013-test-strategy-document-one-page-template.md",
+    "requires": [
+      "skill-assessing-test-suite-health-diagnostic-questions-2047556988"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-18-text-buffer-data-structures-47a1c4ed3f",
+    "purpose": "18 text buffer data structures",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/001-18-text-buffer-data-structures.md",
+    "requires": [],
+    "links": [
+      "skill-19-rendering-9c43e9314b"
+    ]
+  },
+  {
+    "id": "skill-19-rendering-9c43e9314b",
+    "purpose": "19 rendering",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/002-19-rendering.md",
+    "requires": [
+      "skill-18-text-buffer-data-structures-47a1c4ed3f"
+    ],
+    "links": [
+      "skill-20-indexing-and-code-intelligence-a3836f583c"
+    ]
+  },
+  {
+    "id": "skill-20-indexing-and-code-intelligence-a3836f583c",
+    "purpose": "20 indexing and code intelligence",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/003-20-indexing-and-code-intelligence.md",
+    "requires": [
+      "skill-19-rendering-9c43e9314b"
+    ],
+    "links": [
+      "skill-21-the-jetbrains-platform-f753c8d65a"
+    ]
+  },
+  {
+    "id": "skill-21-the-jetbrains-platform-f753c8d65a",
+    "purpose": "21 the jetbrains platform",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/004-21-the-jetbrains-platform.md",
+    "requires": [
+      "skill-20-indexing-and-code-intelligence-a3836f583c"
+    ],
+    "links": [
+      "skill-22-terminal-ui-programming-722196a390"
+    ]
+  },
+  {
+    "id": "skill-22-terminal-ui-programming-722196a390",
+    "purpose": "22 terminal ui programming",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/005-22-terminal-ui-programming.md",
+    "requires": [
+      "skill-21-the-jetbrains-platform-f753c8d65a"
+    ],
+    "links": [
+      "skill-23-editor-performance-4200f50b38"
+    ]
+  },
+  {
+    "id": "skill-23-editor-performance-4200f50b38",
+    "purpose": "23 editor performance",
+    "source": "src/vibey_tools/skills/plugins/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/editors-ide-extension-development/skills/editor-internals-buffers-rendering-and-performance/006-23-editor-performance.md",
+    "requires": [
+      "skill-22-terminal-ui-programming-722196a390"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,178 @@
+[
+  {
+    "id": "skill-1-choose-the-protocol-shape-before-touching-crypto-de285f9273",
+    "purpose": "1 choose the protocol shape before touching crypto",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/001-1-choose-the-protocol-shape-before-touching-crypto.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-cryptography-stack-as-checklists-ae51596a6c"
+    ]
+  },
+  {
+    "id": "skill-2-the-cryptography-stack-as-checklists-ae51596a6c",
+    "purpose": "2 the cryptography stack as checklists",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/002-2-the-cryptography-stack-as-checklists.md",
+    "requires": [
+      "skill-1-choose-the-protocol-shape-before-touching-crypto-de285f9273"
+    ],
+    "links": [
+      "skill-2-5-the-server-you-have-to-write-anyway-fundamentals-stable-20c7089dc8"
+    ]
+  },
+  {
+    "id": "skill-2-5-the-server-you-have-to-write-anyway-fundamentals-stable-20c7089dc8",
+    "purpose": "2 5 the server you have to write anyway fundamentals stable",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/003-2-5-the-server-you-have-to-write-anyway-fundamentals-stable.md",
+    "requires": [
+      "skill-2-the-cryptography-stack-as-checklists-ae51596a6c"
+    ],
+    "links": [
+      "skill-3-the-metadata-budget-every-service-must-fill-this-table-5dc70bdbf5"
+    ]
+  },
+  {
+    "id": "skill-3-the-metadata-budget-every-service-must-fill-this-table-5dc70bdbf5",
+    "purpose": "3 the metadata budget every service must fill this table",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/004-3-the-metadata-budget-every-service-must-fill-this-table.md",
+    "requires": [
+      "skill-2-5-the-server-you-have-to-write-anyway-fundamentals-stable-20c7089dc8"
+    ],
+    "links": [
+      "skill-4-abuse-trust-and-safety-under-e2ee-the-part-everyone-forgets-to-design-6d5499f734"
+    ]
+  },
+  {
+    "id": "skill-4-abuse-trust-and-safety-under-e2ee-the-part-everyone-forgets-to-design-6d5499f734",
+    "purpose": "4 abuse trust and safety under e2ee the part everyone forgets to design",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/005-4-abuse-trust-and-safety-under-e2ee-the-part-everyone-forgets-to-design.md",
+    "requires": [
+      "skill-3-the-metadata-budget-every-service-must-fill-this-table-5dc70bdbf5"
+    ],
+    "links": [
+      "skill-5-the-unglamorous-80-b86b84f9aa"
+    ]
+  },
+  {
+    "id": "skill-5-the-unglamorous-80-b86b84f9aa",
+    "purpose": "5 the unglamorous 80",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/006-5-the-unglamorous-80.md",
+    "requires": [
+      "skill-4-abuse-trust-and-safety-under-e2ee-the-part-everyone-forgets-to-design-6d5499f734"
+    ],
+    "links": [
+      "skill-5-5-voice-video-and-real-time-the-webrtc-layer-you-inherit-fundamentals-stable-6b873310b7"
+    ]
+  },
+  {
+    "id": "skill-5-5-voice-video-and-real-time-the-webrtc-layer-you-inherit-fundamentals-stable-6b873310b7",
+    "purpose": "5 5 voice video and real time the webrtc layer you inherit fundamentals stable",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/007-5-5-voice-video-and-real-time-the-webrtc-layer-you-inherit-fundamentals-stable.md",
+    "requires": [
+      "skill-5-the-unglamorous-80-b86b84f9aa"
+    ],
+    "links": [
+      "skill-6-libraries-and-starting-points-all-actively-maintained-as-of-2026-c6f821b674"
+    ]
+  },
+  {
+    "id": "skill-6-libraries-and-starting-points-all-actively-maintained-as-of-2026-c6f821b674",
+    "purpose": "6 libraries and starting points all actively maintained as of 2026",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/008-6-libraries-and-starting-points-all-actively-maintained-as-of-2026.md",
+    "requires": [
+      "skill-5-5-voice-video-and-real-time-the-webrtc-layer-you-inherit-fundamentals-stable-6b873310b7"
+    ],
+    "links": [
+      "skill-7-pick-the-architecture-by-what-you-re-willing-to-be-responsible-for-6a0db3a1e9"
+    ]
+  },
+  {
+    "id": "skill-7-pick-the-architecture-by-what-you-re-willing-to-be-responsible-for-6a0db3a1e9",
+    "purpose": "7 pick the architecture by what you re willing to be responsible for",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/009-7-pick-the-architecture-by-what-you-re-willing-to-be-responsible-for.md",
+    "requires": [
+      "skill-6-libraries-and-starting-points-all-actively-maintained-as-of-2026-c6f821b674"
+    ],
+    "links": [
+      "skill-8-the-operations-checklist-matrix-flavoured-mostly-transferable-40fbd873bc"
+    ]
+  },
+  {
+    "id": "skill-8-the-operations-checklist-matrix-flavoured-mostly-transferable-40fbd873bc",
+    "purpose": "8 the operations checklist matrix flavoured mostly transferable",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/010-8-the-operations-checklist-matrix-flavoured-mostly-transferable.md",
+    "requires": [
+      "skill-7-pick-the-architecture-by-what-you-re-willing-to-be-responsible-for-6a0db3a1e9"
+    ],
+    "links": [
+      "skill-9-operating-communities-on-other-people-s-platforms-9db839c422"
+    ]
+  },
+  {
+    "id": "skill-9-operating-communities-on-other-people-s-platforms-9db839c422",
+    "purpose": "9 operating communities on other people s platforms",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/011-9-operating-communities-on-other-people-s-platforms.md",
+    "requires": [
+      "skill-8-the-operations-checklist-matrix-flavoured-mostly-transferable-40fbd873bc"
+    ],
+    "links": [
+      "skill-10-incident-playbooks-worth-pre-writing-571500c70f"
+    ]
+  },
+  {
+    "id": "skill-10-incident-playbooks-worth-pre-writing-571500c70f",
+    "purpose": "10 incident playbooks worth pre writing",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/012-10-incident-playbooks-worth-pre-writing.md",
+    "requires": [
+      "skill-9-operating-communities-on-other-people-s-platforms-9db839c422"
+    ],
+    "links": [
+      "skill-11-budget-intuition-from-public-numbers-verified-anchors-c7f6182f5a"
+    ]
+  },
+  {
+    "id": "skill-11-budget-intuition-from-public-numbers-verified-anchors-c7f6182f5a",
+    "purpose": "11 budget intuition from public numbers verified anchors",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/013-11-budget-intuition-from-public-numbers-verified-anchors.md",
+    "requires": [
+      "skill-10-incident-playbooks-worth-pre-writing-571500c70f"
+    ],
+    "links": [
+      "skill-12-the-signalgate-lesson-generalised-b2e61a8654"
+    ]
+  },
+  {
+    "id": "skill-12-the-signalgate-lesson-generalised-b2e61a8654",
+    "purpose": "12 the signalgate lesson generalised",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/014-12-the-signalgate-lesson-generalised.md",
+    "requires": [
+      "skill-11-budget-intuition-from-public-numbers-verified-anchors-c7f6182f5a"
+    ],
+    "links": [
+      "skill-sources-this-file-89cba2beb3"
+    ]
+  },
+  {
+    "id": "skill-sources-this-file-89cba2beb3",
+    "purpose": "sources this file",
+    "source": "src/vibey_tools/skills/plugins/private-chat-engines/skills/chat-builder-and-operator-playbooks/SKILL.md",
+    "output": "docs/microslices/skills/private-chat-engines/skills/chat-builder-and-operator-playbooks/015-sources-this-file.md",
+    "requires": [
+      "skill-12-the-signalgate-lesson-generalised-b2e61a8654"
+    ],
+    "links": []
+  }
+]

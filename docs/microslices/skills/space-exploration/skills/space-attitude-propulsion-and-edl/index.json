@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-7-attitude-control-and-in-space-propulsion-f21a28680f",
+    "purpose": "7 attitude control and in space propulsion",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-attitude-propulsion-and-edl/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-attitude-propulsion-and-edl/001-7-attitude-control-and-in-space-propulsion.md",
+    "requires": [],
+    "links": [
+      "skill-8-edl-and-surface-operations-f75329a97a"
+    ]
+  },
+  {
+    "id": "skill-8-edl-and-surface-operations-f75329a97a",
+    "purpose": "8 edl and surface operations",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-attitude-propulsion-and-edl/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-attitude-propulsion-and-edl/002-8-edl-and-surface-operations.md",
+    "requires": [
+      "skill-7-attitude-control-and-in-space-propulsion-f21a28680f"
+    ],
+    "links": []
+  }
+]

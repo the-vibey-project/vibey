@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-population-and-quantitative-genetics-d958f149fe",
+    "purpose": "4 population and quantitative genetics",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering/001-4-population-and-quantitative-genetics.md",
+    "requires": [],
+    "links": [
+      "skill-5-genome-engineering-f4a608d778"
+    ]
+  },
+  {
+    "id": "skill-5-genome-engineering-f4a608d778",
+    "purpose": "5 genome engineering",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering/002-5-genome-engineering.md",
+    "requires": [
+      "skill-4-population-and-quantitative-genetics-d958f149fe"
+    ],
+    "links": [
+      "skill-6-delivery-screens-synthetic-biology-f02b9c4979"
+    ]
+  },
+  {
+    "id": "skill-6-delivery-screens-synthetic-biology-f02b9c4979",
+    "purpose": "6 delivery screens synthetic biology",
+    "source": "src/vibey_tools/skills/plugins/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering/SKILL.md",
+    "output": "docs/microslices/skills/genetics-neuroscience-technical/skills/neurogen-population-genetics-and-genome-engineering/003-6-delivery-screens-synthetic-biology.md",
+    "requires": [
+      "skill-5-genome-engineering-f4a608d778"
+    ],
+    "links": []
+  }
+]

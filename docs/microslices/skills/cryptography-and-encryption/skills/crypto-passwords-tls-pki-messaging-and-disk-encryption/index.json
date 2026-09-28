@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-11-password-storage-and-kdfs-d663c948e2",
+    "purpose": "11 password storage and kdfs",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/001-11-password-storage-and-kdfs.md",
+    "requires": [],
+    "links": [
+      "skill-12-tls-c7dfa7b3e8"
+    ]
+  },
+  {
+    "id": "skill-12-tls-c7dfa7b3e8",
+    "purpose": "12 tls",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/002-12-tls.md",
+    "requires": [
+      "skill-11-password-storage-and-kdfs-d663c948e2"
+    ],
+    "links": [
+      "skill-13-pki-and-certificates-98f42e4dfc"
+    ]
+  },
+  {
+    "id": "skill-13-pki-and-certificates-98f42e4dfc",
+    "purpose": "13 pki and certificates",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/003-13-pki-and-certificates.md",
+    "requires": [
+      "skill-12-tls-c7dfa7b3e8"
+    ],
+    "links": [
+      "skill-14-end-to-end-encrypted-messaging-1f39b77ae2"
+    ]
+  },
+  {
+    "id": "skill-14-end-to-end-encrypted-messaging-1f39b77ae2",
+    "purpose": "14 end to end encrypted messaging",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/004-14-end-to-end-encrypted-messaging.md",
+    "requires": [
+      "skill-13-pki-and-certificates-98f42e4dfc"
+    ],
+    "links": [
+      "skill-15-disk-and-file-encryption-5245f9a76a"
+    ]
+  },
+  {
+    "id": "skill-15-disk-and-file-encryption-5245f9a76a",
+    "purpose": "15 disk and file encryption",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/005-15-disk-and-file-encryption.md",
+    "requires": [
+      "skill-14-end-to-end-encrypted-messaging-1f39b77ae2"
+    ],
+    "links": [
+      "skill-16-other-protocols-751ae80783"
+    ]
+  },
+  {
+    "id": "skill-16-other-protocols-751ae80783",
+    "purpose": "16 other protocols",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-passwords-tls-pki-messaging-and-disk-encryption/006-16-other-protocols.md",
+    "requires": [
+      "skill-15-disk-and-file-encryption-5245f9a76a"
+    ],
+    "links": []
+  }
+]

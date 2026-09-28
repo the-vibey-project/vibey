@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-executive-synthesis-073a3b0b94",
+    "purpose": "executive synthesis",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/001-executive-synthesis.md",
+    "requires": [],
+    "links": [
+      "skill-1-energy-flows-through-the-food-system-e0f13c30ac"
+    ]
+  },
+  {
+    "id": "skill-1-energy-flows-through-the-food-system-e0f13c30ac",
+    "purpose": "1 energy flows through the food system",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/002-1-energy-flows-through-the-food-system.md",
+    "requires": [
+      "skill-executive-synthesis-073a3b0b94"
+    ],
+    "links": [
+      "skill-2-food-production-and-energy-demand-d1b1dfbb8c"
+    ]
+  },
+  {
+    "id": "skill-2-food-production-and-energy-demand-d1b1dfbb8c",
+    "purpose": "2 food production and energy demand",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/003-2-food-production-and-energy-demand.md",
+    "requires": [
+      "skill-1-energy-flows-through-the-food-system-e0f13c30ac"
+    ],
+    "links": [
+      "skill-3-fertilizer-nitrogen-and-energy-760f452c5a"
+    ]
+  },
+  {
+    "id": "skill-3-fertilizer-nitrogen-and-energy-760f452c5a",
+    "purpose": "3 fertilizer nitrogen and energy",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/004-3-fertilizer-nitrogen-and-energy.md",
+    "requires": [
+      "skill-2-food-production-and-energy-demand-d1b1dfbb8c"
+    ],
+    "links": [
+      "skill-4-farm-energy-efficiency-6ab4988965"
+    ]
+  },
+  {
+    "id": "skill-4-farm-energy-efficiency-6ab4988965",
+    "purpose": "4 farm energy efficiency",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/005-4-farm-energy-efficiency.md",
+    "requires": [
+      "skill-3-fertilizer-nitrogen-and-energy-760f452c5a"
+    ],
+    "links": [
+      "skill-5-renewable-energy-on-farms-43b030b9dd"
+    ]
+  },
+  {
+    "id": "skill-5-renewable-energy-on-farms-43b030b9dd",
+    "purpose": "5 renewable energy on farms",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/006-5-renewable-energy-on-farms.md",
+    "requires": [
+      "skill-4-farm-energy-efficiency-6ab4988965"
+    ],
+    "links": [
+      "skill-6-biofuels-and-the-food-versus-fuel-question-c4d3f6354a"
+    ]
+  },
+  {
+    "id": "skill-6-biofuels-and-the-food-versus-fuel-question-c4d3f6354a",
+    "purpose": "6 biofuels and the food versus fuel question",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/007-6-biofuels-and-the-food-versus-fuel-question.md",
+    "requires": [
+      "skill-5-renewable-energy-on-farms-43b030b9dd"
+    ],
+    "links": [
+      "skill-7-food-loss-storage-and-energy-b9a4de7707"
+    ]
+  },
+  {
+    "id": "skill-7-food-loss-storage-and-energy-b9a4de7707",
+    "purpose": "7 food loss storage and energy",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/008-7-food-loss-storage-and-energy.md",
+    "requires": [
+      "skill-6-biofuels-and-the-food-versus-fuel-question-c4d3f6354a"
+    ],
+    "links": [
+      "skill-8-food-security-energy-access-and-rural-development-7fcd6c3a75"
+    ]
+  },
+  {
+    "id": "skill-8-food-security-energy-access-and-rural-development-7fcd6c3a75",
+    "purpose": "8 food security energy access and rural development",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/009-8-food-security-energy-access-and-rural-development.md",
+    "requires": [
+      "skill-7-food-loss-storage-and-energy-b9a4de7707"
+    ],
+    "links": [
+      "skill-9-climate-and-resilience-1a4492935a"
+    ]
+  },
+  {
+    "id": "skill-9-climate-and-resilience-1a4492935a",
+    "purpose": "9 climate and resilience",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/010-9-climate-and-resilience.md",
+    "requires": [
+      "skill-8-food-security-energy-access-and-rural-development-7fcd6c3a75"
+    ],
+    "links": [
+      "skill-10-measurement-and-research-design-d08b5b97ce"
+    ]
+  },
+  {
+    "id": "skill-10-measurement-and-research-design-d08b5b97ce",
+    "purpose": "10 measurement and research design",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/011-10-measurement-and-research-design.md",
+    "requires": [
+      "skill-9-climate-and-resilience-1a4492935a"
+    ],
+    "links": [
+      "skill-11-common-myths-1b22f0f17b"
+    ]
+  },
+  {
+    "id": "skill-11-common-myths-1b22f0f17b",
+    "purpose": "11 common myths",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/012-11-common-myths.md",
+    "requires": [
+      "skill-10-measurement-and-research-design-d08b5b97ce"
+    ],
+    "links": [
+      "skill-12-practical-whole-farm-food-energy-plan-b064e25d6e"
+    ]
+  },
+  {
+    "id": "skill-12-practical-whole-farm-food-energy-plan-b064e25d6e",
+    "purpose": "12 practical whole farm food energy plan",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/013-12-practical-whole-farm-food-energy-plan.md",
+    "requires": [
+      "skill-11-common-myths-1b22f0f17b"
+    ],
+    "links": [
+      "skill-bottom-line-cfeb80393b"
+    ]
+  },
+  {
+    "id": "skill-bottom-line-cfeb80393b",
+    "purpose": "bottom line",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/food-and-energy-production-agriculture-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/food-and-energy-production-agriculture-research/014-bottom-line.md",
+    "requires": [
+      "skill-12-practical-whole-farm-food-energy-plan-b064e25d6e"
+    ],
+    "links": []
+  }
+]

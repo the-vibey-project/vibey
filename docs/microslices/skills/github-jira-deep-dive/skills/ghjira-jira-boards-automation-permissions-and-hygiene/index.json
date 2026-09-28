@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-boards-sprints-estimation-95a81ad3bc",
+    "purpose": "17 boards sprints estimation",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/001-17-boards-sprints-estimation.md",
+    "requires": [],
+    "links": [
+      "skill-18-reports-a698f7b73c"
+    ]
+  },
+  {
+    "id": "skill-18-reports-a698f7b73c",
+    "purpose": "18 reports",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/002-18-reports.md",
+    "requires": [
+      "skill-17-boards-sprints-estimation-95a81ad3bc"
+    ],
+    "links": [
+      "skill-19-automation-09e62e97a3"
+    ]
+  },
+  {
+    "id": "skill-19-automation-09e62e97a3",
+    "purpose": "19 automation",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/003-19-automation.md",
+    "requires": [
+      "skill-18-reports-a698f7b73c"
+    ],
+    "links": [
+      "skill-20-permissions-413e85f726"
+    ]
+  },
+  {
+    "id": "skill-20-permissions-413e85f726",
+    "purpose": "20 permissions",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/004-20-permissions.md",
+    "requires": [
+      "skill-19-automation-09e62e97a3"
+    ],
+    "links": [
+      "skill-21-jira-service-management-c4c3f6fbcd"
+    ]
+  },
+  {
+    "id": "skill-21-jira-service-management-c4c3f6fbcd",
+    "purpose": "21 jira service management",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/005-21-jira-service-management.md",
+    "requires": [
+      "skill-20-permissions-413e85f726"
+    ],
+    "links": [
+      "skill-22-configuration-hygiene-a22f81a2c9"
+    ]
+  },
+  {
+    "id": "skill-22-configuration-hygiene-a22f81a2c9",
+    "purpose": "22 configuration hygiene",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-boards-automation-permissions-and-hygiene/006-22-configuration-hygiene.md",
+    "requires": [
+      "skill-21-jira-service-management-c4c3f6fbcd"
+    ],
+    "links": []
+  }
+]

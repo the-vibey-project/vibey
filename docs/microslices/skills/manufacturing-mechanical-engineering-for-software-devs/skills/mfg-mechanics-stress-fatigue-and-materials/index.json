@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-8606fab7bb",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-mechanical-engineers-actually-do-518a698d4d"
+    ]
+  },
+  {
+    "id": "skill-1-what-mechanical-engineers-actually-do-518a698d4d",
+    "purpose": "1 what mechanical engineers actually do",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/002-1-what-mechanical-engineers-actually-do.md",
+    "requires": [
+      "skill-0-routing-8606fab7bb"
+    ],
+    "links": [
+      "skill-2-stress-strain-and-deflection-461c8cf06e"
+    ]
+  },
+  {
+    "id": "skill-2-stress-strain-and-deflection-461c8cf06e",
+    "purpose": "2 stress strain and deflection",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/003-2-stress-strain-and-deflection.md",
+    "requires": [
+      "skill-1-what-mechanical-engineers-actually-do-518a698d4d"
+    ],
+    "links": [
+      "skill-3-failure-theories-and-safety-factors-28590d72c6"
+    ]
+  },
+  {
+    "id": "skill-3-failure-theories-and-safety-factors-28590d72c6",
+    "purpose": "3 failure theories and safety factors",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/004-3-failure-theories-and-safety-factors.md",
+    "requires": [
+      "skill-2-stress-strain-and-deflection-461c8cf06e"
+    ],
+    "links": [
+      "skill-4-fatigue-0774e72a3e"
+    ]
+  },
+  {
+    "id": "skill-4-fatigue-0774e72a3e",
+    "purpose": "4 fatigue",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/005-4-fatigue.md",
+    "requires": [
+      "skill-3-failure-theories-and-safety-factors-28590d72c6"
+    ],
+    "links": [
+      "skill-5-materials-selection-26499488da"
+    ]
+  },
+  {
+    "id": "skill-5-materials-selection-26499488da",
+    "purpose": "5 materials selection",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-mechanics-stress-fatigue-and-materials/006-5-materials-selection.md",
+    "requires": [
+      "skill-4-fatigue-0774e72a3e"
+    ],
+    "links": []
+  }
+]

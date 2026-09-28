@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-coverage-snapshot-7f23fb0db5",
+    "purpose": "coverage snapshot",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api/001-coverage-snapshot.md",
+    "requires": [],
+    "links": [
+      "skill-rest-api-basics-bf4d5132a1"
+    ]
+  },
+  {
+    "id": "skill-rest-api-basics-bf4d5132a1",
+    "purpose": "rest api basics",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api/002-rest-api-basics.md",
+    "requires": [
+      "skill-coverage-snapshot-7f23fb0db5"
+    ],
+    "links": [
+      "skill-authentication-two-schemes-5575d8bc28"
+    ]
+  },
+  {
+    "id": "skill-authentication-two-schemes-5575d8bc28",
+    "purpose": "authentication two schemes",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api/003-authentication-two-schemes.md",
+    "requires": [
+      "skill-rest-api-basics-bf4d5132a1"
+    ],
+    "links": [
+      "skill-resource-surface-representative-not-exhaustive-4fb4c4d7ab"
+    ]
+  },
+  {
+    "id": "skill-resource-surface-representative-not-exhaustive-4fb4c4d7ab",
+    "purpose": "resource surface representative not exhaustive",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api/004-resource-surface-representative-not-exhaustive.md",
+    "requires": [
+      "skill-authentication-two-schemes-5575d8bc28"
+    ],
+    "links": [
+      "skill-system-log-polling-pattern-b38a44e25d"
+    ]
+  },
+  {
+    "id": "skill-system-log-polling-pattern-b38a44e25d",
+    "purpose": "system log polling pattern",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api/005-system-log-polling-pattern.md",
+    "requires": [
+      "skill-resource-surface-representative-not-exhaustive-4fb4c4d7ab"
+    ],
+    "links": [
+      "skill-the-official-python-sdk-okta-6479b7c855"
+    ]
+  },
+  {
+    "id": "skill-the-official-python-sdk-okta-6479b7c855",
+    "purpose": "the official python sdk okta",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api/006-the-official-python-sdk-okta.md",
+    "requires": [
+      "skill-system-log-polling-pattern-b38a44e25d"
+    ],
+    "links": [
+      "skill-practical-guidance-f383c12129"
+    ]
+  },
+  {
+    "id": "skill-practical-guidance-f383c12129",
+    "purpose": "practical guidance",
+    "source": "src/vibey_tools/skills/plugins/okta-api-reference/skills/okta-core-management-api/SKILL.md",
+    "output": "docs/microslices/skills/okta-api-reference/skills/okta-core-management-api/007-practical-guidance.md",
+    "requires": [
+      "skill-the-official-python-sdk-okta-6479b7c855"
+    ],
+    "links": []
+  }
+]

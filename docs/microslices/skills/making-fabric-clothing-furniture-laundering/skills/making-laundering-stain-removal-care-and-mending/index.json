@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-22-how-laundering-actually-works-dd21727a30",
+    "purpose": "22 how laundering actually works",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/001-22-how-laundering-actually-works.md",
+    "requires": [],
+    "links": [
+      "skill-23-fibre-specific-care-5b4893b6a3"
+    ]
+  },
+  {
+    "id": "skill-23-fibre-specific-care-5b4893b6a3",
+    "purpose": "23 fibre specific care",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/002-23-fibre-specific-care.md",
+    "requires": [
+      "skill-22-how-laundering-actually-works-dd21727a30"
+    ],
+    "links": [
+      "skill-24-stain-removal-10b2499129"
+    ]
+  },
+  {
+    "id": "skill-24-stain-removal-10b2499129",
+    "purpose": "24 stain removal",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/003-24-stain-removal.md",
+    "requires": [
+      "skill-23-fibre-specific-care-5b4893b6a3"
+    ],
+    "links": [
+      "skill-25-drying-ironing-and-storage-0947047e4c"
+    ]
+  },
+  {
+    "id": "skill-25-drying-ironing-and-storage-0947047e4c",
+    "purpose": "25 drying ironing and storage",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/004-25-drying-ironing-and-storage.md",
+    "requires": [
+      "skill-24-stain-removal-10b2499129"
+    ],
+    "links": [
+      "skill-26-mending-and-pests-291b083160"
+    ]
+  },
+  {
+    "id": "skill-26-mending-and-pests-291b083160",
+    "purpose": "26 mending and pests",
+    "source": "src/vibey_tools/skills/plugins/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/SKILL.md",
+    "output": "docs/microslices/skills/making-fabric-clothing-furniture-laundering/skills/making-laundering-stain-removal-care-and-mending/005-26-mending-and-pests.md",
+    "requires": [
+      "skill-25-drying-ironing-and-storage-0947047e4c"
+    ],
+    "links": []
+  }
+]

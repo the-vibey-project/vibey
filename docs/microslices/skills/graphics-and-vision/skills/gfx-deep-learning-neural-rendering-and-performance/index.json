@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-11-deep-learning-for-vision-4ba4602bbd",
+    "purpose": "11 deep learning for vision",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance/001-11-deep-learning-for-vision.md",
+    "requires": [],
+    "links": [
+      "skill-12-neural-rendering-where-the-fields-meet-ce54d7908d"
+    ]
+  },
+  {
+    "id": "skill-12-neural-rendering-where-the-fields-meet-ce54d7908d",
+    "purpose": "12 neural rendering where the fields meet",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance/002-12-neural-rendering-where-the-fields-meet.md",
+    "requires": [
+      "skill-11-deep-learning-for-vision-4ba4602bbd"
+    ],
+    "links": [
+      "skill-13-performance-cc5061d73d"
+    ]
+  },
+  {
+    "id": "skill-13-performance-cc5061d73d",
+    "purpose": "13 performance",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-deep-learning-neural-rendering-and-performance/003-13-performance.md",
+    "requires": [
+      "skill-12-neural-rendering-where-the-fields-meet-ce54d7908d"
+    ],
+    "links": []
+  }
+]

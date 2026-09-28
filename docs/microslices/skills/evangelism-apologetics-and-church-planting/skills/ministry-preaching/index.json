@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-the-framing-for-part-iii-f55ce0567e",
+    "purpose": "the framing for part iii",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-preaching/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-preaching/001-the-framing-for-part-iii.md",
+    "requires": [],
+    "links": [
+      "skill-12-sermon-structure-and-the-patterns-that-work-4c97d3ed6b"
+    ]
+  },
+  {
+    "id": "skill-12-sermon-structure-and-the-patterns-that-work-4c97d3ed6b",
+    "purpose": "12 sermon structure and the patterns that work",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-preaching/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-preaching/002-12-sermon-structure-and-the-patterns-that-work.md",
+    "requires": [
+      "skill-the-framing-for-part-iii-f55ce0567e"
+    ],
+    "links": [
+      "skill-13-expository-preaching-and-the-curse-of-knowledge-f61f0e3d71"
+    ]
+  },
+  {
+    "id": "skill-13-expository-preaching-and-the-curse-of-knowledge-f61f0e3d71",
+    "purpose": "13 expository preaching and the curse of knowledge",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-preaching/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-preaching/003-13-expository-preaching-and-the-curse-of-knowledge.md",
+    "requires": [
+      "skill-12-sermon-structure-and-the-patterns-that-work-4c97d3ed6b"
+    ],
+    "links": [
+      "skill-14-delivery-and-speech-anxiety-a131f63186"
+    ]
+  },
+  {
+    "id": "skill-14-delivery-and-speech-anxiety-a131f63186",
+    "purpose": "14 delivery and speech anxiety",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-preaching/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-preaching/004-14-delivery-and-speech-anxiety.md",
+    "requires": [
+      "skill-13-expository-preaching-and-the-curse-of-knowledge-f61f0e3d71"
+    ],
+    "links": [
+      "skill-15-sermon-preparation-the-weekly-rhythm-and-the-one-sentence-test-bab371f3bc"
+    ]
+  },
+  {
+    "id": "skill-15-sermon-preparation-the-weekly-rhythm-and-the-one-sentence-test-bab371f3bc",
+    "purpose": "15 sermon preparation the weekly rhythm and the one sentence test",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-preaching/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-preaching/005-15-sermon-preparation-the-weekly-rhythm-and-the-one-sentence-test.md",
+    "requires": [
+      "skill-14-delivery-and-speech-anxiety-a131f63186"
+    ],
+    "links": [
+      "skill-cross-references-1fd4597c94"
+    ]
+  },
+  {
+    "id": "skill-cross-references-1fd4597c94",
+    "purpose": "cross references",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-preaching/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-preaching/006-cross-references.md",
+    "requires": [
+      "skill-15-sermon-preparation-the-weekly-rhythm-and-the-one-sentence-test-bab371f3bc"
+    ],
+    "links": []
+  }
+]

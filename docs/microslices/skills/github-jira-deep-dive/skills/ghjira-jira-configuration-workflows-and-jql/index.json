@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-13-jira-s-configuration-model-9d14dd9ecc",
+    "purpose": "13 jira s configuration model",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/001-13-jira-s-configuration-model.md",
+    "requires": [],
+    "links": [
+      "skill-14-team-managed-vs-company-managed-d309e6af98"
+    ]
+  },
+  {
+    "id": "skill-14-team-managed-vs-company-managed-d309e6af98",
+    "purpose": "14 team managed vs company managed",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/002-14-team-managed-vs-company-managed.md",
+    "requires": [
+      "skill-13-jira-s-configuration-model-9d14dd9ecc"
+    ],
+    "links": [
+      "skill-15-workflows-and-statuses-ff21c9755c"
+    ]
+  },
+  {
+    "id": "skill-15-workflows-and-statuses-ff21c9755c",
+    "purpose": "15 workflows and statuses",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/003-15-workflows-and-statuses.md",
+    "requires": [
+      "skill-14-team-managed-vs-company-managed-d309e6af98"
+    ],
+    "links": [
+      "skill-16-jql-d026e7494a"
+    ]
+  },
+  {
+    "id": "skill-16-jql-d026e7494a",
+    "purpose": "16 jql",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-jira-configuration-workflows-and-jql/004-16-jql.md",
+    "requires": [
+      "skill-15-workflows-and-statuses-ff21c9755c"
+    ],
+    "links": []
+  }
+]

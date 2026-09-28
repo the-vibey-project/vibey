@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-the-four-highest-leverage-decision-clusters-454da6b97d",
+    "purpose": "the four highest leverage decision clusters",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/001-the-four-highest-leverage-decision-clusters.md",
+    "requires": [],
+    "links": [
+      "skill-storage-redundancy-decision-matrix-a79219fb84"
+    ]
+  },
+  {
+    "id": "skill-storage-redundancy-decision-matrix-a79219fb84",
+    "purpose": "storage redundancy decision matrix",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/002-storage-redundancy-decision-matrix.md",
+    "requires": [
+      "skill-the-four-highest-leverage-decision-clusters-454da6b97d"
+    ],
+    "links": [
+      "skill-ai-microsoft-foundry-145aa80e22"
+    ]
+  },
+  {
+    "id": "skill-ai-microsoft-foundry-145aa80e22",
+    "purpose": "ai microsoft foundry",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/003-ai-microsoft-foundry.md",
+    "requires": [
+      "skill-storage-redundancy-decision-matrix-a79219fb84"
+    ],
+    "links": [
+      "skill-cost-optimization-35c90c4630"
+    ]
+  },
+  {
+    "id": "skill-cost-optimization-35c90c4630",
+    "purpose": "cost optimization",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/004-cost-optimization.md",
+    "requires": [
+      "skill-ai-microsoft-foundry-145aa80e22"
+    ],
+    "links": [
+      "skill-iac-bicep-vs-terraform-ad7efc1807"
+    ]
+  },
+  {
+    "id": "skill-iac-bicep-vs-terraform-ad7efc1807",
+    "purpose": "iac bicep vs terraform",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/005-iac-bicep-vs-terraform.md",
+    "requires": [
+      "skill-cost-optimization-35c90c4630"
+    ],
+    "links": [
+      "skill-identity-zero-trust-85a9a15185"
+    ]
+  },
+  {
+    "id": "skill-identity-zero-trust-85a9a15185",
+    "purpose": "identity zero trust",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/006-identity-zero-trust.md",
+    "requires": [
+      "skill-iac-bicep-vs-terraform-ad7efc1807"
+    ],
+    "links": [
+      "skill-service-retirements-act-now-9f7d89fd95"
+    ]
+  },
+  {
+    "id": "skill-service-retirements-act-now-9f7d89fd95",
+    "purpose": "service retirements act now",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/007-service-retirements-act-now.md",
+    "requires": [
+      "skill-identity-zero-trust-85a9a15185"
+    ],
+    "links": [
+      "skill-production-staging-roadmap-a102c1539d"
+    ]
+  },
+  {
+    "id": "skill-production-staging-roadmap-a102c1539d",
+    "purpose": "production staging roadmap",
+    "source": "src/vibey_tools/skills/plugins/azure-cloud-infra/skills/azure-services-catalog/SKILL.md",
+    "output": "docs/microslices/skills/azure-cloud-infra/skills/azure-services-catalog/008-production-staging-roadmap.md",
+    "requires": [
+      "skill-service-retirements-act-now-9f7d89fd95"
+    ],
+    "links": []
+  }
+]

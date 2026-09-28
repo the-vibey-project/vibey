@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-965104c790",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-why-optimization-projects-fail-2d0be2898b"
+    ]
+  },
+  {
+    "id": "skill-1-why-optimization-projects-fail-2d0be2898b",
+    "purpose": "1 why optimization projects fail",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/002-1-why-optimization-projects-fail.md",
+    "requires": [
+      "skill-0-routing-965104c790"
+    ],
+    "links": [
+      "skill-2-complexity-honestly-fcb56ba9f5"
+    ]
+  },
+  {
+    "id": "skill-2-complexity-honestly-fcb56ba9f5",
+    "purpose": "2 complexity honestly",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/003-2-complexity-honestly.md",
+    "requires": [
+      "skill-1-why-optimization-projects-fail-2d0be2898b"
+    ],
+    "links": [
+      "skill-3-linear-programming-6ab356db91"
+    ]
+  },
+  {
+    "id": "skill-3-linear-programming-6ab356db91",
+    "purpose": "3 linear programming",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/004-3-linear-programming.md",
+    "requires": [
+      "skill-2-complexity-honestly-fcb56ba9f5"
+    ],
+    "links": [
+      "skill-4-mip-and-branch-and-bound-31adb61761"
+    ]
+  },
+  {
+    "id": "skill-4-mip-and-branch-and-bound-31adb61761",
+    "purpose": "4 mip and branch and bound",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/005-4-mip-and-branch-and-bound.md",
+    "requires": [
+      "skill-3-linear-programming-6ab356db91"
+    ],
+    "links": [
+      "skill-5-modeling-well-6c1bfe7627"
+    ]
+  },
+  {
+    "id": "skill-5-modeling-well-6c1bfe7627",
+    "purpose": "5 modeling well",
+    "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
+    "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/006-5-modeling-well.md",
+    "requires": [
+      "skill-4-mip-and-branch-and-bound-31adb61761"
+    ],
+    "links": []
+  }
+]

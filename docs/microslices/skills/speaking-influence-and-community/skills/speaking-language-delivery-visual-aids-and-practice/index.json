@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-6-language-for-the-ear-59110fa86e",
+    "purpose": "6 language for the ear",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/001-6-language-for-the-ear.md",
+    "requires": [],
+    "links": [
+      "skill-7-delivery-492c3e4d45"
+    ]
+  },
+  {
+    "id": "skill-7-delivery-492c3e4d45",
+    "purpose": "7 delivery",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/002-7-delivery.md",
+    "requires": [
+      "skill-6-language-for-the-ear-59110fa86e"
+    ],
+    "links": [
+      "skill-8-visual-aids-6a53626a76"
+    ]
+  },
+  {
+    "id": "skill-8-visual-aids-6a53626a76",
+    "purpose": "8 visual aids",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/003-8-visual-aids.md",
+    "requires": [
+      "skill-7-delivery-492c3e4d45"
+    ],
+    "links": [
+      "skill-9-q-a-and-hostility-5c8ade6152"
+    ]
+  },
+  {
+    "id": "skill-9-q-a-and-hostility-5c8ade6152",
+    "purpose": "9 q a and hostility",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/004-9-q-a-and-hostility.md",
+    "requires": [
+      "skill-8-visual-aids-6a53626a76"
+    ],
+    "links": [
+      "skill-10-formats-5c33263fa3"
+    ]
+  },
+  {
+    "id": "skill-10-formats-5c33263fa3",
+    "purpose": "10 formats",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/005-10-formats.md",
+    "requires": [
+      "skill-9-q-a-and-hostility-5c8ade6152"
+    ],
+    "links": [
+      "skill-11-practice-and-getting-better-ddfcd92e96"
+    ]
+  },
+  {
+    "id": "skill-11-practice-and-getting-better-ddfcd92e96",
+    "purpose": "11 practice and getting better",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-language-delivery-visual-aids-and-practice/006-11-practice-and-getting-better.md",
+    "requires": [
+      "skill-10-formats-5c33263fa3"
+    ],
+    "links": []
+  }
+]

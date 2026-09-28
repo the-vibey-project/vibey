@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-fab00ef62d",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-fundamentals-01b33fcac1"
+    ]
+  },
+  {
+    "id": "skill-1-fundamentals-01b33fcac1",
+    "purpose": "1 fundamentals",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/002-1-fundamentals.md",
+    "requires": [
+      "skill-0-routing-fab00ef62d"
+    ],
+    "links": [
+      "skill-2-real-components-313b1689b7"
+    ]
+  },
+  {
+    "id": "skill-2-real-components-313b1689b7",
+    "purpose": "2 real components",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/003-2-real-components.md",
+    "requires": [
+      "skill-1-fundamentals-01b33fcac1"
+    ],
+    "links": [
+      "skill-3-dc-analysis-580757f7af"
+    ]
+  },
+  {
+    "id": "skill-3-dc-analysis-580757f7af",
+    "purpose": "3 dc analysis",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/004-3-dc-analysis.md",
+    "requires": [
+      "skill-2-real-components-313b1689b7"
+    ],
+    "links": [
+      "skill-4-ac-impedance-filters-09792fcdac"
+    ]
+  },
+  {
+    "id": "skill-4-ac-impedance-filters-09792fcdac",
+    "purpose": "4 ac impedance filters",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-fundamentals-components-and-circuit-analysis/005-4-ac-impedance-filters.md",
+    "requires": [
+      "skill-3-dc-analysis-580757f7af"
+    ],
+    "links": []
+  }
+]

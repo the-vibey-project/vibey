@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-antennas-0773353362",
+    "purpose": "5 antennas",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/001-5-antennas.md",
+    "requires": [],
+    "links": [
+      "skill-6-propagation-and-fading-5018edd42f"
+    ]
+  },
+  {
+    "id": "skill-6-propagation-and-fading-5018edd42f",
+    "purpose": "6 propagation and fading",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/002-6-propagation-and-fading.md",
+    "requires": [
+      "skill-5-antennas-0773353362"
+    ],
+    "links": [
+      "skill-7-noise-and-interference-fde3733375"
+    ]
+  },
+  {
+    "id": "skill-7-noise-and-interference-fde3733375",
+    "purpose": "7 noise and interference",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/003-7-noise-and-interference.md",
+    "requires": [
+      "skill-6-propagation-and-fading-5018edd42f"
+    ],
+    "links": [
+      "skill-8-modulation-efb6fe582d"
+    ]
+  },
+  {
+    "id": "skill-8-modulation-efb6fe582d",
+    "purpose": "8 modulation",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/004-8-modulation.md",
+    "requires": [
+      "skill-7-noise-and-interference-fde3733375"
+    ],
+    "links": [
+      "skill-9-shannon-s-limit-1554ca7251"
+    ]
+  },
+  {
+    "id": "skill-9-shannon-s-limit-1554ca7251",
+    "purpose": "9 shannon s limit",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-antennas-propagation-noise-and-modulation/005-9-shannon-s-limit.md",
+    "requires": [
+      "skill-8-modulation-efb6fe582d"
+    ],
+    "links": []
+  }
+]

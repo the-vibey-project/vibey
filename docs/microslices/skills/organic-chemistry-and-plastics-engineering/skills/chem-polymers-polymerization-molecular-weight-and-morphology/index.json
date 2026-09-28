@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-13-what-makes-a-polymer-edee7125c5",
+    "purpose": "13 what makes a polymer",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/001-13-what-makes-a-polymer.md",
+    "requires": [],
+    "links": [
+      "skill-14-polymerization-d88caf3c63"
+    ]
+  },
+  {
+    "id": "skill-14-polymerization-d88caf3c63",
+    "purpose": "14 polymerization",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/002-14-polymerization.md",
+    "requires": [
+      "skill-13-what-makes-a-polymer-edee7125c5"
+    ],
+    "links": [
+      "skill-15-molecular-weight-4748ca14b6"
+    ]
+  },
+  {
+    "id": "skill-15-molecular-weight-4748ca14b6",
+    "purpose": "15 molecular weight",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/003-15-molecular-weight.md",
+    "requires": [
+      "skill-14-polymerization-d88caf3c63"
+    ],
+    "links": [
+      "skill-16-tg-melting-and-morphology-3642a2cbb8"
+    ]
+  },
+  {
+    "id": "skill-16-tg-melting-and-morphology-3642a2cbb8",
+    "purpose": "16 tg melting and morphology",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/004-16-tg-melting-and-morphology.md",
+    "requires": [
+      "skill-15-molecular-weight-4748ca14b6"
+    ],
+    "links": [
+      "skill-17-mechanical-behaviour-67839001c2"
+    ]
+  },
+  {
+    "id": "skill-17-mechanical-behaviour-67839001c2",
+    "purpose": "17 mechanical behaviour",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-polymers-polymerization-molecular-weight-and-morphology/005-17-mechanical-behaviour.md",
+    "requires": [
+      "skill-16-tg-melting-and-morphology-3642a2cbb8"
+    ],
+    "links": []
+  }
+]

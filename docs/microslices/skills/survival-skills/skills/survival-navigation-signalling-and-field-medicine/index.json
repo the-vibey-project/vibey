@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-8-navigation-and-being-lost-ecb1e673df",
+    "purpose": "8 navigation and being lost",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-navigation-signalling-and-field-medicine/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-navigation-signalling-and-field-medicine/001-8-navigation-and-being-lost.md",
+    "requires": [],
+    "links": [
+      "skill-9-signalling-and-rescue-7ef401771e"
+    ]
+  },
+  {
+    "id": "skill-9-signalling-and-rescue-7ef401771e",
+    "purpose": "9 signalling and rescue",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-navigation-signalling-and-field-medicine/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-navigation-signalling-and-field-medicine/002-9-signalling-and-rescue.md",
+    "requires": [
+      "skill-8-navigation-and-being-lost-ecb1e673df"
+    ],
+    "links": [
+      "skill-10-field-medical-priorities-092d2aa819"
+    ]
+  },
+  {
+    "id": "skill-10-field-medical-priorities-092d2aa819",
+    "purpose": "10 field medical priorities",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-navigation-signalling-and-field-medicine/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-navigation-signalling-and-field-medicine/003-10-field-medical-priorities.md",
+    "requires": [
+      "skill-9-signalling-and-rescue-7ef401771e"
+    ],
+    "links": [
+      "skill-11-heat-illness-480ebb0959"
+    ]
+  },
+  {
+    "id": "skill-11-heat-illness-480ebb0959",
+    "purpose": "11 heat illness",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-navigation-signalling-and-field-medicine/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-navigation-signalling-and-field-medicine/004-11-heat-illness.md",
+    "requires": [
+      "skill-10-field-medical-priorities-092d2aa819"
+    ],
+    "links": [
+      "skill-12-animals-in-proportion-28c3ac8b5c"
+    ]
+  },
+  {
+    "id": "skill-12-animals-in-proportion-28c3ac8b5c",
+    "purpose": "12 animals in proportion",
+    "source": "src/vibey_tools/skills/plugins/survival-skills/skills/survival-navigation-signalling-and-field-medicine/SKILL.md",
+    "output": "docs/microslices/skills/survival-skills/skills/survival-navigation-signalling-and-field-medicine/005-12-animals-in-proportion.md",
+    "requires": [
+      "skill-11-heat-illness-480ebb0959"
+    ],
+    "links": []
+  }
+]

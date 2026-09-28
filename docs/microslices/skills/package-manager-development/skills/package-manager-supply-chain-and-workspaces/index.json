@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-supply-chain-security-99afb69e75",
+    "purpose": "8 supply chain security",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-supply-chain-and-workspaces/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-supply-chain-and-workspaces/001-8-supply-chain-security.md",
+    "requires": [],
+    "links": [
+      "skill-9-lifecycle-scripts-and-building-8b40fb61eb"
+    ]
+  },
+  {
+    "id": "skill-9-lifecycle-scripts-and-building-8b40fb61eb",
+    "purpose": "9 lifecycle scripts and building",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-supply-chain-and-workspaces/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-supply-chain-and-workspaces/002-9-lifecycle-scripts-and-building.md",
+    "requires": [
+      "skill-8-supply-chain-security-99afb69e75"
+    ],
+    "links": [
+      "skill-10-workspaces-monorepos-and-overrides-a610e5e369"
+    ]
+  },
+  {
+    "id": "skill-10-workspaces-monorepos-and-overrides-a610e5e369",
+    "purpose": "10 workspaces monorepos and overrides",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-supply-chain-and-workspaces/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-supply-chain-and-workspaces/003-10-workspaces-monorepos-and-overrides.md",
+    "requires": [
+      "skill-9-lifecycle-scripts-and-building-8b40fb61eb"
+    ],
+    "links": []
+  }
+]

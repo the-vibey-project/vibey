@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-molecular-representation-4afd15eaca",
+    "purpose": "4 molecular representation",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/001-4-molecular-representation.md",
+    "requires": [],
+    "links": [
+      "skill-5-cheminformatics-toolkits-8954017c08"
+    ]
+  },
+  {
+    "id": "skill-5-cheminformatics-toolkits-8954017c08",
+    "purpose": "5 cheminformatics toolkits",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/002-5-cheminformatics-toolkits.md",
+    "requires": [
+      "skill-4-molecular-representation-4afd15eaca"
+    ],
+    "links": [
+      "skill-6-data-sources-and-their-quality-3f8edd33f7"
+    ]
+  },
+  {
+    "id": "skill-6-data-sources-and-their-quality-3f8edd33f7",
+    "purpose": "6 data sources and their quality",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/003-6-data-sources-and-their-quality.md",
+    "requires": [
+      "skill-5-cheminformatics-toolkits-8954017c08"
+    ],
+    "links": [
+      "skill-7-splitting-and-leakage-1b945f38cd"
+    ]
+  },
+  {
+    "id": "skill-7-splitting-and-leakage-1b945f38cd",
+    "purpose": "7 splitting and leakage",
+    "source": "src/vibey_tools/skills/plugins/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/SKILL.md",
+    "output": "docs/microslices/skills/medicine-design-software-development/skills/drugdev-representation-cheminformatics-data-quality-and-leakage/004-7-splitting-and-leakage.md",
+    "requires": [
+      "skill-6-data-sources-and-their-quality-3f8edd33f7"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-what-this-skill-does-5e9bbaab0a",
+    "purpose": "what this skill does",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/001-what-this-skill-does.md",
+    "requires": [],
+    "links": [
+      "skill-framework-overview-779e8826ea"
+    ]
+  },
+  {
+    "id": "skill-framework-overview-779e8826ea",
+    "purpose": "framework overview",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/002-framework-overview.md",
+    "requires": [
+      "skill-what-this-skill-does-5e9bbaab0a"
+    ],
+    "links": [
+      "skill-the-five-trust-service-categories-tsc-8e68da9dbf"
+    ]
+  },
+  {
+    "id": "skill-the-five-trust-service-categories-tsc-8e68da9dbf",
+    "purpose": "the five trust service categories tsc",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/003-the-five-trust-service-categories-tsc.md",
+    "requires": [
+      "skill-framework-overview-779e8826ea"
+    ],
+    "links": [
+      "skill-minimum-policy-set-for-soc-2-type-2-267c32bf38"
+    ]
+  },
+  {
+    "id": "skill-minimum-policy-set-for-soc-2-type-2-267c32bf38",
+    "purpose": "minimum policy set for soc 2 type 2",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/004-minimum-policy-set-for-soc-2-type-2.md",
+    "requires": [
+      "skill-the-five-trust-service-categories-tsc-8e68da9dbf"
+    ],
+    "links": [
+      "skill-control-mapping-soc-2-common-criteria-to-nist-800-53-e6057854b7"
+    ]
+  },
+  {
+    "id": "skill-control-mapping-soc-2-common-criteria-to-nist-800-53-e6057854b7",
+    "purpose": "control mapping soc 2 common criteria to nist 800 53",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/005-control-mapping-soc-2-common-criteria-to-nist-800-53.md",
+    "requires": [
+      "skill-minimum-policy-set-for-soc-2-type-2-267c32bf38"
+    ],
+    "links": [
+      "skill-evidence-collection-for-auditors-71296011ca"
+    ]
+  },
+  {
+    "id": "skill-evidence-collection-for-auditors-71296011ca",
+    "purpose": "evidence collection for auditors",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/006-evidence-collection-for-auditors.md",
+    "requires": [
+      "skill-control-mapping-soc-2-common-criteria-to-nist-800-53-e6057854b7"
+    ],
+    "links": [
+      "skill-common-soc-2-gaps-in-saas-cloud-environments-2bf47ffc73"
+    ]
+  },
+  {
+    "id": "skill-common-soc-2-gaps-in-saas-cloud-environments-2bf47ffc73",
+    "purpose": "common soc 2 gaps in saas cloud environments",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/007-common-soc-2-gaps-in-saas-cloud-environments.md",
+    "requires": [
+      "skill-evidence-collection-for-auditors-71296011ca"
+    ],
+    "links": [
+      "skill-readiness-assessment-checklist-360365b260"
+    ]
+  },
+  {
+    "id": "skill-readiness-assessment-checklist-360365b260",
+    "purpose": "readiness assessment checklist",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/soc2-compliance/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/soc2-compliance/008-readiness-assessment-checklist.md",
+    "requires": [
+      "skill-common-soc-2-gaps-in-saas-cloud-environments-2bf47ffc73"
+    ],
+    "links": []
+  }
+]

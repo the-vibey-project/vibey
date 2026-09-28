@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-12-the-software-ecosystem-in-2026-cd28e53516",
+    "purpose": "12 the software ecosystem in 2026",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/001-12-the-software-ecosystem-in-2026.md",
+    "requires": [],
+    "links": [
+      "skill-14-tor-vs-the-alternatives-i2p-mixnets-vpns-9309c7745e"
+    ]
+  },
+  {
+    "id": "skill-14-tor-vs-the-alternatives-i2p-mixnets-vpns-9309c7745e",
+    "purpose": "14 tor vs the alternatives i2p mixnets vpns",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/002-14-tor-vs-the-alternatives-i2p-mixnets-vpns.md",
+    "requires": [
+      "skill-12-the-software-ecosystem-in-2026-cd28e53516"
+    ],
+    "links": [
+      "skill-15-governance-funding-and-the-human-network-9585c31b09"
+    ]
+  },
+  {
+    "id": "skill-15-governance-funding-and-the-human-network-9585c31b09",
+    "purpose": "15 governance funding and the human network",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/003-15-governance-funding-and-the-human-network.md",
+    "requires": [
+      "skill-14-tor-vs-the-alternatives-i2p-mixnets-vpns-9309c7745e"
+    ],
+    "links": [
+      "skill-16-the-reference-shelf-4ee5cf37c1"
+    ]
+  },
+  {
+    "id": "skill-16-the-reference-shelf-4ee5cf37c1",
+    "purpose": "16 the reference shelf",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/004-16-the-reference-shelf.md",
+    "requires": [
+      "skill-15-governance-funding-and-the-human-network-9585c31b09"
+    ],
+    "links": [
+      "skill-where-to-go-next-acddf0085c"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-acddf0085c",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-ecosystem-alternatives-and-governance/005-where-to-go-next.md",
+    "requires": [
+      "skill-16-the-reference-shelf-4ee5cf37c1"
+    ],
+    "links": []
+  }
+]

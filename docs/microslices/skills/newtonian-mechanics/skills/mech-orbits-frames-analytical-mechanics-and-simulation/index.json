@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-9-central-forces-and-orbits-ef54974c4f",
+    "purpose": "9 central forces and orbits",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/001-9-central-forces-and-orbits.md",
+    "requires": [],
+    "links": [
+      "skill-10-non-inertial-frames-2f0c09b6d0"
+    ]
+  },
+  {
+    "id": "skill-10-non-inertial-frames-2f0c09b6d0",
+    "purpose": "10 non inertial frames",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/002-10-non-inertial-frames.md",
+    "requires": [
+      "skill-9-central-forces-and-orbits-ef54974c4f"
+    ],
+    "links": [
+      "skill-11-lagrangian-and-hamiltonian-mechanics-b2f24e954f"
+    ]
+  },
+  {
+    "id": "skill-11-lagrangian-and-hamiltonian-mechanics-b2f24e954f",
+    "purpose": "11 lagrangian and hamiltonian mechanics",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/003-11-lagrangian-and-hamiltonian-mechanics.md",
+    "requires": [
+      "skill-10-non-inertial-frames-2f0c09b6d0"
+    ],
+    "links": [
+      "skill-12-fluids-and-continuous-media-briefly-000b91a9ec"
+    ]
+  },
+  {
+    "id": "skill-12-fluids-and-continuous-media-briefly-000b91a9ec",
+    "purpose": "12 fluids and continuous media briefly",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/004-12-fluids-and-continuous-media-briefly.md",
+    "requires": [
+      "skill-11-lagrangian-and-hamiltonian-mechanics-b2f24e954f"
+    ],
+    "links": [
+      "skill-13-chaos-and-the-limits-of-prediction-7cad17b655"
+    ]
+  },
+  {
+    "id": "skill-13-chaos-and-the-limits-of-prediction-7cad17b655",
+    "purpose": "13 chaos and the limits of prediction",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/005-13-chaos-and-the-limits-of-prediction.md",
+    "requires": [
+      "skill-12-fluids-and-continuous-media-briefly-000b91a9ec"
+    ],
+    "links": [
+      "skill-14-numerical-integration-b2f76e3ef8"
+    ]
+  },
+  {
+    "id": "skill-14-numerical-integration-b2f76e3ef8",
+    "purpose": "14 numerical integration",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-orbits-frames-analytical-mechanics-and-simulation/006-14-numerical-integration.md",
+    "requires": [
+      "skill-13-chaos-and-the-limits-of-prediction-7cad17b655"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-0-routing-edb4b7e311",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-cycle-in-practice-ebd45501e3"
+    ]
+  },
+  {
+    "id": "skill-1-the-cycle-in-practice-ebd45501e3",
+    "purpose": "1 the cycle in practice",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/002-1-the-cycle-in-practice.md",
+    "requires": [
+      "skill-0-routing-edb4b7e311"
+    ],
+    "links": [
+      "skill-2-components-5120f88214"
+    ]
+  },
+  {
+    "id": "skill-2-components-5120f88214",
+    "purpose": "2 components",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/003-2-components.md",
+    "requires": [
+      "skill-1-the-cycle-in-practice-ebd45501e3"
+    ],
+    "links": [
+      "skill-3-refrigerants-properties-and-classification-4854506300"
+    ]
+  },
+  {
+    "id": "skill-3-refrigerants-properties-and-classification-4854506300",
+    "purpose": "3 refrigerants properties and classification",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/004-3-refrigerants-properties-and-classification.md",
+    "requires": [
+      "skill-2-components-5120f88214"
+    ],
+    "links": [
+      "skill-4-charge-evacuation-and-leaks-3e9e5ac36a"
+    ]
+  },
+  {
+    "id": "skill-4-charge-evacuation-and-leaks-3e9e5ac36a",
+    "purpose": "4 charge evacuation and leaks",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/005-4-charge-evacuation-and-leaks.md",
+    "requires": [
+      "skill-3-refrigerants-properties-and-classification-4854506300"
+    ],
+    "links": [
+      "skill-5-diagnosis-superheat-and-subcooling-d3c61b8593"
+    ]
+  },
+  {
+    "id": "skill-5-diagnosis-superheat-and-subcooling-d3c61b8593",
+    "purpose": "5 diagnosis superheat and subcooling",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/006-5-diagnosis-superheat-and-subcooling.md",
+    "requires": [
+      "skill-4-charge-evacuation-and-leaks-3e9e5ac36a"
+    ],
+    "links": [
+      "skill-6-other-cooling-approaches-7918990085"
+    ]
+  },
+  {
+    "id": "skill-6-other-cooling-approaches-7918990085",
+    "purpose": "6 other cooling approaches",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-cycle-components-refrigerants-and-diagnosis/007-6-other-cooling-approaches.md",
+    "requires": [
+      "skill-5-diagnosis-superheat-and-subcooling-d3c61b8593"
+    ],
+    "links": []
+  }
+]

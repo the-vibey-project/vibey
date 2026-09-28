@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-25-what-s-live-verified-august-2026-e3a288b81e",
+    "purpose": "25 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/001-25-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-5c8e984480"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-5c8e984480",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-verified-august-2026-e3a288b81e"
+    ],
+    "links": [
+      "skill-27-numbers-facdcb484a"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-facdcb484a",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/003-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-5c8e984480"
+    ],
+    "links": [
+      "skill-28-books-and-standards-cabeb684b9"
+    ]
+  },
+  {
+    "id": "skill-28-books-and-standards-cabeb684b9",
+    "purpose": "28 books and standards",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/004-28-books-and-standards.md",
+    "requires": [
+      "skill-27-numbers-facdcb484a"
+    ],
+    "links": [
+      "skill-29-quick-reference-53a2320991"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-53a2320991",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/005-29-quick-reference.md",
+    "requires": [
+      "skill-28-books-and-standards-cabeb684b9"
+    ],
+    "links": [
+      "skill-30-method-e2e643724a"
+    ]
+  },
+  {
+    "id": "skill-30-method-e2e643724a",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/SKILL.md",
+    "output": "docs/microslices/skills/refrigeration-ac-climate-control-food-water/skills/hvacr-reference/006-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-53a2320991"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-11-thread-zigbee-and-matter-fc51ad578a",
+    "purpose": "11 thread zigbee and matter",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/001-11-thread-zigbee-and-matter.md",
+    "requires": [],
+    "links": [
+      "skill-12-lora-and-lpwan-3b01307934"
+    ]
+  },
+  {
+    "id": "skill-12-lora-and-lpwan-3b01307934",
+    "purpose": "12 lora and lpwan",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/002-12-lora-and-lpwan.md",
+    "requires": [
+      "skill-11-thread-zigbee-and-matter-fc51ad578a"
+    ],
+    "links": [
+      "skill-13-cellular-and-cellular-iot-0507224d7b"
+    ]
+  },
+  {
+    "id": "skill-13-cellular-and-cellular-iot-0507224d7b",
+    "purpose": "13 cellular and cellular iot",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/003-13-cellular-and-cellular-iot.md",
+    "requires": [
+      "skill-12-lora-and-lpwan-3b01307934"
+    ],
+    "links": [
+      "skill-14-uwb-cf2d31e040"
+    ]
+  },
+  {
+    "id": "skill-14-uwb-cf2d31e040",
+    "purpose": "14 uwb",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/004-14-uwb.md",
+    "requires": [
+      "skill-13-cellular-and-cellular-iot-0507224d7b"
+    ],
+    "links": [
+      "skill-15-other-technologies-worth-knowing-855eee8df0"
+    ]
+  },
+  {
+    "id": "skill-15-other-technologies-worth-knowing-855eee8df0",
+    "purpose": "15 other technologies worth knowing",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/005-15-other-technologies-worth-knowing.md",
+    "requires": [
+      "skill-14-uwb-cf2d31e040"
+    ],
+    "links": [
+      "skill-16-choosing-a-radio-4d8b5e4a2e"
+    ]
+  },
+  {
+    "id": "skill-16-choosing-a-radio-4d8b5e4a2e",
+    "purpose": "16 choosing a radio",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-thread-matter-lora-cellular-uwb-and-choosing/006-16-choosing-a-radio.md",
+    "requires": [
+      "skill-15-other-technologies-worth-knowing-855eee8df0"
+    ],
+    "links": []
+  }
+]

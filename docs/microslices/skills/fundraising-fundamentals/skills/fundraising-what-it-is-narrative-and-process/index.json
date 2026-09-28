@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-3220d08616",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-fundraising-actually-is-19b4cc815e"
+    ]
+  },
+  {
+    "id": "skill-1-what-fundraising-actually-is-19b4cc815e",
+    "purpose": "1 what fundraising actually is",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/002-1-what-fundraising-actually-is.md",
+    "requires": [
+      "skill-0-routing-3220d08616"
+    ],
+    "links": [
+      "skill-2-the-universal-structure-f85bca7d8a"
+    ]
+  },
+  {
+    "id": "skill-2-the-universal-structure-f85bca7d8a",
+    "purpose": "2 the universal structure",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/003-2-the-universal-structure.md",
+    "requires": [
+      "skill-1-what-fundraising-actually-is-19b4cc815e"
+    ],
+    "links": [
+      "skill-3-the-narrative-f710c9573b"
+    ]
+  },
+  {
+    "id": "skill-3-the-narrative-f710c9573b",
+    "purpose": "3 the narrative",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/004-3-the-narrative.md",
+    "requires": [
+      "skill-2-the-universal-structure-f85bca7d8a"
+    ],
+    "links": [
+      "skill-4-running-the-process-8ceec2eb81"
+    ]
+  },
+  {
+    "id": "skill-4-running-the-process-8ceec2eb81",
+    "purpose": "4 running the process",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-what-it-is-narrative-and-process/005-4-running-the-process.md",
+    "requires": [
+      "skill-3-the-narrative-f710c9573b"
+    ],
+    "links": []
+  }
+]

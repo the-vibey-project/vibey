@@ -1,0 +1,190 @@
+[
+  {
+    "id": "skill-core-principle-1af8bb4b9f",
+    "purpose": "core principle",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/001-core-principle.md",
+    "requires": [],
+    "links": [
+      "skill-version-reality-as-of-june-2026-f687461bba"
+    ]
+  },
+  {
+    "id": "skill-version-reality-as-of-june-2026-f687461bba",
+    "purpose": "version reality as of june 2026",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/002-version-reality-as-of-june-2026.md",
+    "requires": [
+      "skill-core-principle-1af8bb4b9f"
+    ],
+    "links": [
+      "skill-architecture-and-project-structure-49107bf3a4"
+    ]
+  },
+  {
+    "id": "skill-architecture-and-project-structure-49107bf3a4",
+    "purpose": "architecture and project structure",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/003-architecture-and-project-structure.md",
+    "requires": [
+      "skill-version-reality-as-of-june-2026-f687461bba"
+    ],
+    "links": [
+      "skill-app-router-rendering-patterns-f9e4cb6371"
+    ]
+  },
+  {
+    "id": "skill-app-router-rendering-patterns-f9e4cb6371",
+    "purpose": "app router rendering patterns",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/004-app-router-rendering-patterns.md",
+    "requires": [
+      "skill-architecture-and-project-structure-49107bf3a4"
+    ],
+    "links": [
+      "skill-data-fetching-patterns-1434db77f6"
+    ]
+  },
+  {
+    "id": "skill-data-fetching-patterns-1434db77f6",
+    "purpose": "data fetching patterns",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/005-data-fetching-patterns.md",
+    "requires": [
+      "skill-app-router-rendering-patterns-f9e4cb6371"
+    ],
+    "links": [
+      "skill-mutations-server-actions-70ef777b38"
+    ]
+  },
+  {
+    "id": "skill-mutations-server-actions-70ef777b38",
+    "purpose": "mutations server actions",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/006-mutations-server-actions.md",
+    "requires": [
+      "skill-data-fetching-patterns-1434db77f6"
+    ],
+    "links": [
+      "skill-state-management-581ec0a9f1"
+    ]
+  },
+  {
+    "id": "skill-state-management-581ec0a9f1",
+    "purpose": "state management",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/007-state-management.md",
+    "requires": [
+      "skill-mutations-server-actions-70ef777b38"
+    ],
+    "links": [
+      "skill-authentication-bac6dacddc"
+    ]
+  },
+  {
+    "id": "skill-authentication-bac6dacddc",
+    "purpose": "authentication",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/008-authentication.md",
+    "requires": [
+      "skill-state-management-581ec0a9f1"
+    ],
+    "links": [
+      "skill-typescript-patterns-3bcffc072b"
+    ]
+  },
+  {
+    "id": "skill-typescript-patterns-3bcffc072b",
+    "purpose": "typescript patterns",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/009-typescript-patterns.md",
+    "requires": [
+      "skill-authentication-bac6dacddc"
+    ],
+    "links": [
+      "skill-testing-patterns-b52d23e80f"
+    ]
+  },
+  {
+    "id": "skill-testing-patterns-b52d23e80f",
+    "purpose": "testing patterns",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/010-testing-patterns.md",
+    "requires": [
+      "skill-typescript-patterns-3bcffc072b"
+    ],
+    "links": [
+      "skill-styling-39ddb79577"
+    ]
+  },
+  {
+    "id": "skill-styling-39ddb79577",
+    "purpose": "styling",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/011-styling.md",
+    "requires": [
+      "skill-testing-patterns-b52d23e80f"
+    ],
+    "links": [
+      "skill-performance-optimization-1cca419b17"
+    ]
+  },
+  {
+    "id": "skill-performance-optimization-1cca419b17",
+    "purpose": "performance optimization",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/012-performance-optimization.md",
+    "requires": [
+      "skill-styling-39ddb79577"
+    ],
+    "links": [
+      "skill-security-b1e2d1e835"
+    ]
+  },
+  {
+    "id": "skill-security-b1e2d1e835",
+    "purpose": "security",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/013-security.md",
+    "requires": [
+      "skill-performance-optimization-1cca419b17"
+    ],
+    "links": [
+      "skill-deployment-d1209b2eda"
+    ]
+  },
+  {
+    "id": "skill-deployment-d1209b2eda",
+    "purpose": "deployment",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/014-deployment.md",
+    "requires": [
+      "skill-security-b1e2d1e835"
+    ],
+    "links": [
+      "skill-anti-patterns-e78c541806"
+    ]
+  },
+  {
+    "id": "skill-anti-patterns-e78c541806",
+    "purpose": "anti patterns",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/015-anti-patterns.md",
+    "requires": [
+      "skill-deployment-d1209b2eda"
+    ],
+    "links": [
+      "skill-staged-setup-recommendations-67e62b022d"
+    ]
+  },
+  {
+    "id": "skill-staged-setup-recommendations-67e62b022d",
+    "purpose": "staged setup recommendations",
+    "source": "src/vibey_tools/skills/plugins/frontend-design/skills/nextjs-patterns/SKILL.md",
+    "output": "docs/microslices/skills/frontend-design/skills/nextjs-patterns/016-staged-setup-recommendations.md",
+    "requires": [
+      "skill-anti-patterns-e78c541806"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-domain-1-identity-and-authentication-entra-id-jwt-oidc-0cdd0a0ea4",
+    "purpose": "domain 1 identity and authentication entra id jwt oidc",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation/001-domain-1-identity-and-authentication-entra-id-jwt-oidc.md",
+    "requires": [],
+    "links": [
+      "skill-domain-2-api-security-net-8-web-api-13c702198c"
+    ]
+  },
+  {
+    "id": "skill-domain-2-api-security-net-8-web-api-13c702198c",
+    "purpose": "domain 2 api security net 8 web api",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation/002-domain-2-api-security-net-8-web-api.md",
+    "requires": [
+      "skill-domain-1-identity-and-authentication-entra-id-jwt-oidc-0cdd0a0ea4"
+    ],
+    "links": [
+      "skill-domain-3-frontend-security-react-and-blazor-wasm-f10ec2aa95"
+    ]
+  },
+  {
+    "id": "skill-domain-3-frontend-security-react-and-blazor-wasm-f10ec2aa95",
+    "purpose": "domain 3 frontend security react and blazor wasm",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation/003-domain-3-frontend-security-react-and-blazor-wasm.md",
+    "requires": [
+      "skill-domain-2-api-security-net-8-web-api-13c702198c"
+    ],
+    "links": [
+      "skill-domain-4-data-layer-security-cosmosdb-postgresql-databricks-156b32d5f8"
+    ]
+  },
+  {
+    "id": "skill-domain-4-data-layer-security-cosmosdb-postgresql-databricks-156b32d5f8",
+    "purpose": "domain 4 data layer security cosmosdb postgresql databricks",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation/004-domain-4-data-layer-security-cosmosdb-postgresql-databricks.md",
+    "requires": [
+      "skill-domain-3-frontend-security-react-and-blazor-wasm-f10ec2aa95"
+    ],
+    "links": [
+      "skill-domain-5-ai-tool-security-claude-code-and-cursor-96de2a1c8a"
+    ]
+  },
+  {
+    "id": "skill-domain-5-ai-tool-security-claude-code-and-cursor-96de2a1c8a",
+    "purpose": "domain 5 ai tool security claude code and cursor",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation/005-domain-5-ai-tool-security-claude-code-and-cursor.md",
+    "requires": [
+      "skill-domain-4-data-layer-security-cosmosdb-postgresql-databricks-156b32d5f8"
+    ],
+    "links": [
+      "skill-domain-6-azure-infrastructure-and-devsecops-c998879c2a"
+    ]
+  },
+  {
+    "id": "skill-domain-6-azure-infrastructure-and-devsecops-c998879c2a",
+    "purpose": "domain 6 azure infrastructure and devsecops",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation/006-domain-6-azure-infrastructure-and-devsecops.md",
+    "requires": [
+      "skill-domain-5-ai-tool-security-claude-code-and-cursor-96de2a1c8a"
+    ],
+    "links": [
+      "skill-twelve-highest-impact-actions-in-priority-order-87444ea524"
+    ]
+  },
+  {
+    "id": "skill-twelve-highest-impact-actions-in-priority-order-87444ea524",
+    "purpose": "twelve highest impact actions in priority order",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/cybersecurity-implementation/007-twelve-highest-impact-actions-in-priority-order.md",
+    "requires": [
+      "skill-domain-6-azure-infrastructure-and-devsecops-c998879c2a"
+    ],
+    "links": []
+  }
+]

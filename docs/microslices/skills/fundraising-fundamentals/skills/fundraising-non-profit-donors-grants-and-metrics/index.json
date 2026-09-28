@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-20-the-non-profit-revenue-model-3360a71e6e",
+    "purpose": "20 the non profit revenue model",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/001-20-the-non-profit-revenue-model.md",
+    "requires": [],
+    "links": [
+      "skill-21-the-donor-pyramid-and-major-gifts-838c5f1b81"
+    ]
+  },
+  {
+    "id": "skill-21-the-donor-pyramid-and-major-gifts-838c5f1b81",
+    "purpose": "21 the donor pyramid and major gifts",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/002-21-the-donor-pyramid-and-major-gifts.md",
+    "requires": [
+      "skill-20-the-non-profit-revenue-model-3360a71e6e"
+    ],
+    "links": [
+      "skill-22-grants-b02105fcd8"
+    ]
+  },
+  {
+    "id": "skill-22-grants-b02105fcd8",
+    "purpose": "22 grants",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/003-22-grants.md",
+    "requires": [
+      "skill-21-the-donor-pyramid-and-major-gifts-838c5f1b81"
+    ],
+    "links": [
+      "skill-23-capital-campaigns-af407fe6ad"
+    ]
+  },
+  {
+    "id": "skill-23-capital-campaigns-af407fe6ad",
+    "purpose": "23 capital campaigns",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/004-23-capital-campaigns.md",
+    "requires": [
+      "skill-22-grants-b02105fcd8"
+    ],
+    "links": [
+      "skill-24-individual-and-recurring-giving-eb07dafd3d"
+    ]
+  },
+  {
+    "id": "skill-24-individual-and-recurring-giving-eb07dafd3d",
+    "purpose": "24 individual and recurring giving",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/005-24-individual-and-recurring-giving.md",
+    "requires": [
+      "skill-23-capital-campaigns-af407fe6ad"
+    ],
+    "links": [
+      "skill-25-metrics-and-the-overhead-myth-7c22de1c34"
+    ]
+  },
+  {
+    "id": "skill-25-metrics-and-the-overhead-myth-7c22de1c34",
+    "purpose": "25 metrics and the overhead myth",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-non-profit-donors-grants-and-metrics/006-25-metrics-and-the-overhead-myth.md",
+    "requires": [
+      "skill-24-individual-and-recurring-giving-eb07dafd3d"
+    ],
+    "links": []
+  }
+]

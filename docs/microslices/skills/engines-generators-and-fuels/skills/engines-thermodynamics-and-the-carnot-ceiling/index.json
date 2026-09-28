@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-1-the-four-laws-of-thermodynamics-14c635f97b",
+    "purpose": "1 the four laws of thermodynamics",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/001-1-the-four-laws-of-thermodynamics.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-carnot-efficiency-ceiling-419b437e89"
+    ]
+  },
+  {
+    "id": "skill-2-the-carnot-efficiency-ceiling-419b437e89",
+    "purpose": "2 the carnot efficiency ceiling",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/002-2-the-carnot-efficiency-ceiling.md",
+    "requires": [
+      "skill-1-the-four-laws-of-thermodynamics-14c635f97b"
+    ],
+    "links": [
+      "skill-3-working-fluid-properties-and-phase-behaviour-6b9f4504d6"
+    ]
+  },
+  {
+    "id": "skill-3-working-fluid-properties-and-phase-behaviour-6b9f4504d6",
+    "purpose": "3 working fluid properties and phase behaviour",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/003-3-working-fluid-properties-and-phase-behaviour.md",
+    "requires": [
+      "skill-2-the-carnot-efficiency-ceiling-419b437e89"
+    ],
+    "links": [
+      "skill-quick-reference-cd7759deb7"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-cd7759deb7",
+    "purpose": "quick reference",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-thermodynamics-and-the-carnot-ceiling/004-quick-reference.md",
+    "requires": [
+      "skill-3-working-fluid-properties-and-phase-behaviour-6b9f4504d6"
+    ],
+    "links": []
+  }
+]

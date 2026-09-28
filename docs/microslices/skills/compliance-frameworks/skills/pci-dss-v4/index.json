@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-what-this-skill-does-3ae253518d",
+    "purpose": "what this skill does",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/001-what-this-skill-does.md",
+    "requires": [],
+    "links": [
+      "skill-framework-overview-19adde3b28"
+    ]
+  },
+  {
+    "id": "skill-framework-overview-19adde3b28",
+    "purpose": "framework overview",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/002-framework-overview.md",
+    "requires": [
+      "skill-what-this-skill-does-3ae253518d"
+    ],
+    "links": [
+      "skill-the-12-requirements-6-goals-d9c3f07f60"
+    ]
+  },
+  {
+    "id": "skill-the-12-requirements-6-goals-d9c3f07f60",
+    "purpose": "the 12 requirements 6 goals",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/003-the-12-requirements-6-goals.md",
+    "requires": [
+      "skill-framework-overview-19adde3b28"
+    ],
+    "links": [
+      "skill-saq-selection-logic-77fc1baf16"
+    ]
+  },
+  {
+    "id": "skill-saq-selection-logic-77fc1baf16",
+    "purpose": "saq selection logic",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/004-saq-selection-logic.md",
+    "requires": [
+      "skill-the-12-requirements-6-goals-d9c3f07f60"
+    ],
+    "links": [
+      "skill-key-new-requirements-in-pci-dss-v4-0-a080aded5a"
+    ]
+  },
+  {
+    "id": "skill-key-new-requirements-in-pci-dss-v4-0-a080aded5a",
+    "purpose": "key new requirements in pci dss v4 0",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/005-key-new-requirements-in-pci-dss-v4-0.md",
+    "requires": [
+      "skill-saq-selection-logic-77fc1baf16"
+    ],
+    "links": [
+      "skill-scoping-cde-connected-systems-out-of-scope-d5a4044985"
+    ]
+  },
+  {
+    "id": "skill-scoping-cde-connected-systems-out-of-scope-d5a4044985",
+    "purpose": "scoping cde connected systems out of scope",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/006-scoping-cde-connected-systems-out-of-scope.md",
+    "requires": [
+      "skill-key-new-requirements-in-pci-dss-v4-0-a080aded5a"
+    ],
+    "links": [
+      "skill-key-technical-requirements-9878ff16ea"
+    ]
+  },
+  {
+    "id": "skill-key-technical-requirements-9878ff16ea",
+    "purpose": "key technical requirements",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/007-key-technical-requirements.md",
+    "requires": [
+      "skill-scoping-cde-connected-systems-out-of-scope-d5a4044985"
+    ],
+    "links": [
+      "skill-assessment-types-qsa-vs-isa-vs-self-assessment-522027cc2e"
+    ]
+  },
+  {
+    "id": "skill-assessment-types-qsa-vs-isa-vs-self-assessment-522027cc2e",
+    "purpose": "assessment types qsa vs isa vs self assessment",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/008-assessment-types-qsa-vs-isa-vs-self-assessment.md",
+    "requires": [
+      "skill-key-technical-requirements-9878ff16ea"
+    ],
+    "links": [
+      "skill-compensating-controls-31e133e42d"
+    ]
+  },
+  {
+    "id": "skill-compensating-controls-31e133e42d",
+    "purpose": "compensating controls",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/009-compensating-controls.md",
+    "requires": [
+      "skill-assessment-types-qsa-vs-isa-vs-self-assessment-522027cc2e"
+    ],
+    "links": [
+      "skill-common-pci-dss-gaps-and-remediation-675dfd7df5"
+    ]
+  },
+  {
+    "id": "skill-common-pci-dss-gaps-and-remediation-675dfd7df5",
+    "purpose": "common pci dss gaps and remediation",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/010-common-pci-dss-gaps-and-remediation.md",
+    "requires": [
+      "skill-compensating-controls-31e133e42d"
+    ],
+    "links": [
+      "skill-conversation-starters-for-pci-assessments-36f48359f8"
+    ]
+  },
+  {
+    "id": "skill-conversation-starters-for-pci-assessments-36f48359f8",
+    "purpose": "conversation starters for pci assessments",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/pci-dss-v4/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/pci-dss-v4/011-conversation-starters-for-pci-assessments.md",
+    "requires": [
+      "skill-common-pci-dss-gaps-and-remediation-675dfd7df5"
+    ],
+    "links": []
+  }
+]

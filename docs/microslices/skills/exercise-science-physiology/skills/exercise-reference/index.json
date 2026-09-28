@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-25-misconceptions-48743c6a30",
+    "purpose": "25 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-reference/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-reference/001-25-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-26-numbers-d1a1ae3d18"
+    ]
+  },
+  {
+    "id": "skill-26-numbers-d1a1ae3d18",
+    "purpose": "26 numbers",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-reference/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-reference/002-26-numbers.md",
+    "requires": [
+      "skill-25-misconceptions-48743c6a30"
+    ],
+    "links": [
+      "skill-27-books-5dcafa93ea"
+    ]
+  },
+  {
+    "id": "skill-27-books-5dcafa93ea",
+    "purpose": "27 books",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-reference/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-reference/003-27-books.md",
+    "requires": [
+      "skill-26-numbers-d1a1ae3d18"
+    ],
+    "links": [
+      "skill-28-quick-reference-d824120962"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-d824120962",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-reference/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-reference/004-28-quick-reference.md",
+    "requires": [
+      "skill-27-books-5dcafa93ea"
+    ],
+    "links": [
+      "skill-29-method-90a72b885f"
+    ]
+  },
+  {
+    "id": "skill-29-method-90a72b885f",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/exercise-science-physiology/skills/exercise-reference/SKILL.md",
+    "output": "docs/microslices/skills/exercise-science-physiology/skills/exercise-reference/005-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-d824120962"
+    ],
+    "links": []
+  }
+]

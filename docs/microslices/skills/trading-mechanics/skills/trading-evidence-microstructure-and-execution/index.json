@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-c7deb3b587",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-evidence-microstructure-and-execution/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-evidence-microstructure-and-execution/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-the-evidence-actually-shows-dced0929c1"
+    ]
+  },
+  {
+    "id": "skill-1-what-the-evidence-actually-shows-dced0929c1",
+    "purpose": "1 what the evidence actually shows",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-evidence-microstructure-and-execution/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-evidence-microstructure-and-execution/002-1-what-the-evidence-actually-shows.md",
+    "requires": [
+      "skill-0-routing-c7deb3b587"
+    ],
+    "links": [
+      "skill-2-market-microstructure-b495fd3d10"
+    ]
+  },
+  {
+    "id": "skill-2-market-microstructure-b495fd3d10",
+    "purpose": "2 market microstructure",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-evidence-microstructure-and-execution/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-evidence-microstructure-and-execution/003-2-market-microstructure.md",
+    "requires": [
+      "skill-1-what-the-evidence-actually-shows-dced0929c1"
+    ],
+    "links": [
+      "skill-3-orders-and-execution-5496ed9e8c"
+    ]
+  },
+  {
+    "id": "skill-3-orders-and-execution-5496ed9e8c",
+    "purpose": "3 orders and execution",
+    "source": "src/vibey_tools/skills/plugins/trading-mechanics/skills/trading-evidence-microstructure-and-execution/SKILL.md",
+    "output": "docs/microslices/skills/trading-mechanics/skills/trading-evidence-microstructure-and-execution/004-3-orders-and-execution.md",
+    "requires": [
+      "skill-2-market-microstructure-b495fd3d10"
+    ],
+    "links": []
+  }
+]

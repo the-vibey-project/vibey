@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-9643ee2f18",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-military-science-is-5a52308b8a"
+    ]
+  },
+  {
+    "id": "skill-1-what-military-science-is-5a52308b8a",
+    "purpose": "1 what military science is",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/002-1-what-military-science-is.md",
+    "requires": [
+      "skill-0-routing-9643ee2f18"
+    ],
+    "links": [
+      "skill-2-clausewitz-fdfc7d179d"
+    ]
+  },
+  {
+    "id": "skill-2-clausewitz-fdfc7d179d",
+    "purpose": "2 clausewitz",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/003-2-clausewitz.md",
+    "requires": [
+      "skill-1-what-military-science-is-5a52308b8a"
+    ],
+    "links": [
+      "skill-3-sun-tzu-and-other-traditions-8c14602d3e"
+    ]
+  },
+  {
+    "id": "skill-3-sun-tzu-and-other-traditions-8c14602d3e",
+    "purpose": "3 sun tzu and other traditions",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/004-3-sun-tzu-and-other-traditions.md",
+    "requires": [
+      "skill-2-clausewitz-fdfc7d179d"
+    ],
+    "links": [
+      "skill-4-sea-and-air-power-b5f87ad32b"
+    ]
+  },
+  {
+    "id": "skill-4-sea-and-air-power-b5f87ad32b",
+    "purpose": "4 sea and air power",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-theory-clausewitz-sun-tzu-and-sea-and-air-power/005-4-sea-and-air-power.md",
+    "requires": [
+      "skill-3-sun-tzu-and-other-traditions-8c14602d3e"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-18-the-commodity-plastics-035b2aca5b",
+    "purpose": "18 the commodity plastics",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/001-18-the-commodity-plastics.md",
+    "requires": [],
+    "links": [
+      "skill-19-engineering-and-high-performance-polymers-14722d874f"
+    ]
+  },
+  {
+    "id": "skill-19-engineering-and-high-performance-polymers-14722d874f",
+    "purpose": "19 engineering and high performance polymers",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/002-19-engineering-and-high-performance-polymers.md",
+    "requires": [
+      "skill-18-the-commodity-plastics-035b2aca5b"
+    ],
+    "links": [
+      "skill-20-additives-4f0eb62bac"
+    ]
+  },
+  {
+    "id": "skill-20-additives-4f0eb62bac",
+    "purpose": "20 additives",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/003-20-additives.md",
+    "requires": [
+      "skill-19-engineering-and-high-performance-polymers-14722d874f"
+    ],
+    "links": [
+      "skill-21-elastomers-thermosets-and-composites-3bbfcd70b8"
+    ]
+  },
+  {
+    "id": "skill-21-elastomers-thermosets-and-composites-3bbfcd70b8",
+    "purpose": "21 elastomers thermosets and composites",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/004-21-elastomers-thermosets-and-composites.md",
+    "requires": [
+      "skill-20-additives-4f0eb62bac"
+    ],
+    "links": [
+      "skill-22-processing-417752ba7d"
+    ]
+  },
+  {
+    "id": "skill-22-processing-417752ba7d",
+    "purpose": "22 processing",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/005-22-processing.md",
+    "requires": [
+      "skill-21-elastomers-thermosets-and-composites-3bbfcd70b8"
+    ],
+    "links": [
+      "skill-23-degradation-and-failure-3e1133a642"
+    ]
+  },
+  {
+    "id": "skill-23-degradation-and-failure-3e1133a642",
+    "purpose": "23 degradation and failure",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-commodity-engineering-plastics-additives-and-processing/006-23-degradation-and-failure.md",
+    "requires": [
+      "skill-22-processing-417752ba7d"
+    ],
+    "links": []
+  }
+]

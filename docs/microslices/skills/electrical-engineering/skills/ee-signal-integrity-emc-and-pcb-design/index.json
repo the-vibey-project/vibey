@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-9-signal-integrity-and-grounding-466f144f2e",
+    "purpose": "9 signal integrity and grounding",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design/001-9-signal-integrity-and-grounding.md",
+    "requires": [],
+    "links": [
+      "skill-10-emc-and-emi-78a5c114b2"
+    ]
+  },
+  {
+    "id": "skill-10-emc-and-emi-78a5c114b2",
+    "purpose": "10 emc and emi",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design/002-10-emc-and-emi.md",
+    "requires": [
+      "skill-9-signal-integrity-and-grounding-466f144f2e"
+    ],
+    "links": [
+      "skill-11-pcb-design-7c047d7c19"
+    ]
+  },
+  {
+    "id": "skill-11-pcb-design-7c047d7c19",
+    "purpose": "11 pcb design",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-signal-integrity-emc-and-pcb-design/003-11-pcb-design.md",
+    "requires": [
+      "skill-10-emc-and-emi-78a5c114b2"
+    ],
+    "links": []
+  }
+]

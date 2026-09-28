@@ -1,0 +1,238 @@
+[
+  {
+    "id": "skill-the-three-core-levers-in-roi-order-1637123157",
+    "purpose": "the three core levers in roi order",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/001-the-three-core-levers-in-roi-order.md",
+    "requires": [],
+    "links": [
+      "skill-token-economics-fundamentals-84afd10b30"
+    ]
+  },
+  {
+    "id": "skill-token-economics-fundamentals-84afd10b30",
+    "purpose": "token economics fundamentals",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/002-token-economics-fundamentals.md",
+    "requires": [
+      "skill-the-three-core-levers-in-roi-order-1637123157"
+    ],
+    "links": [
+      "skill-azure-pricing-models-ecbfa2d9cf"
+    ]
+  },
+  {
+    "id": "skill-azure-pricing-models-ecbfa2d9cf",
+    "purpose": "azure pricing models",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/003-azure-pricing-models.md",
+    "requires": [
+      "skill-token-economics-fundamentals-84afd10b30"
+    ],
+    "links": [
+      "skill-ptu-spillover-ga-august-2025-4b13d2dd89"
+    ]
+  },
+  {
+    "id": "skill-ptu-spillover-ga-august-2025-4b13d2dd89",
+    "purpose": "ptu spillover ga august 2025",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/004-ptu-spillover-ga-august-2025.md",
+    "requires": [
+      "skill-azure-pricing-models-ecbfa2d9cf"
+    ],
+    "links": [
+      "skill-prompt-caching-the-cache-golden-rule-a106b67d1b"
+    ]
+  },
+  {
+    "id": "skill-prompt-caching-the-cache-golden-rule-a106b67d1b",
+    "purpose": "prompt caching the cache golden rule",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/005-prompt-caching-the-cache-golden-rule.md",
+    "requires": [
+      "skill-ptu-spillover-ga-august-2025-4b13d2dd89"
+    ],
+    "links": [
+      "skill-context-window-engineering-d9607b02e3"
+    ]
+  },
+  {
+    "id": "skill-context-window-engineering-d9607b02e3",
+    "purpose": "context window engineering",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/006-context-window-engineering.md",
+    "requires": [
+      "skill-prompt-caching-the-cache-golden-rule-a106b67d1b"
+    ],
+    "links": [
+      "skill-prompt-context-compression-provider-agnostic-608d6a96ce"
+    ]
+  },
+  {
+    "id": "skill-prompt-context-compression-provider-agnostic-608d6a96ce",
+    "purpose": "prompt context compression provider agnostic",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/007-prompt-context-compression-provider-agnostic.md",
+    "requires": [
+      "skill-context-window-engineering-d9607b02e3"
+    ],
+    "links": [
+      "skill-model-routing-cascades-d39b8daf17"
+    ]
+  },
+  {
+    "id": "skill-model-routing-cascades-d39b8daf17",
+    "purpose": "model routing cascades",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/008-model-routing-cascades.md",
+    "requires": [
+      "skill-prompt-context-compression-provider-agnostic-608d6a96ce"
+    ],
+    "links": [
+      "skill-apim-ai-gateway-reference-architecture-691f919943"
+    ]
+  },
+  {
+    "id": "skill-apim-ai-gateway-reference-architecture-691f919943",
+    "purpose": "apim ai gateway reference architecture",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/009-apim-ai-gateway-reference-architecture.md",
+    "requires": [
+      "skill-model-routing-cascades-d39b8daf17"
+    ],
+    "links": [
+      "skill-semantic-caching-16745e0396"
+    ]
+  },
+  {
+    "id": "skill-semantic-caching-16745e0396",
+    "purpose": "semantic caching",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/010-semantic-caching.md",
+    "requires": [
+      "skill-apim-ai-gateway-reference-architecture-691f919943"
+    ],
+    "links": [
+      "skill-advanced-prompt-engineering-b07ad86f03"
+    ]
+  },
+  {
+    "id": "skill-advanced-prompt-engineering-b07ad86f03",
+    "purpose": "advanced prompt engineering",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/011-advanced-prompt-engineering.md",
+    "requires": [
+      "skill-semantic-caching-16745e0396"
+    ],
+    "links": [
+      "skill-tool-calling-cost-optimization-ac01b79fcd"
+    ]
+  },
+  {
+    "id": "skill-tool-calling-cost-optimization-ac01b79fcd",
+    "purpose": "tool calling cost optimization",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/012-tool-calling-cost-optimization.md",
+    "requires": [
+      "skill-advanced-prompt-engineering-b07ad86f03"
+    ],
+    "links": [
+      "skill-fine-tuning-for-cost-distillation-pattern-649f1c9380"
+    ]
+  },
+  {
+    "id": "skill-fine-tuning-for-cost-distillation-pattern-649f1c9380",
+    "purpose": "fine tuning for cost distillation pattern",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/013-fine-tuning-for-cost-distillation-pattern.md",
+    "requires": [
+      "skill-tool-calling-cost-optimization-ac01b79fcd"
+    ],
+    "links": [
+      "skill-embeddings-cost-optimization-476dec2c3e"
+    ]
+  },
+  {
+    "id": "skill-embeddings-cost-optimization-476dec2c3e",
+    "purpose": "embeddings cost optimization",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/014-embeddings-cost-optimization.md",
+    "requires": [
+      "skill-fine-tuning-for-cost-distillation-pattern-649f1c9380"
+    ],
+    "links": [
+      "skill-rate-limiting-429-handling-e5f510eca5"
+    ]
+  },
+  {
+    "id": "skill-rate-limiting-429-handling-e5f510eca5",
+    "purpose": "rate limiting 429 handling",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/015-rate-limiting-429-handling.md",
+    "requires": [
+      "skill-embeddings-cost-optimization-476dec2c3e"
+    ],
+    "links": [
+      "skill-azure-monitor-metrics-reference-690c72d795"
+    ]
+  },
+  {
+    "id": "skill-azure-monitor-metrics-reference-690c72d795",
+    "purpose": "azure monitor metrics reference",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/016-azure-monitor-metrics-reference.md",
+    "requires": [
+      "skill-rate-limiting-429-handling-e5f510eca5"
+    ],
+    "links": [
+      "skill-cost-unit-economics-ae3f1aaa90"
+    ]
+  },
+  {
+    "id": "skill-cost-unit-economics-ae3f1aaa90",
+    "purpose": "cost unit economics",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/017-cost-unit-economics.md",
+    "requires": [
+      "skill-azure-monitor-metrics-reference-690c72d795"
+    ],
+    "links": [
+      "skill-real-world-optimization-recipes-fa25ed877e"
+    ]
+  },
+  {
+    "id": "skill-real-world-optimization-recipes-fa25ed877e",
+    "purpose": "real world optimization recipes",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/018-real-world-optimization-recipes.md",
+    "requires": [
+      "skill-cost-unit-economics-ae3f1aaa90"
+    ],
+    "links": [
+      "skill-staged-implementation-roadmap-3f5b006a23"
+    ]
+  },
+  {
+    "id": "skill-staged-implementation-roadmap-3f5b006a23",
+    "purpose": "staged implementation roadmap",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/019-staged-implementation-roadmap.md",
+    "requires": [
+      "skill-real-world-optimization-recipes-fa25ed877e"
+    ],
+    "links": [
+      "skill-anti-patterns-c6010a71e2"
+    ]
+  },
+  {
+    "id": "skill-anti-patterns-c6010a71e2",
+    "purpose": "anti patterns",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/llm-cost-optimization/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/llm-cost-optimization/020-anti-patterns.md",
+    "requires": [
+      "skill-staged-implementation-roadmap-3f5b006a23"
+    ],
+    "links": []
+  }
+]

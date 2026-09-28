@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-8-runtime-systems-4d2b38aeb9",
+    "purpose": "8 runtime systems",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-runtimes-interpreters-and-jits/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-runtimes-interpreters-and-jits/001-8-runtime-systems.md",
+    "requires": [],
+    "links": [
+      "skill-9-interpreters-and-jits-e5f546a950"
+    ]
+  },
+  {
+    "id": "skill-9-interpreters-and-jits-e5f546a950",
+    "purpose": "9 interpreters and jits",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-runtimes-interpreters-and-jits/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-runtimes-interpreters-and-jits/002-9-interpreters-and-jits.md",
+    "requires": [
+      "skill-8-runtime-systems-4d2b38aeb9"
+    ],
+    "links": []
+  }
+]

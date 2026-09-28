@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-anti-patterns-a4eb5fb740",
+    "purpose": "14 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-reference/001-14-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-15-contested-questions-36f8abf8ad"
+    ]
+  },
+  {
+    "id": "skill-15-contested-questions-36f8abf8ad",
+    "purpose": "15 contested questions",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-reference/002-15-contested-questions.md",
+    "requires": [
+      "skill-14-anti-patterns-a4eb5fb740"
+    ],
+    "links": [
+      "skill-16-currency-snapshot-verified-august-2026-ec21d4c5bf"
+    ]
+  },
+  {
+    "id": "skill-16-currency-snapshot-verified-august-2026-ec21d4c5bf",
+    "purpose": "16 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-reference/003-16-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-15-contested-questions-36f8abf8ad"
+    ],
+    "links": [
+      "skill-17-the-canon-49201cac0f"
+    ]
+  },
+  {
+    "id": "skill-17-the-canon-49201cac0f",
+    "purpose": "17 the canon",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-reference/004-17-the-canon.md",
+    "requires": [
+      "skill-16-currency-snapshot-verified-august-2026-ec21d4c5bf"
+    ],
+    "links": [
+      "skill-18-quick-reference-7f5b4b8ee6"
+    ]
+  },
+  {
+    "id": "skill-18-quick-reference-7f5b4b8ee6",
+    "purpose": "18 quick reference",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-reference/005-18-quick-reference.md",
+    "requires": [
+      "skill-17-the-canon-49201cac0f"
+    ],
+    "links": [
+      "skill-19-sources-and-method-c19bee759f"
+    ]
+  },
+  {
+    "id": "skill-19-sources-and-method-c19bee759f",
+    "purpose": "19 sources and method",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-reference/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-reference/006-19-sources-and-method.md",
+    "requires": [
+      "skill-18-quick-reference-7f5b4b8ee6"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-ui-ux-standards-a9854f381a",
+    "purpose": "ui ux standards",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-ux-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-ux-and-patterns/001-ui-ux-standards.md",
+    "requires": [],
+    "links": [
+      "skill-accessibility-is-now-a-legal-requirement-not-optional-171f33df18"
+    ]
+  },
+  {
+    "id": "skill-accessibility-is-now-a-legal-requirement-not-optional-171f33df18",
+    "purpose": "accessibility is now a legal requirement not optional",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-ux-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-ux-and-patterns/002-accessibility-is-now-a-legal-requirement-not-optional.md",
+    "requires": [
+      "skill-ui-ux-standards-a9854f381a"
+    ],
+    "links": [
+      "skill-mobile-design-patterns-81b7e03e06"
+    ]
+  },
+  {
+    "id": "skill-mobile-design-patterns-81b7e03e06",
+    "purpose": "mobile design patterns",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-ux-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-ux-and-patterns/003-mobile-design-patterns.md",
+    "requires": [
+      "skill-accessibility-is-now-a-legal-requirement-not-optional-171f33df18"
+    ],
+    "links": [
+      "skill-offline-first-persistence-libraries-7ad3214e06"
+    ]
+  },
+  {
+    "id": "skill-offline-first-persistence-libraries-7ad3214e06",
+    "purpose": "offline first persistence libraries",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-ux-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-ux-and-patterns/004-offline-first-persistence-libraries.md",
+    "requires": [
+      "skill-mobile-design-patterns-81b7e03e06"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-10-extensions-f6bd740699",
+    "purpose": "10 extensions",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-extensions-platform-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-extensions-platform-and-standards/001-10-extensions.md",
+    "requires": [],
+    "links": [
+      "skill-11-storage-media-and-capabilities-49308be52b"
+    ]
+  },
+  {
+    "id": "skill-11-storage-media-and-capabilities-49308be52b",
+    "purpose": "11 storage media and capabilities",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-extensions-platform-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-extensions-platform-and-standards/002-11-storage-media-and-capabilities.md",
+    "requires": [
+      "skill-10-extensions-f6bd740699"
+    ],
+    "links": [
+      "skill-12-accessibility-5487f3b0ac"
+    ]
+  },
+  {
+    "id": "skill-12-accessibility-5487f3b0ac",
+    "purpose": "12 accessibility",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-extensions-platform-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-extensions-platform-and-standards/003-12-accessibility.md",
+    "requires": [
+      "skill-11-storage-media-and-capabilities-49308be52b"
+    ],
+    "links": [
+      "skill-13-standards-and-interop-0cb5fe5d58"
+    ]
+  },
+  {
+    "id": "skill-13-standards-and-interop-0cb5fe5d58",
+    "purpose": "13 standards and interop",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-extensions-platform-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-extensions-platform-and-standards/004-13-standards-and-interop.md",
+    "requires": [
+      "skill-12-accessibility-5487f3b0ac"
+    ],
+    "links": [
+      "skill-14-testing-telemetry-and-shipping-9a178cbf61"
+    ]
+  },
+  {
+    "id": "skill-14-testing-telemetry-and-shipping-9a178cbf61",
+    "purpose": "14 testing telemetry and shipping",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-extensions-platform-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-extensions-platform-and-standards/005-14-testing-telemetry-and-shipping.md",
+    "requires": [
+      "skill-13-standards-and-interop-0cb5fe5d58"
+    ],
+    "links": []
+  }
+]

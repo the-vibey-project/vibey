@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-7-the-resurrection-minimal-facts-the-alternatives-and-the-cumulative-case-35595f718e",
+    "purpose": "7 the resurrection minimal facts the alternatives and the cumulative case",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-resurrection-and-scripture/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-resurrection-and-scripture/001-7-the-resurrection-minimal-facts-the-alternatives-and-the-cumulative-case.md",
+    "requires": [],
+    "links": [
+      "skill-8-the-reliability-of-the-new-testament-3deaa46b92"
+    ]
+  },
+  {
+    "id": "skill-8-the-reliability-of-the-new-testament-3deaa46b92",
+    "purpose": "8 the reliability of the new testament",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-resurrection-and-scripture/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-apologetics-resurrection-and-scripture/002-8-the-reliability-of-the-new-testament.md",
+    "requires": [
+      "skill-7-the-resurrection-minimal-facts-the-alternatives-and-the-cumulative-case-35595f718e"
+    ],
+    "links": []
+  }
+]

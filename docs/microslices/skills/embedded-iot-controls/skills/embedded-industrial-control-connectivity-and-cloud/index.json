@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-industrial-control-and-ot-946a86375a",
+    "purpose": "6 industrial control and ot",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/001-6-industrial-control-and-ot.md",
+    "requires": [],
+    "links": [
+      "skill-7-control-theory-as-practiced-in-firmware-cc2f185320"
+    ]
+  },
+  {
+    "id": "skill-7-control-theory-as-practiced-in-firmware-cc2f185320",
+    "purpose": "7 control theory as practiced in firmware",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/002-7-control-theory-as-practiced-in-firmware.md",
+    "requires": [
+      "skill-6-industrial-control-and-ot-946a86375a"
+    ],
+    "links": [
+      "skill-8-connectivity-3055df089c"
+    ]
+  },
+  {
+    "id": "skill-8-connectivity-3055df089c",
+    "purpose": "8 connectivity",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/003-8-connectivity.md",
+    "requires": [
+      "skill-7-control-theory-as-practiced-in-firmware-cc2f185320"
+    ],
+    "links": [
+      "skill-9-cloud-fleet-and-lifecycle-63d7208431"
+    ]
+  },
+  {
+    "id": "skill-9-cloud-fleet-and-lifecycle-63d7208431",
+    "purpose": "9 cloud fleet and lifecycle",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-industrial-control-connectivity-and-cloud/004-9-cloud-fleet-and-lifecycle.md",
+    "requires": [
+      "skill-8-connectivity-3055df089c"
+    ],
+    "links": []
+  }
+]

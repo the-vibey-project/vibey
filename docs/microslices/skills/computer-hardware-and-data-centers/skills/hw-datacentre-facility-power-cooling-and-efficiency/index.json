@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-16-facility-basics-ed669b8217",
+    "purpose": "16 facility basics",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/001-16-facility-basics.md",
+    "requires": [],
+    "links": [
+      "skill-17-power-distribution-cfeaf2dd41"
+    ]
+  },
+  {
+    "id": "skill-17-power-distribution-cfeaf2dd41",
+    "purpose": "17 power distribution",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/002-17-power-distribution.md",
+    "requires": [
+      "skill-16-facility-basics-ed669b8217"
+    ],
+    "links": [
+      "skill-18-cooling-at-scale-6755de6260"
+    ]
+  },
+  {
+    "id": "skill-18-cooling-at-scale-6755de6260",
+    "purpose": "18 cooling at scale",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/003-18-cooling-at-scale.md",
+    "requires": [
+      "skill-17-power-distribution-cfeaf2dd41"
+    ],
+    "links": [
+      "skill-19-efficiency-metrics-763a202e00"
+    ]
+  },
+  {
+    "id": "skill-19-efficiency-metrics-763a202e00",
+    "purpose": "19 efficiency metrics",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/004-19-efficiency-metrics.md",
+    "requires": [
+      "skill-18-cooling-at-scale-6755de6260"
+    ],
+    "links": [
+      "skill-20-racks-and-physical-infrastructure-770ecf8670"
+    ]
+  },
+  {
+    "id": "skill-20-racks-and-physical-infrastructure-770ecf8670",
+    "purpose": "20 racks and physical infrastructure",
+    "source": "src/vibey_tools/skills/plugins/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/computer-hardware-and-data-centers/skills/hw-datacentre-facility-power-cooling-and-efficiency/005-20-racks-and-physical-infrastructure.md",
+    "requires": [
+      "skill-19-efficiency-metrics-763a202e00"
+    ],
+    "links": []
+  }
+]

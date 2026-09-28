@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-569c346beb",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-design-spiral-f100f616f8"
+    ]
+  },
+  {
+    "id": "skill-1-the-design-spiral-f100f616f8",
+    "purpose": "1 the design spiral",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/002-1-the-design-spiral.md",
+    "requires": [
+      "skill-0-routing-569c346beb"
+    ],
+    "links": [
+      "skill-2-buoyancy-and-hydrostatics-8e7d75234a"
+    ]
+  },
+  {
+    "id": "skill-2-buoyancy-and-hydrostatics-8e7d75234a",
+    "purpose": "2 buoyancy and hydrostatics",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/003-2-buoyancy-and-hydrostatics.md",
+    "requires": [
+      "skill-1-the-design-spiral-f100f616f8"
+    ],
+    "links": [
+      "skill-3-stability-8073d7f5ca"
+    ]
+  },
+  {
+    "id": "skill-3-stability-8073d7f5ca",
+    "purpose": "3 stability",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/004-3-stability.md",
+    "requires": [
+      "skill-2-buoyancy-and-hydrostatics-8e7d75234a"
+    ],
+    "links": [
+      "skill-4-hull-form-de5eeaa61e"
+    ]
+  },
+  {
+    "id": "skill-4-hull-form-de5eeaa61e",
+    "purpose": "4 hull form",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-design-spiral-hydrostatics-stability-and-hull-form/005-4-hull-form.md",
+    "requires": [
+      "skill-3-stability-8073d7f5ca"
+    ],
+    "links": []
+  }
+]

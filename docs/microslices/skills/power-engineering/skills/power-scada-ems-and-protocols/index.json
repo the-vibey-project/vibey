@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-6-scada-ems-and-dms-4f5de13ad1",
+    "purpose": "6 scada ems and dms",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-scada-ems-and-protocols/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-scada-ems-and-protocols/001-6-scada-ems-and-dms.md",
+    "requires": [],
+    "links": [
+      "skill-7-protocols-e1cb2f0eac"
+    ]
+  },
+  {
+    "id": "skill-7-protocols-e1cb2f0eac",
+    "purpose": "7 protocols",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-scada-ems-and-protocols/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-scada-ems-and-protocols/002-7-protocols.md",
+    "requires": [
+      "skill-6-scada-ems-and-dms-4f5de13ad1"
+    ],
+    "links": []
+  }
+]

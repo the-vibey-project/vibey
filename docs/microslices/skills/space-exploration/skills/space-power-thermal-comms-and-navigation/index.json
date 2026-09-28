@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-3-power-82c4a5fb42",
+    "purpose": "3 power",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-power-thermal-comms-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-power-thermal-comms-and-navigation/001-3-power.md",
+    "requires": [],
+    "links": [
+      "skill-4-thermal-control-f8b3d24d90"
+    ]
+  },
+  {
+    "id": "skill-4-thermal-control-f8b3d24d90",
+    "purpose": "4 thermal control",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-power-thermal-comms-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-power-thermal-comms-and-navigation/002-4-thermal-control.md",
+    "requires": [
+      "skill-3-power-82c4a5fb42"
+    ],
+    "links": [
+      "skill-5-communications-95cae00d64"
+    ]
+  },
+  {
+    "id": "skill-5-communications-95cae00d64",
+    "purpose": "5 communications",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-power-thermal-comms-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-power-thermal-comms-and-navigation/003-5-communications.md",
+    "requires": [
+      "skill-4-thermal-control-f8b3d24d90"
+    ],
+    "links": [
+      "skill-6-navigation-and-autonomy-3c0bd6faa0"
+    ]
+  },
+  {
+    "id": "skill-6-navigation-and-autonomy-3c0bd6faa0",
+    "purpose": "6 navigation and autonomy",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-power-thermal-comms-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-power-thermal-comms-and-navigation/004-6-navigation-and-autonomy.md",
+    "requires": [
+      "skill-5-communications-95cae00d64"
+    ],
+    "links": []
+  }
+]

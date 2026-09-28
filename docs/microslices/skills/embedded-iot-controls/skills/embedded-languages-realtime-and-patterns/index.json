@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-3-languages-737593fbec",
+    "purpose": "3 languages",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns/001-3-languages.md",
+    "requires": [],
+    "links": [
+      "skill-4-concurrency-timing-and-real-time-correctness-0b441e02f0"
+    ]
+  },
+  {
+    "id": "skill-4-concurrency-timing-and-real-time-correctness-0b441e02f0",
+    "purpose": "4 concurrency timing and real time correctness",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns/002-4-concurrency-timing-and-real-time-correctness.md",
+    "requires": [
+      "skill-3-languages-737593fbec"
+    ],
+    "links": [
+      "skill-5-design-patterns-the-working-set-8fbe7463ae"
+    ]
+  },
+  {
+    "id": "skill-5-design-patterns-the-working-set-8fbe7463ae",
+    "purpose": "5 design patterns the working set",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-languages-realtime-and-patterns/003-5-design-patterns-the-working-set.md",
+    "requires": [
+      "skill-4-concurrency-timing-and-real-time-correctness-0b441e02f0"
+    ],
+    "links": []
+  }
+]

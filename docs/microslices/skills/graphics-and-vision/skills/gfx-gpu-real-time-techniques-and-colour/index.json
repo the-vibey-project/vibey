@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-gpu-architecture-and-apis-1a0f2e48ff",
+    "purpose": "5 gpu architecture and apis",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour/001-5-gpu-architecture-and-apis.md",
+    "requires": [],
+    "links": [
+      "skill-6-real-time-techniques-597f5adbcd"
+    ]
+  },
+  {
+    "id": "skill-6-real-time-techniques-597f5adbcd",
+    "purpose": "6 real time techniques",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour/002-6-real-time-techniques.md",
+    "requires": [
+      "skill-5-gpu-architecture-and-apis-1a0f2e48ff"
+    ],
+    "links": [
+      "skill-7-colour-and-tone-mapping-1a2f4c24e8"
+    ]
+  },
+  {
+    "id": "skill-7-colour-and-tone-mapping-1a2f4c24e8",
+    "purpose": "7 colour and tone mapping",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-gpu-real-time-techniques-and-colour/003-7-colour-and-tone-mapping.md",
+    "requires": [
+      "skill-6-real-time-techniques-597f5adbcd"
+    ],
+    "links": []
+  }
+]

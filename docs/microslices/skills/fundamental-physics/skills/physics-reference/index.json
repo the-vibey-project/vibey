@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-13-numbers-e63b62ddce",
+    "purpose": "13 numbers",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/001-13-numbers.md",
+    "requires": [],
+    "links": [
+      "skill-14-misconceptions-5ff0f252a2"
+    ]
+  },
+  {
+    "id": "skill-14-misconceptions-5ff0f252a2",
+    "purpose": "14 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/002-14-misconceptions.md",
+    "requires": [
+      "skill-13-numbers-e63b62ddce"
+    ],
+    "links": [
+      "skill-15-contested-interpretation-0bf6eb8ec9"
+    ]
+  },
+  {
+    "id": "skill-15-contested-interpretation-0bf6eb8ec9",
+    "purpose": "15 contested interpretation",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/003-15-contested-interpretation.md",
+    "requires": [
+      "skill-14-misconceptions-5ff0f252a2"
+    ],
+    "links": [
+      "skill-16-contested-physics-aa112fab7b"
+    ]
+  },
+  {
+    "id": "skill-16-contested-physics-aa112fab7b",
+    "purpose": "16 contested physics",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/004-16-contested-physics.md",
+    "requires": [
+      "skill-15-contested-interpretation-0bf6eb8ec9"
+    ],
+    "links": [
+      "skill-17-what-s-actually-open-82eb340dfd"
+    ]
+  },
+  {
+    "id": "skill-17-what-s-actually-open-82eb340dfd",
+    "purpose": "17 what s actually open",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/005-17-what-s-actually-open.md",
+    "requires": [
+      "skill-16-contested-physics-aa112fab7b"
+    ],
+    "links": [
+      "skill-18-textbooks-9a4b2edbef"
+    ]
+  },
+  {
+    "id": "skill-18-textbooks-9a4b2edbef",
+    "purpose": "18 textbooks",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/006-18-textbooks.md",
+    "requires": [
+      "skill-17-what-s-actually-open-82eb340dfd"
+    ],
+    "links": [
+      "skill-19-quick-reference-afa00c3f9a"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-afa00c3f9a",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/007-19-quick-reference.md",
+    "requires": [
+      "skill-18-textbooks-9a4b2edbef"
+    ],
+    "links": [
+      "skill-20-method-c7a2a16169"
+    ]
+  },
+  {
+    "id": "skill-20-method-c7a2a16169",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/fundamental-physics/skills/physics-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundamental-physics/skills/physics-reference/008-20-method.md",
+    "requires": [
+      "skill-19-quick-reference-afa00c3f9a"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-15-dram-internals-509a82c954",
+    "purpose": "15 dram internals",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/001-15-dram-internals.md",
+    "requires": [],
+    "links": [
+      "skill-16-memory-controllers-f61118b65c"
+    ]
+  },
+  {
+    "id": "skill-16-memory-controllers-f61118b65c",
+    "purpose": "16 memory controllers",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/002-16-memory-controllers.md",
+    "requires": [
+      "skill-15-dram-internals-509a82c954"
+    ],
+    "links": [
+      "skill-17-emerging-memory-interfaces-a711ebe857"
+    ]
+  },
+  {
+    "id": "skill-17-emerging-memory-interfaces-a711ebe857",
+    "purpose": "17 emerging memory interfaces",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/003-17-emerging-memory-interfaces.md",
+    "requires": [
+      "skill-16-memory-controllers-f61118b65c"
+    ],
+    "links": [
+      "skill-18-power-and-clocking-48545d57bd"
+    ]
+  },
+  {
+    "id": "skill-18-power-and-clocking-48545d57bd",
+    "purpose": "18 power and clocking",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/004-18-power-and-clocking.md",
+    "requires": [
+      "skill-17-emerging-memory-interfaces-a711ebe857"
+    ],
+    "links": [
+      "skill-19-microarchitectural-security-620ea5ed6b"
+    ]
+  },
+  {
+    "id": "skill-19-microarchitectural-security-620ea5ed6b",
+    "purpose": "19 microarchitectural security",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-dram-memory-controllers-power-and-security/005-19-microarchitectural-security.md",
+    "requires": [
+      "skill-18-power-and-clocking-48545d57bd"
+    ],
+    "links": []
+  }
+]

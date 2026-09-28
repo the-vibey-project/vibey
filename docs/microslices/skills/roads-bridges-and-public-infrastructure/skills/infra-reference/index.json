@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-27-what-s-live-checked-august-2026-4bd8e7c524",
+    "purpose": "27 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-reference/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-reference/001-27-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-28-misconceptions-d45677acba"
+    ]
+  },
+  {
+    "id": "skill-28-misconceptions-d45677acba",
+    "purpose": "28 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-reference/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-reference/002-28-misconceptions.md",
+    "requires": [
+      "skill-27-what-s-live-checked-august-2026-4bd8e7c524"
+    ],
+    "links": [
+      "skill-29-numbers-4a12612fb3"
+    ]
+  },
+  {
+    "id": "skill-29-numbers-4a12612fb3",
+    "purpose": "29 numbers",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-reference/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-reference/003-29-numbers.md",
+    "requires": [
+      "skill-28-misconceptions-d45677acba"
+    ],
+    "links": [
+      "skill-30-sources-5bb0007b9d"
+    ]
+  },
+  {
+    "id": "skill-30-sources-5bb0007b9d",
+    "purpose": "30 sources",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-reference/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-reference/004-30-sources.md",
+    "requires": [
+      "skill-29-numbers-4a12612fb3"
+    ],
+    "links": [
+      "skill-31-quick-reference-fe55e78e8a"
+    ]
+  },
+  {
+    "id": "skill-31-quick-reference-fe55e78e8a",
+    "purpose": "31 quick reference",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-reference/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-reference/005-31-quick-reference.md",
+    "requires": [
+      "skill-30-sources-5bb0007b9d"
+    ],
+    "links": [
+      "skill-32-method-e232884d21"
+    ]
+  },
+  {
+    "id": "skill-32-method-e232884d21",
+    "purpose": "32 method",
+    "source": "src/vibey_tools/skills/plugins/roads-bridges-and-public-infrastructure/skills/infra-reference/SKILL.md",
+    "output": "docs/microslices/skills/roads-bridges-and-public-infrastructure/skills/infra-reference/006-32-method.md",
+    "requires": [
+      "skill-31-quick-reference-fe55e78e8a"
+    ],
+    "links": []
+  }
+]

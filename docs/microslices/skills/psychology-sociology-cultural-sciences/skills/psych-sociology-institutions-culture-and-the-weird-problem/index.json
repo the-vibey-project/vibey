@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-16-sociological-thinking-630ce103be",
+    "purpose": "16 sociological thinking",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/001-16-sociological-thinking.md",
+    "requires": [],
+    "links": [
+      "skill-17-theory-traditions-732b922aac"
+    ]
+  },
+  {
+    "id": "skill-17-theory-traditions-732b922aac",
+    "purpose": "17 theory traditions",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/002-17-theory-traditions.md",
+    "requires": [
+      "skill-16-sociological-thinking-630ce103be"
+    ],
+    "links": [
+      "skill-18-stratification-and-mobility-55237d4ab6"
+    ]
+  },
+  {
+    "id": "skill-18-stratification-and-mobility-55237d4ab6",
+    "purpose": "18 stratification and mobility",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/003-18-stratification-and-mobility.md",
+    "requires": [
+      "skill-17-theory-traditions-732b922aac"
+    ],
+    "links": [
+      "skill-19-networks-f0ed8ee22c"
+    ]
+  },
+  {
+    "id": "skill-19-networks-f0ed8ee22c",
+    "purpose": "19 networks",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/004-19-networks.md",
+    "requires": [
+      "skill-18-stratification-and-mobility-55237d4ab6"
+    ],
+    "links": [
+      "skill-20-institutions-and-organizations-8fbc1860ea"
+    ]
+  },
+  {
+    "id": "skill-20-institutions-and-organizations-8fbc1860ea",
+    "purpose": "20 institutions and organizations",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/005-20-institutions-and-organizations.md",
+    "requires": [
+      "skill-19-networks-f0ed8ee22c"
+    ],
+    "links": [
+      "skill-21-deviance-and-social-control-6ba3e158aa"
+    ]
+  },
+  {
+    "id": "skill-21-deviance-and-social-control-6ba3e158aa",
+    "purpose": "21 deviance and social control",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/006-21-deviance-and-social-control.md",
+    "requires": [
+      "skill-20-institutions-and-organizations-8fbc1860ea"
+    ],
+    "links": [
+      "skill-22-religion-and-secularization-f958e80a99"
+    ]
+  },
+  {
+    "id": "skill-22-religion-and-secularization-f958e80a99",
+    "purpose": "22 religion and secularization",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/007-22-religion-and-secularization.md",
+    "requires": [
+      "skill-21-deviance-and-social-control-6ba3e158aa"
+    ],
+    "links": [
+      "skill-23-culture-and-anthropology-6a0783cd45"
+    ]
+  },
+  {
+    "id": "skill-23-culture-and-anthropology-6a0783cd45",
+    "purpose": "23 culture and anthropology",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/008-23-culture-and-anthropology.md",
+    "requires": [
+      "skill-22-religion-and-secularization-f958e80a99"
+    ],
+    "links": [
+      "skill-24-cross-cultural-the-weird-problem-559a5857ca"
+    ]
+  },
+  {
+    "id": "skill-24-cross-cultural-the-weird-problem-559a5857ca",
+    "purpose": "24 cross cultural the weird problem",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-sociology-institutions-culture-and-the-weird-problem/009-24-cross-cultural-the-weird-problem.md",
+    "requires": [
+      "skill-23-culture-and-anthropology-6a0783cd45"
+    ],
+    "links": []
+  }
+]

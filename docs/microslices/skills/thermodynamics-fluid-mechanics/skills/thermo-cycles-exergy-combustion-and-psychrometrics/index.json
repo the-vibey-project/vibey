@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-8-power-cycles-f575324fd6",
+    "purpose": "8 power cycles",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/001-8-power-cycles.md",
+    "requires": [],
+    "links": [
+      "skill-9-refrigeration-and-heat-pumps-2c4a00abe5"
+    ]
+  },
+  {
+    "id": "skill-9-refrigeration-and-heat-pumps-2c4a00abe5",
+    "purpose": "9 refrigeration and heat pumps",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/002-9-refrigeration-and-heat-pumps.md",
+    "requires": [
+      "skill-8-power-cycles-f575324fd6"
+    ],
+    "links": [
+      "skill-10-exergy-24f618d16e"
+    ]
+  },
+  {
+    "id": "skill-10-exergy-24f618d16e",
+    "purpose": "10 exergy",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/003-10-exergy.md",
+    "requires": [
+      "skill-9-refrigeration-and-heat-pumps-2c4a00abe5"
+    ],
+    "links": [
+      "skill-11-combustion-74ddec69cd"
+    ]
+  },
+  {
+    "id": "skill-11-combustion-74ddec69cd",
+    "purpose": "11 combustion",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/004-11-combustion.md",
+    "requires": [
+      "skill-10-exergy-24f618d16e"
+    ],
+    "links": [
+      "skill-12-psychrometrics-2abd531279"
+    ]
+  },
+  {
+    "id": "skill-12-psychrometrics-2abd531279",
+    "purpose": "12 psychrometrics",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-cycles-exergy-combustion-and-psychrometrics/005-12-psychrometrics.md",
+    "requires": [
+      "skill-11-combustion-74ddec69cd"
+    ],
+    "links": []
+  }
+]

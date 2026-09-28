@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-15-misconceptions-the-consolidated-list-1ef3e846c0",
+    "purpose": "15 misconceptions the consolidated list",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-reference/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-reference/001-15-misconceptions-the-consolidated-list.md",
+    "requires": [],
+    "links": [
+      "skill-16-numbers-and-formulas-6e3e616848"
+    ]
+  },
+  {
+    "id": "skill-16-numbers-and-formulas-6e3e616848",
+    "purpose": "16 numbers and formulas",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-reference/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-reference/002-16-numbers-and-formulas.md",
+    "requires": [
+      "skill-15-misconceptions-the-consolidated-list-1ef3e846c0"
+    ],
+    "links": [
+      "skill-17-books-4b2c2f3558"
+    ]
+  },
+  {
+    "id": "skill-17-books-4b2c2f3558",
+    "purpose": "17 books",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-reference/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-reference/003-17-books.md",
+    "requires": [
+      "skill-16-numbers-and-formulas-6e3e616848"
+    ],
+    "links": [
+      "skill-18-quick-reference-843615e472"
+    ]
+  },
+  {
+    "id": "skill-18-quick-reference-843615e472",
+    "purpose": "18 quick reference",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-reference/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-reference/004-18-quick-reference.md",
+    "requires": [
+      "skill-17-books-4b2c2f3558"
+    ],
+    "links": [
+      "skill-19-method-0aeee88144"
+    ]
+  },
+  {
+    "id": "skill-19-method-0aeee88144",
+    "purpose": "19 method",
+    "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-reference/SKILL.md",
+    "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-reference/005-19-method.md",
+    "requires": [
+      "skill-18-quick-reference-843615e472"
+    ],
+    "links": []
+  }
+]

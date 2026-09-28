@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-0e84aa9eda",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-framing-data-and-classical/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-framing-data-and-classical/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-framing-a6f7c9452e"
+    ]
+  },
+  {
+    "id": "skill-1-framing-a6f7c9452e",
+    "purpose": "1 framing",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-framing-data-and-classical/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-framing-data-and-classical/002-1-framing.md",
+    "requires": [
+      "skill-0-routing-0e84aa9eda"
+    ],
+    "links": [
+      "skill-2-data-fd2352b880"
+    ]
+  },
+  {
+    "id": "skill-2-data-fd2352b880",
+    "purpose": "2 data",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-framing-data-and-classical/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-framing-data-and-classical/003-2-data.md",
+    "requires": [
+      "skill-1-framing-a6f7c9452e"
+    ],
+    "links": [
+      "skill-3-the-classical-toolkit-eb00bbd306"
+    ]
+  },
+  {
+    "id": "skill-3-the-classical-toolkit-eb00bbd306",
+    "purpose": "3 the classical toolkit",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-framing-data-and-classical/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-framing-data-and-classical/004-3-the-classical-toolkit.md",
+    "requires": [
+      "skill-2-data-fd2352b880"
+    ],
+    "links": []
+  }
+]

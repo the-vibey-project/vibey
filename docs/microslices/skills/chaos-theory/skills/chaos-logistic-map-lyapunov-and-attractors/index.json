@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-the-logistic-map-3e6cb4c1a5",
+    "purpose": "5 the logistic map",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/001-5-the-logistic-map.md",
+    "requires": [],
+    "links": [
+      "skill-6-lyapunov-exponents-adba4fd18f"
+    ]
+  },
+  {
+    "id": "skill-6-lyapunov-exponents-adba4fd18f",
+    "purpose": "6 lyapunov exponents",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/002-6-lyapunov-exponents.md",
+    "requires": [
+      "skill-5-the-logistic-map-3e6cb4c1a5"
+    ],
+    "links": [
+      "skill-7-strange-attractors-4af5da0741"
+    ]
+  },
+  {
+    "id": "skill-7-strange-attractors-4af5da0741",
+    "purpose": "7 strange attractors",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/003-7-strange-attractors.md",
+    "requires": [
+      "skill-6-lyapunov-exponents-adba4fd18f"
+    ],
+    "links": [
+      "skill-8-routes-to-chaos-d4c54ac808"
+    ]
+  },
+  {
+    "id": "skill-8-routes-to-chaos-d4c54ac808",
+    "purpose": "8 routes to chaos",
+    "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/SKILL.md",
+    "output": "docs/microslices/skills/chaos-theory/skills/chaos-logistic-map-lyapunov-and-attractors/004-8-routes-to-chaos.md",
+    "requires": [
+      "skill-7-strange-attractors-4af5da0741"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-the-three-things-you-must-plan-around-now-e600ca920b",
+    "purpose": "the three things you must plan around now",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/github-atlassian/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/github-atlassian/001-the-three-things-you-must-plan-around-now.md",
+    "requires": [],
+    "links": [
+      "skill-part-1-github-1f7789b953"
+    ]
+  },
+  {
+    "id": "skill-part-1-github-1f7789b953",
+    "purpose": "part 1 github",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/github-atlassian/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/github-atlassian/002-part-1-github.md",
+    "requires": [
+      "skill-the-three-things-you-must-plan-around-now-e600ca920b"
+    ],
+    "links": [
+      "skill-part-2-atlassian-cc9b251323"
+    ]
+  },
+  {
+    "id": "skill-part-2-atlassian-cc9b251323",
+    "purpose": "part 2 atlassian",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/github-atlassian/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/github-atlassian/003-part-2-atlassian.md",
+    "requires": [
+      "skill-part-1-github-1f7789b953"
+    ],
+    "links": [
+      "skill-part-3-github-atlassian-integration-efa2182f68"
+    ]
+  },
+  {
+    "id": "skill-part-3-github-atlassian-integration-efa2182f68",
+    "purpose": "part 3 github atlassian integration",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/github-atlassian/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/github-atlassian/004-part-3-github-atlassian-integration.md",
+    "requires": [
+      "skill-part-2-atlassian-cc9b251323"
+    ],
+    "links": [
+      "skill-part-4-cross-cutting-concerns-a623125fdd"
+    ]
+  },
+  {
+    "id": "skill-part-4-cross-cutting-concerns-a623125fdd",
+    "purpose": "part 4 cross cutting concerns",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/github-atlassian/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/github-atlassian/005-part-4-cross-cutting-concerns.md",
+    "requires": [
+      "skill-part-3-github-atlassian-integration-efa2182f68"
+    ],
+    "links": [
+      "skill-staged-implementation-roadmap-e9b8287e07"
+    ]
+  },
+  {
+    "id": "skill-staged-implementation-roadmap-e9b8287e07",
+    "purpose": "staged implementation roadmap",
+    "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/github-atlassian/SKILL.md",
+    "output": "docs/microslices/skills/devsecops-cicd/skills/github-atlassian/006-staged-implementation-roadmap.md",
+    "requires": [
+      "skill-part-4-cross-cutting-concerns-a623125fdd"
+    ],
+    "links": []
+  }
+]

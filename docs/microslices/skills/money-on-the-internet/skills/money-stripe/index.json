@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-1-what-it-actually-is-aa07846846",
+    "purpose": "1 what it actually is",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/001-1-what-it-actually-is.md",
+    "requires": [],
+    "links": [
+      "skill-2-core-api-mechanics-durable-f081efc547"
+    ]
+  },
+  {
+    "id": "skill-2-core-api-mechanics-durable-f081efc547",
+    "purpose": "2 core api mechanics durable",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/002-2-core-api-mechanics-durable.md",
+    "requires": [
+      "skill-1-what-it-actually-is-aa07846846"
+    ],
+    "links": [
+      "skill-3-integration-patterns-easiest-most-control-d7482527af"
+    ]
+  },
+  {
+    "id": "skill-3-integration-patterns-easiest-most-control-d7482527af",
+    "purpose": "3 integration patterns easiest most control",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/003-3-integration-patterns-easiest-most-control.md",
+    "requires": [
+      "skill-2-core-api-mechanics-durable-f081efc547"
+    ],
+    "links": [
+      "skill-4-compliance-reality-us-eu-as-of-2026-af5c1666a1"
+    ]
+  },
+  {
+    "id": "skill-4-compliance-reality-us-eu-as-of-2026-af5c1666a1",
+    "purpose": "4 compliance reality us eu as of 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/004-4-compliance-reality-us-eu-as-of-2026.md",
+    "requires": [
+      "skill-3-integration-patterns-easiest-most-control-d7482527af"
+    ],
+    "links": [
+      "skill-5-money-movement-products-pricing-us-as-of-sept-2026-9a5b731519"
+    ]
+  },
+  {
+    "id": "skill-5-money-movement-products-pricing-us-as-of-sept-2026-9a5b731519",
+    "purpose": "5 money movement products pricing us as of sept 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/005-5-money-movement-products-pricing-us-as-of-sept-2026.md",
+    "requires": [
+      "skill-4-compliance-reality-us-eu-as-of-2026-af5c1666a1"
+    ],
+    "links": [
+      "skill-6-the-stablecoin-stack-bridge-privy-tempo-versioned-fast-moving-45b1497ada"
+    ]
+  },
+  {
+    "id": "skill-6-the-stablecoin-stack-bridge-privy-tempo-versioned-fast-moving-45b1497ada",
+    "purpose": "6 the stablecoin stack bridge privy tempo versioned fast moving",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/006-6-the-stablecoin-stack-bridge-privy-tempo-versioned-fast-moving.md",
+    "requires": [
+      "skill-5-money-movement-products-pricing-us-as-of-sept-2026-9a5b731519"
+    ],
+    "links": [
+      "skill-7-regulatory-backdrop-that-touches-stripe-builders-as-of-16-sep-2026-979e952651"
+    ]
+  },
+  {
+    "id": "skill-7-regulatory-backdrop-that-touches-stripe-builders-as-of-16-sep-2026-979e952651",
+    "purpose": "7 regulatory backdrop that touches stripe builders as of 16 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/007-7-regulatory-backdrop-that-touches-stripe-builders-as-of-16-sep-2026.md",
+    "requires": [
+      "skill-6-the-stablecoin-stack-bridge-privy-tempo-versioned-fast-moving-45b1497ada"
+    ],
+    "links": [
+      "skill-sources-as-of-16-sep-2026-bb8116af29"
+    ]
+  },
+  {
+    "id": "skill-sources-as-of-16-sep-2026-bb8116af29",
+    "purpose": "sources as of 16 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-stripe/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-stripe/008-sources-as-of-16-sep-2026.md",
+    "requires": [
+      "skill-7-regulatory-backdrop-that-touches-stripe-builders-as-of-16-sep-2026-979e952651"
+    ],
+    "links": []
+  }
+]

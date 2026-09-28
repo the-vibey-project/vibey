@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-6-embedded-buses-3ba69f5d10",
+    "purpose": "6 embedded buses",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/001-6-embedded-buses.md",
+    "requires": [],
+    "links": [
+      "skill-7-pcie-peripherals-e901df6cf3"
+    ]
+  },
+  {
+    "id": "skill-7-pcie-peripherals-e901df6cf3",
+    "purpose": "7 pcie peripherals",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/002-7-pcie-peripherals.md",
+    "requires": [
+      "skill-6-embedded-buses-3ba69f5d10"
+    ],
+    "links": [
+      "skill-8-hid-fa00d40792"
+    ]
+  },
+  {
+    "id": "skill-8-hid-fa00d40792",
+    "purpose": "8 hid",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/003-8-hid.md",
+    "requires": [
+      "skill-7-pcie-peripherals-e901df6cf3"
+    ],
+    "links": [
+      "skill-9-keyboards-16c2ba5598"
+    ]
+  },
+  {
+    "id": "skill-9-keyboards-16c2ba5598",
+    "purpose": "9 keyboards",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/004-9-keyboards.md",
+    "requires": [
+      "skill-8-hid-fa00d40792"
+    ],
+    "links": [
+      "skill-10-mice-and-pointing-devices-7cb9241541"
+    ]
+  },
+  {
+    "id": "skill-10-mice-and-pointing-devices-7cb9241541",
+    "purpose": "10 mice and pointing devices",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/005-10-mice-and-pointing-devices.md",
+    "requires": [
+      "skill-9-keyboards-16c2ba5598"
+    ],
+    "links": [
+      "skill-11-displays-ace928c986"
+    ]
+  },
+  {
+    "id": "skill-11-displays-ace928c986",
+    "purpose": "11 displays",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-buses-pcie-hid-keyboards-mice-and-displays/006-11-displays.md",
+    "requires": [
+      "skill-10-mice-and-pointing-devices-7cb9241541"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-21-cortex-m-and-embedded-9715330020",
+    "purpose": "21 cortex m and embedded",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/001-21-cortex-m-and-embedded.md",
+    "requires": [],
+    "links": [
+      "skill-22-toolchain-and-abi-8e84e15fb5"
+    ]
+  },
+  {
+    "id": "skill-22-toolchain-and-abi-8e84e15fb5",
+    "purpose": "22 toolchain and abi",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/002-22-toolchain-and-abi.md",
+    "requires": [
+      "skill-21-cortex-m-and-embedded-9715330020"
+    ],
+    "links": [
+      "skill-23-porting-from-x86-2324db594c"
+    ]
+  },
+  {
+    "id": "skill-23-porting-from-x86-2324db594c",
+    "purpose": "23 porting from x86",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/003-23-porting-from-x86.md",
+    "requires": [
+      "skill-22-toolchain-and-abi-8e84e15fb5"
+    ],
+    "links": [
+      "skill-24-performance-analysis-on-arm-edf75b7381"
+    ]
+  },
+  {
+    "id": "skill-24-performance-analysis-on-arm-edf75b7381",
+    "purpose": "24 performance analysis on arm",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/004-24-performance-analysis-on-arm.md",
+    "requires": [
+      "skill-23-porting-from-x86-2324db594c"
+    ],
+    "links": [
+      "skill-25-the-competitive-landscape-3e37905449"
+    ]
+  },
+  {
+    "id": "skill-25-the-competitive-landscape-3e37905449",
+    "purpose": "25 the competitive landscape",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-cortex-m-toolchain-porting-and-performance/005-25-the-competitive-landscape.md",
+    "requires": [
+      "skill-24-performance-analysis-on-arm-edf75b7381"
+    ],
+    "links": []
+  }
+]

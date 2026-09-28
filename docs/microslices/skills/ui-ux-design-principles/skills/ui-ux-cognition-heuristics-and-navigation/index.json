@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-efd17c5aba",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-science-underneath-why-interfaces-work-or-don-t-bfea79d860"
+    ]
+  },
+  {
+    "id": "skill-1-the-science-underneath-why-interfaces-work-or-don-t-bfea79d860",
+    "purpose": "1 the science underneath why interfaces work or don t",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/002-1-the-science-underneath-why-interfaces-work-or-don-t.md",
+    "requires": [
+      "skill-0-routing-efd17c5aba"
+    ],
+    "links": [
+      "skill-2-usability-heuristics-and-mental-models-7c3aeb1de0"
+    ]
+  },
+  {
+    "id": "skill-2-usability-heuristics-and-mental-models-7c3aeb1de0",
+    "purpose": "2 usability heuristics and mental models",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/003-2-usability-heuristics-and-mental-models.md",
+    "requires": [
+      "skill-1-the-science-underneath-why-interfaces-work-or-don-t-bfea79d860"
+    ],
+    "links": [
+      "skill-3-information-architecture-and-navigation-5ceb0725db"
+    ]
+  },
+  {
+    "id": "skill-3-information-architecture-and-navigation-5ceb0725db",
+    "purpose": "3 information architecture and navigation",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-cognition-heuristics-and-navigation/004-3-information-architecture-and-navigation.md",
+    "requires": [
+      "skill-2-usability-heuristics-and-mental-models-7c3aeb1de0"
+    ],
+    "links": []
+  }
+]

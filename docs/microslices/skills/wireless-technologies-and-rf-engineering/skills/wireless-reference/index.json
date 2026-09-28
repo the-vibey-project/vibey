@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-25-what-s-live-checked-august-2026-feff1b3f24",
+    "purpose": "25 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-reference/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-reference/001-25-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-600f2d2076"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-600f2d2076",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-reference/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-checked-august-2026-feff1b3f24"
+    ],
+    "links": [
+      "skill-27-numbers-ed94d2cd18"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-ed94d2cd18",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-reference/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-reference/003-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-600f2d2076"
+    ],
+    "links": [
+      "skill-28-sources-fa77be9993"
+    ]
+  },
+  {
+    "id": "skill-28-sources-fa77be9993",
+    "purpose": "28 sources",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-reference/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-reference/004-28-sources.md",
+    "requires": [
+      "skill-27-numbers-ed94d2cd18"
+    ],
+    "links": [
+      "skill-29-quick-reference-1d33d4b6a2"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-1d33d4b6a2",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-reference/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-reference/005-29-quick-reference.md",
+    "requires": [
+      "skill-28-sources-fa77be9993"
+    ],
+    "links": [
+      "skill-30-method-5ffdc9ffa9"
+    ]
+  },
+  {
+    "id": "skill-30-method-5ffdc9ffa9",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-reference/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-reference/006-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-1d33d4b6a2"
+    ],
+    "links": []
+  }
+]

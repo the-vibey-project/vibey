@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-directory-services-and-hybrid-identity-93641f1401",
+    "purpose": "5 directory services and hybrid identity",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/001-5-directory-services-and-hybrid-identity.md",
+    "requires": [],
+    "links": [
+      "skill-6-authentication-80e428ff60"
+    ]
+  },
+  {
+    "id": "skill-6-authentication-80e428ff60",
+    "purpose": "6 authentication",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/002-6-authentication.md",
+    "requires": [
+      "skill-5-directory-services-and-hybrid-identity-93641f1401"
+    ],
+    "links": [
+      "skill-7-authorization-rbac-and-beyond-c96b8d6948"
+    ]
+  },
+  {
+    "id": "skill-7-authorization-rbac-and-beyond-c96b8d6948",
+    "purpose": "7 authorization rbac and beyond",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/003-7-authorization-rbac-and-beyond.md",
+    "requires": [
+      "skill-6-authentication-80e428ff60"
+    ],
+    "links": [
+      "skill-8-privileged-access-f303acb628"
+    ]
+  },
+  {
+    "id": "skill-8-privileged-access-f303acb628",
+    "purpose": "8 privileged access",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/004-8-privileged-access.md",
+    "requires": [
+      "skill-7-authorization-rbac-and-beyond-c96b8d6948"
+    ],
+    "links": []
+  }
+]

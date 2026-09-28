@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-cache-organization-373d70d3a8",
+    "purpose": "6 cache organization",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/001-6-cache-organization.md",
+    "requires": [],
+    "links": [
+      "skill-7-cache-coherence-d30980d133"
+    ]
+  },
+  {
+    "id": "skill-7-cache-coherence-d30980d133",
+    "purpose": "7 cache coherence",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/002-7-cache-coherence.md",
+    "requires": [
+      "skill-6-cache-organization-373d70d3a8"
+    ],
+    "links": [
+      "skill-8-memory-consistency-models-70d54fc854"
+    ]
+  },
+  {
+    "id": "skill-8-memory-consistency-models-70d54fc854",
+    "purpose": "8 memory consistency models",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/003-8-memory-consistency-models.md",
+    "requires": [
+      "skill-7-cache-coherence-d30980d133"
+    ],
+    "links": [
+      "skill-9-virtual-memory-and-translation-e74ba766dd"
+    ]
+  },
+  {
+    "id": "skill-9-virtual-memory-and-translation-e74ba766dd",
+    "purpose": "9 virtual memory and translation",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/004-9-virtual-memory-and-translation.md",
+    "requires": [
+      "skill-8-memory-consistency-models-70d54fc854"
+    ],
+    "links": [
+      "skill-10-prefetching-f2d157a49c"
+    ]
+  },
+  {
+    "id": "skill-10-prefetching-f2d157a49c",
+    "purpose": "10 prefetching",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-caches-coherence-consistency-and-virtual-memory/005-10-prefetching.md",
+    "requires": [
+      "skill-9-virtual-memory-and-translation-e74ba766dd"
+    ],
+    "links": []
+  }
+]

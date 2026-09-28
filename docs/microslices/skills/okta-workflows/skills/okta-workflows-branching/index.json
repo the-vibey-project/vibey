@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-quirk-1-1-no-implicit-type-coercion-in-comparisons-silent-wrong-branch-26b3d9f317",
+    "purpose": "quirk 1 1 no implicit type coercion in comparisons silent wrong branch",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-branching/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-branching/001-quirk-1-1-no-implicit-type-coercion-in-comparisons-silent-wrong-branch.md",
+    "requires": [],
+    "links": [
+      "skill-quirk-1-2-nesting-depth-don-t-exceed-3-nested-if-elseif-399c76476f"
+    ]
+  },
+  {
+    "id": "skill-quirk-1-2-nesting-depth-don-t-exceed-3-nested-if-elseif-399c76476f",
+    "purpose": "quirk 1 2 nesting depth don t exceed 3 nested if elseif",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-branching/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-branching/002-quirk-1-2-nesting-depth-don-t-exceed-3-nested-if-elseif.md",
+    "requires": [
+      "skill-quirk-1-1-no-implicit-type-coercion-in-comparisons-silent-wrong-branch-26b3d9f317"
+    ],
+    "links": [
+      "skill-quirk-1-3-passing-a-value-directly-into-an-if-elseif-condition-throws-an-error-tip-bug-5d455f9bc1"
+    ]
+  },
+  {
+    "id": "skill-quirk-1-3-passing-a-value-directly-into-an-if-elseif-condition-throws-an-error-tip-bug-5d455f9bc1",
+    "purpose": "quirk 1 3 passing a value directly into an if elseif condition throws an error tip bug",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-branching/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-branching/003-quirk-1-3-passing-a-value-directly-into-an-if-elseif-condition-throws-an-error-tip-bug.md",
+    "requires": [
+      "skill-quirk-1-2-nesting-depth-don-t-exceed-3-nested-if-elseif-399c76476f"
+    ],
+    "links": [
+      "skill-quirk-1-4-return-continue-if-behave-differently-inside-if-elseif-and-if-error-blocks-9af16d60f0"
+    ]
+  },
+  {
+    "id": "skill-quirk-1-4-return-continue-if-behave-differently-inside-if-elseif-and-if-error-blocks-9af16d60f0",
+    "purpose": "quirk 1 4 return continue if behave differently inside if elseif and if error blocks",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-branching/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-branching/004-quirk-1-4-return-continue-if-behave-differently-inside-if-elseif-and-if-error-blocks.md",
+    "requires": [
+      "skill-quirk-1-3-passing-a-value-directly-into-an-if-elseif-condition-throws-an-error-tip-bug-5d455f9bc1"
+    ],
+    "links": [
+      "skill-quirk-1-5-cannot-drag-outputs-from-inside-a-branch-to-cards-after-the-block-e2d6298459"
+    ]
+  },
+  {
+    "id": "skill-quirk-1-5-cannot-drag-outputs-from-inside-a-branch-to-cards-after-the-block-e2d6298459",
+    "purpose": "quirk 1 5 cannot drag outputs from inside a branch to cards after the block",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-branching/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-branching/005-quirk-1-5-cannot-drag-outputs-from-inside-a-branch-to-cards-after-the-block.md",
+    "requires": [
+      "skill-quirk-1-4-return-continue-if-behave-differently-inside-if-elseif-and-if-error-blocks-9af16d60f0"
+    ],
+    "links": [
+      "skill-quirk-1-6-if-else-supports-only-one-condition-07915c6db7"
+    ]
+  },
+  {
+    "id": "skill-quirk-1-6-if-else-supports-only-one-condition-07915c6db7",
+    "purpose": "quirk 1 6 if else supports only one condition",
+    "source": "src/vibey_tools/skills/plugins/okta-workflows/skills/okta-workflows-branching/SKILL.md",
+    "output": "docs/microslices/skills/okta-workflows/skills/okta-workflows-branching/006-quirk-1-6-if-else-supports-only-one-condition.md",
+    "requires": [
+      "skill-quirk-1-5-cannot-drag-outputs-from-inside-a-branch-to-cards-after-the-block-e2d6298459"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-8-organic-chemistry-5a8011d81e",
+    "purpose": "8 organic chemistry",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-organic-chemistry-and-analytical-methods/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-organic-chemistry-and-analytical-methods/001-8-organic-chemistry.md",
+    "requires": [],
+    "links": [
+      "skill-9-analytical-methods-and-spectroscopy-5f3ea0f15a"
+    ]
+  },
+  {
+    "id": "skill-9-analytical-methods-and-spectroscopy-5f3ea0f15a",
+    "purpose": "9 analytical methods and spectroscopy",
+    "source": "src/vibey_tools/skills/plugins/biology-chemistry-foundations/skills/biochem-organic-chemistry-and-analytical-methods/SKILL.md",
+    "output": "docs/microslices/skills/biology-chemistry-foundations/skills/biochem-organic-chemistry-and-analytical-methods/002-9-analytical-methods-and-spectroscopy.md",
+    "requires": [
+      "skill-8-organic-chemistry-5a8011d81e"
+    ],
+    "links": []
+  }
+]

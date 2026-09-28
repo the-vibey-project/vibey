@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-semiconductors-aeef74b472",
+    "purpose": "5 semiconductors",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/001-5-semiconductors.md",
+    "requires": [],
+    "links": [
+      "skill-6-op-amps-7dec5504cb"
+    ]
+  },
+  {
+    "id": "skill-6-op-amps-7dec5504cb",
+    "purpose": "6 op amps",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/002-6-op-amps.md",
+    "requires": [
+      "skill-5-semiconductors-aeef74b472"
+    ],
+    "links": [
+      "skill-7-digital-logic-and-interfacing-655dbae1c7"
+    ]
+  },
+  {
+    "id": "skill-7-digital-logic-and-interfacing-655dbae1c7",
+    "purpose": "7 digital logic and interfacing",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/003-7-digital-logic-and-interfacing.md",
+    "requires": [
+      "skill-6-op-amps-7dec5504cb"
+    ],
+    "links": [
+      "skill-8-power-fbfe972514"
+    ]
+  },
+  {
+    "id": "skill-8-power-fbfe972514",
+    "purpose": "8 power",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-semiconductors-op-amps-logic-and-power/004-8-power.md",
+    "requires": [
+      "skill-7-digital-logic-and-interfacing-655dbae1c7"
+    ],
+    "links": []
+  }
+]

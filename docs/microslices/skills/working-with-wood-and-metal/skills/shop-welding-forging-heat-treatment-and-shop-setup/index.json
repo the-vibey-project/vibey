@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-19-welding-processes-daf9e327dd",
+    "purpose": "19 welding processes",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/001-19-welding-processes.md",
+    "requires": [],
+    "links": [
+      "skill-20-brazing-and-soldering-698479f19e"
+    ]
+  },
+  {
+    "id": "skill-20-brazing-and-soldering-698479f19e",
+    "purpose": "20 brazing and soldering",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/002-20-brazing-and-soldering.md",
+    "requires": [
+      "skill-19-welding-processes-daf9e327dd"
+    ],
+    "links": [
+      "skill-21-forming-and-forging-1215ee924f"
+    ]
+  },
+  {
+    "id": "skill-21-forming-and-forging-1215ee924f",
+    "purpose": "21 forming and forging",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/003-21-forming-and-forging.md",
+    "requires": [
+      "skill-20-brazing-and-soldering-698479f19e"
+    ],
+    "links": [
+      "skill-22-heat-treatment-0304715c68"
+    ]
+  },
+  {
+    "id": "skill-22-heat-treatment-0304715c68",
+    "purpose": "22 heat treatment",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/004-22-heat-treatment.md",
+    "requires": [
+      "skill-21-forming-and-forging-1215ee924f"
+    ],
+    "links": [
+      "skill-23-metal-finishing-676619ae72"
+    ]
+  },
+  {
+    "id": "skill-23-metal-finishing-676619ae72",
+    "purpose": "23 metal finishing",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/005-23-metal-finishing.md",
+    "requires": [
+      "skill-22-heat-treatment-0304715c68"
+    ],
+    "links": [
+      "skill-24-fasteners-and-fits-ea2f989ff8"
+    ]
+  },
+  {
+    "id": "skill-24-fasteners-and-fits-ea2f989ff8",
+    "purpose": "24 fasteners and fits",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/006-24-fasteners-and-fits.md",
+    "requires": [
+      "skill-23-metal-finishing-676619ae72"
+    ],
+    "links": [
+      "skill-25-measurement-6f48e902e0"
+    ]
+  },
+  {
+    "id": "skill-25-measurement-6f48e902e0",
+    "purpose": "25 measurement",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/007-25-measurement.md",
+    "requires": [
+      "skill-24-fasteners-and-fits-ea2f989ff8"
+    ],
+    "links": [
+      "skill-26-shop-setup-dust-and-fume-3883655b73"
+    ]
+  },
+  {
+    "id": "skill-26-shop-setup-dust-and-fume-3883655b73",
+    "purpose": "26 shop setup dust and fume",
+    "source": "src/vibey_tools/skills/plugins/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/SKILL.md",
+    "output": "docs/microslices/skills/working-with-wood-and-metal/skills/shop-welding-forging-heat-treatment-and-shop-setup/008-26-shop-setup-dust-and-fume.md",
+    "requires": [
+      "skill-25-measurement-6f48e902e0"
+    ],
+    "links": []
+  }
+]

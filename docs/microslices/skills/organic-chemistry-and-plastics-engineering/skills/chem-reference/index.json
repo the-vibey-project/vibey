@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-27-what-s-live-checked-august-2026-e97e84af7a",
+    "purpose": "27 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-reference/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-reference/001-27-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-28-misconceptions-e331f6994d"
+    ]
+  },
+  {
+    "id": "skill-28-misconceptions-e331f6994d",
+    "purpose": "28 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-reference/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-reference/002-28-misconceptions.md",
+    "requires": [
+      "skill-27-what-s-live-checked-august-2026-e97e84af7a"
+    ],
+    "links": [
+      "skill-29-numbers-9b4d8fead1"
+    ]
+  },
+  {
+    "id": "skill-29-numbers-9b4d8fead1",
+    "purpose": "29 numbers",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-reference/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-reference/003-29-numbers.md",
+    "requires": [
+      "skill-28-misconceptions-e331f6994d"
+    ],
+    "links": [
+      "skill-30-books-231bb37adf"
+    ]
+  },
+  {
+    "id": "skill-30-books-231bb37adf",
+    "purpose": "30 books",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-reference/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-reference/004-30-books.md",
+    "requires": [
+      "skill-29-numbers-9b4d8fead1"
+    ],
+    "links": [
+      "skill-31-quick-reference-3f47846ef2"
+    ]
+  },
+  {
+    "id": "skill-31-quick-reference-3f47846ef2",
+    "purpose": "31 quick reference",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-reference/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-reference/005-31-quick-reference.md",
+    "requires": [
+      "skill-30-books-231bb37adf"
+    ],
+    "links": [
+      "skill-32-method-3de6cea03b"
+    ]
+  },
+  {
+    "id": "skill-32-method-3de6cea03b",
+    "purpose": "32 method",
+    "source": "src/vibey_tools/skills/plugins/organic-chemistry-and-plastics-engineering/skills/chem-reference/SKILL.md",
+    "output": "docs/microslices/skills/organic-chemistry-and-plastics-engineering/skills/chem-reference/006-32-method.md",
+    "requires": [
+      "skill-31-quick-reference-3f47846ef2"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-ruminant-digestion-why-cattle-are-different-75373bd2d0",
+    "purpose": "8 ruminant digestion why cattle are different",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species/001-8-ruminant-digestion-why-cattle-are-different.md",
+    "requires": [],
+    "links": [
+      "skill-9-livestock-nutrition-94f831323f"
+    ]
+  },
+  {
+    "id": "skill-9-livestock-nutrition-94f831323f",
+    "purpose": "9 livestock nutrition",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species/002-9-livestock-nutrition.md",
+    "requires": [
+      "skill-8-ruminant-digestion-why-cattle-are-different-75373bd2d0"
+    ],
+    "links": [
+      "skill-10-species-selection-ab3abf49bb"
+    ]
+  },
+  {
+    "id": "skill-10-species-selection-ab3abf49bb",
+    "purpose": "10 species selection",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-livestock-digestion-nutrition-and-species/003-10-species-selection.md",
+    "requires": [
+      "skill-9-livestock-nutrition-94f831323f"
+    ],
+    "links": []
+  }
+]

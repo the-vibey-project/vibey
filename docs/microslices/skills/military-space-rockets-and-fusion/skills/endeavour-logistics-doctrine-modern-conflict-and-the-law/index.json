@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-force-structure-logistics-doctrine-intelligence-and-procurement-643383e258",
+    "purpose": "4 force structure logistics doctrine intelligence and procurement",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/001-4-force-structure-logistics-doctrine-intelligence-and-procurement.md",
+    "requires": [],
+    "links": [
+      "skill-5-modern-conflict-6924d12566"
+    ]
+  },
+  {
+    "id": "skill-5-modern-conflict-6924d12566",
+    "purpose": "5 modern conflict",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/002-5-modern-conflict.md",
+    "requires": [
+      "skill-4-force-structure-logistics-doctrine-intelligence-and-procurement-643383e258"
+    ],
+    "links": [
+      "skill-6-the-law-of-armed-conflict-a0fc06efb2"
+    ]
+  },
+  {
+    "id": "skill-6-the-law-of-armed-conflict-a0fc06efb2",
+    "purpose": "6 the law of armed conflict",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/003-6-the-law-of-armed-conflict.md",
+    "requires": [
+      "skill-5-modern-conflict-6924d12566"
+    ],
+    "links": [
+      "skill-where-the-rest-of-part-i-lives-ed77f54f44"
+    ]
+  },
+  {
+    "id": "skill-where-the-rest-of-part-i-lives-ed77f54f44",
+    "purpose": "where the rest of part i lives",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-logistics-doctrine-modern-conflict-and-the-law/004-where-the-rest-of-part-i-lives.md",
+    "requires": [
+      "skill-6-the-law-of-armed-conflict-a0fc06efb2"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-standards-compliance-5df1938753",
+    "purpose": "standards compliance",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security/001-standards-compliance.md",
+    "requires": [],
+    "links": [
+      "skill-secure-storage-hardware-backed-everywhere-369a4ff15c"
+    ]
+  },
+  {
+    "id": "skill-secure-storage-hardware-backed-everywhere-369a4ff15c",
+    "purpose": "secure storage hardware backed everywhere",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security/002-secure-storage-hardware-backed-everywhere.md",
+    "requires": [
+      "skill-standards-compliance-5df1938753"
+    ],
+    "links": [
+      "skill-secure-communications-0d8d3524c8"
+    ]
+  },
+  {
+    "id": "skill-secure-communications-0d8d3524c8",
+    "purpose": "secure communications",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security/003-secure-communications.md",
+    "requires": [
+      "skill-secure-storage-hardware-backed-everywhere-369a4ff15c"
+    ],
+    "links": [
+      "skill-binary-runtime-protection-28970050c2"
+    ]
+  },
+  {
+    "id": "skill-binary-runtime-protection-28970050c2",
+    "purpose": "binary runtime protection",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security/004-binary-runtime-protection.md",
+    "requires": [
+      "skill-secure-communications-0d8d3524c8"
+    ],
+    "links": [
+      "skill-security-testing-in-ci-decfd34b4c"
+    ]
+  },
+  {
+    "id": "skill-security-testing-in-ci-decfd34b4c",
+    "purpose": "security testing in ci",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security/005-security-testing-in-ci.md",
+    "requires": [
+      "skill-binary-runtime-protection-28970050c2"
+    ],
+    "links": [
+      "skill-privacy-2ffbfa73d8"
+    ]
+  },
+  {
+    "id": "skill-privacy-2ffbfa73d8",
+    "purpose": "privacy",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security/006-privacy.md",
+    "requires": [
+      "skill-security-testing-in-ci-decfd34b4c"
+    ],
+    "links": [
+      "skill-mfa-on-mobile-4e034a03dd"
+    ]
+  },
+  {
+    "id": "skill-mfa-on-mobile-4e034a03dd",
+    "purpose": "mfa on mobile",
+    "source": "src/vibey_tools/skills/plugins/mobile-development/skills/mobile-security/SKILL.md",
+    "output": "docs/microslices/skills/mobile-development/skills/mobile-security/007-mfa-on-mobile.md",
+    "requires": [
+      "skill-privacy-2ffbfa73d8"
+    ],
+    "links": []
+  }
+]

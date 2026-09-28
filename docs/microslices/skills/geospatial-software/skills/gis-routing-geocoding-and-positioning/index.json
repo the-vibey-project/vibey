@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-routing-b4fb25541a",
+    "purpose": "8 routing",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-routing-geocoding-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-routing-geocoding-and-positioning/001-8-routing.md",
+    "requires": [],
+    "links": [
+      "skill-9-geocoding-7d5fa67ffd"
+    ]
+  },
+  {
+    "id": "skill-9-geocoding-7d5fa67ffd",
+    "purpose": "9 geocoding",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-routing-geocoding-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-routing-geocoding-and-positioning/002-9-geocoding.md",
+    "requires": [
+      "skill-8-routing-b4fb25541a"
+    ],
+    "links": [
+      "skill-10-gnss-and-positioning-cf02ec6513"
+    ]
+  },
+  {
+    "id": "skill-10-gnss-and-positioning-cf02ec6513",
+    "purpose": "10 gnss and positioning",
+    "source": "src/vibey_tools/skills/plugins/geospatial-software/skills/gis-routing-geocoding-and-positioning/SKILL.md",
+    "output": "docs/microslices/skills/geospatial-software/skills/gis-routing-geocoding-and-positioning/003-10-gnss-and-positioning.md",
+    "requires": [
+      "skill-9-geocoding-7d5fa67ffd"
+    ],
+    "links": []
+  }
+]

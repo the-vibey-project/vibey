@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-20-the-official-position-7bcc15f1a1",
+    "purpose": "20 the official position",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/001-20-the-official-position.md",
+    "requires": [],
+    "links": [
+      "skill-21-quantum-random-number-generation-0d13076d04"
+    ]
+  },
+  {
+    "id": "skill-21-quantum-random-number-generation-0d13076d04",
+    "purpose": "21 quantum random number generation",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/002-21-quantum-random-number-generation.md",
+    "requires": [
+      "skill-20-the-official-position-7bcc15f1a1"
+    ],
+    "links": [
+      "skill-22-the-quantum-computing-threat-2efe278e36"
+    ]
+  },
+  {
+    "id": "skill-22-the-quantum-computing-threat-2efe278e36",
+    "purpose": "22 the quantum computing threat",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/003-22-the-quantum-computing-threat.md",
+    "requires": [
+      "skill-21-quantum-random-number-generation-0d13076d04"
+    ],
+    "links": [
+      "skill-23-choosing-5f980e6671"
+    ]
+  },
+  {
+    "id": "skill-23-choosing-5f980e6671",
+    "purpose": "23 choosing",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-official-position-qrng-quantum-threat-and-choosing/004-23-choosing.md",
+    "requires": [
+      "skill-22-the-quantum-computing-threat-2efe278e36"
+    ],
+    "links": []
+  }
+]

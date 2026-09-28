@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-13dabb5a44",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-stack-ros2-and-perception/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-stack-ros2-and-perception/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-stack-1b347a9e06"
+    ]
+  },
+  {
+    "id": "skill-1-the-stack-1b347a9e06",
+    "purpose": "1 the stack",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-stack-ros2-and-perception/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-stack-ros2-and-perception/002-1-the-stack.md",
+    "requires": [
+      "skill-0-routing-13dabb5a44"
+    ],
+    "links": [
+      "skill-2-ros-2-and-middleware-22e45f3041"
+    ]
+  },
+  {
+    "id": "skill-2-ros-2-and-middleware-22e45f3041",
+    "purpose": "2 ros 2 and middleware",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-stack-ros2-and-perception/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-stack-ros2-and-perception/003-2-ros-2-and-middleware.md",
+    "requires": [
+      "skill-1-the-stack-1b347a9e06"
+    ],
+    "links": [
+      "skill-3-perception-0ad064825f"
+    ]
+  },
+  {
+    "id": "skill-3-perception-0ad064825f",
+    "purpose": "3 perception",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-stack-ros2-and-perception/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-stack-ros2-and-perception/004-3-perception.md",
+    "requires": [
+      "skill-2-ros-2-and-middleware-22e45f3041"
+    ],
+    "links": [
+      "skill-4-state-estimation-and-slam-f6210a3079"
+    ]
+  },
+  {
+    "id": "skill-4-state-estimation-and-slam-f6210a3079",
+    "purpose": "4 state estimation and slam",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-stack-ros2-and-perception/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-stack-ros2-and-perception/005-4-state-estimation-and-slam.md",
+    "requires": [
+      "skill-3-perception-0ad064825f"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-36-ecopoiesis-and-the-oxygen-problem-4a41de2060",
+    "purpose": "36 ecopoiesis and the oxygen problem",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics/001-36-ecopoiesis-and-the-oxygen-problem.md",
+    "requires": [],
+    "links": [
+      "skill-37-timelines-and-paraterraforming-9e2756879b"
+    ]
+  },
+  {
+    "id": "skill-37-timelines-and-paraterraforming-9e2756879b",
+    "purpose": "37 timelines and paraterraforming",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics/002-37-timelines-and-paraterraforming.md",
+    "requires": [
+      "skill-36-ecopoiesis-and-the-oxygen-problem-4a41de2060"
+    ],
+    "links": [
+      "skill-38-ethics-governance-and-the-venus-comparison-8f28ea113c"
+    ]
+  },
+  {
+    "id": "skill-38-ethics-governance-and-the-venus-comparison-8f28ea113c",
+    "purpose": "38 ethics governance and the venus comparison",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-ecopoiesis-oxygen-timelines-and-ethics/003-38-ethics-governance-and-the-venus-comparison.md",
+    "requires": [
+      "skill-37-timelines-and-paraterraforming-9e2756879b"
+    ],
+    "links": []
+  }
+]

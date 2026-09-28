@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-14-anti-patterns-e70fb26bc4",
+    "purpose": "14 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference/001-14-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-15-contested-questions-ffb1870ba0"
+    ]
+  },
+  {
+    "id": "skill-15-contested-questions-ffb1870ba0",
+    "purpose": "15 contested questions",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference/002-15-contested-questions.md",
+    "requires": [
+      "skill-14-anti-patterns-e70fb26bc4"
+    ],
+    "links": [
+      "skill-16-the-canon-authorities-and-references-b20202174b"
+    ]
+  },
+  {
+    "id": "skill-16-the-canon-authorities-and-references-b20202174b",
+    "purpose": "16 the canon authorities and references",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference/003-16-the-canon-authorities-and-references.md",
+    "requires": [
+      "skill-15-contested-questions-ffb1870ba0"
+    ],
+    "links": [
+      "skill-17-case-studies-and-hard-won-lessons-dd96ff483b"
+    ]
+  },
+  {
+    "id": "skill-17-case-studies-and-hard-won-lessons-dd96ff483b",
+    "purpose": "17 case studies and hard won lessons",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference/004-17-case-studies-and-hard-won-lessons.md",
+    "requires": [
+      "skill-16-the-canon-authorities-and-references-b20202174b"
+    ],
+    "links": [
+      "skill-18-currency-snapshot-verified-august-2026-d7566cf238"
+    ]
+  },
+  {
+    "id": "skill-18-currency-snapshot-verified-august-2026-d7566cf238",
+    "purpose": "18 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference/005-18-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-17-case-studies-and-hard-won-lessons-dd96ff483b"
+    ],
+    "links": [
+      "skill-19-quick-reference-f9462082eb"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-f9462082eb",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference/006-19-quick-reference.md",
+    "requires": [
+      "skill-18-currency-snapshot-verified-august-2026-d7566cf238"
+    ],
+    "links": [
+      "skill-20-sources-and-method-1392fc1eb8"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-1392fc1eb8",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/desktop-apps-macos-linux/skills/desktop-reference/SKILL.md",
+    "output": "docs/microslices/skills/desktop-apps-macos-linux/skills/desktop-reference/007-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-f9462082eb"
+    ],
+    "links": []
+  }
+]

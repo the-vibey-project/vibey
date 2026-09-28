@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-architecture-33edec0c7e",
+    "purpose": "4 architecture",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-architecture-and-resilience/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-architecture-and-resilience/001-4-architecture.md",
+    "requires": [],
+    "links": [
+      "skill-5-containers-kubernetes-and-serverless-9a666d0878"
+    ]
+  },
+  {
+    "id": "skill-5-containers-kubernetes-and-serverless-9a666d0878",
+    "purpose": "5 containers kubernetes and serverless",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-architecture-and-resilience/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-architecture-and-resilience/002-5-containers-kubernetes-and-serverless.md",
+    "requires": [
+      "skill-4-architecture-33edec0c7e"
+    ],
+    "links": [
+      "skill-6-resilience-and-the-2025-lessons-c861a8eb2a"
+    ]
+  },
+  {
+    "id": "skill-6-resilience-and-the-2025-lessons-c861a8eb2a",
+    "purpose": "6 resilience and the 2025 lessons",
+    "source": "src/vibey_tools/skills/plugins/cloud-computing/skills/cloud-architecture-and-resilience/SKILL.md",
+    "output": "docs/microslices/skills/cloud-computing/skills/cloud-architecture-and-resilience/003-6-resilience-and-the-2025-lessons.md",
+    "requires": [
+      "skill-5-containers-kubernetes-and-serverless-9a666d0878"
+    ],
+    "links": []
+  }
+]

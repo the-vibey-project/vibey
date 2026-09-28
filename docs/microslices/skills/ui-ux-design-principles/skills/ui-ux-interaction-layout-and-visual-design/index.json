@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-4-input-and-interaction-37a01a16df",
+    "purpose": "4 input and interaction",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design/001-4-input-and-interaction.md",
+    "requires": [],
+    "links": [
+      "skill-5-layout-responsiveness-and-adaptation-cfaf5d5ddd"
+    ]
+  },
+  {
+    "id": "skill-5-layout-responsiveness-and-adaptation-cfaf5d5ddd",
+    "purpose": "5 layout responsiveness and adaptation",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design/002-5-layout-responsiveness-and-adaptation.md",
+    "requires": [
+      "skill-4-input-and-interaction-37a01a16df"
+    ],
+    "links": [
+      "skill-6-visual-design-142165b7ff"
+    ]
+  },
+  {
+    "id": "skill-6-visual-design-142165b7ff",
+    "purpose": "6 visual design",
+    "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design/SKILL.md",
+    "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-interaction-layout-and-visual-design/003-6-visual-design.md",
+    "requires": [
+      "skill-5-layout-responsiveness-and-adaptation-cfaf5d5ddd"
+    ],
+    "links": []
+  }
+]

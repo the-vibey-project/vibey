@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-registry-design-6ed5b794de",
+    "purpose": "5 registry design",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-registries-and-installation/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-registries-and-installation/001-5-registry-design.md",
+    "requires": [],
+    "links": [
+      "skill-6-cache-layout-and-linking-564535a92a"
+    ]
+  },
+  {
+    "id": "skill-6-cache-layout-and-linking-564535a92a",
+    "purpose": "6 cache layout and linking",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-registries-and-installation/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-registries-and-installation/002-6-cache-layout-and-linking.md",
+    "requires": [
+      "skill-5-registry-design-6ed5b794de"
+    ],
+    "links": [
+      "skill-7-publishing-and-authentication-40dd8e3b73"
+    ]
+  },
+  {
+    "id": "skill-7-publishing-and-authentication-40dd8e3b73",
+    "purpose": "7 publishing and authentication",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-registries-and-installation/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-registries-and-installation/003-7-publishing-and-authentication.md",
+    "requires": [
+      "skill-6-cache-layout-and-linking-564535a92a"
+    ],
+    "links": []
+  }
+]

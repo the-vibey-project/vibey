@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-pitch-intervals-notation-ebe86228d1",
+    "purpose": "5 pitch intervals notation",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/001-5-pitch-intervals-notation.md",
+    "requires": [],
+    "links": [
+      "skill-6-scales-and-modes-aa027cef12"
+    ]
+  },
+  {
+    "id": "skill-6-scales-and-modes-aa027cef12",
+    "purpose": "6 scales and modes",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/002-6-scales-and-modes.md",
+    "requires": [
+      "skill-5-pitch-intervals-notation-ebe86228d1"
+    ],
+    "links": [
+      "skill-7-rhythm-and-meter-ad6337e660"
+    ]
+  },
+  {
+    "id": "skill-7-rhythm-and-meter-ad6337e660",
+    "purpose": "7 rhythm and meter",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/003-7-rhythm-and-meter.md",
+    "requires": [
+      "skill-6-scales-and-modes-aa027cef12"
+    ],
+    "links": [
+      "skill-8-timbre-07feac625e"
+    ]
+  },
+  {
+    "id": "skill-8-timbre-07feac625e",
+    "purpose": "8 timbre",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/004-8-timbre.md",
+    "requires": [
+      "skill-7-rhythm-and-meter-ad6337e660"
+    ],
+    "links": [
+      "skill-9-chords-5e915b6380"
+    ]
+  },
+  {
+    "id": "skill-9-chords-5e915b6380",
+    "purpose": "9 chords",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-pitch-scales-rhythm-timbre-and-chords/005-9-chords.md",
+    "requires": [
+      "skill-8-timbre-07feac625e"
+    ],
+    "links": []
+  }
+]

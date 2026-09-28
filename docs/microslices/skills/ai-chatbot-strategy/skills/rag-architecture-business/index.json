@@ -1,0 +1,202 @@
+[
+  {
+    "id": "skill-the-core-problem-rag-solves-fc47fee80d",
+    "purpose": "the core problem rag solves",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/001-the-core-problem-rag-solves.md",
+    "requires": [],
+    "links": [
+      "skill-what-rag-is-d7d256ff04"
+    ]
+  },
+  {
+    "id": "skill-what-rag-is-d7d256ff04",
+    "purpose": "what rag is",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/002-what-rag-is.md",
+    "requires": [
+      "skill-the-core-problem-rag-solves-fc47fee80d"
+    ],
+    "links": [
+      "skill-the-business-case-hallucination-reduction-49c7479c83"
+    ]
+  },
+  {
+    "id": "skill-the-business-case-hallucination-reduction-49c7479c83",
+    "purpose": "the business case hallucination reduction",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/003-the-business-case-hallucination-reduction.md",
+    "requires": [
+      "skill-what-rag-is-d7d256ff04"
+    ],
+    "links": [
+      "skill-how-rag-works-the-three-stage-pipeline-719c804a15"
+    ]
+  },
+  {
+    "id": "skill-how-rag-works-the-three-stage-pipeline-719c804a15",
+    "purpose": "how rag works the three stage pipeline",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/004-how-rag-works-the-three-stage-pipeline.md",
+    "requires": [
+      "skill-the-business-case-hallucination-reduction-49c7479c83"
+    ],
+    "links": [
+      "skill-vector-databases-explained-for-business-d108639c4a"
+    ]
+  },
+  {
+    "id": "skill-vector-databases-explained-for-business-d108639c4a",
+    "purpose": "vector databases explained for business",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/005-vector-databases-explained-for-business.md",
+    "requires": [
+      "skill-how-rag-works-the-three-stage-pipeline-719c804a15"
+    ],
+    "links": [
+      "skill-embeddings-explained-for-business-7822da01d8"
+    ]
+  },
+  {
+    "id": "skill-embeddings-explained-for-business-7822da01d8",
+    "purpose": "embeddings explained for business",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/006-embeddings-explained-for-business.md",
+    "requires": [
+      "skill-vector-databases-explained-for-business-d108639c4a"
+    ],
+    "links": [
+      "skill-the-four-ai-memory-types-dd049fa661"
+    ]
+  },
+  {
+    "id": "skill-the-four-ai-memory-types-dd049fa661",
+    "purpose": "the four ai memory types",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/007-the-four-ai-memory-types.md",
+    "requires": [
+      "skill-embeddings-explained-for-business-7822da01d8"
+    ],
+    "links": [
+      "skill-three-generations-of-rag-architecture-3e1541e503"
+    ]
+  },
+  {
+    "id": "skill-three-generations-of-rag-architecture-3e1541e503",
+    "purpose": "three generations of rag architecture",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/008-three-generations-of-rag-architecture.md",
+    "requires": [
+      "skill-the-four-ai-memory-types-dd049fa661"
+    ],
+    "links": [
+      "skill-rag-vs-alternatives-93c8f8cf91"
+    ]
+  },
+  {
+    "id": "skill-rag-vs-alternatives-93c8f8cf91",
+    "purpose": "rag vs alternatives",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/009-rag-vs-alternatives.md",
+    "requires": [
+      "skill-three-generations-of-rag-architecture-3e1541e503"
+    ],
+    "links": [
+      "skill-real-world-rag-applications-by-industry-d861b15219"
+    ]
+  },
+  {
+    "id": "skill-real-world-rag-applications-by-industry-d861b15219",
+    "purpose": "real world rag applications by industry",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/010-real-world-rag-applications-by-industry.md",
+    "requires": [
+      "skill-rag-vs-alternatives-93c8f8cf91"
+    ],
+    "links": [
+      "skill-the-competitive-moat-rag-creates-09b19a8fe5"
+    ]
+  },
+  {
+    "id": "skill-the-competitive-moat-rag-creates-09b19a8fe5",
+    "purpose": "the competitive moat rag creates",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/011-the-competitive-moat-rag-creates.md",
+    "requires": [
+      "skill-real-world-rag-applications-by-industry-d861b15219"
+    ],
+    "links": [
+      "skill-where-rag-systems-fail-in-production-e86853f889"
+    ]
+  },
+  {
+    "id": "skill-where-rag-systems-fail-in-production-e86853f889",
+    "purpose": "where rag systems fail in production",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/012-where-rag-systems-fail-in-production.md",
+    "requires": [
+      "skill-the-competitive-moat-rag-creates-09b19a8fe5"
+    ],
+    "links": [
+      "skill-the-nine-decisions-that-determine-rag-chatbot-performance-fa1293d194"
+    ]
+  },
+  {
+    "id": "skill-the-nine-decisions-that-determine-rag-chatbot-performance-fa1293d194",
+    "purpose": "the nine decisions that determine rag chatbot performance",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/013-the-nine-decisions-that-determine-rag-chatbot-performance.md",
+    "requires": [
+      "skill-where-rag-systems-fail-in-production-e86853f889"
+    ],
+    "links": [
+      "skill-the-cost-spectrum-b4e6a208ff"
+    ]
+  },
+  {
+    "id": "skill-the-cost-spectrum-b4e6a208ff",
+    "purpose": "the cost spectrum",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/014-the-cost-spectrum.md",
+    "requires": [
+      "skill-the-nine-decisions-that-determine-rag-chatbot-performance-fa1293d194"
+    ],
+    "links": [
+      "skill-the-technology-stack-in-summary-b072f57b98"
+    ]
+  },
+  {
+    "id": "skill-the-technology-stack-in-summary-b072f57b98",
+    "purpose": "the technology stack in summary",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/015-the-technology-stack-in-summary.md",
+    "requires": [
+      "skill-the-cost-spectrum-b4e6a208ff"
+    ],
+    "links": [
+      "skill-evaluation-framework-for-rag-quality-b0f323c244"
+    ]
+  },
+  {
+    "id": "skill-evaluation-framework-for-rag-quality-b0f323c244",
+    "purpose": "evaluation framework for rag quality",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/016-evaluation-framework-for-rag-quality.md",
+    "requires": [
+      "skill-the-technology-stack-in-summary-b072f57b98"
+    ],
+    "links": [
+      "skill-what-cannot-be-solved-by-model-upgrades-2e63a7440b"
+    ]
+  },
+  {
+    "id": "skill-what-cannot-be-solved-by-model-upgrades-2e63a7440b",
+    "purpose": "what cannot be solved by model upgrades",
+    "source": "src/vibey_tools/skills/plugins/ai-chatbot-strategy/skills/rag-architecture-business/SKILL.md",
+    "output": "docs/microslices/skills/ai-chatbot-strategy/skills/rag-architecture-business/017-what-cannot-be-solved-by-model-upgrades.md",
+    "requires": [
+      "skill-evaluation-framework-for-rag-quality-b0f323c244"
+    ],
+    "links": []
+  }
+]

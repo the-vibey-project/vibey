@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-thunderstorms-and-severe-weather-406f3e4613",
+    "purpose": "8 thunderstorms and severe weather",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer/001-8-thunderstorms-and-severe-weather.md",
+    "requires": [],
+    "links": [
+      "skill-9-tropical-cyclones-b60258f10e"
+    ]
+  },
+  {
+    "id": "skill-9-tropical-cyclones-b60258f10e",
+    "purpose": "9 tropical cyclones",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer/002-9-tropical-cyclones.md",
+    "requires": [
+      "skill-8-thunderstorms-and-severe-weather-406f3e4613"
+    ],
+    "links": [
+      "skill-10-boundary-layer-and-local-effects-eeb66f6bf9"
+    ]
+  },
+  {
+    "id": "skill-10-boundary-layer-and-local-effects-eeb66f6bf9",
+    "purpose": "10 boundary layer and local effects",
+    "source": "src/vibey_tools/skills/plugins/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer/SKILL.md",
+    "output": "docs/microslices/skills/weather-science/skills/weather-severe-storms-cyclones-and-boundary-layer/003-10-boundary-layer-and-local-effects.md",
+    "requires": [
+      "skill-9-tropical-cyclones-b60258f10e"
+    ],
+    "links": []
+  }
+]

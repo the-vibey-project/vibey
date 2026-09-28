@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-why-this-part-is-load-bearing-1cc8146923",
+    "purpose": "why this part is load bearing",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/001-why-this-part-is-load-bearing.md",
+    "requires": [],
+    "links": [
+      "skill-5-the-ethics-of-evangelistic-influence-55abf6d468"
+    ]
+  },
+  {
+    "id": "skill-5-the-ethics-of-evangelistic-influence-55abf6d468",
+    "purpose": "5 the ethics of evangelistic influence",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/002-5-the-ethics-of-evangelistic-influence.md",
+    "requires": [
+      "skill-why-this-part-is-load-bearing-1cc8146923"
+    ],
+    "links": [
+      "skill-what-this-section-is-not-saying-8d4fdb740e"
+    ]
+  },
+  {
+    "id": "skill-what-this-section-is-not-saying-8d4fdb740e",
+    "purpose": "what this section is not saying",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/003-what-this-section-is-not-saying.md",
+    "requires": [
+      "skill-5-the-ethics-of-evangelistic-influence-55abf6d468"
+    ],
+    "links": [
+      "skill-cross-references-9c6cd819cd"
+    ]
+  },
+  {
+    "id": "skill-cross-references-9c6cd819cd",
+    "purpose": "cross references",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-evangelism-ethics/004-cross-references.md",
+    "requires": [
+      "skill-what-this-section-is-not-saying-8d4fdb740e"
+    ],
+    "links": []
+  }
+]

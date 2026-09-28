@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-8-deterrence-1580d7b5ab",
+    "purpose": "8 deterrence",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/001-8-deterrence.md",
+    "requires": [],
+    "links": [
+      "skill-9-nuclear-strategy-75c312903e"
+    ]
+  },
+  {
+    "id": "skill-9-nuclear-strategy-75c312903e",
+    "purpose": "9 nuclear strategy",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/002-9-nuclear-strategy.md",
+    "requires": [
+      "skill-8-deterrence-1580d7b5ab"
+    ],
+    "links": [
+      "skill-10-escalation-37650995a0"
+    ]
+  },
+  {
+    "id": "skill-10-escalation-37650995a0",
+    "purpose": "10 escalation",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/003-10-escalation.md",
+    "requires": [
+      "skill-9-nuclear-strategy-75c312903e"
+    ],
+    "links": [
+      "skill-11-alliances-57d96e5ce2"
+    ]
+  },
+  {
+    "id": "skill-11-alliances-57d96e5ce2",
+    "purpose": "11 alliances",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/004-11-alliances.md",
+    "requires": [
+      "skill-10-escalation-37650995a0"
+    ],
+    "links": [
+      "skill-12-grand-strategy-5259d5a80c"
+    ]
+  },
+  {
+    "id": "skill-12-grand-strategy-5259d5a80c",
+    "purpose": "12 grand strategy",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-deterrence-nuclear-strategy-alliances-and-grand-strategy/005-12-grand-strategy.md",
+    "requires": [
+      "skill-11-alliances-57d96e5ce2"
+    ],
+    "links": []
+  }
+]

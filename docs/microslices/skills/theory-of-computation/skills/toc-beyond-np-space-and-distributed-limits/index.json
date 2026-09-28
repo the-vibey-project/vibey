@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-8-beyond-np-30e236808e",
+    "purpose": "8 beyond np",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/001-8-beyond-np.md",
+    "requires": [],
+    "links": [
+      "skill-9-fine-grained-complexity-b574dcec9d"
+    ]
+  },
+  {
+    "id": "skill-9-fine-grained-complexity-b574dcec9d",
+    "purpose": "9 fine grained complexity",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/002-9-fine-grained-complexity.md",
+    "requires": [
+      "skill-8-beyond-np-30e236808e"
+    ],
+    "links": [
+      "skill-10-space-and-memory-0e7de93f11"
+    ]
+  },
+  {
+    "id": "skill-10-space-and-memory-0e7de93f11",
+    "purpose": "10 space and memory",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/003-10-space-and-memory.md",
+    "requires": [
+      "skill-9-fine-grained-complexity-b574dcec9d"
+    ],
+    "links": [
+      "skill-11-distributed-computing-impossibility-results-9e7cb01903"
+    ]
+  },
+  {
+    "id": "skill-11-distributed-computing-impossibility-results-9e7cb01903",
+    "purpose": "11 distributed computing impossibility results",
+    "source": "src/vibey_tools/skills/plugins/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/SKILL.md",
+    "output": "docs/microslices/skills/theory-of-computation/skills/toc-beyond-np-space-and-distributed-limits/004-11-distributed-computing-impossibility-results.md",
+    "requires": [
+      "skill-10-space-and-memory-0e7de93f11"
+    ],
+    "links": []
+  }
+]

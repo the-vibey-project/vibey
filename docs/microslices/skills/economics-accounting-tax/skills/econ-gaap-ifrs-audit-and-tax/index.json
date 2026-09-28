@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-15-gaap-vs-ifrs-93694b1201",
+    "purpose": "15 gaap vs ifrs",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/001-15-gaap-vs-ifrs.md",
+    "requires": [],
+    "links": [
+      "skill-16-audit-and-controls-6862baa41a"
+    ]
+  },
+  {
+    "id": "skill-16-audit-and-controls-6862baa41a",
+    "purpose": "16 audit and controls",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/002-16-audit-and-controls.md",
+    "requires": [
+      "skill-15-gaap-vs-ifrs-93694b1201"
+    ],
+    "links": [
+      "skill-17-tax-fundamentals-and-why-this-section-is-deliberately-general-f4b9d40e63"
+    ]
+  },
+  {
+    "id": "skill-17-tax-fundamentals-and-why-this-section-is-deliberately-general-f4b9d40e63",
+    "purpose": "17 tax fundamentals and why this section is deliberately general",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/003-17-tax-fundamentals-and-why-this-section-is-deliberately-general.md",
+    "requires": [
+      "skill-16-audit-and-controls-6862baa41a"
+    ],
+    "links": [
+      "skill-18-book-tax-differences-and-deferred-tax-0a7794e5cc"
+    ]
+  },
+  {
+    "id": "skill-18-book-tax-differences-and-deferred-tax-0a7794e5cc",
+    "purpose": "18 book tax differences and deferred tax",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/004-18-book-tax-differences-and-deferred-tax.md",
+    "requires": [
+      "skill-17-tax-fundamentals-and-why-this-section-is-deliberately-general-f4b9d40e63"
+    ],
+    "links": [
+      "skill-19-entity-choice-76eacf7c91"
+    ]
+  },
+  {
+    "id": "skill-19-entity-choice-76eacf7c91",
+    "purpose": "19 entity choice",
+    "source": "src/vibey_tools/skills/plugins/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/SKILL.md",
+    "output": "docs/microslices/skills/economics-accounting-tax/skills/econ-gaap-ifrs-audit-and-tax/005-19-entity-choice.md",
+    "requires": [
+      "skill-18-book-tax-differences-and-deferred-tax-0a7794e5cc"
+    ],
+    "links": []
+  }
+]

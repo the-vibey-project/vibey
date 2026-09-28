@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-899e554734",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-nuclear-structure-1ac8c2ebd7"
+    ]
+  },
+  {
+    "id": "skill-1-nuclear-structure-1ac8c2ebd7",
+    "purpose": "1 nuclear structure",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/002-1-nuclear-structure.md",
+    "requires": [
+      "skill-0-routing-899e554734"
+    ],
+    "links": [
+      "skill-2-radioactive-decay-3427f46fb7"
+    ]
+  },
+  {
+    "id": "skill-2-radioactive-decay-3427f46fb7",
+    "purpose": "2 radioactive decay",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/003-2-radioactive-decay.md",
+    "requires": [
+      "skill-1-nuclear-structure-1ac8c2ebd7"
+    ],
+    "links": [
+      "skill-3-reactions-and-cross-sections-15f759a305"
+    ]
+  },
+  {
+    "id": "skill-3-reactions-and-cross-sections-15f759a305",
+    "purpose": "3 reactions and cross sections",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/004-3-reactions-and-cross-sections.md",
+    "requires": [
+      "skill-2-radioactive-decay-3427f46fb7"
+    ],
+    "links": [
+      "skill-4-radiation-and-dose-91a407b0bd"
+    ]
+  },
+  {
+    "id": "skill-4-radiation-and-dose-91a407b0bd",
+    "purpose": "4 radiation and dose",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-structure-decay-reactions-and-dose/005-4-radiation-and-dose.md",
+    "requires": [
+      "skill-3-reactions-and-cross-sections-15f759a305"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-checked-august-2026-16a0f58733",
+    "purpose": "26 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-reference/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-reference/001-26-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-3ef42f831c"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-3ef42f831c",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-reference/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-checked-august-2026-16a0f58733"
+    ],
+    "links": [
+      "skill-28-numbers-45f0df2400"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-45f0df2400",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-reference/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-reference/003-28-numbers.md",
+    "requires": [
+      "skill-27-misconceptions-3ef42f831c"
+    ],
+    "links": [
+      "skill-29-sources-ea6514bdf3"
+    ]
+  },
+  {
+    "id": "skill-29-sources-ea6514bdf3",
+    "purpose": "29 sources",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-reference/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-reference/004-29-sources.md",
+    "requires": [
+      "skill-28-numbers-45f0df2400"
+    ],
+    "links": [
+      "skill-30-quick-reference-dc70ff65d0"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-dc70ff65d0",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-reference/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-sources-ea6514bdf3"
+    ],
+    "links": [
+      "skill-31-method-4124361a26"
+    ]
+  },
+  {
+    "id": "skill-31-method-4124361a26",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/arm-architecture-deep-dive/skills/arm-reference/SKILL.md",
+    "output": "docs/microslices/skills/arm-architecture-deep-dive/skills/arm-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-dc70ff65d0"
+    ],
+    "links": []
+  }
+]

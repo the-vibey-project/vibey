@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-research-brief-11144da62c",
+    "purpose": "research brief",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/001-research-brief.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-mechanical-foundation-65cbb0901e"
+    ]
+  },
+  {
+    "id": "skill-1-the-mechanical-foundation-65cbb0901e",
+    "purpose": "1 the mechanical foundation",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/002-1-the-mechanical-foundation.md",
+    "requires": [
+      "skill-research-brief-11144da62c"
+    ],
+    "links": [
+      "skill-2-automotive-and-mechatronic-mechanics-bd803bdb0f"
+    ]
+  },
+  {
+    "id": "skill-2-automotive-and-mechatronic-mechanics-bd803bdb0f",
+    "purpose": "2 automotive and mechatronic mechanics",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/003-2-automotive-and-mechatronic-mechanics.md",
+    "requires": [
+      "skill-1-the-mechanical-foundation-65cbb0901e"
+    ],
+    "links": [
+      "skill-3-sensing-and-perception-cd8f287921"
+    ]
+  },
+  {
+    "id": "skill-3-sensing-and-perception-cd8f287921",
+    "purpose": "3 sensing and perception",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/004-3-sensing-and-perception.md",
+    "requires": [
+      "skill-2-automotive-and-mechatronic-mechanics-bd803bdb0f"
+    ],
+    "links": [
+      "skill-4-precision-agriculture-76418eaf47"
+    ]
+  },
+  {
+    "id": "skill-4-precision-agriculture-76418eaf47",
+    "purpose": "4 precision agriculture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/005-4-precision-agriculture.md",
+    "requires": [
+      "skill-3-sensing-and-perception-cd8f287921"
+    ],
+    "links": [
+      "skill-5-automation-and-robotics-013410ef18"
+    ]
+  },
+  {
+    "id": "skill-5-automation-and-robotics-013410ef18",
+    "purpose": "5 automation and robotics",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/006-5-automation-and-robotics.md",
+    "requires": [
+      "skill-4-precision-agriculture-76418eaf47"
+    ],
+    "links": [
+      "skill-6-artificial-intelligence-and-farm-software-fa7de20650"
+    ]
+  },
+  {
+    "id": "skill-6-artificial-intelligence-and-farm-software-fa7de20650",
+    "purpose": "6 artificial intelligence and farm software",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/007-6-artificial-intelligence-and-farm-software.md",
+    "requires": [
+      "skill-5-automation-and-robotics-013410ef18"
+    ],
+    "links": [
+      "skill-7-connectivity-cloud-and-data-governance-497dbaad6b"
+    ]
+  },
+  {
+    "id": "skill-7-connectivity-cloud-and-data-governance-497dbaad6b",
+    "purpose": "7 connectivity cloud and data governance",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/008-7-connectivity-cloud-and-data-governance.md",
+    "requires": [
+      "skill-6-artificial-intelligence-and-farm-software-fa7de20650"
+    ],
+    "links": [
+      "skill-8-safety-and-human-factors-53e4d62d83"
+    ]
+  },
+  {
+    "id": "skill-8-safety-and-human-factors-53e4d62d83",
+    "purpose": "8 safety and human factors",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/009-8-safety-and-human-factors.md",
+    "requires": [
+      "skill-7-connectivity-cloud-and-data-governance-497dbaad6b"
+    ],
+    "links": [
+      "skill-9-economics-and-adoption-67fb57f0ae"
+    ]
+  },
+  {
+    "id": "skill-9-economics-and-adoption-67fb57f0ae",
+    "purpose": "9 economics and adoption",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/010-9-economics-and-adoption.md",
+    "requires": [
+      "skill-8-safety-and-human-factors-53e4d62d83"
+    ],
+    "links": [
+      "skill-10-a-technology-evaluation-protocol-7e7d06f623"
+    ]
+  },
+  {
+    "id": "skill-10-a-technology-evaluation-protocol-7e7d06f623",
+    "purpose": "10 a technology evaluation protocol",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/011-10-a-technology-evaluation-protocol.md",
+    "requires": [
+      "skill-9-economics-and-adoption-67fb57f0ae"
+    ],
+    "links": [
+      "skill-11-maturity-map-1c9efd3079"
+    ]
+  },
+  {
+    "id": "skill-11-maturity-map-1c9efd3079",
+    "purpose": "11 maturity map",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/012-11-maturity-map.md",
+    "requires": [
+      "skill-10-a-technology-evaluation-protocol-7e7d06f623"
+    ],
+    "links": [
+      "skill-12-common-myths-41d8b33e32"
+    ]
+  },
+  {
+    "id": "skill-12-common-myths-41d8b33e32",
+    "purpose": "12 common myths",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/013-12-common-myths.md",
+    "requires": [
+      "skill-11-maturity-map-1c9efd3079"
+    ],
+    "links": [
+      "skill-research-note-e76820d37c"
+    ]
+  },
+  {
+    "id": "skill-research-note-e76820d37c",
+    "purpose": "research note",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/agricultural-machinery-robotics-technology-research/014-research-note.md",
+    "requires": [
+      "skill-12-common-myths-41d8b33e32"
+    ],
+    "links": []
+  }
+]

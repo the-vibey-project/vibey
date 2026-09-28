@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-26-what-s-live-verified-august-2026-478ba2553c",
+    "purpose": "26 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-reference/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-reference/001-26-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-fcbc29e466"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-fcbc29e466",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-reference/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-verified-august-2026-478ba2553c"
+    ],
+    "links": [
+      "skill-28-quick-reference-c4cc234a80"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-c4cc234a80",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-reference/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-reference/003-28-quick-reference.md",
+    "requires": [
+      "skill-27-misconceptions-fcbc29e466"
+    ],
+    "links": [
+      "skill-29-method-bd313c886a"
+    ]
+  },
+  {
+    "id": "skill-29-method-bd313c886a",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/github-jira-deep-dive/skills/ghjira-reference/SKILL.md",
+    "output": "docs/microslices/skills/github-jira-deep-dive/skills/ghjira-reference/004-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-c4cc234a80"
+    ],
+    "links": []
+  }
+]

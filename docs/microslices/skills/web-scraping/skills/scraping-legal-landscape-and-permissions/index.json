@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-97ee6e04c1",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-legal-landscape-and-permissions/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-legal-landscape-and-permissions/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-legal-landscape-f177756e39"
+    ]
+  },
+  {
+    "id": "skill-1-the-legal-landscape-f177756e39",
+    "purpose": "1 the legal landscape",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-legal-landscape-and-permissions/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-legal-landscape-and-permissions/002-1-the-legal-landscape.md",
+    "requires": [
+      "skill-0-routing-97ee6e04c1"
+    ],
+    "links": [
+      "skill-2-should-you-scrape-at-all-f54a732a92"
+    ]
+  },
+  {
+    "id": "skill-2-should-you-scrape-at-all-f54a732a92",
+    "purpose": "2 should you scrape at all",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-legal-landscape-and-permissions/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-legal-landscape-and-permissions/003-2-should-you-scrape-at-all.md",
+    "requires": [
+      "skill-1-the-legal-landscape-f177756e39"
+    ],
+    "links": [
+      "skill-3-robots-txt-and-the-permission-layer-f89de208c4"
+    ]
+  },
+  {
+    "id": "skill-3-robots-txt-and-the-permission-layer-f89de208c4",
+    "purpose": "3 robots txt and the permission layer",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-legal-landscape-and-permissions/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-legal-landscape-and-permissions/004-3-robots-txt-and-the-permission-layer.md",
+    "requires": [
+      "skill-2-should-you-scrape-at-all-f54a732a92"
+    ],
+    "links": []
+  }
+]

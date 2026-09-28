@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-17-design-for-manufacture-and-assembly-23a2257d93",
+    "purpose": "17 design for manufacture and assembly",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/001-17-design-for-manufacture-and-assembly.md",
+    "requires": [],
+    "links": [
+      "skill-18-metrology-and-quality-75c95c2eaf"
+    ]
+  },
+  {
+    "id": "skill-18-metrology-and-quality-75c95c2eaf",
+    "purpose": "18 metrology and quality",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/002-18-metrology-and-quality.md",
+    "requires": [
+      "skill-17-design-for-manufacture-and-assembly-23a2257d93"
+    ],
+    "links": [
+      "skill-19-scale-economics-da7d972fa4"
+    ]
+  },
+  {
+    "id": "skill-19-scale-economics-da7d972fa4",
+    "purpose": "19 scale economics",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/003-19-scale-economics.md",
+    "requires": [
+      "skill-18-metrology-and-quality-75c95c2eaf"
+    ],
+    "links": [
+      "skill-20-cad-cae-and-simulation-e1fad5f2a0"
+    ]
+  },
+  {
+    "id": "skill-20-cad-cae-and-simulation-e1fad5f2a0",
+    "purpose": "20 cad cae and simulation",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/004-20-cad-cae-and-simulation.md",
+    "requires": [
+      "skill-19-scale-economics-da7d972fa4"
+    ],
+    "links": [
+      "skill-21-plm-version-control-for-atoms-7c800c9e20"
+    ]
+  },
+  {
+    "id": "skill-21-plm-version-control-for-atoms-7c800c9e20",
+    "purpose": "21 plm version control for atoms",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/005-21-plm-version-control-for-atoms.md",
+    "requires": [
+      "skill-20-cad-cae-and-simulation-e1fad5f2a0"
+    ],
+    "links": [
+      "skill-22-physical-supply-chain-bf1127fc91"
+    ]
+  },
+  {
+    "id": "skill-22-physical-supply-chain-bf1127fc91",
+    "purpose": "22 physical supply chain",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/006-22-physical-supply-chain.md",
+    "requires": [
+      "skill-21-plm-version-control-for-atoms-7c800c9e20"
+    ],
+    "links": [
+      "skill-23-new-product-introduction-2d9e56ba92"
+    ]
+  },
+  {
+    "id": "skill-23-new-product-introduction-2d9e56ba92",
+    "purpose": "23 new product introduction",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/007-23-new-product-introduction.md",
+    "requires": [
+      "skill-22-physical-supply-chain-bf1127fc91"
+    ],
+    "links": [
+      "skill-24-what-transfers-and-what-doesn-t-7d22397fc4"
+    ]
+  },
+  {
+    "id": "skill-24-what-transfers-and-what-doesn-t-7d22397fc4",
+    "purpose": "24 what transfers and what doesn t",
+    "source": "src/vibey_tools/skills/plugins/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/SKILL.md",
+    "output": "docs/microslices/skills/manufacturing-mechanical-engineering-for-software-devs/skills/mfg-dfm-metrology-plm-npi-and-what-transfers/008-24-what-transfers-and-what-doesn-t.md",
+    "requires": [
+      "skill-23-new-product-introduction-2d9e56ba92"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-11-oceanography-36e198de4a",
+    "purpose": "11 oceanography",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/001-11-oceanography.md",
+    "requires": [],
+    "links": [
+      "skill-12-cryosphere-68b43fb647"
+    ]
+  },
+  {
+    "id": "skill-12-cryosphere-68b43fb647",
+    "purpose": "12 cryosphere",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/002-12-cryosphere.md",
+    "requires": [
+      "skill-11-oceanography-36e198de4a"
+    ],
+    "links": [
+      "skill-13-biogeochemical-cycles-c516fd24b8"
+    ]
+  },
+  {
+    "id": "skill-13-biogeochemical-cycles-c516fd24b8",
+    "purpose": "13 biogeochemical cycles",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/003-13-biogeochemical-cycles.md",
+    "requires": [
+      "skill-12-cryosphere-68b43fb647"
+    ],
+    "links": [
+      "skill-14-resources-28d16d3257"
+    ]
+  },
+  {
+    "id": "skill-14-resources-28d16d3257",
+    "purpose": "14 resources",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/004-14-resources.md",
+    "requires": [
+      "skill-13-biogeochemical-cycles-c516fd24b8"
+    ],
+    "links": [
+      "skill-15-natural-hazards-a28d07a39d"
+    ]
+  },
+  {
+    "id": "skill-15-natural-hazards-a28d07a39d",
+    "purpose": "15 natural hazards",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/005-15-natural-hazards.md",
+    "requires": [
+      "skill-14-resources-28d16d3257"
+    ],
+    "links": [
+      "skill-16-observation-and-geophysics-b775aac502"
+    ]
+  },
+  {
+    "id": "skill-16-observation-and-geophysics-b775aac502",
+    "purpose": "16 observation and geophysics",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-oceans-cryosphere-cycles-hazards-and-observation/006-16-observation-and-geophysics.md",
+    "requires": [
+      "skill-15-natural-hazards-a28d07a39d"
+    ],
+    "links": []
+  }
+]

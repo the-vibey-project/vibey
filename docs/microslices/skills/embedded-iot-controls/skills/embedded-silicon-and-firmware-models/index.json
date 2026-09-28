@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-0-routing-what-kind-of-problem-is-this-70b909b916",
+    "purpose": "0 routing what kind of problem is this",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-silicon-and-firmware-models/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-silicon-and-firmware-models/001-0-routing-what-kind-of-problem-is-this.md",
+    "requires": [],
+    "links": [
+      "skill-1-silicon-memory-and-peripherals-73dbb370c6"
+    ]
+  },
+  {
+    "id": "skill-1-silicon-memory-and-peripherals-73dbb370c6",
+    "purpose": "1 silicon memory and peripherals",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-silicon-and-firmware-models/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-silicon-and-firmware-models/002-1-silicon-memory-and-peripherals.md",
+    "requires": [
+      "skill-0-routing-what-kind-of-problem-is-this-70b909b916"
+    ],
+    "links": [
+      "skill-2-firmware-programming-models-8ca77c9d31"
+    ]
+  },
+  {
+    "id": "skill-2-firmware-programming-models-8ca77c9d31",
+    "purpose": "2 firmware programming models",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-silicon-and-firmware-models/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-silicon-and-firmware-models/003-2-firmware-programming-models.md",
+    "requires": [
+      "skill-1-silicon-memory-and-peripherals-73dbb370c6"
+    ],
+    "links": []
+  }
+]

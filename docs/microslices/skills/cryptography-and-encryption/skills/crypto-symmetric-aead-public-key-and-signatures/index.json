@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-symmetric-encryption-e53319d970",
+    "purpose": "6 symmetric encryption",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/001-6-symmetric-encryption.md",
+    "requires": [],
+    "links": [
+      "skill-7-aead-af3e1a31c4"
+    ]
+  },
+  {
+    "id": "skill-7-aead-af3e1a31c4",
+    "purpose": "7 aead",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/002-7-aead.md",
+    "requires": [
+      "skill-6-symmetric-encryption-e53319d970"
+    ],
+    "links": [
+      "skill-8-public-key-cryptography-65e7e246a3"
+    ]
+  },
+  {
+    "id": "skill-8-public-key-cryptography-65e7e246a3",
+    "purpose": "8 public key cryptography",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/003-8-public-key-cryptography.md",
+    "requires": [
+      "skill-7-aead-af3e1a31c4"
+    ],
+    "links": [
+      "skill-9-key-exchange-and-forward-secrecy-dc113217e0"
+    ]
+  },
+  {
+    "id": "skill-9-key-exchange-and-forward-secrecy-dc113217e0",
+    "purpose": "9 key exchange and forward secrecy",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/004-9-key-exchange-and-forward-secrecy.md",
+    "requires": [
+      "skill-8-public-key-cryptography-65e7e246a3"
+    ],
+    "links": [
+      "skill-10-digital-signatures-25c8913838"
+    ]
+  },
+  {
+    "id": "skill-10-digital-signatures-25c8913838",
+    "purpose": "10 digital signatures",
+    "source": "src/vibey_tools/skills/plugins/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/SKILL.md",
+    "output": "docs/microslices/skills/cryptography-and-encryption/skills/crypto-symmetric-aead-public-key-and-signatures/005-10-digital-signatures.md",
+    "requires": [
+      "skill-9-key-exchange-and-forward-secrecy-dc113217e0"
+    ],
+    "links": []
+  }
+]

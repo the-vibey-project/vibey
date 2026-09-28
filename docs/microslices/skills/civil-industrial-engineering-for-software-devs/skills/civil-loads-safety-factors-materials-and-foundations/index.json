@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-6dcb9f3fd7",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-why-this-comparison-keeps-coming-up-be5e9d2c72"
+    ]
+  },
+  {
+    "id": "skill-1-why-this-comparison-keeps-coming-up-be5e9d2c72",
+    "purpose": "1 why this comparison keeps coming up",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/002-1-why-this-comparison-keeps-coming-up.md",
+    "requires": [
+      "skill-0-routing-6dcb9f3fd7"
+    ],
+    "links": [
+      "skill-2-loads-and-structure-67d50f0643"
+    ]
+  },
+  {
+    "id": "skill-2-loads-and-structure-67d50f0643",
+    "purpose": "2 loads and structure",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/003-2-loads-and-structure.md",
+    "requires": [
+      "skill-1-why-this-comparison-keeps-coming-up-be5e9d2c72"
+    ],
+    "links": [
+      "skill-3-factor-of-safety-40821c80fa"
+    ]
+  },
+  {
+    "id": "skill-3-factor-of-safety-40821c80fa",
+    "purpose": "3 factor of safety",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/004-3-factor-of-safety.md",
+    "requires": [
+      "skill-2-loads-and-structure-67d50f0643"
+    ],
+    "links": [
+      "skill-4-materials-7f5a409273"
+    ]
+  },
+  {
+    "id": "skill-4-materials-7f5a409273",
+    "purpose": "4 materials",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/005-4-materials.md",
+    "requires": [
+      "skill-3-factor-of-safety-40821c80fa"
+    ],
+    "links": [
+      "skill-5-foundations-and-soil-40f065b793"
+    ]
+  },
+  {
+    "id": "skill-5-foundations-and-soil-40f065b793",
+    "purpose": "5 foundations and soil",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-loads-safety-factors-materials-and-foundations/006-5-foundations-and-soil.md",
+    "requires": [
+      "skill-4-materials-7f5a409273"
+    ],
+    "links": []
+  }
+]

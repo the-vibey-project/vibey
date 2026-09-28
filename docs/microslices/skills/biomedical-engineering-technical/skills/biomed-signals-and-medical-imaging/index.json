@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-0-routing-c970ef6620",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-physiological-signal-processing-0db3a4c8cd"
+    ]
+  },
+  {
+    "id": "skill-1-physiological-signal-processing-0db3a4c8cd",
+    "purpose": "1 physiological signal processing",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging/002-1-physiological-signal-processing.md",
+    "requires": [
+      "skill-0-routing-c970ef6620"
+    ],
+    "links": [
+      "skill-2-medical-imaging-31b02283f5"
+    ]
+  },
+  {
+    "id": "skill-2-medical-imaging-31b02283f5",
+    "purpose": "2 medical imaging",
+    "source": "src/vibey_tools/skills/plugins/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging/SKILL.md",
+    "output": "docs/microslices/skills/biomedical-engineering-technical/skills/biomed-signals-and-medical-imaging/003-2-medical-imaging.md",
+    "requires": [
+      "skill-1-physiological-signal-processing-0db3a4c8cd"
+    ],
+    "links": []
+  }
+]

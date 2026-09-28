@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-33-terraforming-theory-and-the-three-habitability-thresholds-9dc6425ee4",
+    "purpose": "33 terraforming theory and the three habitability thresholds",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/001-33-terraforming-theory-and-the-three-habitability-thresholds.md",
+    "requires": [],
+    "links": [
+      "skill-34-atmospheric-thickening-and-warming-strategies-361d0e1a40"
+    ]
+  },
+  {
+    "id": "skill-34-atmospheric-thickening-and-warming-strategies-361d0e1a40",
+    "purpose": "34 atmospheric thickening and warming strategies",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/002-34-atmospheric-thickening-and-warming-strategies.md",
+    "requires": [
+      "skill-33-terraforming-theory-and-the-three-habitability-thresholds-9dc6425ee4"
+    ],
+    "links": [
+      "skill-35-the-magnetic-field-problem-9033dda042"
+    ]
+  },
+  {
+    "id": "skill-35-the-magnetic-field-problem-9033dda042",
+    "purpose": "35 the magnetic field problem",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/003-35-the-magnetic-field-problem.md",
+    "requires": [
+      "skill-34-atmospheric-thickening-and-warming-strategies-361d0e1a40"
+    ],
+    "links": [
+      "skill-quick-reference-630f6f17c5"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-630f6f17c5",
+    "purpose": "quick reference",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-terraforming-warming-and-the-magnetic-field-problem/004-quick-reference.md",
+    "requires": [
+      "skill-35-the-magnetic-field-problem-9033dda042"
+    ],
+    "links": []
+  }
+]

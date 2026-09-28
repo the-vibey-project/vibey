@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-3797ccd902",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-three-layers-three-kinds-of-claim-d6f4870322"
+    ]
+  },
+  {
+    "id": "skill-1-three-layers-three-kinds-of-claim-d6f4870322",
+    "purpose": "1 three layers three kinds of claim",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/002-1-three-layers-three-kinds-of-claim.md",
+    "requires": [
+      "skill-0-routing-3797ccd902"
+    ],
+    "links": [
+      "skill-2-the-harmonic-series-d5f9f28fb3"
+    ]
+  },
+  {
+    "id": "skill-2-the-harmonic-series-d5f9f28fb3",
+    "purpose": "2 the harmonic series",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/003-2-the-harmonic-series.md",
+    "requires": [
+      "skill-1-three-layers-three-kinds-of-claim-d6f4870322"
+    ],
+    "links": [
+      "skill-3-psychoacoustics-0e45ef9737"
+    ]
+  },
+  {
+    "id": "skill-3-psychoacoustics-0e45ef9737",
+    "purpose": "3 psychoacoustics",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/004-3-psychoacoustics.md",
+    "requires": [
+      "skill-2-the-harmonic-series-d5f9f28fb3"
+    ],
+    "links": [
+      "skill-4-tuning-and-temperament-7efb376ffd"
+    ]
+  },
+  {
+    "id": "skill-4-tuning-and-temperament-7efb376ffd",
+    "purpose": "4 tuning and temperament",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-claims-harmonic-series-psychoacoustics-and-tuning/005-4-tuning-and-temperament.md",
+    "requires": [
+      "skill-3-psychoacoustics-0e45ef9737"
+    ],
+    "links": []
+  }
+]

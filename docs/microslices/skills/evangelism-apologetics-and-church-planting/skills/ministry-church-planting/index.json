@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-the-framing-for-part-v-2f3cb82c0a",
+    "purpose": "the framing for part v",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/001-the-framing-for-part-v.md",
+    "requires": [],
+    "links": [
+      "skill-19-church-planting-models-3ecaff40ec"
+    ]
+  },
+  {
+    "id": "skill-19-church-planting-models-3ecaff40ec",
+    "purpose": "19 church planting models",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/002-19-church-planting-models.md",
+    "requires": [
+      "skill-the-framing-for-part-v-2f3cb82c0a"
+    ],
+    "links": [
+      "skill-20-the-church-planting-process-assessment-to-post-launch-3cd37c8115"
+    ]
+  },
+  {
+    "id": "skill-20-the-church-planting-process-assessment-to-post-launch-3cd37c8115",
+    "purpose": "20 the church planting process assessment to post launch",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/003-20-the-church-planting-process-assessment-to-post-launch.md",
+    "requires": [
+      "skill-19-church-planting-models-3ecaff40ec"
+    ],
+    "links": [
+      "skill-21-building-sustainable-community-onboarding-norms-volunteers-and-conflict-c99abea6de"
+    ]
+  },
+  {
+    "id": "skill-21-building-sustainable-community-onboarding-norms-volunteers-and-conflict-c99abea6de",
+    "purpose": "21 building sustainable community onboarding norms volunteers and conflict",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/004-21-building-sustainable-community-onboarding-norms-volunteers-and-conflict.md",
+    "requires": [
+      "skill-20-the-church-planting-process-assessment-to-post-launch-3cd37c8115"
+    ],
+    "links": [
+      "skill-22-sustainability-beyond-the-plant-344172aa67"
+    ]
+  },
+  {
+    "id": "skill-22-sustainability-beyond-the-plant-344172aa67",
+    "purpose": "22 sustainability beyond the plant",
+    "source": "src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/SKILL.md",
+    "output": "docs/microslices/skills/evangelism-apologetics-and-church-planting/skills/ministry-church-planting/005-22-sustainability-beyond-the-plant.md",
+    "requires": [
+      "skill-21-building-sustainable-community-onboarding-norms-volunteers-and-conflict-c99abea6de"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-12-gnc-software-69c4c07d58",
+    "purpose": "12 gnc software",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/001-12-gnc-software.md",
+    "requires": [],
+    "links": [
+      "skill-13-verification-and-validation-d6a52a674f"
+    ]
+  },
+  {
+    "id": "skill-13-verification-and-validation-d6a52a674f",
+    "purpose": "13 verification and validation",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/002-13-verification-and-validation.md",
+    "requires": [
+      "skill-12-gnc-software-69c4c07d58"
+    ],
+    "links": [
+      "skill-14-ground-segment-6abbbf1445"
+    ]
+  },
+  {
+    "id": "skill-14-ground-segment-6abbbf1445",
+    "purpose": "14 ground segment",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/003-14-ground-segment.md",
+    "requires": [
+      "skill-13-verification-and-validation-d6a52a674f"
+    ],
+    "links": [
+      "skill-15-autonomy-and-onboard-ai-86c34ad723"
+    ]
+  },
+  {
+    "id": "skill-15-autonomy-and-onboard-ai-86c34ad723",
+    "purpose": "15 autonomy and onboard ai",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/004-15-autonomy-and-onboard-ai.md",
+    "requires": [
+      "skill-14-ground-segment-6abbbf1445"
+    ],
+    "links": [
+      "skill-16-failure-case-studies-ea6529494f"
+    ]
+  },
+  {
+    "id": "skill-16-failure-case-studies-ea6529494f",
+    "purpose": "16 failure case studies",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-gnc-verification-ground-and-autonomy/005-16-failure-case-studies.md",
+    "requires": [
+      "skill-15-autonomy-and-onboard-ai-86c34ad723"
+    ],
+    "links": []
+  }
+]

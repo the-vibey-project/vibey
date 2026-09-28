@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-1696da7603",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-taxonomy-a1e31d17be"
+    ]
+  },
+  {
+    "id": "skill-1-the-taxonomy-a1e31d17be",
+    "purpose": "1 the taxonomy",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/002-1-the-taxonomy.md",
+    "requires": [
+      "skill-0-routing-1696da7603"
+    ],
+    "links": [
+      "skill-2-education-and-block-based-tools-c07a64b434"
+    ]
+  },
+  {
+    "id": "skill-2-education-and-block-based-tools-c07a64b434",
+    "purpose": "2 education and block based tools",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/003-2-education-and-block-based-tools.md",
+    "requires": [
+      "skill-1-the-taxonomy-a1e31d17be"
+    ],
+    "links": [
+      "skill-3-workflow-automation-c9b091d735"
+    ]
+  },
+  {
+    "id": "skill-3-workflow-automation-c9b091d735",
+    "purpose": "3 workflow automation",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/004-3-workflow-automation.md",
+    "requires": [
+      "skill-2-education-and-block-based-tools-c07a64b434"
+    ],
+    "links": [
+      "skill-4-ai-app-generation-the-disruption-f4d4b055f6"
+    ]
+  },
+  {
+    "id": "skill-4-ai-app-generation-the-disruption-f4d4b055f6",
+    "purpose": "4 ai app generation the disruption",
+    "source": "src/vibey_tools/skills/plugins/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/SKILL.md",
+    "output": "docs/microslices/skills/low-code-no-code/skills/lowcode-landscape-automation-and-ai-generation/005-4-ai-app-generation-the-disruption.md",
+    "requires": [
+      "skill-3-workflow-automation-c9b091d735"
+    ],
+    "links": []
+  }
+]

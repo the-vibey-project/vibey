@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-9-structure-and-longitudinal-strength-3df504917d",
+    "purpose": "9 structure and longitudinal strength",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/001-9-structure-and-longitudinal-strength.md",
+    "requires": [],
+    "links": [
+      "skill-10-materials-and-corrosion-9375a905bd"
+    ]
+  },
+  {
+    "id": "skill-10-materials-and-corrosion-9375a905bd",
+    "purpose": "10 materials and corrosion",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/002-10-materials-and-corrosion.md",
+    "requires": [
+      "skill-9-structure-and-longitudinal-strength-3df504917d"
+    ],
+    "links": [
+      "skill-11-machinery-2c63679eea"
+    ]
+  },
+  {
+    "id": "skill-11-machinery-2c63679eea",
+    "purpose": "11 machinery",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/003-11-machinery.md",
+    "requires": [
+      "skill-10-materials-and-corrosion-9375a905bd"
+    ],
+    "links": [
+      "skill-12-ship-systems-0417dd0875"
+    ]
+  },
+  {
+    "id": "skill-12-ship-systems-0417dd0875",
+    "purpose": "12 ship systems",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/004-12-ship-systems.md",
+    "requires": [
+      "skill-11-machinery-2c63679eea"
+    ],
+    "links": [
+      "skill-13-ship-types-and-what-drives-them-f0db5f629e"
+    ]
+  },
+  {
+    "id": "skill-13-ship-types-and-what-drives-them-f0db5f629e",
+    "purpose": "13 ship types and what drives them",
+    "source": "src/vibey_tools/skills/plugins/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/SKILL.md",
+    "output": "docs/microslices/skills/maritime-engineering-and-building-ships/skills/ship-structure-materials-machinery-systems-and-types/005-13-ship-types-and-what-drives-them.md",
+    "requires": [
+      "skill-12-ship-systems-0417dd0875"
+    ],
+    "links": []
+  }
+]

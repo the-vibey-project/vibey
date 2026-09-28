@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-21-pcb-fabrication-1cdd35302b",
+    "purpose": "21 pcb fabrication",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/001-21-pcb-fabrication.md",
+    "requires": [],
+    "links": [
+      "skill-22-assembly-and-soldering-3f84242c57"
+    ]
+  },
+  {
+    "id": "skill-22-assembly-and-soldering-3f84242c57",
+    "purpose": "22 assembly and soldering",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/002-22-assembly-and-soldering.md",
+    "requires": [
+      "skill-21-pcb-fabrication-1cdd35302b"
+    ],
+    "links": [
+      "skill-23-reliability-ddf00744e0"
+    ]
+  },
+  {
+    "id": "skill-23-reliability-ddf00744e0",
+    "purpose": "23 reliability",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/003-23-reliability.md",
+    "requires": [
+      "skill-22-assembly-and-soldering-3f84242c57"
+    ],
+    "links": [
+      "skill-24-design-flow-f1f08e3935"
+    ]
+  },
+  {
+    "id": "skill-24-design-flow-f1f08e3935",
+    "purpose": "24 design flow",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/004-24-design-flow.md",
+    "requires": [
+      "skill-23-reliability-ddf00744e0"
+    ],
+    "links": [
+      "skill-25-economics-7d519aa5d1"
+    ]
+  },
+  {
+    "id": "skill-25-economics-7d519aa5d1",
+    "purpose": "25 economics",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/005-25-economics.md",
+    "requires": [
+      "skill-24-design-flow-f1f08e3935"
+    ],
+    "links": [
+      "skill-26-supply-chain-and-concentration-f475ce4f12"
+    ]
+  },
+  {
+    "id": "skill-26-supply-chain-and-concentration-f475ce4f12",
+    "purpose": "26 supply chain and concentration",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-pcb-assembly-reliability-design-flow-and-economics/006-26-supply-chain-and-concentration.md",
+    "requires": [
+      "skill-25-economics-7d519aa5d1"
+    ],
+    "links": []
+  }
+]

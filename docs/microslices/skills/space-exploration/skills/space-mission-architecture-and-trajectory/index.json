@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-0-routing-79daa6ac2c",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-mission-architecture-and-trajectory/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-mission-architecture-and-trajectory/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-mission-architecture-c4b20ceb50"
+    ]
+  },
+  {
+    "id": "skill-1-mission-architecture-c4b20ceb50",
+    "purpose": "1 mission architecture",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-mission-architecture-and-trajectory/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-mission-architecture-and-trajectory/002-1-mission-architecture.md",
+    "requires": [
+      "skill-0-routing-79daa6ac2c"
+    ],
+    "links": [
+      "skill-2-trajectory-and-mission-design-b05dc3ed6e"
+    ]
+  },
+  {
+    "id": "skill-2-trajectory-and-mission-design-b05dc3ed6e",
+    "purpose": "2 trajectory and mission design",
+    "source": "src/vibey_tools/skills/plugins/space-exploration/skills/space-mission-architecture-and-trajectory/SKILL.md",
+    "output": "docs/microslices/skills/space-exploration/skills/space-mission-architecture-and-trajectory/003-2-trajectory-and-mission-design.md",
+    "requires": [
+      "skill-1-mission-architecture-c4b20ceb50"
+    ],
+    "links": []
+  }
+]

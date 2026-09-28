@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-25-what-s-live-verified-august-2026-621bbf5cd6",
+    "purpose": "25 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-reference/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-reference/001-25-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-76b7cf4189"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-76b7cf4189",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-reference/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-verified-august-2026-621bbf5cd6"
+    ],
+    "links": [
+      "skill-27-books-82fd353647"
+    ]
+  },
+  {
+    "id": "skill-27-books-82fd353647",
+    "purpose": "27 books",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-reference/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-reference/003-27-books.md",
+    "requires": [
+      "skill-26-misconceptions-76b7cf4189"
+    ],
+    "links": [
+      "skill-28-numbers-a96421ed2b"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-a96421ed2b",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-reference/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-reference/004-28-numbers.md",
+    "requires": [
+      "skill-27-books-82fd353647"
+    ],
+    "links": [
+      "skill-29-quick-reference-db17c0caee"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-db17c0caee",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-reference/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-reference/005-29-quick-reference.md",
+    "requires": [
+      "skill-28-numbers-a96421ed2b"
+    ],
+    "links": [
+      "skill-30-method-75c6225ee9"
+    ]
+  },
+  {
+    "id": "skill-30-method-75c6225ee9",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling/skills/story-reference/SKILL.md",
+    "output": "docs/microslices/skills/entertainment-comedy-drama-storytelling/skills/story-reference/006-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-db17c0caee"
+    ],
+    "links": []
+  }
+]

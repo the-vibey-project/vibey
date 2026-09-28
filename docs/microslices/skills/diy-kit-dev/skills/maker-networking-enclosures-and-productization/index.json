@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-networking-and-home-automation-c82b8bce11",
+    "purpose": "11 networking and home automation",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-networking-enclosures-and-productization/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-networking-enclosures-and-productization/001-11-networking-and-home-automation.md",
+    "requires": [],
+    "links": [
+      "skill-12-enclosures-and-fabrication-fe58655272"
+    ]
+  },
+  {
+    "id": "skill-12-enclosures-and-fabrication-fe58655272",
+    "purpose": "12 enclosures and fabrication",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-networking-enclosures-and-productization/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-networking-enclosures-and-productization/002-12-enclosures-and-fabrication.md",
+    "requires": [
+      "skill-11-networking-and-home-automation-c82b8bce11"
+    ],
+    "links": [
+      "skill-13-prototype-product-f9661d85a5"
+    ]
+  },
+  {
+    "id": "skill-13-prototype-product-f9661d85a5",
+    "purpose": "13 prototype product",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-networking-enclosures-and-productization/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-networking-enclosures-and-productization/003-13-prototype-product.md",
+    "requires": [
+      "skill-12-enclosures-and-fabrication-fe58655272"
+    ],
+    "links": [
+      "skill-14-buying-and-sourcing-666f790fc9"
+    ]
+  },
+  {
+    "id": "skill-14-buying-and-sourcing-666f790fc9",
+    "purpose": "14 buying and sourcing",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-networking-enclosures-and-productization/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-networking-enclosures-and-productization/004-14-buying-and-sourcing.md",
+    "requires": [
+      "skill-13-prototype-product-f9661d85a5"
+    ],
+    "links": []
+  }
+]

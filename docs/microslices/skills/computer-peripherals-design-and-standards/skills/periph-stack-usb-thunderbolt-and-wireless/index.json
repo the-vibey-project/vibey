@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-f8c28a6986",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-peripheral-stack-cc98cad3df"
+    ]
+  },
+  {
+    "id": "skill-1-the-peripheral-stack-cc98cad3df",
+    "purpose": "1 the peripheral stack",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/002-1-the-peripheral-stack.md",
+    "requires": [
+      "skill-0-routing-f8c28a6986"
+    ],
+    "links": [
+      "skill-2-usb-architecture-2e23bf19bb"
+    ]
+  },
+  {
+    "id": "skill-2-usb-architecture-2e23bf19bb",
+    "purpose": "2 usb architecture",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/003-2-usb-architecture.md",
+    "requires": [
+      "skill-1-the-peripheral-stack-cc98cad3df"
+    ],
+    "links": [
+      "skill-3-usb-c-and-power-delivery-5719929265"
+    ]
+  },
+  {
+    "id": "skill-3-usb-c-and-power-delivery-5719929265",
+    "purpose": "3 usb c and power delivery",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/004-3-usb-c-and-power-delivery.md",
+    "requires": [
+      "skill-2-usb-architecture-2e23bf19bb"
+    ],
+    "links": [
+      "skill-4-thunderbolt-and-alternate-modes-cd7a050602"
+    ]
+  },
+  {
+    "id": "skill-4-thunderbolt-and-alternate-modes-cd7a050602",
+    "purpose": "4 thunderbolt and alternate modes",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/005-4-thunderbolt-and-alternate-modes.md",
+    "requires": [
+      "skill-3-usb-c-and-power-delivery-5719929265"
+    ],
+    "links": [
+      "skill-5-wireless-peripherals-fe83353333"
+    ]
+  },
+  {
+    "id": "skill-5-wireless-peripherals-fe83353333",
+    "purpose": "5 wireless peripherals",
+    "source": "src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/SKILL.md",
+    "output": "docs/microslices/skills/computer-peripherals-design-and-standards/skills/periph-stack-usb-thunderbolt-and-wireless/006-5-wireless-peripherals.md",
+    "requires": [
+      "skill-4-thunderbolt-and-alternate-modes-cd7a050602"
+    ],
+    "links": []
+  }
+]

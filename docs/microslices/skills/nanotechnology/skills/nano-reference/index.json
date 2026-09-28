@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-12-misconceptions-fbee3744a9",
+    "purpose": "12 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-reference/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-reference/001-12-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-13-numbers-87fd847990"
+    ]
+  },
+  {
+    "id": "skill-13-numbers-87fd847990",
+    "purpose": "13 numbers",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-reference/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-reference/002-13-numbers.md",
+    "requires": [
+      "skill-12-misconceptions-fbee3744a9"
+    ],
+    "links": [
+      "skill-14-what-actually-moved-ed57ad3e71"
+    ]
+  },
+  {
+    "id": "skill-14-what-actually-moved-ed57ad3e71",
+    "purpose": "14 what actually moved",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-reference/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-reference/003-14-what-actually-moved.md",
+    "requires": [
+      "skill-13-numbers-87fd847990"
+    ],
+    "links": [
+      "skill-15-books-14755eb162"
+    ]
+  },
+  {
+    "id": "skill-15-books-14755eb162",
+    "purpose": "15 books",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-reference/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-reference/004-15-books.md",
+    "requires": [
+      "skill-14-what-actually-moved-ed57ad3e71"
+    ],
+    "links": [
+      "skill-16-quick-reference-677a52471a"
+    ]
+  },
+  {
+    "id": "skill-16-quick-reference-677a52471a",
+    "purpose": "16 quick reference",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-reference/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-reference/005-16-quick-reference.md",
+    "requires": [
+      "skill-15-books-14755eb162"
+    ],
+    "links": [
+      "skill-17-method-36d1470c34"
+    ]
+  },
+  {
+    "id": "skill-17-method-36d1470c34",
+    "purpose": "17 method",
+    "source": "src/vibey_tools/skills/plugins/nanotechnology/skills/nano-reference/SKILL.md",
+    "output": "docs/microslices/skills/nanotechnology/skills/nano-reference/006-17-method.md",
+    "requires": [
+      "skill-16-quick-reference-677a52471a"
+    ],
+    "links": []
+  }
+]

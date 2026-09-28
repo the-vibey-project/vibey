@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-24-what-s-live-checked-august-2026-b926deb6ee",
+    "purpose": "24 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-reference/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-reference/001-24-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-25-misconceptions-bdb71ebae5"
+    ]
+  },
+  {
+    "id": "skill-25-misconceptions-bdb71ebae5",
+    "purpose": "25 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-reference/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-reference/002-25-misconceptions.md",
+    "requires": [
+      "skill-24-what-s-live-checked-august-2026-b926deb6ee"
+    ],
+    "links": [
+      "skill-26-numbers-and-dates-8b38593c95"
+    ]
+  },
+  {
+    "id": "skill-26-numbers-and-dates-8b38593c95",
+    "purpose": "26 numbers and dates",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-reference/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-reference/003-26-numbers-and-dates.md",
+    "requires": [
+      "skill-25-misconceptions-bdb71ebae5"
+    ],
+    "links": [
+      "skill-27-sources-2cd2839ae9"
+    ]
+  },
+  {
+    "id": "skill-27-sources-2cd2839ae9",
+    "purpose": "27 sources",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-reference/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-reference/004-27-sources.md",
+    "requires": [
+      "skill-26-numbers-and-dates-8b38593c95"
+    ],
+    "links": [
+      "skill-28-quick-reference-6a27dffd1f"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-6a27dffd1f",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-reference/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-reference/005-28-quick-reference.md",
+    "requires": [
+      "skill-27-sources-2cd2839ae9"
+    ],
+    "links": [
+      "skill-29-method-2cdcbd1d32"
+    ]
+  },
+  {
+    "id": "skill-29-method-2cdcbd1d32",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-reference/SKILL.md",
+    "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-reference/006-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-6a27dffd1f"
+    ],
+    "links": []
+  }
+]

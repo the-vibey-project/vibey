@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-24ee582b65",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-2-two-traditions-9af6f0da25"
+    ]
+  },
+  {
+    "id": "skill-2-two-traditions-9af6f0da25",
+    "purpose": "2 two traditions",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/002-2-two-traditions.md",
+    "requires": [
+      "skill-0-routing-24ee582b65"
+    ],
+    "links": [
+      "skill-3-measurement-afc33103c5"
+    ]
+  },
+  {
+    "id": "skill-3-measurement-afc33103c5",
+    "purpose": "3 measurement",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/003-3-measurement.md",
+    "requires": [
+      "skill-2-two-traditions-9af6f0da25"
+    ],
+    "links": [
+      "skill-4-adaptation-and-the-set-point-85ab7b9ace"
+    ]
+  },
+  {
+    "id": "skill-4-adaptation-and-the-set-point-85ab7b9ace",
+    "purpose": "4 adaptation and the set point",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/004-4-adaptation-and-the-set-point.md",
+    "requires": [
+      "skill-3-measurement-afc33103c5"
+    ],
+    "links": [
+      "skill-5-money-2bfbdcc2d4"
+    ]
+  },
+  {
+    "id": "skill-5-money-2bfbdcc2d4",
+    "purpose": "5 money",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/005-5-money.md",
+    "requires": [
+      "skill-4-adaptation-and-the-set-point-85ab7b9ace"
+    ],
+    "links": [
+      "skill-6-the-replication-problem-395285dfdc"
+    ]
+  },
+  {
+    "id": "skill-6-the-replication-problem-395285dfdc",
+    "purpose": "6 the replication problem",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-traditions-measurement-adaptation-money-and-replication/006-6-the-replication-problem.md",
+    "requires": [
+      "skill-5-money-2bfbdcc2d4"
+    ],
+    "links": []
+  }
+]

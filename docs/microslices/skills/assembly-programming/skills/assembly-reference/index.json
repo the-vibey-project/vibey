@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-d7d96fdbe5",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-reference/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-45d015266e"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-45d015266e",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-reference/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-d7d96fdbe5"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-ae617ba534"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-ae617ba534",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-reference/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-45d015266e"
+    ],
+    "links": [
+      "skill-18-the-canon-92b270feaa"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-92b270feaa",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-reference/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-ae617ba534"
+    ],
+    "links": [
+      "skill-19-quick-reference-216f2446b3"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-216f2446b3",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-reference/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-92b270feaa"
+    ],
+    "links": [
+      "skill-20-sources-and-method-bacb2281b4"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-bacb2281b4",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/assembly-programming/skills/assembly-reference/SKILL.md",
+    "output": "docs/microslices/skills/assembly-programming/skills/assembly-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-216f2446b3"
+    ],
+    "links": []
+  }
+]

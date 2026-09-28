@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-6ccbadc07e",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-reference/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-ade82d56c5"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-ade82d56c5",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-reference/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-6ccbadc07e"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-4b58279b13"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-4b58279b13",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-reference/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-ade82d56c5"
+    ],
+    "links": [
+      "skill-18-the-canon-68b71760fe"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-68b71760fe",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-reference/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-4b58279b13"
+    ],
+    "links": [
+      "skill-19-quick-reference-aef714759f"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-aef714759f",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-reference/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-68b71760fe"
+    ],
+    "links": [
+      "skill-20-sources-and-method-f33a0dcc89"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-f33a0dcc89",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-reference/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-aef714759f"
+    ],
+    "links": []
+  }
+]

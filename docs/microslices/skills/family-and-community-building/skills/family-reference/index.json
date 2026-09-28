@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-24-what-s-live-verified-august-2026-4806b88c57",
+    "purpose": "24 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reference/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reference/001-24-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-25-misconceptions-7437468232"
+    ]
+  },
+  {
+    "id": "skill-25-misconceptions-7437468232",
+    "purpose": "25 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reference/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reference/002-25-misconceptions.md",
+    "requires": [
+      "skill-24-what-s-live-verified-august-2026-4806b88c57"
+    ],
+    "links": [
+      "skill-26-numbers-4b91660026"
+    ]
+  },
+  {
+    "id": "skill-26-numbers-4b91660026",
+    "purpose": "26 numbers",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reference/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reference/003-26-numbers.md",
+    "requires": [
+      "skill-25-misconceptions-7437468232"
+    ],
+    "links": [
+      "skill-27-books-a2e3846d5d"
+    ]
+  },
+  {
+    "id": "skill-27-books-a2e3846d5d",
+    "purpose": "27 books",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reference/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reference/004-27-books.md",
+    "requires": [
+      "skill-26-numbers-4b91660026"
+    ],
+    "links": [
+      "skill-28-quick-reference-1536489730"
+    ]
+  },
+  {
+    "id": "skill-28-quick-reference-1536489730",
+    "purpose": "28 quick reference",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reference/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reference/005-28-quick-reference.md",
+    "requires": [
+      "skill-27-books-a2e3846d5d"
+    ],
+    "links": [
+      "skill-29-method-a15f8a78af"
+    ]
+  },
+  {
+    "id": "skill-29-method-a15f8a78af",
+    "purpose": "29 method",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-reference/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-reference/006-29-method.md",
+    "requires": [
+      "skill-28-quick-reference-1536489730"
+    ],
+    "links": []
+  }
+]

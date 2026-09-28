@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-convolution-and-correlation-17d24a81fa",
+    "purpose": "4 convolution and correlation",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/001-4-convolution-and-correlation.md",
+    "requires": [],
+    "links": [
+      "skill-5-multirate-098a663cdc"
+    ]
+  },
+  {
+    "id": "skill-5-multirate-098a663cdc",
+    "purpose": "5 multirate",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/002-5-multirate.md",
+    "requires": [
+      "skill-4-convolution-and-correlation-17d24a81fa"
+    ],
+    "links": [
+      "skill-6-adaptive-filtering-and-estimation-ba3770d0cf"
+    ]
+  },
+  {
+    "id": "skill-6-adaptive-filtering-and-estimation-ba3770d0cf",
+    "purpose": "6 adaptive filtering and estimation",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/003-6-adaptive-filtering-and-estimation.md",
+    "requires": [
+      "skill-5-multirate-098a663cdc"
+    ],
+    "links": [
+      "skill-7-spectral-analysis-and-time-frequency-abeb180311"
+    ]
+  },
+  {
+    "id": "skill-7-spectral-analysis-and-time-frequency-abeb180311",
+    "purpose": "7 spectral analysis and time frequency",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-convolution-multirate-and-spectral-analysis/004-7-spectral-analysis-and-time-frequency.md",
+    "requires": [
+      "skill-6-adaptive-filtering-and-estimation-ba3770d0cf"
+    ],
+    "links": []
+  }
+]

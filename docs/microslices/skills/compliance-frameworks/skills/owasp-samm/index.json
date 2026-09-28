@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-what-this-skill-does-3d8c33b745",
+    "purpose": "what this skill does",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/001-what-this-skill-does.md",
+    "requires": [],
+    "links": [
+      "skill-samm-v2-structure-overview-2b58c0b11c"
+    ]
+  },
+  {
+    "id": "skill-samm-v2-structure-overview-2b58c0b11c",
+    "purpose": "samm v2 structure overview",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/002-samm-v2-structure-overview.md",
+    "requires": [
+      "skill-what-this-skill-does-3d8c33b745"
+    ],
+    "links": [
+      "skill-business-function-1-governance-1ec3586e42"
+    ]
+  },
+  {
+    "id": "skill-business-function-1-governance-1ec3586e42",
+    "purpose": "business function 1 governance",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/003-business-function-1-governance.md",
+    "requires": [
+      "skill-samm-v2-structure-overview-2b58c0b11c"
+    ],
+    "links": [
+      "skill-business-function-2-design-cf53d1a630"
+    ]
+  },
+  {
+    "id": "skill-business-function-2-design-cf53d1a630",
+    "purpose": "business function 2 design",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/004-business-function-2-design.md",
+    "requires": [
+      "skill-business-function-1-governance-1ec3586e42"
+    ],
+    "links": [
+      "skill-business-function-3-implementation-29f089687d"
+    ]
+  },
+  {
+    "id": "skill-business-function-3-implementation-29f089687d",
+    "purpose": "business function 3 implementation",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/005-business-function-3-implementation.md",
+    "requires": [
+      "skill-business-function-2-design-cf53d1a630"
+    ],
+    "links": [
+      "skill-business-function-4-verification-b5146729bb"
+    ]
+  },
+  {
+    "id": "skill-business-function-4-verification-b5146729bb",
+    "purpose": "business function 4 verification",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/006-business-function-4-verification.md",
+    "requires": [
+      "skill-business-function-3-implementation-29f089687d"
+    ],
+    "links": [
+      "skill-business-function-5-operations-4b93a3d6a8"
+    ]
+  },
+  {
+    "id": "skill-business-function-5-operations-4b93a3d6a8",
+    "purpose": "business function 5 operations",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/007-business-function-5-operations.md",
+    "requires": [
+      "skill-business-function-4-verification-b5146729bb"
+    ],
+    "links": [
+      "skill-assessment-methodology-93648ccda6"
+    ]
+  },
+  {
+    "id": "skill-assessment-methodology-93648ccda6",
+    "purpose": "assessment methodology",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/008-assessment-methodology.md",
+    "requires": [
+      "skill-business-function-5-operations-4b93a3d6a8"
+    ],
+    "links": [
+      "skill-samm-score-reference-15-practices-summary-table-0512e58c16"
+    ]
+  },
+  {
+    "id": "skill-samm-score-reference-15-practices-summary-table-0512e58c16",
+    "purpose": "samm score reference 15 practices summary table",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/009-samm-score-reference-15-practices-summary-table.md",
+    "requires": [
+      "skill-assessment-methodology-93648ccda6"
+    ],
+    "links": [
+      "skill-starting-points-by-organization-type-8ddb889951"
+    ]
+  },
+  {
+    "id": "skill-starting-points-by-organization-type-8ddb889951",
+    "purpose": "starting points by organization type",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/010-starting-points-by-organization-type.md",
+    "requires": [
+      "skill-samm-score-reference-15-practices-summary-table-0512e58c16"
+    ],
+    "links": [
+      "skill-security-champions-program-g3-level-2-4bfd7b902f"
+    ]
+  },
+  {
+    "id": "skill-security-champions-program-g3-level-2-4bfd7b902f",
+    "purpose": "security champions program g3 level 2",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/011-security-champions-program-g3-level-2.md",
+    "requires": [
+      "skill-starting-points-by-organization-type-8ddb889951"
+    ],
+    "links": [
+      "skill-integrating-samm-with-agile-scrum-sprints-078af6bdff"
+    ]
+  },
+  {
+    "id": "skill-integrating-samm-with-agile-scrum-sprints-078af6bdff",
+    "purpose": "integrating samm with agile scrum sprints",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/012-integrating-samm-with-agile-scrum-sprints.md",
+    "requires": [
+      "skill-security-champions-program-g3-level-2-4bfd7b902f"
+    ],
+    "links": [
+      "skill-relationship-to-other-frameworks-08fccdc22b"
+    ]
+  },
+  {
+    "id": "skill-relationship-to-other-frameworks-08fccdc22b",
+    "purpose": "relationship to other frameworks",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/013-relationship-to-other-frameworks.md",
+    "requires": [
+      "skill-integrating-samm-with-agile-scrum-sprints-078af6bdff"
+    ],
+    "links": [
+      "skill-samm-roadmap-template-0115f57e41"
+    ]
+  },
+  {
+    "id": "skill-samm-roadmap-template-0115f57e41",
+    "purpose": "samm roadmap template",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/owasp-samm/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/owasp-samm/014-samm-roadmap-template.md",
+    "requires": [
+      "skill-relationship-to-other-frameworks-08fccdc22b"
+    ],
+    "links": []
+  }
+]

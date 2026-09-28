@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-20-site-safety-73862e7d31",
+    "purpose": "20 site safety",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/001-20-site-safety.md",
+    "requires": [],
+    "links": [
+      "skill-21-commissioning-and-handover-c560084102"
+    ]
+  },
+  {
+    "id": "skill-21-commissioning-and-handover-c560084102",
+    "purpose": "21 commissioning and handover",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/002-21-commissioning-and-handover.md",
+    "requires": [
+      "skill-20-site-safety-73862e7d31"
+    ],
+    "links": [
+      "skill-22-existing-buildings-and-retrofit-89971dde8c"
+    ]
+  },
+  {
+    "id": "skill-22-existing-buildings-and-retrofit-89971dde8c",
+    "purpose": "22 existing buildings and retrofit",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/003-22-existing-buildings-and-retrofit.md",
+    "requires": [
+      "skill-21-commissioning-and-handover-c560084102"
+    ],
+    "links": [
+      "skill-23-why-projects-fail-30c85aecb5"
+    ]
+  },
+  {
+    "id": "skill-23-why-projects-fail-30c85aecb5",
+    "purpose": "23 why projects fail",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/004-23-why-projects-fail.md",
+    "requires": [
+      "skill-22-existing-buildings-and-retrofit-89971dde8c"
+    ],
+    "links": []
+  }
+]

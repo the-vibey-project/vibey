@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-b06595423a",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-abstraction-stack-85e546c595"
+    ]
+  },
+  {
+    "id": "skill-1-the-abstraction-stack-85e546c595",
+    "purpose": "1 the abstraction stack",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/002-1-the-abstraction-stack.md",
+    "requires": [
+      "skill-0-routing-b06595423a"
+    ],
+    "links": [
+      "skill-2-carriers-doping-and-silicon-aac4d413b4"
+    ]
+  },
+  {
+    "id": "skill-2-carriers-doping-and-silicon-aac4d413b4",
+    "purpose": "2 carriers doping and silicon",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/003-2-carriers-doping-and-silicon.md",
+    "requires": [
+      "skill-1-the-abstraction-stack-85e546c595"
+    ],
+    "links": [
+      "skill-3-junctions-and-contacts-4a24334306"
+    ]
+  },
+  {
+    "id": "skill-3-junctions-and-contacts-4a24334306",
+    "purpose": "3 junctions and contacts",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/004-3-junctions-and-contacts.md",
+    "requires": [
+      "skill-2-carriers-doping-and-silicon-aac4d413b4"
+    ],
+    "links": [
+      "skill-4-the-mosfet-f091f95f35"
+    ]
+  },
+  {
+    "id": "skill-4-the-mosfet-f091f95f35",
+    "purpose": "4 the mosfet",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/005-4-the-mosfet.md",
+    "requires": [
+      "skill-3-junctions-and-contacts-4a24334306"
+    ],
+    "links": [
+      "skill-5-scaling-and-what-ended-507ff30d91"
+    ]
+  },
+  {
+    "id": "skill-5-scaling-and-what-ended-507ff30d91",
+    "purpose": "5 scaling and what ended",
+    "source": "src/vibey_tools/skills/plugins/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/SKILL.md",
+    "output": "docs/microslices/skills/semiconductors-and-chip-manufacturing/skills/semi-carriers-doping-junctions-mosfet-and-scaling/006-5-scaling-and-what-ended.md",
+    "requires": [
+      "skill-4-the-mosfet-f091f95f35"
+    ],
+    "links": []
+  }
+]

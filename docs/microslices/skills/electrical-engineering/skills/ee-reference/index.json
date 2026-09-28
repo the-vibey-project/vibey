@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-16-anti-patterns-b8125847db",
+    "purpose": "16 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-reference/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-reference/001-16-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-17-numbers-7486a122f7"
+    ]
+  },
+  {
+    "id": "skill-17-numbers-7486a122f7",
+    "purpose": "17 numbers",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-reference/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-reference/002-17-numbers.md",
+    "requires": [
+      "skill-16-anti-patterns-b8125847db"
+    ],
+    "links": [
+      "skill-18-books-cde493c143"
+    ]
+  },
+  {
+    "id": "skill-18-books-cde493c143",
+    "purpose": "18 books",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-reference/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-reference/003-18-books.md",
+    "requires": [
+      "skill-17-numbers-7486a122f7"
+    ],
+    "links": [
+      "skill-19-quick-reference-46c6c1fcfc"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-46c6c1fcfc",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-reference/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-reference/004-19-quick-reference.md",
+    "requires": [
+      "skill-18-books-cde493c143"
+    ],
+    "links": [
+      "skill-20-method-15f2fe0645"
+    ]
+  },
+  {
+    "id": "skill-20-method-15f2fe0645",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/electrical-engineering/skills/ee-reference/SKILL.md",
+    "output": "docs/microslices/skills/electrical-engineering/skills/ee-reference/005-20-method.md",
+    "requires": [
+      "skill-19-quick-reference-46c6c1fcfc"
+    ],
+    "links": []
+  }
+]

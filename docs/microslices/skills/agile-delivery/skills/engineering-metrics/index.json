@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-the-measurement-hierarchy-36362a6bb3",
+    "purpose": "the measurement hierarchy",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/001-the-measurement-hierarchy.md",
+    "requires": [],
+    "links": [
+      "skill-dora-four-key-metrics-ec7ec99d23"
+    ]
+  },
+  {
+    "id": "skill-dora-four-key-metrics-ec7ec99d23",
+    "purpose": "dora four key metrics",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/002-dora-four-key-metrics.md",
+    "requires": [
+      "skill-the-measurement-hierarchy-36362a6bb3"
+    ],
+    "links": [
+      "skill-space-framework-a9c5d7b5a3"
+    ]
+  },
+  {
+    "id": "skill-space-framework-a9c5d7b5a3",
+    "purpose": "space framework",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/003-space-framework.md",
+    "requires": [
+      "skill-dora-four-key-metrics-ec7ec99d23"
+    ],
+    "links": [
+      "skill-cycle-time-breakdown-62f0c013db"
+    ]
+  },
+  {
+    "id": "skill-cycle-time-breakdown-62f0c013db",
+    "purpose": "cycle time breakdown",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/004-cycle-time-breakdown.md",
+    "requires": [
+      "skill-space-framework-a9c5d7b5a3"
+    ],
+    "links": [
+      "skill-okr-structure-for-engineering-acd02f29ea"
+    ]
+  },
+  {
+    "id": "skill-okr-structure-for-engineering-acd02f29ea",
+    "purpose": "okr structure for engineering",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/005-okr-structure-for-engineering.md",
+    "requires": [
+      "skill-cycle-time-breakdown-62f0c013db"
+    ],
+    "links": [
+      "skill-engineering-efficiency-ratios-ab5b13fc72"
+    ]
+  },
+  {
+    "id": "skill-engineering-efficiency-ratios-ab5b13fc72",
+    "purpose": "engineering efficiency ratios",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/006-engineering-efficiency-ratios.md",
+    "requires": [
+      "skill-okr-structure-for-engineering-acd02f29ea"
+    ],
+    "links": [
+      "skill-dora-assessment-running-a-team-assessment-ccca5b2a40"
+    ]
+  },
+  {
+    "id": "skill-dora-assessment-running-a-team-assessment-ccca5b2a40",
+    "purpose": "dora assessment running a team assessment",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/007-dora-assessment-running-a-team-assessment.md",
+    "requires": [
+      "skill-engineering-efficiency-ratios-ab5b13fc72"
+    ],
+    "links": [
+      "skill-presenting-metrics-to-leadership-90e72d6051"
+    ]
+  },
+  {
+    "id": "skill-presenting-metrics-to-leadership-90e72d6051",
+    "purpose": "presenting metrics to leadership",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/008-presenting-metrics-to-leadership.md",
+    "requires": [
+      "skill-dora-assessment-running-a-team-assessment-ccca5b2a40"
+    ],
+    "links": [
+      "skill-common-metrics-anti-patterns-181b0db09f"
+    ]
+  },
+  {
+    "id": "skill-common-metrics-anti-patterns-181b0db09f",
+    "purpose": "common metrics anti patterns",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/009-common-metrics-anti-patterns.md",
+    "requires": [
+      "skill-presenting-metrics-to-leadership-90e72d6051"
+    ],
+    "links": [
+      "skill-using-metrics-to-identify-systemic-problems-not-blame-61171d686b"
+    ]
+  },
+  {
+    "id": "skill-using-metrics-to-identify-systemic-problems-not-blame-61171d686b",
+    "purpose": "using metrics to identify systemic problems not blame",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/010-using-metrics-to-identify-systemic-problems-not-blame.md",
+    "requires": [
+      "skill-common-metrics-anti-patterns-181b0db09f"
+    ],
+    "links": [
+      "skill-reliability-as-the-fifth-dora-metric-7c66b5facd"
+    ]
+  },
+  {
+    "id": "skill-reliability-as-the-fifth-dora-metric-7c66b5facd",
+    "purpose": "reliability as the fifth dora metric",
+    "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/engineering-metrics/SKILL.md",
+    "output": "docs/microslices/skills/agile-delivery/skills/engineering-metrics/011-reliability-as-the-fifth-dora-metric.md",
+    "requires": [
+      "skill-using-metrics-to-identify-systemic-problems-not-blame-61171d686b"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-6-linear-algebra-a33ab9478a",
+    "purpose": "6 linear algebra",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/001-6-linear-algebra.md",
+    "requires": [],
+    "links": [
+      "skill-7-differential-equations-and-simulation-8466f9074a"
+    ]
+  },
+  {
+    "id": "skill-7-differential-equations-and-simulation-8466f9074a",
+    "purpose": "7 differential equations and simulation",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/002-7-differential-equations-and-simulation.md",
+    "requires": [
+      "skill-6-linear-algebra-a33ab9478a"
+    ],
+    "links": [
+      "skill-8-optimization-f687e43c41"
+    ]
+  },
+  {
+    "id": "skill-8-optimization-f687e43c41",
+    "purpose": "8 optimization",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/003-8-optimization.md",
+    "requires": [
+      "skill-7-differential-equations-and-simulation-8466f9074a"
+    ],
+    "links": [
+      "skill-9-interpolation-quadrature-transforms-d4e73a5ed1"
+    ]
+  },
+  {
+    "id": "skill-9-interpolation-quadrature-transforms-d4e73a5ed1",
+    "purpose": "9 interpolation quadrature transforms",
+    "source": "src/vibey_tools/skills/plugins/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/SKILL.md",
+    "output": "docs/microslices/skills/math-science-programming/skills/sci-linear-algebra-differential-equations-and-optimization/004-9-interpolation-quadrature-transforms.md",
+    "requires": [
+      "skill-8-optimization-f687e43c41"
+    ],
+    "links": []
+  }
+]

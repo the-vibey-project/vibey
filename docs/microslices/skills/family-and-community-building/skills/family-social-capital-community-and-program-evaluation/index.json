@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-16-social-capital-b2c85fb3c1",
+    "purpose": "16 social capital",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/001-16-social-capital.md",
+    "requires": [],
+    "links": [
+      "skill-17-networks-and-belonging-298dec8f05"
+    ]
+  },
+  {
+    "id": "skill-17-networks-and-belonging-298dec8f05",
+    "purpose": "17 networks and belonging",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/002-17-networks-and-belonging.md",
+    "requires": [
+      "skill-16-social-capital-b2c85fb3c1"
+    ],
+    "links": [
+      "skill-18-loneliness-and-social-isolation-fda8362a2e"
+    ]
+  },
+  {
+    "id": "skill-18-loneliness-and-social-isolation-fda8362a2e",
+    "purpose": "18 loneliness and social isolation",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/003-18-loneliness-and-social-isolation.md",
+    "requires": [
+      "skill-17-networks-and-belonging-298dec8f05"
+    ],
+    "links": [
+      "skill-19-third-places-2193ee1b25"
+    ]
+  },
+  {
+    "id": "skill-19-third-places-2193ee1b25",
+    "purpose": "19 third places",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/004-19-third-places.md",
+    "requires": [
+      "skill-18-loneliness-and-social-isolation-fda8362a2e"
+    ],
+    "links": [
+      "skill-20-congregations-and-voluntary-associations-3eb2837251"
+    ]
+  },
+  {
+    "id": "skill-20-congregations-and-voluntary-associations-3eb2837251",
+    "purpose": "20 congregations and voluntary associations",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/005-20-congregations-and-voluntary-associations.md",
+    "requires": [
+      "skill-19-third-places-2193ee1b25"
+    ],
+    "links": [
+      "skill-21-community-organizing-4cfc2e00e0"
+    ]
+  },
+  {
+    "id": "skill-21-community-organizing-4cfc2e00e0",
+    "purpose": "21 community organizing",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/006-21-community-organizing.md",
+    "requires": [
+      "skill-20-congregations-and-voluntary-associations-3eb2837251"
+    ],
+    "links": [
+      "skill-22-collective-efficacy-a16f112112"
+    ]
+  },
+  {
+    "id": "skill-22-collective-efficacy-a16f112112",
+    "purpose": "22 collective efficacy",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/007-22-collective-efficacy.md",
+    "requires": [
+      "skill-21-community-organizing-4cfc2e00e0"
+    ],
+    "links": [
+      "skill-23-does-the-program-actually-work-62ce3890eb"
+    ]
+  },
+  {
+    "id": "skill-23-does-the-program-actually-work-62ce3890eb",
+    "purpose": "23 does the program actually work",
+    "source": "src/vibey_tools/skills/plugins/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/SKILL.md",
+    "output": "docs/microslices/skills/family-and-community-building/skills/family-social-capital-community-and-program-evaluation/008-23-does-the-program-actually-work.md",
+    "requires": [
+      "skill-22-collective-efficacy-a16f112112"
+    ],
+    "links": []
+  }
+]

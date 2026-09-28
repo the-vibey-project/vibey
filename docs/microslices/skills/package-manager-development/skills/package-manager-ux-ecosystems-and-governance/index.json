@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-11-performance-4a14ce8891",
+    "purpose": "11 performance",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/001-11-performance.md",
+    "requires": [],
+    "links": [
+      "skill-12-ux-42db1816fc"
+    ]
+  },
+  {
+    "id": "skill-12-ux-42db1816fc",
+    "purpose": "12 ux",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/002-12-ux.md",
+    "requires": [
+      "skill-11-performance-4a14ce8891"
+    ],
+    "links": [
+      "skill-13-the-ecosystem-comparison-de9fe14b30"
+    ]
+  },
+  {
+    "id": "skill-13-the-ecosystem-comparison-de9fe14b30",
+    "purpose": "13 the ecosystem comparison",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/003-13-the-ecosystem-comparison.md",
+    "requires": [
+      "skill-12-ux-42db1816fc"
+    ],
+    "links": [
+      "skill-14-governance-and-sustainability-43da3d92f3"
+    ]
+  },
+  {
+    "id": "skill-14-governance-and-sustainability-43da3d92f3",
+    "purpose": "14 governance and sustainability",
+    "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/SKILL.md",
+    "output": "docs/microslices/skills/package-manager-development/skills/package-manager-ux-ecosystems-and-governance/004-14-governance-and-sustainability.md",
+    "requires": [
+      "skill-13-the-ecosystem-comparison-de9fe14b30"
+    ],
+    "links": []
+  }
+]

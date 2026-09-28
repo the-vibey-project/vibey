@@ -1,0 +1,250 @@
+[
+  {
+    "id": "skill-the-three-layer-structure-of-ai-in-2026-275d9b5482",
+    "purpose": "the three layer structure of ai in 2026",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/001-the-three-layer-structure-of-ai-in-2026.md",
+    "requires": [],
+    "links": [
+      "skill-frontier-model-landscape-mid-2026-e6270fd91a"
+    ]
+  },
+  {
+    "id": "skill-frontier-model-landscape-mid-2026-e6270fd91a",
+    "purpose": "frontier model landscape mid 2026",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/002-frontier-model-landscape-mid-2026.md",
+    "requires": [
+      "skill-the-three-layer-structure-of-ai-in-2026-275d9b5482"
+    ],
+    "links": [
+      "skill-hosted-apis-vs-open-weights-decision-rule-1034e4ac4c"
+    ]
+  },
+  {
+    "id": "skill-hosted-apis-vs-open-weights-decision-rule-1034e4ac4c",
+    "purpose": "hosted apis vs open weights decision rule",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/003-hosted-apis-vs-open-weights-decision-rule.md",
+    "requires": [
+      "skill-frontier-model-landscape-mid-2026-e6270fd91a"
+    ],
+    "links": [
+      "skill-model-selection-strategy-staged-66b37a7e34"
+    ]
+  },
+  {
+    "id": "skill-model-selection-strategy-staged-66b37a7e34",
+    "purpose": "model selection strategy staged",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/004-model-selection-strategy-staged.md",
+    "requires": [
+      "skill-hosted-apis-vs-open-weights-decision-rule-1034e4ac4c"
+    ],
+    "links": [
+      "skill-build-pattern-for-llm-applications-0189a87f68"
+    ]
+  },
+  {
+    "id": "skill-build-pattern-for-llm-applications-0189a87f68",
+    "purpose": "build pattern for llm applications",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/005-build-pattern-for-llm-applications.md",
+    "requires": [
+      "skill-model-selection-strategy-staged-66b37a7e34"
+    ],
+    "links": [
+      "skill-reasoning-models-test-time-compute-68e64b76c1"
+    ]
+  },
+  {
+    "id": "skill-reasoning-models-test-time-compute-68e64b76c1",
+    "purpose": "reasoning models test time compute",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/006-reasoning-models-test-time-compute.md",
+    "requires": [
+      "skill-build-pattern-for-llm-applications-0189a87f68"
+    ],
+    "links": [
+      "skill-classical-ml-tabular-data-44244ce7bd"
+    ]
+  },
+  {
+    "id": "skill-classical-ml-tabular-data-44244ce7bd",
+    "purpose": "classical ml tabular data",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/007-classical-ml-tabular-data.md",
+    "requires": [
+      "skill-reasoning-models-test-time-compute-68e64b76c1"
+    ],
+    "links": [
+      "skill-mathematical-foundations-c6ba07b729"
+    ]
+  },
+  {
+    "id": "skill-mathematical-foundations-c6ba07b729",
+    "purpose": "mathematical foundations",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/008-mathematical-foundations.md",
+    "requires": [
+      "skill-classical-ml-tabular-data-44244ce7bd"
+    ],
+    "links": [
+      "skill-classical-ml-reference-3f394cc82a"
+    ]
+  },
+  {
+    "id": "skill-classical-ml-reference-3f394cc82a",
+    "purpose": "classical ml reference",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/009-classical-ml-reference.md",
+    "requires": [
+      "skill-mathematical-foundations-c6ba07b729"
+    ],
+    "links": [
+      "skill-deep-learning-foundations-22ae3d1ed1"
+    ]
+  },
+  {
+    "id": "skill-deep-learning-foundations-22ae3d1ed1",
+    "purpose": "deep learning foundations",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/010-deep-learning-foundations.md",
+    "requires": [
+      "skill-classical-ml-reference-3f394cc82a"
+    ],
+    "links": [
+      "skill-the-transformer-attention-395a2de8eb"
+    ]
+  },
+  {
+    "id": "skill-the-transformer-attention-395a2de8eb",
+    "purpose": "the transformer attention",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/011-the-transformer-attention.md",
+    "requires": [
+      "skill-deep-learning-foundations-22ae3d1ed1"
+    ],
+    "links": [
+      "skill-llm-training-post-training-9c06115b4d"
+    ]
+  },
+  {
+    "id": "skill-llm-training-post-training-9c06115b4d",
+    "purpose": "llm training post training",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/012-llm-training-post-training.md",
+    "requires": [
+      "skill-the-transformer-attention-395a2de8eb"
+    ],
+    "links": [
+      "skill-llm-inference-optimization-467ffd72e7"
+    ]
+  },
+  {
+    "id": "skill-llm-inference-optimization-467ffd72e7",
+    "purpose": "llm inference optimization",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/013-llm-inference-optimization.md",
+    "requires": [
+      "skill-llm-training-post-training-9c06115b4d"
+    ],
+    "links": [
+      "skill-evaluation-benchmark-skepticism-4c1574b63b"
+    ]
+  },
+  {
+    "id": "skill-evaluation-benchmark-skepticism-4c1574b63b",
+    "purpose": "evaluation benchmark skepticism",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/014-evaluation-benchmark-skepticism.md",
+    "requires": [
+      "skill-llm-inference-optimization-467ffd72e7"
+    ],
+    "links": [
+      "skill-rag-fundamentals-quick-reference-e009d8b375"
+    ]
+  },
+  {
+    "id": "skill-rag-fundamentals-quick-reference-e009d8b375",
+    "purpose": "rag fundamentals quick reference",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/015-rag-fundamentals-quick-reference.md",
+    "requires": [
+      "skill-evaluation-benchmark-skepticism-4c1574b63b"
+    ],
+    "links": [
+      "skill-agent-stack-mcp-ed82f9638f"
+    ]
+  },
+  {
+    "id": "skill-agent-stack-mcp-ed82f9638f",
+    "purpose": "agent stack mcp",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/016-agent-stack-mcp.md",
+    "requires": [
+      "skill-rag-fundamentals-quick-reference-e009d8b375"
+    ],
+    "links": [
+      "skill-generative-ai-across-modalities-0275672725"
+    ]
+  },
+  {
+    "id": "skill-generative-ai-across-modalities-0275672725",
+    "purpose": "generative ai across modalities",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/017-generative-ai-across-modalities.md",
+    "requires": [
+      "skill-agent-stack-mcp-ed82f9638f"
+    ],
+    "links": [
+      "skill-mlops-infrastructure-65bf7541d8"
+    ]
+  },
+  {
+    "id": "skill-mlops-infrastructure-65bf7541d8",
+    "purpose": "mlops infrastructure",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/018-mlops-infrastructure.md",
+    "requires": [
+      "skill-generative-ai-across-modalities-0275672725"
+    ],
+    "links": [
+      "skill-advanced-architectures-9d808ee3d6"
+    ]
+  },
+  {
+    "id": "skill-advanced-architectures-9d808ee3d6",
+    "purpose": "advanced architectures",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/019-advanced-architectures.md",
+    "requires": [
+      "skill-mlops-infrastructure-65bf7541d8"
+    ],
+    "links": [
+      "skill-safety-alignment-governance-f1d8565664"
+    ]
+  },
+  {
+    "id": "skill-safety-alignment-governance-f1d8565664",
+    "purpose": "safety alignment governance",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/020-safety-alignment-governance.md",
+    "requires": [
+      "skill-advanced-architectures-9d808ee3d6"
+    ],
+    "links": [
+      "skill-durable-principles-outlast-model-names-d613d40a98"
+    ]
+  },
+  {
+    "id": "skill-durable-principles-outlast-model-names-d613d40a98",
+    "purpose": "durable principles outlast model names",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/ai-ml-landscape/021-durable-principles-outlast-model-names.md",
+    "requires": [
+      "skill-safety-alignment-governance-f1d8565664"
+    ],
+    "links": []
+  }
+]

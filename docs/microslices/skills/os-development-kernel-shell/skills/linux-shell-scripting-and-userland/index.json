@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-8-shell-semantics-the-part-that-causes-the-bugs-17db45c4f3",
+    "purpose": "8 shell semantics the part that causes the bugs",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/001-8-shell-semantics-the-part-that-causes-the-bugs.md",
+    "requires": [],
+    "links": [
+      "skill-9-choosing-a-shell-1420b58c65"
+    ]
+  },
+  {
+    "id": "skill-9-choosing-a-shell-1420b58c65",
+    "purpose": "9 choosing a shell",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/002-9-choosing-a-shell.md",
+    "requires": [
+      "skill-8-shell-semantics-the-part-that-causes-the-bugs-17db45c4f3"
+    ],
+    "links": [
+      "skill-10-defensive-shell-scripting-de9ddb6b03"
+    ]
+  },
+  {
+    "id": "skill-10-defensive-shell-scripting-de9ddb6b03",
+    "purpose": "10 defensive shell scripting",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/003-10-defensive-shell-scripting.md",
+    "requires": [
+      "skill-9-choosing-a-shell-1420b58c65"
+    ],
+    "links": [
+      "skill-11-the-userland-80595ea51a"
+    ]
+  },
+  {
+    "id": "skill-11-the-userland-80595ea51a",
+    "purpose": "11 the userland",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-shell-scripting-and-userland/004-11-the-userland.md",
+    "requires": [
+      "skill-10-defensive-shell-scripting-de9ddb6b03"
+    ],
+    "links": []
+  }
+]

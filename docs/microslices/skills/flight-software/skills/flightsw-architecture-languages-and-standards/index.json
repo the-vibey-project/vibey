@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-1f30aeafea",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-architecture-languages-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-architecture-languages-and-standards/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-makes-it-different-526bb94bc8"
+    ]
+  },
+  {
+    "id": "skill-1-what-makes-it-different-526bb94bc8",
+    "purpose": "1 what makes it different",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-architecture-languages-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-architecture-languages-and-standards/002-1-what-makes-it-different.md",
+    "requires": [
+      "skill-0-routing-1f30aeafea"
+    ],
+    "links": [
+      "skill-2-architecture-edea7adb23"
+    ]
+  },
+  {
+    "id": "skill-2-architecture-edea7adb23",
+    "purpose": "2 architecture",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-architecture-languages-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-architecture-languages-and-standards/003-2-architecture.md",
+    "requires": [
+      "skill-1-what-makes-it-different-526bb94bc8"
+    ],
+    "links": [
+      "skill-3-languages-and-coding-standards-cfe8781196"
+    ]
+  },
+  {
+    "id": "skill-3-languages-and-coding-standards-cfe8781196",
+    "purpose": "3 languages and coding standards",
+    "source": "src/vibey_tools/skills/plugins/flight-software/skills/flightsw-architecture-languages-and-standards/SKILL.md",
+    "output": "docs/microslices/skills/flight-software/skills/flightsw-architecture-languages-and-standards/004-3-languages-and-coding-standards.md",
+    "requires": [
+      "skill-2-architecture-edea7adb23"
+    ],
+    "links": []
+  }
+]

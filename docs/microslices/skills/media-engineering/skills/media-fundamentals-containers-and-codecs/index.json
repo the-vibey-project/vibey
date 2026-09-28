@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-18a337d382",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-fundamentals-containers-and-codecs/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-fundamentals-containers-and-codecs/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-fundamentals-ae976f3025"
+    ]
+  },
+  {
+    "id": "skill-1-fundamentals-ae976f3025",
+    "purpose": "1 fundamentals",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-fundamentals-containers-and-codecs/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-fundamentals-containers-and-codecs/002-1-fundamentals.md",
+    "requires": [
+      "skill-0-routing-18a337d382"
+    ],
+    "links": [
+      "skill-2-containers-and-muxing-aaa8195aa2"
+    ]
+  },
+  {
+    "id": "skill-2-containers-and-muxing-aaa8195aa2",
+    "purpose": "2 containers and muxing",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-fundamentals-containers-and-codecs/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-fundamentals-containers-and-codecs/003-2-containers-and-muxing.md",
+    "requires": [
+      "skill-1-fundamentals-ae976f3025"
+    ],
+    "links": [
+      "skill-3-codecs-dfc03fecbc"
+    ]
+  },
+  {
+    "id": "skill-3-codecs-dfc03fecbc",
+    "purpose": "3 codecs",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-fundamentals-containers-and-codecs/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-fundamentals-containers-and-codecs/004-3-codecs.md",
+    "requires": [
+      "skill-2-containers-and-muxing-aaa8195aa2"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-1-side-by-side-all-dated-claims-are-as-of-16-sep-2026-6c29ae4f33",
+    "purpose": "1 side by side all dated claims are as of 16 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/001-1-side-by-side-all-dated-claims-are-as-of-16-sep-2026.md",
+    "requires": [],
+    "links": [
+      "skill-2-decision-heuristics-54ba0e9f84"
+    ]
+  },
+  {
+    "id": "skill-2-decision-heuristics-54ba0e9f84",
+    "purpose": "2 decision heuristics",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/002-2-decision-heuristics.md",
+    "requires": [
+      "skill-1-side-by-side-all-dated-claims-are-as-of-16-sep-2026-6c29ae4f33"
+    ],
+    "links": [
+      "skill-3-the-four-engineering-patterns-that-transfer-everywhere-78ed7c0d95"
+    ]
+  },
+  {
+    "id": "skill-3-the-four-engineering-patterns-that-transfer-everywhere-78ed7c0d95",
+    "purpose": "3 the four engineering patterns that transfer everywhere",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/003-3-the-four-engineering-patterns-that-transfer-everywhere.md",
+    "requires": [
+      "skill-2-decision-heuristics-54ba0e9f84"
+    ],
+    "links": [
+      "skill-4-sequenced-study-roadmap-8-serious-weeks-0b3db809b7"
+    ]
+  },
+  {
+    "id": "skill-4-sequenced-study-roadmap-8-serious-weeks-0b3db809b7",
+    "purpose": "4 sequenced study roadmap 8 serious weeks",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/004-4-sequenced-study-roadmap-8-serious-weeks.md",
+    "requires": [
+      "skill-3-the-four-engineering-patterns-that-transfer-everywhere-78ed7c0d95"
+    ],
+    "links": [
+      "skill-5-canonical-documentation-shelf-61bccdf9da"
+    ]
+  },
+  {
+    "id": "skill-5-canonical-documentation-shelf-61bccdf9da",
+    "purpose": "5 canonical documentation shelf",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-choosing-a-rail-and-shared-patterns/005-5-canonical-documentation-shelf.md",
+    "requires": [
+      "skill-4-sequenced-study-roadmap-8-serious-weeks-0b3db809b7"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-18-what-actually-persuades-ae6dca66a9",
+    "purpose": "18 what actually persuades",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-persuasion-and-the-ethics-of-influence/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-persuasion-and-the-ethics-of-influence/001-18-what-actually-persuades.md",
+    "requires": [],
+    "links": [
+      "skill-19-the-ethics-of-influence-4e8e64ce4f"
+    ]
+  },
+  {
+    "id": "skill-19-the-ethics-of-influence-4e8e64ce4f",
+    "purpose": "19 the ethics of influence",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-persuasion-and-the-ethics-of-influence/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-persuasion-and-the-ethics-of-influence/002-19-the-ethics-of-influence.md",
+    "requires": [
+      "skill-18-what-actually-persuades-ae6dca66a9"
+    ],
+    "links": []
+  }
+]

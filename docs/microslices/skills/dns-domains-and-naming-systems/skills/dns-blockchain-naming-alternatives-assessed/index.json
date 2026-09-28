@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-21-why-alternatives-exist-42c735f785",
+    "purpose": "21 why alternatives exist",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/001-21-why-alternatives-exist.md",
+    "requires": [],
+    "links": [
+      "skill-22-ens-8341303122"
+    ]
+  },
+  {
+    "id": "skill-22-ens-8341303122",
+    "purpose": "22 ens",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/002-22-ens.md",
+    "requires": [
+      "skill-21-why-alternatives-exist-42c735f785"
+    ],
+    "links": [
+      "skill-23-other-systems-3660c0249f"
+    ]
+  },
+  {
+    "id": "skill-23-other-systems-3660c0249f",
+    "purpose": "23 other systems",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/003-23-other-systems.md",
+    "requires": [
+      "skill-22-ens-8341303122"
+    ],
+    "links": [
+      "skill-24-honest-assessment-c2115a0a60"
+    ]
+  },
+  {
+    "id": "skill-24-honest-assessment-c2115a0a60",
+    "purpose": "24 honest assessment",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/004-24-honest-assessment.md",
+    "requires": [
+      "skill-23-other-systems-3660c0249f"
+    ],
+    "links": [
+      "skill-25-non-dns-namespaces-b7b6e907fb"
+    ]
+  },
+  {
+    "id": "skill-25-non-dns-namespaces-b7b6e907fb",
+    "purpose": "25 non dns namespaces",
+    "source": "src/vibey_tools/skills/plugins/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/SKILL.md",
+    "output": "docs/microslices/skills/dns-domains-and-naming-systems/skills/dns-blockchain-naming-alternatives-assessed/005-25-non-dns-namespaces.md",
+    "requires": [
+      "skill-24-honest-assessment-c2115a0a60"
+    ],
+    "links": []
+  }
+]

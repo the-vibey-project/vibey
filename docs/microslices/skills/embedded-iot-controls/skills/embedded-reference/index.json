@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-contested-questions-present-both-cases-don-t-adjudicate-2e1e69a4c2",
+    "purpose": "14 contested questions present both cases don t adjudicate",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-reference/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-reference/001-14-contested-questions-present-both-cases-don-t-adjudicate.md",
+    "requires": [],
+    "links": [
+      "skill-15-the-canon-who-and-what-to-cite-fbb941ba4e"
+    ]
+  },
+  {
+    "id": "skill-15-the-canon-who-and-what-to-cite-fbb941ba4e",
+    "purpose": "15 the canon who and what to cite",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-reference/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-reference/002-15-the-canon-who-and-what-to-cite.md",
+    "requires": [
+      "skill-14-contested-questions-present-both-cases-don-t-adjudicate-2e1e69a4c2"
+    ],
+    "links": [
+      "skill-16-case-studies-the-failures-everyone-should-know-7c9cd4dea9"
+    ]
+  },
+  {
+    "id": "skill-16-case-studies-the-failures-everyone-should-know-7c9cd4dea9",
+    "purpose": "16 case studies the failures everyone should know",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-reference/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-reference/003-16-case-studies-the-failures-everyone-should-know.md",
+    "requires": [
+      "skill-15-the-canon-who-and-what-to-cite-fbb941ba4e"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-7b577945d8"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-7b577945d8",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-reference/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-reference/004-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-case-studies-the-failures-everyone-should-know-7c9cd4dea9"
+    ],
+    "links": [
+      "skill-18-quick-reference-cards-65d850090c"
+    ]
+  },
+  {
+    "id": "skill-18-quick-reference-cards-65d850090c",
+    "purpose": "18 quick reference cards",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-reference/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-reference/005-18-quick-reference-cards.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-7b577945d8"
+    ],
+    "links": [
+      "skill-19-sources-and-method-7160b9248c"
+    ]
+  },
+  {
+    "id": "skill-19-sources-and-method-7160b9248c",
+    "purpose": "19 sources and method",
+    "source": "src/vibey_tools/skills/plugins/embedded-iot-controls/skills/embedded-reference/SKILL.md",
+    "output": "docs/microslices/skills/embedded-iot-controls/skills/embedded-reference/006-19-sources-and-method.md",
+    "requires": [
+      "skill-18-quick-reference-cards-65d850090c"
+    ],
+    "links": []
+  }
+]

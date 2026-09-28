@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-section-1-the-core-strategic-insight-63f3a52c11",
+    "purpose": "section 1 the core strategic insight",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/001-section-1-the-core-strategic-insight.md",
+    "requires": [],
+    "links": [
+      "skill-section-2-bryan-garner-s-framework-d199067045"
+    ]
+  },
+  {
+    "id": "skill-section-2-bryan-garner-s-framework-d199067045",
+    "purpose": "section 2 bryan garner s framework",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/002-section-2-bryan-garner-s-framework.md",
+    "requires": [
+      "skill-section-1-the-core-strategic-insight-63f3a52c11"
+    ],
+    "links": [
+      "skill-section-3-john-roberts-as-appellate-advocate-a2100d22cc"
+    ]
+  },
+  {
+    "id": "skill-section-3-john-roberts-as-appellate-advocate-a2100d22cc",
+    "purpose": "section 3 john roberts as appellate advocate",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/003-section-3-john-roberts-as-appellate-advocate.md",
+    "requires": [
+      "skill-section-2-bryan-garner-s-framework-d199067045"
+    ],
+    "links": [
+      "skill-section-4-elena-kagan-and-paul-clement-2aa392d4e6"
+    ]
+  },
+  {
+    "id": "skill-section-4-elena-kagan-and-paul-clement-2aa392d4e6",
+    "purpose": "section 4 elena kagan and paul clement",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/004-section-4-elena-kagan-and-paul-clement.md",
+    "requires": [
+      "skill-section-3-john-roberts-as-appellate-advocate-a2100d22cc"
+    ],
+    "links": [
+      "skill-section-5-structural-architecture-of-elite-briefs-dfa26aac29"
+    ]
+  },
+  {
+    "id": "skill-section-5-structural-architecture-of-elite-briefs-dfa26aac29",
+    "purpose": "section 5 structural architecture of elite briefs",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/005-section-5-structural-architecture-of-elite-briefs.md",
+    "requires": [
+      "skill-section-4-elena-kagan-and-paul-clement-2aa392d4e6"
+    ],
+    "links": [
+      "skill-section-6-judicial-cognition-research-e072ea9c28"
+    ]
+  },
+  {
+    "id": "skill-section-6-judicial-cognition-research-e072ea9c28",
+    "purpose": "section 6 judicial cognition research",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/006-section-6-judicial-cognition-research.md",
+    "requires": [
+      "skill-section-5-structural-architecture-of-elite-briefs-dfa26aac29"
+    ],
+    "links": [
+      "skill-section-7-the-fluency-effect-a398be378c"
+    ]
+  },
+  {
+    "id": "skill-section-7-the-fluency-effect-a398be378c",
+    "purpose": "section 7 the fluency effect",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/007-section-7-the-fluency-effect.md",
+    "requires": [
+      "skill-section-6-judicial-cognition-research-e072ea9c28"
+    ],
+    "links": [
+      "skill-section-8-practical-brief-writing-checklist-41091ff466"
+    ]
+  },
+  {
+    "id": "skill-section-8-practical-brief-writing-checklist-41091ff466",
+    "purpose": "section 8 practical brief writing checklist",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/008-section-8-practical-brief-writing-checklist.md",
+    "requires": [
+      "skill-section-7-the-fluency-effect-a398be378c"
+    ],
+    "links": [
+      "skill-section-9-oral-argument-the-conversation-model-dbf32e3428"
+    ]
+  },
+  {
+    "id": "skill-section-9-oral-argument-the-conversation-model-dbf32e3428",
+    "purpose": "section 9 oral argument the conversation model",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/009-section-9-oral-argument-the-conversation-model.md",
+    "requires": [
+      "skill-section-8-practical-brief-writing-checklist-41091ff466"
+    ],
+    "links": [
+      "skill-section-10-overcoming-the-pro-se-credibility-gap-b478814cc0"
+    ]
+  },
+  {
+    "id": "skill-section-10-overcoming-the-pro-se-credibility-gap-b478814cc0",
+    "purpose": "section 10 overcoming the pro se credibility gap",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/010-section-10-overcoming-the-pro-se-credibility-gap.md",
+    "requires": [
+      "skill-section-9-oral-argument-the-conversation-model-dbf32e3428"
+    ],
+    "links": [
+      "skill-brief-structure-template-16e3ef75e0"
+    ]
+  },
+  {
+    "id": "skill-brief-structure-template-16e3ef75e0",
+    "purpose": "brief structure template",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/011-brief-structure-template.md",
+    "requires": [
+      "skill-section-10-overcoming-the-pro-se-credibility-gap-b478814cc0"
+    ],
+    "links": [
+      "skill-quick-reference-research-citations-2f1c0ca97c"
+    ]
+  },
+  {
+    "id": "skill-quick-reference-research-citations-2f1c0ca97c",
+    "purpose": "quick reference research citations",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing/012-quick-reference-research-citations.md",
+    "requires": [
+      "skill-brief-structure-template-16e3ef75e0"
+    ],
+    "links": []
+  }
+]

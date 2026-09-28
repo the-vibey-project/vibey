@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-11-digestion-and-absorption-668a5899e1",
+    "purpose": "11 digestion and absorption",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/001-11-digestion-and-absorption.md",
+    "requires": [],
+    "links": [
+      "skill-12-energy-balance-69cd1cb5fa"
+    ]
+  },
+  {
+    "id": "skill-12-energy-balance-69cd1cb5fa",
+    "purpose": "12 energy balance",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/002-12-energy-balance.md",
+    "requires": [
+      "skill-11-digestion-and-absorption-668a5899e1"
+    ],
+    "links": [
+      "skill-13-appetite-regulation-6b0a5b6e36"
+    ]
+  },
+  {
+    "id": "skill-13-appetite-regulation-6b0a5b6e36",
+    "purpose": "13 appetite regulation",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/003-13-appetite-regulation.md",
+    "requires": [
+      "skill-12-energy-balance-69cd1cb5fa"
+    ],
+    "links": [
+      "skill-14-the-microbiome-c1f243d49e"
+    ]
+  },
+  {
+    "id": "skill-14-the-microbiome-c1f243d49e",
+    "purpose": "14 the microbiome",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/004-14-the-microbiome.md",
+    "requires": [
+      "skill-13-appetite-regulation-6b0a5b6e36"
+    ],
+    "links": [
+      "skill-15-food-composition-and-processing-5efad90a77"
+    ]
+  },
+  {
+    "id": "skill-15-food-composition-and-processing-5efad90a77",
+    "purpose": "15 food composition and processing",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/005-15-food-composition-and-processing.md",
+    "requires": [
+      "skill-14-the-microbiome-c1f243d49e"
+    ],
+    "links": [
+      "skill-16-cooking-and-nutrients-8813cebe09"
+    ]
+  },
+  {
+    "id": "skill-16-cooking-and-nutrients-8813cebe09",
+    "purpose": "16 cooking and nutrients",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/006-16-cooking-and-nutrients.md",
+    "requires": [
+      "skill-15-food-composition-and-processing-5efad90a77"
+    ],
+    "links": [
+      "skill-17-public-health-nutrition-de8553ca84"
+    ]
+  },
+  {
+    "id": "skill-17-public-health-nutrition-de8553ca84",
+    "purpose": "17 public health nutrition",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/007-17-public-health-nutrition.md",
+    "requires": [
+      "skill-16-cooking-and-nutrients-8813cebe09"
+    ],
+    "links": [
+      "skill-18-food-allergy-and-intolerance-b8b343b071"
+    ]
+  },
+  {
+    "id": "skill-18-food-allergy-and-intolerance-b8b343b071",
+    "purpose": "18 food allergy and intolerance",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-digestion-energy-balance-appetite-and-food-processing/008-18-food-allergy-and-intolerance.md",
+    "requires": [
+      "skill-17-public-health-nutrition-de8553ca84"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-6-building-services-mep-and-fire-safety-8bf3a323cc",
+    "purpose": "6 building services mep and fire safety",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-services-sequencing-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-services-sequencing-and-codes/001-6-building-services-mep-and-fire-safety.md",
+    "requires": [],
+    "links": [
+      "skill-7-construction-sequencing-codes-and-permitting-723e9e9178"
+    ]
+  },
+  {
+    "id": "skill-7-construction-sequencing-codes-and-permitting-723e9e9178",
+    "purpose": "7 construction sequencing codes and permitting",
+    "source": "src/vibey_tools/skills/plugins/building-a-homestead/skills/homestead-services-sequencing-and-codes/SKILL.md",
+    "output": "docs/microslices/skills/building-a-homestead/skills/homestead-services-sequencing-and-codes/002-7-construction-sequencing-codes-and-permitting.md",
+    "requires": [
+      "skill-6-building-services-mep-and-fire-safety-8bf3a323cc"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-18ce400993",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-kernel-architecture-23112f1bb4"
+    ]
+  },
+  {
+    "id": "skill-1-kernel-architecture-23112f1bb4",
+    "purpose": "1 kernel architecture",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/002-1-kernel-architecture.md",
+    "requires": [
+      "skill-0-routing-18ce400993"
+    ],
+    "links": [
+      "skill-2-writing-kernel-code-edeffd33b4"
+    ]
+  },
+  {
+    "id": "skill-2-writing-kernel-code-edeffd33b4",
+    "purpose": "2 writing kernel code",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/003-2-writing-kernel-code.md",
+    "requires": [
+      "skill-1-kernel-architecture-23112f1bb4"
+    ],
+    "links": [
+      "skill-3-concurrency-in-the-kernel-842823dc4c"
+    ]
+  },
+  {
+    "id": "skill-3-concurrency-in-the-kernel-842823dc4c",
+    "purpose": "3 concurrency in the kernel",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-architecture-and-code/004-3-concurrency-in-the-kernel.md",
+    "requires": [
+      "skill-2-writing-kernel-code-edeffd33b4"
+    ],
+    "links": []
+  }
+]

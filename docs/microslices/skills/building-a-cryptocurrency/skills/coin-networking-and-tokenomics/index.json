@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-the-networking-layer-c4802ba0de",
+    "purpose": "7 the networking layer",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-networking-and-tokenomics/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-networking-and-tokenomics/001-7-the-networking-layer.md",
+    "requires": [],
+    "links": [
+      "skill-8-economics-and-tokenomics-9d091dddba"
+    ]
+  },
+  {
+    "id": "skill-8-economics-and-tokenomics-9d091dddba",
+    "purpose": "8 economics and tokenomics",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-networking-and-tokenomics/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-networking-and-tokenomics/002-8-economics-and-tokenomics.md",
+    "requires": [
+      "skill-7-the-networking-layer-c4802ba0de"
+    ],
+    "links": [
+      "skill-where-the-rest-of-the-reference-is-f75b18e9f6"
+    ]
+  },
+  {
+    "id": "skill-where-the-rest-of-the-reference-is-f75b18e9f6",
+    "purpose": "where the rest of the reference is",
+    "source": "src/vibey_tools/skills/plugins/building-a-cryptocurrency/skills/coin-networking-and-tokenomics/SKILL.md",
+    "output": "docs/microslices/skills/building-a-cryptocurrency/skills/coin-networking-and-tokenomics/003-where-the-rest-of-the-reference-is.md",
+    "requires": [
+      "skill-8-economics-and-tokenomics-9d091dddba"
+    ],
+    "links": []
+  }
+]

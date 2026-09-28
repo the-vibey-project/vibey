@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-3bb9109b0a",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-reference/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-73effb9b78"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-73effb9b78",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-reference/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-3bb9109b0a"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-65cc48ff8c"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-65cc48ff8c",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-reference/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-73effb9b78"
+    ],
+    "links": [
+      "skill-18-the-canon-ce48fe0a1b"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-ce48fe0a1b",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-reference/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-65cc48ff8c"
+    ],
+    "links": [
+      "skill-19-quick-reference-7f9cab3790"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-7f9cab3790",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-reference/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-ce48fe0a1b"
+    ],
+    "links": [
+      "skill-20-sources-and-method-4d71d07fe8"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-4d71d07fe8",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-reference/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-7f9cab3790"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-codes-and-standards-2dcfeec8a1",
+    "purpose": "6 codes and standards",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/001-6-codes-and-standards.md",
+    "requires": [],
+    "links": [
+      "skill-7-licensure-and-liability-bcfb07bea8"
+    ]
+  },
+  {
+    "id": "skill-7-licensure-and-liability-bcfb07bea8",
+    "purpose": "7 licensure and liability",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/002-7-licensure-and-liability.md",
+    "requires": [
+      "skill-6-codes-and-standards-2dcfeec8a1"
+    ],
+    "links": [
+      "skill-8-failure-analysis-21b3494f13"
+    ]
+  },
+  {
+    "id": "skill-8-failure-analysis-21b3494f13",
+    "purpose": "8 failure analysis",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/003-8-failure-analysis.md",
+    "requires": [
+      "skill-7-licensure-and-liability-bcfb07bea8"
+    ],
+    "links": [
+      "skill-9-construction-sequencing-dea3bf9a8f"
+    ]
+  },
+  {
+    "id": "skill-9-construction-sequencing-dea3bf9a8f",
+    "purpose": "9 construction sequencing",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/004-9-construction-sequencing.md",
+    "requires": [
+      "skill-8-failure-analysis-21b3494f13"
+    ],
+    "links": [
+      "skill-10-infrastructure-systems-5fc62183a1"
+    ]
+  },
+  {
+    "id": "skill-10-infrastructure-systems-5fc62183a1",
+    "purpose": "10 infrastructure systems",
+    "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/SKILL.md",
+    "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/005-10-infrastructure-systems.md",
+    "requires": [
+      "skill-9-construction-sequencing-dea3bf9a8f"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-8-fuel-cycle-and-waste-10503d441a",
+    "purpose": "8 fuel cycle and waste",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fuel-cycle-waste-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fuel-cycle-waste-and-safety/001-8-fuel-cycle-and-waste.md",
+    "requires": [],
+    "links": [
+      "skill-9-reactor-safety-cc64e0214d"
+    ]
+  },
+  {
+    "id": "skill-9-reactor-safety-cc64e0214d",
+    "purpose": "9 reactor safety",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-fuel-cycle-waste-and-safety/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-fuel-cycle-waste-and-safety/002-9-reactor-safety.md",
+    "requires": [
+      "skill-8-fuel-cycle-and-waste-10503d441a"
+    ],
+    "links": []
+  }
+]

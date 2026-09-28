@@ -1,0 +1,526 @@
+[
+  {
+    "id": "skill-core-principle-3aa446b8c0",
+    "purpose": "core principle",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/001-core-principle.md",
+    "requires": [],
+    "links": [
+      "skill-compute-decision-ladder-2026-default-fe76b03cac"
+    ]
+  },
+  {
+    "id": "skill-compute-decision-ladder-2026-default-fe76b03cac",
+    "purpose": "compute decision ladder 2026 default",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/002-compute-decision-ladder-2026-default.md",
+    "requires": [
+      "skill-core-principle-3aa446b8c0"
+    ],
+    "links": [
+      "skill-monolithic-architecture-33981d97e4"
+    ]
+  },
+  {
+    "id": "skill-monolithic-architecture-33981d97e4",
+    "purpose": "monolithic architecture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/003-monolithic-architecture.md",
+    "requires": [
+      "skill-compute-decision-ladder-2026-default-fe76b03cac"
+    ],
+    "links": [
+      "skill-microservices-architecture-62fbe9e8e4"
+    ]
+  },
+  {
+    "id": "skill-microservices-architecture-62fbe9e8e4",
+    "purpose": "microservices architecture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/004-microservices-architecture.md",
+    "requires": [
+      "skill-monolithic-architecture-33981d97e4"
+    ],
+    "links": [
+      "skill-serverless-architecture-6e3a8ced63"
+    ]
+  },
+  {
+    "id": "skill-serverless-architecture-6e3a8ced63",
+    "purpose": "serverless architecture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/005-serverless-architecture.md",
+    "requires": [
+      "skill-microservices-architecture-62fbe9e8e4"
+    ],
+    "links": [
+      "skill-event-driven-architecture-eda-6a62bd0f75"
+    ]
+  },
+  {
+    "id": "skill-event-driven-architecture-eda-6a62bd0f75",
+    "purpose": "event driven architecture eda",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/006-event-driven-architecture-eda.md",
+    "requires": [
+      "skill-serverless-architecture-6e3a8ced63"
+    ],
+    "links": [
+      "skill-rest-101447aef9"
+    ]
+  },
+  {
+    "id": "skill-rest-101447aef9",
+    "purpose": "rest",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/007-rest.md",
+    "requires": [
+      "skill-event-driven-architecture-eda-6a62bd0f75"
+    ],
+    "links": [
+      "skill-grpc-597c16112c"
+    ]
+  },
+  {
+    "id": "skill-grpc-597c16112c",
+    "purpose": "grpc",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/008-grpc.md",
+    "requires": [
+      "skill-rest-101447aef9"
+    ],
+    "links": [
+      "skill-graphql-90c2bd8eea"
+    ]
+  },
+  {
+    "id": "skill-graphql-90c2bd8eea",
+    "purpose": "graphql",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/009-graphql.md",
+    "requires": [
+      "skill-grpc-597c16112c"
+    ],
+    "links": [
+      "skill-websockets-real-time-f0b2ac45bc"
+    ]
+  },
+  {
+    "id": "skill-websockets-real-time-f0b2ac45bc",
+    "purpose": "websockets real time",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/010-websockets-real-time.md",
+    "requires": [
+      "skill-graphql-90c2bd8eea"
+    ],
+    "links": [
+      "skill-message-queues-d9471f62fa"
+    ]
+  },
+  {
+    "id": "skill-message-queues-d9471f62fa",
+    "purpose": "message queues",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/011-message-queues.md",
+    "requires": [
+      "skill-websockets-real-time-f0b2ac45bc"
+    ],
+    "links": [
+      "skill-event-streaming-kafka-pattern-e7ec7e8967"
+    ]
+  },
+  {
+    "id": "skill-event-streaming-kafka-pattern-e7ec7e8967",
+    "purpose": "event streaming kafka pattern",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/012-event-streaming-kafka-pattern.md",
+    "requires": [
+      "skill-message-queues-d9471f62fa"
+    ],
+    "links": [
+      "skill-relational-rdbms-b5902985cf"
+    ]
+  },
+  {
+    "id": "skill-relational-rdbms-b5902985cf",
+    "purpose": "relational rdbms",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/013-relational-rdbms.md",
+    "requires": [
+      "skill-event-streaming-kafka-pattern-e7ec7e8967"
+    ],
+    "links": [
+      "skill-document-cosmos-db-for-nosql-4cac6b32b5"
+    ]
+  },
+  {
+    "id": "skill-document-cosmos-db-for-nosql-4cac6b32b5",
+    "purpose": "document cosmos db for nosql",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/014-document-cosmos-db-for-nosql.md",
+    "requires": [
+      "skill-relational-rdbms-b5902985cf"
+    ],
+    "links": [
+      "skill-key-value-redis-90e5ca50cb"
+    ]
+  },
+  {
+    "id": "skill-key-value-redis-90e5ca50cb",
+    "purpose": "key value redis",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/015-key-value-redis.md",
+    "requires": [
+      "skill-document-cosmos-db-for-nosql-4cac6b32b5"
+    ],
+    "links": [
+      "skill-vector-search-3bc6f56154"
+    ]
+  },
+  {
+    "id": "skill-vector-search-3bc6f56154",
+    "purpose": "vector search",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/016-vector-search.md",
+    "requires": [
+      "skill-key-value-redis-90e5ca50cb"
+    ],
+    "links": [
+      "skill-data-lakes-lakehouses-0e973d9cf5"
+    ]
+  },
+  {
+    "id": "skill-data-lakes-lakehouses-0e973d9cf5",
+    "purpose": "data lakes lakehouses",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/017-data-lakes-lakehouses.md",
+    "requires": [
+      "skill-vector-search-3bc6f56154"
+    ],
+    "links": [
+      "skill-azure-api-management-apim-8ef604f319"
+    ]
+  },
+  {
+    "id": "skill-azure-api-management-apim-8ef604f319",
+    "purpose": "azure api management apim",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/018-azure-api-management-apim.md",
+    "requires": [
+      "skill-data-lakes-lakehouses-0e973d9cf5"
+    ],
+    "links": [
+      "skill-load-balancing-decision-matrix-75537f2ba4"
+    ]
+  },
+  {
+    "id": "skill-load-balancing-decision-matrix-75537f2ba4",
+    "purpose": "load balancing decision matrix",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/019-load-balancing-decision-matrix.md",
+    "requires": [
+      "skill-azure-api-management-apim-8ef604f319"
+    ],
+    "links": [
+      "skill-catalog-azure-architecture-center-791795e9f3"
+    ]
+  },
+  {
+    "id": "skill-catalog-azure-architecture-center-791795e9f3",
+    "purpose": "catalog azure architecture center",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/020-catalog-azure-architecture-center.md",
+    "requires": [
+      "skill-load-balancing-decision-matrix-75537f2ba4"
+    ],
+    "links": [
+      "skill-high-availability-b781d238b7"
+    ]
+  },
+  {
+    "id": "skill-high-availability-b781d238b7",
+    "purpose": "high availability",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/021-high-availability.md",
+    "requires": [
+      "skill-catalog-azure-architecture-center-791795e9f3"
+    ],
+    "links": [
+      "skill-three-pillars-one-05092001b0"
+    ]
+  },
+  {
+    "id": "skill-three-pillars-one-05092001b0",
+    "purpose": "three pillars one",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/022-three-pillars-one.md",
+    "requires": [
+      "skill-high-availability-b781d238b7"
+    ],
+    "links": [
+      "skill-azure-mapping-994a1e3674"
+    ]
+  },
+  {
+    "id": "skill-azure-mapping-994a1e3674",
+    "purpose": "azure mapping",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/023-azure-mapping.md",
+    "requires": [
+      "skill-three-pillars-one-05092001b0"
+    ],
+    "links": [
+      "skill-zero-trust-f3cb1ecbee"
+    ]
+  },
+  {
+    "id": "skill-zero-trust-f3cb1ecbee",
+    "purpose": "zero trust",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/024-zero-trust.md",
+    "requires": [
+      "skill-azure-mapping-994a1e3674"
+    ],
+    "links": [
+      "skill-iam-oauth-2-0-flows-3d72903975"
+    ]
+  },
+  {
+    "id": "skill-iam-oauth-2-0-flows-3d72903975",
+    "purpose": "iam oauth 2 0 flows",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/025-iam-oauth-2-0-flows.md",
+    "requires": [
+      "skill-zero-trust-f3cb1ecbee"
+    ],
+    "links": [
+      "skill-encryption-eb57256b0d"
+    ]
+  },
+  {
+    "id": "skill-encryption-eb57256b0d",
+    "purpose": "encryption",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/026-encryption.md",
+    "requires": [
+      "skill-iam-oauth-2-0-flows-3d72903975"
+    ],
+    "links": [
+      "skill-etl-vs-elt-a0c0cb6803"
+    ]
+  },
+  {
+    "id": "skill-etl-vs-elt-a0c0cb6803",
+    "purpose": "etl vs elt",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/027-etl-vs-elt.md",
+    "requires": [
+      "skill-encryption-eb57256b0d"
+    ],
+    "links": [
+      "skill-stream-processing-772cdadbc0"
+    ]
+  },
+  {
+    "id": "skill-stream-processing-772cdadbc0",
+    "purpose": "stream processing",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/028-stream-processing.md",
+    "requires": [
+      "skill-etl-vs-elt-a0c0cb6803"
+    ],
+    "links": [
+      "skill-lambda-vs-kappa-fcaa1ad17d"
+    ]
+  },
+  {
+    "id": "skill-lambda-vs-kappa-fcaa1ad17d",
+    "purpose": "lambda vs kappa",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/029-lambda-vs-kappa.md",
+    "requires": [
+      "skill-stream-processing-772cdadbc0"
+    ],
+    "links": [
+      "skill-cdc-change-data-capture-3405ab4c9e"
+    ]
+  },
+  {
+    "id": "skill-cdc-change-data-capture-3405ab4c9e",
+    "purpose": "cdc change data capture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/030-cdc-change-data-capture.md",
+    "requires": [
+      "skill-lambda-vs-kappa-fcaa1ad17d"
+    ],
+    "links": [
+      "skill-rag-retrieval-augmented-generation-1f95ecf8dd"
+    ]
+  },
+  {
+    "id": "skill-rag-retrieval-augmented-generation-1f95ecf8dd",
+    "purpose": "rag retrieval augmented generation",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/031-rag-retrieval-augmented-generation.md",
+    "requires": [
+      "skill-cdc-change-data-capture-3405ab4c9e"
+    ],
+    "links": [
+      "skill-apim-ai-gateway-front-all-llm-traffic-from-day-one-fef2d50c99"
+    ]
+  },
+  {
+    "id": "skill-apim-ai-gateway-front-all-llm-traffic-from-day-one-fef2d50c99",
+    "purpose": "apim ai gateway front all llm traffic from day one",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/032-apim-ai-gateway-front-all-llm-traffic-from-day-one.md",
+    "requires": [
+      "skill-rag-retrieval-augmented-generation-1f95ecf8dd"
+    ],
+    "links": [
+      "skill-ai-agent-architecture-1214916310"
+    ]
+  },
+  {
+    "id": "skill-ai-agent-architecture-1214916310",
+    "purpose": "ai agent architecture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/033-ai-agent-architecture.md",
+    "requires": [
+      "skill-apim-ai-gateway-front-all-llm-traffic-from-day-one-fef2d50c99"
+    ],
+    "links": [
+      "skill-ml-training-inference-d7782b0f95"
+    ]
+  },
+  {
+    "id": "skill-ml-training-inference-d7782b0f95",
+    "purpose": "ml training inference",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/034-ml-training-inference.md",
+    "requires": [
+      "skill-ai-agent-architecture-1214916310"
+    ],
+    "links": [
+      "skill-prompt-flow-retirement-b7e0a8d8f1"
+    ]
+  },
+  {
+    "id": "skill-prompt-flow-retirement-b7e0a8d8f1",
+    "purpose": "prompt flow retirement",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/035-prompt-flow-retirement.md",
+    "requires": [
+      "skill-ml-training-inference-d7782b0f95"
+    ],
+    "links": [
+      "skill-enterprise-integration-patterns-eip-hohpe-woolf-eb1b4e5096"
+    ]
+  },
+  {
+    "id": "skill-enterprise-integration-patterns-eip-hohpe-woolf-eb1b4e5096",
+    "purpose": "enterprise integration patterns eip hohpe woolf",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/036-enterprise-integration-patterns-eip-hohpe-woolf.md",
+    "requires": [
+      "skill-prompt-flow-retirement-b7e0a8d8f1"
+    ],
+    "links": [
+      "skill-workflow-orchestration-8fb0d8af62"
+    ]
+  },
+  {
+    "id": "skill-workflow-orchestration-8fb0d8af62",
+    "purpose": "workflow orchestration",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/037-workflow-orchestration.md",
+    "requires": [
+      "skill-enterprise-integration-patterns-eip-hohpe-woolf-eb1b4e5096"
+    ],
+    "links": [
+      "skill-hybrid-integration-b59461eb2c"
+    ]
+  },
+  {
+    "id": "skill-hybrid-integration-b59461eb2c",
+    "purpose": "hybrid integration",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/038-hybrid-integration.md",
+    "requires": [
+      "skill-workflow-orchestration-8fb0d8af62"
+    ],
+    "links": [
+      "skill-containers-orchestration-539c50bde7"
+    ]
+  },
+  {
+    "id": "skill-containers-orchestration-539c50bde7",
+    "purpose": "containers orchestration",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/039-containers-orchestration.md",
+    "requires": [
+      "skill-hybrid-integration-b59461eb2c"
+    ],
+    "links": [
+      "skill-gitops-a3842ff806"
+    ]
+  },
+  {
+    "id": "skill-gitops-a3842ff806",
+    "purpose": "gitops",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/040-gitops.md",
+    "requires": [
+      "skill-containers-orchestration-539c50bde7"
+    ],
+    "links": [
+      "skill-platform-engineering-0f4864a139"
+    ]
+  },
+  {
+    "id": "skill-platform-engineering-0f4864a139",
+    "purpose": "platform engineering",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/041-platform-engineering.md",
+    "requires": [
+      "skill-gitops-a3842ff806"
+    ],
+    "links": [
+      "skill-event-driven-vs-request-response-628cab3d73"
+    ]
+  },
+  {
+    "id": "skill-event-driven-vs-request-response-628cab3d73",
+    "purpose": "event driven vs request response",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/042-event-driven-vs-request-response.md",
+    "requires": [
+      "skill-platform-engineering-0f4864a139"
+    ],
+    "links": [
+      "skill-make-vs-buy-vs-configure-083116781f"
+    ]
+  },
+  {
+    "id": "skill-make-vs-buy-vs-configure-083116781f",
+    "purpose": "make vs buy vs configure",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/043-make-vs-buy-vs-configure.md",
+    "requires": [
+      "skill-event-driven-vs-request-response-628cab3d73"
+    ],
+    "links": [
+      "skill-conway-s-law-8fd789c39a"
+    ]
+  },
+  {
+    "id": "skill-conway-s-law-8fd789c39a",
+    "purpose": "conway s law",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/architecture-patterns/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/architecture-patterns/044-conway-s-law.md",
+    "requires": [
+      "skill-make-vs-buy-vs-configure-083116781f"
+    ],
+    "links": []
+  }
+]

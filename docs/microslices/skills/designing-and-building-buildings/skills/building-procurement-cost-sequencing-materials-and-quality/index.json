@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-15-procurement-and-delivery-01eba4f4ce",
+    "purpose": "15 procurement and delivery",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/001-15-procurement-and-delivery.md",
+    "requires": [],
+    "links": [
+      "skill-16-cost-fac6cc743c"
+    ]
+  },
+  {
+    "id": "skill-16-cost-fac6cc743c",
+    "purpose": "16 cost",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/002-16-cost.md",
+    "requires": [
+      "skill-15-procurement-and-delivery-01eba4f4ce"
+    ],
+    "links": [
+      "skill-17-sequencing-and-temporary-works-e2ed78632b"
+    ]
+  },
+  {
+    "id": "skill-17-sequencing-and-temporary-works-e2ed78632b",
+    "purpose": "17 sequencing and temporary works",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/003-17-sequencing-and-temporary-works.md",
+    "requires": [
+      "skill-16-cost-fac6cc743c"
+    ],
+    "links": [
+      "skill-18-materials-in-construction-d8f6840747"
+    ]
+  },
+  {
+    "id": "skill-18-materials-in-construction-d8f6840747",
+    "purpose": "18 materials in construction",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/004-18-materials-in-construction.md",
+    "requires": [
+      "skill-17-sequencing-and-temporary-works-e2ed78632b"
+    ],
+    "links": [
+      "skill-19-quality-and-inspection-f990fd01af"
+    ]
+  },
+  {
+    "id": "skill-19-quality-and-inspection-f990fd01af",
+    "purpose": "19 quality and inspection",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-procurement-cost-sequencing-materials-and-quality/005-19-quality-and-inspection.md",
+    "requires": [
+      "skill-18-materials-in-construction-d8f6840747"
+    ],
+    "links": []
+  }
+]

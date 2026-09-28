@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-12-probabilistic-and-streaming-structures-71c65da736",
+    "purpose": "12 probabilistic and streaming structures",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement/001-12-probabilistic-and-streaming-structures.md",
+    "requires": [],
+    "links": [
+      "skill-13-measurement-b3c762c39f"
+    ]
+  },
+  {
+    "id": "skill-13-measurement-b3c762c39f",
+    "purpose": "13 measurement",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement/002-13-measurement.md",
+    "requires": [
+      "skill-12-probabilistic-and-streaming-structures-71c65da736"
+    ],
+    "links": [
+      "skill-14-concurrent-data-structures-268be5c9fa"
+    ]
+  },
+  {
+    "id": "skill-14-concurrent-data-structures-268be5c9fa",
+    "purpose": "14 concurrent data structures",
+    "source": "src/vibey_tools/skills/plugins/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement/SKILL.md",
+    "output": "docs/microslices/skills/algorithms-deep-dive/skills/algo-probabilistic-concurrency-and-measurement/003-14-concurrent-data-structures.md",
+    "requires": [
+      "skill-13-measurement-b3c762c39f"
+    ],
+    "links": []
+  }
+]

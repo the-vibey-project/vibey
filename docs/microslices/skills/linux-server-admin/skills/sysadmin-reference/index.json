@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-b9b816ab4e",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-reference/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-numbers-and-limits-1898cb6bf7"
+    ]
+  },
+  {
+    "id": "skill-16-numbers-and-limits-1898cb6bf7",
+    "purpose": "16 numbers and limits",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-reference/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-reference/002-16-numbers-and-limits.md",
+    "requires": [
+      "skill-15-anti-patterns-b9b816ab4e"
+    ],
+    "links": [
+      "skill-17-lifecycle-dates-verified-august-2026-0f96ff4415"
+    ]
+  },
+  {
+    "id": "skill-17-lifecycle-dates-verified-august-2026-0f96ff4415",
+    "purpose": "17 lifecycle dates verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-reference/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-reference/003-17-lifecycle-dates-verified-august-2026.md",
+    "requires": [
+      "skill-16-numbers-and-limits-1898cb6bf7"
+    ],
+    "links": [
+      "skill-18-books-59ff0a57ae"
+    ]
+  },
+  {
+    "id": "skill-18-books-59ff0a57ae",
+    "purpose": "18 books",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-reference/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-reference/004-18-books.md",
+    "requires": [
+      "skill-17-lifecycle-dates-verified-august-2026-0f96ff4415"
+    ],
+    "links": [
+      "skill-19-command-reference-2bc6732222"
+    ]
+  },
+  {
+    "id": "skill-19-command-reference-2bc6732222",
+    "purpose": "19 command reference",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-reference/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-reference/005-19-command-reference.md",
+    "requires": [
+      "skill-18-books-59ff0a57ae"
+    ],
+    "links": [
+      "skill-20-method-a71adc6e9a"
+    ]
+  },
+  {
+    "id": "skill-20-method-a71adc6e9a",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-reference/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-reference/006-20-method.md",
+    "requires": [
+      "skill-19-command-reference-2bc6732222"
+    ],
+    "links": []
+  }
+]

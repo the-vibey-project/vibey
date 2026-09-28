@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-f2679346f1",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-foundations-and-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-foundations-and-algorithms/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-foundations-83d68260c0"
+    ]
+  },
+  {
+    "id": "skill-1-foundations-83d68260c0",
+    "purpose": "1 foundations",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-foundations-and-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-foundations-and-algorithms/002-1-foundations.md",
+    "requires": [
+      "skill-0-routing-f2679346f1"
+    ],
+    "links": [
+      "skill-2-what-quantum-computers-can-and-cannot-do-9afa341e95"
+    ]
+  },
+  {
+    "id": "skill-2-what-quantum-computers-can-and-cannot-do-9afa341e95",
+    "purpose": "2 what quantum computers can and cannot do",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-foundations-and-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-foundations-and-algorithms/003-2-what-quantum-computers-can-and-cannot-do.md",
+    "requires": [
+      "skill-1-foundations-83d68260c0"
+    ],
+    "links": [
+      "skill-3-the-algorithm-canon-f38e6c9ddb"
+    ]
+  },
+  {
+    "id": "skill-3-the-algorithm-canon-f38e6c9ddb",
+    "purpose": "3 the algorithm canon",
+    "source": "src/vibey_tools/skills/plugins/quantum-computing/skills/quantum-foundations-and-algorithms/SKILL.md",
+    "output": "docs/microslices/skills/quantum-computing/skills/quantum-foundations-and-algorithms/004-3-the-algorithm-canon.md",
+    "requires": [
+      "skill-2-what-quantum-computers-can-and-cannot-do-9afa341e95"
+    ],
+    "links": []
+  }
+]

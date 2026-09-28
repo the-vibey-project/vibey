@@ -1,0 +1,202 @@
+[
+  {
+    "id": "skill-how-to-read-this-volume-dcee8ecb7d",
+    "purpose": "how to read this volume",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/001-how-to-read-this-volume.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-farm-as-an-agroecosystem-52904814d6"
+    ]
+  },
+  {
+    "id": "skill-1-the-farm-as-an-agroecosystem-52904814d6",
+    "purpose": "1 the farm as an agroecosystem",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/002-1-the-farm-as-an-agroecosystem.md",
+    "requires": [
+      "skill-how-to-read-this-volume-dcee8ecb7d"
+    ],
+    "links": [
+      "skill-2-soil-land-and-fertility-8bdc0b15c9"
+    ]
+  },
+  {
+    "id": "skill-2-soil-land-and-fertility-8bdc0b15c9",
+    "purpose": "2 soil land and fertility",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/003-2-soil-land-and-fertility.md",
+    "requires": [
+      "skill-1-the-farm-as-an-agroecosystem-52904814d6"
+    ],
+    "links": [
+      "skill-3-crops-and-plant-production-4f5a72513a"
+    ]
+  },
+  {
+    "id": "skill-3-crops-and-plant-production-4f5a72513a",
+    "purpose": "3 crops and plant production",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/004-3-crops-and-plant-production.md",
+    "requires": [
+      "skill-2-soil-land-and-fertility-8bdc0b15c9"
+    ],
+    "links": [
+      "skill-4-livestock-and-aquaculture-8e41ebdede"
+    ]
+  },
+  {
+    "id": "skill-4-livestock-and-aquaculture-8e41ebdede",
+    "purpose": "4 livestock and aquaculture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/005-4-livestock-and-aquaculture.md",
+    "requires": [
+      "skill-3-crops-and-plant-production-4f5a72513a"
+    ],
+    "links": [
+      "skill-5-pest-disease-and-weed-management-426ab7caab"
+    ]
+  },
+  {
+    "id": "skill-5-pest-disease-and-weed-management-426ab7caab",
+    "purpose": "5 pest disease and weed management",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/006-5-pest-disease-and-weed-management.md",
+    "requires": [
+      "skill-4-livestock-and-aquaculture-8e41ebdede"
+    ],
+    "links": [
+      "skill-6-water-land-air-and-weather-ef9226ebcc"
+    ]
+  },
+  {
+    "id": "skill-6-water-land-air-and-weather-ef9226ebcc",
+    "purpose": "6 water land air and weather",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/007-6-water-land-air-and-weather.md",
+    "requires": [
+      "skill-5-pest-disease-and-weed-management-426ab7caab"
+    ],
+    "links": [
+      "skill-7-food-production-and-preservation-050b2e6953"
+    ]
+  },
+  {
+    "id": "skill-7-food-production-and-preservation-050b2e6953",
+    "purpose": "7 food production and preservation",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/008-7-food-production-and-preservation.md",
+    "requires": [
+      "skill-6-water-land-air-and-weather-ef9226ebcc"
+    ],
+    "links": [
+      "skill-8-energy-and-infrastructure-f0119fe72a"
+    ]
+  },
+  {
+    "id": "skill-8-energy-and-infrastructure-f0119fe72a",
+    "purpose": "8 energy and infrastructure",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/009-8-energy-and-infrastructure.md",
+    "requires": [
+      "skill-7-food-production-and-preservation-050b2e6953"
+    ],
+    "links": [
+      "skill-9-machinery-robotics-and-digital-agriculture-c8bc9ec698"
+    ]
+  },
+  {
+    "id": "skill-9-machinery-robotics-and-digital-agriculture-c8bc9ec698",
+    "purpose": "9 machinery robotics and digital agriculture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/010-9-machinery-robotics-and-digital-agriculture.md",
+    "requires": [
+      "skill-8-energy-and-infrastructure-f0119fe72a"
+    ],
+    "links": [
+      "skill-10-finance-insurance-business-and-markets-cd7db53ec6"
+    ]
+  },
+  {
+    "id": "skill-10-finance-insurance-business-and-markets-cd7db53ec6",
+    "purpose": "10 finance insurance business and markets",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/011-10-finance-insurance-business-and-markets.md",
+    "requires": [
+      "skill-9-machinery-robotics-and-digital-agriculture-c8bc9ec698"
+    ],
+    "links": [
+      "skill-11-people-culture-and-institutions-2c4efa04e2"
+    ]
+  },
+  {
+    "id": "skill-11-people-culture-and-institutions-2c4efa04e2",
+    "purpose": "11 people culture and institutions",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/012-11-people-culture-and-institutions.md",
+    "requires": [
+      "skill-10-finance-insurance-business-and-markets-cd7db53ec6"
+    ],
+    "links": [
+      "skill-12-evaluation-framework-199938db33"
+    ]
+  },
+  {
+    "id": "skill-12-evaluation-framework-199938db33",
+    "purpose": "12 evaluation framework",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/013-12-evaluation-framework.md",
+    "requires": [
+      "skill-11-people-culture-and-institutions-2c4efa04e2"
+    ],
+    "links": [
+      "skill-13-integrated-farm-design-72bd92326f"
+    ]
+  },
+  {
+    "id": "skill-13-integrated-farm-design-72bd92326f",
+    "purpose": "13 integrated farm design",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/014-13-integrated-farm-design.md",
+    "requires": [
+      "skill-12-evaluation-framework-199938db33"
+    ],
+    "links": [
+      "skill-14-major-recurring-errors-9906ea784c"
+    ]
+  },
+  {
+    "id": "skill-14-major-recurring-errors-9906ea784c",
+    "purpose": "14 major recurring errors",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/015-14-major-recurring-errors.md",
+    "requires": [
+      "skill-13-integrated-farm-design-72bd92326f"
+    ],
+    "links": [
+      "skill-15-core-source-set-62586c28bd"
+    ]
+  },
+  {
+    "id": "skill-15-core-source-set-62586c28bd",
+    "purpose": "15 core source set",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/016-15-core-source-set.md",
+    "requires": [
+      "skill-14-major-recurring-errors-9906ea784c"
+    ],
+    "links": [
+      "skill-limits-and-next-research-fa94cec6c0"
+    ]
+  },
+  {
+    "id": "skill-limits-and-next-research-fa94cec6c0",
+    "purpose": "limits and next research",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-a-agriculture-and-farming-deep-dive/017-limits-and-next-research.md",
+    "requires": [
+      "skill-15-core-source-set-62586c28bd"
+    ],
+    "links": []
+  }
+]

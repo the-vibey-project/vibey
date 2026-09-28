@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-quantum-repeaters-feaac9ced6",
+    "purpose": "14 quantum repeaters",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/001-14-quantum-repeaters.md",
+    "requires": [],
+    "links": [
+      "skill-15-quantum-memory-f93a549729"
+    ]
+  },
+  {
+    "id": "skill-15-quantum-memory-f93a549729",
+    "purpose": "15 quantum memory",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/002-15-quantum-memory.md",
+    "requires": [
+      "skill-14-quantum-repeaters-feaac9ced6"
+    ],
+    "links": [
+      "skill-16-entanglement-distribution-c2d963ba98"
+    ]
+  },
+  {
+    "id": "skill-16-entanglement-distribution-c2d963ba98",
+    "purpose": "16 entanglement distribution",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/003-16-entanglement-distribution.md",
+    "requires": [
+      "skill-15-quantum-memory-f93a549729"
+    ],
+    "links": [
+      "skill-17-satellite-qkd-0979c930fa"
+    ]
+  },
+  {
+    "id": "skill-17-satellite-qkd-0979c930fa",
+    "purpose": "17 satellite qkd",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/004-17-satellite-qkd.md",
+    "requires": [
+      "skill-16-entanglement-distribution-c2d963ba98"
+    ],
+    "links": [
+      "skill-18-the-quantum-internet-roadmap-3b8bb43197"
+    ]
+  },
+  {
+    "id": "skill-18-the-quantum-internet-roadmap-3b8bb43197",
+    "purpose": "18 the quantum internet roadmap",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/005-18-the-quantum-internet-roadmap.md",
+    "requires": [
+      "skill-17-satellite-qkd-0979c930fa"
+    ],
+    "links": [
+      "skill-19-other-quantum-network-applications-be8e0ca730"
+    ]
+  },
+  {
+    "id": "skill-19-other-quantum-network-applications-be8e0ca730",
+    "purpose": "19 other quantum network applications",
+    "source": "src/vibey_tools/skills/plugins/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/SKILL.md",
+    "output": "docs/microslices/skills/quantum-cryptography-and-quantum-internet/skills/qcrypto-repeaters-memory-entanglement-distribution-and-satellite/006-19-other-quantum-network-applications.md",
+    "requires": [
+      "skill-18-the-quantum-internet-roadmap-3b8bb43197"
+    ],
+    "links": []
+  }
+]

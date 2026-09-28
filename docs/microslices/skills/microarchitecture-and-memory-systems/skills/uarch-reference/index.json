@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-25-what-s-live-checked-august-2026-37be666d65",
+    "purpose": "25 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-reference/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-reference/001-25-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-26-misconceptions-899ab93eb3"
+    ]
+  },
+  {
+    "id": "skill-26-misconceptions-899ab93eb3",
+    "purpose": "26 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-reference/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-reference/002-26-misconceptions.md",
+    "requires": [
+      "skill-25-what-s-live-checked-august-2026-37be666d65"
+    ],
+    "links": [
+      "skill-27-numbers-9e32cc603a"
+    ]
+  },
+  {
+    "id": "skill-27-numbers-9e32cc603a",
+    "purpose": "27 numbers",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-reference/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-reference/003-27-numbers.md",
+    "requires": [
+      "skill-26-misconceptions-899ab93eb3"
+    ],
+    "links": [
+      "skill-28-books-39bfe10959"
+    ]
+  },
+  {
+    "id": "skill-28-books-39bfe10959",
+    "purpose": "28 books",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-reference/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-reference/004-28-books.md",
+    "requires": [
+      "skill-27-numbers-9e32cc603a"
+    ],
+    "links": [
+      "skill-29-quick-reference-48de8decfa"
+    ]
+  },
+  {
+    "id": "skill-29-quick-reference-48de8decfa",
+    "purpose": "29 quick reference",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-reference/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-reference/005-29-quick-reference.md",
+    "requires": [
+      "skill-28-books-39bfe10959"
+    ],
+    "links": [
+      "skill-30-method-1cd4af0ec9"
+    ]
+  },
+  {
+    "id": "skill-30-method-1cd4af0ec9",
+    "purpose": "30 method",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-reference/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-reference/006-30-method.md",
+    "requires": [
+      "skill-29-quick-reference-48de8decfa"
+    ],
+    "links": []
+  }
+]

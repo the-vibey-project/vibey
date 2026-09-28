@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-4-deep-learning-fundamentals-f25f61375d",
+    "purpose": "4 deep learning fundamentals",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-deep-learning-and-training/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-deep-learning-and-training/001-4-deep-learning-fundamentals.md",
+    "requires": [],
+    "links": [
+      "skill-5-architectures-fddc6c82c9"
+    ]
+  },
+  {
+    "id": "skill-5-architectures-fddc6c82c9",
+    "purpose": "5 architectures",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-deep-learning-and-training/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-deep-learning-and-training/002-5-architectures.md",
+    "requires": [
+      "skill-4-deep-learning-fundamentals-f25f61375d"
+    ],
+    "links": [
+      "skill-6-the-ecosystem-60b0974906"
+    ]
+  },
+  {
+    "id": "skill-6-the-ecosystem-60b0974906",
+    "purpose": "6 the ecosystem",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-deep-learning-and-training/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-deep-learning-and-training/003-6-the-ecosystem.md",
+    "requires": [
+      "skill-5-architectures-fddc6c82c9"
+    ],
+    "links": [
+      "skill-7-training-at-scale-9b995b1d59"
+    ]
+  },
+  {
+    "id": "skill-7-training-at-scale-9b995b1d59",
+    "purpose": "7 training at scale",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-deep-learning-and-training/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-deep-learning-and-training/004-7-training-at-scale.md",
+    "requires": [
+      "skill-6-the-ecosystem-60b0974906"
+    ],
+    "links": [
+      "skill-8-fine-tuning-and-adaptation-fc6de13deb"
+    ]
+  },
+  {
+    "id": "skill-8-fine-tuning-and-adaptation-fc6de13deb",
+    "purpose": "8 fine tuning and adaptation",
+    "source": "src/vibey_tools/skills/plugins/machine-learning/skills/ml-deep-learning-and-training/SKILL.md",
+    "output": "docs/microslices/skills/machine-learning/skills/ml-deep-learning-and-training/005-8-fine-tuning-and-adaptation.md",
+    "requires": [
+      "skill-7-training-at-scale-9b995b1d59"
+    ],
+    "links": []
+  }
+]

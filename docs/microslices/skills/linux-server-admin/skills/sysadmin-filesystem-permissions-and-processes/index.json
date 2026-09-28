@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-b40ef2d208",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-filesystem-and-files-ef1b0786c7"
+    ]
+  },
+  {
+    "id": "skill-1-filesystem-and-files-ef1b0786c7",
+    "purpose": "1 filesystem and files",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/002-1-filesystem-and-files.md",
+    "requires": [
+      "skill-0-routing-b40ef2d208"
+    ],
+    "links": [
+      "skill-2-users-permissions-capabilities-4d0880b5e5"
+    ]
+  },
+  {
+    "id": "skill-2-users-permissions-capabilities-4d0880b5e5",
+    "purpose": "2 users permissions capabilities",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/003-2-users-permissions-capabilities.md",
+    "requires": [
+      "skill-1-filesystem-and-files-ef1b0786c7"
+    ],
+    "links": [
+      "skill-3-processes-and-resources-69096eaf8e"
+    ]
+  },
+  {
+    "id": "skill-3-processes-and-resources-69096eaf8e",
+    "purpose": "3 processes and resources",
+    "source": "src/vibey_tools/skills/plugins/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/SKILL.md",
+    "output": "docs/microslices/skills/linux-server-admin/skills/sysadmin-filesystem-permissions-and-processes/004-3-processes-and-resources.md",
+    "requires": [
+      "skill-2-users-permissions-capabilities-4d0880b5e5"
+    ],
+    "links": []
+  }
+]

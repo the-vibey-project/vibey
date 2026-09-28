@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-14-differential-forms-9e8062eada",
+    "purpose": "14 differential forms",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations/001-14-differential-forms.md",
+    "requires": [],
+    "links": [
+      "skill-15-constrained-optimization-b8623736d5"
+    ]
+  },
+  {
+    "id": "skill-15-constrained-optimization-b8623736d5",
+    "purpose": "15 constrained optimization",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations/002-15-constrained-optimization.md",
+    "requires": [
+      "skill-14-differential-forms-9e8062eada"
+    ],
+    "links": [
+      "skill-16-differential-equations-b484159deb"
+    ]
+  },
+  {
+    "id": "skill-16-differential-equations-b484159deb",
+    "purpose": "16 differential equations",
+    "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations/SKILL.md",
+    "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-forms-optimization-and-differential-equations/003-16-differential-equations.md",
+    "requires": [
+      "skill-15-constrained-optimization-b8623736d5"
+    ],
+    "links": []
+  }
+]

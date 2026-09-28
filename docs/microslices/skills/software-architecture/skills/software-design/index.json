@@ -1,0 +1,274 @@
+[
+  {
+    "id": "skill-core-philosophy-4dcd0a67f5",
+    "purpose": "core philosophy",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/001-core-philosophy.md",
+    "requires": [],
+    "links": [
+      "skill-design-as-decision-making-96593e366c"
+    ]
+  },
+  {
+    "id": "skill-design-as-decision-making-96593e366c",
+    "purpose": "design as decision making",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/002-design-as-decision-making.md",
+    "requires": [
+      "skill-core-philosophy-4dcd0a67f5"
+    ],
+    "links": [
+      "skill-design-process-by-scale-c476d426c3"
+    ]
+  },
+  {
+    "id": "skill-design-process-by-scale-c476d426c3",
+    "purpose": "design process by scale",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/003-design-process-by-scale.md",
+    "requires": [
+      "skill-design-as-decision-making-96593e366c"
+    ],
+    "links": [
+      "skill-principles-as-contextual-heuristics-5122902a99"
+    ]
+  },
+  {
+    "id": "skill-principles-as-contextual-heuristics-5122902a99",
+    "purpose": "principles as contextual heuristics",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/004-principles-as-contextual-heuristics.md",
+    "requires": [
+      "skill-design-process-by-scale-c476d426c3"
+    ],
+    "links": [
+      "skill-architectural-design-patterns-and-styles-02c80a309c"
+    ]
+  },
+  {
+    "id": "skill-architectural-design-patterns-and-styles-02c80a309c",
+    "purpose": "architectural design patterns and styles",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/005-architectural-design-patterns-and-styles.md",
+    "requires": [
+      "skill-principles-as-contextual-heuristics-5122902a99"
+    ],
+    "links": [
+      "skill-monolith-first-doctrine-64ccf8665a"
+    ]
+  },
+  {
+    "id": "skill-monolith-first-doctrine-64ccf8665a",
+    "purpose": "monolith first doctrine",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/006-monolith-first-doctrine.md",
+    "requires": [
+      "skill-architectural-design-patterns-and-styles-02c80a309c"
+    ],
+    "links": [
+      "skill-domain-driven-design-ddd-ea51814190"
+    ]
+  },
+  {
+    "id": "skill-domain-driven-design-ddd-ea51814190",
+    "purpose": "domain driven design ddd",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/007-domain-driven-design-ddd.md",
+    "requires": [
+      "skill-monolith-first-doctrine-64ccf8665a"
+    ],
+    "links": [
+      "skill-architecture-decision-records-adrs-049a181753"
+    ]
+  },
+  {
+    "id": "skill-architecture-decision-records-adrs-049a181753",
+    "purpose": "architecture decision records adrs",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/008-architecture-decision-records-adrs.md",
+    "requires": [
+      "skill-domain-driven-design-ddd-ea51814190"
+    ],
+    "links": [
+      "skill-the-c4-model-simon-brown-74f8e07a56"
+    ]
+  },
+  {
+    "id": "skill-the-c4-model-simon-brown-74f8e07a56",
+    "purpose": "the c4 model simon brown",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/009-the-c4-model-simon-brown.md",
+    "requires": [
+      "skill-architecture-decision-records-adrs-049a181753"
+    ],
+    "links": [
+      "skill-design-documents-and-rfcs-89d3b74c55"
+    ]
+  },
+  {
+    "id": "skill-design-documents-and-rfcs-89d3b74c55",
+    "purpose": "design documents and rfcs",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/010-design-documents-and-rfcs.md",
+    "requires": [
+      "skill-the-c4-model-simon-brown-74f8e07a56"
+    ],
+    "links": [
+      "skill-architecture-advice-process-6c5ac4a74a"
+    ]
+  },
+  {
+    "id": "skill-architecture-advice-process-6c5ac4a74a",
+    "purpose": "architecture advice process",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/011-architecture-advice-process.md",
+    "requires": [
+      "skill-design-documents-and-rfcs-89d3b74c55"
+    ],
+    "links": [
+      "skill-fitness-functions-and-automated-governance-e5fe64ec6f"
+    ]
+  },
+  {
+    "id": "skill-fitness-functions-and-automated-governance-e5fe64ec6f",
+    "purpose": "fitness functions and automated governance",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/012-fitness-functions-and-automated-governance.md",
+    "requires": [
+      "skill-architecture-advice-process-6c5ac4a74a"
+    ],
+    "links": [
+      "skill-api-design-a88fb9e9ea"
+    ]
+  },
+  {
+    "id": "skill-api-design-a88fb9e9ea",
+    "purpose": "api design",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/013-api-design.md",
+    "requires": [
+      "skill-fitness-functions-and-automated-governance-e5fe64ec6f"
+    ],
+    "links": [
+      "skill-non-functional-design-b8a23c6331"
+    ]
+  },
+  {
+    "id": "skill-non-functional-design-b8a23c6331",
+    "purpose": "non functional design",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/014-non-functional-design.md",
+    "requires": [
+      "skill-api-design-a88fb9e9ea"
+    ],
+    "links": [
+      "skill-ai-impact-on-software-design-6285a65681"
+    ]
+  },
+  {
+    "id": "skill-ai-impact-on-software-design-6285a65681",
+    "purpose": "ai impact on software design",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/015-ai-impact-on-software-design.md",
+    "requires": [
+      "skill-non-functional-design-b8a23c6331"
+    ],
+    "links": [
+      "skill-legacy-brownfield-design-0fcfd11cf1"
+    ]
+  },
+  {
+    "id": "skill-legacy-brownfield-design-0fcfd11cf1",
+    "purpose": "legacy brownfield design",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/016-legacy-brownfield-design.md",
+    "requires": [
+      "skill-ai-impact-on-software-design-6285a65681"
+    ],
+    "links": [
+      "skill-quality-metrics-and-anti-patterns-f2e46a0ea3"
+    ]
+  },
+  {
+    "id": "skill-quality-metrics-and-anti-patterns-f2e46a0ea3",
+    "purpose": "quality metrics and anti patterns",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/017-quality-metrics-and-anti-patterns.md",
+    "requires": [
+      "skill-legacy-brownfield-design-0fcfd11cf1"
+    ],
+    "links": [
+      "skill-refactoring-and-evolution-63da9eabd9"
+    ]
+  },
+  {
+    "id": "skill-refactoring-and-evolution-63da9eabd9",
+    "purpose": "refactoring and evolution",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/018-refactoring-and-evolution.md",
+    "requires": [
+      "skill-quality-metrics-and-anti-patterns-f2e46a0ea3"
+    ],
+    "links": [
+      "skill-benchmarks-that-should-change-your-approach-4b199a0b89"
+    ]
+  },
+  {
+    "id": "skill-benchmarks-that-should-change-your-approach-4b199a0b89",
+    "purpose": "benchmarks that should change your approach",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/019-benchmarks-that-should-change-your-approach.md",
+    "requires": [
+      "skill-refactoring-and-evolution-63da9eabd9"
+    ],
+    "links": [
+      "skill-cross-cutting-themes-53baf2e4b3"
+    ]
+  },
+  {
+    "id": "skill-cross-cutting-themes-53baf2e4b3",
+    "purpose": "cross cutting themes",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/020-cross-cutting-themes.md",
+    "requires": [
+      "skill-benchmarks-that-should-change-your-approach-4b199a0b89"
+    ],
+    "links": [
+      "skill-staged-recommendations-4d477ee724"
+    ]
+  },
+  {
+    "id": "skill-staged-recommendations-4d477ee724",
+    "purpose": "staged recommendations",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/021-staged-recommendations.md",
+    "requires": [
+      "skill-cross-cutting-themes-53baf2e4b3"
+    ],
+    "links": [
+      "skill-expert-s-diagnostic-questions-8f19f04847"
+    ]
+  },
+  {
+    "id": "skill-expert-s-diagnostic-questions-8f19f04847",
+    "purpose": "expert s diagnostic questions",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/022-expert-s-diagnostic-questions.md",
+    "requires": [
+      "skill-staged-recommendations-4d477ee724"
+    ],
+    "links": [
+      "skill-key-sources-and-authorities-8f45efab91"
+    ]
+  },
+  {
+    "id": "skill-key-sources-and-authorities-8f45efab91",
+    "purpose": "key sources and authorities",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-design/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-design/023-key-sources-and-authorities.md",
+    "requires": [
+      "skill-expert-s-diagnostic-questions-8f19f04847"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-14-a-skeleton-936cbe5c35",
+    "purpose": "14 a skeleton",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-history-modernism-and-the-canon/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-history-modernism-and-the-canon/001-14-a-skeleton.md",
+    "requires": [],
+    "links": [
+      "skill-15-modernism-to-contemporary-ae8edd730e"
+    ]
+  },
+  {
+    "id": "skill-15-modernism-to-contemporary-ae8edd730e",
+    "purpose": "15 modernism to contemporary",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-history-modernism-and-the-canon/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-history-modernism-and-the-canon/002-15-modernism-to-contemporary.md",
+    "requires": [
+      "skill-14-a-skeleton-936cbe5c35"
+    ],
+    "links": [
+      "skill-16-the-canon-problem-c9722989a3"
+    ]
+  },
+  {
+    "id": "skill-16-the-canon-problem-c9722989a3",
+    "purpose": "16 the canon problem",
+    "source": "src/vibey_tools/skills/plugins/art-theory-fundamentals/skills/art-history-modernism-and-the-canon/SKILL.md",
+    "output": "docs/microslices/skills/art-theory-fundamentals/skills/art-history-modernism-and-the-canon/003-16-the-canon-problem.md",
+    "requires": [
+      "skill-15-modernism-to-contemporary-ae8edd730e"
+    ],
+    "links": []
+  }
+]

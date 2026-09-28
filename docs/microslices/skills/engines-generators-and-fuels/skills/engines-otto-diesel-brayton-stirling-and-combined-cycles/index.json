@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-the-universal-design-principle-923b2c19ec",
+    "purpose": "the universal design principle",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/001-the-universal-design-principle.md",
+    "requires": [],
+    "links": [
+      "skill-7-the-otto-cycle-spark-ignition-petrol-2dbdd53aa8"
+    ]
+  },
+  {
+    "id": "skill-7-the-otto-cycle-spark-ignition-petrol-2dbdd53aa8",
+    "purpose": "7 the otto cycle spark ignition petrol",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/002-7-the-otto-cycle-spark-ignition-petrol.md",
+    "requires": [
+      "skill-the-universal-design-principle-923b2c19ec"
+    ],
+    "links": [
+      "skill-8-the-diesel-cycle-compression-ignition-ef289f5eb4"
+    ]
+  },
+  {
+    "id": "skill-8-the-diesel-cycle-compression-ignition-ef289f5eb4",
+    "purpose": "8 the diesel cycle compression ignition",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/003-8-the-diesel-cycle-compression-ignition.md",
+    "requires": [
+      "skill-7-the-otto-cycle-spark-ignition-petrol-2dbdd53aa8"
+    ],
+    "links": [
+      "skill-9-the-brayton-cycle-gas-turbines-4bd0c47f5a"
+    ]
+  },
+  {
+    "id": "skill-9-the-brayton-cycle-gas-turbines-4bd0c47f5a",
+    "purpose": "9 the brayton cycle gas turbines",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/004-9-the-brayton-cycle-gas-turbines.md",
+    "requires": [
+      "skill-8-the-diesel-cycle-compression-ignition-ef289f5eb4"
+    ],
+    "links": [
+      "skill-10-the-stirling-engine-a56dc9dc14"
+    ]
+  },
+  {
+    "id": "skill-10-the-stirling-engine-a56dc9dc14",
+    "purpose": "10 the stirling engine",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/005-10-the-stirling-engine.md",
+    "requires": [
+      "skill-9-the-brayton-cycle-gas-turbines-4bd0c47f5a"
+    ],
+    "links": [
+      "skill-11-the-combined-cycle-the-most-efficient-heat-engine-6eae416797"
+    ]
+  },
+  {
+    "id": "skill-11-the-combined-cycle-the-most-efficient-heat-engine-6eae416797",
+    "purpose": "11 the combined cycle the most efficient heat engine",
+    "source": "src/vibey_tools/skills/plugins/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/SKILL.md",
+    "output": "docs/microslices/skills/engines-generators-and-fuels/skills/engines-otto-diesel-brayton-stirling-and-combined-cycles/006-11-the-combined-cycle-the-most-efficient-heat-engine.md",
+    "requires": [
+      "skill-10-the-stirling-engine-a56dc9dc14"
+    ],
+    "links": []
+  }
+]

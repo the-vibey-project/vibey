@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-power-read-this-section-4bf4b0ad9d",
+    "purpose": "4 power read this section",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-power-electronics-and-io/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-power-electronics-and-io/001-4-power-read-this-section.md",
+    "requires": [],
+    "links": [
+      "skill-5-the-electronics-you-actually-need-46edae03cc"
+    ]
+  },
+  {
+    "id": "skill-5-the-electronics-you-actually-need-46edae03cc",
+    "purpose": "5 the electronics you actually need",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-power-electronics-and-io/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-power-electronics-and-io/002-5-the-electronics-you-actually-need.md",
+    "requires": [
+      "skill-4-power-read-this-section-4bf4b0ad9d"
+    ],
+    "links": [
+      "skill-6-sensors-and-inputs-36883d5d02"
+    ]
+  },
+  {
+    "id": "skill-6-sensors-and-inputs-36883d5d02",
+    "purpose": "6 sensors and inputs",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-power-electronics-and-io/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-power-electronics-and-io/003-6-sensors-and-inputs.md",
+    "requires": [
+      "skill-5-the-electronics-you-actually-need-46edae03cc"
+    ],
+    "links": [
+      "skill-7-outputs-motors-and-actuators-c3a03ec9b8"
+    ]
+  },
+  {
+    "id": "skill-7-outputs-motors-and-actuators-c3a03ec9b8",
+    "purpose": "7 outputs motors and actuators",
+    "source": "src/vibey_tools/skills/plugins/diy-kit-dev/skills/maker-power-electronics-and-io/SKILL.md",
+    "output": "docs/microslices/skills/diy-kit-dev/skills/maker-power-electronics-and-io/004-7-outputs-motors-and-actuators.md",
+    "requires": [
+      "skill-6-sensors-and-inputs-36883d5d02"
+    ],
+    "links": []
+  }
+]

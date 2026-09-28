@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-6-first-offers-and-anchoring-e85e0f6825",
+    "purpose": "6 first offers and anchoring",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/001-6-first-offers-and-anchoring.md",
+    "requires": [],
+    "links": [
+      "skill-7-concessions-95b205824c"
+    ]
+  },
+  {
+    "id": "skill-7-concessions-95b205824c",
+    "purpose": "7 concessions",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/002-7-concessions.md",
+    "requires": [
+      "skill-6-first-offers-and-anchoring-e85e0f6825"
+    ],
+    "links": [
+      "skill-8-creating-value-fd84575ee2"
+    ]
+  },
+  {
+    "id": "skill-8-creating-value-fd84575ee2",
+    "purpose": "8 creating value",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/003-8-creating-value.md",
+    "requires": [
+      "skill-7-concessions-95b205824c"
+    ],
+    "links": [
+      "skill-9-the-negotiator-s-dilemma-280e6fe72e"
+    ]
+  },
+  {
+    "id": "skill-9-the-negotiator-s-dilemma-280e6fe72e",
+    "purpose": "9 the negotiator s dilemma",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/004-9-the-negotiator-s-dilemma.md",
+    "requires": [
+      "skill-8-creating-value-fd84575ee2"
+    ],
+    "links": [
+      "skill-10-closing-and-commitment-5a44db325d"
+    ]
+  },
+  {
+    "id": "skill-10-closing-and-commitment-5a44db325d",
+    "purpose": "10 closing and commitment",
+    "source": "src/vibey_tools/skills/plugins/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/SKILL.md",
+    "output": "docs/microslices/skills/negotiation-and-conflict-resolution/skills/negot-anchoring-concessions-value-creation-and-closing/005-10-closing-and-commitment.md",
+    "requires": [
+      "skill-9-the-negotiator-s-dilemma-280e6fe72e"
+    ],
+    "links": []
+  }
+]

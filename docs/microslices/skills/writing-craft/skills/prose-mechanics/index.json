@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-the-foundational-insight-e64589c2f6",
+    "purpose": "the foundational insight",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/001-the-foundational-insight.md",
+    "requires": [],
+    "links": [
+      "skill-parataxis-vs-hypotaxis-the-master-distinction-11b33dd276"
+    ]
+  },
+  {
+    "id": "skill-parataxis-vs-hypotaxis-the-master-distinction-11b33dd276",
+    "purpose": "parataxis vs hypotaxis the master distinction",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/002-parataxis-vs-hypotaxis-the-master-distinction.md",
+    "requires": [
+      "skill-the-foundational-insight-e64589c2f6"
+    ],
+    "links": [
+      "skill-the-major-prose-style-families-aad0661317"
+    ]
+  },
+  {
+    "id": "skill-the-major-prose-style-families-aad0661317",
+    "purpose": "the major prose style families",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/003-the-major-prose-style-families.md",
+    "requires": [
+      "skill-parataxis-vs-hypotaxis-the-master-distinction-11b33dd276"
+    ],
+    "links": [
+      "skill-word-level-mechanics-the-anglo-saxon-latinate-divide-33fe8dbb66"
+    ]
+  },
+  {
+    "id": "skill-word-level-mechanics-the-anglo-saxon-latinate-divide-33fe8dbb66",
+    "purpose": "word level mechanics the anglo saxon latinate divide",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/004-word-level-mechanics-the-anglo-saxon-latinate-divide.md",
+    "requires": [
+      "skill-the-major-prose-style-families-aad0661317"
+    ],
+    "links": [
+      "skill-sentence-mechanics-the-stress-position-e4a606674f"
+    ]
+  },
+  {
+    "id": "skill-sentence-mechanics-the-stress-position-e4a606674f",
+    "purpose": "sentence mechanics the stress position",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/005-sentence-mechanics-the-stress-position.md",
+    "requires": [
+      "skill-word-level-mechanics-the-anglo-saxon-latinate-divide-33fe8dbb66"
+    ],
+    "links": [
+      "skill-sentence-types-and-their-effects-1a9d204909"
+    ]
+  },
+  {
+    "id": "skill-sentence-types-and-their-effects-1a9d204909",
+    "purpose": "sentence types and their effects",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/006-sentence-types-and-their-effects.md",
+    "requires": [
+      "skill-sentence-mechanics-the-stress-position-e4a606674f"
+    ],
+    "links": [
+      "skill-punctuation-as-craft-d23e0baa6c"
+    ]
+  },
+  {
+    "id": "skill-punctuation-as-craft-d23e0baa6c",
+    "purpose": "punctuation as craft",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/007-punctuation-as-craft.md",
+    "requires": [
+      "skill-sentence-types-and-their-effects-1a9d204909"
+    ],
+    "links": [
+      "skill-how-ai-prose-fails-peer-reviewed-evidence-50f1140960"
+    ]
+  },
+  {
+    "id": "skill-how-ai-prose-fails-peer-reviewed-evidence-50f1140960",
+    "purpose": "how ai prose fails peer reviewed evidence",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/008-how-ai-prose-fails-peer-reviewed-evidence.md",
+    "requires": [
+      "skill-punctuation-as-craft-d23e0baa6c"
+    ],
+    "links": [
+      "skill-overriding-ai-prose-defaults-e0871599e3"
+    ]
+  },
+  {
+    "id": "skill-overriding-ai-prose-defaults-e0871599e3",
+    "purpose": "overriding ai prose defaults",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/009-overriding-ai-prose-defaults.md",
+    "requires": [
+      "skill-how-ai-prose-fails-peer-reviewed-evidence-50f1140960"
+    ],
+    "links": [
+      "skill-voice-what-it-is-mechanically-5fbe565aaa"
+    ]
+  },
+  {
+    "id": "skill-voice-what-it-is-mechanically-5fbe565aaa",
+    "purpose": "voice what it is mechanically",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/prose-mechanics/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/prose-mechanics/010-voice-what-it-is-mechanically.md",
+    "requires": [
+      "skill-overriding-ai-prose-defaults-e0871599e3"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,238 @@
+[
+  {
+    "id": "skill-part-1-the-three-laws-precedence-order-never-invert-1010e48e8e",
+    "purpose": "part 1 the three laws precedence order never invert",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/001-part-1-the-three-laws-precedence-order-never-invert.md",
+    "requires": [],
+    "links": [
+      "skill-part-2-prime-directive-before-writing-any-code-46114d242e"
+    ]
+  },
+  {
+    "id": "skill-part-2-prime-directive-before-writing-any-code-46114d242e",
+    "purpose": "part 2 prime directive before writing any code",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/002-part-2-prime-directive-before-writing-any-code.md",
+    "requires": [
+      "skill-part-1-the-three-laws-precedence-order-never-invert-1010e48e8e"
+    ],
+    "links": [
+      "skill-part-3-eight-inviolable-security-principles-saltzer-schroeder-zero-trust-dae7dda65c"
+    ]
+  },
+  {
+    "id": "skill-part-3-eight-inviolable-security-principles-saltzer-schroeder-zero-trust-dae7dda65c",
+    "purpose": "part 3 eight inviolable security principles saltzer schroeder zero trust",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/003-part-3-eight-inviolable-security-principles-saltzer-schroeder-zero-trust.md",
+    "requires": [
+      "skill-part-2-prime-directive-before-writing-any-code-46114d242e"
+    ],
+    "links": [
+      "skill-part-4-spec-driven-development-7e7a48e97d"
+    ]
+  },
+  {
+    "id": "skill-part-4-spec-driven-development-7e7a48e97d",
+    "purpose": "part 4 spec driven development",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/004-part-4-spec-driven-development.md",
+    "requires": [
+      "skill-part-3-eight-inviolable-security-principles-saltzer-schroeder-zero-trust-dae7dda65c"
+    ],
+    "links": [
+      "skill-part-5-project-anatomy-c6ec05eefa"
+    ]
+  },
+  {
+    "id": "skill-part-5-project-anatomy-c6ec05eefa",
+    "purpose": "part 5 project anatomy",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/005-part-5-project-anatomy.md",
+    "requires": [
+      "skill-part-4-spec-driven-development-7e7a48e97d"
+    ],
+    "links": [
+      "skill-part-6-onion-architecture-strict-layer-rules-d550544859"
+    ]
+  },
+  {
+    "id": "skill-part-6-onion-architecture-strict-layer-rules-d550544859",
+    "purpose": "part 6 onion architecture strict layer rules",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/006-part-6-onion-architecture-strict-layer-rules.md",
+    "requires": [
+      "skill-part-5-project-anatomy-c6ec05eefa"
+    ],
+    "links": [
+      "skill-part-7-tdd-the-only-acceptable-workflow-6b511246bb"
+    ]
+  },
+  {
+    "id": "skill-part-7-tdd-the-only-acceptable-workflow-6b511246bb",
+    "purpose": "part 7 tdd the only acceptable workflow",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/007-part-7-tdd-the-only-acceptable-workflow.md",
+    "requires": [
+      "skill-part-6-onion-architecture-strict-layer-rules-d550544859"
+    ],
+    "links": [
+      "skill-part-8-middleware-pipeline-order-net-8-never-deviate-4c83a526e5"
+    ]
+  },
+  {
+    "id": "skill-part-8-middleware-pipeline-order-net-8-never-deviate-4c83a526e5",
+    "purpose": "part 8 middleware pipeline order net 8 never deviate",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/008-part-8-middleware-pipeline-order-net-8-never-deviate.md",
+    "requires": [
+      "skill-part-7-tdd-the-only-acceptable-workflow-6b511246bb"
+    ],
+    "links": [
+      "skill-part-9-identity-authentication-and-authorization-5295d6273f"
+    ]
+  },
+  {
+    "id": "skill-part-9-identity-authentication-and-authorization-5295d6273f",
+    "purpose": "part 9 identity authentication and authorization",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/009-part-9-identity-authentication-and-authorization.md",
+    "requires": [
+      "skill-part-8-middleware-pipeline-order-net-8-never-deviate-4c83a526e5"
+    ],
+    "links": [
+      "skill-part-10-api-security-net-8-39282394b9"
+    ]
+  },
+  {
+    "id": "skill-part-10-api-security-net-8-39282394b9",
+    "purpose": "part 10 api security net 8",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/010-part-10-api-security-net-8.md",
+    "requires": [
+      "skill-part-9-identity-authentication-and-authorization-5295d6273f"
+    ],
+    "links": [
+      "skill-part-11-frontend-security-3693f41d54"
+    ]
+  },
+  {
+    "id": "skill-part-11-frontend-security-3693f41d54",
+    "purpose": "part 11 frontend security",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/011-part-11-frontend-security.md",
+    "requires": [
+      "skill-part-10-api-security-net-8-39282394b9"
+    ],
+    "links": [
+      "skill-part-12-data-layer-security-984d1a5813"
+    ]
+  },
+  {
+    "id": "skill-part-12-data-layer-security-984d1a5813",
+    "purpose": "part 12 data layer security",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/012-part-12-data-layer-security.md",
+    "requires": [
+      "skill-part-11-frontend-security-3693f41d54"
+    ],
+    "links": [
+      "skill-part-13-infrastructure-security-and-devsecops-a83108d32e"
+    ]
+  },
+  {
+    "id": "skill-part-13-infrastructure-security-and-devsecops-a83108d32e",
+    "purpose": "part 13 infrastructure security and devsecops",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/013-part-13-infrastructure-security-and-devsecops.md",
+    "requires": [
+      "skill-part-12-data-layer-security-984d1a5813"
+    ],
+    "links": [
+      "skill-part-14-ai-self-governance-89f0b0cc43"
+    ]
+  },
+  {
+    "id": "skill-part-14-ai-self-governance-89f0b0cc43",
+    "purpose": "part 14 ai self governance",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/014-part-14-ai-self-governance.md",
+    "requires": [
+      "skill-part-13-infrastructure-security-and-devsecops-a83108d32e"
+    ],
+    "links": [
+      "skill-part-15-agentic-execution-protocol-9-steps-ae97cf7181"
+    ]
+  },
+  {
+    "id": "skill-part-15-agentic-execution-protocol-9-steps-ae97cf7181",
+    "purpose": "part 15 agentic execution protocol 9 steps",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/015-part-15-agentic-execution-protocol-9-steps.md",
+    "requires": [
+      "skill-part-14-ai-self-governance-89f0b0cc43"
+    ],
+    "links": [
+      "skill-part-16-definition-of-done-d3955a0697"
+    ]
+  },
+  {
+    "id": "skill-part-16-definition-of-done-d3955a0697",
+    "purpose": "part 16 definition of done",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/016-part-16-definition-of-done.md",
+    "requires": [
+      "skill-part-15-agentic-execution-protocol-9-steps-ae97cf7181"
+    ],
+    "links": [
+      "skill-part-17-anti-patterns-never-do-these-3768dcb030"
+    ]
+  },
+  {
+    "id": "skill-part-17-anti-patterns-never-do-these-3768dcb030",
+    "purpose": "part 17 anti patterns never do these",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/017-part-17-anti-patterns-never-do-these.md",
+    "requires": [
+      "skill-part-16-definition-of-done-d3955a0697"
+    ],
+    "links": [
+      "skill-part-18-structured-logging-standards-6f25a47833"
+    ]
+  },
+  {
+    "id": "skill-part-18-structured-logging-standards-6f25a47833",
+    "purpose": "part 18 structured logging standards",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/018-part-18-structured-logging-standards.md",
+    "requires": [
+      "skill-part-17-anti-patterns-never-do-these-3768dcb030"
+    ],
+    "links": [
+      "skill-part-19-error-handling-standards-c0af1ae3f8"
+    ]
+  },
+  {
+    "id": "skill-part-19-error-handling-standards-c0af1ae3f8",
+    "purpose": "part 19 error handling standards",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/019-part-19-error-handling-standards.md",
+    "requires": [
+      "skill-part-18-structured-logging-standards-6f25a47833"
+    ],
+    "links": [
+      "skill-part-20-git-and-commit-standards-495c54cdb6"
+    ]
+  },
+  {
+    "id": "skill-part-20-git-and-commit-standards-495c54cdb6",
+    "purpose": "part 20 git and commit standards",
+    "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/security-first-scrum/SKILL.md",
+    "output": "docs/microslices/skills/security-first-dev/skills/security-first-scrum/020-part-20-git-and-commit-standards.md",
+    "requires": [
+      "skill-part-19-error-handling-standards-c0af1ae3f8"
+    ],
+    "links": []
+  }
+]

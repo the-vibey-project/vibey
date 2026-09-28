@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-checked-august-2026-99ce17fedc",
+    "purpose": "26 what s live checked august 2026",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-reference/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-reference/001-26-what-s-live-checked-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-b72eb96b05"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-b72eb96b05",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-reference/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-checked-august-2026-99ce17fedc"
+    ],
+    "links": [
+      "skill-28-numbers-5f2326f00c"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-5f2326f00c",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-reference/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-reference/003-28-numbers.md",
+    "requires": [
+      "skill-27-misconceptions-b72eb96b05"
+    ],
+    "links": [
+      "skill-29-books-725b745b1c"
+    ]
+  },
+  {
+    "id": "skill-29-books-725b745b1c",
+    "purpose": "29 books",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-reference/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-reference/004-29-books.md",
+    "requires": [
+      "skill-28-numbers-5f2326f00c"
+    ],
+    "links": [
+      "skill-30-quick-reference-bb8abfb73e"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-bb8abfb73e",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-reference/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-books-725b745b1c"
+    ],
+    "links": [
+      "skill-31-method-63f65ee0b5"
+    ]
+  },
+  {
+    "id": "skill-31-method-63f65ee0b5",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-reference/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-bb8abfb73e"
+    ],
+    "links": []
+  }
+]

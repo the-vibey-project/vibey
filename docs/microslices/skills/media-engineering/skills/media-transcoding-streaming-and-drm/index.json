@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-transcoding-and-packaging-e3585de057",
+    "purpose": "7 transcoding and packaging",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-transcoding-streaming-and-drm/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-transcoding-streaming-and-drm/001-7-transcoding-and-packaging.md",
+    "requires": [],
+    "links": [
+      "skill-8-streaming-delivery-2380b0317f"
+    ]
+  },
+  {
+    "id": "skill-8-streaming-delivery-2380b0317f",
+    "purpose": "8 streaming delivery",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-transcoding-streaming-and-drm/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-transcoding-streaming-and-drm/002-8-streaming-delivery.md",
+    "requires": [
+      "skill-7-transcoding-and-packaging-e3585de057"
+    ],
+    "links": [
+      "skill-9-drm-63e574d180"
+    ]
+  },
+  {
+    "id": "skill-9-drm-63e574d180",
+    "purpose": "9 drm",
+    "source": "src/vibey_tools/skills/plugins/media-engineering/skills/media-transcoding-streaming-and-drm/SKILL.md",
+    "output": "docs/microslices/skills/media-engineering/skills/media-transcoding-streaming-and-drm/003-9-drm.md",
+    "requires": [
+      "skill-8-streaming-delivery-2380b0317f"
+    ],
+    "links": []
+  }
+]

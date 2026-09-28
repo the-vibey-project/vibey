@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-the-stack-f8c2a6f061",
+    "purpose": "17 the stack",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/001-17-the-stack.md",
+    "requires": [],
+    "links": [
+      "skill-18-wi-fi-802-11-7b131e45bf"
+    ]
+  },
+  {
+    "id": "skill-18-wi-fi-802-11-7b131e45bf",
+    "purpose": "18 wi fi 802 11",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/002-18-wi-fi-802-11.md",
+    "requires": [
+      "skill-17-the-stack-f8c2a6f061"
+    ],
+    "links": [
+      "skill-19-bluetooth-and-ble-87f7d48fa0"
+    ]
+  },
+  {
+    "id": "skill-19-bluetooth-and-ble-87f7d48fa0",
+    "purpose": "19 bluetooth and ble",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/003-19-bluetooth-and-ble.md",
+    "requires": [
+      "skill-18-wi-fi-802-11-7b131e45bf"
+    ],
+    "links": [
+      "skill-20-lpwan-and-cellular-iot-4a54bbb8fa"
+    ]
+  },
+  {
+    "id": "skill-20-lpwan-and-cellular-iot-4a54bbb8fa",
+    "purpose": "20 lpwan and cellular iot",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/004-20-lpwan-and-cellular-iot.md",
+    "requires": [
+      "skill-19-bluetooth-and-ble-87f7d48fa0"
+    ],
+    "links": [
+      "skill-21-802-15-4-zigbee-thread-matter-ef24979a81"
+    ]
+  },
+  {
+    "id": "skill-21-802-15-4-zigbee-thread-matter-ef24979a81",
+    "purpose": "21 802 15 4 zigbee thread matter",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/005-21-802-15-4-zigbee-thread-matter.md",
+    "requires": [
+      "skill-20-lpwan-and-cellular-iot-4a54bbb8fa"
+    ],
+    "links": [
+      "skill-22-gnss-2a72609cf0"
+    ]
+  },
+  {
+    "id": "skill-22-gnss-2a72609cf0",
+    "purpose": "22 gnss",
+    "source": "src/vibey_tools/skills/plugins/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/SKILL.md",
+    "output": "docs/microslices/skills/radio-technology-for-software-devs/skills/radio-protocol-stacks-wifi-ble-lpwan-and-gnss/006-22-gnss.md",
+    "requires": [
+      "skill-21-802-15-4-zigbee-thread-matter-ef24979a81"
+    ],
+    "links": []
+  }
+]

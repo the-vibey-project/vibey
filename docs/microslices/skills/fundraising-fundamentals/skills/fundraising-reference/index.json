@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-26-what-moved-verified-august-2026-ad8335a59c",
+    "purpose": "26 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference/001-26-what-moved-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-anti-patterns-975629f82f"
+    ]
+  },
+  {
+    "id": "skill-27-anti-patterns-975629f82f",
+    "purpose": "27 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference/002-27-anti-patterns.md",
+    "requires": [
+      "skill-26-what-moved-verified-august-2026-ad8335a59c"
+    ],
+    "links": [
+      "skill-28-misconceptions-55fb168a44"
+    ]
+  },
+  {
+    "id": "skill-28-misconceptions-55fb168a44",
+    "purpose": "28 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference/003-28-misconceptions.md",
+    "requires": [
+      "skill-27-anti-patterns-975629f82f"
+    ],
+    "links": [
+      "skill-29-numbers-56a89673cb"
+    ]
+  },
+  {
+    "id": "skill-29-numbers-56a89673cb",
+    "purpose": "29 numbers",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference/004-29-numbers.md",
+    "requires": [
+      "skill-28-misconceptions-55fb168a44"
+    ],
+    "links": [
+      "skill-30-books-fdf6c17c91"
+    ]
+  },
+  {
+    "id": "skill-30-books-fdf6c17c91",
+    "purpose": "30 books",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference/005-30-books.md",
+    "requires": [
+      "skill-29-numbers-56a89673cb"
+    ],
+    "links": [
+      "skill-31-quick-reference-606fbc344a"
+    ]
+  },
+  {
+    "id": "skill-31-quick-reference-606fbc344a",
+    "purpose": "31 quick reference",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference/006-31-quick-reference.md",
+    "requires": [
+      "skill-30-books-fdf6c17c91"
+    ],
+    "links": [
+      "skill-32-method-5de015e469"
+    ]
+  },
+  {
+    "id": "skill-32-method-5de015e469",
+    "purpose": "32 method",
+    "source": "src/vibey_tools/skills/plugins/fundraising-fundamentals/skills/fundraising-reference/SKILL.md",
+    "output": "docs/microslices/skills/fundraising-fundamentals/skills/fundraising-reference/007-32-method.md",
+    "requires": [
+      "skill-31-quick-reference-606fbc344a"
+    ],
+    "links": []
+  }
+]

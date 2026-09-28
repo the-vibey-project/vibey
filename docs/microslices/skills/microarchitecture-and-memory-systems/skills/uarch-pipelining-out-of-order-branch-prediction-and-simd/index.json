@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-b4a4d73e5f",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-architecture-versus-microarchitecture-72f3eeb537"
+    ]
+  },
+  {
+    "id": "skill-1-architecture-versus-microarchitecture-72f3eeb537",
+    "purpose": "1 architecture versus microarchitecture",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/002-1-architecture-versus-microarchitecture.md",
+    "requires": [
+      "skill-0-routing-b4a4d73e5f"
+    ],
+    "links": [
+      "skill-2-pipelining-6ffdd3e794"
+    ]
+  },
+  {
+    "id": "skill-2-pipelining-6ffdd3e794",
+    "purpose": "2 pipelining",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/003-2-pipelining.md",
+    "requires": [
+      "skill-1-architecture-versus-microarchitecture-72f3eeb537"
+    ],
+    "links": [
+      "skill-3-out-of-order-execution-1711d24fb2"
+    ]
+  },
+  {
+    "id": "skill-3-out-of-order-execution-1711d24fb2",
+    "purpose": "3 out of order execution",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/004-3-out-of-order-execution.md",
+    "requires": [
+      "skill-2-pipelining-6ffdd3e794"
+    ],
+    "links": [
+      "skill-4-branch-prediction-91d71e6dc6"
+    ]
+  },
+  {
+    "id": "skill-4-branch-prediction-91d71e6dc6",
+    "purpose": "4 branch prediction",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/005-4-branch-prediction.md",
+    "requires": [
+      "skill-3-out-of-order-execution-1711d24fb2"
+    ],
+    "links": [
+      "skill-5-execution-units-and-simd-4e3db0260d"
+    ]
+  },
+  {
+    "id": "skill-5-execution-units-and-simd-4e3db0260d",
+    "purpose": "5 execution units and simd",
+    "source": "src/vibey_tools/skills/plugins/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/SKILL.md",
+    "output": "docs/microslices/skills/microarchitecture-and-memory-systems/skills/uarch-pipelining-out-of-order-branch-prediction-and-simd/006-5-execution-units-and-simd.md",
+    "requires": [
+      "skill-4-branch-prediction-91d71e6dc6"
+    ],
+    "links": []
+  }
+]

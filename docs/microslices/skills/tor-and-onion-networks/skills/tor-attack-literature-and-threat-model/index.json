@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-11-the-attack-literature-what-actually-threatens-tor-users-82a1ccb752",
+    "purpose": "11 the attack literature what actually threatens tor users",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-attack-literature-and-threat-model/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-attack-literature-and-threat-model/001-11-the-attack-literature-what-actually-threatens-tor-users.md",
+    "requires": [],
+    "links": [
+      "skill-where-to-go-next-1e618529c2"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-1e618529c2",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-attack-literature-and-threat-model/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-attack-literature-and-threat-model/002-where-to-go-next.md",
+    "requires": [
+      "skill-11-the-attack-literature-what-actually-threatens-tor-users-82a1ccb752"
+    ],
+    "links": []
+  }
+]

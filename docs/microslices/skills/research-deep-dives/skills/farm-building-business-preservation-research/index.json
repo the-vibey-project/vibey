@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-research-brief-c57da9488e",
+    "purpose": "research brief",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/001-research-brief.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-farm-as-an-engineered-production-system-377cd42789"
+    ]
+  },
+  {
+    "id": "skill-1-the-farm-as-an-engineered-production-system-377cd42789",
+    "purpose": "1 the farm as an engineered production system",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/002-1-the-farm-as-an-engineered-production-system.md",
+    "requires": [
+      "skill-research-brief-c57da9488e"
+    ],
+    "links": [
+      "skill-2-site-planning-and-civil-engineering-7c92cd8606"
+    ]
+  },
+  {
+    "id": "skill-2-site-planning-and-civil-engineering-7c92cd8606",
+    "purpose": "2 site planning and civil engineering",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/003-2-site-planning-and-civil-engineering.md",
+    "requires": [
+      "skill-1-the-farm-as-an-engineered-production-system-377cd42789"
+    ],
+    "links": [
+      "skill-3-farm-buildings-and-construction-9676d8bf17"
+    ]
+  },
+  {
+    "id": "skill-3-farm-buildings-and-construction-9676d8bf17",
+    "purpose": "3 farm buildings and construction",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/004-3-farm-buildings-and-construction.md",
+    "requires": [
+      "skill-2-site-planning-and-civil-engineering-7c92cd8606"
+    ],
+    "links": [
+      "skill-4-insurance-and-risk-management-c2a80e8884"
+    ]
+  },
+  {
+    "id": "skill-4-insurance-and-risk-management-c2a80e8884",
+    "purpose": "4 insurance and risk management",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/005-4-insurance-and-risk-management.md",
+    "requires": [
+      "skill-3-farm-buildings-and-construction-9676d8bf17"
+    ],
+    "links": [
+      "skill-5-farm-finance-and-business-design-f6903852f3"
+    ]
+  },
+  {
+    "id": "skill-5-farm-finance-and-business-design-f6903852f3",
+    "purpose": "5 farm finance and business design",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/006-5-farm-finance-and-business-design.md",
+    "requires": [
+      "skill-4-insurance-and-risk-management-c2a80e8884"
+    ],
+    "links": [
+      "skill-6-food-and-resource-preservation-b94da73f4b"
+    ]
+  },
+  {
+    "id": "skill-6-food-and-resource-preservation-b94da73f4b",
+    "purpose": "6 food and resource preservation",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/007-6-food-and-resource-preservation.md",
+    "requires": [
+      "skill-5-farm-finance-and-business-design-f6903852f3"
+    ],
+    "links": [
+      "skill-7-resource-preservation-beyond-food-72bed3ff7e"
+    ]
+  },
+  {
+    "id": "skill-7-resource-preservation-beyond-food-72bed3ff7e",
+    "purpose": "7 resource preservation beyond food",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/008-7-resource-preservation-beyond-food.md",
+    "requires": [
+      "skill-6-food-and-resource-preservation-b94da73f4b"
+    ],
+    "links": [
+      "skill-8-integrated-failure-analysis-f6e79329b6"
+    ]
+  },
+  {
+    "id": "skill-8-integrated-failure-analysis-f6e79329b6",
+    "purpose": "8 integrated failure analysis",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/009-8-integrated-failure-analysis.md",
+    "requires": [
+      "skill-7-resource-preservation-beyond-food-72bed3ff7e"
+    ],
+    "links": [
+      "skill-9-practical-implementation-sequence-096ea32246"
+    ]
+  },
+  {
+    "id": "skill-9-practical-implementation-sequence-096ea32246",
+    "purpose": "9 practical implementation sequence",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/010-9-practical-implementation-sequence.md",
+    "requires": [
+      "skill-8-integrated-failure-analysis-f6e79329b6"
+    ],
+    "links": [
+      "skill-10-common-mistakes-and-myths-12449a1e4b"
+    ]
+  },
+  {
+    "id": "skill-10-common-mistakes-and-myths-12449a1e4b",
+    "purpose": "10 common mistakes and myths",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/011-10-common-mistakes-and-myths.md",
+    "requires": [
+      "skill-9-practical-implementation-sequence-096ea32246"
+    ],
+    "links": [
+      "skill-research-note-3e49eb8f81"
+    ]
+  },
+  {
+    "id": "skill-research-note-3e49eb8f81",
+    "purpose": "research note",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/farm-building-business-preservation-research/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/farm-building-business-preservation-research/012-research-note.md",
+    "requires": [
+      "skill-10-common-mistakes-and-myths-12449a1e4b"
+    ],
+    "links": []
+  }
+]

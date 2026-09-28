@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-0-routing-ae8b7261d3",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-systems-and-properties-3dcd1cfeaf"
+    ]
+  },
+  {
+    "id": "skill-1-systems-and-properties-3dcd1cfeaf",
+    "purpose": "1 systems and properties",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/002-1-systems-and-properties.md",
+    "requires": [
+      "skill-0-routing-ae8b7261d3"
+    ],
+    "links": [
+      "skill-2-the-zeroth-law-and-temperature-856a74221e"
+    ]
+  },
+  {
+    "id": "skill-2-the-zeroth-law-and-temperature-856a74221e",
+    "purpose": "2 the zeroth law and temperature",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/003-2-the-zeroth-law-and-temperature.md",
+    "requires": [
+      "skill-1-systems-and-properties-3dcd1cfeaf"
+    ],
+    "links": [
+      "skill-3-the-first-law-00d548ab88"
+    ]
+  },
+  {
+    "id": "skill-3-the-first-law-00d548ab88",
+    "purpose": "3 the first law",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/004-3-the-first-law.md",
+    "requires": [
+      "skill-2-the-zeroth-law-and-temperature-856a74221e"
+    ],
+    "links": [
+      "skill-4-the-second-law-and-entropy-4954e7540e"
+    ]
+  },
+  {
+    "id": "skill-4-the-second-law-and-entropy-4954e7540e",
+    "purpose": "4 the second law and entropy",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/005-4-the-second-law-and-entropy.md",
+    "requires": [
+      "skill-3-the-first-law-00d548ab88"
+    ],
+    "links": [
+      "skill-5-property-relations-0da03a2da2"
+    ]
+  },
+  {
+    "id": "skill-5-property-relations-0da03a2da2",
+    "purpose": "5 property relations",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/006-5-property-relations.md",
+    "requires": [
+      "skill-4-the-second-law-and-entropy-4954e7540e"
+    ],
+    "links": [
+      "skill-6-equations-of-state-ff86e555d7"
+    ]
+  },
+  {
+    "id": "skill-6-equations-of-state-ff86e555d7",
+    "purpose": "6 equations of state",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/007-6-equations-of-state.md",
+    "requires": [
+      "skill-5-property-relations-0da03a2da2"
+    ],
+    "links": [
+      "skill-7-phase-behaviour-c4a5b7f7ff"
+    ]
+  },
+  {
+    "id": "skill-7-phase-behaviour-c4a5b7f7ff",
+    "purpose": "7 phase behaviour",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-laws-entropy-property-relations-and-phase-behaviour/008-7-phase-behaviour.md",
+    "requires": [
+      "skill-6-equations-of-state-ff86e555d7"
+    ],
+    "links": []
+  }
+]

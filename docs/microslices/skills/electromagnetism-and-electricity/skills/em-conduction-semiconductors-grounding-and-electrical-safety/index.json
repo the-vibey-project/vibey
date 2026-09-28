@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-20-conduction-and-band-theory-3997406b31",
+    "purpose": "20 conduction and band theory",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/001-20-conduction-and-band-theory.md",
+    "requires": [],
+    "links": [
+      "skill-21-semiconductors-08daa405cd"
+    ]
+  },
+  {
+    "id": "skill-21-semiconductors-08daa405cd",
+    "purpose": "21 semiconductors",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/002-21-semiconductors.md",
+    "requires": [
+      "skill-20-conduction-and-band-theory-3997406b31"
+    ],
+    "links": [
+      "skill-22-superconductivity-d5869f012c"
+    ]
+  },
+  {
+    "id": "skill-22-superconductivity-d5869f012c",
+    "purpose": "22 superconductivity",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/003-22-superconductivity.md",
+    "requires": [
+      "skill-21-semiconductors-08daa405cd"
+    ],
+    "links": [
+      "skill-23-plasma-ea19d4b836"
+    ]
+  },
+  {
+    "id": "skill-23-plasma-ea19d4b836",
+    "purpose": "23 plasma",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/004-23-plasma.md",
+    "requires": [
+      "skill-22-superconductivity-d5869f012c"
+    ],
+    "links": [
+      "skill-24-grounding-shielding-and-emc-35fcd46460"
+    ]
+  },
+  {
+    "id": "skill-24-grounding-shielding-and-emc-35fcd46460",
+    "purpose": "24 grounding shielding and emc",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/005-24-grounding-shielding-and-emc.md",
+    "requires": [
+      "skill-23-plasma-ea19d4b836"
+    ],
+    "links": [
+      "skill-25-the-physics-of-electrical-safety-bb63a53614"
+    ]
+  },
+  {
+    "id": "skill-25-the-physics-of-electrical-safety-bb63a53614",
+    "purpose": "25 the physics of electrical safety",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-conduction-semiconductors-grounding-and-electrical-safety/006-25-the-physics-of-electrical-safety.md",
+    "requires": [
+      "skill-24-grounding-shielding-and-emc-35fcd46460"
+    ],
+    "links": []
+  }
+]

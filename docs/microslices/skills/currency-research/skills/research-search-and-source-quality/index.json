@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-the-one-rule-that-matters-most-f75d5c2005",
+    "purpose": "the one rule that matters most",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-search-and-source-quality/001-the-one-rule-that-matters-most.md",
+    "requires": [],
+    "links": [
+      "skill-constructing-the-search-1458ae774e"
+    ]
+  },
+  {
+    "id": "skill-constructing-the-search-1458ae774e",
+    "purpose": "constructing the search",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-search-and-source-quality/002-constructing-the-search.md",
+    "requires": [
+      "skill-the-one-rule-that-matters-most-f75d5c2005"
+    ],
+    "links": [
+      "skill-source-tiers-b4921561f5"
+    ]
+  },
+  {
+    "id": "skill-source-tiers-b4921561f5",
+    "purpose": "source tiers",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-search-and-source-quality/003-source-tiers.md",
+    "requires": [
+      "skill-constructing-the-search-1458ae774e"
+    ],
+    "links": [
+      "skill-dating-a-claim-910f97afa4"
+    ]
+  },
+  {
+    "id": "skill-dating-a-claim-910f97afa4",
+    "purpose": "dating a claim",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-search-and-source-quality/004-dating-a-claim.md",
+    "requires": [
+      "skill-source-tiers-b4921561f5"
+    ],
+    "links": [
+      "skill-recording-provenance-3e26945010"
+    ]
+  },
+  {
+    "id": "skill-recording-provenance-3e26945010",
+    "purpose": "recording provenance",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-search-and-source-quality/005-recording-provenance.md",
+    "requires": [
+      "skill-dating-a-claim-910f97afa4"
+    ],
+    "links": [
+      "skill-when-the-evidence-is-thin-e9be9ae4b1"
+    ]
+  },
+  {
+    "id": "skill-when-the-evidence-is-thin-e9be9ae4b1",
+    "purpose": "when the evidence is thin",
+    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-search-and-source-quality/006-when-the-evidence-is-thin.md",
+    "requires": [
+      "skill-recording-provenance-3e26945010"
+    ],
+    "links": []
+  }
+]

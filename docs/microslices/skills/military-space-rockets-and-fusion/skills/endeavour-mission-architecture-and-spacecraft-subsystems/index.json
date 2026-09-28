@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-17-mission-architecture-and-the-design-cascade-c4264fc4ce",
+    "purpose": "17 mission architecture and the design cascade",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/001-17-mission-architecture-and-the-design-cascade.md",
+    "requires": [],
+    "links": [
+      "skill-18-spacecraft-power-and-thermal-control-c22f9581f6"
+    ]
+  },
+  {
+    "id": "skill-18-spacecraft-power-and-thermal-control-c22f9581f6",
+    "purpose": "18 spacecraft power and thermal control",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/002-18-spacecraft-power-and-thermal-control.md",
+    "requires": [
+      "skill-17-mission-architecture-and-the-design-cascade-c4264fc4ce"
+    ],
+    "links": [
+      "skill-19-communications-navigation-and-autonomy-bf7f34e526"
+    ]
+  },
+  {
+    "id": "skill-19-communications-navigation-and-autonomy-bf7f34e526",
+    "purpose": "19 communications navigation and autonomy",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/003-19-communications-navigation-and-autonomy.md",
+    "requires": [
+      "skill-18-spacecraft-power-and-thermal-control-c22f9581f6"
+    ],
+    "links": [
+      "skill-20-attitude-control-in-space-propulsion-and-entry-descent-and-landing-39aad0ce65"
+    ]
+  },
+  {
+    "id": "skill-20-attitude-control-in-space-propulsion-and-entry-descent-and-landing-39aad0ce65",
+    "purpose": "20 attitude control in space propulsion and entry descent and landing",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/004-20-attitude-control-in-space-propulsion-and-entry-descent-and-landing.md",
+    "requires": [
+      "skill-19-communications-navigation-and-autonomy-bf7f34e526"
+    ],
+    "links": [
+      "skill-21-human-physiology-life-support-and-isru-4840544458"
+    ]
+  },
+  {
+    "id": "skill-21-human-physiology-life-support-and-isru-4840544458",
+    "purpose": "21 human physiology life support and isru",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/005-21-human-physiology-life-support-and-isru.md",
+    "requires": [
+      "skill-20-attitude-control-in-space-propulsion-and-entry-descent-and-landing-39aad0ce65"
+    ],
+    "links": [
+      "skill-22-reliability-margins-and-the-failures-that-teach-them-6b6f5a2952"
+    ]
+  },
+  {
+    "id": "skill-22-reliability-margins-and-the-failures-that-teach-them-6b6f5a2952",
+    "purpose": "22 reliability margins and the failures that teach them",
+    "source": "src/vibey_tools/skills/plugins/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/SKILL.md",
+    "output": "docs/microslices/skills/military-space-rockets-and-fusion/skills/endeavour-mission-architecture-and-spacecraft-subsystems/006-22-reliability-margins-and-the-failures-that-teach-them.md",
+    "requires": [
+      "skill-21-human-physiology-life-support-and-isru-4840544458"
+    ],
+    "links": []
+  }
+]

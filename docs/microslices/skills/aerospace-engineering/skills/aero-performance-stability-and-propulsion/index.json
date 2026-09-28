@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-5-performance-c681b4c5c3",
+    "purpose": "5 performance",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-performance-stability-and-propulsion/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-performance-stability-and-propulsion/001-5-performance.md",
+    "requires": [],
+    "links": [
+      "skill-6-stability-and-control-ea2fc7e91a"
+    ]
+  },
+  {
+    "id": "skill-6-stability-and-control-ea2fc7e91a",
+    "purpose": "6 stability and control",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-performance-stability-and-propulsion/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-performance-stability-and-propulsion/002-6-stability-and-control.md",
+    "requires": [
+      "skill-5-performance-c681b4c5c3"
+    ],
+    "links": [
+      "skill-7-air-breathing-propulsion-72086cbbc8"
+    ]
+  },
+  {
+    "id": "skill-7-air-breathing-propulsion-72086cbbc8",
+    "purpose": "7 air breathing propulsion",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-performance-stability-and-propulsion/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-performance-stability-and-propulsion/003-7-air-breathing-propulsion.md",
+    "requires": [
+      "skill-6-stability-and-control-ea2fc7e91a"
+    ],
+    "links": []
+  }
+]

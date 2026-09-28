@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-13-the-five-patterns-88cbb20373",
+    "purpose": "13 the five patterns",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/001-13-the-five-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-13-1-the-socks-interface-the-boring-correct-way-23c7b573ee"
+    ]
+  },
+  {
+    "id": "skill-13-1-the-socks-interface-the-boring-correct-way-23c7b573ee",
+    "purpose": "13 1 the socks interface the boring correct way",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/002-13-1-the-socks-interface-the-boring-correct-way.md",
+    "requires": [
+      "skill-13-the-five-patterns-88cbb20373"
+    ],
+    "links": [
+      "skill-13-2-the-control-port-and-ephemeral-onion-services-de20ae4049"
+    ]
+  },
+  {
+    "id": "skill-13-2-the-control-port-and-ephemeral-onion-services-de20ae4049",
+    "purpose": "13 2 the control port and ephemeral onion services",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/003-13-2-the-control-port-and-ephemeral-onion-services.md",
+    "requires": [
+      "skill-13-1-the-socks-interface-the-boring-correct-way-23c7b573ee"
+    ],
+    "links": [
+      "skill-13-3-long-lived-onion-services-torrc-e06d718545"
+    ]
+  },
+  {
+    "id": "skill-13-3-long-lived-onion-services-torrc-e06d718545",
+    "purpose": "13 3 long lived onion services torrc",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/004-13-3-long-lived-onion-services-torrc.md",
+    "requires": [
+      "skill-13-2-the-control-port-and-ephemeral-onion-services-de20ae4049"
+    ],
+    "links": [
+      "skill-13-4-advertising-the-onion-from-your-clearnet-site-f40ed58b4e"
+    ]
+  },
+  {
+    "id": "skill-13-4-advertising-the-onion-from-your-clearnet-site-f40ed58b4e",
+    "purpose": "13 4 advertising the onion from your clearnet site",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/005-13-4-advertising-the-onion-from-your-clearnet-site.md",
+    "requires": [
+      "skill-13-3-long-lived-onion-services-torrc-e06d718545"
+    ],
+    "links": [
+      "skill-13-4a-non-socks-apps-torsocks-and-its-honest-limits-c98f31be5b"
+    ]
+  },
+  {
+    "id": "skill-13-4a-non-socks-apps-torsocks-and-its-honest-limits-c98f31be5b",
+    "purpose": "13 4a non socks apps torsocks and its honest limits",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/006-13-4a-non-socks-apps-torsocks-and-its-honest-limits.md",
+    "requires": [
+      "skill-13-4-advertising-the-onion-from-your-clearnet-site-f40ed58b4e"
+    ],
+    "links": [
+      "skill-13-4b-arti-as-a-library-and-daemon-9f9196c0d3"
+    ]
+  },
+  {
+    "id": "skill-13-4b-arti-as-a-library-and-daemon-9f9196c0d3",
+    "purpose": "13 4b arti as a library and daemon",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/007-13-4b-arti-as-a-library-and-daemon.md",
+    "requires": [
+      "skill-13-4a-non-socks-apps-torsocks-and-its-honest-limits-c98f31be5b"
+    ],
+    "links": [
+      "skill-13-4c-developing-against-a-test-network-chutney-51d284581b"
+    ]
+  },
+  {
+    "id": "skill-13-4c-developing-against-a-test-network-chutney-51d284581b",
+    "purpose": "13 4c developing against a test network chutney",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/008-13-4c-developing-against-a-test-network-chutney.md",
+    "requires": [
+      "skill-13-4b-arti-as-a-library-and-daemon-9f9196c0d3"
+    ],
+    "links": [
+      "skill-13-6-building-your-own-private-network-3d617c4fc3"
+    ]
+  },
+  {
+    "id": "skill-13-6-building-your-own-private-network-3d617c4fc3",
+    "purpose": "13 6 building your own private network",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/009-13-6-building-your-own-private-network.md",
+    "requires": [
+      "skill-13-4c-developing-against-a-test-network-chutney-51d284581b"
+    ],
+    "links": [
+      "skill-where-to-go-next-d07a74871b"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-d07a74871b",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-building-on-tor-software-patterns/010-where-to-go-next.md",
+    "requires": [
+      "skill-13-6-building-your-own-private-network-3d617c4fc3"
+    ],
+    "links": []
+  }
+]

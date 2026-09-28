@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-12-endpoint-management-and-patching-07c8f23464",
+    "purpose": "12 endpoint management and patching",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/001-12-endpoint-management-and-patching.md",
+    "requires": [],
+    "links": [
+      "skill-13-backup-dr-and-continuity-1f63342bae"
+    ]
+  },
+  {
+    "id": "skill-13-backup-dr-and-continuity-1f63342bae",
+    "purpose": "13 backup dr and continuity",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/002-13-backup-dr-and-continuity.md",
+    "requires": [
+      "skill-12-endpoint-management-and-patching-07c8f23464"
+    ],
+    "links": [
+      "skill-14-monitoring-and-logging-fb711fd2cd"
+    ]
+  },
+  {
+    "id": "skill-14-monitoring-and-logging-fb711fd2cd",
+    "purpose": "14 monitoring and logging",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/003-14-monitoring-and-logging.md",
+    "requires": [
+      "skill-13-backup-dr-and-continuity-1f63342bae"
+    ],
+    "links": [
+      "skill-15-itsm-and-change-management-cb4cca018a"
+    ]
+  },
+  {
+    "id": "skill-15-itsm-and-change-management-cb4cca018a",
+    "purpose": "15 itsm and change management",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/004-15-itsm-and-change-management.md",
+    "requires": [
+      "skill-14-monitoring-and-logging-fb711fd2cd"
+    ],
+    "links": [
+      "skill-16-asset-and-configuration-management-2929ce0bb0"
+    ]
+  },
+  {
+    "id": "skill-16-asset-and-configuration-management-2929ce0bb0",
+    "purpose": "16 asset and configuration management",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/005-16-asset-and-configuration-management.md",
+    "requires": [
+      "skill-15-itsm-and-change-management-cb4cca018a"
+    ],
+    "links": [
+      "skill-17-governance-frameworks-f2cbd96993"
+    ]
+  },
+  {
+    "id": "skill-17-governance-frameworks-f2cbd96993",
+    "purpose": "17 governance frameworks",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/006-17-governance-frameworks.md",
+    "requires": [
+      "skill-16-asset-and-configuration-management-2929ce0bb0"
+    ],
+    "links": [
+      "skill-18-capacity-and-lifecycle-8074d2ddd7"
+    ]
+  },
+  {
+    "id": "skill-18-capacity-and-lifecycle-8074d2ddd7",
+    "purpose": "18 capacity and lifecycle",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/007-18-capacity-and-lifecycle.md",
+    "requires": [
+      "skill-17-governance-frameworks-f2cbd96993"
+    ],
+    "links": [
+      "skill-19-vendor-and-third-party-risk-920c443b19"
+    ]
+  },
+  {
+    "id": "skill-19-vendor-and-third-party-risk-920c443b19",
+    "purpose": "19 vendor and third party risk",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-endpoints-continuity-itsm-and-vendor-risk/008-19-vendor-and-third-party-risk.md",
+    "requires": [
+      "skill-18-capacity-and-lifecycle-8074d2ddd7"
+    ],
+    "links": []
+  }
+]

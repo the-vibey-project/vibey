@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-23-interventions-dff3cadc78",
+    "purpose": "23 interventions",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/001-23-interventions.md",
+    "requires": [],
+    "links": [
+      "skill-24-burnout-9b08a55532"
+    ]
+  },
+  {
+    "id": "skill-24-burnout-9b08a55532",
+    "purpose": "24 burnout",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/002-24-burnout.md",
+    "requires": [
+      "skill-23-interventions-dff3cadc78"
+    ],
+    "links": [
+      "skill-25-self-criticism-and-self-compassion-7c67e1879a"
+    ]
+  },
+  {
+    "id": "skill-25-self-criticism-and-self-compassion-7c67e1879a",
+    "purpose": "25 self criticism and self compassion",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/003-25-self-criticism-and-self-compassion.md",
+    "requires": [
+      "skill-24-burnout-9b08a55532"
+    ],
+    "links": [
+      "skill-26-the-limits-a1cb1ed957"
+    ]
+  },
+  {
+    "id": "skill-26-the-limits-a1cb1ed957",
+    "purpose": "26 the limits",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/004-26-the-limits.md",
+    "requires": [
+      "skill-25-self-criticism-and-self-compassion-7c67e1879a"
+    ],
+    "links": [
+      "skill-27-the-industry-critique-7e693e22aa"
+    ]
+  },
+  {
+    "id": "skill-27-the-industry-critique-7e693e22aa",
+    "purpose": "27 the industry critique",
+    "source": "src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/SKILL.md",
+    "output": "docs/microslices/skills/wellbeing-purpose-and-drive/skills/wb-interventions-burnout-limits-and-the-industry-critique/005-27-the-industry-critique.md",
+    "requires": [
+      "skill-26-the-limits-a1cb1ed957"
+    ],
+    "links": []
+  }
+]

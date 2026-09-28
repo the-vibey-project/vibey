@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-15-anti-patterns-c5d6743c0f",
+    "purpose": "15 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-development-reference/001-15-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-16-contested-questions-09580a9a30"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-09580a9a30",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-development-reference/002-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-c5d6743c0f"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-195d089bbe"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-195d089bbe",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-development-reference/003-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-09580a9a30"
+    ],
+    "links": [
+      "skill-18-the-canon-3e50e94c77"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-3e50e94c77",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-development-reference/004-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-195d089bbe"
+    ],
+    "links": [
+      "skill-19-quick-reference-5c320698b3"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-5c320698b3",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-development-reference/005-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-3e50e94c77"
+    ],
+    "links": [
+      "skill-20-sources-and-method-b57af3a6c1"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-b57af3a6c1",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/programming-language-development/skills/language-development-reference/SKILL.md",
+    "output": "docs/microslices/skills/programming-language-development/skills/language-development-reference/006-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-5c320698b3"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-8-inverters-renewables-and-the-inertia-problem-fdb0fa2f76",
+    "purpose": "8 inverters renewables and the inertia problem",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-inverters-storage-markets-and-datacenters/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-inverters-storage-markets-and-datacenters/001-8-inverters-renewables-and-the-inertia-problem.md",
+    "requires": [],
+    "links": [
+      "skill-9-storage-527b705108"
+    ]
+  },
+  {
+    "id": "skill-9-storage-527b705108",
+    "purpose": "9 storage",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-inverters-storage-markets-and-datacenters/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-inverters-storage-markets-and-datacenters/002-9-storage.md",
+    "requires": [
+      "skill-8-inverters-renewables-and-the-inertia-problem-fdb0fa2f76"
+    ],
+    "links": [
+      "skill-10-markets-and-dispatch-585a2594d2"
+    ]
+  },
+  {
+    "id": "skill-10-markets-and-dispatch-585a2594d2",
+    "purpose": "10 markets and dispatch",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-inverters-storage-markets-and-datacenters/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-inverters-storage-markets-and-datacenters/003-10-markets-and-dispatch.md",
+    "requires": [
+      "skill-9-storage-527b705108"
+    ],
+    "links": [
+      "skill-11-writing-grid-software-9ca191716a"
+    ]
+  },
+  {
+    "id": "skill-11-writing-grid-software-9ca191716a",
+    "purpose": "11 writing grid software",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-inverters-storage-markets-and-datacenters/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-inverters-storage-markets-and-datacenters/004-11-writing-grid-software.md",
+    "requires": [
+      "skill-10-markets-and-dispatch-585a2594d2"
+    ],
+    "links": [
+      "skill-12-datacenter-power-5f6143729d"
+    ]
+  },
+  {
+    "id": "skill-12-datacenter-power-5f6143729d",
+    "purpose": "12 datacenter power",
+    "source": "src/vibey_tools/skills/plugins/power-engineering/skills/power-inverters-storage-markets-and-datacenters/SKILL.md",
+    "output": "docs/microslices/skills/power-engineering/skills/power-inverters-storage-markets-and-datacenters/005-12-datacenter-power.md",
+    "requires": [
+      "skill-11-writing-grid-software-9ca191716a"
+    ],
+    "links": []
+  }
+]

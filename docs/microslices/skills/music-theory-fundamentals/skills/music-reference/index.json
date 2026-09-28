@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-22-what-s-live-verified-august-2026-628df8ca92",
+    "purpose": "22 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-reference/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-reference/001-22-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-23-misconceptions-e3de5f1b25"
+    ]
+  },
+  {
+    "id": "skill-23-misconceptions-e3de5f1b25",
+    "purpose": "23 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-reference/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-reference/002-23-misconceptions.md",
+    "requires": [
+      "skill-22-what-s-live-verified-august-2026-628df8ca92"
+    ],
+    "links": [
+      "skill-24-books-7b99eea08f"
+    ]
+  },
+  {
+    "id": "skill-24-books-7b99eea08f",
+    "purpose": "24 books",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-reference/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-reference/003-24-books.md",
+    "requires": [
+      "skill-23-misconceptions-e3de5f1b25"
+    ],
+    "links": [
+      "skill-25-quick-reference-67fa9703b6"
+    ]
+  },
+  {
+    "id": "skill-25-quick-reference-67fa9703b6",
+    "purpose": "25 quick reference",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-reference/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-reference/004-25-quick-reference.md",
+    "requires": [
+      "skill-24-books-7b99eea08f"
+    ],
+    "links": [
+      "skill-26-method-f4bf8d2535"
+    ]
+  },
+  {
+    "id": "skill-26-method-f4bf8d2535",
+    "purpose": "26 method",
+    "source": "src/vibey_tools/skills/plugins/music-theory-fundamentals/skills/music-reference/SKILL.md",
+    "output": "docs/microslices/skills/music-theory-fundamentals/skills/music-reference/005-26-method.md",
+    "requires": [
+      "skill-25-quick-reference-67fa9703b6"
+    ],
+    "links": []
+  }
+]

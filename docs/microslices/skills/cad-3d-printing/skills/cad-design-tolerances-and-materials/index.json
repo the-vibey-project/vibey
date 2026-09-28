@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-design-for-additive-manufacturing-2a4a5d36f5",
+    "purpose": "7 design for additive manufacturing",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-design-tolerances-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-design-tolerances-and-materials/001-7-design-for-additive-manufacturing.md",
+    "requires": [],
+    "links": [
+      "skill-8-tolerances-and-fits-4f36ab2e4d"
+    ]
+  },
+  {
+    "id": "skill-8-tolerances-and-fits-4f36ab2e4d",
+    "purpose": "8 tolerances and fits",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-design-tolerances-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-design-tolerances-and-materials/002-8-tolerances-and-fits.md",
+    "requires": [
+      "skill-7-design-for-additive-manufacturing-2a4a5d36f5"
+    ],
+    "links": [
+      "skill-9-materials-0fe7c7259c"
+    ]
+  },
+  {
+    "id": "skill-9-materials-0fe7c7259c",
+    "purpose": "9 materials",
+    "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-design-tolerances-and-materials/SKILL.md",
+    "output": "docs/microslices/skills/cad-3d-printing/skills/cad-design-tolerances-and-materials/003-9-materials.md",
+    "requires": [
+      "skill-8-tolerances-and-fits-4f36ab2e4d"
+    ],
+    "links": []
+  }
+]

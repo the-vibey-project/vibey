@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-1-installation-extras-8ce6dcebe6",
+    "purpose": "1 installation extras",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-core/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-core/001-1-installation-extras.md",
+    "requires": [],
+    "links": [
+      "skill-2-python-the-v1-core-4-phase-bootstrap-eeab716b7e"
+    ]
+  },
+  {
+    "id": "skill-2-python-the-v1-core-4-phase-bootstrap-eeab716b7e",
+    "purpose": "2 python the v1 core 4 phase bootstrap",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-core/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-core/002-2-python-the-v1-core-4-phase-bootstrap.md",
+    "requires": [
+      "skill-1-installation-extras-8ce6dcebe6"
+    ],
+    "links": []
+  }
+]

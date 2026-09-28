@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-0-routing-8e28e88eac",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-earth-structure-and-plate-tectonics-f8e1f2696a"
+    ]
+  },
+  {
+    "id": "skill-1-earth-structure-and-plate-tectonics-f8e1f2696a",
+    "purpose": "1 earth structure and plate tectonics",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/002-1-earth-structure-and-plate-tectonics.md",
+    "requires": [
+      "skill-0-routing-8e28e88eac"
+    ],
+    "links": [
+      "skill-2-minerals-and-rocks-94912e4ba5"
+    ]
+  },
+  {
+    "id": "skill-2-minerals-and-rocks-94912e4ba5",
+    "purpose": "2 minerals and rocks",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/003-2-minerals-and-rocks.md",
+    "requires": [
+      "skill-1-earth-structure-and-plate-tectonics-f8e1f2696a"
+    ],
+    "links": [
+      "skill-3-deep-time-cf2fad30f2"
+    ]
+  },
+  {
+    "id": "skill-3-deep-time-cf2fad30f2",
+    "purpose": "3 deep time",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/004-3-deep-time.md",
+    "requires": [
+      "skill-2-minerals-and-rocks-94912e4ba5"
+    ],
+    "links": [
+      "skill-4-deformation-and-structure-060813dfa8"
+    ]
+  },
+  {
+    "id": "skill-4-deformation-and-structure-060813dfa8",
+    "purpose": "4 deformation and structure",
+    "source": "src/vibey_tools/skills/plugins/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/SKILL.md",
+    "output": "docs/microslices/skills/geoscience/skills/geo-earth-structure-tectonics-rocks-and-deep-time/005-4-deformation-and-structure.md",
+    "requires": [
+      "skill-3-deep-time-cf2fad30f2"
+    ],
+    "links": []
+  }
+]

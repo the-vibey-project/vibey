@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-anti-patterns-d03ebea940",
+    "purpose": "14 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-reference/001-14-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-15-contested-questions-9ccfe96fc7"
+    ]
+  },
+  {
+    "id": "skill-15-contested-questions-9ccfe96fc7",
+    "purpose": "15 contested questions",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-reference/002-15-contested-questions.md",
+    "requires": [
+      "skill-14-anti-patterns-d03ebea940"
+    ],
+    "links": [
+      "skill-16-currency-snapshot-verified-august-2026-155d46963e"
+    ]
+  },
+  {
+    "id": "skill-16-currency-snapshot-verified-august-2026-155d46963e",
+    "purpose": "16 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-reference/003-16-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-15-contested-questions-9ccfe96fc7"
+    ],
+    "links": [
+      "skill-17-the-canon-600cf8c87f"
+    ]
+  },
+  {
+    "id": "skill-17-the-canon-600cf8c87f",
+    "purpose": "17 the canon",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-reference/004-17-the-canon.md",
+    "requires": [
+      "skill-16-currency-snapshot-verified-august-2026-155d46963e"
+    ],
+    "links": [
+      "skill-18-quick-reference-e41f8c5e7b"
+    ]
+  },
+  {
+    "id": "skill-18-quick-reference-e41f8c5e7b",
+    "purpose": "18 quick reference",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-reference/005-18-quick-reference.md",
+    "requires": [
+      "skill-17-the-canon-600cf8c87f"
+    ],
+    "links": [
+      "skill-19-sources-and-method-adb0500e48"
+    ]
+  },
+  {
+    "id": "skill-19-sources-and-method-adb0500e48",
+    "purpose": "19 sources and method",
+    "source": "src/vibey_tools/skills/plugins/cryptocurrency-development/skills/blockchain-reference/SKILL.md",
+    "output": "docs/microslices/skills/cryptocurrency-development/skills/blockchain-reference/006-19-sources-and-method.md",
+    "requires": [
+      "skill-18-quick-reference-e41f8c5e7b"
+    ],
+    "links": []
+  }
+]

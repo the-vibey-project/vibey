@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-17-misconceptions-61db452df3",
+    "purpose": "17 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-reference/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-reference/001-17-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-18-formulas-and-facts-39cc1816e4"
+    ]
+  },
+  {
+    "id": "skill-18-formulas-and-facts-39cc1816e4",
+    "purpose": "18 formulas and facts",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-reference/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-reference/002-18-formulas-and-facts.md",
+    "requires": [
+      "skill-17-misconceptions-61db452df3"
+    ],
+    "links": [
+      "skill-19-books-e90aa8d8b5"
+    ]
+  },
+  {
+    "id": "skill-19-books-e90aa8d8b5",
+    "purpose": "19 books",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-reference/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-reference/003-19-books.md",
+    "requires": [
+      "skill-18-formulas-and-facts-39cc1816e4"
+    ],
+    "links": [
+      "skill-20-quick-reference-88a22130fc"
+    ]
+  },
+  {
+    "id": "skill-20-quick-reference-88a22130fc",
+    "purpose": "20 quick reference",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-reference/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-reference/004-20-quick-reference.md",
+    "requires": [
+      "skill-19-books-e90aa8d8b5"
+    ],
+    "links": [
+      "skill-21-method-a3178b372a"
+    ]
+  },
+  {
+    "id": "skill-21-method-a3178b372a",
+    "purpose": "21 method",
+    "source": "src/vibey_tools/skills/plugins/game-theory/skills/gametheory-reference/SKILL.md",
+    "output": "docs/microslices/skills/game-theory/skills/gametheory-reference/005-21-method.md",
+    "requires": [
+      "skill-20-quick-reference-88a22130fc"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-6-architectural-patterns-35cd40d019",
+    "purpose": "6 architectural patterns",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-architectural/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-architectural/001-6-architectural-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-7-monoliths-modules-and-microservices-791440a67f"
+    ]
+  },
+  {
+    "id": "skill-7-monoliths-modules-and-microservices-791440a67f",
+    "purpose": "7 monoliths modules and microservices",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-architectural/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-architectural/002-7-monoliths-modules-and-microservices.md",
+    "requires": [
+      "skill-6-architectural-patterns-35cd40d019"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-what-s-live-verified-august-2026-a2d9d5d92a",
+    "purpose": "26 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-reference/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-reference/001-26-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-27-misconceptions-d8bb2bb6a5"
+    ]
+  },
+  {
+    "id": "skill-27-misconceptions-d8bb2bb6a5",
+    "purpose": "27 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-reference/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-reference/002-27-misconceptions.md",
+    "requires": [
+      "skill-26-what-s-live-verified-august-2026-a2d9d5d92a"
+    ],
+    "links": [
+      "skill-28-numbers-e2aabf5eca"
+    ]
+  },
+  {
+    "id": "skill-28-numbers-e2aabf5eca",
+    "purpose": "28 numbers",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-reference/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-reference/003-28-numbers.md",
+    "requires": [
+      "skill-27-misconceptions-d8bb2bb6a5"
+    ],
+    "links": [
+      "skill-29-books-and-resources-6b64258d1f"
+    ]
+  },
+  {
+    "id": "skill-29-books-and-resources-6b64258d1f",
+    "purpose": "29 books and resources",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-reference/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-reference/004-29-books-and-resources.md",
+    "requires": [
+      "skill-28-numbers-e2aabf5eca"
+    ],
+    "links": [
+      "skill-30-quick-reference-0a0c780ecc"
+    ]
+  },
+  {
+    "id": "skill-30-quick-reference-0a0c780ecc",
+    "purpose": "30 quick reference",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-reference/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-reference/005-30-quick-reference.md",
+    "requires": [
+      "skill-29-books-and-resources-6b64258d1f"
+    ],
+    "links": [
+      "skill-31-method-3eed1c22d5"
+    ]
+  },
+  {
+    "id": "skill-31-method-3eed1c22d5",
+    "purpose": "31 method",
+    "source": "src/vibey_tools/skills/plugins/locomotion-and-train-technologies/skills/rail-reference/SKILL.md",
+    "output": "docs/microslices/skills/locomotion-and-train-technologies/skills/rail-reference/006-31-method.md",
+    "requires": [
+      "skill-30-quick-reference-0a0c780ecc"
+    ],
+    "links": []
+  }
+]

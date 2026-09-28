@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-14-numbers-a35f14ea7a",
+    "purpose": "14 numbers",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference/001-14-numbers.md",
+    "requires": [],
+    "links": [
+      "skill-15-misconceptions-f1cb99daf1"
+    ]
+  },
+  {
+    "id": "skill-15-misconceptions-f1cb99daf1",
+    "purpose": "15 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference/002-15-misconceptions.md",
+    "requires": [
+      "skill-14-numbers-a35f14ea7a"
+    ],
+    "links": [
+      "skill-16-contested-9052fca215"
+    ]
+  },
+  {
+    "id": "skill-16-contested-9052fca215",
+    "purpose": "16 contested",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference/003-16-contested.md",
+    "requires": [
+      "skill-15-misconceptions-f1cb99daf1"
+    ],
+    "links": [
+      "skill-17-what-s-actually-open-e73b77b898"
+    ]
+  },
+  {
+    "id": "skill-17-what-s-actually-open-e73b77b898",
+    "purpose": "17 what s actually open",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference/004-17-what-s-actually-open.md",
+    "requires": [
+      "skill-16-contested-9052fca215"
+    ],
+    "links": [
+      "skill-18-textbooks-479e7680a1"
+    ]
+  },
+  {
+    "id": "skill-18-textbooks-479e7680a1",
+    "purpose": "18 textbooks",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference/005-18-textbooks.md",
+    "requires": [
+      "skill-17-what-s-actually-open-e73b77b898"
+    ],
+    "links": [
+      "skill-19-quick-reference-9fea30388f"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-9fea30388f",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference/006-19-quick-reference.md",
+    "requires": [
+      "skill-18-textbooks-479e7680a1"
+    ],
+    "links": [
+      "skill-20-method-227005a0ba"
+    ]
+  },
+  {
+    "id": "skill-20-method-227005a0ba",
+    "purpose": "20 method",
+    "source": "src/vibey_tools/skills/plugins/rocket-science/skills/rocket-reference/SKILL.md",
+    "output": "docs/microslices/skills/rocket-science/skills/rocket-reference/007-20-method.md",
+    "requires": [
+      "skill-19-quick-reference-9fea30388f"
+    ],
+    "links": []
+  }
+]

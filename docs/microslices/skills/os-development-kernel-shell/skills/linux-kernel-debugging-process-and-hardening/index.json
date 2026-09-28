@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-12-debugging-and-observability-65da5206a8",
+    "purpose": "12 debugging and observability",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening/001-12-debugging-and-observability.md",
+    "requires": [],
+    "links": [
+      "skill-13-the-kernel-development-process-bdd52622a5"
+    ]
+  },
+  {
+    "id": "skill-13-the-kernel-development-process-bdd52622a5",
+    "purpose": "13 the kernel development process",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening/002-13-the-kernel-development-process.md",
+    "requires": [
+      "skill-12-debugging-and-observability-65da5206a8"
+    ],
+    "links": [
+      "skill-14-security-and-hardening-434cf64a8e"
+    ]
+  },
+  {
+    "id": "skill-14-security-and-hardening-434cf64a8e",
+    "purpose": "14 security and hardening",
+    "source": "src/vibey_tools/skills/plugins/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/os-development-kernel-shell/skills/linux-kernel-debugging-process-and-hardening/003-14-security-and-hardening.md",
+    "requires": [
+      "skill-13-the-kernel-development-process-bdd52622a5"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-0-routing-91d6f0b8db",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-sampling-and-quantization-cb9dfd8f79"
+    ]
+  },
+  {
+    "id": "skill-1-sampling-and-quantization-cb9dfd8f79",
+    "purpose": "1 sampling and quantization",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/002-1-sampling-and-quantization.md",
+    "requires": [
+      "skill-0-routing-91d6f0b8db"
+    ],
+    "links": [
+      "skill-2-the-frequency-domain-8aebb3502f"
+    ]
+  },
+  {
+    "id": "skill-2-the-frequency-domain-8aebb3502f",
+    "purpose": "2 the frequency domain",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/003-2-the-frequency-domain.md",
+    "requires": [
+      "skill-1-sampling-and-quantization-cb9dfd8f79"
+    ],
+    "links": [
+      "skill-3-filters-383232bb66"
+    ]
+  },
+  {
+    "id": "skill-3-filters-383232bb66",
+    "purpose": "3 filters",
+    "source": "src/vibey_tools/skills/plugins/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/SKILL.md",
+    "output": "docs/microslices/skills/signal-processing/skills/dsp-sampling-frequency-domain-and-filters/004-3-filters.md",
+    "requires": [
+      "skill-2-the-frequency-domain-8aebb3502f"
+    ],
+    "links": []
+  }
+]

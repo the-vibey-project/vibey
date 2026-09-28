@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-14-anti-patterns-d930c26b28",
+    "purpose": "14 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference/001-14-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-15-anti-patterns-table-34e43a81d7"
+    ]
+  },
+  {
+    "id": "skill-15-anti-patterns-table-34e43a81d7",
+    "purpose": "15 anti patterns table",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference/002-15-anti-patterns-table.md",
+    "requires": [
+      "skill-14-anti-patterns-d930c26b28"
+    ],
+    "links": [
+      "skill-16-contested-questions-c66c5dfb07"
+    ]
+  },
+  {
+    "id": "skill-16-contested-questions-c66c5dfb07",
+    "purpose": "16 contested questions",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference/003-16-contested-questions.md",
+    "requires": [
+      "skill-15-anti-patterns-table-34e43a81d7"
+    ],
+    "links": [
+      "skill-17-currency-snapshot-verified-august-2026-2f9cef220e"
+    ]
+  },
+  {
+    "id": "skill-17-currency-snapshot-verified-august-2026-2f9cef220e",
+    "purpose": "17 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference/004-17-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-16-contested-questions-c66c5dfb07"
+    ],
+    "links": [
+      "skill-18-the-canon-301417ec6b"
+    ]
+  },
+  {
+    "id": "skill-18-the-canon-301417ec6b",
+    "purpose": "18 the canon",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference/005-18-the-canon.md",
+    "requires": [
+      "skill-17-currency-snapshot-verified-august-2026-2f9cef220e"
+    ],
+    "links": [
+      "skill-19-quick-reference-b094b340c4"
+    ]
+  },
+  {
+    "id": "skill-19-quick-reference-b094b340c4",
+    "purpose": "19 quick reference",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference/006-19-quick-reference.md",
+    "requires": [
+      "skill-18-the-canon-301417ec6b"
+    ],
+    "links": [
+      "skill-20-sources-and-method-d728c97724"
+    ]
+  },
+  {
+    "id": "skill-20-sources-and-method-d728c97724",
+    "purpose": "20 sources and method",
+    "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-reference/SKILL.md",
+    "output": "docs/microslices/skills/design-patterns/skills/patterns-reference/007-20-sources-and-method.md",
+    "requires": [
+      "skill-19-quick-reference-b094b340c4"
+    ],
+    "links": []
+  }
+]

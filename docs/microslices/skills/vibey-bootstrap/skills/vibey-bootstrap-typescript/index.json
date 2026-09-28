@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-7-typescript-next-js-a-http-client-integration-2452dfb35c",
+    "purpose": "7 typescript next js a http client integration",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-typescript/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-typescript/001-7-typescript-next-js-a-http-client-integration.md",
+    "requires": [],
+    "links": [
+      "skill-8-typescript-next-js-b-porting-the-patterns-to-typescript-2ee86b186b"
+    ]
+  },
+  {
+    "id": "skill-8-typescript-next-js-b-porting-the-patterns-to-typescript-2ee86b186b",
+    "purpose": "8 typescript next js b porting the patterns to typescript",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-typescript/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-typescript/002-8-typescript-next-js-b-porting-the-patterns-to-typescript.md",
+    "requires": [
+      "skill-7-typescript-next-js-a-http-client-integration-2452dfb35c"
+    ],
+    "links": [
+      "skill-9-appendices-9b27bb150b"
+    ]
+  },
+  {
+    "id": "skill-9-appendices-9b27bb150b",
+    "purpose": "9 appendices",
+    "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-typescript/SKILL.md",
+    "output": "docs/microslices/skills/vibey-bootstrap/skills/vibey-bootstrap-typescript/003-9-appendices.md",
+    "requires": [
+      "skill-8-typescript-next-js-b-porting-the-patterns-to-typescript-2ee86b186b"
+    ],
+    "links": []
+  }
+]

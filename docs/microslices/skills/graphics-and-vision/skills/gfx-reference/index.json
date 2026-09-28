@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-anti-patterns-589685f54e",
+    "purpose": "14 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-reference/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-reference/001-14-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-15-numbers-ed3426537d"
+    ]
+  },
+  {
+    "id": "skill-15-numbers-ed3426537d",
+    "purpose": "15 numbers",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-reference/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-reference/002-15-numbers.md",
+    "requires": [
+      "skill-14-anti-patterns-589685f54e"
+    ],
+    "links": [
+      "skill-16-what-actually-moved-verified-august-2026-52866c42c4"
+    ]
+  },
+  {
+    "id": "skill-16-what-actually-moved-verified-august-2026-52866c42c4",
+    "purpose": "16 what actually moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-reference/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-reference/003-16-what-actually-moved-verified-august-2026.md",
+    "requires": [
+      "skill-15-numbers-ed3426537d"
+    ],
+    "links": [
+      "skill-17-books-9b10c11645"
+    ]
+  },
+  {
+    "id": "skill-17-books-9b10c11645",
+    "purpose": "17 books",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-reference/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-reference/004-17-books.md",
+    "requires": [
+      "skill-16-what-actually-moved-verified-august-2026-52866c42c4"
+    ],
+    "links": [
+      "skill-18-quick-reference-52d10697c1"
+    ]
+  },
+  {
+    "id": "skill-18-quick-reference-52d10697c1",
+    "purpose": "18 quick reference",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-reference/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-reference/005-18-quick-reference.md",
+    "requires": [
+      "skill-17-books-9b10c11645"
+    ],
+    "links": [
+      "skill-19-method-e1e425b94c"
+    ]
+  },
+  {
+    "id": "skill-19-method-e1e425b94c",
+    "purpose": "19 method",
+    "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-reference/SKILL.md",
+    "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-reference/006-19-method.md",
+    "requires": [
+      "skill-18-quick-reference-52d10697c1"
+    ],
+    "links": []
+  }
+]

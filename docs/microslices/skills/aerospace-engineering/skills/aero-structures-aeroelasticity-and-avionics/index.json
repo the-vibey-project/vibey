@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-structures-and-materials-771f1c25fe",
+    "purpose": "8 structures and materials",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics/001-8-structures-and-materials.md",
+    "requires": [],
+    "links": [
+      "skill-9-aeroelasticity-2131fc5f83"
+    ]
+  },
+  {
+    "id": "skill-9-aeroelasticity-2131fc5f83",
+    "purpose": "9 aeroelasticity",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics/002-9-aeroelasticity.md",
+    "requires": [
+      "skill-8-structures-and-materials-771f1c25fe"
+    ],
+    "links": [
+      "skill-10-flight-controls-and-avionics-67c05081db"
+    ]
+  },
+  {
+    "id": "skill-10-flight-controls-and-avionics-67c05081db",
+    "purpose": "10 flight controls and avionics",
+    "source": "src/vibey_tools/skills/plugins/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics/SKILL.md",
+    "output": "docs/microslices/skills/aerospace-engineering/skills/aero-structures-aeroelasticity-and-avionics/003-10-flight-controls-and-avionics.md",
+    "requires": [
+      "skill-9-aeroelasticity-2131fc5f83"
+    ],
+    "links": []
+  }
+]

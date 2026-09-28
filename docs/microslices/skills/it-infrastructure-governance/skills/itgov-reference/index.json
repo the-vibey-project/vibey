@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-20-anti-patterns-fd49d45826",
+    "purpose": "20 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference/001-20-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-21-what-moved-verified-august-2026-8c0fdd1272"
+    ]
+  },
+  {
+    "id": "skill-21-what-moved-verified-august-2026-8c0fdd1272",
+    "purpose": "21 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference/002-21-what-moved-verified-august-2026.md",
+    "requires": [
+      "skill-20-anti-patterns-fd49d45826"
+    ],
+    "links": [
+      "skill-22-misconceptions-6ceb4cacbe"
+    ]
+  },
+  {
+    "id": "skill-22-misconceptions-6ceb4cacbe",
+    "purpose": "22 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference/003-22-misconceptions.md",
+    "requires": [
+      "skill-21-what-moved-verified-august-2026-8c0fdd1272"
+    ],
+    "links": [
+      "skill-23-numbers-e20e92e702"
+    ]
+  },
+  {
+    "id": "skill-23-numbers-e20e92e702",
+    "purpose": "23 numbers",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference/004-23-numbers.md",
+    "requires": [
+      "skill-22-misconceptions-6ceb4cacbe"
+    ],
+    "links": [
+      "skill-24-books-21e4cdfe78"
+    ]
+  },
+  {
+    "id": "skill-24-books-21e4cdfe78",
+    "purpose": "24 books",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference/005-24-books.md",
+    "requires": [
+      "skill-23-numbers-e20e92e702"
+    ],
+    "links": [
+      "skill-25-quick-reference-762432b464"
+    ]
+  },
+  {
+    "id": "skill-25-quick-reference-762432b464",
+    "purpose": "25 quick reference",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference/006-25-quick-reference.md",
+    "requires": [
+      "skill-24-books-21e4cdfe78"
+    ],
+    "links": [
+      "skill-26-method-2ea6355ed0"
+    ]
+  },
+  {
+    "id": "skill-26-method-2ea6355ed0",
+    "purpose": "26 method",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-reference/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-reference/007-26-method.md",
+    "requires": [
+      "skill-25-quick-reference-762432b464"
+    ],
+    "links": []
+  }
+]

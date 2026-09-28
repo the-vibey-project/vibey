@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-the-learning-layer-1149b8d707",
+    "purpose": "8 the learning layer",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-learning-simulation-and-fleets/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-learning-simulation-and-fleets/001-8-the-learning-layer.md",
+    "requires": [],
+    "links": [
+      "skill-9-simulation-and-sim-to-real-42fee9aa6e"
+    ]
+  },
+  {
+    "id": "skill-9-simulation-and-sim-to-real-42fee9aa6e",
+    "purpose": "9 simulation and sim to real",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-learning-simulation-and-fleets/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-learning-simulation-and-fleets/002-9-simulation-and-sim-to-real.md",
+    "requires": [
+      "skill-8-the-learning-layer-1149b8d707"
+    ],
+    "links": [
+      "skill-10-multi-robot-and-fleets-7933322c6d"
+    ]
+  },
+  {
+    "id": "skill-10-multi-robot-and-fleets-7933322c6d",
+    "purpose": "10 multi robot and fleets",
+    "source": "src/vibey_tools/skills/plugins/robotics-software/skills/robotics-learning-simulation-and-fleets/SKILL.md",
+    "output": "docs/microslices/skills/robotics-software/skills/robotics-learning-simulation-and-fleets/003-10-multi-robot-and-fleets.md",
+    "requires": [
+      "skill-9-simulation-and-sim-to-real-42fee9aa6e"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-what-this-skill-does-0c1887f94c",
+    "purpose": "what this skill does",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/001-what-this-skill-does.md",
+    "requires": [],
+    "links": [
+      "skill-cmmc-2-0-model-overview-64693050f9"
+    ]
+  },
+  {
+    "id": "skill-cmmc-2-0-model-overview-64693050f9",
+    "purpose": "cmmc 2 0 model overview",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/002-cmmc-2-0-model-overview.md",
+    "requires": [
+      "skill-what-this-skill-does-0c1887f94c"
+    ],
+    "links": [
+      "skill-determining-which-level-applies-6f5fabfa5e"
+    ]
+  },
+  {
+    "id": "skill-determining-which-level-applies-6f5fabfa5e",
+    "purpose": "determining which level applies",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/003-determining-which-level-applies.md",
+    "requires": [
+      "skill-cmmc-2-0-model-overview-64693050f9"
+    ],
+    "links": [
+      "skill-cui-identification-and-handling-4cebfae025"
+    ]
+  },
+  {
+    "id": "skill-cui-identification-and-handling-4cebfae025",
+    "purpose": "cui identification and handling",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/004-cui-identification-and-handling.md",
+    "requires": [
+      "skill-determining-which-level-applies-6f5fabfa5e"
+    ],
+    "links": [
+      "skill-key-dfars-clauses-c2008028b0"
+    ]
+  },
+  {
+    "id": "skill-key-dfars-clauses-c2008028b0",
+    "purpose": "key dfars clauses",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/005-key-dfars-clauses.md",
+    "requires": [
+      "skill-cui-identification-and-handling-4cebfae025"
+    ],
+    "links": [
+      "skill-sprs-score-submission-e7ddd5f015"
+    ]
+  },
+  {
+    "id": "skill-sprs-score-submission-e7ddd5f015",
+    "purpose": "sprs score submission",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/006-sprs-score-submission.md",
+    "requires": [
+      "skill-key-dfars-clauses-c2008028b0"
+    ],
+    "links": [
+      "skill-cybersecurity-incident-disclosure-framework-674b15fdab"
+    ]
+  },
+  {
+    "id": "skill-cybersecurity-incident-disclosure-framework-674b15fdab",
+    "purpose": "cybersecurity incident disclosure framework",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/007-cybersecurity-incident-disclosure-framework.md",
+    "requires": [
+      "skill-sprs-score-submission-e7ddd5f015"
+    ],
+    "links": [
+      "skill-scoping-system-boundaries-for-cui-149f73e955"
+    ]
+  },
+  {
+    "id": "skill-scoping-system-boundaries-for-cui-149f73e955",
+    "purpose": "scoping system boundaries for cui",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/008-scoping-system-boundaries-for-cui.md",
+    "requires": [
+      "skill-cybersecurity-incident-disclosure-framework-674b15fdab"
+    ],
+    "links": [
+      "skill-assessment-types-in-detail-fa308c70e4"
+    ]
+  },
+  {
+    "id": "skill-assessment-types-in-detail-fa308c70e4",
+    "purpose": "assessment types in detail",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/009-assessment-types-in-detail.md",
+    "requires": [
+      "skill-scoping-system-boundaries-for-cui-149f73e955"
+    ],
+    "links": [
+      "skill-common-cmmc-cui-implementation-gaps-ea235e56b8"
+    ]
+  },
+  {
+    "id": "skill-common-cmmc-cui-implementation-gaps-ea235e56b8",
+    "purpose": "common cmmc cui implementation gaps",
+    "source": "src/vibey_tools/skills/plugins/compliance-frameworks/skills/cmmc-cui/SKILL.md",
+    "output": "docs/microslices/skills/compliance-frameworks/skills/cmmc-cui/010-common-cmmc-cui-implementation-gaps.md",
+    "requires": [
+      "skill-assessment-types-in-detail-fa308c70e4"
+    ],
+    "links": []
+  }
+]

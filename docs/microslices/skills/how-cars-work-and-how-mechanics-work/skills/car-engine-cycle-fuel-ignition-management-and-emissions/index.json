@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-0-routing-92913c02c4",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-four-stroke-cycle-0ef09c6c8a"
+    ]
+  },
+  {
+    "id": "skill-1-the-four-stroke-cycle-0ef09c6c8a",
+    "purpose": "1 the four stroke cycle",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/002-1-the-four-stroke-cycle.md",
+    "requires": [
+      "skill-0-routing-92913c02c4"
+    ],
+    "links": [
+      "skill-2-engine-anatomy-07db1fa9d4"
+    ]
+  },
+  {
+    "id": "skill-2-engine-anatomy-07db1fa9d4",
+    "purpose": "2 engine anatomy",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/003-2-engine-anatomy.md",
+    "requires": [
+      "skill-1-the-four-stroke-cycle-0ef09c6c8a"
+    ],
+    "links": [
+      "skill-3-the-air-path-480cb94fee"
+    ]
+  },
+  {
+    "id": "skill-3-the-air-path-480cb94fee",
+    "purpose": "3 the air path",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/004-3-the-air-path.md",
+    "requires": [
+      "skill-2-engine-anatomy-07db1fa9d4"
+    ],
+    "links": [
+      "skill-4-fuel-and-injection-e84038ff19"
+    ]
+  },
+  {
+    "id": "skill-4-fuel-and-injection-e84038ff19",
+    "purpose": "4 fuel and injection",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/005-4-fuel-and-injection.md",
+    "requires": [
+      "skill-3-the-air-path-480cb94fee"
+    ],
+    "links": [
+      "skill-5-ignition-and-knock-d8530843eb"
+    ]
+  },
+  {
+    "id": "skill-5-ignition-and-knock-d8530843eb",
+    "purpose": "5 ignition and knock",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/006-5-ignition-and-knock.md",
+    "requires": [
+      "skill-4-fuel-and-injection-e84038ff19"
+    ],
+    "links": [
+      "skill-6-engine-management-and-closed-loop-control-436f37558f"
+    ]
+  },
+  {
+    "id": "skill-6-engine-management-and-closed-loop-control-436f37558f",
+    "purpose": "6 engine management and closed loop control",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/007-6-engine-management-and-closed-loop-control.md",
+    "requires": [
+      "skill-5-ignition-and-knock-d8530843eb"
+    ],
+    "links": [
+      "skill-7-cooling-and-lubrication-15ffd9790b"
+    ]
+  },
+  {
+    "id": "skill-7-cooling-and-lubrication-15ffd9790b",
+    "purpose": "7 cooling and lubrication",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/008-7-cooling-and-lubrication.md",
+    "requires": [
+      "skill-6-engine-management-and-closed-loop-control-436f37558f"
+    ],
+    "links": [
+      "skill-8-emissions-aftertreatment-d53589ef6c"
+    ]
+  },
+  {
+    "id": "skill-8-emissions-aftertreatment-d53589ef6c",
+    "purpose": "8 emissions aftertreatment",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/009-8-emissions-aftertreatment.md",
+    "requires": [
+      "skill-7-cooling-and-lubrication-15ffd9790b"
+    ],
+    "links": [
+      "skill-9-diesel-specifics-b81fbd7840"
+    ]
+  },
+  {
+    "id": "skill-9-diesel-specifics-b81fbd7840",
+    "purpose": "9 diesel specifics",
+    "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/SKILL.md",
+    "output": "docs/microslices/skills/how-cars-work-and-how-mechanics-work/skills/car-engine-cycle-fuel-ignition-management-and-emissions/010-9-diesel-specifics.md",
+    "requires": [
+      "skill-8-emissions-aftertreatment-d53589ef6c"
+    ],
+    "links": []
+  }
+]

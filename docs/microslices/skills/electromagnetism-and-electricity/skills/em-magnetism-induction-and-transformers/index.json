@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-12-magnetic-fields-f71ccdc046",
+    "purpose": "12 magnetic fields",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/001-12-magnetic-fields.md",
+    "requires": [],
+    "links": [
+      "skill-13-induction-d8e977bf9e"
+    ]
+  },
+  {
+    "id": "skill-13-induction-d8e977bf9e",
+    "purpose": "13 induction",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/002-13-induction.md",
+    "requires": [
+      "skill-12-magnetic-fields-f71ccdc046"
+    ],
+    "links": [
+      "skill-14-inductance-and-transformers-7af67a689d"
+    ]
+  },
+  {
+    "id": "skill-14-inductance-and-transformers-7af67a689d",
+    "purpose": "14 inductance and transformers",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/003-14-inductance-and-transformers.md",
+    "requires": [
+      "skill-13-induction-d8e977bf9e"
+    ],
+    "links": [
+      "skill-15-magnetic-materials-3589c0f410"
+    ]
+  },
+  {
+    "id": "skill-15-magnetic-materials-3589c0f410",
+    "purpose": "15 magnetic materials",
+    "source": "src/vibey_tools/skills/plugins/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/SKILL.md",
+    "output": "docs/microslices/skills/electromagnetism-and-electricity/skills/em-magnetism-induction-and-transformers/004-15-magnetic-materials.md",
+    "requires": [
+      "skill-14-inductance-and-transformers-7af67a689d"
+    ],
+    "links": []
+  }
+]

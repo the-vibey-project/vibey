@@ -1,0 +1,94 @@
+[
+  {
+    "id": "skill-14-reading-instruction-ebb77f089c",
+    "purpose": "14 reading instruction",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/001-14-reading-instruction.md",
+    "requires": [],
+    "links": [
+      "skill-15-mathematics-instruction-1fe16f4007"
+    ]
+  },
+  {
+    "id": "skill-15-mathematics-instruction-1fe16f4007",
+    "purpose": "15 mathematics instruction",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/002-15-mathematics-instruction.md",
+    "requires": [
+      "skill-14-reading-instruction-ebb77f089c"
+    ],
+    "links": [
+      "skill-16-curriculum-and-sequencing-a599910374"
+    ]
+  },
+  {
+    "id": "skill-16-curriculum-and-sequencing-a599910374",
+    "purpose": "16 curriculum and sequencing",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/003-16-curriculum-and-sequencing.md",
+    "requires": [
+      "skill-15-mathematics-instruction-1fe16f4007"
+    ],
+    "links": [
+      "skill-17-classroom-practice-f11048c287"
+    ]
+  },
+  {
+    "id": "skill-17-classroom-practice-f11048c287",
+    "purpose": "17 classroom practice",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/004-17-classroom-practice.md",
+    "requires": [
+      "skill-16-curriculum-and-sequencing-a599910374"
+    ],
+    "links": [
+      "skill-18-differentiation-e8a11d79b8"
+    ]
+  },
+  {
+    "id": "skill-18-differentiation-e8a11d79b8",
+    "purpose": "18 differentiation",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/005-18-differentiation.md",
+    "requires": [
+      "skill-17-classroom-practice-f11048c287"
+    ],
+    "links": [
+      "skill-19-higher-education-2862fa35a8"
+    ]
+  },
+  {
+    "id": "skill-19-higher-education-2862fa35a8",
+    "purpose": "19 higher education",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/006-19-higher-education.md",
+    "requires": [
+      "skill-18-differentiation-e8a11d79b8"
+    ],
+    "links": [
+      "skill-20-adult-and-workplace-learning-6db681d49d"
+    ]
+  },
+  {
+    "id": "skill-20-adult-and-workplace-learning-6db681d49d",
+    "purpose": "20 adult and workplace learning",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/007-20-adult-and-workplace-learning.md",
+    "requires": [
+      "skill-19-higher-education-2862fa35a8"
+    ],
+    "links": [
+      "skill-21-educational-technology-30b790a90e"
+    ]
+  },
+  {
+    "id": "skill-21-educational-technology-30b790a90e",
+    "purpose": "21 educational technology",
+    "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/SKILL.md",
+    "output": "docs/microslices/skills/pedagogy-and-the-study-of-learning/skills/pedagogy-subject-instruction-curriculum-and-classroom-practice/008-21-educational-technology.md",
+    "requires": [
+      "skill-20-adult-and-workplace-learning-6db681d49d"
+    ],
+    "links": []
+  }
+]

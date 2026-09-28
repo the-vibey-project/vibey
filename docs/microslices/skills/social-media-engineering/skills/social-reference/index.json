@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-14-anti-patterns-c40c7780f9",
+    "purpose": "14 anti patterns",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-reference/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-reference/001-14-anti-patterns.md",
+    "requires": [],
+    "links": [
+      "skill-15-contested-questions-40bfb9b7ba"
+    ]
+  },
+  {
+    "id": "skill-15-contested-questions-40bfb9b7ba",
+    "purpose": "15 contested questions",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-reference/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-reference/002-15-contested-questions.md",
+    "requires": [
+      "skill-14-anti-patterns-c40c7780f9"
+    ],
+    "links": [
+      "skill-16-currency-snapshot-verified-august-2026-c0438f0423"
+    ]
+  },
+  {
+    "id": "skill-16-currency-snapshot-verified-august-2026-c0438f0423",
+    "purpose": "16 currency snapshot verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-reference/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-reference/003-16-currency-snapshot-verified-august-2026.md",
+    "requires": [
+      "skill-15-contested-questions-40bfb9b7ba"
+    ],
+    "links": [
+      "skill-17-resources-34b0c167a8"
+    ]
+  },
+  {
+    "id": "skill-17-resources-34b0c167a8",
+    "purpose": "17 resources",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-reference/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-reference/004-17-resources.md",
+    "requires": [
+      "skill-16-currency-snapshot-verified-august-2026-c0438f0423"
+    ],
+    "links": [
+      "skill-18-quick-reference-21cc860d43"
+    ]
+  },
+  {
+    "id": "skill-18-quick-reference-21cc860d43",
+    "purpose": "18 quick reference",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-reference/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-reference/005-18-quick-reference.md",
+    "requires": [
+      "skill-17-resources-34b0c167a8"
+    ],
+    "links": [
+      "skill-19-sources-and-method-32ce3c3d80"
+    ]
+  },
+  {
+    "id": "skill-19-sources-and-method-32ce3c3d80",
+    "purpose": "19 sources and method",
+    "source": "src/vibey_tools/skills/plugins/social-media-engineering/skills/social-reference/SKILL.md",
+    "output": "docs/microslices/skills/social-media-engineering/skills/social-reference/006-19-sources-and-method.md",
+    "requires": [
+      "skill-18-quick-reference-21cc860d43"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,178 @@
+[
+  {
+    "id": "skill-purpose-81916827ab",
+    "purpose": "purpose",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/001-purpose.md",
+    "requires": [],
+    "links": [
+      "skill-1-a-shared-systems-vocabulary-5e1769a912"
+    ]
+  },
+  {
+    "id": "skill-1-a-shared-systems-vocabulary-5e1769a912",
+    "purpose": "1 a shared systems vocabulary",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/002-1-a-shared-systems-vocabulary.md",
+    "requires": [
+      "skill-purpose-81916827ab"
+    ],
+    "links": [
+      "skill-2-stocks-flows-and-maintenance-9ace20d84e"
+    ]
+  },
+  {
+    "id": "skill-2-stocks-flows-and-maintenance-9ace20d84e",
+    "purpose": "2 stocks flows and maintenance",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/003-2-stocks-flows-and-maintenance.md",
+    "requires": [
+      "skill-1-a-shared-systems-vocabulary-5e1769a912"
+    ],
+    "links": [
+      "skill-3-information-and-knowledge-358987f586"
+    ]
+  },
+  {
+    "id": "skill-3-information-and-knowledge-358987f586",
+    "purpose": "3 information and knowledge",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/004-3-information-and-knowledge.md",
+    "requires": [
+      "skill-2-stocks-flows-and-maintenance-9ace20d84e"
+    ],
+    "links": [
+      "skill-4-power-and-governance-abbcb2d683"
+    ]
+  },
+  {
+    "id": "skill-4-power-and-governance-abbcb2d683",
+    "purpose": "4 power and governance",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/005-4-power-and-governance.md",
+    "requires": [
+      "skill-3-information-and-knowledge-358987f586"
+    ],
+    "links": [
+      "skill-5-resilience-and-risk-f05e6b8c69"
+    ]
+  },
+  {
+    "id": "skill-5-resilience-and-risk-f05e6b8c69",
+    "purpose": "5 resilience and risk",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/006-5-resilience-and-risk.md",
+    "requires": [
+      "skill-4-power-and-governance-abbcb2d683"
+    ],
+    "links": [
+      "skill-6-human-agency-and-automation-6d037386d2"
+    ]
+  },
+  {
+    "id": "skill-6-human-agency-and-automation-6d037386d2",
+    "purpose": "6 human agency and automation",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/007-6-human-agency-and-automation.md",
+    "requires": [
+      "skill-5-resilience-and-risk-f05e6b8c69"
+    ],
+    "links": [
+      "skill-7-communication-and-double-empathy-across-systems-34b3c5ee54"
+    ]
+  },
+  {
+    "id": "skill-7-communication-and-double-empathy-across-systems-34b3c5ee54",
+    "purpose": "7 communication and double empathy across systems",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/008-7-communication-and-double-empathy-across-systems.md",
+    "requires": [
+      "skill-6-human-agency-and-automation-6d037386d2"
+    ],
+    "links": [
+      "skill-8-designing-interventions-7ca130d298"
+    ]
+  },
+  {
+    "id": "skill-8-designing-interventions-7ca130d298",
+    "purpose": "8 designing interventions",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/009-8-designing-interventions.md",
+    "requires": [
+      "skill-7-communication-and-double-empathy-across-systems-34b3c5ee54"
+    ],
+    "links": [
+      "skill-9-ethics-of-integration-0f0d588931"
+    ]
+  },
+  {
+    "id": "skill-9-ethics-of-integration-0f0d588931",
+    "purpose": "9 ethics of integration",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/010-9-ethics-of-integration.md",
+    "requires": [
+      "skill-8-designing-interventions-7ca130d298"
+    ],
+    "links": [
+      "skill-10-a-practical-planning-template-0a8274134c"
+    ]
+  },
+  {
+    "id": "skill-10-a-practical-planning-template-0a8274134c",
+    "purpose": "10 a practical planning template",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/011-10-a-practical-planning-template.md",
+    "requires": [
+      "skill-9-ethics-of-integration-0f0d588931"
+    ],
+    "links": [
+      "skill-11-research-architecture-82cb22aa6e"
+    ]
+  },
+  {
+    "id": "skill-11-research-architecture-82cb22aa6e",
+    "purpose": "11 research architecture",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/012-11-research-architecture.md",
+    "requires": [
+      "skill-10-a-practical-planning-template-0a8274134c"
+    ],
+    "links": [
+      "skill-12-capstone-research-questions-670e1113f4"
+    ]
+  },
+  {
+    "id": "skill-12-capstone-research-questions-670e1113f4",
+    "purpose": "12 capstone research questions",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/013-12-capstone-research-questions.md",
+    "requires": [
+      "skill-11-research-architecture-82cb22aa6e"
+    ],
+    "links": [
+      "skill-13-final-synthesis-9b3e859b4d"
+    ]
+  },
+  {
+    "id": "skill-13-final-synthesis-9b3e859b4d",
+    "purpose": "13 final synthesis",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/014-13-final-synthesis.md",
+    "requires": [
+      "skill-12-capstone-research-questions-670e1113f4"
+    ],
+    "links": [
+      "skill-limits-a0cea4bbb4"
+    ]
+  },
+  {
+    "id": "skill-limits-a0cea4bbb4",
+    "purpose": "limits",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-h-integrated-systems-synthesis/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-h-integrated-systems-synthesis/015-limits.md",
+    "requires": [
+      "skill-13-final-synthesis-9b3e859b4d"
+    ],
+    "links": []
+  }
+]

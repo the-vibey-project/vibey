@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-core-philosophy-7bc657bf23",
+    "purpose": "core philosophy",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/001-core-philosophy.md",
+    "requires": [],
+    "links": [
+      "skill-architecture-style-decision-df0882945e"
+    ]
+  },
+  {
+    "id": "skill-architecture-style-decision-df0882945e",
+    "purpose": "architecture style decision",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/002-architecture-style-decision.md",
+    "requires": [
+      "skill-core-philosophy-7bc657bf23"
+    ],
+    "links": [
+      "skill-api-style-selection-8790618ccd"
+    ]
+  },
+  {
+    "id": "skill-api-style-selection-8790618ccd",
+    "purpose": "api style selection",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/003-api-style-selection.md",
+    "requires": [
+      "skill-architecture-style-decision-df0882945e"
+    ],
+    "links": [
+      "skill-python-backend-architecture-7c85633100"
+    ]
+  },
+  {
+    "id": "skill-python-backend-architecture-7c85633100",
+    "purpose": "python backend architecture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/004-python-backend-architecture.md",
+    "requires": [
+      "skill-api-style-selection-8790618ccd"
+    ],
+    "links": [
+      "skill-next-js-typescript-frontend-architecture-2a271c4136"
+    ]
+  },
+  {
+    "id": "skill-next-js-typescript-frontend-architecture-2a271c4136",
+    "purpose": "next js typescript frontend architecture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/005-next-js-typescript-frontend-architecture.md",
+    "requires": [
+      "skill-python-backend-architecture-7c85633100"
+    ],
+    "links": [
+      "skill-azure-cloud-architecture-6770e0d67a"
+    ]
+  },
+  {
+    "id": "skill-azure-cloud-architecture-6770e0d67a",
+    "purpose": "azure cloud architecture",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/006-azure-cloud-architecture.md",
+    "requires": [
+      "skill-next-js-typescript-frontend-architecture-2a271c4136"
+    ],
+    "links": [
+      "skill-cqrs-and-event-sourcing-34cdbf3349"
+    ]
+  },
+  {
+    "id": "skill-cqrs-and-event-sourcing-34cdbf3349",
+    "purpose": "cqrs and event sourcing",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/007-cqrs-and-event-sourcing.md",
+    "requires": [
+      "skill-azure-cloud-architecture-6770e0d67a"
+    ],
+    "links": [
+      "skill-observability-54fe73659e"
+    ]
+  },
+  {
+    "id": "skill-observability-54fe73659e",
+    "purpose": "observability",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/008-observability.md",
+    "requires": [
+      "skill-cqrs-and-event-sourcing-34cdbf3349"
+    ],
+    "links": [
+      "skill-zero-downtime-database-migrations-expand-contract-0fdb3b3664"
+    ]
+  },
+  {
+    "id": "skill-zero-downtime-database-migrations-expand-contract-0fdb3b3664",
+    "purpose": "zero downtime database migrations expand contract",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/009-zero-downtime-database-migrations-expand-contract.md",
+    "requires": [
+      "skill-observability-54fe73659e"
+    ],
+    "links": [
+      "skill-ci-cd-010861d9fe"
+    ]
+  },
+  {
+    "id": "skill-ci-cd-010861d9fe",
+    "purpose": "ci cd",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/010-ci-cd.md",
+    "requires": [
+      "skill-zero-downtime-database-migrations-expand-contract-0fdb3b3664"
+    ],
+    "links": [
+      "skill-process-and-people-74f890c97f"
+    ]
+  },
+  {
+    "id": "skill-process-and-people-74f890c97f",
+    "purpose": "process and people",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/011-process-and-people.md",
+    "requires": [
+      "skill-ci-cd-010861d9fe"
+    ],
+    "links": [
+      "skill-sequencing-decisions-cfd98ecb39"
+    ]
+  },
+  {
+    "id": "skill-sequencing-decisions-cfd98ecb39",
+    "purpose": "sequencing decisions",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/012-sequencing-decisions.md",
+    "requires": [
+      "skill-process-and-people-74f890c97f"
+    ],
+    "links": [
+      "skill-staged-rollout-thresholds-96f6d9d637"
+    ]
+  },
+  {
+    "id": "skill-staged-rollout-thresholds-96f6d9d637",
+    "purpose": "staged rollout thresholds",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/013-staged-rollout-thresholds.md",
+    "requires": [
+      "skill-sequencing-decisions-cfd98ecb39"
+    ],
+    "links": [
+      "skill-common-mistakes-to-avoid-25a04a1937"
+    ]
+  },
+  {
+    "id": "skill-common-mistakes-to-avoid-25a04a1937",
+    "purpose": "common mistakes to avoid",
+    "source": "src/vibey_tools/skills/plugins/software-architecture/skills/software-architecture/SKILL.md",
+    "output": "docs/microslices/skills/software-architecture/skills/software-architecture/014-common-mistakes-to-avoid.md",
+    "requires": [
+      "skill-staged-rollout-thresholds-96f6d9d637"
+    ],
+    "links": []
+  }
+]

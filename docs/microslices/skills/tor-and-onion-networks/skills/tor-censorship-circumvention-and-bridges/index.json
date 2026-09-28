@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-10-censorship-circumvention-bridges-and-pluggable-transports-4a78203daf",
+    "purpose": "10 censorship circumvention bridges and pluggable transports",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-censorship-circumvention-and-bridges/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-censorship-circumvention-and-bridges/001-10-censorship-circumvention-bridges-and-pluggable-transports.md",
+    "requires": [],
+    "links": [
+      "skill-where-to-go-next-0f3e3f683f"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-0f3e3f683f",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-censorship-circumvention-and-bridges/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-censorship-circumvention-and-bridges/002-where-to-go-next.md",
+    "requires": [
+      "skill-10-censorship-circumvention-bridges-and-pluggable-transports-4a78203daf"
+    ],
+    "links": []
+  }
+]

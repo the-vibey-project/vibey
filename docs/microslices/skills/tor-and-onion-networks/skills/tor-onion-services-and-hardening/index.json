@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-8-onion-services-v3-end-to-end-1df9fb0a83",
+    "purpose": "8 onion services v3 end to end",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-onion-services-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-onion-services-and-hardening/001-8-onion-services-v3-end-to-end.md",
+    "requires": [],
+    "links": [
+      "skill-9-hardening-onion-services-vanguards-proof-of-work-load-balancing-a0718aa37d"
+    ]
+  },
+  {
+    "id": "skill-9-hardening-onion-services-vanguards-proof-of-work-load-balancing-a0718aa37d",
+    "purpose": "9 hardening onion services vanguards proof of work load balancing",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-onion-services-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-onion-services-and-hardening/002-9-hardening-onion-services-vanguards-proof-of-work-load-balancing.md",
+    "requires": [
+      "skill-8-onion-services-v3-end-to-end-1df9fb0a83"
+    ],
+    "links": [
+      "skill-where-to-go-next-3478343df8"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-3478343df8",
+    "purpose": "where to go next",
+    "source": "src/vibey_tools/skills/plugins/tor-and-onion-networks/skills/tor-onion-services-and-hardening/SKILL.md",
+    "output": "docs/microslices/skills/tor-and-onion-networks/skills/tor-onion-services-and-hardening/003-where-to-go-next.md",
+    "requires": [
+      "skill-9-hardening-onion-services-vanguards-proof-of-work-load-balancing-a0718aa37d"
+    ],
+    "links": []
+  }
+]

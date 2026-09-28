@@ -1,0 +1,238 @@
+[
+  {
+    "id": "skill-elt-vs-etl-decision-framework-cfd0885cd3",
+    "purpose": "elt vs etl decision framework",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/001-elt-vs-etl-decision-framework.md",
+    "requires": [],
+    "links": [
+      "skill-pipeline-design-principles-9989b94a83"
+    ]
+  },
+  {
+    "id": "skill-pipeline-design-principles-9989b94a83",
+    "purpose": "pipeline design principles",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/002-pipeline-design-principles.md",
+    "requires": [
+      "skill-elt-vs-etl-decision-framework-cfd0885cd3"
+    ],
+    "links": [
+      "skill-incremental-loads-cdc-b74db18ed6"
+    ]
+  },
+  {
+    "id": "skill-incremental-loads-cdc-b74db18ed6",
+    "purpose": "incremental loads cdc",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/003-incremental-loads-cdc.md",
+    "requires": [
+      "skill-pipeline-design-principles-9989b94a83"
+    ],
+    "links": [
+      "skill-scd2-implementation-e91c9192e2"
+    ]
+  },
+  {
+    "id": "skill-scd2-implementation-e91c9192e2",
+    "purpose": "scd2 implementation",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/004-scd2-implementation.md",
+    "requires": [
+      "skill-incremental-loads-cdc-b74db18ed6"
+    ],
+    "links": [
+      "skill-dbt-project-structure-7397ed7111"
+    ]
+  },
+  {
+    "id": "skill-dbt-project-structure-7397ed7111",
+    "purpose": "dbt project structure",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/005-dbt-project-structure.md",
+    "requires": [
+      "skill-scd2-implementation-e91c9192e2"
+    ],
+    "links": [
+      "skill-orchestration-tool-selection-33376f13a6"
+    ]
+  },
+  {
+    "id": "skill-orchestration-tool-selection-33376f13a6",
+    "purpose": "orchestration tool selection",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/006-orchestration-tool-selection.md",
+    "requires": [
+      "skill-dbt-project-structure-7397ed7111"
+    ],
+    "links": [
+      "skill-data-quality-layered-approach-625fecd953"
+    ]
+  },
+  {
+    "id": "skill-data-quality-layered-approach-625fecd953",
+    "purpose": "data quality layered approach",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/007-data-quality-layered-approach.md",
+    "requires": [
+      "skill-orchestration-tool-selection-33376f13a6"
+    ],
+    "links": [
+      "skill-python-data-stack-328ad25db7"
+    ]
+  },
+  {
+    "id": "skill-python-data-stack-328ad25db7",
+    "purpose": "python data stack",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/008-python-data-stack.md",
+    "requires": [
+      "skill-data-quality-layered-approach-625fecd953"
+    ],
+    "links": [
+      "skill-data-quality-at-scale-pydantic-vs-pandera-b3273d4bd2"
+    ]
+  },
+  {
+    "id": "skill-data-quality-at-scale-pydantic-vs-pandera-b3273d4bd2",
+    "purpose": "data quality at scale pydantic vs pandera",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/009-data-quality-at-scale-pydantic-vs-pandera.md",
+    "requires": [
+      "skill-python-data-stack-328ad25db7"
+    ],
+    "links": [
+      "skill-batch-vs-streaming-decision-575c4e0f62"
+    ]
+  },
+  {
+    "id": "skill-batch-vs-streaming-decision-575c4e0f62",
+    "purpose": "batch vs streaming decision",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/010-batch-vs-streaming-decision.md",
+    "requires": [
+      "skill-data-quality-at-scale-pydantic-vs-pandera-b3273d4bd2"
+    ],
+    "links": [
+      "skill-sql-cte-best-practices-f41e989296"
+    ]
+  },
+  {
+    "id": "skill-sql-cte-best-practices-f41e989296",
+    "purpose": "sql cte best practices",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/011-sql-cte-best-practices.md",
+    "requires": [
+      "skill-batch-vs-streaming-decision-575c4e0f62"
+    ],
+    "links": [
+      "skill-cloud-warehouse-cost-controls-033fdd1fa2"
+    ]
+  },
+  {
+    "id": "skill-cloud-warehouse-cost-controls-033fdd1fa2",
+    "purpose": "cloud warehouse cost controls",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/012-cloud-warehouse-cost-controls.md",
+    "requires": [
+      "skill-sql-cte-best-practices-f41e989296"
+    ],
+    "links": [
+      "skill-lakehouse-table-formats-f30ad0fde3"
+    ]
+  },
+  {
+    "id": "skill-lakehouse-table-formats-f30ad0fde3",
+    "purpose": "lakehouse table formats",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/013-lakehouse-table-formats.md",
+    "requires": [
+      "skill-cloud-warehouse-cost-controls-033fdd1fa2"
+    ],
+    "links": [
+      "skill-azure-databricks-optimization-f4f2302cc8"
+    ]
+  },
+  {
+    "id": "skill-azure-databricks-optimization-f4f2302cc8",
+    "purpose": "azure databricks optimization",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/014-azure-databricks-optimization.md",
+    "requires": [
+      "skill-lakehouse-table-formats-f30ad0fde3"
+    ],
+    "links": [
+      "skill-schema-evolution-data-contracts-3628ce5b27"
+    ]
+  },
+  {
+    "id": "skill-schema-evolution-data-contracts-3628ce5b27",
+    "purpose": "schema evolution data contracts",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/015-schema-evolution-data-contracts.md",
+    "requires": [
+      "skill-azure-databricks-optimization-f4f2302cc8"
+    ],
+    "links": [
+      "skill-feature-stores-012d8cc2ed"
+    ]
+  },
+  {
+    "id": "skill-feature-stores-012d8cc2ed",
+    "purpose": "feature stores",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/016-feature-stores.md",
+    "requires": [
+      "skill-schema-evolution-data-contracts-3628ce5b27"
+    ],
+    "links": [
+      "skill-mlflow-production-patterns-be157f33f1"
+    ]
+  },
+  {
+    "id": "skill-mlflow-production-patterns-be157f33f1",
+    "purpose": "mlflow production patterns",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/017-mlflow-production-patterns.md",
+    "requires": [
+      "skill-feature-stores-012d8cc2ed"
+    ],
+    "links": [
+      "skill-ml-modeling-best-practices-0d85ee4a54"
+    ]
+  },
+  {
+    "id": "skill-ml-modeling-best-practices-0d85ee4a54",
+    "purpose": "ml modeling best practices",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/018-ml-modeling-best-practices.md",
+    "requires": [
+      "skill-mlflow-production-patterns-be157f33f1"
+    ],
+    "links": [
+      "skill-data-mesh-what-actually-works-38b4ee810c"
+    ]
+  },
+  {
+    "id": "skill-data-mesh-what-actually-works-38b4ee810c",
+    "purpose": "data mesh what actually works",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/019-data-mesh-what-actually-works.md",
+    "requires": [
+      "skill-ml-modeling-best-practices-0d85ee4a54"
+    ],
+    "links": [
+      "skill-staged-implementation-roadmap-2f911cf846"
+    ]
+  },
+  {
+    "id": "skill-staged-implementation-roadmap-2f911cf846",
+    "purpose": "staged implementation roadmap",
+    "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/data-engineering/SKILL.md",
+    "output": "docs/microslices/skills/ai-and-data/skills/data-engineering/020-staged-implementation-roadmap.md",
+    "requires": [
+      "skill-data-mesh-what-actually-works-38b4ee810c"
+    ],
+    "links": []
+  }
+]

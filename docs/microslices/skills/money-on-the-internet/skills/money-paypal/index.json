@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-1-what-it-actually-is-2c978e9cfb",
+    "purpose": "1 what it actually is",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal/001-1-what-it-actually-is.md",
+    "requires": [],
+    "links": [
+      "skill-2-using-it-3a38ccd9b5"
+    ]
+  },
+  {
+    "id": "skill-2-using-it-3a38ccd9b5",
+    "purpose": "2 using it",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal/002-2-using-it.md",
+    "requires": [
+      "skill-1-what-it-actually-is-2c978e9cfb"
+    ],
+    "links": [
+      "skill-3-us-merchant-fees-official-schedule-effective-1-sep-2026-d95fc8d254"
+    ]
+  },
+  {
+    "id": "skill-3-us-merchant-fees-official-schedule-effective-1-sep-2026-d95fc8d254",
+    "purpose": "3 us merchant fees official schedule effective 1 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal/003-3-us-merchant-fees-official-schedule-effective-1-sep-2026.md",
+    "requires": [
+      "skill-2-using-it-3a38ccd9b5"
+    ],
+    "links": [
+      "skill-4-the-crypto-layer-pyusd-and-the-2026-strategy-versioned-8327f03de7"
+    ]
+  },
+  {
+    "id": "skill-4-the-crypto-layer-pyusd-and-the-2026-strategy-versioned-8327f03de7",
+    "purpose": "4 the crypto layer pyusd and the 2026 strategy versioned",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal/004-4-the-crypto-layer-pyusd-and-the-2026-strategy-versioned.md",
+    "requires": [
+      "skill-3-us-merchant-fees-official-schedule-effective-1-sep-2026-d95fc8d254"
+    ],
+    "links": [
+      "skill-5-developing-on-paypal-9cdc0ec28b"
+    ]
+  },
+  {
+    "id": "skill-5-developing-on-paypal-9cdc0ec28b",
+    "purpose": "5 developing on paypal",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal/005-5-developing-on-paypal.md",
+    "requires": [
+      "skill-4-the-crypto-layer-pyusd-and-the-2026-strategy-versioned-8327f03de7"
+    ],
+    "links": [
+      "skill-6-paypal-vs-stripe-vs-both-f754404bf4"
+    ]
+  },
+  {
+    "id": "skill-6-paypal-vs-stripe-vs-both-f754404bf4",
+    "purpose": "6 paypal vs stripe vs both",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal/006-6-paypal-vs-stripe-vs-both.md",
+    "requires": [
+      "skill-5-developing-on-paypal-9cdc0ec28b"
+    ],
+    "links": [
+      "skill-sources-as-of-16-sep-2026-63fa772ba4"
+    ]
+  },
+  {
+    "id": "skill-sources-as-of-16-sep-2026-63fa772ba4",
+    "purpose": "sources as of 16 sep 2026",
+    "source": "src/vibey_tools/skills/plugins/money-on-the-internet/skills/money-paypal/SKILL.md",
+    "output": "docs/microslices/skills/money-on-the-internet/skills/money-paypal/007-sources-as-of-16-sep-2026.md",
+    "requires": [
+      "skill-6-paypal-vs-stripe-vs-both-f754404bf4"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-15-misconceptions-93a37dbaf7",
+    "purpose": "15 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference/001-15-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-16-what-moved-verified-august-2026-d357a1e0f2"
+    ]
+  },
+  {
+    "id": "skill-16-what-moved-verified-august-2026-d357a1e0f2",
+    "purpose": "16 what moved verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference/002-16-what-moved-verified-august-2026.md",
+    "requires": [
+      "skill-15-misconceptions-93a37dbaf7"
+    ],
+    "links": [
+      "skill-17-scope-note-47240c6e1c"
+    ]
+  },
+  {
+    "id": "skill-17-scope-note-47240c6e1c",
+    "purpose": "17 scope note",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference/003-17-scope-note.md",
+    "requires": [
+      "skill-16-what-moved-verified-august-2026-d357a1e0f2"
+    ],
+    "links": [
+      "skill-18-numbers-cd310af79a"
+    ]
+  },
+  {
+    "id": "skill-18-numbers-cd310af79a",
+    "purpose": "18 numbers",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference/004-18-numbers.md",
+    "requires": [
+      "skill-17-scope-note-47240c6e1c"
+    ],
+    "links": [
+      "skill-19-books-833b1640c7"
+    ]
+  },
+  {
+    "id": "skill-19-books-833b1640c7",
+    "purpose": "19 books",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference/005-19-books.md",
+    "requires": [
+      "skill-18-numbers-cd310af79a"
+    ],
+    "links": [
+      "skill-20-quick-reference-120508fb46"
+    ]
+  },
+  {
+    "id": "skill-20-quick-reference-120508fb46",
+    "purpose": "20 quick reference",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference/006-20-quick-reference.md",
+    "requires": [
+      "skill-19-books-833b1640c7"
+    ],
+    "links": [
+      "skill-21-method-40775a2f20"
+    ]
+  },
+  {
+    "id": "skill-21-method-40775a2f20",
+    "purpose": "21 method",
+    "source": "src/vibey_tools/skills/plugins/nuclear-physics/skills/nuclear-reference/SKILL.md",
+    "output": "docs/microslices/skills/nuclear-physics/skills/nuclear-reference/007-21-method.md",
+    "requires": [
+      "skill-20-quick-reference-120508fb46"
+    ],
+    "links": []
+  }
+]

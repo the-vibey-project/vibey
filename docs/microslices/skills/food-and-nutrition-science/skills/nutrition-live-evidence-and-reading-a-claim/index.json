@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-24-what-s-live-verified-august-2026-52315f04be",
+    "purpose": "24 what s live verified august 2026",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-live-evidence-and-reading-a-claim/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-live-evidence-and-reading-a-claim/001-24-what-s-live-verified-august-2026.md",
+    "requires": [],
+    "links": [
+      "skill-25-reading-a-nutrition-claim-bd7998287e"
+    ]
+  },
+  {
+    "id": "skill-25-reading-a-nutrition-claim-bd7998287e",
+    "purpose": "25 reading a nutrition claim",
+    "source": "src/vibey_tools/skills/plugins/food-and-nutrition-science/skills/nutrition-live-evidence-and-reading-a-claim/SKILL.md",
+    "output": "docs/microslices/skills/food-and-nutrition-science/skills/nutrition-live-evidence-and-reading-a-claim/002-25-reading-a-nutrition-claim.md",
+    "requires": [
+      "skill-24-what-s-live-verified-august-2026-52315f04be"
+    ],
+    "links": []
+  }
+]

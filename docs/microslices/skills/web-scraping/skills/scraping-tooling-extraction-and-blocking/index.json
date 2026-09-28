@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-4-how-the-web-serves-data-84094e0020",
+    "purpose": "4 how the web serves data",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-tooling-extraction-and-blocking/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-tooling-extraction-and-blocking/001-4-how-the-web-serves-data.md",
+    "requires": [],
+    "links": [
+      "skill-5-the-tool-ladder-4f25f53280"
+    ]
+  },
+  {
+    "id": "skill-5-the-tool-ladder-4f25f53280",
+    "purpose": "5 the tool ladder",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-tooling-extraction-and-blocking/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-tooling-extraction-and-blocking/002-5-the-tool-ladder.md",
+    "requires": [
+      "skill-4-how-the-web-serves-data-84094e0020"
+    ],
+    "links": [
+      "skill-6-parsing-and-extraction-2d66e58407"
+    ]
+  },
+  {
+    "id": "skill-6-parsing-and-extraction-2d66e58407",
+    "purpose": "6 parsing and extraction",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-tooling-extraction-and-blocking/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-tooling-extraction-and-blocking/003-6-parsing-and-extraction.md",
+    "requires": [
+      "skill-5-the-tool-ladder-4f25f53280"
+    ],
+    "links": [
+      "skill-7-why-you-re-getting-blocked-6d0991cc97"
+    ]
+  },
+  {
+    "id": "skill-7-why-you-re-getting-blocked-6d0991cc97",
+    "purpose": "7 why you re getting blocked",
+    "source": "src/vibey_tools/skills/plugins/web-scraping/skills/scraping-tooling-extraction-and-blocking/SKILL.md",
+    "output": "docs/microslices/skills/web-scraping/skills/scraping-tooling-extraction-and-blocking/004-7-why-you-re-getting-blocked.md",
+    "requires": [
+      "skill-6-parsing-and-extraction-2d66e58407"
+    ],
+    "links": []
+  }
+]

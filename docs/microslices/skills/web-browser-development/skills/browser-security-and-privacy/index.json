@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-8-the-security-model-77b0564f7a",
+    "purpose": "8 the security model",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-security-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-security-and-privacy/001-8-the-security-model.md",
+    "requires": [],
+    "links": [
+      "skill-9-privacy-and-anti-tracking-5d20a30fa6"
+    ]
+  },
+  {
+    "id": "skill-9-privacy-and-anti-tracking-5d20a30fa6",
+    "purpose": "9 privacy and anti tracking",
+    "source": "src/vibey_tools/skills/plugins/web-browser-development/skills/browser-security-and-privacy/SKILL.md",
+    "output": "docs/microslices/skills/web-browser-development/skills/browser-security-and-privacy/002-9-privacy-and-anti-tracking.md",
+    "requires": [
+      "skill-8-the-security-model-77b0564f7a"
+    ],
+    "links": []
+  }
+]
