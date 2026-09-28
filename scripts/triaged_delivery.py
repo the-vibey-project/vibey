@@ -26,6 +26,7 @@ PRIORITIES = ("critical", "high", "medium", "low")
 TRIAGED = "vibey-gh:triaged"
 BUMPED = "vibey-gh:priority-bumped"
 MARKER = "<!-- vibey-delivery-dispatch issue:{number} -->"
+EVIDENCE_DIR = ".vibey/delivery-evidence"
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,54 @@ def gh(*args: str) -> str:
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "gh command failed")
     return result.stdout
+
+
+def _json_command(args: list[str]) -> dict[str, object]:
+    result = subprocess.run(args, capture_output=True, text=True, check=False)
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "command failed: " + " ".join(args))
+    value = json.loads(result.stdout or "{}")
+    if not isinstance(value, dict):
+        raise RuntimeError("command did not return a JSON object: " + " ".join(args))
+    return value
+
+
+def _evidence_path(repo: Path, project_id: str) -> Path:
+    path = repo / EVIDENCE_DIR / f"{project_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _record_evidence(repo: Path, project_id: str, **values: object) -> None:
+    """Append the latest observed delivery facts; never manufacture completion."""
+    path = _evidence_path(repo, project_id)
+    prior: dict[str, object] = {}
+    if path.exists():
+        prior = json.loads(path.read_text())
+    prior.update(values)
+    prior["updated_at"] = time.time()
+    path.write_text(json.dumps(prior, indent=2, sort_keys=True) + "\n")
+
+
+def _capacity_blocked(status: dict[str, object]) -> bool:
+    queue = status.get("queue_depth")
+    if isinstance(queue, dict) and int(queue.get("awaiting_capacity", 0)) > 0:
+        return True
+    circuits = status.get("circuits")
+    if not isinstance(circuits, list):
+        return False
+    return any(
+        isinstance(circuit, dict)
+        and circuit.get("capacity_state") not in (None, "closed", "available")
+        for circuit in circuits
+    )
+
+
+def _cost_output(project_id: str) -> str:
+    result = subprocess.run(
+        ["uv", "run", "vibey", "cost", project_id], capture_output=True, text=True, check=False
+    )
+    return (result.stdout + result.stderr).strip()
 
 
 def _descendants(pid: int) -> list[int]:
@@ -204,7 +253,13 @@ def dispatch(issue: Issue, *, repo: Path) -> str:
     return project_id
 
 
-def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: float = 900.0) -> None:
+def drive_project(
+    project_id: str,
+    *,
+    repo: Path,
+    max_steps: int = 100,
+    worker_timeout: float = 900.0,
+) -> None:
     """Run the normal worker and answer only DESIGN gates with their declared defaults."""
     for _ in range(max_steps):
         try:
@@ -234,15 +289,24 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
                 f"project {project_id} worker exceeded {worker_timeout:g}s; "
                 "leaving the durable lease for queue.reap"
             )
+            _record_evidence(repo, project_id, outcome="worker_timeout", capacity_safe=True)
             return
-        gates = json.loads(
-            subprocess.run(
-                ["uv", "run", "vibey", "gates", project_id, "--json"],
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout
-        ).get("gates", [])
+        status = _json_command(["uv", "run", "vibey", "status", project_id, "--json"])
+        gates = _json_command(["uv", "run", "vibey", "gates", project_id, "--json"]).get(
+            "gates", []
+        )
+        _record_evidence(
+            repo,
+            project_id,
+            status=status,
+            gates=gates,
+            cost=_cost_output(project_id),
+            review_observed=status.get("phase") in {"review", "done"},
+        )
+        if _capacity_blocked(status):
+            _record_evidence(repo, project_id, outcome="awaiting_capacity", status=status)
+            print(f"project {project_id} paused: capacity evidence requires retry")
+            return
         design_gates = [
             gate
             for gate in gates
@@ -269,6 +333,9 @@ def drive_project(project_id: str, *, max_steps: int = 100, worker_timeout: floa
             if gates:
                 print(f"project {project_id} paused at human gate(s)")
             return
+        if status.get("phase") != "design":
+            _record_evidence(repo, project_id, outcome="worker_progress", status=status)
+            return
         accepted = subprocess.run(
             ["uv", "run", "vibey", "design", "accept", project_id],
             capture_output=True,
@@ -293,6 +360,7 @@ def publish_project(project_id: str, issue: Issue, *, repo: Path) -> str | None:
         ).stdout
     )
     if status.get("phase") != "done":
+        _record_evidence(repo, project_id, outcome="not_done", status=status)
         return None
     branch = f"vibey/{int(status['cycle'])}/integration"
     worktree = Path(str(status["repo_path"]))
@@ -329,19 +397,51 @@ def publish_project(project_id: str, issue: Issue, *, repo: Path) -> str | None:
     subprocess.run(push_gate_command, check=True)
     existing = json.loads(gh("pr", "list", "--head", branch, "--base", "develop", "--json", "url"))
     if existing:
-        return str(existing[0]["url"])
-    return gh(
-        "pr",
-        "create",
-        "--base",
-        "develop",
-        "--head",
-        branch,
-        "--title",
-        f"delivery: #{issue.number} {issue.title}",
-        "--body",
-        f"Automated delivery for GitHub issue #{issue.number}.\n\nVibey project: `{project_id}`.",
-    ).strip()
+        pull_request = str(existing[0]["url"])
+    else:
+        pull_request = gh(
+            "pr",
+            "create",
+            "--base",
+            "develop",
+            "--head",
+            branch,
+            "--title",
+            f"delivery: #{issue.number} {issue.title}",
+            "--body",
+            f"Automated delivery for GitHub issue #{issue.number}.\n\nVibey project: `{project_id}`.",
+        ).strip()
+    pr = json.loads(
+        gh("pr", "view", pull_request, "--json", "url,state,mergedAt,statusCheckRollup")
+    )
+    _record_evidence(repo, project_id, outcome="pr_created", status=status, pull_request=pr)
+    if pr.get("state") == "MERGED":
+        return pull_request
+    checks = pr.get("statusCheckRollup")
+    if (
+        not isinstance(checks, list)
+        or not checks
+        or any(
+            isinstance(check, dict) and check.get("conclusion") not in ("SUCCESS", "SKIPPED")
+            for check in checks
+        )
+    ):
+        print(f"project {project_id} PR is not merge-ready; evidence recorded")
+        return pull_request
+    merge_train = subprocess.run(
+        ["uv", "run", "vibey-gh", "merge-train", "--pr", pull_request.rsplit("/", 1)[-1]],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    _record_evidence(
+        repo,
+        project_id,
+        merge_train_returncode=merge_train.returncode,
+        merge_train_stdout=merge_train.stdout,
+        merge_train_stderr=merge_train.stderr,
+    )
+    return pull_request
 
 
 def run_once(repo: Path) -> int:
@@ -355,7 +455,7 @@ def run_once(repo: Path) -> int:
             continue
         project_id = dispatch(issue, repo=repo)
         print(f"dispatched #{issue.number} ({issue.priority}) -> project {project_id}")
-        drive_project(project_id)
+        drive_project(project_id, repo=repo)
         pull_request = publish_project(project_id, issue, repo=repo)
         if pull_request:
             gh("issue", "comment", str(issue.number), "--body", f"Delivery PR: {pull_request}")
