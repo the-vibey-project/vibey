@@ -18,6 +18,7 @@ This is the general form; that one can converge on it.
 
 import asyncio
 import json
+import pathlib
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping
@@ -36,6 +37,8 @@ OLLAMA_MODEL_ENV = "VIBEY_OLLAMA_MODEL"
 OLLAMA_TIMEOUT_ENV = "VIBEY_OLLAMA_TIMEOUT"
 OLLAMA_CONTEXT_ENV = "VIBEY_OLLAMA_CONTEXT"
 OLLAMA_OUTPUT_ENV = "VIBEY_OLLAMA_OUTPUT"
+OLLAMA_FIT_ENV = "VIBEY_OLLAMA_FIT"
+VIBEY_REVISION_ENV = "VIBEY_REVISION"
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
@@ -44,6 +47,29 @@ DEFAULT_OLLAMA_CONTEXT = 8192
 DEFAULT_OLLAMA_OUTPUT = 2048
 
 _HTTP_SCHEMES = ("http", "https")
+
+
+def _load_fit(
+    path: str | None, url: str, model: str, revision: str | None
+) -> dict[str, int] | None:
+    if not path:
+        return None
+    try:
+        record = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+        if record.get("url") != url or record.get("model") != model:
+            return None
+        if revision and record.get("revision") != revision:
+            return None
+        fit = record.get("selected_fit")
+        if not isinstance(fit, dict) or not fit.get("valid"):
+            return None
+        context = int(fit["context"])
+        output = int(fit["output"])
+        if context < 4096 or output <= 0:
+            return None
+        return {"context": context, "output": output}
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
 
 
 class UrllibOllamaTransport:
@@ -136,6 +162,16 @@ class OllamaChatClient:
         raw_timeout = environ.get(OLLAMA_TIMEOUT_ENV) or str(DEFAULT_OLLAMA_TIMEOUT)
         raw_context = environ.get(OLLAMA_CONTEXT_ENV) or str(DEFAULT_OLLAMA_CONTEXT)
         raw_output = environ.get(OLLAMA_OUTPUT_ENV) or str(DEFAULT_OLLAMA_OUTPUT)
+        fit_path = environ.get(OLLAMA_FIT_ENV)
+        fit = _load_fit(
+            fit_path,
+            environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
+            model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
+            environ.get(VIBEY_REVISION_ENV),
+        )
+        if fit is not None:
+            raw_context = str(fit["context"])
+            raw_output = str(fit["output"])
         try:
             timeout = int(raw_timeout)
         except ValueError as exc:

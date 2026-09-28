@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import time
 import urllib.request
 from datetime import UTC, datetime
@@ -54,17 +55,42 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:11434")
     parser.add_argument("--model", default="gpt-oss:20b")
-    parser.add_argument("--context", type=int, default=8192)
-    parser.add_argument("--output", type=int, default=2048)
+    parser.add_argument("--contexts", default="4096,8192")
+    parser.add_argument("--outputs", default="512,1024,2048")
+    parser.add_argument("--record", type=str)
     args = parser.parse_args()
+    contexts = [int(value) for value in args.contexts.split(",")]
+    outputs = [int(value) for value in args.outputs.split(",")]
+    results = [
+        probe(args.url, args.model, context, output, 'Return {"ok":true}.')
+        for context in contexts
+        for output in outputs
+    ]
+    valid = [item for item in results if item["ok"]]
+    selected = (
+        min(valid, key=lambda item: (item["elapsed_seconds"], item["context"], item["output"]))
+        if valid
+        else None
+    )
+    try:
+        revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        revision = "unknown"
     result = {
         "measured_at": datetime.now(UTC).isoformat(),
         "url": args.url,
         "model": args.model,
-        "probe": probe(args.url, args.model, args.context, args.output, 'Return {"ok":true}.'),
+        "revision": revision,
+        "prompt_shape": {"system_chars": 22, "user_chars": 20},
+        "results": results,
+        "selected_fit": selected,
     }
-    print(json.dumps(result, sort_keys=True))
-    return 0 if result["probe"]["ok"] else 2  # type: ignore[index]
+    encoded = json.dumps(result, sort_keys=True)
+    if args.record:
+        with open(args.record, "w", encoding="utf-8") as handle:
+            handle.write(encoded + "\n")
+    print(encoded)
+    return 0 if selected is not None else 2
 
 
 if __name__ == "__main__":
