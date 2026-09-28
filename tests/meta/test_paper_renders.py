@@ -106,6 +106,12 @@ def test_the_paper_carries_the_reproducible_visual_atlas() -> None:
         "fig:completion-band",
         "fig:six-materials",
         "fig:record-effect",
+        "fig:queue-state",
+        "fig:authority-map",
+        "fig:process-reaping",
+        "fig:environment-boundary",
+        "fig:capacity-precedence",
+        "fig:publication-ladder",
     )
     assert text.count(r"\begin{figure") >= len(expected_labels)
     assert all(rf"\label{{{label}}}" in text for label in expected_labels)

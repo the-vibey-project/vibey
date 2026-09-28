@@ -463,6 +463,27 @@ bump moves several rows in one transaction and `now()` is a single instant for a
 them (10.g), and not a large priority value, because first-in-first-out would then need
 a counter disguised as a weight.
 
+The queue is therefore durable state rather than a convenience list. [Figure](#fig:queue-state) makes
+the distinction concrete: priority changes can alter the next eligible claim, but they
+cannot erase the history, skip a parked human gate, or convert a lease expiry into a
+completion. The return arrows are deliberately part of the picture: a lease that ends
+or a gate that remains unanswered returns work to an evidence-bearing state.
+
+```latex
+\begin{figure*}[!htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,q/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum width=2.3cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},a/.style={-latex,line width=.65pt,draw=vibeygray}]
+\node[q] (open) at (0,0) {open issue}; \node[q] (triage) at (3,0) {triaged label}; \node[q] (bump) at (6,0) {priority bump}; \node[q] (claim) at (9,0) {leased claim}; \node[q] (park) at (12,0) {parked gate}; \node[q,fill=vibeyteal!12,draw=vibeyteal!70] (done) at (15,0) {evidence done};
+\foreach \x/\y in {open/triage,triage/bump,bump/claim,claim/park,park/done}{\draw[a] (\x) -- (\y);}
+\draw[a,draw=vibeyred] (claim.south) -- ++(0,-.8) -| (triage.south); \draw[a,draw=vibeyred] (park.south) -- ++(0,-.8) -| (claim.south);
+\node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.45) {ordering is derived from labels and age; no manual reorder bypasses a gate};
+\end{tikzpicture}
+\caption{Durable queue state. Priority changes alter ordering but never erase history, bypass a human gate, or turn a lease timeout into success.}
+\label{fig:queue-state}
+\end{figure*}
+\FloatBarrier
+```
+
 Only two callers may bump or un-bump: the operator, meaning the operating-system
 account that owns the queue's reviewed declaration, checked by the process's user id
 against that file's owner rather than by a name typed on a command line; and an
@@ -567,6 +588,26 @@ $$\Sigma = \langle D, B, R, D_d, D_e, D_r \rangle$$
 
 design, build, review, deploy-design, deploy-execute, deploy-review, with the
 human-gated subset $G = \{D, R, D_d, D_r\}$.
+
+The phase names alone can obscure where authority changes hands. [Figure](#fig:authority-map) reads the
+same machine as a chain of evidence-bearing transitions: unattended execution is
+confined to the work phases, while design, review, deployment consent, and deployment
+review remain explicit gates. In particular, declining deployment is a recorded local
+completion, not an unbounded wait for a person.
+
+```latex
+\begin{figure*}[!htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,p/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.4cm,minimum height=.7cm,align=center,font=\sffamily\scriptsize},g/.style={draw=vibeyviolet!65,fill=vibeyviolet!10,rounded corners=3pt,minimum width=2.4cm,minimum height=.7cm,align=center,font=\sffamily\scriptsize},a/.style={-latex,line width=.65pt,draw=vibeygray}]
+\node[p] (claim) at (0,0) {worker claim}; \node[g] (design) at (3,0) {design answer}; \node[p] (build) at (6,0) {build evidence}; \node[g] (review) at (9,0) {review verdict}; \node[p] (deploy) at (12,0) {deploy opt-in}; \node[g] (audit) at (15,0) {deployment review};
+\foreach \x/\y in {claim/design,design/build,build/review,review/deploy,deploy/audit}{\draw[a] (\x) -- (\y);} \draw[a,draw=vibeyred] (design.south) -- ++(0,-.85) -| (claim.south); \draw[a,draw=vibeyred] (review.south) -- ++(0,-.85) -| (build.south);
+\node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.5) {local completion is terminal when deployment is declined; deployment is never inferred};
+\end{tikzpicture}
+\caption{The six-phase machine as an authority map. Human gates are explicit state transitions; unattended workers occupy only build and deployment-execute phases. Declining deployment records a successful local completion rather than waiting indefinitely.}
+\label{fig:authority-map}
+\end{figure*}
+\FloatBarrier
+```
 
 ```latex
 \begin{invariant}[Gate soundness]
@@ -1286,6 +1327,25 @@ Every turn, verdict and spend entry of a run is one line of JSON in an append-on
 trail under the run directory, so the runner obeys the same write-ahead discipline
 as the orchestrator, at the scale of one session.
 
+This bound has an operational consequence when a worker fails to return. [Figure](#fig:process-reaping)
+shows the required order: terminate the whole worker process group, reap descendants,
+and record the resulting evidence before either retrying or judging publication. That
+order prevents a surviving child from looking like a completed lane after its parent
+has timed out.
+
+```latex
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,r/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.3cm,minimum height=.6cm,align=center,font=\sffamily\scriptsize},a/.style={-latex,line width=.7pt,draw=vibeygray}]
+\node[r] (run) at (0,0) {worker process}; \node[r] (timeout) at (0,-1.1) {deadline}; \node[r] (term) at (3,-1.1) {terminate group}; \node[r] (reap) at (3,-2.2) {reap descendants}; \node[r,fill=vibeyteal!12,draw=vibeyteal!70] (evidence) at (0,-2.2) {record evidence};
+\draw[a] (run) -- (timeout) -- (term) -- (reap) -- (evidence); \draw[a,draw=vibeyred] (term) -- (evidence); \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3) {no orphaned process can masquerade as a completed lane};
+\end{tikzpicture}
+\caption{Worker timeout handling. The delivery runner stops the process group, reaps descendants, and records the timeout before any retry or publication decision.}
+\label{fig:process-reaping}
+\end{figure}
+\FloatBarrier
+```
+
 ### What an engine may see
 
 A bound on what a run may spend is not a bound on what it may reach. Until 3.0.0 every
@@ -1358,6 +1418,25 @@ asks a project to declare what it used to inherit: agyloop's Vertex credentials,
 provider key OpenCode reads from the environment, a GitHub token for claudeloop's issue
 import, and any toolchain variable a gate needs (`CHANGELOG.md`).
 
+[Figure](#fig:environment-boundary) summarizes the boundary in the direction a model experiences it. The engine
+receives a reviewed allow-list and a bounded prompt; secret-shaped names are rejected
+before a command is selected. This is environment hygiene, not a claim that processes
+sharing an operating-system user are mutually isolated—the limitation stated above
+remains material.
+
+```latex
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,b/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.25cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},a/.style={-latex,line width=.7pt,draw=vibeygray}]
+\node[b,fill=vibeyteal!12,draw=vibeyteal!70] (engine) at (0,0) {engine}; \node[b] (allow) at (0,-1.15) {allow-list}; \node[b] (prompt) at (0,-2.3) {bounded prompt}; \node[b] (model) at (3,-2.3) {local model}; \node[b,fill=vibeyred!10,draw=vibeyred!65] (secret) at (3,-1.15) {secret names\\rejected};
+\draw[a] (engine) -- (allow) -- (prompt) -- (model); \draw[a,draw=vibeyred] (allow) -- (secret); \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3.05) {configuration declares permitted variables; defaults are sovereign and fail closed};
+\end{tikzpicture}
+\caption{The engine environment boundary. A project declares the narrow variables a gate or adapter needs; credential-shaped names and inherited process state are excluded before the model can choose a command.}
+\label{fig:environment-boundary}
+\end{figure}
+\FloatBarrier
+```
+
 ### The sovereign driver, in progress
 
 The operator asked for an editor that drives the local model directly (#290), with
@@ -1426,6 +1505,24 @@ capacity is always attributed to capacity and never laundered into success.
 Completion is read from a structured per-turn verdict where the vendor supports one,
 with an explicit done marker as the fallback, and the capacity verdict is consulted
 first either way.
+
+[Figure](#fig:capacity-precedence) is the small but consequential decision rule. A final-looking answer is
+retained as evidence, but it cannot authorise completion if the capacity classifier
+says that the run was starved. This preserves both observations without allowing the
+more convenient one to overwrite the safety-relevant one.
+
+```latex
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,c/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.5cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},a/.style={-latex,line width=.7pt,draw=vibeygray}]
+\node[c] (claim) at (0,0) {completion claim}; \node[c] (capacity) at (0,-1.15) {capacity verdict}; \node[c,fill=vibeyred!10,draw=vibeyred!65] (reject) at (3,-1.15) {capacity wins}; \node[c,fill=vibeyteal!12,draw=vibeyteal!70] (done) at (3,0) {done accepted};
+\draw[a] (claim) -- (done); \draw[a,draw=vibeyred] (capacity) -- (reject); \draw[a,draw=vibeyred] (claim) -- (reject); \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-2) {a plausible answer never launders a starved run into success};
+\end{tikzpicture}
+\caption{Capacity precedence. Completion is admissible only after the capacity classifier says the run was able to complete; an exhaustion verdict outranks any final-looking text.}
+\label{fig:capacity-precedence}
+\end{figure}
+\FloatBarrier
+```
 
 ```latex
 \begin{figure*}[!t]
@@ -3446,6 +3543,26 @@ We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally
 ```
 
 ## Validation
+
+Publication is itself a gated transformation, not the last place a claim becomes true.
+[Figure](#fig:publication-ladder) puts the paper's own evidence chain in the same terms as the delivery system:
+the canonical Markdown, revision-pinned evidence, and figure atlas are deterministic
+inputs; rendering and visual inspection are distinct checks on the PDF, site, and book.
+Consequently, a generated chart or a successful TeX invocation alone is not publication
+evidence.
+
+```latex
+\begin{figure*}[!htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,n/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.4cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},a/.style={-latex,line width=.65pt,draw=vibeygray}]
+\node[n] (source) at (0,0) {source markdown}; \node[n] (evidence) at (3,0) {evidence JSON}; \node[n] (fig) at (6,0) {TikZ atlas}; \node[n] (tex) at (9,0) {LaTeX}; \node[n] (pdf) at (12,0) {PDF}; \node[n,fill=vibeyteal!12,draw=vibeyteal!70] (site) at (15,0) {site / book};
+\foreach \x/\y in {source/evidence,evidence/fig,fig/tex,tex/pdf,pdf/site}{\draw[a] (\x) -- (\y);} \draw[a,draw=vibeyred] (pdf.south) -- ++(0,-.8) -| (tex.south); \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.45) {canonical source; revision markers; visual inspection; separate output checks};
+\end{tikzpicture}
+\caption{Publication provenance. Evidence and figure generation are deterministic inputs to the canonical source, while rendering and visual inspection remain explicit release gates for PDF, site and book surfaces.}
+\label{fig:publication-ladder}
+\end{figure*}
+\FloatBarrier
+```
 
 The model is validated at three levels. At the *property* level, the gate, the phase
 guards and the selector are pure functions under a 100% branch-coverage floor per
