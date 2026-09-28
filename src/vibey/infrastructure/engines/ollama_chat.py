@@ -214,14 +214,10 @@ class OllamaChatClient:
         endpoint = f"{self._base_url}/api/chat"
         body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
         message = body.get("message")
-        if (
-            isinstance(message, dict)
-            and message.get("content") == ""
-            and isinstance(payload["format"], dict)
-        ):
-            # Some local model builds accept the JSON schema but emit an empty message
-            # when grammar compilation cannot satisfy it. One bounded JSON-mode retry
-            # keeps the transport live; callers still validate the decoded object.
+        if isinstance(message, dict) and message.get("content") == "":
+            # Local model builds can emit an empty message when generation is interrupted
+            # or grammar compilation cannot satisfy it. One bounded JSON-mode retry keeps
+            # the transport live; callers still validate the decoded object.
             payload["format"] = "json"
             body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
             message = body.get("message")
