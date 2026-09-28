@@ -1980,8 +1980,12 @@ def test_doctor_record_persists_preflight_only(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("probe_returncode", [0, 2])
+@pytest.mark.parametrize("probe_stderr", ["", "probe failed"])
 def test_doctor_sovereign_fit_uses_the_current_interpreter_and_fixed_probe(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, probe_returncode: int
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    probe_returncode: int,
+    probe_stderr: str,
 ) -> None:
     """The portable probe must run from this environment, not an arbitrary PATH python."""
     from unittest.mock import AsyncMock
@@ -1993,7 +1997,7 @@ def test_doctor_sovereign_fit_uses_the_current_interpreter_and_fixed_probe(
     def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         seen.append(argv)
         code = probe_returncode if argv and argv[0] == sys.executable else 0
-        return subprocess.CompletedProcess(argv, code, stdout="{}\n", stderr="probe failed")
+        return subprocess.CompletedProcess(argv, code, stdout="{}\n", stderr=probe_stderr)
 
     monkeypatch.setattr("vibey.cli.main.subprocess.run", fake_run)
     output = tmp_path / "fit.json"
