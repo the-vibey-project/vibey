@@ -143,7 +143,9 @@ jobs:
         run: uv run bandit -q -r src/vibey
 
       - name: Gate 7 - pip-audit
-        run: uv run pip-audit
+        # The workspace contains editable unpublished packages; audit the
+        # resolvable third-party environment without querying PyPI for them.
+        run: uv run pip-audit --skip-editable
 
   # The definition of done says "No-loss property suite green over 10,000 adversarial
   # examples" (docs/plans/implementation-plan.md); `gates` runs the same tests at
@@ -304,7 +306,7 @@ jobs:
           - package: vibey-skills
             dir: src/vibey_tools/skills
             python: "3.12"
-            install: 'pip install -e .'
+            install: 'pip install -e ".[dev]"'
             test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
             # Its own `docs` job, verbatim: --strict is what makes 700-odd generated pages
             # trustworthy, and the counts prove every plugin and skill produced one.
@@ -321,12 +323,12 @@ jobs:
           - package: vibey-skills
             dir: src/vibey_tools/skills
             python: "3.13"
-            install: 'pip install -e .'
+            install: 'pip install -e ".[dev]"'
             test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
           - package: vibey-skills
             dir: src/vibey_tools/skills
             python: "3.14"
-            install: 'pip install -e .'
+            install: 'pip install -e ".[dev]"'
             test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
           # vibey-bootstrap's nested CI never ran a static gate at all. Its own pre-commit
           # hook did, and these are that hook's commands, verbatim: its configured
