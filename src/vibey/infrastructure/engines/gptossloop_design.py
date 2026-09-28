@@ -12,11 +12,11 @@ to the `gptossloop` binary. That is deliberate: `gptossloop run` takes a plan fi
 `gptossloop prompt` needs an existing run id, so neither offers the one-shot
 prompt-to-JSON this needs — and going direct buys the property that matters here.
 
-**Constrained decoding.** Ollama compiles the schema to a grammar and zeroes the
-probability of any token that would break it, so malformed JSON is not reachable. The
-paid provider has to hunt for ```json fences and cope with prose wrapped around the
-answer; this cannot receive either. The weaker model is, on shape alone, the more
-reliable of the two. The exchange itself lives in `ollama_chat.OllamaChatClient`, shared
+**Bounded JSON mode.** Experiments showed that larger local grammar schemas can compile
+successfully yet return empty content when GPT-OSS exhausts its generation budget. The
+provider therefore requests JSON mode and validates the decoded object at each typed
+boundary; this keeps the transport live without silently accepting malformed or
+incomplete data. The exchange itself lives in `ollama_chat.OllamaChatClient`, shared
 with the sovereign DECOMPOSE producer, so the endpoint and model are configured once
 (`VIBEY_OLLAMA_URL`, `VIBEY_OLLAMA_MODEL`) rather than hard-coded here.
 
@@ -207,7 +207,7 @@ class GptossloopDesignProvider:
         data = await self._chat.ask(
             QUESTION_SYSTEM,
             f"Stage: {stage.value}\nPrior ledger events: {events_json(prior_events)}",
-            QUESTIONS_SCHEMA,
+            "json",
         )
         raw = as_object_list(data.get("questions"), "questions")
         if not raw:
@@ -252,7 +252,7 @@ class GptossloopDesignProvider:
         data = await self._chat.ask(
             RESEARCH_SYSTEM,
             f"Topic: {topic}\nSource: {source}\n\n{body}",
-            RESEARCH_SCHEMA,
+            "json",
         )
         title = str(data.get("title", "")).strip()
         content = str(data.get("content", "")).strip()
@@ -317,9 +317,7 @@ class GptossloopDesignProvider:
         return f"No {name} (or .txt) exists in {self._evidence_dir}."
 
     async def synthesize(self, events: Sequence[DesignEvent]) -> DesignSpec:
-        data = await self._chat.ask(
-            SPEC_SYSTEM, f"Ledger events: {events_json(events)}", SPEC_SCHEMA
-        )
+        data = await self._chat.ask(SPEC_SYSTEM, f"Ledger events: {events_json(events)}", "json")
         try:
             constraints = as_object_list(data.get("constraints", []), "constraints")
             criteria = as_object_list(data.get("criteria"), "criteria")

@@ -12,7 +12,6 @@ from vibey.application.design import DesignEvent, DesignStage
 from vibey.domain import errors
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.spec import ConstraintKind
-from vibey.infrastructure.engines import gptossloop_design as mod
 from vibey.infrastructure.engines.gptossloop_design import (
     GptossloopDesignProvider,
     SovereignResearchUnavailable,
@@ -97,9 +96,9 @@ async def test_a_stage_of_questions_comes_back_shaped() -> None:
     assert batch.stage is DesignStage.CONTEXT_FREE
     assert [q.question_id for q in batch.questions] == ["q1"]
     assert batch.questions[0].blocking is True
-    # Constrained decoding is the whole reason this provider is reliable: the schema is
-    # compiled to a grammar, so malformed JSON is unreachable rather than merely unlikely.
-    assert sent[0]["format"] == mod.QUESTIONS_SCHEMA
+    # JSON mode avoids the empty-response failure seen with larger local grammars;
+    # the provider's typed decoder remains the validation boundary.
+    assert sent[0]["format"] == "json"
     # temperature 0: a DESIGN stage that asks different questions on an unchanged ledger
     # cannot be reasoned about by the phase that consumes it.
     assert sent[0]["options"]["temperature"] == 0
