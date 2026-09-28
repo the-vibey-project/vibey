@@ -26,6 +26,7 @@ from vibey.infrastructure.engines.ollama_chat import (
     VIBEY_REVISION_ENV,
     OllamaChatClient,
     UrllibOllamaTransport,
+    _load_fit,
 )
 
 
@@ -135,6 +136,28 @@ def test_valid_fit_overrides_defaults_and_stale_fit_is_ignored(tmp_path) -> None
         {OLLAMA_FIT_ENV: str(fit), VIBEY_REVISION_ENV: "different"}
     )
     assert stale._output_ceiling == 2048
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"url": "other", "model": DEFAULT_OLLAMA_MODEL},
+        {"url": DEFAULT_OLLAMA_URL, "model": DEFAULT_OLLAMA_MODEL, "selected_fit": {}},
+        {
+            "url": DEFAULT_OLLAMA_URL,
+            "model": DEFAULT_OLLAMA_MODEL,
+            "selected_fit": {"valid": True, "context": 1024, "output": 0},
+        },
+    ],
+)
+def test_invalid_fit_records_are_ignored(tmp_path, record) -> None:
+    fit = tmp_path / "fit.json"
+    fit.write_text(json.dumps(record), encoding="utf-8")
+    assert _load_fit(str(fit), DEFAULT_OLLAMA_URL, DEFAULT_OLLAMA_MODEL, None) is None
+    assert (
+        _load_fit(str(tmp_path / "missing.json"), DEFAULT_OLLAMA_URL, DEFAULT_OLLAMA_MODEL, None)
+        is None
+    )
 
 
 def test_an_explicit_model_beats_the_environment_and_empty_counts_as_unset() -> None:
