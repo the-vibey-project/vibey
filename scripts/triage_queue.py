@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Reconcile GitHub's triaged issues into PostgreSQL's durable priority queue."""
 
 from __future__ import annotations
