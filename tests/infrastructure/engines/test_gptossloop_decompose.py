@@ -132,6 +132,15 @@ async def test_the_grammar_enumerates_the_specs_own_criteria() -> None:
     assert schema == "json"
 
 
+def test_schema_describes_criteria_for_callers_that_need_the_typed_shape() -> None:
+    producer, _ = _producer(VALID)
+
+    schema = producer.schema(["AC-1", "AC-2"])
+
+    criterion = schema["properties"]["items"]["items"]["properties"]["acceptance_ids"]
+    assert criterion["items"] == {"type": "string", "enum": ["AC-1", "AC-2"]}
+
+
 @pytest.mark.asyncio
 async def test_a_spec_with_no_criteria_is_refused_before_the_model_is_asked() -> None:
     """An empty enum is a grammar nothing satisfies; asking would only waste a generation."""
