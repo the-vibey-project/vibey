@@ -135,4 +135,5 @@ nav:
           - "0072 — The Sabbath, kept where the machine stands": architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md
           - "0073 — Krypton desktop in C, on GTK 4 and libadwaita": architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md
           - "0074 — Measured dispatch for every service-bus surface": architecture/decisions/0074-measured-service-bus-dispatch.md
+          - "0075 — Context-bearing surfaces are linked microslice graphs": architecture/decisions/0075-context-microslices-and-linked-surfaces.md
   - Research paper: paper.md

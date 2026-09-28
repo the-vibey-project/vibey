@@ -154,6 +154,11 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "a smoke test's scratch directory, created and discarded by the recipe it is in",
     ),
     (
+        "docs/microslices/*",
+        r"/tmp|/var/tmp|/run/user|XDG_",
+        "generated mirrors of authoritative skills; volatile-path examples are source content",
+    ),
+    (
         "src/vibey_runners/agy/docs/plans/research-notes.md",
         r"/tmp/",
         "a reproduction of a sandbox escape: the files are the probe, not work",
