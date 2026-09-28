@@ -18,10 +18,12 @@ from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_TIMEOUT,
     DEFAULT_OLLAMA_URL,
     OLLAMA_CONTEXT_ENV,
+    OLLAMA_FIT_ENV,
     OLLAMA_MODEL_ENV,
     OLLAMA_OUTPUT_ENV,
     OLLAMA_TIMEOUT_ENV,
     OLLAMA_URL_ENV,
+    VIBEY_REVISION_ENV,
     OllamaChatClient,
     UrllibOllamaTransport,
 )
@@ -109,6 +111,30 @@ def test_invalid_context_configuration_is_rejected() -> None:
         OllamaChatClient(output_ceiling=0)
     with pytest.raises(ConfigError, match="VIBEY_OLLAMA_OUTPUT"):
         OllamaChatClient.from_environment({OLLAMA_OUTPUT_ENV: "many"})
+
+
+def test_valid_fit_overrides_defaults_and_stale_fit_is_ignored(tmp_path) -> None:
+    fit = tmp_path / "fit.json"
+    fit.write_text(
+        json.dumps(
+            {
+                "url": DEFAULT_OLLAMA_URL,
+                "model": DEFAULT_OLLAMA_MODEL,
+                "revision": "abc",
+                "selected_fit": {"valid": True, "context": 4096, "output": 1024},
+            }
+        ),
+        encoding="utf-8",
+    )
+    client = OllamaChatClient.from_environment(
+        {OLLAMA_FIT_ENV: str(fit), VIBEY_REVISION_ENV: "abc"}
+    )
+    assert client.context_window(100) == 4096
+    assert client._output_ceiling == 1024
+    stale = OllamaChatClient.from_environment(
+        {OLLAMA_FIT_ENV: str(fit), VIBEY_REVISION_ENV: "different"}
+    )
+    assert stale._output_ceiling == 2048
 
 
 def test_an_explicit_model_beats_the_environment_and_empty_counts_as_unset() -> None:
