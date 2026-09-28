@@ -1374,6 +1374,17 @@ def doctor(
             help="Install and start local PostgreSQL when it is missing or stopped",
         ),
     ] = False,
+    sovereign_fit: Annotated[
+        bool,
+        typer.Option(
+            "--sovereign-fit",
+            help="Run and persist the portable GPT-OSS capacity probe",
+        ),
+    ] = False,
+    fit_output: Annotated[
+        Path | None,
+        typer.Option("--fit-output", help="Fit JSON path (default: local state directory)"),
+    ] = None,
 ) -> None:
     """Check local PostgreSQL, engine health, auth status, and conformance."""
     from vibey.application.conformance import run_conformance
@@ -1420,6 +1431,35 @@ def doctor(
             eids = [d.engine_id for d in DEFAULT_DESCRIPTORS] + list(local.enabled_engines)
 
         all_ok = True
+
+        if sovereign_fit:
+            output = fit_output or (
+                Path.home() / ".local" / "state" / "vibey" / "sovereign-fit.json"
+            )
+            output.parent.mkdir(parents=True, exist_ok=True)
+            probe = Path(__file__).resolve().parents[3] / "scripts" / "sovereign_probe.py"
+            probe_result = subprocess.run(
+                [
+                    "python3",
+                    str(probe),
+                    "--url",
+                    os.environ.get("VIBEY_OLLAMA_URL", "http://127.0.0.1:11434"),
+                    "--model",
+                    os.environ.get("VIBEY_OLLAMA_MODEL", "gpt-oss:20b"),
+                    "--record",
+                    str(output),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if probe_result.returncode == 0:
+                typer.echo(f"sovereign fit PASS — recorded {output}")
+            else:
+                typer.echo("sovereign fit FAIL — no measured capacity fit recorded")
+                if probe_result.stderr.strip():
+                    typer.echo(f"  detail: {probe_result.stderr.strip()}")
+                all_ok = False
 
         record_project_id: UUID | None = None
         # What the probes may see of this environment. With nothing recorded there is no
