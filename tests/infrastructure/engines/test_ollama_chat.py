@@ -139,6 +139,33 @@ def test_valid_fit_overrides_defaults_and_stale_fit_is_ignored(tmp_path) -> None
     assert stale._output_ceiling == 2048
 
 
+def test_the_probe_selected_fit_schema_is_consumed_without_translation(tmp_path) -> None:
+    """The probe persists ``valid``; the runtime must accept that exact record shape."""
+    fit = tmp_path / "fit.json"
+    fit.write_text(
+        json.dumps(
+            {
+                "url": DEFAULT_OLLAMA_URL,
+                "model": DEFAULT_OLLAMA_MODEL,
+                "revision": "probe-head",
+                "prompt_shape": {"system_chars": 22, "user_chars": 20},
+                "selected_fit": {
+                    "ok": True,
+                    "valid": True,
+                    "context": 8192,
+                    "output": 1024,
+                    "elapsed_seconds": 1.25,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _load_fit(
+        str(fit), DEFAULT_OLLAMA_URL, DEFAULT_OLLAMA_MODEL, "probe-head"
+    ) == {"context": 8192, "output": 1024, "max_prompt_chars": 42}
+
+
 @pytest.mark.parametrize(
     "record",
     [

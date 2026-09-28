@@ -10,7 +10,8 @@ scheduling event rather than a loss of state. Work items are claimed from a Post
 queue with `FOR UPDATE SKIP LOCKED` under renewable leases; a handoff between engines
 is admitted only by a pure, model-free no-loss predicate; and delivery proceeds
 through a six-phase state machine whose four human gates each require an explicit
-recorded verdict. Beneath the orchestrator, six session runners share one bounded,
+recorded verdict. Beneath the orchestrator, five session-runner packages expose seven
+selectable engine identities and share one bounded,
 never-blocking core that never gives a credit balance a clock and lets a capacity
 verdict outrank a completion claim. Above it, an exact-head release calculus binds
 every automated verdict to the revision it evaluated and terminates within a bounded
@@ -67,8 +68,9 @@ decisions must occur at defined points, not wherever a session happens to stall;
 (iii) exhaustion of one vendor's capacity must not lose work.
 
 The system that answers these constraints is one repository holding a family of
-packages: the orchestrator `vibey`; six session runners, `claudeloop`, `codexloop`,
-`cursorloop`, `agyloop`, `opencodeloop` and the local `qwenloop`; `vibey-gh`, which owns provenance,
+packages: the orchestrator `vibey`; five session-runner packages for `claudeloop`,
+`codexloop`, `cursorloop`, `agyloop` and the dual-engine local runner that exposes
+`gptossloop` and `qwenloop`; `vibey-gh`, which owns provenance,
 merging and release; `vibey-skills`, a retrieval engine over a skill library; and
 `vibey-bootstrap`, a bootstrap layer for cloud workloads. Each package once carried its
 own paper. This paper consolidates them. [Fig. 1](#fig:family-tree) shows the family as
@@ -76,7 +78,10 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
 
 - the ledger invariant, the no-loss handoff gate, the queue semantics and the gated six-phase machine, with their soundness arguments, and the database's enforcement of the first, stated with what it does not cover;
 - a priority lane shared by both queues whose contents are derived rather than remembered, which orders work without preempting it or admitting it past any gate, and reapers that decide a hang by measurement;
-- a session-runner core shared by six engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks, and an environment every engine starts from by allow-list;
+- a session-runner core shared by five runner packages and seven selectable engine
+  identities, whose capacity taxonomy never gives a credit balance a clock and whose
+  completion rule a capacity verdict outranks, and an environment every engine starts
+  from by allow-list;
 - the exact-head release calculus, with a termination bound and a recorded production counterexample, and its extension from the revision a verdict evaluated to the input the evaluating model actually read;
 - Convergence-Driven Development (CDD), an enclosing loop above Specification-Driven
   Development and Test-Driven Development that measures convergence at nested delivery
@@ -96,7 +101,7 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
   tool/.style={minimum width=5cm,minimum height=1.15cm}]
   % ---------------------------------------------------------------- the distribution
   \node[vibeycore,minimum width=5.4cm,minimum height=.95cm] (dist) at (8.875,0)
-    {pip install vibey\\\mdseries one distribution, twelve console scripts};
+    {pip install vibey-engine\\\mdseries engine family; apps ship as krypton-app};
   \node[vibeytag,anchor=west] at ($(dist.east)+(0.18,0)$) {ADR-0037};
   % ---------------------------------------------------------------- orchestrator
   \node[vibeybox,minimum width=2.8cm,minimum height=1.15cm] (vibey) at (1.65,-4.0)
@@ -107,34 +112,33 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
   \node[vibeysoft,run] (r2) at (7.775,-2.55)  {\textbf{codexloop}\\paid tier};
   \node[vibeysoft,run] (r3) at (10.425,-2.55) {\textbf{cursorloop}\\paid tier};
   \node[vibeysoft,run] (r4) at (5.125,-4.2)   {\textbf{agyloop}\\paid tier};
-  \node[vibeysoft,run] (r5) at (7.775,-4.2)   {\textbf{opencodeloop}\\paid tier};
-  \node[vibeytealbox,run] (r6) at (10.425,-4.2) {\textbf{qwenloop}\\local, sovereign};
-  \node[vibeypill] at (r1.south) {Python 3.10+};
+  \node[vibeytealbox,minimum width=5.1cm,minimum height=1.15cm] (r5) at (9.1,-4.2)
+    {\textbf{local runner package}\\gptossloop default $\cdot$ qwenloop opt-in};
+  \node[vibeypill] at (r1.south) {Python 3.12+};
   \node[vibeypill] at (r2.south) {Python 3.12+};
   \node[vibeypill] at (r3.south) {Python 3.12+};
   \node[vibeypill] at (r4.south) {Python 3.12+};
   \node[vibeypill] at (r5.south) {Python 3.12+};
-  \node[vibeypill] at (r6.south) {Python 3.12+};
   \node[vibeybox,minimum width=7.75cm,minimum height=.7cm] (bar) at (7.775,-5.75)
-    {\textbf{vibey-runners-common}\quad shared by all six runners};
-  \node[vibeypill] at (bar.south) {Python 3.10+};
+    {\textbf{vibey-runners-common}\quad shared by all five runner packages};
+  \node[vibeypill] at (bar.south) {Python 3.12+};
   % ---------------------------------------------------------------- tools
   \node[vibeyvioletbox,tool] (t1) at (15.0,-2.55)
     {\textbf{vibey-gh}\\provenance, merge train,\\promotion, release, governance canon};
   \node[vibeyvioletbox,tool] (t2) at (15.0,-4.15)
-    {\textbf{vibey-skills}\\retrieval engine over\\710 skill documents in 135 plugins};
+    {\textbf{vibey-skills}\\retrieval engine over\\728 skill documents in 136 plugins};
   \node[vibeyvioletbox,tool] (t3) at (15.0,-5.75)
     {\textbf{vibey-bootstrap}\\fail-closed bootstrap,\\outbox, audit chain};
-  \node[vibeypill] at (t1.south) {Python 3.11+};
-  \node[vibeypill] at (t2.south) {Python 3.10+};
-  \node[vibeypill] at (t3.south) {Python 3.11+};
+  \node[vibeypill] at (t1.south) {Python 3.12+};
+  \node[vibeypill] at (t2.south) {Python 3.12+};
+  \node[vibeypill] at (t3.south) {Python 3.12+};
   % ---------------------------------------------------------------- lanes
   \coordinate (p1t) at (1.65,-1.5);   \coordinate (p1b) at (1.65,-6.5);
   \coordinate (p2t) at (7.775,-1.5);  \coordinate (p2b) at (7.775,-6.5);
   \coordinate (p3t) at (15.0,-1.5);   \coordinate (p3b) at (15.0,-6.5);
   \begin{scope}[on background layer]
     \node[vibeylane,fit=(vibey)(p1t)(p1b)] (L1) {};
-    \node[vibeylane,fit=(r1)(r3)(r4)(r6)(bar)(p2t)(p2b)] (L2) {};
+    \node[vibeylane,fit=(r1)(r3)(r4)(r5)(bar)(p2t)(p2b)] (L2) {};
     \node[vibeylane,fit=(t1)(t3)(p3t)(p3b)] (L3) {};
   \end{scope}
   \node[vibeylanelabel] at (L1.north west) {Orchestrator};
@@ -148,7 +152,7 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
   \node[vibeynote,anchor=west,align=left] at (0,-7.15)
     {each tenant keeps its own pyproject, version, test suite and gates (ADR-0022), absorbed into one tree with history preserved (ADR-0021)};
 \end{tikzpicture}
-\caption{One command installs the whole family. The dark box is the single pip package; under it sit the orchestrator, six session runners on their shared library, and three tools. Each pill names the oldest Python a member runs on. The teal runner, qwenloop, is the local, sovereign engine that needs no paid service.}
+\caption{The two-package publication surface and the engine family. The dark box names the engine distribution; the apps publish separately as \texttt{krypton-app}. Beneath it sit the orchestrator, five runner packages on their shared library, and three tools. Every tenant requires Python 3.12 or newer. The teal package exposes \texttt{gptossloop}, the sovereign default on GPT-OSS 20B, and opt-in \texttt{qwenloop}; \texttt{claudeloop-local} supplies the seventh selectable identity.}
 \label{fig:family-tree}
 \end{figure*}
 ```
