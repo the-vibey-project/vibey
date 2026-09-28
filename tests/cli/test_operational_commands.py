@@ -2,6 +2,8 @@
 import asyncio
 import json
 import os
+import subprocess
+import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
@@ -1975,6 +1977,41 @@ def test_doctor_record_persists_preflight_only(tmp_path: Path) -> None:
             assert record.conformance_ok is False
 
     asyncio.run(check())
+
+
+def test_doctor_sovereign_fit_uses_the_current_interpreter_and_fixed_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The portable probe must run from this environment, not an arbitrary PATH python."""
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import PreflightResult
+
+    seen: list[list[str]] = []
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="{}\n", stderr="")
+
+    monkeypatch.setattr("vibey.cli.main.subprocess.run", fake_run)
+    output = tmp_path / "fit.json"
+    with monkeypatch.context() as scoped:
+        scoped.setattr(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            AsyncMock(return_value=PreflightResult(installed=False, version=None, auth_ok=False)),
+        )
+        result = runner.invoke(
+            app,
+            ["doctor", "--sovereign-fit", "--fit-output", str(output), "--engine", "claudeloop"],
+        )
+
+    assert result.exit_code == 0, result.output
+    assert seen
+    probe_argv = seen[-1]
+    assert probe_argv[0] == sys.executable
+    assert probe_argv[-2] == "--record"
+    assert probe_argv[-1] == str(output)
+    assert probe_argv[1].endswith("scripts/sovereign_probe.py")
 
 
 def test_doctor_record_with_conformance_grants_eligibility(tmp_path: Path) -> None:
