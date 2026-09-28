@@ -23,9 +23,14 @@ from dataclasses import dataclass
 from os import environ
 from pathlib import Path
 
-from triage_queue import claim as claim_ticket
-from triage_queue import github_tickets, set_state
-from triage_queue import reconcile as reconcile_tickets
+try:
+    from scripts.triage_queue import claim as claim_ticket
+    from scripts.triage_queue import github_tickets, set_state
+    from scripts.triage_queue import reconcile as reconcile_tickets
+except ModuleNotFoundError:  # Direct execution keeps the script directory on sys.path.
+    from triage_queue import claim as claim_ticket
+    from triage_queue import github_tickets, set_state
+    from triage_queue import reconcile as reconcile_tickets
 
 PRIORITIES = ("critical", "high", "medium", "low")
 TRIAGED = "vibey-gh:triaged"
