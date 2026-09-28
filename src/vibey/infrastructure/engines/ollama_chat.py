@@ -67,7 +67,9 @@ def _load_fit(
         output = int(fit["output"])
         if context < 4096 or output <= 0:
             return None
-        return {"context": context, "output": output}
+        shape = record.get("prompt_shape")
+        max_prompt_chars = int(shape["system_chars"]) + int(shape["user_chars"])
+        return {"context": context, "output": output, "max_prompt_chars": max_prompt_chars}
     except (OSError, ValueError, TypeError, KeyError):
         return None
 
@@ -125,6 +127,7 @@ class OllamaChatClient:
         timeout: int = DEFAULT_OLLAMA_TIMEOUT,
         context_ceiling: int = DEFAULT_OLLAMA_CONTEXT,
         output_ceiling: int = DEFAULT_OLLAMA_OUTPUT,
+        fit_prompt_chars: int | None = None,
         transport: OllamaTransportInterface | None = None,
     ) -> None:
         self._base_url = self._validated_base_url(base_url)
@@ -143,6 +146,7 @@ class OllamaChatClient:
         self._timeout = timeout
         self._context_ceiling = context_ceiling
         self._output_ceiling = output_ceiling
+        self._fit_prompt_chars = fit_prompt_chars
         self._transport = transport if transport is not None else UrllibOllamaTransport()
 
     @classmethod
@@ -198,6 +202,7 @@ class OllamaChatClient:
             timeout=timeout,
             context_ceiling=context_ceiling,
             output_ceiling=output_ceiling,
+            fit_prompt_chars=fit.get("max_prompt_chars") if fit is not None else None,
             transport=transport,
         )
 
@@ -229,6 +234,12 @@ class OllamaChatClient:
         self, system: str, user: str, schema: Mapping[str, object] | str
     ) -> dict[str, object]:
         bounded_user = self._bounded_user(user)
+        fit_applies = (
+            self._fit_prompt_chars is None
+            or len(system) + len(bounded_user) <= self._fit_prompt_chars
+        )
+        context_ceiling = self._context_ceiling if fit_applies else DEFAULT_OLLAMA_CONTEXT
+        output_ceiling = self._output_ceiling if fit_applies else DEFAULT_OLLAMA_OUTPUT
         payload: dict[str, object] = {
             "model": self._model,
             "messages": [
@@ -243,8 +254,15 @@ class OllamaChatClient:
             # reasoned about by the phase that consumes it.
             "options": {
                 "temperature": 0,
-                "num_ctx": self.context_window(len(system) + len(bounded_user)),
-                "num_predict": self._output_ceiling,
+                "num_ctx": min(
+                    context_ceiling,
+                    max(
+                        self.CONTEXT_FLOOR,
+                        (len(system) + len(bounded_user)) // self.CHARS_PER_TOKEN
+                        + self.CONTEXT_RESERVE,
+                    ),
+                ),
+                "num_predict": output_ceiling,
             },
         }
         endpoint = f"{self._base_url}/api/chat"

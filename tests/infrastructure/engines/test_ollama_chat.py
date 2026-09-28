@@ -122,6 +122,7 @@ def test_valid_fit_overrides_defaults_and_stale_fit_is_ignored(tmp_path) -> None
                 "url": DEFAULT_OLLAMA_URL,
                 "model": DEFAULT_OLLAMA_MODEL,
                 "revision": "abc",
+                "prompt_shape": {"system_chars": 1, "user_chars": 1},
                 "selected_fit": {"valid": True, "context": 4096, "output": 1024},
             }
         ),
