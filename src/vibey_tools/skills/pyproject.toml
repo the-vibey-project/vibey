@@ -80,11 +80,10 @@ docs = [
   "mkdocs-literate-nav>=0.6",
 ]
 
-# Empty, and kept rather than deleted. Its one entry was `vibey-gh`, which is no longer a
-# distribution on any index (ADR-0037) -- it is a sibling in this tree, installed from
-# `src/vibey_tools/gh`, and a requirement on it by name would resolve nowhere. The key
-# stays so `pip install -e ".[dev]"` keeps working wherever it is already written.
-dev = []
+# The package stays dependency-free at runtime. Tests import pytest directly, however,
+# and the CI tenant matrix installs the package before running its unittest discovery;
+# keeping pytest here makes that declared test environment complete on every Python floor.
+dev = ["pytest>=8"]
 
 # `vibey-skills` is the CLI. `vibe-skills` (the short alias from the vibe-engineering-skills
 # era) is kept as a deprecated entry point that prints one warning line and delegates; the
