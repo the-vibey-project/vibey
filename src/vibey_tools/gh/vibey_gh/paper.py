@@ -97,6 +97,9 @@ PREAMBLE: tuple[str, ...] = (
     r"\usepgfplotslibrary{fillbetween,statistics,polar,groupplots}",
     r"\usepackage{pifont}",
     r"\usepackage{url}",
+    # Keeps a figure with the claim that introduces it.  The paper uses many wide
+    # diagrams; without explicit barriers LaTeX may accumulate them at the end.
+    r"\usepackage{placeins}",
     # The palette is the vibey design system's print family (design/tokens), generated.
     *PAPER_COLOURS,
     (
