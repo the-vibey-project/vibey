@@ -33,8 +33,13 @@ def probe(url: str, model: str, context: int, output: int, prompt: str) -> dict[
         with urllib.request.urlopen(request, timeout=120) as response:  # nosec B310
             body = json.loads(response.read())
         content = body.get("message", {}).get("content", "")
+        valid = isinstance(content, str) and bool(content.strip())
         return {
-            "ok": isinstance(content, str) and bool(content.strip()),
+            # ``valid`` is the persisted fit contract consumed by
+            # OllamaChatClient._load_fit.  ``ok`` remains as the per-probe status
+            # used by this script and by older records.
+            "ok": valid,
+            "valid": valid,
             "elapsed_seconds": round(time.monotonic() - started, 3),
             "content_chars": len(content) if isinstance(content, str) else 0,
             "eval_count": body.get("eval_count"),
@@ -44,6 +49,7 @@ def probe(url: str, model: str, context: int, output: int, prompt: str) -> dict[
     except Exception as exc:  # pragma: no cover - host-dependent probe failures
         return {
             "ok": False,
+            "valid": False,
             "elapsed_seconds": round(time.monotonic() - started, 3),
             "context": context,
             "output": output,
