@@ -18,8 +18,8 @@ remain documented inputs for future wiring.
 | `./vibey.toml`, keys `[features].gptossloop`, `[features].qwenloop`, `[features].claudeloop_local` | `vibey doctor` and `vibey loops` (`cli/main.py` `_local_engines_from_toml`, through `LocalEngineSettings`) | Which local engines are added to the health sweep and reported as switched on. The file is read from the current directory with `parse_toml_string`; a missing or malformed file leaves every switch at its default: `gptossloop` on, the others off (ADR-0064). |
 | `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]` and `[engine_environment]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run and what an engine session may see of the environment into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
- | `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. |
- | `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
+ | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. `[notifications] sweep_interval_seconds` is read from the same `./vibey.toml`, for the gate-reminder sweep every idle worker runs. |
+ | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
  | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
  | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
 
@@ -200,6 +200,7 @@ The queue reaper's keys have the same overlay, and the same precedence
 | `VIBEY_QUEUE_REAP_POLICY_PRIORITY` | `[queue.reap].policy_priority` |
 | `VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS` | `[queue.reap].consumer_timeout_seconds` |
 | `VIBEY_QUEUE_REAP_DELIVERY_LIMIT` | `[queue.reap].delivery_limit` |
+| `VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES` | `[queue.defect].identical_failures` |
 
 ## Schema semantics
 
@@ -362,20 +363,51 @@ parallelism = 4
 ## `[notifications]`
 
 Notifications are opt-in because desktop alerts and outbound webhooks are
-side effects. `vibey new` copies this table into the project's stored config;
-`build_app()` constructs one service and applies the project policy when a
-worker raises a gate or a project changes phase.
+side effects, and no channel reaches a person with zero configuration: a worker
+in a pod or under launchd has no desktop to show an alert on, and a webhook
+needs a public destination. So `enabled` stays `false` by default. `vibey new`
+copies this table into the project's stored config; `build_app()` constructs
+one service and applies the project policy when a worker raises a gate or a
+project changes phase.
+
+**Whether anyone was told is recorded, never assumed.** Every notice about a
+gate -- notice `0` when it is raised, reminder `1`, `2`, ... while it waits --
+ends in exactly one ledger event: `GateNotified` when at least one channel took
+it (with what each channel reported), or `GateNoticeUndeliverable` with the
+reason -- `disabled`, `no_channel` (enabled with desktop off and no webhook),
+`config_invalid`, `unwired` (a process composed without a sink) or `failed` --
+and a `gate.notice_undeliverable` warning. A project nobody can hear is said
+once per gate, at its raise notice, and not reminded about. One event per gate
+and notice number, fleet-wide: a replayed sweep records nothing. Both kinds are
+withheld from ledger publication.
+
+**A gate still waiting is reminded about.** An idle `vibey worker` sweeps its
+project's open gates at most every `sweep_interval_seconds`; `vibey gates
+--remind` runs the same sweep on demand, so a supervisor can schedule it where
+no worker idles ([CLI reference](cli.md#vibey-gates-project_id)). A gate with no raise
+notice on record -- raised before this release, or by the queue reaper -- gets
+one; a gate open `remind_after_seconds` after it was raised gets a reminder
+every `remind_every_seconds`, at most `max_reminders` times. A sweep that was
+down sends the one reminder now due, not every one it missed. `vibey doctor`
+reports how many open gates are in projects nobody will be told about
+(`WARN gate-notices ... gates waiting, nobody will be told`).
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `enabled` | boolean | `false` | Enables delivery for this project. |
 | `desktop` | boolean | `true` | Sends desktop alerts when enabled. |
-| `webhooks` | array of tables | `[]` | Each table requires `url` and may include a `secret`; URLs must be public `http://` or `https://` destinations at publish time (loopback, private, link-local, reserved, local-name, credential-bearing, and redirecting endpoints are rejected). Secrets sign the JSON payload with `X-Vibey-Signature: sha256=...`. |
+| `webhooks` | array of tables | `[]` | Each table requires `url` and may include a `secret`; URLs must be public `http://` or `https://` destinations at publish time (loopback, private, link-local, reserved, local-name, credential-bearing, and redirecting endpoints are rejected). Secrets sign the JSON payload with `X-Vibey-Signature: sha256=...`. The payload names the gate, its kind, its job and the `notice` number -- never the gate's prompt. |
+| `remind_after_seconds` | int ≥ 1 | `86400` | How long a gate waits before its first reminder: a day. |
+| `remind_every_seconds` | int ≥ 1 | `86400` | The time between reminders after the first. |
+| `max_reminders` | int ≥ 0 | `7` | The most reminders one gate gets -- a week of daily ones at the defaults. `0`: none; the raise notice is still sent and recorded. |
+| `sweep_interval_seconds` | int ≥ 1 | `300` | How often an idle worker looks for due reminders. Read from `./vibey.toml` by `build_app`, like [`[queue.reap]`](#queuereap), since the sweep is the process's; the other keys are read from each project's stored config. |
 
 ```toml
 [notifications]
 enabled = true
 desktop = true
+remind_after_seconds = 43200   # first reminder after 12 hours
+max_reminders = 4
 
 [[notifications.webhooks]]
 url = "https://ops.example/vibey"
@@ -555,6 +587,37 @@ a `bus_dead_lettered` gate, and is never deleted.
 [queue.reap]
 stale_ready_seconds = 600
 dead_letter_peek_limit = 200
+```
+
+## `[queue.defect]` { #queuedefect }
+
+When an exhausted job is a defect rather than bad luck. A job that burns its last attempt
+parks on a gate (ADR-0024), and that gate -- `attempts_exhausted` from the worker,
+`escalation_exhausted` from build.implement's effort ladder -- offers more attempts. When
+the job's last `identical_failures` failures were all the same failure, more attempts
+cannot change the outcome, so the worker raises a **`defect`** gate instead, which offers
+none.
+
+Every failed run of a handler is recorded as a `JobFailed` ledger event (withheld from
+publication) with its **signature**: the failure's class and its detail with ids,
+timestamps, durations, addresses, temporary paths and attempt counters normalized away,
+hashed (`domain/defect.py`). The defect gate names the signature and how many attempts
+shared it, and is answered `--choice requeue` -- run it again once a fix has landed; it
+parks on a new defect gate at once if it fails the same way, and goes on within its
+remaining attempts if the failure changed -- or `--choice abandon`, which cancels the job
+when the answer lands (work that depends on it will not run). Varied failures keep the
+grant. History that cannot be read keeps the grant too, and is said at warning.
+
+Read like [`[queue.reap]`](#queuereap): from `./vibey.toml` by `build_app`, or from the
+environment alone (`VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES`) in a pod with none.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `identical_failures` | int: `0`, or ≥ 2 | `3` | How many of the most recent failures must share one signature. Two could be a coincidence; three is a pattern. `0` switches the check off and every exhaustion offers its grant; `1` would call every failure a defect, so it is refused. An unknown key is refused. |
+
+```toml
+[queue.defect]
+identical_failures = 4
 ```
 
 ## Concurrent local runs: `[local_models]` in `.vibey-gh.toml` { #local_models }

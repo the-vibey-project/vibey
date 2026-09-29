@@ -825,3 +825,47 @@ async def test_a_completed_run_is_complete_whatever_its_exit_code(tmp_path: Path
     outcome = await handler.handle(_job(payload={"title": "t"}))
 
     assert isinstance(outcome, Success)
+
+
+async def test_a_requeued_defect_runs_the_exhausted_ladder_at_top_effort(tmp_path: Path) -> None:
+    """The worker raises a `defect` gate in place of this ladder's grant when the attempts
+    all failed alike. Its requeue must run the job: without it the ladder would park again,
+    with no new failure to tell it apart, and the job would never run at all."""
+    from tests.application.fakes import FakeHumanGateRepository
+    from vibey.application.dto import HumanGateRequest
+    from vibey.application.worker import Park
+    from vibey.domain.effort import Effort as _Effort
+
+    gates = FakeHumanGateRepository()
+    captured: dict[str, object] = {}
+
+    class _SpyEngine(ScriptedEngine):
+        async def start(self, spec):  # type: ignore[no-untyped-def]
+            captured["effort"] = spec.effort
+            return await super().start(spec)
+
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=_SpyEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        human_gates=gates,  # type: ignore[arg-type]
+    )
+    job = _job(attempts=8, payload={"title": "t"})
+    defect = await gates.raise_gate(
+        job.project_id,
+        job.id,
+        HumanGateRequest(kind="defect", prompt="failed alike", options=("requeue", "abandon")),
+    )
+
+    # Unanswered, it grants nothing: the ladder parks as before.
+    still_parked = await handler.handle(job)
+    assert isinstance(still_parked, Park)
+    assert still_parked.request.kind == "escalation_exhausted"
+
+    await gates.answer(defect.gate_id, answer={"choice": "requeue"}, answered_by="operator")
+    ran = await handler.handle(job)
+    assert isinstance(ran, Success)
+    assert captured["effort"] is _Effort.HIGH

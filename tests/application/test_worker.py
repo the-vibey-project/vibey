@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
-from vibey.application.dto import HumanGateRequest, JobRecord
+from vibey.application.dto import HumanGateRecord, HumanGateRequest, JobRecord
 from vibey.application.interfaces.worker_interface import WorkerLoopInterface
 from vibey.application.worker import (
     CapacityDeferred,
@@ -68,55 +68,6 @@ def test_the_worker_loop_satisfies_its_declared_seam() -> None:
     )
 
     assert isinstance(loop, WorkerLoopInterface)
-
-
-def test_notification_failure_classifies_returned_channel_results() -> None:
-    enabled = {"notifications": {"enabled": True}}
-    with_webhook = {
-        "notifications": {
-            "enabled": True,
-            "desktop": False,
-            "webhooks": [{"url": "https://example.test/hook"}],
-        }
-    }
-
-    assert WorkerLoop._notification_failure({"error": "boom"}, {}) == "boom"
-    assert WorkerLoop._notification_failure({}, {}) is None
-    assert WorkerLoop._notification_failure({"enabled": False}, enabled) == (
-        "notification service reported disabled"
-    )
-    assert WorkerLoop._notification_failure({"enabled": True}, enabled) == (
-        "desktop delivery returned false"
-    )
-    assert (
-        WorkerLoop._notification_failure(
-            {"enabled": True, "desktop": True, "webhooks": []}, enabled
-        )
-        is None
-    )
-    assert (
-        WorkerLoop._notification_failure(
-            {"enabled": True, "desktop": True},
-            {"notifications": {"enabled": True, "desktop": True, "webhooks": {}}},
-        )
-        is None
-    )
-    assert (
-        WorkerLoop._notification_failure({"enabled": True, "webhooks": "bad"}, with_webhook)
-        == "webhook delivery results were missing"
-    )
-    assert (
-        WorkerLoop._notification_failure({"enabled": True, "webhooks": []}, with_webhook)
-        == "webhook delivery results did not match configured destinations"
-    )
-    assert (
-        WorkerLoop._notification_failure({"enabled": True, "webhooks": [False]}, with_webhook)
-        == "webhook delivery returned false"
-    )
-    assert (
-        WorkerLoop._notification_failure({"enabled": True, "webhooks": [True]}, with_webhook)
-        is None
-    )
 
 
 async def test_run_once_returns_false_when_nothing_claimable() -> None:
@@ -431,6 +382,7 @@ async def test_new_gates_are_sent_to_the_configured_notification_sink(
         "gate_id": str(gates.raised[0].gate_id),
         "gate_kind": kind,
         "job_id": str(job.id),
+        "notice": 0,
     }
 
 
@@ -457,9 +409,10 @@ async def test_notification_sink_failure_is_logged_without_losing_the_gate() -> 
 
     assert len(gates.raised) == 1
     assert [(level, event) for level, event, _ in logger.lines] == [
-        ("warning", "notification.failed")
+        ("warning", "gate.notice_undeliverable")
     ]
     assert logger.lines[0][2]["notification_kind"] == "human_gate_raised"
+    assert logger.lines[0][2]["reason"] == "failed"
     assert logger.lines[0][2]["error"] == "RuntimeError('desktop unavailable')"
 
 
@@ -486,7 +439,7 @@ async def test_notification_sink_false_delivery_is_logged_without_losing_the_gat
 
     assert len(gates.raised) == 1
     assert [(level, event) for level, event, _ in logger.lines] == [
-        ("warning", "notification.failed")
+        ("warning", "gate.notice_undeliverable")
     ]
     assert logger.lines[0][2]["error"] == "desktop delivery returned false"
 
@@ -1090,7 +1043,14 @@ async def test_a_park_the_queue_refused_is_said_not_raised() -> None:
 
     assert claimed is True
     assert jobs.calls[-1] == "park"
-    assert logger.lines == [("warning", "job.park_rejected", {**_fields(job), "reason": _LOST})]
+    # The gate's notice is said first -- notifications are off by default, so nobody was
+    # told -- and then the refused park.
+    assert [(level, event) for level, event, _ in logger.lines] == [
+        ("warning", "gate.notice_undeliverable"),
+        ("warning", "job.park_rejected"),
+    ]
+    assert logger.lines[0][2]["reason"] == "disabled"
+    assert logger.lines[1] == ("warning", "job.park_rejected", {**_fields(job), "reason": _LOST})
 
 
 async def test_an_initial_lease_extension_that_raises_carries_on_at_the_default() -> None:
@@ -1143,3 +1103,203 @@ async def test_an_initial_lease_extension_that_is_refused_is_said() -> None:
 
     assert claimed is True
     assert logger.lines == [("warning", "job.lease_lost", {**_fields(job), "reason": _LOST})]
+
+
+# -- defect triage and gate notices ---------------------------------------------------
+
+
+class _Triage:
+    """Records failures and answers every triage with `result` -- or the request itself."""
+
+    def __init__(self, result: HumanGateRequest | None = None) -> None:
+        self._result = result
+        self.recorded: list[tuple[UUID, FailureClass, str]] = []
+        self.triaged: list[str] = []
+
+    async def record(self, job: JobRecord, failure_class: FailureClass, detail: str) -> None:
+        self.recorded.append((job.id, failure_class, detail))
+
+    async def triage(self, job: JobRecord, request: HumanGateRequest) -> HumanGateRequest:
+        self.triaged.append(request.kind)
+        return self._result if self._result is not None else request
+
+
+_DEFECT = HumanGateRequest(kind="defect", prompt="failed alike", options=("requeue", "abandon"))
+
+
+async def test_every_failure_is_recorded_for_triage() -> None:
+    job = make_job(PROJECT_ID)
+    triage = _Triage()
+    loop = WorkerLoop(
+        jobs=FakeJobRepository([job]),
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Failure(FailureClass.ENGINE, "boom")),
+        owner="w1",
+        defects=triage,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert triage.recorded == [(job.id, FailureClass.ENGINE, "boom")]
+    assert triage.triaged == []  # attempts remained: nacked, nothing to triage
+
+
+async def test_an_exhausted_job_that_failed_alike_parks_on_a_defect_gate() -> None:
+    job = make_job(PROJECT_ID, max_attempts=1)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    triage = _Triage(_DEFECT)
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+        defects=triage,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert triage.triaged == ["attempts_exhausted"]
+    assert [gate.kind for gate in gates.raised] == ["defect"]
+    assert gates.raised[0].options == ("requeue", "abandon")
+    assert jobs.calls[-1] == "park"
+
+
+async def test_a_ladder_park_is_triaged_but_a_gate_the_handler_raised_is_not() -> None:
+    job = make_job(PROJECT_ID)
+    gates = FakeHumanGateRepository()
+    triage = _Triage(_DEFECT)
+    ladder = HumanGateRequest(kind="escalation_exhausted", prompt="grant more?")
+    loop = WorkerLoop(
+        jobs=FakeJobRepository([job]),
+        gates=gates,
+        handler=_FixedHandler(Park(ladder)),
+        owner="w1",
+        defects=triage,
+    )
+    await loop.run_once(PROJECT_ID)
+    assert [gate.kind for gate in gates.raised] == ["defect"]
+
+    other = make_job(PROJECT_ID)
+    own = await gates.raise_gate(PROJECT_ID, other.id, ladder)
+    triage = _Triage(_DEFECT)
+    loop = WorkerLoop(
+        jobs=FakeJobRepository([other]),
+        gates=gates,
+        handler=_FixedHandler(Park(ladder, gate=own)),
+        owner="w1",
+        defects=triage,
+    )
+    await loop.run_once(PROJECT_ID)
+    assert triage.triaged == []
+
+
+async def _requeued_defect(gates: FakeHumanGateRepository, job: JobRecord) -> None:
+    raised = await gates.raise_gate(PROJECT_ID, job.id, _DEFECT)
+    await gates.answer(raised.gate_id, answer={"choice": "requeue"}, answered_by="adam")
+
+
+async def test_a_requeued_defect_that_fails_alike_parks_at_once_with_attempts_left() -> None:
+    """The requeue buys one run: a ladder-parked job still has queue attempts, and must not
+    spend them on a failure already known not to change."""
+    job = make_job(PROJECT_ID, max_attempts=10, attempts=7)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    await _requeued_defect(gates, job)
+    triage = _Triage(_DEFECT)
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+        defects=triage,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert triage.triaged == ["attempts_exhausted"]
+    assert [gate.kind for gate in gates.raised] == ["defect", "defect"]
+    assert "nack" not in jobs.calls
+    assert jobs.calls[-1] == "park"
+
+
+async def test_a_requeued_defect_that_fails_differently_goes_on_within_its_attempts() -> None:
+    job = make_job(PROJECT_ID, max_attempts=10, attempts=7)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    await _requeued_defect(gates, job)
+    triage = _Triage()  # the failure changed: triage keeps the grant
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "a new error")),
+        owner="w1",
+        defects=triage,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert triage.triaged == ["attempts_exhausted"]
+    assert len(gates.raised) == 1
+    assert jobs.calls[-1] == "nack"
+
+
+@pytest.mark.parametrize("latest", [None, "approval", "unanswered-defect"])
+async def test_a_failure_with_attempts_left_is_nacked_unless_it_follows_a_requeue(
+    latest: str | None,
+) -> None:
+    job = make_job(PROJECT_ID, max_attempts=10, attempts=3)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    if latest == "approval":
+        raised = await gates.raise_gate(
+            PROJECT_ID, job.id, HumanGateRequest(kind="approval", prompt="?")
+        )
+        await gates.answer(raised.gate_id, answer={"verdict": "accept"}, answered_by="adam")
+    elif latest == "unanswered-defect":
+        await gates.raise_gate(PROJECT_ID, job.id, _DEFECT)
+    triage = _Triage(_DEFECT)
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+        defects=triage,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert triage.triaged == []
+    assert jobs.calls[-1] == "nack"
+
+
+async def test_an_injected_notice_service_announces_every_raised_gate() -> None:
+    class _Notices:
+        def __init__(self) -> None:
+            self.delivered: list[tuple[UUID, int, Mapping[str, object] | None]] = []
+
+        async def deliver(
+            self,
+            gate: HumanGateRecord,
+            *,
+            notice: int,
+            config: Mapping[str, object] | None,
+            waited_seconds: float = 0.0,
+        ) -> object:
+            self.delivered.append((gate.gate_id, notice, config))
+            return None
+
+    notices = _Notices()
+    gates = FakeHumanGateRepository()
+    loop = WorkerLoop(
+        jobs=FakeJobRepository([make_job(PROJECT_ID)]),
+        gates=gates,
+        handler=_FixedHandler(Park(HumanGateRequest(kind="approval", prompt="?"))),
+        owner="w1",
+        notification_config={"notifications": {"enabled": True}},
+        gate_notices=notices,  # type: ignore[arg-type]
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert notices.delivered == [(gates.raised[0].gate_id, 0, {"notifications": {"enabled": True}})]

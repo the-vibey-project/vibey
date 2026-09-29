@@ -161,6 +161,13 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         # Who answered a gate, from which account, and what they answered: the answer
         # can carry anything a person typed, and the account is the operator's.
         EventKind.GATE_ANSWERED,
+        # Whether, and over which of the operator's channels, a person was told a gate
+        # was waiting: webhook outcomes describe the operator's own endpoints.
+        EventKind.GATE_NOTIFIED,
+        EventKind.GATE_NOTICE_UNDELIVERABLE,
+        # A failure's detail quotes whatever the handler raised -- tool and model output
+        # included.
+        EventKind.JOB_FAILED,
         # Which devices could reach the hub, and which scopes the host granted them.
         EventKind.HUB_DEVICE_PAIRED,
         EventKind.HUB_DEVICE_REVOKED,

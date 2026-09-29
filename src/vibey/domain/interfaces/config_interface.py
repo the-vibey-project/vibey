@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from vibey.domain.gate_notice import ReminderSchedule
     from vibey.domain.queue_reap import BrokerPolicy, ReapThresholds
 
 
@@ -28,6 +29,22 @@ class NotificationsConfigInterface(Protocol):
 
     @property
     def webhooks(self) -> tuple[NotificationWebhookConfigInterface, ...]: ...
+
+    @property
+    def remind_after_seconds(self) -> int: ...
+
+    @property
+    def remind_every_seconds(self) -> int: ...
+
+    @property
+    def max_reminders(self) -> int: ...
+
+    @property
+    def sweep_interval_seconds(self) -> int: ...
+
+    def reminders(self) -> ReminderSchedule:
+        """The schedule a waiting gate is reminded on."""
+        ...
 
 
 @runtime_checkable
@@ -68,6 +85,16 @@ class QueueReapConfigInterface(Protocol):
 
 
 @runtime_checkable
+class QueueDefectConfigInterface(Protocol):
+    """`[queue.defect]`."""
+
+    @property
+    def identical_failures(self) -> int:
+        """How many consecutive identical failures make a defect; 0 is off."""
+        ...
+
+
+@runtime_checkable
 class QueueConfigInterface(Protocol):
     """`[queue]`."""
 
@@ -76,3 +103,6 @@ class QueueConfigInterface(Protocol):
 
     @property
     def reap(self) -> QueueReapConfigInterface: ...
+
+    @property
+    def defect(self) -> QueueDefectConfigInterface: ...

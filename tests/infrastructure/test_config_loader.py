@@ -361,3 +361,14 @@ def test_the_environment_alone_refuses_a_threshold_out_of_range() -> None:
 
     with pytest.raises(ConfigError, match="queue.reap.interval_seconds"):
         ENVIRONMENT_CONFIG.load({"VIBEY_QUEUE_REAP_INTERVAL_SECONDS": "0"})
+
+
+def test_the_environment_alone_declares_the_defect_threshold() -> None:
+    """A cluster pod has no vibey.toml; `[queue.defect]` comes from its environment."""
+    from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG
+
+    declared = ENVIRONMENT_CONFIG.load({"VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES": " 5 "})
+    assert declared.queue.defect.identical_failures == 5
+    assert ENVIRONMENT_CONFIG.load({}).queue.defect.identical_failures == 3
+    with pytest.raises(ValueError, match="VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES must be an int"):
+        ENVIRONMENT_CONFIG.load({"VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES": "three"})

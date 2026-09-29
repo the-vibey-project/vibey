@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Final
 
 import asyncpg
 from platformdirs import user_cache_path
@@ -23,6 +24,7 @@ from vibey.application.build_verify_handler import (
     VerifyRepairPolicy,
 )
 from vibey.application.bus_dead_letter_handler import BUS_DEAD_LETTER_KIND, BusDeadLetterHandler
+from vibey.application.defect_triage import DefectTriage
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
 from vibey.application.deploy_design_bridge import DeployDesignBridgeHandler
 from vibey.application.deploy_design_handler import (
@@ -47,6 +49,7 @@ from vibey.application.engine_selection import (
 )
 from vibey.application.engine_selector import EngineSelector
 from vibey.application.gate_answer import GateAnswerService
+from vibey.application.gate_notices import GateNoticeService, GateReminder
 from vibey.application.interfaces import (
     AzureClientPort,
     BlobPort,
@@ -74,6 +77,16 @@ from vibey.application.interfaces import (
     VisualInventoryProducer,
     WorkPlanProducer,
 )
+from vibey.application.interfaces.defect_triage import (
+    DefectTriageInterface,
+    JobFailureHistory,
+)
+from vibey.application.interfaces.gate_notices import (
+    GateNoticeServiceInterface,
+    GateNoticeStore,
+    GateReminderInterface,
+)
+from vibey.application.interfaces.observability import Logger
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
@@ -90,10 +103,14 @@ from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
-from vibey.domain.config import VibeyConfig
+from vibey.bootstrap_interface import WorkerGateSeamsInterface
+from vibey.domain.config import NotificationsConfig, QueueDefectConfig, VibeyConfig
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import VibeyError
-from vibey.domain.interfaces.config_interface import QueueReapConfigInterface
+from vibey.domain.interfaces.config_interface import (
+    QueueDefectConfigInterface,
+    QueueReapConfigInterface,
+)
 from vibey.domain.phase import Phase
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
@@ -105,9 +122,11 @@ from vibey.infrastructure.db.database_setup import SchemaPreparer
 from vibey.infrastructure.db.design_ledger import PostgresDesignLedger
 from vibey.infrastructure.db.design_spec_repository import FileDesignSpecRepository
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
+from vibey.infrastructure.db.gate_notice_store import PostgresGateNoticeStore
 from vibey.infrastructure.db.handoff_repository import PostgresHandoffRepository
 from vibey.infrastructure.db.human_gate_repository import PostgresHumanGateRepository
 from vibey.infrastructure.db.interfaces import MigratorInterface, SchemaPreparerInterface
+from vibey.infrastructure.db.job_failure_history import PostgresJobFailureHistory
 from vibey.infrastructure.db.job_priority_repository import PostgresJobPriorityStore
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_guard import (
@@ -215,6 +234,15 @@ class AppResources:
     # `[queue.reap]` as resolved: the reaper's thresholds and which broker queues are
     # vibey's -- the dead-letter handler replays only into those.
     queue_reap: QueueReapConfigInterface
+    # Gate notices and defect triage. Each worker records its gates' notices and its jobs'
+    # failures through these; the reminder sweep runs from the worker's idle loop and from
+    # `vibey gates --remind`.
+    gate_notice_store: GateNoticeStore
+    job_failures: JobFailureHistory
+    gate_reminder: GateReminderInterface
+    # `[queue.defect]` as resolved, like `[queue.reap]`: from ./vibey.toml, or the
+    # environment alone in a pod with none.
+    queue_defect: QueueDefectConfigInterface
     integration_lock: PostgresAdvisoryLock | None = None
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
@@ -224,6 +252,36 @@ class AppResources:
 class SystemClock:
     def now(self) -> datetime:
         return datetime.now(UTC)
+
+
+class WorkerGateSeams:
+    """The gate-notice service and defect triage one project's worker composes.
+
+    Every worker builder asks this, so a design-only worker announces and records its gates
+    exactly as the full one does. The defect threshold is the queue's declared policy
+    (`[queue.defect]`, resolved once by `build_app`); a harness with no database gets a
+    notice service that sends and says but records nothing, and no triage.
+    """
+
+    def compose(
+        self, resources: object, logger: Logger
+    ) -> tuple[GateNoticeServiceInterface, DefectTriageInterface | None]:
+        notices = GateNoticeService(
+            sink=getattr(resources, "notifications", None),
+            store=getattr(resources, "gate_notice_store", None),
+            logger=logger,
+        )
+        history = getattr(resources, "job_failures", None)
+        if history is None:
+            return notices, None
+        policy: QueueDefectConfigInterface = getattr(resources, "queue_defect", QueueDefectConfig())
+        return notices, DefectTriage(
+            history=history, logger=logger, threshold=policy.identical_failures
+        )
+
+
+WORKER_GATE_SEAMS: Final[WorkerGateSeamsInterface] = WorkerGateSeams()
+"""What every worker builder composes its gate seams through. Stateless."""
 
 
 def build_design_worker(
@@ -262,6 +320,7 @@ def build_design_worker(
             "design.spec": DesignSpecHandler(specs=resources.design_specs),
         }
     )
+    gate_notices, defects = WORKER_GATE_SEAMS.compose(resources, StructlogAppLogger(owner=owner))
     return WorkerLoop(
         jobs=resources.jobs,
         gates=resources.gates,
@@ -273,6 +332,8 @@ def build_design_worker(
         tracer=getattr(resources, "telemetry_tracer", None),
         metrics=getattr(resources, "telemetry_metrics", None),
         telemetry_enabled=_telemetry_enabled(project.config),
+        gate_notices=gate_notices,
+        defects=defects,
     )
 
 
@@ -294,6 +355,7 @@ def build_visual_worker(
             "visual.plan": VisualPlanHandler(inventories=resources.visual_inventories),
         }
     )
+    gate_notices, defects = WORKER_GATE_SEAMS.compose(resources, StructlogAppLogger(owner=owner))
     return WorkerLoop(
         jobs=resources.jobs,
         gates=resources.gates,
@@ -305,6 +367,8 @@ def build_visual_worker(
         tracer=getattr(resources, "telemetry_tracer", None),
         metrics=getattr(resources, "telemetry_metrics", None),
         telemetry_enabled=_telemetry_enabled(project.config if project is not None else {}),
+        gate_notices=gate_notices,
+        defects=defects,
     )
 
 
@@ -686,6 +750,7 @@ def build_full_worker(
             "build.integrate": _ClosureFactory(_integrate),
         },
     )
+    gate_notices, defects = WORKER_GATE_SEAMS.compose(resources, StructlogAppLogger(owner=owner))
     return WorkerLoop(
         jobs=resources.jobs,
         gates=resources.gates,
@@ -699,6 +764,8 @@ def build_full_worker(
         metrics=metrics,
         telemetry_enabled=telemetry_enabled,
         sabbath=sabbath,
+        gate_notices=gate_notices,
+        defects=defects,
     )
 
 
@@ -946,11 +1013,14 @@ async def build_app(
         declared = resolved_config if resolved_config is not None else ENVIRONMENT_CONFIG.load()
         bus_settings = declared.bus
         reap_settings: QueueReapConfigInterface = declared.queue.reap
+        defect_settings: QueueDefectConfigInterface = declared.queue.defect
         if skipped_toml:
             # A vibey.toml the surfaces could not use is still the operator's word on the
             # reaper: its [queue] table is read on its own, and a malformed one fails the
             # start rather than falling back to an enabled reaper on defaults.
-            reap_settings = QUEUE_CONFIG.load(vibey_toml, environ=os.environ).reap
+            queue_settings = QUEUE_CONFIG.load(vibey_toml, environ=os.environ)
+            reap_settings = queue_settings.reap
+            defect_settings = queue_settings.defect
         bus_inspector: BusInspectorPort | None = None
         bus_port: BusPort
         if bus_settings.url and bus_settings.username and bus_settings.password:
@@ -1047,6 +1117,23 @@ async def build_app(
             logger=StructlogAppLogger(owner="queue-reaper"),
         )
         gates = PostgresHumanGateRepository(pool)
+        gate_notice_store = PostgresGateNoticeStore(pool)
+        notice_settings = (
+            resolved_config.notifications if resolved_config is not None else NotificationsConfig()
+        )
+        gate_reminder = GateReminder(
+            gates=gates,
+            projects=projects,
+            store=gate_notice_store,
+            notices=GateNoticeService(
+                sink=notifications,
+                store=gate_notice_store,
+                logger=StructlogAppLogger(owner="gate-reminder"),
+            ),
+            clock=clock,
+            logger=StructlogAppLogger(owner="gate-reminder"),
+            interval_seconds=notice_settings.sweep_interval_seconds,
+        )
         yield AppResources(
             projects=projects,
             jobs=jobs,
@@ -1111,6 +1198,10 @@ async def build_app(
             ledger_guard=guard,
             queue_reaper=queue_reaper,
             queue_reap=reap_settings,
+            gate_notice_store=gate_notice_store,
+            job_failures=PostgresJobFailureHistory(pool),
+            gate_reminder=gate_reminder,
+            queue_defect=defect_settings,
         )
     finally:
         if bus_recomputer_task is not None:

@@ -7,7 +7,9 @@ An answer is a compare-and-set on `answered_at IS NULL` in one transaction that:
    the gate is still open, so of two answers racing for one gate exactly one lands;
 2. appends one `GateAnswered` event on the same connection, so a gate is never answered
    without its record, and a refused or replayed answer writes none;
-3. returns the gate's job to `ready` and notifies the workers.
+3. returns the gate's job to `ready` and notifies the workers -- or, for a `defect` gate
+   answered `abandon`, cancels it, so a job a person chose to stop is never claimed again
+   (domain/defect.py). The `GateAnswered` event is the record of that choice.
 
 When the gate was not open, nothing is written. The same request replayed with the same
 answer is a no-op success (`GateAnswerOutcome.replayed`); any other answer is refused
@@ -32,8 +34,10 @@ from vibey.application.dto import (
     ProjectRecord,
 )
 from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.defect import DEFECT_ANSWERS
 from vibey.domain.errors import GateAlreadyAnswered, UnknownGate, WrongPhase
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
+from vibey.domain.interfaces.defect_interface import DefectAnswerPolicyInterface
 from vibey.domain.job import QUEUE_GATE_KINDS
 from vibey.domain.ledger import EventKind, Provenance, digest_event
 from vibey.domain.phase import Phase, StoredPhase
@@ -57,6 +61,16 @@ RETURNING *
 """
 
 _PROJECT: Final = "SELECT * FROM project WHERE id = $1"
+
+_READY: Final = """
+UPDATE job SET state = 'ready', run_after = greatest(run_after, now()), updated_at = now()
+WHERE id = $1 AND state = 'awaiting_human'
+"""
+
+_CANCEL: Final = """
+UPDATE job SET state = 'cancelled', updated_at = now()
+WHERE id = $1 AND state = 'awaiting_human'
+"""
 
 
 def _canonical(answer: Mapping[str, object] | None) -> str:
@@ -158,11 +172,13 @@ class PostgresHumanGateRepository:
         drafts: GateAnsweredDraftBuilderInterface = GATE_ANSWERED_DRAFTS,
         appender: EventAppenderInterface = DEFAULT_EVENT_APPENDER,
         rows: ProjectRowMapperInterface = PROJECT_ROWS,
+        defect_answers: DefectAnswerPolicyInterface = DEFECT_ANSWERS,
     ) -> None:
         self._pool = pool
         self._drafts = drafts
         self._appender = appender
         self._rows = rows
+        self._defect_answers = defect_answers
 
     async def raise_gate(
         self, project_id: UUID, job_id: UUID | None, request: HumanGateRequest
@@ -227,15 +243,11 @@ class PostgresHumanGateRepository:
             gate = _row_to_record(row)
             await self._record(conn, gate, account=account, at=row["answered_at"])
             if gate.job_id is not None:
-                await conn.execute(
-                    """
-                    UPDATE job SET state = 'ready', run_after = greatest(run_after, now()),
-                                   updated_at = now()
-                    WHERE id = $1 AND state = 'awaiting_human'
-                    """,
-                    gate.job_id,
-                )
-                await conn.execute(f"NOTIFY vibey_job_ready, '{gate.project_id}'")
+                if self._defect_answers.abandons(gate.kind, gate.answer):
+                    await conn.execute(_CANCEL, gate.job_id)
+                else:
+                    await conn.execute(_READY, gate.job_id)
+                    await conn.execute(f"NOTIFY vibey_job_ready, '{gate.project_id}'")
             return GateAnswerOutcome(record=gate)
 
     async def _record(

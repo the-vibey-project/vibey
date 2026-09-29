@@ -7,19 +7,27 @@ be idempotent under replay).
 The attempt bound is a ladder like any other, so it ends the way ADR-0024
 says every bounded ladder ends: in a park that advertises its grant. A job
 that burns its last attempt parks as ``attempts_exhausted`` with the number
-to type; it never becomes a ``failed`` row nobody was told about."""
+to type; it never becomes a ``failed`` row nobody was told about -- unless its
+last failures were all one failure, when more attempts cannot help and it parks
+on a ``defect`` gate instead (application/defect_triage.py).
+
+Every gate it raises is announced through `GateNoticeService`, which records
+whether anyone was told (application/gate_notices.py)."""
 
 import asyncio
 import contextlib
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
 
 from vibey.application.dto import HumanGateRecord, HumanGateRequest, JobRecord
+from vibey.application.gate_notices import GateNoticeService
 from vibey.application.interfaces import (
+    DefectTriageInterface,
     Defer,
     Failure,
+    GateNoticeServiceInterface,
     JobHandler,
     Logger,
     NotificationSink,
@@ -34,7 +42,8 @@ from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import HumanGateRepository, JobRepository
 from vibey.domain.errors import ClassifiedFailure
-from vibey.domain.job import ATTEMPTS_EXHAUSTED_GATE_KIND, FailureClass
+from vibey.domain.gate_notice import RAISED_NOTICE
+from vibey.domain.job import ATTEMPTS_EXHAUSTED_GATE_KIND, DEFECT_GATE_KIND, FailureClass
 from vibey.domain.phase import Phase
 
 # The grant key every attempt bound in the tree reads and writes. It is the
@@ -77,6 +86,8 @@ class WorkerLoop:
         metrics: TelemetryMetrics | None = None,
         telemetry_enabled: bool = True,
         sabbath: SabbathGateInterface | None = None,
+        gate_notices: GateNoticeServiceInterface | None = None,
+        defects: DefectTriageInterface | None = None,
     ) -> None:
         # Sub-doctrine 8.i: from sundown Friday to sundown Saturday this worker claims
         # nothing. Jobs wait exactly where the queue put them -- paused, not failed (10.f)
@@ -102,6 +113,15 @@ class WorkerLoop:
         self._log: Logger = (
             logger if logger is not None else StandardLibraryLogger(__name__, owner=owner)
         )
+        # Without a store the notices are still sent and said, just not recorded: what a
+        # harness composes. The composition root always hands in the recording service.
+        self._gate_notices: GateNoticeServiceInterface = (
+            gate_notices
+            if gate_notices is not None
+            else GateNoticeService(sink=notifications, store=None, logger=self._log)
+        )
+        # None: every exhaustion offers its grant, as before defects were told apart.
+        self._defects = defects
 
     def _resting(self) -> bool:
         """Whether 8.i holds now. Logs the rest once when it begins and once when it ends,
@@ -123,39 +143,6 @@ class WorkerLoop:
             )
             self._resting_until = None
         return False
-
-    @staticmethod
-    def _notification_failure(
-        result: Mapping[str, object], config: Mapping[str, object]
-    ) -> str | None:
-        """Return a diagnostic when an enabled channel did not deliver."""
-        if result.get("error"):
-            return str(result["error"])
-
-        raw_config = config.get("notifications")
-        if not isinstance(raw_config, Mapping) or raw_config.get("enabled") is not True:
-            return None
-        if result.get("enabled") is False:
-            return "notification service reported disabled"
-        if raw_config.get("desktop", True) is True and result.get("desktop") is not True:
-            return "desktop delivery returned false"
-
-        raw_webhooks = raw_config.get("webhooks", ())
-        configured_webhooks = (
-            [item for item in raw_webhooks if isinstance(item, Mapping) and item.get("url")]
-            if isinstance(raw_webhooks, Sequence) and not isinstance(raw_webhooks, str | bytes)
-            else []
-        )
-        if not configured_webhooks:
-            return None
-        deliveries = result.get("webhooks")
-        if not isinstance(deliveries, Sequence) or isinstance(deliveries, str | bytes):
-            return "webhook delivery results were missing"
-        if len(deliveries) != len(configured_webhooks):
-            return "webhook delivery results did not match configured destinations"
-        if any(delivery is not True for delivery in deliveries):
-            return "webhook delivery returned false"
-        return None
 
     async def run_once(self, project_id: UUID) -> bool:
         """Claims and executes at most one job. Returns False if there was
@@ -221,7 +208,15 @@ class WorkerLoop:
         elif isinstance(outcome, Failure):
             await self._settle_failure(job, outcome)
         elif isinstance(outcome, Park):
-            await self._raise_and_park(job, outcome.request, created_gate=outcome.gate)
+            # A gate the handler raised itself is announced as it stands; one it asks
+            # for is triaged first, so an exhausted ladder is not offered as a grant
+            # when its failures were all one failure.
+            request = (
+                outcome.request
+                if outcome.gate is not None
+                else await self._triaged(job, outcome.request)
+            )
+            await self._raise_and_park(job, request, created_gate=outcome.gate)
         elif isinstance(outcome, Defer):
             # A defer used to leave no trace outside `job.last_error`: the
             # queue showed 0 failed, 0 parked and a job quietly sliding its
@@ -270,7 +265,13 @@ class WorkerLoop:
         a job the human had just paid for.
         """
         error = {"class": outcome.failure_class.value, "detail": outcome.detail}
+        # Every failure is recorded before anything else, so the history a later
+        # exhaustion reads includes this one whichever way this settle ends.
+        if self._defects is not None:
+            await self._defects.record(job, outcome.failure_class, outcome.detail)
         if job.attempts < job.max_attempts:
+            if await self._failed_alike_after_requeue(job, outcome):
+                return
             nacked = await self._jobs.nack(job.id, owner=self._owner, error=error)
             self._landed(nacked, event="job.nack_rejected", job=job)
             return
@@ -293,20 +294,49 @@ class WorkerLoop:
             self._landed(nacked, event="job.nack_rejected", job=job)
             return
 
-        limit = job.max_attempts
         await self._raise_and_park(
-            job,
-            HumanGateRequest(
-                kind=EXHAUSTED_GATE_KIND,
-                prompt=(
-                    f"job {job.kind!r} exhausted its {limit} attempts on the last "
-                    f"failure ({outcome.failure_class.value}: {outcome.detail}). Grant "
-                    f"more by answering --raw "
-                    f"'{{\"{ATTEMPTS_GRANT_KEY}\": {limit + self._attempts_grant_step}}}', "
-                    "or fix the item by hand and answer anything to retry it once."
-                ),
+            job, await self._triaged(job, self._exhausted_request(job, outcome))
+        )
+
+    def _exhausted_request(self, job: JobRecord, outcome: Failure) -> HumanGateRequest:
+        limit = job.max_attempts
+        return HumanGateRequest(
+            kind=EXHAUSTED_GATE_KIND,
+            prompt=(
+                f"job {job.kind!r} exhausted its {limit} attempts on the last "
+                f"failure ({outcome.failure_class.value}: {outcome.detail}). Grant "
+                f"more by answering --raw "
+                f"'{{\"{ATTEMPTS_GRANT_KEY}\": {limit + self._attempts_grant_step}}}', "
+                "or fix the item by hand and answer anything to retry it once."
             ),
         )
+
+    async def _failed_alike_after_requeue(self, job: JobRecord, outcome: Failure) -> bool:
+        """Parks a requeued defect that failed the same way again, attempts left or not.
+
+        A `defect` gate's requeue buys one run. A job parked on the ladder's exhaustion
+        (build.implement) still has queue attempts left when it is requeued, and would
+        otherwise spend them all on a failure already known not to change. Only while its
+        latest gate is that answered defect gate: a new failure raises a new gate, so
+        this applies to the requeued run alone. A different failure means the fix did
+        something, and the job goes on within the attempts it has."""
+        if self._defects is None:
+            return False
+        latest = await self._gates.latest_for_job(job.id, include_queue_gates=True)
+        if latest is None or latest.kind != DEFECT_GATE_KIND or latest.answer is None:
+            return False
+        request = await self._defects.triage(job, self._exhausted_request(job, outcome))
+        if request.kind != DEFECT_GATE_KIND:
+            return False
+        await self._raise_and_park(job, request)
+        return True
+
+    async def _triaged(self, job: JobRecord, request: HumanGateRequest) -> HumanGateRequest:
+        """`request`, or the `defect` gate that replaces a grant when the job's recent
+        failures were all one failure."""
+        if self._defects is None:
+            return request
+        return await self._defects.triage(job, request)
 
     def _granted_attempts(self, gate: HumanGateRecord | None) -> int | None:
         """The attempt bound a human granted on this job's latest gate, if
@@ -344,51 +374,11 @@ class WorkerLoop:
             if existing is None or existing.answer is not None:
                 gate = await self._gates.raise_gate(job.project_id, job.id, request)
         if gate is not None:
-            await self._notify_gate(job, gate.gate_id, request)
+            await self._gate_notices.deliver(
+                gate, notice=RAISED_NOTICE, config=self._notification_config
+            )
         parked = await self._jobs.park(job.id, owner=self._owner)
         self._landed(parked, event="job.park_rejected", job=job)
-
-    async def _notify_gate(self, job: JobRecord, gate_id: UUID, request: HumanGateRequest) -> None:
-        if self._notifications is None:
-            return
-        kind = "budget_exceeded" if request.kind == "budget_exhausted" else "human_gate_raised"
-        title = "Budget Exceeded" if kind == "budget_exceeded" else "Human Gate Raised"
-        # Gate prompts can contain model/tool output and are displayed in the gate UI.
-        # Desktop toasts are deliberately a short privacy-safe cue, never prompt text.
-        message = (
-            "A budget decision is needed to continue."
-            if kind == "budget_exceeded"
-            else "Your response is needed to continue."
-        )
-        try:
-            result = await self._notifications.notify(
-                project_id=job.project_id,
-                kind=kind,
-                title=title,
-                message=message,
-                payload={
-                    "gate_id": str(gate_id),
-                    "gate_kind": request.kind,
-                    "job_id": str(job.id),
-                },
-                config=self._notification_config,
-            )
-            failure = self._notification_failure(result, self._notification_config or {})
-            if failure is not None:
-                self._log.warning(
-                    "notification.failed",
-                    **self._job_fields(job),
-                    notification_kind=kind,
-                    error=failure,
-                    result=dict(result),
-                )
-        except Exception as exc:  # noqa: BLE001 - notification failure cannot lose a gate
-            self._log.warning(
-                "notification.failed",
-                **self._job_fields(job),
-                notification_kind=kind,
-                error=repr(exc),
-            )
 
     def _record_queue_latency(self, job: JobRecord, claimed_at: datetime) -> None:
         if self._metrics is None:

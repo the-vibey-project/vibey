@@ -14,7 +14,10 @@ from typing import Protocol, runtime_checkable
 from vibey.application.interfaces import (
     Clock,
     ConductorPreflightInterface,
+    DefectTriageInterface,
     EngineAdapter,
+    GateNoticeServiceInterface,
+    Logger,
 )
 from vibey.domain.engine import EngineId
 
@@ -82,3 +85,15 @@ class AppResourcesInterface(Protocol):
 
     @property
     def integration_lock(self) -> object | None: ...
+
+
+@runtime_checkable
+class WorkerGateSeamsInterface(Protocol):
+    """Composes the gate-notice service and defect triage a worker runs with."""
+
+    def compose(
+        self, resources: object, logger: Logger
+    ) -> tuple[GateNoticeServiceInterface, DefectTriageInterface | None]:
+        """The notice service always; the triage only when the resources carry a failure
+        history to read."""
+        ...

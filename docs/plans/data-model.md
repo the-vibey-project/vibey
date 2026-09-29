@@ -939,6 +939,16 @@ answer is refused (`GateAlreadyAnswered`) and writes nothing. A gate answered be
 ladders park on these gates rather than failing (ADR-0024). Gates are answered
 with `vibey answer GATE_ID`.
 
+An exhausted job whose last `[queue.defect] identical_failures` failures (`JobFailed`
+events) share one signature parks on `defect` instead of `attempts_exhausted` or
+`escalation_exhausted`: it offers no more attempts, only `requeue` or `abandon`. The
+`defect` gate is one of the queue's own (`QUEUE_GATE_KINDS`), and its `abandon` answer
+sets the job `cancelled` in the same transaction as the answer, instead of `ready`.
+
+Whether anyone was told a gate is waiting is recorded on the ledger, not on the row: one
+`GateNotified` or `GateNoticeUndeliverable` event per gate and notice number, where 0 is
+the notice sent when the gate is raised and 1, 2, ... are reminders.
+
 ### 3.10 `artifact` and `budget_ledger`
 
 Provisioned by 0008; not yet read or written by any repository. Artifacts are

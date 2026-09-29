@@ -78,6 +78,7 @@ EVERY_KIND: list[tuple[str, tuple[str, ...], str | None, str]] = [
         "--choice LOOP_DEPLOY_DESIGN",
     ),
     ("bus_dead_lettered", ("replay", "dismiss"), None, "--choice replay"),
+    ("defect", ("requeue", "abandon"), None, "--choice requeue"),
     ("budget_exhausted", (), None, """--raw '{"max_dollars": N}'"""),
     ("escalation_exhausted", (), None, """--raw '{"max_attempts": N}'"""),
     ("attempts_exhausted", (), None, """--raw '{"max_attempts": N}'"""),

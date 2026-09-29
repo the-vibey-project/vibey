@@ -15,6 +15,38 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **gates:** "a person was told" is evidence, never assumed. Every notice about a human
+  gate -- notice 0 when it is raised, reminder 1, 2, ... while it waits -- now ends in one
+  ledger event: `GateNotified` when a channel took it, or `GateNoticeUndeliverable` with the
+  reason (`disabled`, `no_channel`, `config_invalid`, `unwired`, `failed`) and a
+  `gate.notice_undeliverable` warning. With `[notifications] enabled = false` -- still the
+  default, since no channel reaches a person with zero configuration (a pod or a launchd
+  worker has no desktop) -- a gate used to leave no trace at all; now it is said once per
+  gate, loudly, and not reminded about. One event per gate and notice number, fleet-wide,
+  so a replayed sweep records nothing (`PostgresGateNoticeStore`).
+* **gates:** stale-gate reminders. An idle worker sweeps its project's open gates every
+  `[notifications] sweep_interval_seconds` (default 300): a gate with no raise notice on
+  record gets one, and a gate open `remind_after_seconds` (default a day) gets a reminder
+  every `remind_every_seconds` (default a day), at most `max_reminders` (default 7; 0 for
+  none) times. `vibey gates --remind [--dry-run] [--json]` runs the same sweep on demand, for
+  a supervisor to schedule where no worker idles; it exits 1 when a project's notices could
+  not be read. `vibey doctor` gains a `gate-notices` line: `WARN ... N gates waiting,
+  nobody will be told`, by project and reason -- a report, never a failure.
+* **queue:** a job whose last failures were all one failure parks on a `defect` gate, not a
+  grant. Every failed handler run is recorded as a `JobFailed` event with its signature --
+  the failure class and detail with ids, timestamps, durations, addresses, temporary paths
+  and attempt counters normalized away, hashed (`domain/defect.py`). When the last
+  `[queue.defect] identical_failures` (default 3; 0 off; env
+  `VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES`) share one signature, the worker raises `defect`
+  in place of `attempts_exhausted` or build.implement's `escalation_exhausted`, naming the
+  signature and the attempts that shared it and offering no more attempts: `--choice
+  requeue` runs it again once a fix has landed (parking at once if it fails the same way),
+  `--choice abandon` cancels the job in the answer's own transaction. Varied failures keep
+  their grant, and unreadable history fails open to it. `GateNotified`,
+  `GateNoticeUndeliverable` and `JobFailed` are withheld from ledger publication.
+
 ## [3.0.0] (2026-09-29)
 
 ### Bug Fixes
