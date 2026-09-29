@@ -2522,7 +2522,7 @@ them are the reviewer's and the operator's time, not the machine's.
 \draw[vibeyline] (9.62,-9.56) -- (9.62,0.2) node[vibeynote,anchor=south] {06:00};
 \draw[vibeyline] (10.69,-9.56) -- (10.69,0.2) node[vibeynote,anchor=south] {08:00};
 \draw[vibeyline] (11.77,-9.56) -- (11.77,0.2) node[vibeynote,anchor=south] {10:00};
-\draw[vibeydashed] (6.41,-9.66) -- (6.41,0.45) node[vibeynote,anchor=south,text=vibeygray] {2026-09-23 UTC};
+\draw[vibeydashed] (6.41,-9.66) -- (6.41,0.17);\node[vibeynote,anchor=south,text=vibeygray] at (6.41,0.46) {2026-09-23 UTC};
 \end{scope}
 \fill[vibeyblue!80,rounded corners=1pt] (0.00,-0.09) rectangle (0.62,0.09);
 \fill[vibeyblue!80,rounded corners=1pt] (0.94,-0.33) rectangle (1.00,-0.15);
@@ -2533,13 +2533,11 @@ them are the reviewer's and the operator's time, not the machine's.
 \fill[vibeyblue!80,rounded corners=1pt] (1.56,-1.29) rectangle (1.62,-1.11);
 \fill[vibeyblue!80,rounded corners=1pt] (1.70,-1.53) rectangle (1.77,-1.35);
 \fill[vibeyblue!80,rounded corners=1pt] (1.79,-1.77) rectangle (1.85,-1.59);
-\fill[vibeysilver] (5.39,-0.09) rectangle (5.51,0.09);
-\node[vibeynote,anchor=west,text=vibeysilver] at (5.54,0.00) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (5.39,-0.09) rectangle (5.51,0.09);
 \fill[vibeyblue!80,rounded corners=1pt] (5.40,-2.01) rectangle (5.51,-1.83);
 \fill[vibeyblue!80,rounded corners=1pt] (5.51,-2.25) rectangle (5.57,-2.07);
 \fill[vibeyblue!80,rounded corners=1pt] (5.54,-2.49) rectangle (5.65,-2.31);
-\fill[vibeysilver] (5.65,-2.25) rectangle (5.77,-2.07);
-\node[vibeynote,anchor=west,text=vibeysilver] at (5.80,-2.16) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (5.65,-2.25) rectangle (5.77,-2.07);
 \fill[vibeyblue!80,rounded corners=1pt] (6.04,-2.73) rectangle (6.13,-2.55);
 \fill[vibeyblue!80,rounded corners=1pt] (6.13,-2.97) rectangle (6.23,-2.79);
 \fill[vibeyblue!80,rounded corners=1pt] (6.23,-3.21) rectangle (6.29,-3.03);
@@ -2548,19 +2546,15 @@ them are the reviewer's and the operator's time, not the machine's.
 \fill[vibeyblue!80,rounded corners=1pt] (6.59,-3.93) rectangle (6.69,-3.75);
 \fill[vibeyblue!80,rounded corners=1pt] (6.69,-3.69) rectangle (6.85,-3.51);
 \fill[vibeyblue!80,rounded corners=1pt] (6.85,-4.17) rectangle (6.91,-3.99);
-\fill[vibeysilver] (6.89,-4.41) rectangle (7.01,-4.23);
-\node[vibeynote,anchor=west,text=vibeysilver] at (7.04,-4.32) {no end};
-\fill[vibeysilver] (7.23,-4.65) rectangle (7.35,-4.47);
-\node[vibeynote,anchor=west,text=vibeysilver] at (7.38,-4.56) {no end};
-\fill[vibeysilver] (7.33,-4.65) rectangle (7.45,-4.47);
-\node[vibeynote,anchor=west,text=vibeysilver] at (7.48,-4.56) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (6.89,-4.41) rectangle (7.01,-4.23);
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (7.23,-4.65) rectangle (7.35,-4.47);
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (7.33,-4.65) rectangle (7.45,-4.47);
 \fill[vibeyblue!80,rounded corners=1pt] (7.34,-4.65) rectangle (7.46,-4.47);
 \fill[vibeyblue!80,rounded corners=1pt] (7.46,-4.89) rectangle (7.53,-4.71);
 \fill[vibeyblue!80,rounded corners=1pt] (7.53,-5.13) rectangle (7.85,-4.95);
 \fill[vibeyblue!80,rounded corners=1pt] (7.85,-5.37) rectangle (8.18,-5.19);
 \fill[vibeyblue!80,rounded corners=1pt] (8.18,-5.61) rectangle (8.34,-5.43);
-\fill[vibeysilver] (8.34,-5.85) rectangle (8.46,-5.67);
-\node[vibeynote,anchor=west,text=vibeysilver] at (8.49,-5.76) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (8.34,-5.85) rectangle (8.46,-5.67);
 \fill[vibeyblue!80,rounded corners=1pt] (8.88,-6.09) rectangle (9.21,-5.91);
 \fill[vibeyblue!80,rounded corners=1pt] (9.21,-2.97) rectangle (9.34,-2.79);
 \fill[vibeyblue!80,rounded corners=1pt] (9.34,-5.85) rectangle (9.63,-5.67);
@@ -2576,11 +2570,9 @@ them are the reviewer's and the operator's time, not the machine's.
 \fill[vibeyblue!80,rounded corners=1pt] (10.79,-8.49) rectangle (10.98,-8.31);
 \fill[vibeyblue!80,rounded corners=1pt] (10.98,-8.73) rectangle (11.21,-8.55);
 \fill[vibeyblue!80,rounded corners=1pt] (11.21,-8.97) rectangle (11.27,-8.79);
-\fill[vibeysilver] (11.25,-9.21) rectangle (11.37,-9.03);
-\node[vibeynote,anchor=west,text=vibeysilver] at (11.40,-9.12) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (11.25,-9.21) rectangle (11.37,-9.03);
 \fill[vibeyblue!80,rounded corners=1pt] (12.22,-9.21) rectangle (12.40,-9.03);
-\fill[vibeysilver] (12.40,-9.45) rectangle (12.52,-9.27);
-\node[vibeynote,anchor=west,text=vibeysilver] at (12.55,-9.36) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (12.40,-9.45) rectangle (12.52,-9.27);
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,0.00) {engines-provider};
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-0.24) {qwenloop-edit-tool};
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-0.48) {qwenloop-request-timeout};
@@ -2622,7 +2614,8 @@ them are the reviewer's and the operator's time, not the machine's.
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-9.12) {gap-ci-tenants-arch-macos-1};
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-9.36) {gap-ci-tenants-arch-macos-2};
 \node[vibeynote,anchor=north west,align=left] at (0,-9.91)
-  {one bar per logged start--end pair; time in UTC from 2026-09-22 12:03; a lane started twice is drawn twice};
+  {\textcolor{vibeyblue!80}{$\blacksquare$} one bar per logged start--end pair \quad \textcolor{vibeysilver}{$\blacksquare$} a start with no logged end \quad
+   time in UTC from 2026-09-22 12:03; a lane started twice is drawn twice};
 \end{tikzpicture}
 \caption{Lane starts and ends as the storm's progress log recorded them, over 23.1 hours from 2026-09-22 12:03 UTC. One local model served every lane in turn, one instance per model; the bars therefore never overlap in time, and the blank stretches are the reviewer's and the operator's, not the machine's.}
 \label{fig:storm-timeline}

@@ -798,13 +798,12 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             x0 = (s["start"] - t0).total_seconds() / 3600 * per_h
             if s["end"] is None:
                 x1 = x0 + 0.12
+                # A start with no logged end is a grey stub, explained once in the key: a
+                # "no end" label beside each stub overprinted its twin on a lane started twice
+                # and ran into the next bar on its row.
                 lines.append(
-                    f"\\fill[vibeysilver] ({x0:.2f},{y - 0.09:.2f}) rectangle ({x1:.2f},{y + 0.09:.2f});"
+                    f"\\filldraw[fill=vibeysilver,draw=white,line width=.4pt] ({x0:.2f},{y - 0.09:.2f}) rectangle ({x1:.2f},{y + 0.09:.2f});"
                 )
-                if not any(f"at ({x1 + 0.03:.2f},{y:.2f})" in line for line in lines):
-                    lines.append(
-                        f"\\node[vibeynote,anchor=west,text=vibeysilver] at ({x1 + 0.03:.2f},{y:.2f}) {{no end}};"
-                    )
             else:
                 x1 = max(x0 + 0.06, (s["end"] - t0).total_seconds() / 3600 * per_h)
                 lines.append(
@@ -832,8 +831,11 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         while day <= t_end:
             if day > t0:
                 x = (day - t0).total_seconds() / 3600 * per_h
+                # The dashed midnight line stops below the hour labels, and the date sits
+                # above them, so the line never strikes through its own "00:00".
                 day_marks.append(
-                    f"\\draw[vibeydashed] ({x:.2f},{height - 0.3:.2f}) -- ({x:.2f},0.45) node[vibeynote,anchor=south,text=vibeygray] {{{day.strftime('%Y-%m-%d')} UTC}};"
+                    f"\\draw[vibeydashed] ({x:.2f},{height - 0.3:.2f}) -- ({x:.2f},0.17);"
+                    f"\\node[vibeynote,anchor=south,text=vibeygray] at ({x:.2f},0.46) {{{day.strftime('%Y-%m-%d')} UTC}};"
                 )
             day += timedelta(days=1)
         body = f"""\\begin{{tikzpicture}}[x=1cm,y=1cm]
@@ -843,7 +845,8 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\end{{scope}}
 {chr(10).join(lines)}
 \\node[vibeynote,anchor=north west,align=left] at (0,{height - 0.55:.2f})
-  {{one bar per logged start--end pair; time in UTC from {t0.strftime("%Y-%m-%d %H:%M")}; a lane started twice is drawn twice}};
+  {{\\textcolor{{vibeyblue!80}}{{$\\blacksquare$}} one bar per logged start--end pair \\quad \\textcolor{{vibeysilver}}{{$\\blacksquare$}} a start with no logged end \\quad
+   time in UTC from {t0.strftime("%Y-%m-%d %H:%M")}; a lane started twice is drawn twice}};
 \\end{{tikzpicture}}"""
         caption = (
             f"Lane starts and ends as the storm's progress log recorded them, over {span_h:.1f} hours from "
