@@ -596,3 +596,68 @@ async def test_list_for_cycle_scopes_by_project_cycle_and_kind_oldest_first(
 
     assert [job.id for job in listed] == [first.id, second.id]
     assert await repo.list_for_cycle(uuid4(), cycle=1, kind="build.implement") == ()
+
+
+async def _another_project(pool: asyncpg.Pool, name: str) -> UUID:
+    async with pool.acquire() as conn:
+        pid = await conn.fetchval(
+            "INSERT INTO project (name, repo_path, config) VALUES ($1, $2, $3::jsonb) RETURNING id",
+            name,
+            f"/srv/{name}",
+            "{}",
+        )
+    return UUID(str(pid))
+
+
+async def test_claimable_projects_is_empty_when_nothing_is_claimable(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    assert await PostgresJobRepository(migrated_pool).claimable_projects() == ()
+
+
+async def test_claimable_projects_orders_projects_by_their_next_job_in_claim_order(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    """#1189: a worker serving every project takes the fleet's next job first. Each project
+    is listed once, at the place its own head job holds in the claim's ORDER BY."""
+    repo = PostgresJobRepository(migrated_pool)
+    urgent = await _another_project(migrated_pool, "urgent")
+    await repo.enqueue(_request(project_id, subject="a"))
+    await repo.enqueue(_request(project_id, subject="b"))
+    head = await repo.enqueue(_request(urgent, subject="c"))
+    async with migrated_pool.acquire() as conn:
+        await conn.execute("UPDATE job SET priority = 5 WHERE id = $1", head.id)
+
+    assert await repo.claimable_projects() == (urgent, project_id)
+
+
+async def test_claimable_projects_skips_work_the_claim_would_refuse(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    """The same filter as the claim: not due, blocked on a dependency, or not ready is
+    never listed, so a listed project is one whose claim can succeed."""
+    repo = PostgresJobRepository(migrated_pool)
+    later = await _another_project(migrated_pool, "later")
+    blocked = await _another_project(migrated_pool, "blocked")
+    await repo.enqueue(
+        _request(later, subject="later", run_after=datetime.now(UTC) + timedelta(hours=1))
+    )
+    await repo.enqueue(_request(blocked, subject="first"))
+    await repo.enqueue(_request(blocked, subject="second", depends_on_keys=("key-first",)))
+    first = await repo.claim(blocked, owner="w", lease=LEASE)
+    assert first is not None
+
+    assert await repo.claimable_projects() == ()
+
+
+async def test_a_listed_project_is_claimed_through_the_one_claim(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id))
+
+    (listed,) = await repo.claimable_projects()
+    claimed = await repo.claim(listed, owner="worker-1", lease=LEASE)
+
+    assert claimed is not None and claimed.id == job.id
+    assert await repo.claimable_projects() == ()

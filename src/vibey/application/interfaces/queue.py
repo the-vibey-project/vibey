@@ -80,9 +80,12 @@ class JobHandlerFactory(Protocol):
 
 @runtime_checkable
 class JobReadyNotifier(Protocol):
-    async def wait_for_job_ready(self, project_id: UUID, *, timeout: timedelta) -> bool:
+    async def wait_for_job_ready(self, project_id: UUID | None, *, timeout: timedelta) -> bool:
         """Blocks until a job-ready notification arrives or timeout elapses.
-        Returns True if notified, False on timeout (the poll fallback)."""
+        Returns True if notified, False on timeout (the poll fallback).
+
+        `project_id` None waits for any project's notification: the wake-up of a worker
+        that serves every project (#1189)."""
         ...
 
 
@@ -120,6 +123,17 @@ class JobRepository(Protocol):
         Only a job in a phase this vibey knows, of a project in a phase this vibey
         knows, is claimable (vibey#287): a phase a newer vibey added is left for a
         worker that knows what it means, never guessed at."""
+        ...
+
+    async def claimable_projects(self) -> tuple[UUID, ...]:
+        """Every project with a job `claim` would hand out now, ordered by that project's
+        next job in the claim's own order (bump, priority, due time).
+
+        A worker serving every project (#1189) asks this, then claims through `claim`
+        project by project: the claim stays the one place a job is leased, so every
+        per-project rule it enforces still holds. Read-only; a project listed here may
+        have been drained by another worker by the time its claim runs, and that claim
+        simply returns None."""
         ...
 
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool: ...

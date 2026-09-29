@@ -11,6 +11,9 @@ from uuid import UUID
 import asyncpg
 
 _CHANNEL = "vibey_job_ready"
+# The waiter key a worker serving every project (#1189) waits under: woken by any project's
+# notification. A payload is always a project UUID, so it can never collide with this.
+_ANY = "*"
 
 
 class PostgresJobReadyNotifier:
@@ -30,14 +33,14 @@ class PostgresJobReadyNotifier:
             self._conn = None
 
     def _on_notify(self, connection: object, pid: int, channel: str, payload: str) -> None:
-        for fut in self._waiters.pop(payload, []):
+        for fut in (*self._waiters.pop(payload, []), *self._waiters.pop(_ANY, [])):
             if not fut.done():
                 fut.set_result(True)
 
-    async def wait_for_job_ready(self, project_id: UUID, *, timeout: timedelta) -> bool:
+    async def wait_for_job_ready(self, project_id: UUID | None, *, timeout: timedelta) -> bool:
         loop = asyncio.get_running_loop()
         fut: asyncio.Future[bool] = loop.create_future()
-        key = str(project_id)
+        key = _ANY if project_id is None else str(project_id)
         self._waiters.setdefault(key, []).append(fut)
         try:
             return await asyncio.wait_for(fut, timeout=timeout.total_seconds())
