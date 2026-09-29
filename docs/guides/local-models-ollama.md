@@ -65,7 +65,15 @@ for local agent work. Qwen lifecycle desktop notifications stay enabled and
 use macOS's `Ping` sound; `--desktop-notifications` is explicit in the example
 commands even though it is the default.
 
-- The DESIGN and DECOMPOSE providers talk to `<VIBEY_OLLAMA_URL>/api/chat`.
+- The DESIGN and DECOMPOSE providers talk to `<VIBEY_OLLAMA_URL>/api/chat`, in JSON
+  mode with the answer's schema stated in the prompt and checked on the way back; a
+  malformed answer is re-asked once, naming what was wrong. A reply cut short by its
+  output budget (`done_reason: length`, the reasoning spent every token) is retried
+  once with double the budget, within `VIBEY_OLLAMA_CONTEXT`, and reasoning level
+  `VIBEY_OLLAMA_RETRY_THINK` (`low` by default; `none` leaves the model's own). A
+  second cut-short reply fails as a *capacity* shortfall naming `VIBEY_OLLAMA_OUTPUT`
+  / `VIBEY_OLLAMA_CONTEXT`. Measured before and after in
+  [sovereign-retry-2026-09-29](../architecture/evidence/sovereign-retry-2026-09-29.md).
 - gptossloop's process gets `GPTOSSLOOP_BASE_URL=<VIBEY_OLLAMA_URL>/v1` and
   `GPTOSSLOOP_MODEL=<the model>` (`--ollama-model`, else `VIBEY_OLLAMA_MODEL`, else
   `gpt-oss:20b`), so it attaches to this server and runs the providers' model.

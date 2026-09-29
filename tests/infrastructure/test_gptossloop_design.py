@@ -21,6 +21,7 @@ from vibey.infrastructure.engines.interfaces import (
     OllamaChatClientInterface,
 )
 from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
+from vibey.infrastructure.engines.validated_ask import ValidatedAsk
 
 SPEC_PAYLOAD = {
     "objective": "publish a heartbeat ref",
@@ -108,9 +109,40 @@ async def test_a_stage_of_questions_comes_back_shaped() -> None:
 
 @pytest.mark.asyncio
 async def test_a_stage_with_no_questions_is_refused() -> None:
-    provider, _ = _provider({"questions": []})
-    with pytest.raises(ValueError, match="non-empty questions list"):
+    provider, sent = _provider({"questions": []})
+    with pytest.raises(errors.ModelAnswerRejected, match=r"\$.questions must have at least 1"):
         await provider.batch(DesignStage.JOB_STORY, [])
+    assert len(sent) == 2  # asked, re-asked once, then refused
+
+
+@pytest.mark.asyncio
+async def test_questions_missing_their_keys_are_re_asked_then_rejected_by_name() -> None:
+    """Measured live: in JSON mode gpt-oss named its own keys and the old provider died on
+    `KeyError: 'question_id'`, eleven attempts running. Now the schema travels in the
+    prompt, the violation is named in one re-ask, and a second miss is a typed refusal."""
+    provider, sent = _provider({"questions": [{"id": "q1", "question": "what?"}]})
+
+    with pytest.raises(errors.ModelAnswerRejected) as caught:
+        await provider.batch(DesignStage.WALKING_SKELETON, [])
+
+    assert caught.value.failure_class.value == "engine"
+    assert "$.questions[0] is missing the required key 'question_id'" in str(caught.value)
+    system = str(sent[0]["messages"][0]["content"])
+    assert '"question_id"' in system  # the schema is stated, not left to a grammar
+    reask = str(sent[1]["messages"][1]["content"])
+    assert "missing the required key 'question_id'" in reask
+
+
+@pytest.mark.asyncio
+async def test_a_batch_whose_decoder_refuses_it_is_re_asked_with_the_reason() -> None:
+    """What the schema cannot say -- a non-empty default -- the decoder does, and the
+    re-ask carries its words."""
+    provider, sent = _provider(
+        {"questions": [{"question_id": "q1", "text": "what?", "default": " ", "blocking": False}]}
+    )
+    with pytest.raises(errors.ModelAnswerRejected, match="requires a proposed default"):
+        await provider.batch(DesignStage.CONTEXT_FREE, [])
+    assert "requires a proposed default" in str(sent[1]["messages"][1]["content"])
 
 
 @pytest.mark.asyncio
@@ -270,8 +302,48 @@ async def test_a_spec_without_a_single_criterion_is_refused() -> None:
     payload = json.loads(json.dumps(SPEC_PAYLOAD))
     payload["criteria"] = []
     provider, _ = _provider(payload)
-    with pytest.raises(ValueError, match="at least one acceptance criterion"):
+    with pytest.raises(ValueError, match=r"\$.criteria must have at least 1 item"):
         await provider.synthesize([])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "mutate, expected",
+    [
+        (lambda p: p.pop("objective"), "$ is missing the required key 'objective'"),
+        (lambda p: p.update(non_goals="not a list"), "$.non_goals must be of JSON type array"),
+        (
+            lambda p: p.update(constraints=["not an object"]),
+            "$.constraints[0] must be of JSON type object, got string",
+        ),
+        (
+            lambda p: p.update(constraints=[{"text": "x", "kind": "sideways"}]),
+            '$.constraints[0].kind must be one of "hard", "soft", got "sideways"',
+        ),
+    ],
+)
+async def test_a_malformed_spec_is_refused_at_the_boundary(mutate, expected: str) -> None:
+    payload = json.loads(json.dumps(SPEC_PAYLOAD))
+    mutate(payload)
+    provider, _ = _provider(payload)
+    with pytest.raises(errors.ModelAnswerRejected, match="the DesignSpec was rejected") as caught:
+        await provider.synthesize([])
+    assert expected in str(caught.value)
+
+
+class _AcceptsAnything:
+    """A shape checker that passes everything, leaving the typed decoders as the last
+    line -- which they must still be, whatever checker a caller injects."""
+
+    def violations(self, value: object, schema: Mapping[str, object]) -> tuple[str, ...]:
+        return ()
+
+
+def _unchecked(content: object) -> GptossloopDesignProvider:
+    chat = OllamaChatClient(transport=FakeTransport(content))
+    return GptossloopDesignProvider(
+        chat=chat, asker=ValidatedAsk(chat, checker=_AcceptsAnything(), reasks=0)
+    )
 
 
 @pytest.mark.asyncio
@@ -280,16 +352,23 @@ async def test_a_spec_without_a_single_criterion_is_refused() -> None:
     [
         (lambda p: p.pop("objective"), "invalid DesignSpec JSON"),
         (lambda p: p.update(non_goals="not a list"), "non_goals must be a list"),
+        (lambda p: p.update(criteria=[]), "at least one acceptance criterion"),
         (lambda p: p.update(constraints=["not an object"]), "every constraints item"),
-        (lambda p: p.update(constraints=[{"text": "x", "kind": "sideways"}]), "invalid DesignSpec"),
     ],
 )
-async def test_a_malformed_spec_is_refused_at_the_boundary(mutate, expected: str) -> None:
+async def test_the_spec_decoder_still_refuses_what_a_checker_let_through(
+    mutate, expected: str
+) -> None:
     payload = json.loads(json.dumps(SPEC_PAYLOAD))
     mutate(payload)
-    provider, _ = _provider(payload)
-    with pytest.raises(ValueError, match=expected):
-        await provider.synthesize([])
+    with pytest.raises(errors.ModelAnswerRejected, match=expected):
+        await _unchecked(payload).synthesize([])
+
+
+@pytest.mark.asyncio
+async def test_the_question_decoder_still_refuses_an_empty_batch() -> None:
+    with pytest.raises(errors.ModelAnswerRejected, match="non-empty questions list"):
+        await _unchecked({"questions": []}).batch(DesignStage.JOB_STORY, [])
 
 
 @pytest.mark.asyncio

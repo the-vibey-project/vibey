@@ -1,12 +1,26 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The one client every sovereign provider talks to the local model through.
 
-Ollama's chat API with the answer's JSON schema passed as `format`. Ollama compiles the
-schema to a grammar and zeroes the probability of any token that would break it, so
-malformed JSON is not reachable: the boundary needs no fence-hunting and no repair pass
-(ADR-0027).
+Ollama's chat API, with `format` either a JSON schema (compiled to a grammar, so
+malformed JSON is unreachable) or the string ``"json"`` (JSON mode: well-formed JSON,
+any shape). The sovereign DESIGN and DECOMPOSE producers use JSON mode -- a grammar
+compiled from their larger schemas stalled GPT-OSS on the reference host -- and validate
+the decoded object themselves (`validated_ask.ValidatedAsk`), so a caller asking in JSON
+mode gets a JSON object back and nothing more is promised.
 
-It exists as one class because there are now two callers -- the DESIGN provider and the
+Two replies are retried, once each, and never both:
+
+- **Out of output budget.** gpt-oss reasons before it answers, and when the reasoning
+  spends the whole `num_predict` Ollama returns ``done_reason == "length"`` with empty
+  content and a full `thinking` channel. At temperature 0 the same request fails the
+  same way, so the retry asks again with a larger budget (bounded by the context
+  ceiling) and lighter reasoning (`VIBEY_OLLAMA_RETRY_THINK`). If that is still cut
+  short, `OutputBudgetExhausted` says so -- a CAPACITY failure naming the knobs, not an
+  anonymous "empty content".
+- **Empty for any other reason** (a grammar the build could not satisfy): one retry in
+  JSON mode, as before.
+
+It exists as one class because there are two callers -- the DESIGN provider and the
 DECOMPOSE producer -- and the endpoint, the model and the request shape were a private
 copy inside the first. Two copies of a hard-coded endpoint is how the second one gets
 pointed somewhere the first is not.
@@ -25,6 +39,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from vibey.domain.config import ConfigError
+from vibey.domain.errors import OutputBudgetExhausted
 from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
     OllamaTransportInterface,
 )
@@ -38,6 +53,7 @@ OLLAMA_TIMEOUT_ENV = "VIBEY_OLLAMA_TIMEOUT"
 OLLAMA_CONTEXT_ENV = "VIBEY_OLLAMA_CONTEXT"
 OLLAMA_OUTPUT_ENV = "VIBEY_OLLAMA_OUTPUT"
 OLLAMA_FIT_ENV = "VIBEY_OLLAMA_FIT"
+OLLAMA_RETRY_THINK_ENV = "VIBEY_OLLAMA_RETRY_THINK"
 VIBEY_REVISION_ENV = "VIBEY_REVISION"
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
@@ -45,6 +61,19 @@ DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
 DEFAULT_OLLAMA_TIMEOUT = 900
 DEFAULT_OLLAMA_CONTEXT = 8192
 DEFAULT_OLLAMA_OUTPUT = 2048
+#: The reasoning level asked for on the retry after a reply ran out of output budget.
+#: Ollama 0.34 accepts these for gpt-oss, and accepts (then ignores) a level for a model
+#: that only thinks on or off; "none" sends no `think` at all, keeping the model default.
+DEFAULT_OLLAMA_RETRY_THINK = "low"
+THINK_LEVELS: dict[str, str | bool | None] = {
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "max": "max",
+    "true": True,
+    "false": False,
+    "none": None,
+}
 
 _HTTP_SCHEMES = ("http", "https")
 
@@ -118,6 +147,8 @@ class OllamaChatClient:
     CONTEXT_CEILING = 32768
     CONTEXT_RESERVE = 2048
     CHARS_PER_TOKEN = 3
+    #: How much larger the output budget is on the one retry after a reply was cut short.
+    OUTPUT_RETRY_FACTOR = 2
 
     def __init__(
         self,
@@ -128,6 +159,7 @@ class OllamaChatClient:
         context_ceiling: int = DEFAULT_OLLAMA_CONTEXT,
         output_ceiling: int = DEFAULT_OLLAMA_OUTPUT,
         fit_prompt_chars: int | None = None,
+        retry_think: str | bool | None = DEFAULT_OLLAMA_RETRY_THINK,
         transport: OllamaTransportInterface | None = None,
     ) -> None:
         self._base_url = self._validated_base_url(base_url)
@@ -142,11 +174,17 @@ class OllamaChatClient:
             )
         if output_ceiling <= 0:
             raise ConfigError(OLLAMA_OUTPUT_ENV, f"must be positive, got {output_ceiling}")
+        if retry_think not in THINK_LEVELS.values():
+            raise ConfigError(
+                OLLAMA_RETRY_THINK_ENV,
+                f"must be one of {', '.join(THINK_LEVELS)}, got {retry_think!r}",
+            )
         self._model = model.strip()
         self._timeout = timeout
         self._context_ceiling = context_ceiling
         self._output_ceiling = output_ceiling
         self._fit_prompt_chars = fit_prompt_chars
+        self._retry_think = retry_think
         self._transport = transport if transport is not None else UrllibOllamaTransport()
 
     @classmethod
@@ -196,6 +234,12 @@ class OllamaChatClient:
                 OLLAMA_OUTPUT_ENV,
                 f"must be a whole number of tokens, got {raw_output!r}",
             ) from exc
+        raw_think = (environ.get(OLLAMA_RETRY_THINK_ENV) or DEFAULT_OLLAMA_RETRY_THINK).strip()
+        if raw_think.lower() not in THINK_LEVELS:
+            raise ConfigError(
+                OLLAMA_RETRY_THINK_ENV,
+                f"must be one of {', '.join(THINK_LEVELS)}, got {raw_think!r}",
+            )
         return cls(
             base_url=environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
             model=model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
@@ -203,6 +247,7 @@ class OllamaChatClient:
             context_ceiling=context_ceiling,
             output_ceiling=output_ceiling,
             fit_prompt_chars=fit.get("max_prompt_chars") if fit is not None else None,
+            retry_think=THINK_LEVELS[raw_think.lower()],
             transport=transport,
         )
 
@@ -234,41 +279,40 @@ class OllamaChatClient:
         self, system: str, user: str, schema: Mapping[str, object] | str
     ) -> dict[str, object]:
         bounded_user = self._bounded_user(user)
-        fit_applies = (
-            self._fit_prompt_chars is None
-            or len(system) + len(bounded_user) <= self._fit_prompt_chars
-        )
+        prompt_chars = len(system) + len(bounded_user)
+        fit_applies = self._fit_prompt_chars is None or prompt_chars <= self._fit_prompt_chars
         context_ceiling = self._context_ceiling if fit_applies else DEFAULT_OLLAMA_CONTEXT
-        output_ceiling = self._output_ceiling if fit_applies else DEFAULT_OLLAMA_OUTPUT
-        payload: dict[str, object] = {
-            "model": self._model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": bounded_user},
-            ],
-            # The grammar. Malformed JSON is unreachable, so this boundary needs no
-            # fence-hunting and no repair pass.
-            "format": dict(schema) if isinstance(schema, Mapping) else schema,
-            "stream": False,
-            # temperature 0 because an answer that changes on unchanged input cannot be
-            # reasoned about by the phase that consumes it.
-            "options": {
-                "temperature": 0,
-                "num_ctx": min(
-                    context_ceiling,
-                    max(
-                        self.CONTEXT_FLOOR,
-                        (len(system) + len(bounded_user)) // self.CHARS_PER_TOKEN
-                        + self.CONTEXT_RESERVE,
-                    ),
-                ),
-                "num_predict": output_ceiling,
-            },
-        }
+        num_predict = self._output_ceiling if fit_applies else DEFAULT_OLLAMA_OUTPUT
+        num_ctx = min(
+            context_ceiling,
+            max(self.CONTEXT_FLOOR, prompt_chars // self.CHARS_PER_TOKEN + self.CONTEXT_RESERVE),
+        )
         endpoint = f"{self._base_url}/api/chat"
+        payload = self._payload(system, bounded_user, schema, num_ctx, num_predict)
         body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
         message = body.get("message")
-        if isinstance(message, dict) and message.get("content") == "":
+        if self._cut_short(body):
+            # The reasoning spent the budget before the answer began. At temperature 0 the
+            # same request fails the same way, so ask once more with room to finish: a
+            # larger budget, bounded by the context ceiling, and lighter reasoning.
+            prompt_tokens = body.get("prompt_eval_count")
+            if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
+                prompt_tokens = prompt_chars // self.CHARS_PER_TOKEN
+            num_predict = min(
+                num_predict * self.OUTPUT_RETRY_FACTOR,
+                max(num_predict, context_ceiling - prompt_tokens),
+            )
+            num_ctx = min(context_ceiling, max(num_ctx, prompt_tokens + num_predict))
+            payload = self._payload(
+                system, bounded_user, schema, num_ctx, num_predict, think=self._retry_think
+            )
+            body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
+            if self._cut_short(body):
+                raise OutputBudgetExhausted(
+                    self._model, output_tokens=num_predict, context_tokens=num_ctx
+                )
+            message = body.get("message")
+        elif isinstance(message, dict) and message.get("content") == "":
             # Local model builds can emit an empty message when generation is interrupted
             # or grammar compilation cannot satisfy it. One bounded JSON-mode retry keeps
             # the transport live; callers still validate the decoded object.
@@ -280,12 +324,58 @@ class OllamaChatClient:
         if not message["content"].strip():
             raise ValueError("Ollama response carried empty message content")
         value = json.loads(message["content"])
-        # Constrained decoding guarantees the schema, but this is a boundary with an
-        # external process: assert the top-level shape rather than trust it, so a gateway
-        # that is not actually Ollama cannot hand back something that is not an answer.
+        # Neither a grammar nor JSON mode is trusted across a process boundary: assert the
+        # top-level shape, so a gateway that is not actually Ollama cannot hand back
+        # something that is not an answer.
         if not isinstance(value, dict):
             raise ValueError(f"expected a JSON object, got {type(value).__name__}")
         return value
+
+    def _payload(
+        self,
+        system: str,
+        user: str,
+        schema: Mapping[str, object] | str,
+        num_ctx: int,
+        num_predict: int,
+        *,
+        think: str | bool | None = None,
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            # A schema is compiled to a grammar; "json" asks only for well-formed JSON.
+            "format": dict(schema) if isinstance(schema, Mapping) else schema,
+            "stream": False,
+            # temperature 0 because an answer that changes on unchanged input cannot be
+            # reasoned about by the phase that consumes it.
+            "options": {"temperature": 0, "num_ctx": num_ctx, "num_predict": num_predict},
+        }
+        if think is not None:
+            payload["think"] = think
+        return payload
+
+    @staticmethod
+    def _cut_short(body: Mapping[str, object]) -> bool:
+        """Generation stopped at the output limit before a whole JSON answer was written.
+
+        Only `done_reason == "length"` counts: an empty reply that stopped for another
+        reason is not a budget problem, and more budget would not help it.
+        """
+        if body.get("done_reason") != "length":
+            return False
+        message = body.get("message")
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, str) or not content.strip():
+            return True
+        try:
+            json.loads(content)
+        except ValueError:
+            return True
+        return False
 
     @staticmethod
     def _validated_base_url(base_url: str) -> str:

@@ -7,13 +7,15 @@ whose items carry no verification commands, so every verify gate after it ran no
 and passed. A project
 could be specified without paid credit and then not honestly planned.
 
-This asks the local model for the plan through the shared Ollama client, under a
-grammar built from the spec itself: every `acceptance_ids` and `criteria_checked` entry
-is an ENUM of the spec's own criterion ids, so a criterion that does not exist is not a
-token the model can emit, and every item must carry at least one verification command
-and one checked criterion. What a grammar cannot say -- that dependencies come before
-their dependents, that every criterion is mapped, that the skeleton goes first and
-alone -- is checked after decoding, and a plan that fails any of it is refused whole.
+This asks the local model for the plan through the shared Ollama client with a schema
+built from the spec itself: every `acceptance_ids` and `criteria_checked` entry is an
+ENUM of the spec's own criterion ids, and every item must carry at least one
+verification command and one checked criterion. The schema is NOT compiled to a
+grammar -- the full nested grammar stalled GPT-OSS on the reference host -- so it is
+stated in the prompt and the answer is checked against it (`ValidatedAsk`), along with
+what no schema can say -- that dependencies come before their dependents, that every
+criterion is mapped, that the skeleton goes first and alone. A violation is re-asked
+once, naming it; a second is `ModelAnswerRejected`, and a plan is refused whole.
 Never a partial plan: BuildDecomposeHandler fans items out one at a time, and a plan it
 discovers is wrong halfway through has already been partly enqueued.
 """
@@ -31,7 +33,11 @@ from vibey.infrastructure.engines.interfaces.design_json_interface import (
 from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
     OllamaChatClientInterface,
 )
+from vibey.infrastructure.engines.interfaces.validated_ask_interface import (
+    ValidatedAskInterface,
+)
 from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
+from vibey.infrastructure.engines.validated_ask import ValidatedAsk
 
 DECOMPOSE_SYSTEM = (
     "You decompose an accepted software design spec into a dependency-ordered graph of "
@@ -55,16 +61,18 @@ DECOMPOSE_SYSTEM = (
 
 
 class GptossloopWorkPlanProducer:
-    """DECOMPOSE on a local model, over the shared Ollama client with a compiled grammar."""
+    """DECOMPOSE on a local model, over the shared Ollama client in JSON mode, checked."""
 
     def __init__(
         self,
         *,
         chat: OllamaChatClientInterface | None = None,
         decoder: WorkPlanDecoderInterface | None = None,
+        asker: ValidatedAskInterface | None = None,
     ) -> None:
         self._chat = chat if chat is not None else OllamaChatClient()
         self._decoder = decoder if decoder is not None else WorkPlanDecoder()
+        self._ask = asker if asker is not None else ValidatedAsk(self._chat)
 
     def schema(self, criteria_ids: Sequence[str]) -> dict[str, object]:
         """The grammar for one decomposition of a spec with these criterion ids."""
@@ -126,14 +134,15 @@ class GptossloopWorkPlanProducer:
             # An empty enum is a grammar nothing satisfies, and a plan with nothing to
             # map onto could never pass validate_decomposition's first rule anyway.
             raise ValueError("a spec with no acceptance criteria cannot be decomposed")
-        data = await self._chat.ask(
+        return await self._ask.ask(
             DECOMPOSE_SYSTEM,
             f"Spec: {json.dumps(self._decoder.spec_json(spec), default=str)}",
-            # The full nested schema makes the local GPT-OSS grammar compiler stall on
-            # this host. Keep the response in JSON mode and enforce the complete typed
-            # plan contract immediately below with WorkPlanDecoder.require_valid().
-            "json",
+            self.schema(criteria_ids),
+            subject="the work plan",
+            decode=lambda data: self._plan(data, criteria_ids),
         )
+
+    def _plan(self, data: dict[str, object], criteria_ids: Sequence[str]) -> tuple[WorkItem, ...]:
         items = self._decoder.items(data.get("items"))
         self._decoder.require_valid(items, criteria_ids, strict=True)
         return items
