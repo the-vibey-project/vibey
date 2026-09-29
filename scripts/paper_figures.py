@@ -48,17 +48,21 @@ DEFAULT_TEST_TIME_RECORD = "docs/runbooks/expansion/evidence/13-front1-validatio
 DEFAULT_TIMEZONE = "America/New_York"
 DEFAULT_SINCE = date(2026, 8, 9)
 SCRIPT = "scripts/paper_figures.py"
-PACKAGES: tuple[tuple[str, str], ...] = (
-    ("vibey", "src/vibey"),
-    ("vibey-gh", "src/vibey_tools/gh"),
-    ("claudeloop", "src/vibey_runners/claude"),
-    ("vibey-bootstrap", "src/vibey_tools/bootstrap"),
-    ("agyloop", "src/vibey_runners/agy"),
-    ("codexloop", "src/vibey_runners/codex"),
-    ("cursorloop", "src/vibey_runners/cursor"),
-    ("qwenloop", "src/vibey_runners/qwen"),
-    ("vibey-skills", "src/vibey_tools/skills"),
-    ("runners-common", "src/vibey_runners/common"),
+# Each package as (name, source directory, project directory). The project directory holds
+# the package's pyproject.toml, whose pytest `testpaths` say where its suite lives: for the
+# orchestrator that is the repository root's `tests/`, outside `src/vibey`, and a count taken
+# from the source directory alone would credit it with no tests at all.
+PACKAGES: tuple[tuple[str, str, str], ...] = (
+    ("vibey", "src/vibey", ""),
+    ("vibey-gh", "src/vibey_tools/gh", "src/vibey_tools/gh"),
+    ("claudeloop", "src/vibey_runners/claude", "src/vibey_runners/claude"),
+    ("vibey-bootstrap", "src/vibey_tools/bootstrap", "src/vibey_tools/bootstrap"),
+    ("agyloop", "src/vibey_runners/agy", "src/vibey_runners/agy"),
+    ("codexloop", "src/vibey_runners/codex", "src/vibey_runners/codex"),
+    ("cursorloop", "src/vibey_runners/cursor", "src/vibey_runners/cursor"),
+    ("qwenloop", "src/vibey_runners/qwen", "src/vibey_runners/qwen"),
+    ("vibey-skills", "src/vibey_tools/skills", "src/vibey_tools/skills"),
+    ("runners-common", "src/vibey_runners/common", "src/vibey_runners/common"),
 )
 LAYERS: tuple[str, ...] = ("domain", "application", "infrastructure", "cli", "tui")
 # The release tag family this repository holds. The absorbed packages tagged their own
@@ -410,6 +414,22 @@ class CodebaseShape(FigureSourceInterface):
         self._repo = repo
         self._revision = revision
 
+    def _test_roots(self, project: str) -> list[str]:
+        """The directories the project's pytest configuration collects, at the revision."""
+        pyproject = f"{project}/pyproject.toml" if project else "pyproject.toml"
+        shown = subprocess.run(
+            ["git", "show", f"{self._revision}:{pyproject}"],
+            cwd=self._repo,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if shown.returncode != 0:
+            return []
+        options = tomllib.loads(shown.stdout).get("tool", {}).get("pytest", {})
+        testpaths = options.get("ini_options", {}).get("testpaths", [])
+        return [f"{project}/{path}".strip("/") if project else path for path in testpaths]
+
     def load(self) -> dict[str, Any]:
         rev = self._revision
         listing = subprocess.run(
@@ -440,23 +460,23 @@ class CodebaseShape(FigureSourceInterface):
             if re.search(r"(^|/)tests?/", path):
                 tests_by_path[path] = len(_TEST_DEF.findall(content))
         packages = []
-        for name, prefix in PACKAGES:
-            inside = [p for p in paths if p.startswith(prefix + "/")]
+        for name, source, project in PACKAGES:
+            roots = [source, *self._test_roots(project)]
+            inside = [p for p in paths if any(p.startswith(root + "/") for root in roots)]
             packages.append(
                 {
                     "package": name,
                     "lines": sum(lines_by_path[p] for p in inside),
                     "tests": sum(tests_by_path.get(p, 0) for p in inside),
+                    "suites": [root for root in roots[1:] if not root.startswith(source + "/")],
                 }
             )
-        root_tests = sum(n for p, n in tests_by_path.items() if p.startswith("tests/"))
         layers = {
             layer: sum(lines_by_path[p] for p in paths if p.startswith(f"src/vibey/{layer}/"))
             for layer in LAYERS
         }
         return {
             "packages": packages,
-            "root_tests": root_tests,
             "layers": layers,
             "python_files": len(paths),
             "python_lines": sum(lines_by_path.values()),
@@ -1207,26 +1227,44 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             else f"\\node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:{layers[layer] + 900},{i}) {{{_thousands(layers[layer])} $\\cdot$ exempt}};"
             for i, layer in enumerate(LAYERS)
         )
+        # The thousands separator is left at pgf's default, `{,}`, whose braces keep the comma
+        # an ordinary symbol in math mode; overriding it through nested style keys stripped the
+        # braces and set a punctuation comma, which prints as "75, 594".
+        top_lines = max(p["lines"] for p in packages)
+        top_tests = max(p["tests"] for p in packages)
+        blank = "," * (n - 1)
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=3 by 1,horizontal sep=1.9cm}},vibeyaxis,height=5.6cm,
   y dir=reverse,ytick={{0,...,{n - 1}}},ymin=-0.7,ymax={n - 0.3},xmin=0,y tick label style={{font=\\sffamily\\tiny}},
-  scaled x ticks=false,x tick label style={{/pgf/number format/fixed,/pgf/number format/1000 sep={{{{,}}}}}},point meta=x,
-  nodes near coords,every node near coord/.append style={{font=\\sffamily\\tiny,text=vibeygray,/pgf/number format/fixed,/pgf/number format/1000 sep={{{{,}}}}}}]
-\\nextgroupplot[title={{a. Lines of Python per package}},xbar,bar width=6pt,width=5.9cm,yticklabels={{{names}}},xlabel={{lines}}]
+  scaled x ticks=false,x tick label style={{/pgf/number format/fixed}},point meta=x,
+  nodes near coords,every node near coord/.append style={{font=\\sffamily\\tiny,text=vibeygray,/pgf/number format/fixed}}]
+\\nextgroupplot[title={{a. Lines of Python per package}},xbar,bar width=6pt,width=5.9cm,yticklabels={{{names}}},xlabel={{lines}},xmax={top_lines * 1.25:.0f}]
 \\addplot[fill=vibeyblue,draw=none] coordinates {{{loc}}};
-\\nextgroupplot[title={{b. Test functions per package}},xbar,bar width=6pt,width=4.9cm,yticklabels={{,,,,,,,,,,,}},xlabel={{tests}}]
+\\nextgroupplot[title={{b. Test functions per package}},xbar,bar width=6pt,width=4.9cm,yticklabels={{{blank}}},xlabel={{tests}},xmax={top_tests * 1.25:.0f}]
 \\addplot[fill=vibeyteal!85,draw=none] coordinates {{{tests}}};
 \\nextgroupplot[title={{c. The orchestrator's layers}},xbar,bar width=6pt,width=4.9cm,ytick={{0,...,{len(LAYERS) - 1}}},yticklabels={{{",".join(LAYERS)}}},ymin=-0.7,ymax={len(LAYERS) - 0.3},xlabel={{lines}},xmax={max(layers.values()) * 1.9:.0f},nodes near coords={{}}]
 \\addplot[fill=vibeyviolet!85,draw=none] coordinates {{{layer_coords}}};
 {floor_marks}
 \\end{{groupplot}}
 \\end{{tikzpicture}}"""
+        suites = [
+            f"\\texttt{{{_tex(p['package'])}}}'s in the top-level \\texttt{{{_tex(root)}/}}"
+            for p in packages
+            for root in p["suites"]
+        ]
+        empty = [f"\\texttt{{{_tex(p['package'])}}}" for p in packages if p["tests"] == 0]
         caption = (
             f"The shape of the tree at revision {self._revision[:8]}: {_thousands(data['python_lines'])} lines of Python in "
             f"{_thousands(data['python_files'])} files and {_thousands(data['test_functions'])} test functions. "
-            f"(a) Lines per package; (b) test functions per package, with {_thousands(data['root_tests'])} more in the "
-            f"orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below "
-            f"100\\% branch coverage."
+            f"(a) Lines and (b) test functions per package, each package counted together with the test suite its "
+            f"pytest configuration collects"
+            + (f", {' and '.join(suites)}" if suites else "")
+            + (
+                f"; {', '.join(empty)} {'has' if len(empty) == 1 else 'have'} no test functions at this revision"
+                if empty
+                else ""
+            )
+            + ". (c) The orchestrator's layers, four of which fail the build below 100\\% branch coverage."
         )
         return self._fence("figure*", "fig:codebase-shape", caption, body)
 

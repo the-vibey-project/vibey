@@ -3051,18 +3051,18 @@ Finally, the architectural shape of the consolidated repository across its 11 pa
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=3 by 1,horizontal sep=1.9cm},vibeyaxis,height=5.6cm,
   y dir=reverse,ytick={0,...,9},ymin=-0.7,ymax=9.7,xmin=0,y tick label style={font=\sffamily\tiny},
-  scaled x ticks=false,x tick label style={/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}},point meta=x,
-  nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray,/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}}]
-\nextgroupplot[title={a. Lines of Python per package},xbar,bar width=6pt,width=5.9cm,yticklabels={vibey-gh,vibey,claudeloop,vibey-bootstrap,agyloop,codexloop,cursorloop,qwenloop,vibey-skills,runners-common},xlabel={lines}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(75594,0) (58279,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (10909,7) (3109,8) (258,9)};
-\nextgroupplot[title={b. Test functions per package},xbar,bar width=6pt,width=4.9cm,yticklabels={,,,,,,,,,,,},xlabel={tests}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(2011,0) (0,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (291,7) (33,8) (0,9)};
+  scaled x ticks=false,x tick label style={/pgf/number format/fixed},point meta=x,
+  nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray,/pgf/number format/fixed}]
+\nextgroupplot[title={a. Lines of Python per package},xbar,bar width=6pt,width=5.9cm,yticklabels={vibey,vibey-gh,claudeloop,vibey-bootstrap,agyloop,codexloop,cursorloop,qwenloop,vibey-skills,runners-common},xlabel={lines},xmax=183360]
+\addplot[fill=vibeyblue,draw=none] coordinates {(146688,0) (75594,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (10909,7) (3109,8) (258,9)};
+\nextgroupplot[title={b. Test functions per package},xbar,bar width=6pt,width=4.9cm,yticklabels={,,,,,,,,,},xlabel={tests},xmax=4866]
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(3893,0) (2011,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (291,7) (33,8) (0,9)};
 \nextgroupplot[title={c. The orchestrator's layers},xbar,bar width=6pt,width=4.9cm,ytick={0,...,4},yticklabels={domain,application,infrastructure,cli,tui},ymin=-0.7,ymax=4.7,xlabel={lines},xmax=45323,nodes near coords={}]
 \addplot[fill=vibeyviolet!85,draw=none] coordinates {(12488,0) (13786,1) (23854,2) (6347,3) (590,4)};
 \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:13388,0) {12,488 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:14686,1) {13,786 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:24754,2) {23,854 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:7247,3) {6,347 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:1490,4) {590 $\cdot$ exempt};
 \end{groupplot}
 \end{tikzpicture}
-\caption{The shape of the tree at revision 3680d700: 389,222 lines of Python in 2,245 files and 10,638 test functions. (a) Lines per package; (b) test functions per package, with 3,893 more in the orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below 100\% branch coverage.}
+\caption{The shape of the tree at revision 3680d700: 389,222 lines of Python in 2,245 files and 10,638 test functions. (a) Lines and (b) test functions per package, each package counted together with the test suite its pytest configuration collects, \texttt{vibey}'s in the top-level \texttt{tests/}; \texttt{runners-common} has no test functions at this revision. (c) The orchestrator's layers, four of which fail the build below 100\% branch coverage.}
 \label{fig:codebase-shape}
 \end{figure*}
 ```
