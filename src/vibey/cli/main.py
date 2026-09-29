@@ -1707,16 +1707,20 @@ def migrate() -> None:
     DSN carries a password, revokes every privilege it holds, grants exactly the
     declared ones, then connects as it and reports whether the ledger guard is in
     force. Exits 1 when it is not, so an install still running as one role cannot
-    pass this step silently.
+    pass this step silently. Exits 1 too when the install carries no migrations at
+    all: `applied 0 migration(s)` over an empty set would be success nobody observed.
     """
-    from vibey.bootstrap import migrations_dir
     from vibey.infrastructure.db.database_setup import OwnerMigration
+    from vibey.infrastructure.db.interfaces.migration_catalog_interface import (
+        MigrationCatalogInterface,
+    )
     from vibey.infrastructure.db.ledger_guard import (
         DatabaseEndpoints,
         DatabaseRoleReconciler,
         LedgerGuardInspector,
     )
-    from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
+    from vibey.infrastructure.db.migration_catalog import MigrationCatalog
+    from vibey.infrastructure.db.migrator import PostgresMigrator
 
     owner_url = os.environ.get(DatabaseEndpoints.MIGRATE_ENV, "").strip()
     if not owner_url:
@@ -1731,17 +1735,22 @@ def migrate() -> None:
         reconciler=DatabaseRoleReconciler(),
         inspector=LedgerGuardInspector(),
     )
+    catalog: MigrationCatalogInterface = MigrationCatalog.packaged()
     try:
+        # Read before connecting: an install with no migrations is refused whatever
+        # state the database is in, and names the directory it looked in.
+        migrations = catalog.migrations()
         report = asyncio.run(
             runner.run(
                 owner_url=owner_url,
                 app=DatabaseEndpoints(app_url=app_url) if app_url else None,
-                migrations=discover_migrations(migrations_dir()),
+                migrations=migrations,
             )
         )
     except VibeyError as exc:
-        # A refusal (a missing role the owner may not create, an application role that
-        # cannot be guarded) is the answer, said plainly -- not a traceback.
+        # A refusal (no migrations shipped, a missing role the owner may not create, an
+        # application role that cannot be guarded) is the answer, said plainly -- not a
+        # traceback.
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(1) from None
     typer.echo(

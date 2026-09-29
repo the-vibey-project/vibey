@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import logging
 import os
-from typing import Any
+from typing import Any, ClassVar
 
 from vibey_bootstrap.repositories.interfaces.enhanced_config_repository_interface import (
     EnhancedConfigRepositoryInterface,
@@ -14,6 +14,11 @@ from vibey_bootstrap.services.interfaces.telemetry_manager_interface import (
     TelemetryManagerInterface,
 )
 
+# This module's own logger, never the root one: `logging.warning(...)` at import time both
+# printed `WARNING:root:...` on every `vibey` command of a base install and, as a side
+# effect, ran `logging.basicConfig()` on the host application's root logger.
+_LOG = logging.getLogger(__name__)
+
 # Optional imports for telemetry
 try:
     from azure.monitor.opentelemetry import configure_azure_monitor
@@ -22,7 +27,13 @@ try:
     TELEMETRY_AVAILABLE = True
 except ImportError:
     TELEMETRY_AVAILABLE = False
-    logging.warning("Azure Monitor OpenTelemetry not available, using basic logging")
+    # An optional extra nobody installed is not a fault, so this is debug-level. The
+    # warning belongs to the case where telemetry was ASKED for and cannot be had, and
+    # `TelemetryManager.configure` gives it then, once.
+    _LOG.debug(
+        "Azure Monitor OpenTelemetry not available (the vibey-engine[azure] extra); "
+        "using basic logging"
+    )
 
 # Optional Azure Functions instrumentation (not available as standalone package)
 AZURE_FUNCTIONS_INSTRUMENTOR_AVAILABLE = False
@@ -40,6 +51,10 @@ except ImportError:
 
 class TelemetryManager(TelemetryManagerInterface):
     """Manages Application Insights telemetry and structured logging"""
+
+    # Per process, not per manager: every manager a process builds would otherwise say
+    # the same thing again.
+    _missing_package_warned: ClassVar[bool] = False
 
     def __init__(self) -> None:
         self.tracer: Any = None
@@ -65,15 +80,14 @@ class TelemetryManager(TelemetryManagerInterface):
             )
 
             if not app_insights_connection_string:
-                logging.warning(
-                    "Application Insights connection string not found. Using basic logging."
-                )
+                # Telemetry was not configured, so basic logging is what was asked for.
+                _LOG.debug("Application Insights connection string not found. Using basic logging.")
                 self._configure_logging()
                 self._configured = True
                 return True
 
             if not TELEMETRY_AVAILABLE:
-                logging.warning("Azure Monitor OpenTelemetry not available. Using basic logging.")
+                self._warn_missing_package_once()
                 self._configure_logging()
                 self._configured = True
                 return True
@@ -104,6 +118,18 @@ class TelemetryManager(TelemetryManagerInterface):
             self._configure_logging()
             self._configured = True
             return True
+
+    @classmethod
+    def _warn_missing_package_once(cls) -> None:
+        """Telemetry is configured but its package is absent: said once per process."""
+        if cls._missing_package_warned:
+            return
+        cls._missing_package_warned = True
+        _LOG.warning(
+            "An Application Insights connection string is configured, but Azure Monitor "
+            "OpenTelemetry is not installed (the vibey-engine[azure] extra). No telemetry "
+            "will be sent; using basic logging."
+        )
 
     def try_upgrade_from_config(self, config_repository: EnhancedConfigRepositoryInterface) -> bool:
         """

@@ -189,6 +189,41 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   control that holds (see the runbook). The storm's
   `storm_trust.py` gains `LABELED_QUERY`, `IssueGate.judge_labels`, `Grant.curators` and a
   `query` argument to `GhForge`; its own lanes still ask `QUERY`.
+* **packaging:** the `vibey-engine` wheel now carries the SQL migrations, so a `pip install`
+  or `uv tool install` can create its schema. Measured on 2026-09-29: neither a locally
+  built wheel nor PyPI's 3.0.0 contained any `.sql`, so on an empty database `vibey migrate`
+  printed `applied 0 migration(s)` and exited 1, and `vibey new` then failed on `relation
+  "project" does not exist`; only a source checkout and the image (whose Dockerfile copied
+  the directory by hand) worked. The migrations move from the repository root into the
+  package, `src/vibey/infrastructure/db/migrations/` -- one copy, read through
+  `importlib.resources` by the new `MigrationCatalog` from a checkout, the image and a wheel
+  alike -- and the image keeps `/app/migrations` as a symlink to it. `vibey migrate`, and
+  every worker start, now refuse an install that carries no migration files
+  (`NoMigrationsFound`, exit 1, naming the directory) instead of reporting `applied 0`
+  over an empty schema. `tests/meta/test_wheel_ships_migrations.py` builds the real wheel
+  and asserts every migration is in it, byte for byte, and that code imported from the
+  unpacked wheel finds them there.
+* **krypton-app:** `pip install krypton-app` now brings `vibey-engine[hub]`, not bare
+  `vibey-engine`. The launcher's one job is `vibey serve`, whose web stack (fastapi,
+  uvicorn) is the engine's `hub` extra, so on its own the package installed a `krypton`
+  that crashed on `No module named 'fastapi'`. Still unpinned; the launcher's install hint
+  names the extra too, and `clients/krypton-app/tests/test_packaging.py` holds the
+  requirement to an extra the engine actually declares.
+* **bootstrap:** a base install no longer prints `WARNING:root:Azure Monitor OpenTelemetry
+  not available` on every `vibey` command. The notice was a root-logger warning at import
+  time, so it fired whether or not anyone had asked for Azure telemetry -- and, as a side
+  effect, ran `logging.basicConfig()` on the host's root logger. It is now debug-level on
+  `vibey_bootstrap.services.telemetry`'s own logger, as is the "no connection string"
+  notice. The warning is kept for the case it is for: an Application Insights connection
+  string is configured but the `vibey-engine[azure]` extra is missing -- said once per
+  process.
+* **clients:** every Node package now declares the Node it needs in `engines.node`, so npm
+  says so up front instead of a build failing on an older Node. Measured on 2026-09-29: the
+  Expo app (`clients/app`) exports for the web on Node 20.20.2, 22 and 24 and fails on
+  18.20, so it declares `>=20.19.4`; the VS Code extension and `@vibey/core` pass their
+  tests on 20.20, 22 and 24 and fail them on 18.20, so both declare `>=20`. The two
+  lockfiles carry the same fields (`npm install --package-lock-only`), and the root one
+  also picks up the extension's 0.2.0 version it had not recorded.
 
 ## [3.0.0] (2026-09-29)
 

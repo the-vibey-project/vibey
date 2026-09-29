@@ -3,14 +3,14 @@
 (ADR-0054 item 6): the named set is what was bumped by name, and a pulled job no named
 job still needs -- an orphan the per-bump rule could leave -- leaves the lane."""
 
-from pathlib import Path
 from uuid import UUID
 
 import asyncpg
 
+from vibey.infrastructure.db.migration_catalog import MigrationCatalog
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
-MIGRATIONS = discover_migrations(Path(__file__).resolve().parents[3] / "migrations")
+MIGRATIONS = discover_migrations(MigrationCatalog.packaged().directory)
 
 
 async def _job(conn: asyncpg.Connection, pid: UUID, key: str, state: str = "ready") -> UUID:

@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Every migration has its own number, and the numbers run without a gap.
 
-The migrator applies `migrations/*.sql` in lexical order and records each by its stem.
+The migrator applies `src/vibey/infrastructure/db/migrations/*.sql` in lexical order and records each by its stem.
 Two branches that each add "the next" migration pick the same number, and both land
 cleanly on their own: #1095's `0015_job_bump_named.sql` and #1100's ledger guard did
 exactly that. Merged together, two 0015s apply in whatever order their slugs sort,
@@ -16,12 +16,18 @@ from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-MIGRATIONS = REPO / "migrations"
+MIGRATIONS = REPO / "src" / "vibey" / "infrastructure" / "db" / "migrations"
 NAME = re.compile(r"(?P<number>\d{4})_[a-z0-9_]+\.sql")
 
 
 def _files() -> list[Path]:
     return sorted(MIGRATIONS.glob("*.sql"))
+
+
+def test_the_migrations_directory_is_not_empty() -> None:
+    """Every other test here passes vacuously over no files, so a moved directory
+    would turn this whole module green without checking anything."""
+    assert _files(), f"no migrations at {MIGRATIONS}"
 
 
 def test_every_migration_is_named_number_underscore_slug() -> None:

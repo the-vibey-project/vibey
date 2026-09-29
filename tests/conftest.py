@@ -32,6 +32,7 @@ from hypothesis import HealthCheck, settings
 
 from tests.db_reaper import BackgroundReap, HoldMark, TestDatabaseHold, TestDatabaseReaper
 from tests.db_roles import TestDatabaseRoles
+from vibey.infrastructure.db.migration_catalog import MigrationCatalog
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
 # The no-loss lane: `pytest -m noloss --hypothesis-profile=noloss`, the CI job "No-loss
@@ -61,7 +62,7 @@ settings.register_profile(
 )
 settings.load_profile("vibey")
 
-_MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
+_MIGRATIONS_DIR = MigrationCatalog.packaged().directory
 # The template is migrated from THIS checkout's migrations and then reused by
 # every later session on the same server. Two checkouts whose migrations
 # differ -- parallel worktrees, one carrying a migration the other lacks --

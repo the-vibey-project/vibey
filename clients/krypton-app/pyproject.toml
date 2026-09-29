@@ -12,10 +12,14 @@ description = "krypton, the apps of vibey: launches the local vibey hub and open
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-# The launcher starts `vibey serve`, so the engine is what makes it useful. Unpinned: the
-# two packages release on their own cadences, and the launcher checks what the installed
-# engine can do at run time rather than trusting a version number to say it.
-dependencies = ["vibey-engine"]
+# The launcher starts `vibey serve`, so the engine is what makes it useful -- and the
+# engine's `hub` extra is what makes `vibey serve` run: the hub's web stack (fastapi,
+# uvicorn) is an extra of vibey-engine, not a base dependency (ADR-0067). Bare
+# `vibey-engine` installed a launcher whose one job crashed on `No module named 'fastapi'`
+# (measured 2026-09-29). Unpinned: the two packages release on their own cadences, and the
+# launcher checks what the installed engine can do at run time rather than trusting a
+# version number to say it.
+dependencies = ["vibey-engine[hub]"]
 
 [project.urls]
 Homepage = "https://the-vibey-project.github.io/vibey/"

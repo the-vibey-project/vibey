@@ -232,3 +232,29 @@ def test_migrate_reports_a_refusal_without_a_traceback(monkeypatch: pytest.Monke
     assert "error: the application role 'vibey_app' does not exist" in res.stderr
     assert "CREATEROLE" in res.stderr
     assert "Traceback" not in res.output
+
+
+def test_migrate_refuses_an_install_that_carries_no_migrations(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The published 3.0.0 wheel shipped no `.sql`: `vibey migrate` printed
+    `applied 0 migration(s)` over an empty set and left a database with no schema. No
+    migration files is a broken install, said plainly, before any database is touched."""
+    from vibey.infrastructure.db.database_setup import OwnerMigration
+    from vibey.infrastructure.db.migration_catalog import MigrationCatalog
+
+    async def never(self: object, **kwargs: object) -> None:
+        raise AssertionError("an install with no migrations must not reach the database")
+
+    monkeypatch.setenv("VIBEY_PG_MIGRATE_URL", OWNER_DSN)
+    monkeypatch.setattr(
+        MigrationCatalog, "packaged", classmethod(lambda cls: MigrationCatalog(tmp_path))
+    )
+    monkeypatch.setattr(OwnerMigration, "run", never)
+
+    res = runner.invoke(app, ["migrate"])
+
+    assert res.exit_code == 1
+    assert f"error: no migrations found at {tmp_path}" in res.stderr
+    assert "applied" not in res.output
+    assert "Traceback" not in res.output

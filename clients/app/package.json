@@ -45,6 +45,9 @@
   "private": true,
   "description": "Krypton for iOS, Android and the web: one Expo app over the vibey hub (ADR-0068).",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.19.4"
+  },
   "jest": {
     "preset": "jest-expo",
     "testMatch": [

@@ -61,7 +61,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-MIGRATIONS = REPO / "migrations"
+MIGRATIONS = REPO / "src" / "vibey" / "infrastructure" / "db" / "migrations"
 ADRS = REPO / "docs" / "architecture" / "decisions"
 
 _DOLLAR = re.compile(r"\$([A-Za-z_][A-Za-z_0-9]*)?\$")

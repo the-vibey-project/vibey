@@ -9,6 +9,7 @@ import pytest
 import pytest_asyncio
 
 from vibey.infrastructure.db.interfaces import MigratorInterface
+from vibey.infrastructure.db.migration_catalog import MigrationCatalog
 from vibey.infrastructure.db.migrator import (
     InvalidMigrationLockTimeout,
     MigrationChecksumError,
@@ -19,7 +20,7 @@ from vibey.infrastructure.db.migrator import (
     discover_migrations,
 )
 
-MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
+MIGRATIONS_DIR = MigrationCatalog.packaged().directory
 LOCK_KEY = PostgresMigrator.LOCK_KEY
 
 

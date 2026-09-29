@@ -143,7 +143,8 @@ from vibey.infrastructure.db.ledger_guard import (
     LedgerGuardStatus,
 )
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
-from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
+from vibey.infrastructure.db.migration_catalog import MigrationCatalog
+from vibey.infrastructure.db.migrator import PostgresMigrator
 from vibey.infrastructure.db.project_abandonment_store import PostgresProjectAbandonmentStore
 from vibey.infrastructure.db.project_budget_store import PostgresProjectBudgetStore
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
@@ -846,11 +847,15 @@ def database_url() -> str:
 
 
 def migrations_dir() -> Path:
-    """Resolved relative to this file so it works from a source checkout and
-    from the image alike (/app/src/vibey/bootstrap.py -> /app/migrations).
-    Derived in one place because two copies of this arithmetic would drift
-    silently -- the image's layout depends on it."""
-    return Path(__file__).resolve().parents[2] / "migrations"
+    """The directory the schema's migrations ship in: package data under
+    `vibey/infrastructure/db/migrations/`, so a source checkout, the image and an
+    installed wheel read the same files. Derived in one place, `MigrationCatalog`,
+    because two copies of this answer would drift silently -- and one did: while it was
+    `parents[2] / "migrations"` from this file, the wheel shipped no migrations at all.
+
+    A module-level function because every caller that wants the path alone -- the
+    cluster preflight and the test suite's database restore -- already imports it."""
+    return MigrationCatalog.packaged().directory
 
 
 @asynccontextmanager
@@ -879,7 +884,9 @@ async def build_app(
             preparer: SchemaPreparerInterface = SchemaPreparer(
                 migrator=migrator, inspector=LedgerGuardInspector()
             )
-            guard = await preparer.prepare(conn, endpoints, discover_migrations(migrations_dir()))
+            guard = await preparer.prepare(
+                conn, endpoints, MigrationCatalog.packaged().migrations()
+            )
 
         telemetry_tracer = TelemetryTracer()
         telemetry_metrics = TelemetryMetrics()

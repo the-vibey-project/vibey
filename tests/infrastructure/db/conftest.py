@@ -2,7 +2,6 @@
 import getpass
 import os
 from collections.abc import AsyncIterator
-from pathlib import Path
 from uuid import UUID
 
 import asyncpg
@@ -10,9 +9,10 @@ import pytest
 import pytest_asyncio
 
 from tests.db_roles import TestDatabaseRoles
+from vibey.infrastructure.db.migration_catalog import MigrationCatalog
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
-MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
+MIGRATIONS_DIR = MigrationCatalog.packaged().directory
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
