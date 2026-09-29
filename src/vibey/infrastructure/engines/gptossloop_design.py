@@ -12,13 +12,16 @@ to the `gptossloop` binary. That is deliberate: `gptossloop run` takes a plan fi
 `gptossloop prompt` needs an existing run id, so neither offers the one-shot
 prompt-to-JSON this needs — and going direct buys the property that matters here.
 
-**Bounded JSON mode.** Experiments showed that larger local grammar schemas can compile
-successfully yet return empty content when GPT-OSS exhausts its generation budget. The
-provider therefore requests JSON mode and validates the decoded object at each typed
-boundary; this keeps the transport live without silently accepting malformed or
-incomplete data. The exchange itself lives in `ollama_chat.OllamaChatClient`, shared
-with the sovereign DECOMPOSE producer, so the endpoint and model are configured once
-(`VIBEY_OLLAMA_URL`, `VIBEY_OLLAMA_MODEL`) rather than hard-coded here.
+**JSON mode, schema-checked -- not schema-constrained.** Larger local grammars compiled
+from these schemas stalled GPT-OSS on the reference host, so the provider asks in JSON
+mode: the answer is well-formed JSON, and its shape is NOT guaranteed by decoding. The
+schema is therefore stated in the prompt and the decoded object is checked against it
+by `validated_ask.ValidatedAsk`, which re-asks once naming the violations and then
+raises `ModelAnswerRejected` rather than a bare `KeyError` (measured:
+docs/architecture/evidence/sovereign-retry-2026-09-29.md). The exchange itself lives in
+`ollama_chat.OllamaChatClient`, shared with the sovereign DECOMPOSE producer, so the
+endpoint and model are configured once (`VIBEY_OLLAMA_URL`, `VIBEY_OLLAMA_MODEL`) rather
+than hard-coded here.
 
 What it cannot do is research, and that is stated rather than worked around — see
 `research()`.
@@ -49,7 +52,11 @@ from vibey.infrastructure.engines.design_json import as_object_list, events_json
 from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
     OllamaChatClientInterface,
 )
+from vibey.infrastructure.engines.interfaces.validated_ask_interface import (
+    ValidatedAskInterface,
+)
 from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
+from vibey.infrastructure.engines.validated_ask import ValidatedAsk
 
 # Re-exported: the refusal moved to the domain so the research handler can catch it
 # without importing infrastructure, and this import path should not break.
@@ -176,7 +183,7 @@ RESEARCH_SYSTEM = (
 
 
 class GptossloopDesignProvider:
-    """DESIGN on a local model, over Ollama's chat API with a compiled grammar."""
+    """DESIGN on a local model, over Ollama's chat API in JSON mode, schema-checked."""
 
     #: The sovereign path's actor. Doctrine 8.a is only auditable if the
     #: ledger says gptossloop when gptossloop's model is what ran (ADR-0064).
@@ -187,8 +194,10 @@ class GptossloopDesignProvider:
         *,
         chat: OllamaChatClientInterface | None = None,
         evidence_dir: Path | None = None,
+        asker: ValidatedAskInterface | None = None,
     ) -> None:
         self._chat = chat if chat is not None else OllamaChatClient()
+        self._ask = asker if asker is not None else ValidatedAsk(self._chat)
         self._evidence_dir = evidence_dir
 
     @classmethod
@@ -204,11 +213,15 @@ class GptossloopDesignProvider:
         return cls(chat=chat, evidence_dir=Path(evidence) if evidence else None)
 
     async def batch(self, stage: DesignStage, prior_events: Sequence[DesignEvent]) -> QuestionBatch:
-        data = await self._chat.ask(
+        return await self._ask.ask(
             QUESTION_SYSTEM,
             f"Stage: {stage.value}\nPrior ledger events: {events_json(prior_events)}",
-            "json",
+            QUESTIONS_SCHEMA,
+            subject=f"the DESIGN {stage.value} question batch",
+            decode=lambda data: self._question_batch(stage, data),
         )
+
+    def _question_batch(self, stage: DesignStage, data: Mapping[str, object]) -> QuestionBatch:
         raw = as_object_list(data.get("questions"), "questions")
         if not raw:
             raise ValueError("DESIGN question output requires a non-empty questions list")
@@ -249,11 +262,15 @@ class GptossloopDesignProvider:
                 evidence_name=self._evidence_name(topic),
             )
         source, body = document
-        data = await self._chat.ask(
+        return await self._ask.ask(
             RESEARCH_SYSTEM,
             f"Topic: {topic}\nSource: {source}\n\n{body}",
-            "json",
+            RESEARCH_SCHEMA,
+            subject=f"the research summary of {topic!r}",
+            decode=lambda data: self._research_result(source, data),
         )
+
+    def _research_result(self, source: str, data: Mapping[str, object]) -> ResearchResult:
         title = str(data.get("title", "")).strip()
         content = str(data.get("content", "")).strip()
         if not title or not content:
@@ -317,7 +334,15 @@ class GptossloopDesignProvider:
         return f"No {name} (or .txt) exists in {self._evidence_dir}."
 
     async def synthesize(self, events: Sequence[DesignEvent]) -> DesignSpec:
-        data = await self._chat.ask(SPEC_SYSTEM, f"Ledger events: {events_json(events)}", "json")
+        return await self._ask.ask(
+            SPEC_SYSTEM,
+            f"Ledger events: {events_json(events)}",
+            SPEC_SCHEMA,
+            subject="the DesignSpec",
+            decode=self._design_spec,
+        )
+
+    def _design_spec(self, data: Mapping[str, object]) -> DesignSpec:
         try:
             constraints = as_object_list(data.get("constraints", []), "constraints")
             criteria = as_object_list(data.get("criteria"), "criteria")

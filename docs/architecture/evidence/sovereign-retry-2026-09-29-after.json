@@ -1,0 +1,816 @@
+{
+  "started_at": "2026-09-29T08:04:54.528484+00:00",
+  "finished_at": "2026-09-29T08:37:39.305923+00:00",
+  "model": "gpt-oss:20b",
+  "runs_per_workload": 10,
+  "environment": {
+    "VIBEY_OLLAMA_URL": null,
+    "VIBEY_OLLAMA_MODEL": null,
+    "VIBEY_OLLAMA_CONTEXT": null,
+    "VIBEY_OLLAMA_OUTPUT": null,
+    "VIBEY_OLLAMA_FIT": null,
+    "VIBEY_OLLAMA_RETRY_THINK": null
+  },
+  "summary": {
+    "design.interview": {
+      "n": 10,
+      "outcomes": {
+        "ok": 10
+      },
+      "ok_rate": 1.0,
+      "empty_content_rate": 0.0,
+      "schema_violation_rate": 0.0,
+      "empty_content_done_reasons": {},
+      "first_call_empty_rate": 0.0,
+      "first_call_done_reasons": {
+        "stop": 10
+      },
+      "mean_seconds": 25.1,
+      "mean_calls": 1.0
+    },
+    "design.interview (production replay)": {
+      "n": 10,
+      "outcomes": {
+        "ok": 10
+      },
+      "ok_rate": 1.0,
+      "empty_content_rate": 0.0,
+      "schema_violation_rate": 0.0,
+      "empty_content_done_reasons": {},
+      "first_call_empty_rate": 0.0,
+      "first_call_done_reasons": {
+        "stop": 10
+      },
+      "mean_seconds": 77.8,
+      "mean_calls": 1.0
+    },
+    "build.decompose": {
+      "n": 10,
+      "outcomes": {
+        "ok": 10
+      },
+      "ok_rate": 1.0,
+      "empty_content_rate": 0.0,
+      "schema_violation_rate": 0.0,
+      "empty_content_done_reasons": {},
+      "first_call_empty_rate": 0.4,
+      "first_call_done_reasons": {
+        "length": 10
+      },
+      "mean_seconds": 93.5,
+      "mean_calls": 2.0
+    }
+  },
+  "runs": [
+    {
+      "workload": "design.interview",
+      "label": "context_free/brief-0",
+      "seconds": 34.32,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 34.32,
+          "done_reason": "stop",
+          "eval_count": 992,
+          "prompt_eval_count": 419,
+          "content_chars": 620,
+          "thinking_chars": 3983
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 81.43,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 81.43,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 109.87,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 88.26,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 887,
+          "content_chars": 0,
+          "thinking_chars": 8204
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 4983,
+          "num_predict": 4096,
+          "seconds": 21.59,
+          "done_reason": "stop",
+          "eval_count": 446,
+          "prompt_eval_count": 887,
+          "content_chars": 1001,
+          "thinking_chars": 705
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "job_story/brief-1",
+      "seconds": 20.53,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 20.53,
+          "done_reason": "stop",
+          "eval_count": 427,
+          "prompt_eval_count": 424,
+          "content_chars": 497,
+          "thinking_chars": 1437
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 84.24,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 84.22,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-1",
+      "seconds": 99.64,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 66.39,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 835,
+          "content_chars": 316,
+          "thinking_chars": 8435
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 4931,
+          "num_predict": 4096,
+          "seconds": 33.25,
+          "done_reason": "stop",
+          "eval_count": 907,
+          "prompt_eval_count": 835,
+          "content_chars": 3005,
+          "thinking_chars": 413
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "laddering/brief-2",
+      "seconds": 58.44,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 58.44,
+          "done_reason": "stop",
+          "eval_count": 1804,
+          "prompt_eval_count": 415,
+          "content_chars": 622,
+          "thinking_chars": 8481
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 76.54,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 76.54,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-2",
+      "seconds": 87.85,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 66.55,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 932,
+          "content_chars": 286,
+          "thinking_chars": 8360
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 5028,
+          "num_predict": 4096,
+          "seconds": 21.3,
+          "done_reason": "stop",
+          "eval_count": 481,
+          "prompt_eval_count": 932,
+          "content_chars": 1434,
+          "thinking_chars": 470
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "example_mapping/brief-0",
+      "seconds": 19.18,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 19.18,
+          "done_reason": "stop",
+          "eval_count": 481,
+          "prompt_eval_count": 419,
+          "content_chars": 644,
+          "thinking_chars": 1258
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 76.47,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 76.47,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 87.44,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 67.59,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 887,
+          "content_chars": 0,
+          "thinking_chars": 8204
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 4983,
+          "num_predict": 4096,
+          "seconds": 19.84,
+          "done_reason": "stop",
+          "eval_count": 446,
+          "prompt_eval_count": 887,
+          "content_chars": 1001,
+          "thinking_chars": 705
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "walking_skeleton/brief-1",
+      "seconds": 23.98,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 23.98,
+          "done_reason": "stop",
+          "eval_count": 669,
+          "prompt_eval_count": 425,
+          "content_chars": 634,
+          "thinking_chars": 2518
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 76.82,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 76.82,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-1",
+      "seconds": 98.69,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 65.75,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 835,
+          "content_chars": 316,
+          "thinking_chars": 8435
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 4931,
+          "num_predict": 4096,
+          "seconds": 32.94,
+          "done_reason": "stop",
+          "eval_count": 907,
+          "prompt_eval_count": 835,
+          "content_chars": 3005,
+          "thinking_chars": 413
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "nfr_planguage/brief-2",
+      "seconds": 15.94,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 15.94,
+          "done_reason": "stop",
+          "eval_count": 406,
+          "prompt_eval_count": 417,
+          "content_chars": 627,
+          "thinking_chars": 1231
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 76.26,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 76.26,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-2",
+      "seconds": 86.22,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 65.92,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 932,
+          "content_chars": 286,
+          "thinking_chars": 8360
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 5028,
+          "num_predict": 4096,
+          "seconds": 20.3,
+          "done_reason": "stop",
+          "eval_count": 481,
+          "prompt_eval_count": 932,
+          "content_chars": 1434,
+          "thinking_chars": 470
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "premortem/brief-0",
+      "seconds": 28.36,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 28.36,
+          "done_reason": "stop",
+          "eval_count": 822,
+          "prompt_eval_count": 420,
+          "content_chars": 564,
+          "thinking_chars": 3239
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 75.81,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 75.81,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 91.27,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 70.93,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 887,
+          "content_chars": 0,
+          "thinking_chars": 8204
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 4983,
+          "num_predict": 4096,
+          "seconds": 20.33,
+          "done_reason": "stop",
+          "eval_count": 446,
+          "prompt_eval_count": 887,
+          "content_chars": 1001,
+          "thinking_chars": 705
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "context_free/brief-1",
+      "seconds": 14.52,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 14.52,
+          "done_reason": "stop",
+          "eval_count": 354,
+          "prompt_eval_count": 424,
+          "content_chars": 430,
+          "thinking_chars": 1125
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 76.72,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 76.72,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-1",
+      "seconds": 100.38,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 66.78,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 835,
+          "content_chars": 316,
+          "thinking_chars": 8435
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 4931,
+          "num_predict": 4096,
+          "seconds": 33.6,
+          "done_reason": "stop",
+          "eval_count": 907,
+          "prompt_eval_count": 835,
+          "content_chars": 3005,
+          "thinking_chars": 413
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "job_story/brief-2",
+      "seconds": 19.63,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 19.63,
+          "done_reason": "stop",
+          "eval_count": 524,
+          "prompt_eval_count": 415,
+          "content_chars": 371,
+          "thinking_chars": 2000
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 76.81,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 76.81,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-2",
+      "seconds": 88.11,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 67.66,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 932,
+          "content_chars": 286,
+          "thinking_chars": 8360
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 5028,
+          "num_predict": 4096,
+          "seconds": 20.45,
+          "done_reason": "stop",
+          "eval_count": 481,
+          "prompt_eval_count": 932,
+          "content_chars": 1434,
+          "thinking_chars": 470
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "laddering/brief-0",
+      "seconds": 16.2,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 16.2,
+          "done_reason": "stop",
+          "eval_count": 407,
+          "prompt_eval_count": 419,
+          "content_chars": 460,
+          "thinking_chars": 1320
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 77.14,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 77.14,
+          "done_reason": "stop",
+          "eval_count": 1977,
+          "prompt_eval_count": 5627,
+          "content_chars": 779,
+          "thinking_chars": 8837
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 85.86,
+      "outcome": "ok",
+      "error": null,
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 66.84,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 887,
+          "content_chars": 0,
+          "thinking_chars": 8204
+        },
+        {
+          "format": "json",
+          "think": "low",
+          "num_ctx": 4983,
+          "num_predict": 4096,
+          "seconds": 19.02,
+          "done_reason": "stop",
+          "eval_count": 446,
+          "prompt_eval_count": 887,
+          "content_chars": 1001,
+          "thinking_chars": 705
+        }
+      ]
+    }
+  ]
+}

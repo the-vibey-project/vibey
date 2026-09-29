@@ -1,5 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
+
+from vibey.domain.job import FailureClass
 
 if TYPE_CHECKING:
     from vibey.domain.handoff import GateResult
@@ -243,3 +245,62 @@ class LeaseReapIncomplete(VibeyError):
             f"{len(failures)} expired lease(s) could not be reaped, {len(reaped)} were: "
             + "; ".join(failures)
         )
+
+
+class ClassifiedFailure(VibeyError):
+    """A failure that already knows which `FailureClass` it is.
+
+    The worker records any other exception a handler raises as `FailureClass.VIBEY` --
+    our own bug. That is the right default and the wrong answer for a failure whose cause
+    is known at the point it is raised: a model that ran out of output budget, or one
+    that answered in the wrong shape, is not a bug in vibey, and an operator reading the
+    exhausted-attempts gate needs to be told which it was. Subclasses name their class.
+    """
+
+    failure_class: ClassVar[FailureClass] = FailureClass.VIBEY
+
+
+class OutputBudgetExhausted(ClassifiedFailure):
+    """A local model spent its whole output budget without producing an answer.
+
+    Observed on gpt-oss:20b: with `done_reason == "length"` the reply carries empty
+    content and a full reasoning channel -- the reasoning consumed every token it was
+    allowed. At temperature 0 an unchanged request fails the same way again, so this is
+    raised only after one bounded retry with a larger budget and lighter reasoning.
+
+    CAPACITY, not VIBEY or WORK: a configured resource limit refused the request, the way
+    a vendor's quota does. It is NOT a `CapacityState`: `WindowExhausted` promises that
+    waiting helps and `CreditsExhausted` that money does, and neither is true here --
+    only a larger `VIBEY_OLLAMA_OUTPUT` / `VIBEY_OLLAMA_CONTEXT` (or a smaller prompt)
+    changes the outcome. So it is a bounded Failure, never a Defer that would retry an
+    identical request forever.
+    """
+
+    failure_class = FailureClass.CAPACITY
+
+    def __init__(self, model: str, *, output_tokens: int, context_tokens: int) -> None:
+        self.model = model
+        self.output_tokens = output_tokens
+        self.context_tokens = context_tokens
+        super().__init__(
+            f"{model} spent its whole output budget ({output_tokens} tokens in a "
+            f"{context_tokens}-token context) without producing an answer, after a "
+            "widened retry; raise VIBEY_OLLAMA_OUTPUT / VIBEY_OLLAMA_CONTEXT or shrink "
+            "the prompt"
+        )
+
+
+class ModelAnswerRejected(ClassifiedFailure, ValueError):
+    """A model's answer broke the shape its caller requires, after one re-ask naming why.
+
+    ENGINE, because the engine produced it: the work asked of it is sound and vibey read
+    the answer correctly. Also a `ValueError`, so every caller that already treats a
+    malformed answer as one keeps doing so.
+    """
+
+    failure_class = FailureClass.ENGINE
+
+    def __init__(self, subject: str, violations: tuple[str, ...]) -> None:
+        self.subject = subject
+        self.violations = violations
+        super().__init__(f"{subject} was rejected after a re-ask: " + "; ".join(violations))
