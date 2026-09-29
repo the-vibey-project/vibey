@@ -15,6 +15,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [3.0.0] (2026-09-29)
+
 ### Features
 
 * **bus:** measured dispatch for every service-bus surface
