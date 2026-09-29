@@ -116,16 +116,38 @@ def test_configuring_twice_is_a_no_op_unless_reconfiguration_is_asked_for(manage
     assert manager.configure() is True
 
 
-def test_without_a_connection_string_it_falls_back_to_basic_logging(manager, monkeypatch):
+def test_without_a_connection_string_it_falls_back_to_basic_logging(manager, monkeypatch, caplog):
+    """Telemetry nobody configured is not a fault: basic logging, and no warning."""
     monkeypatch.delenv("APPLICATIONINSIGHTS_CONNECTION_STRING", raising=False)
-    assert manager.configure() is True
+    with caplog.at_level(logging.WARNING):
+        assert manager.configure() is True
     assert manager.tracer is None
+    assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
 
 
 def test_without_the_azure_monitor_extra_it_falls_back_to_basic_logging(manager, monkeypatch):
     monkeypatch.setattr(telemetry_mod, "TELEMETRY_AVAILABLE", False)
+    monkeypatch.setattr(TelemetryManager, "_missing_package_warned", False)
     assert manager.configure(connection_string="InstrumentationKey=k") is True
     assert manager.tracer is None
+
+
+def test_configured_telemetry_without_its_package_warns_once_per_process(monkeypatch, caplog):
+    """A connection string asks for telemetry the base install cannot send: that is worth
+    a warning, but one -- not one per manager, and not one per `vibey` command's import."""
+    monkeypatch.setattr(telemetry_mod, "TELEMETRY_AVAILABLE", False)
+    monkeypatch.setattr(TelemetryManager, "_missing_package_warned", False)
+    monkeypatch.setattr(TelemetryManager, "_configure_logging", lambda self: None)
+
+    with caplog.at_level(logging.WARNING):
+        assert TelemetryManager().configure(connection_string="InstrumentationKey=k") is True
+        assert TelemetryManager().configure(connection_string="InstrumentationKey=k") is True
+
+    warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert len(warnings) == 1
+    assert "connection string is configured" in warnings[0].getMessage()
+    assert "vibey-engine[azure]" in warnings[0].getMessage()
+    assert warnings[0].name == "vibey_bootstrap.services.telemetry"
 
 
 def test_a_full_configuration_instruments_functions_and_gets_a_tracer(manager, monkeypatch):
@@ -201,11 +223,15 @@ def test_the_module_degrades_when_azure_monitor_is_not_installed(caplog):
 
     saved = sys.modules.pop("vibey_bootstrap.services.telemetry")
     try:
-        with patch("builtins.__import__", refuse), caplog.at_level(logging.WARNING):
+        with patch("builtins.__import__", refuse), caplog.at_level(logging.DEBUG):
             degraded = importlib.import_module("vibey_bootstrap.services.telemetry")
         assert degraded.TELEMETRY_AVAILABLE is False
         assert degraded.AZURE_FUNCTIONS_INSTRUMENTOR_AVAILABLE is False
-        assert "not available" in caplog.text
+        # Said at debug level, on the module's own logger: a base install that never asked
+        # for Azure telemetry printed `WARNING:root:...` on every `vibey` command.
+        said = [r for r in caplog.records if "not available" in r.getMessage()]
+        assert [r.levelno for r in said] == [logging.DEBUG]
+        assert said[0].name == "vibey_bootstrap.services.telemetry"
     finally:
         sys.modules["vibey_bootstrap.services.telemetry"] = saved
 

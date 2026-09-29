@@ -209,6 +209,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   that crashed on `No module named 'fastapi'`. Still unpinned; the launcher's install hint
   names the extra too, and `clients/krypton-app/tests/test_packaging.py` holds the
   requirement to an extra the engine actually declares.
+* **bootstrap:** a base install no longer prints `WARNING:root:Azure Monitor OpenTelemetry
+  not available` on every `vibey` command. The notice was a root-logger warning at import
+  time, so it fired whether or not anyone had asked for Azure telemetry -- and, as a side
+  effect, ran `logging.basicConfig()` on the host's root logger. It is now debug-level on
+  `vibey_bootstrap.services.telemetry`'s own logger, as is the "no connection string"
+  notice. The warning is kept for the case it is for: an Application Insights connection
+  string is configured but the `vibey-engine[azure]` extra is missing -- said once per
+  process.
 
 ## [3.0.0] (2026-09-29)
 
