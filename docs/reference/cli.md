@@ -2,16 +2,17 @@
 
 Every `vibey` command and subcommand, written by hand against
 [`src/vibey/cli/main.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/cli/main.py)
-and checked against it as of 2026-09-20. Nothing generates this page. If it
+and checked against it as of 2026-09-29. Nothing generates this page. If it
 and the code disagree, the code wins. `vibey <command> --help` prints the
 code's own help text, which is shorter than this page and in places less
 complete (for example, `vibey work --help` does not say that `qwenloop` is still
 accepted as the old name of `gptossloop`).
 
-Top-level commands, in `vibey --help` order: `new`, `projects`, `gates`,
-`answer`, `work`, `watch`, `recover`, `status`, `engines`, `loops`, `cost`,
-`install`, `doctor`, `migrate`, `operator`, `worker`, and the command groups
-`design`, `visual`, `deploy`, `ledger`, `queue`, `budget`.
+Top-level commands, in `vibey --help` order: `new`, `serve`, `sabbath`,
+`projects`, `gates`, `answer`, `work`, `watch`, `recover`, `status`, `engines`,
+`loops`, `cost`, `install`, `doctor`, `migrate`, `operator`, `worker`, and the
+command groups `design`, `visual`, `deploy`, `ledger`, `queue`, `budget`,
+`ultra`, `driver`, `hub`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -116,6 +117,7 @@ Create a project and enqueue its first DESIGN interview.
 | Option | Default | What it does |
 |---|---|---|
 | `--repo PATH` | `.` | Repository the project builds against. |
+| `--intake TEXT` | unset | Initial issue or task text to seed the DESIGN ledger with. Before the DESIGN job is enqueued it is appended as one `TranscriptRecorded` event with `untrusted` provenance and the payload `{"text": TEXT, "source": "github-issue"}`, so the interview starts from it. The triaged-delivery bridge (`scripts/triaged_delivery.py`) hands a GitHub issue over this way. |
 | `--max-cycles N` | `10` | Cap on delivery cycles before the project stops (min 1). |
 | `--max-cycle-dollars F` | unset | Per-cycle dollar cap (min 0.01), stored as `max_cycle_dollars` in project config. Tripping it parks a `budget_exhausted` gate instead of starting more sessions (ADR-0024). Unset means no dollar cap. |
 | `--max-cycle-turns N` | unset | Per-cycle engine-turn cap (min 1), stored as `max_cycle_turns`. |
@@ -343,6 +345,7 @@ visual-inventory job. Live engine use is explicit and capped. Prints
 | `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | `gptossloop` runs the sovereign local DESIGN provider on Ollama (ADR-0015, ADR-0027, ADR-0064) and reads research material from `$VIBEY_EVIDENCE_DIR`; with that unset, research refuses rather than inventing a source, and DESIGN stops there. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `scripted` needs no live engine. `qwenloop` is still accepted: it is read as `gptossloop`, with `--provider qwenloop is now --provider gptossloop (ADR-0064) ...` on stderr. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'gptossloop'`. |
 | `--max-turns N` | `1` | Turn cap for this one job (min 1). |
 | `--max-dollars F` | `0.25` | Dollar cap for this one job (0.01–10). |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` | Local model for `--provider gptossloop`; ignored by the other providers. The server is `$VIBEY_OLLAMA_URL`. |
 
 In VISUAL_DESIGN only `--provider scripted` works; any other provider exits
 3 with `Error: no live VisualInventoryProducer is implemented yet; use --provider scripted`.
@@ -637,6 +640,33 @@ longer than 200 characters or holds control or formatting characters, or
 does not know, because nothing can be recorded under it. Showing that project
 still works.
 
+### `vibey budget no-cap` and `vibey budget cap`
+
+`no-cap` declares no cap for [ULTRA](#vibey-ultra) runs through sub-doctrine 8.b's
+whole path, in a terminal on the host:
+
+1. a full-screen warning with the measured cost per hour ("unknown" when
+   nothing has been measured);
+2. the typed phrase `I accept unlimited spending`;
+3. a second warning, whose default answer keeps a cap;
+4. the declaration: `[budget] ultra_no_cap = true` in `--toml` (default
+   `./vibey.toml`), and a trusted `UltraNoCapChanged` ledger event naming who,
+   when and which device.
+
+| Subcommand | Option | Default | What it does |
+|---|---|---|---|
+| `budget no-cap [PROJECT_ID]` | `--toml PATH` | `vibey.toml` | The `vibey.toml` that records the declaration. |
+| | `--by NAME` | the account running it | As for `set`: a label for the record, not a permission; the account is recorded beside it. |
+| `budget cap [PROJECT_ID]` | `--toml PATH`, `--by NAME` | as `no-cap` | As for `no-cap`. |
+
+Both default to the most recently created project. Run off a terminal, `no-cap`
+refuses with exit 2 and records nothing. A wrong phrase exits 1. The default
+answer to the second warning prints `Kept the cap` and exits 0. No environment
+variable can declare it. `cap` withdraws the declaration in one command, binding
+at the next ULTRA pass: it records `UltraNoCapChanged` with `enabled: false`, and
+sets the key to `false` when the file exists. The worker reads only the ledger
+event. The file records the declaration.
+
 ## `vibey ultra`
 
 ULTRA is effort without a ceiling ([ADR-0063](../architecture/decisions/0063-ultra-effort-without-a-ceiling.md)).
@@ -659,27 +689,6 @@ Each event records `by`, `account` and `device` (the host's name). These
 commands run only on the host. `start` after a `stop` does not resume a stopped
 item's chain by itself: the stopped pass ended without a successor, so the next
 pass starts when the item's BUILD job is enqueued again.
-
-### `vibey budget no-cap` and `vibey budget cap`
-
-`no-cap` declares no cap for ULTRA runs through sub-doctrine 8.b's whole path,
-in a terminal on the host:
-
-1. a full-screen warning with the measured cost per hour ("unknown" when
-   nothing has been measured);
-2. the typed phrase `I accept unlimited spending`;
-3. a second warning, whose default answer keeps a cap;
-4. the declaration: `[budget] ultra_no_cap = true` in `--toml` (default
-   `./vibey.toml`), and a trusted `UltraNoCapChanged` ledger event naming who,
-   when and which device.
-
-Run off a terminal it refuses with exit 2 and records nothing. A wrong phrase
-exits 1. The default answer to the second warning prints `Kept the cap` and
-exits 0. No environment variable can declare it. `cap` withdraws the
-declaration in one command: it records `UltraNoCapChanged` with `enabled:
-false`, and sets the key to `false` when the file exists. The worker reads only
-the ledger event. The file records the declaration.
-
 
 ## `vibey driver`
 
@@ -706,17 +715,37 @@ successful probe hands back.
 
 ## `vibey ledger`
 
-Bare `vibey ledger` prints help. Subcommand:
+Bare `vibey ledger` prints help. Subcommands, in `vibey ledger --help` order:
+`search`, `export`, `site`, `show`.
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
+| `ledger search [PROJECT_ID]` | `--id UUID` | unset | Exactly this record. |
+| | `--digest SHA256` | unset | Records whose payload has this full 64-character SHA-256 digest. A digest names a payload, not a record, so several records can match. |
+| | `--actor ACTOR` | unset | Who produced it: an engine id, a provenance (`trusted`, `agent`, `untrusted`), or `vibey` for events vibey wrote itself. |
+| | `--since TIME` | unset | Produced at or after this ISO-8601 time; no zone means UTC. |
+| | `--until TIME` | unset | Produced before this ISO-8601 time; no zone means UTC. Must be after `--since`. |
+| | `--kind KIND` (repeatable) | unset | Event kind, by name or value, any case; repeat it for any of several. A kind this vibey does not know (a newer one wrote it) is matched exactly, with a note on stderr. |
+| | `--text TEXT` | unset | Appears in the payload's JSON text, literally, any case. Must not be empty. |
+| | `--limit N` / `-n` | `50` | At most this many, the latest matches (min 1). |
+| | `--json` | off | Print JSON: every field of every event. |
 | `ledger show [PROJECT_ID]` | `--limit N` / `-n` | `50` | Show the most recent N events (min 1). |
 | | `--phase PHASE` | unset | Filter to one phase, by name or value, case-insensitive (`BUILD`, `deploy_design`). |
 | | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. |
-| `ledger export PROJECT_ID` | `--out FILE` | required | Write the public, redacted ledger projection. |
+| `ledger export PROJECT_ID` | `--out FILE` / `-o` | required | Write the public, redacted ledger projection. |
 | | `--billing` | off | Write the operator-scoped billing projection consumed by `vibey-gh forecast`; it keeps metered spend fields and operational event kinds only. |
+| `ledger site` | `--from FILE` | required | A shard file written by `vibey ledger export`. Needs no database. |
+| | `--out DIR` / `-o` | required | The directory to write the site into. |
+| | `--json-only` | off | Build the JSON surface: `records/<event_id>.json`, `index.json`, `manifest.json`. Required until the human-first record pages exist; without it the command exits 2. An invalid shard exits 1. |
 
-Prints one line per event, oldest first:
+`ledger search` applies every criterion it is given, in Postgres, to one project's
+ledger (the latest when `PROJECT_ID` is omitted). A malformed criterion is a usage
+error (exit 2), checked before any connection is opened; an unknown `PROJECT_ID`
+prints `unknown project <id>` and exits 1. It prints one line per event, oldest
+first, then a line saying how many matched and whether older matches were cut.
+[What gets published](../guides/ledger-publication.md) covers `export` and `site`.
+
+`ledger show` prints one line per event, oldest first:
 `#<seq> <YYYY-MM-DD HH:MM:SS> [<PHASE>] <kind> [<engine>]`. Filters apply
 before `--limit`. Defaults to the most recently created project.
 
@@ -845,6 +874,8 @@ PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 | `--engines LIST` | unset | With `--cluster`: the worker's own `--engines` allow-list (chart value `worker.engines`). `engine-auth` requires exactly these. Parsed as the worker parses it; empty means unset. |
 | `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, `gptossloop`, or the old name `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
 | `--install-postgres` | off | Install and start local PostgreSQL when it is missing or stopped. This is explicit; the default doctor never changes the host. It cannot be combined with `--cluster`. |
+| `--sovereign-fit` | off | Run the GPT-OSS capacity probe (`scripts/sovereign_probe.py`) against `$VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`) and `$VIBEY_OLLAMA_MODEL` (default `gpt-oss:20b`), and persist the measured fit; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Prints `sovereign fit PASS — recorded <path>`, or `sovereign fit FAIL — no measured capacity fit recorded`, which makes doctor exit 1. |
+| `--fit-output PATH` | `~/.local/state/vibey/sovereign-fit.json` | Where `--sovereign-fit` writes the fit record. Its parent directory is created. |
 
 With `--engine` unset, doctor checks the four paid engines (`claudeloop`,
 `codexloop`, `cursorloop`, `agyloop`) whether or not they are installed —
@@ -975,6 +1006,7 @@ every phase for one project.
 | `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | DESIGN and decomposition providers. `gptossloop` uses the sovereign local DESIGN and decomposition providers on Ollama (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`; reads `$VIBEY_EVIDENCE_DIR`), recorded in the ledger as `gptossloop`. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `scripted` is fully offline. `qwenloop` is still accepted and read as `gptossloop`, with a notice on stderr (ADR-0064). Any other value exits 2. |
 | `--max-turns N` | `25` | Turn cap per claudeloop DESIGN or decomposition session (min 1). |
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` | Local model for `--provider gptossloop`, and the model the worker hands gptossloop (below); ignored by the other providers. |
 | `--project ID` | latest | Project to work on. |
 | `--wait-for-project SECONDS` | unset (min 1.0) | Poll every N seconds for a project instead of exiting 1 when none exists yet — for long-lived deployments, where exiting means a restart loop. |
 | `--azure {memory,az}` | `memory` | Azure client for the deploy stage set. `memory` is an in-memory adapter that touches no real infrastructure. `az` uses the real Azure CLI and mutates real resources on consented deploys; the worker runs `az account show` first and exits 1 if you are not logged in. Any other value exits 2. |
@@ -1047,6 +1079,13 @@ Variables read by code under `src/vibey`:
 | `VIBEY_PG_MIGRATE_URL` | `migrate` only | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it. |
 | `VIBEY_EVIDENCE_DIR` | `work --provider gptossloop`, `worker --provider gptossloop` | Directory of reading material for the gptossloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_GPTOSSLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables gptossloop; any other set value, `0` included, disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] gptossloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, gptossloop is on (ADR-0064). |
+| `VIBEY_OLLAMA_URL` | `work` and `worker` with `--provider gptossloop`; `doctor --sovereign-fit`; `loops`; the worker's local engines | The Ollama server, default `http://127.0.0.1:11434`. Only an `http(s)` URL with a host is accepted. |
+| `VIBEY_OLLAMA_MODEL` | as `VIBEY_OLLAMA_URL` | The local model, default `gpt-oss:20b`; `--ollama-model` beats it. |
+| `VIBEY_OLLAMA_TIMEOUT` | the sovereign DESIGN and DECOMPOSE providers | Seconds per request, default `900`. |
+| `VIBEY_OLLAMA_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | Context ceiling in tokens (`num_ctx`), default `8192`, at least `4096`. |
+| `VIBEY_OLLAMA_OUTPUT` | as `VIBEY_OLLAMA_TIMEOUT` | Output ceiling in tokens (`num_predict`), default `2048`. |
+| `VIBEY_OLLAMA_FIT` | as `VIBEY_OLLAMA_TIMEOUT` | Path to a fit record written by `vibey doctor --sovereign-fit`. When it matches, its measured context and output replace the two ceilings above; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Unset, unreadable or mismatched means the configured ceilings. |
+| `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop, the runner on a Qwen model; any other set value disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config; with neither, qwenloop is off. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
