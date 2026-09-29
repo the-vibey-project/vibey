@@ -181,3 +181,11 @@ def test_a_pre_squash_tree_still_does_not_reach_the_integration_branch(tmp_path:
     tree = _git(tmp_path, "rev-parse", f"{commits['feature']}^{{tree}}")
     problems = _problems(tmp_path, commits["feature"], tree=tree)[commits["feature"]]
     assert any("not on origin/develop's history" in r for r in problems), problems
+
+
+def test_a_pin_a_tag_holds_is_accepted_as_it_stands(tmp_path: Path) -> None:
+    """A squash merge drops the pin from every branch; a tag keeps it walkable."""
+    commits = _history(tmp_path)
+    _git(tmp_path, "tag", "-a", "paper-figures/pin", "-m", "pin", commits["feature"])
+    problems, resolved = _probe(tmp_path, None, commits["feature"])[commits["feature"]]
+    assert problems == [] and resolved == commits["feature"], (problems, resolved)
