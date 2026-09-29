@@ -68,7 +68,12 @@ from vibey.domain.engine import EXIT_CODE_WIND_DOWN, IsolationLevel
 from vibey.domain.errors import EscalationExhausted
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.interfaces.ultra_interface import UltraPassInterface, UltraPolicyInterface
-from vibey.domain.job import FailureClass, idempotency_key
+from vibey.domain.job import (
+    DEFECT_GATE_KIND,
+    ESCALATION_EXHAUSTED_GATE_KIND,
+    FailureClass,
+    idempotency_key,
+)
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
 from vibey.domain.provision import ProvisionSpec
@@ -230,10 +235,10 @@ class BuildImplementHandler:
                 gate = await self._human_gates.latest_for_job(job.id)
                 if gate is not None and gate.answer is not None:
                     granted = granted_limit(gate.answer, "max_attempts")
-            if granted is None or job.attempts > granted:
+            if (granted is None or job.attempts > granted) and not await self._requeued(job):
                 return Park(
                     HumanGateRequest(
-                        kind="escalation_exhausted",
+                        kind=ESCALATION_EXHAUSTED_GATE_KIND,
                         prompt=(
                             f"work item {job.work_item_id!r} exhausted the escalation "
                             f"ladder after {job.attempts} attempts. Grant more by "
@@ -244,6 +249,18 @@ class BuildImplementHandler:
                     )
                 )
             return effort_for_attempt(base_effort, BUILD_LADDER_EXHAUSTED)
+
+    async def _requeued(self, job: JobRecord) -> bool:
+        """Whether the job's latest gate is an answered `defect` gate: the worker raised it
+        in place of this ladder's grant when the attempts had all failed alike, and its
+        answer (`requeue`; an `abandon` cancels the job before it is claimed) runs the job
+        at the ladder's top effort. Without this the requeue would park straight back on
+        the ladder, with no new failure to tell it apart, and never run at all. Bounded by
+        the queue's own attempt limit, which the defect gate never widens."""
+        if self._human_gates is None:
+            return False
+        gate = await self._human_gates.latest_for_job(job.id, include_queue_gates=True)
+        return gate is not None and gate.kind == DEFECT_GATE_KIND and gate.answer is not None
 
     async def _run(
         self, job: JobRecord, base_effort: Effort, effort: Effort, *, ultra: bool

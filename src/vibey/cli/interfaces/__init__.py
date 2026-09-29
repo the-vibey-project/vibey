@@ -10,6 +10,12 @@ from vibey.cli.interfaces.gate_answers_interface import (
     AnswerRuleInterface,
     GateAnswerCommandsInterface,
 )
+from vibey.cli.interfaces.gate_notices_interface import (
+    GateNoticeDoctorInterface,
+    GateReadersOpenerInterface,
+    GateRemindersCommandInterface,
+    GateRemindersPresenterInterface,
+)
 from vibey.cli.interfaces.gates_interface import (
     GatesCommandInterface,
     GatesPresenterInterface,
@@ -38,6 +44,10 @@ from vibey.cli.interfaces.queue_interface import (
 )
 
 __all__ = [
+    "GateNoticeDoctorInterface",
+    "GateReadersOpenerInterface",
+    "GateRemindersCommandInterface",
+    "GateRemindersPresenterInterface",
     "AnswerRuleInterface",
     "GateAnswerCommandsInterface",
     "GatesCommandInterface",

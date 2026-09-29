@@ -22,6 +22,7 @@ from vibey.application.review_deployment_choice_handler import ReviewDeploymentC
 from vibey.application.worker import Park, Success
 from vibey.domain.job import (
     ATTEMPTS_EXHAUSTED_GATE_KIND,
+    DEFECT_GATE_KIND,
     DELIVERY_EXHAUSTED_GATE_KIND,
     QUEUE_GATE_KINDS,
 )
@@ -64,11 +65,16 @@ class _Projects:
         self.transitions.append(to)
 
 
-def test_the_queue_gate_kinds_are_the_two_exhaustion_gates() -> None:
-    assert {ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND} == QUEUE_GATE_KINDS
-    assert (ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND) == (
+def test_the_queue_gate_kinds_are_the_two_exhaustion_gates_and_the_defect_gate() -> None:
+    assert {
+        ATTEMPTS_EXHAUSTED_GATE_KIND,
+        DELIVERY_EXHAUSTED_GATE_KIND,
+        DEFECT_GATE_KIND,
+    } == QUEUE_GATE_KINDS
+    assert (ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND, DEFECT_GATE_KIND) == (
         "attempts_exhausted",
         "delivery_exhausted",
+        "defect",
     )
 
 

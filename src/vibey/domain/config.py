@@ -7,10 +7,19 @@ touches the filesystem — reading the file is an infrastructure concern.
 """
 
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
+from vibey.domain.defect import DEFAULT_IDENTICAL_FAILURES, MIN_IDENTICAL_FAILURES
 from vibey.domain.errors import VibeyError
+from vibey.domain.gate_notice import (
+    DEFAULT_MAX_REMINDERS,
+    DEFAULT_REMIND_AFTER_SECONDS,
+    DEFAULT_REMIND_EVERY_SECONDS,
+    DEFAULT_SWEEP_INTERVAL_SECONDS,
+    ReminderSchedule,
+)
 from vibey.domain.queue_priority import OPERATOR_SOURCE
 from vibey.domain.queue_reap import (
     DEFAULT_DEAD_LETTER_MIN_DEPTH,
@@ -175,13 +184,44 @@ class NotificationsConfig:
     """Operator notifications for a project.
 
     Notifications stay opt-in because desktop alerts and outbound webhooks are
-    side effects.  Once enabled, desktop delivery defaults on and webhook
-    destinations are explicit.
+    side effects, and no channel reaches a person with zero configuration: a
+    worker in a pod or under launchd has no desktop to show an alert on. Once
+    enabled, desktop delivery defaults on and webhook destinations are explicit.
+
+    Whether a gate's notices reached anyone is recorded either way (`GateNotified`
+    / `GateNoticeUndeliverable`), and `vibey doctor` counts the gates nobody will
+    be told about. A gate still open `remind_after_seconds` after it was raised is
+    reminded about every `remind_every_seconds`, at most `max_reminders` times (0:
+    never); an idle worker looks for due reminders every `sweep_interval_seconds`.
     """
 
     enabled: bool = False
     desktop: bool = True
     webhooks: tuple[NotificationWebhookConfig, ...] = ()
+    remind_after_seconds: int = DEFAULT_REMIND_AFTER_SECONDS
+    remind_every_seconds: int = DEFAULT_REMIND_EVERY_SECONDS
+    max_reminders: int = DEFAULT_MAX_REMINDERS
+    sweep_interval_seconds: int = DEFAULT_SWEEP_INTERVAL_SECONDS
+
+    def __post_init__(self) -> None:
+        for name in ("remind_after_seconds", "remind_every_seconds", "sweep_interval_seconds"):
+            if getattr(self, name) < 1:
+                raise ConfigError(f"notifications.{name}", "must be at least 1")
+        if self.max_reminders < 0:
+            raise ConfigError("notifications.max_reminders", "must not be negative")
+
+    @classmethod
+    def from_data(cls, data: Mapping[str, Any]) -> "NotificationsConfig":
+        """Read `[notifications]` from a whole parsed document -- a vibey.toml, or the
+        configuration a project was stored with. Needs nothing else in it."""
+        return _parse_notifications(dict(data))
+
+    def reminders(self) -> ReminderSchedule:
+        return ReminderSchedule(
+            after_seconds=self.remind_after_seconds,
+            every_seconds=self.remind_every_seconds,
+            max_reminders=self.max_reminders,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -494,11 +534,44 @@ class QueueReapConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class QueueDefectConfig:
+    """`[queue.defect]`: when an exhausted job is a defect rather than bad luck.
+
+    When a job's last `identical_failures` failures share one signature (domain/defect.py),
+    the worker raises a `defect` gate that offers no more attempts, instead of a grant.
+    0 switches the check off; 1 would call every single failure a defect, so it is refused.
+    """
+
+    identical_failures: int = DEFAULT_IDENTICAL_FAILURES
+
+    def __post_init__(self) -> None:
+        if self.identical_failures != 0 and self.identical_failures < MIN_IDENTICAL_FAILURES:
+            raise ConfigError(
+                "queue.defect.identical_failures",
+                f"must be 0 (off) or at least {MIN_IDENTICAL_FAILURES}",
+            )
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "QueueDefectConfig":
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"{path}.{unknown[0]}", "is not a [queue.defect] key")
+        value = table.get("identical_failures", DEFAULT_IDENTICAL_FAILURES)
+        # bool is an int to isinstance; a count written `true` is a mistake.
+        if type(value) is not int:
+            raise ConfigError(
+                f"{path}.identical_failures", f"must be a int, got {type(value).__name__}"
+            )
+        return cls(identical_failures=value)
+
+
+@dataclass(frozen=True, slots=True)
 class QueueConfig:
     """`[queue]`: the job queue's declared policy."""
 
     priority: QueuePriorityConfig = field(default_factory=QueuePriorityConfig)
     reap: QueueReapConfig = field(default_factory=QueueReapConfig)
+    defect: QueueDefectConfig = field(default_factory=QueueDefectConfig)
 
     @classmethod
     def from_data(cls, data: dict[str, Any]) -> "QueueConfig":
@@ -507,9 +580,11 @@ class QueueConfig:
         table = _optional(data, "queue", "queue", dict, {})
         priority = _optional(table, "priority", "queue.priority", dict, {})
         reap = _optional(table, "reap", "queue.reap", dict, {})
+        defect = _optional(table, "defect", "queue.defect", dict, {})
         return cls(
             priority=QueuePriorityConfig.from_table(priority, "queue.priority"),
             reap=QueueReapConfig.from_table(reap, "queue.reap"),
+            defect=QueueDefectConfig.from_table(defect, "queue.defect"),
         )
 
 
@@ -680,7 +755,28 @@ def _parse_notifications(data: dict[str, Any]) -> NotificationsConfig:
         enabled=_optional(table, "enabled", "notifications.enabled", bool, False),
         desktop=_optional(table, "desktop", "notifications.desktop", bool, True),
         webhooks=tuple(webhooks),
+        remind_after_seconds=_count(
+            table, "remind_after_seconds", "notifications", DEFAULT_REMIND_AFTER_SECONDS
+        ),
+        remind_every_seconds=_count(
+            table, "remind_every_seconds", "notifications", DEFAULT_REMIND_EVERY_SECONDS
+        ),
+        max_reminders=_count(table, "max_reminders", "notifications", DEFAULT_MAX_REMINDERS),
+        sweep_interval_seconds=_count(
+            table, "sweep_interval_seconds", "notifications", DEFAULT_SWEEP_INTERVAL_SECONDS
+        ),
     )
+
+
+def _count(table: dict[str, Any], key: str, section: str, default: int) -> int:
+    """An integer key, refusing a bool: `true` is an int to isinstance, and a count written
+    `true` is a mistake. A module-level function beside the other `_parse_*` helpers it
+    serves, which are functions for the same reason: the schema's parsing is one module's
+    private vocabulary, not an object anything else holds."""
+    value = table.get(key, default)
+    if type(value) is not int:
+        raise ConfigError(f"{section}.{key}", f"must be a int, got {type(value).__name__}")
+    return value
 
 
 def _parse_telemetry(data: dict[str, Any]) -> TelemetryConfig:

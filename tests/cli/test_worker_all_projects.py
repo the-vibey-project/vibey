@@ -151,6 +151,32 @@ def test_all_projects_continuous_idles_on_any_projects_notification(
     reaper.assert_awaited_with(only)
 
 
+def test_all_projects_sweeps_every_projects_gates_not_the_last_one_served(
+    tmp_path: Path, notifier: AsyncMock
+) -> None:
+    """The reap's project id only labels a pass over everything; the gate sweep's scope
+    filters. Scoped to the project last served, an all-projects worker would remind the
+    gates of one project and leave every other project's waiting unannounced."""
+    _seed(tmp_path, ("kappa",))
+    with patch(
+        "vibey.application.gate_notices.GateReminder.run_if_due", new=AsyncMock()
+    ) as reminder:
+        runner.invoke(app, ["worker", "--all-projects"])
+    reminder.assert_awaited_with(None)
+
+
+def test_a_failing_gate_sweep_is_reported_under_all_projects(
+    tmp_path: Path, notifier: AsyncMock
+) -> None:
+    _seed(tmp_path, ("lambda",))
+    with patch(
+        "vibey.application.gate_notices.GateReminder.run_if_due",
+        new=AsyncMock(side_effect=RuntimeError("no gates table")),
+    ):
+        res = runner.invoke(app, ["worker", "--all-projects"])
+    assert "gate reminders failed: no gates table" in res.output
+
+
 def test_all_projects_skips_the_queue_reap_until_it_has_served_a_project(
     notifier: AsyncMock,
 ) -> None:

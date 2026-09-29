@@ -386,3 +386,34 @@ def test_the_strict_project_gets_no_independence_policy_and_the_default_gets_one
     default = _independence_policy({}, pool, clock)
     assert default is not None
     assert default.pool == pool
+
+
+def test_every_worker_composes_its_gate_seams_from_the_resources() -> None:
+    """A worker announces and records its gates' notices, and triages its exhausted jobs by
+    the queue's declared `[queue.defect]`; a harness with no failure history gets no triage."""
+    from types import SimpleNamespace
+
+    from vibey.application.defect_triage import DefectTriage
+    from vibey.application.gate_notices import GateNoticeService
+    from vibey.bootstrap import WORKER_GATE_SEAMS
+    from vibey.bootstrap_interface import WorkerGateSeamsInterface
+    from vibey.domain.config import QueueDefectConfig
+    from vibey.infrastructure.logging import StructlogAppLogger
+
+    assert isinstance(WORKER_GATE_SEAMS, WorkerGateSeamsInterface)
+    logger = StructlogAppLogger(owner="w")
+
+    notices, defects = WORKER_GATE_SEAMS.compose(SimpleNamespace(), logger)
+    assert isinstance(notices, GateNoticeService)
+    assert defects is None
+
+    declared = SimpleNamespace(
+        job_failures=object(), queue_defect=QueueDefectConfig(identical_failures=4)
+    )
+    _, triage = WORKER_GATE_SEAMS.compose(declared, logger)
+    assert isinstance(triage, DefectTriage)
+    assert triage._threshold == 4  # noqa: SLF001 - the one number this composes
+
+    _, default = WORKER_GATE_SEAMS.compose(SimpleNamespace(job_failures=object()), logger)
+    assert isinstance(default, DefectTriage)
+    assert default._threshold == 3  # noqa: SLF001

@@ -40,6 +40,7 @@ from vibey.bootstrap import (
 from vibey.cli.budget import budget_app
 from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
 from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
@@ -331,10 +332,33 @@ def list_gates(
             help='Print JSON instead: {"gates": [...]}, oldest first.',
         ),
     ] = False,
+    remind: Annotated[
+        bool,
+        typer.Option(
+            "--remind",
+            help="Send the notices now due instead: a raise notice for any gate with none "
+            "on record, else each gate's next reminder on its project's schedule. Every "
+            "notice is recorded as delivered or undeliverable. What an idle worker runs; "
+            "schedule it where no worker idles.",
+        ),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="With --remind: list the notices that are due, and send and record nothing.",
+        ),
+    ] = False,
 ) -> None:
     """List open gates, oldest first, each with the `vibey answer` command that answers it."""
+    if dry_run and not remind:
+        typer.echo("--dry-run applies only with --remind", err=True)
+        raise typer.Exit(EXIT_USAGE)
     with guard():
-        asyncio.run(GATES.run(project_id, as_json=as_json))
+        if remind:
+            asyncio.run(GATE_REMINDERS.run(project_id, as_json=as_json, dry_run=dry_run))
+        else:
+            asyncio.run(GATES.run(project_id, as_json=as_json))
 
 
 @design_app.callback(invoke_without_command=True)
@@ -1559,6 +1583,9 @@ def doctor(
         sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
         for line in sabbath_lines:
             typer.echo(line)
+        # Gates waiting on a person nobody will tell: reported, not failed -- the default
+        # is notifications off, and the gates are still listed by `vibey gates`.
+        typer.echo(await GATE_NOTICE_DOCTOR.line())
         # #1189: whether the worker and the delivery bridge are kept running. A missing
         # supervisor is a WARN, a FAIL with `[supervisor] required = true` (12.e).
         supervisor_lines, supervisor_ok = SUPERVISOR.doctor_lines()
@@ -2079,6 +2106,9 @@ def worker(
                 def reap_target() -> UUID | None:
                     return everyone.last_served
 
+                # Every project this worker serves has its gates swept, not only the
+                # last one it happened to serve.
+                remind_scope: UUID | None = None
                 target = "all projects"
             else:
 
@@ -2108,6 +2138,7 @@ def worker(
                 def reap_target() -> UUID | None:
                     return served_id
 
+                remind_scope = served_id
                 count = len(loops)
                 target = f"project={project.name}"
 
@@ -2155,6 +2186,14 @@ def worker(
                             await resources.queue_reaper.run_if_due(labelled)
                         except Exception as exc:
                             typer.echo(f"drive[{idx}] queue reap failed: {exc}", err=True)
+                    # Gates still waiting get their reminders, and a gate nobody was
+                    # told about is said once -- at most once per interval across every
+                    # drive loop, like the reap above. Unlike the reap's label, this scope
+                    # filters: an all-projects worker sweeps every project's gates.
+                    try:
+                        await resources.gate_reminder.run_if_due(remind_scope)
+                    except Exception as exc:
+                        typer.echo(f"drive[{idx}] gate reminders failed: {exc}", err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )

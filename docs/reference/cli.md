@@ -240,6 +240,8 @@ one wrapped paragraph, and the exact command that answers it:
 |---|---|---|
 | `PROJECT_ID` | every project | Only this project's open gates. An unknown id exits 1 with `unknown project <id>` on stderr and nothing on stdout. |
 | `--json` | off | Print `{"gates": [...]}` instead. |
+| `--remind` | off | Send the gate notices now due instead of listing: see [Reminding about waiting gates](#reminding-about-waiting-gates). |
+| `--dry-run` | off | With `--remind`: list the notices that are due and send and record nothing. Without `--remind` it exits 2 (`--dry-run applies only with --remind`). |
 
 `--json` prints one object whose `gates` array holds, oldest first, one object
 per gate with exactly these keys:
@@ -270,6 +272,33 @@ both forms exit 0: the text form prints
 `no open gates: nothing is waiting for your answer` and `--json` prints
 `{"gates": []}`.
 
+### Reminding about waiting gates
+
+`vibey gates --remind` runs one gate-reminder sweep -- the one every idle
+`vibey worker` runs for its project at most every `[notifications]
+sweep_interval_seconds` -- so a supervisor can schedule it (cron, a systemd
+timer, a Kubernetes CronJob) where no worker idles. Each open gate gets at
+most one notice: its raise notice when none is on record, else the reminder
+its project's schedule says is now due ([`[notifications]`](configuration.md#notifications)).
+Every notice is recorded on the ledger as `GateNotified` or
+`GateNoticeUndeliverable`, once per gate and notice number, so running it
+twice sends nothing twice. A project whose notifications are off is said once
+per gate -- `UNDELIVERABLE (disabled)` -- and not reminded about.
+
+```text
+2 open gates; 2 notices sent
+  told    reminder 1 gate 5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b (approval)
+  UNDELIVERABLE (disabled) raise notice gate 9d2a7b1c-3e4f-4a5b-8c6d-7e8f9a0b1c2d (defect)
+          [notifications] enabled is false, so nobody will be told this gate is waiting; enable a channel, or watch `vibey gates`
+```
+
+`--json` prints `{"project_id", "dry_run", "waiting", "sent": [...],
+"planned": [...], "unreadable": [...], "ok"}`; each `sent` entry is the
+recorded payload (`gate_id`, `gate_kind`, `job_id`, `notice`, and `channels`
+or `reason` and `detail`) with `project_id` and `delivered`. It exits 1 when a
+project's notices on record could not be read: nothing was sent for that
+project, and it is named under `unreadable`.
+
 ### How each kind of gate is answered
 
 `answer_with` is one line a shell runs as printed: every word is quoted as the
@@ -288,7 +317,8 @@ anywhere in `src/vibey` without an entry there.
 | `deploy_failure_triage` | `vibey answer ID --choice LOOP_DEPLOY_DESIGN` | The Phase ⑥ triage. Or `RETRY_DEPLOY_EXECUTE`, `ABORT_DEPLOYMENT`. |
 | `bus_dead_lettered` | `vibey answer ID --choice replay`, or `dismiss` when the message cannot be replayed | A dead-lettered bus message. |
 | `budget_exhausted` | `vibey answer ID --raw '{"max_dollars": N}'` | The budget brake. |
-| `escalation_exhausted`, `attempts_exhausted` | `vibey answer ID --raw '{"max_attempts": N}'` | A spent effort ladder; a job out of attempts. |
+| `escalation_exhausted`, `attempts_exhausted` | `vibey answer ID --raw '{"max_attempts": N}'` | A spent effort ladder; a job out of attempts whose last failures were not all alike. |
+| `defect` | `vibey answer ID --choice requeue`, or `--choice abandon` | A job out of attempts whose last [`[queue.defect]`](configuration.md#queuedefect) failures were all one failure: no more attempts are offered. `requeue` runs it again once a fix has landed (a same-failure run parks here again at once); `abandon` cancels it. |
 | `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
 | `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
 | `handoff_gate_failed`, `too_many_wind_downs`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
@@ -968,6 +998,15 @@ The last line, `hub-exposure`, asks whether a running hub (`vibey serve`) listen
 declares, `FAIL` on an undeclared one (the exit is then 1), and `UNKNOWN` when no hub is
 running or its runtime record names a process that is gone. A `[hub]` table that cannot be
 read is a `FAIL`.
+
+After the Sabbath lines, `gate-notices` counts the open gates in projects nobody will be
+told about -- `[notifications]` off (the default), on with desktop alerts off and no
+webhook, or a table that does not parse -- and prints them as `WARN gate-notices N gates
+waiting, nobody will be told: <project> <count> (<reason>), ...`, with how many more will
+be. `PASS` when there are none, or when every waiting gate's project has a channel;
+`UNKNOWN` when `VIBEY_PG_URL` is unset or the gates cannot be read. It is a report, never
+a failure: those gates are still listed by `vibey gates`, and each is recorded on the
+ledger as undeliverable ([`[notifications]`](configuration.md#notifications)).
 
 `--cluster` ignores `--conformance`, `--engine`, `--record` and `--project`,
 runs up to eight checks, and exits 1 if any fails: the DSN host resolves beyond

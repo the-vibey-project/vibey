@@ -22,6 +22,7 @@ from vibey.domain.engine import (
     StoredEngineId,
 )
 from vibey.domain.failover import FailoverStatus
+from vibey.domain.gate_notice import GateNotice
 from vibey.domain.handoff import GateResult, HandoffBrief
 from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.budget_caps_interface import (
@@ -550,3 +551,37 @@ class EngineFailoverDecision:
     requirement: JobRequirement | None = None
     gate: GateResult | None = None
     brief: HandoffBrief | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PlannedNotice:
+    """A notice a dry-run reminder sweep would have sent."""
+
+    project_id: UUID
+    gate_id: UUID
+    gate_kind: str
+    notice: int
+    waited_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class GateReminderReport:
+    """What one reminder sweep found and did.
+
+    ``waiting`` counts the open gates the sweep looked at. ``sent`` holds every notice it
+    attempted, each recorded as delivered or undeliverable -- in a dry run, nothing, and
+    ``planned`` holds what it would have attempted. ``unreadable`` names every project whose
+    notices or configuration could not be read: nothing was sent for those, and a sweep
+    with any of them is not ``ok`` (10.f, 10.g).
+    """
+
+    project_id: UUID | None
+    dry_run: bool
+    waiting: int = 0
+    sent: tuple[GateNotice, ...] = ()
+    planned: tuple[PlannedNotice, ...] = ()
+    unreadable: tuple[str, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        return not self.unreadable

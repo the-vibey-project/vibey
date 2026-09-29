@@ -66,6 +66,11 @@ from vibey.application.interfaces.class_contracts import (
     VibeySkillsContextCompilerInterface,
 )
 from vibey.application.interfaces.config_store import ConfigStorePort
+from vibey.application.interfaces.defect_triage import (
+    DefectGateInterface,
+    DefectTriageInterface,
+    JobFailureHistory,
+)
 from vibey.application.interfaces.design import (
     DesignProvider,
     DesignQuestionProvider,
@@ -96,6 +101,11 @@ from vibey.application.interfaces.failover import (
 )
 from vibey.application.interfaces.files import FilesPort
 from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
+from vibey.application.interfaces.gate_notices import (
+    GateNoticeServiceInterface,
+    GateNoticeStore,
+    GateReminderInterface,
+)
 from vibey.application.interfaces.gates import (
     GateLookup,
     HumanGateRepository,
@@ -207,6 +217,12 @@ from vibey.application.interfaces.worker_interface import (
 )
 
 __all__ = [
+    "DefectGateInterface",
+    "DefectTriageInterface",
+    "JobFailureHistory",
+    "GateNoticeServiceInterface",
+    "GateNoticeStore",
+    "GateReminderInterface",
     "Logger",
     "NotificationSink",
     "TelemetryMetrics",

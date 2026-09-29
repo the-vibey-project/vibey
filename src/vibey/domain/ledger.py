@@ -117,6 +117,18 @@ class EventKind(StrEnum):
     ENGINE_FAILED_OVER = "EngineFailedOver"
     ENGINE_PROBED = "EngineProbed"
     ENGINE_HANDED_BACK = "EngineHandedBack"
+    # Gate notices. "A person was told" is evidence, never assumed: every notice about a
+    # gate -- the one when it is raised (`notice` 0) and each reminder while it waits
+    # (1, 2, ...) -- is recorded as delivered on at least one channel, or as undeliverable
+    # with the reason (notifications disabled, no channel, none wired, or delivery
+    # failed). One event per gate and notice number: a replayed sweep records nothing.
+    GATE_NOTIFIED = "GateNotified"
+    GATE_NOTICE_UNDELIVERABLE = "GateNoticeUndeliverable"
+    # A job's handler failed: its class, the failure's signature (the detail with ids,
+    # times and counters normalized away, hashed) and the attempt. The worker reads a
+    # job's last few back before offering more attempts, and raises a `defect` gate
+    # instead when they were all one failure (domain/defect.py).
+    JOB_FAILED = "JobFailed"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)
