@@ -11,6 +11,7 @@ Postgres.
 
 import asyncio
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from uuid import UUID
 
@@ -477,6 +478,67 @@ def test_new_project_refuses_a_forbidden_declaration_before_creating_anything(
             return await resources.projects.get_latest()
 
     assert asyncio.run(latest()) is None
+
+
+def _latest_config() -> Mapping[str, object]:
+    async def load() -> Mapping[str, object]:
+        async with build_app() as resources:
+            project = await resources.projects.get_latest()
+            assert project is not None
+            return project.config
+
+    return asyncio.run(load())
+
+
+def test_new_project_stores_the_declared_design_table(tmp_path: Path) -> None:
+    (tmp_path / "vibey.toml").write_text('[design.interview]\ndefault_scope = "model"\n')
+
+    result = runner.invoke(app, ["new", "declared-design-proj", "--repo", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert _latest_config()["design"] == {"interview": {"default_scope": "model"}}
+
+
+def test_the_design_default_scope_flag_beats_the_file(tmp_path: Path) -> None:
+    """The triaged-delivery bridge creates every project with `narrowest`, whatever the
+    repository's own vibey.toml declares -- accepting defaults unattended is bounded only
+    under it."""
+    (tmp_path / "vibey.toml").write_text('[design.interview]\ndefault_scope = "model"\n')
+
+    result = runner.invoke(
+        app,
+        [
+            "new",
+            "narrowest-proj",
+            "--repo",
+            str(tmp_path),
+            "--design-default-scope",
+            "narrowest",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _latest_config()["design"] == {"interview": {"default_scope": "narrowest"}}
+
+
+def test_the_design_default_scope_flag_needs_no_file(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["new", "flag-only-proj", "--repo", str(tmp_path), "--design-default-scope", "model"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert _latest_config()["design"] == {"interview": {"default_scope": "model"}}
+
+
+def test_an_unknown_design_default_scope_is_refused(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["new", "wide-proj", "--repo", str(tmp_path), "--design-default-scope", "widest"],
+    )
+
+    assert result.exit_code != 0
+    assert "model, narrowest" in result.output
 
 
 def test_new_project_rejects_unknown_skills_context_mode(tmp_path: Path) -> None:

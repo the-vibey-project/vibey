@@ -6,8 +6,8 @@ and unit-tested in
 (`VibeyConfig`, `parse_config`, `parse_toml_string`) and
 [`src/vibey/infrastructure/config_loader.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/infrastructure/config_loader.py)
 (`load_config_from_path`). `vibey new` reads the `[notifications]`,
-`[telemetry]`, [`[gates]`](#gates) and [`[engine_environment]`](#engine_environment)
-tables from the repository's `vibey.toml` and stores them in the project record; the
+`[telemetry]`, [`[gates]`](#gates), [`[engine_environment]`](#engine_environment) and
+[`[design]`](#designinterview) tables from the repository's `vibey.toml` and stores them in the project record; the
 worker and lifecycle repository consume those stored tables. The other schema tables
 remain documented inputs for future wiring.
 
@@ -16,7 +16,7 @@ remain documented inputs for future wiring.
 | Input | Read by | What it controls |
 |---|---|---|
 | `./vibey.toml`, keys `[features].gptossloop`, `[features].qwenloop`, `[features].claudeloop_local` | `vibey doctor` and `vibey loops` (`cli/main.py` `_local_engines_from_toml`, through `LocalEngineSettings`) | Which local engines are added to the health sweep and reported as switched on. The file is read from the current directory with `parse_toml_string`; a missing or malformed file leaves every switch at its default: `gptossloop` on, the others off (ADR-0064). |
-| `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]` and `[engine_environment]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run and what an engine session may see of the environment into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
+| `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]`, `[engine_environment]` and `[design]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run, what an engine session may see of the environment and how the DESIGN interview declares its defaults ([`[design.interview]`](#designinterview)) into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. `[notifications] sweep_interval_seconds` is read from the same `./vibey.toml`, for the gate-reminder sweep every idle worker runs. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
@@ -30,8 +30,9 @@ The project record is written once, at creation, by one of two paths:
   `--max-cycle-turns`, `--skills-context-mode` and `--skills-context-budget`
   are stored in the `config` JSON as `max_cycle_dollars`, `max_cycle_turns`
   and `skills_context` (the last only when the mode is not `off`). When the repo
-  contains `vibey.toml`, its `[notifications]`, `[telemetry]`, `[gates]` and
-  `[engine_environment]` tables are copied into that same JSON record.
+  contains `vibey.toml`, its `[notifications]`, `[telemetry]`, `[gates]`,
+  `[engine_environment]` and `[design]` tables are copied into that same JSON record;
+  `--design-default-scope` then overrides `design.interview.default_scope`.
 - **The Kubernetes operator** ([ADR-0025](../architecture/decisions/0025-kubernetes-operator-crd-keda.md)):
   a `VibeyProject` spec's `maxCycles` sets the column (default `10`);
   `repo`, `maxCycleDollars`, `maxCycleTurns` and `skillsContext` are stored in
@@ -344,6 +345,52 @@ Each phase table accepts the same three fields:
 effort = "standard"
 engines = ["claudeloop", "agyloop"]
 parallelism = 4
+```
+
+## `[design.interview]` { #designinterview }
+
+How the DESIGN interview declares each question's default. `vibey new` copies the
+`[design]` table into the project record, and the `design.interview` handler reads it
+from there (`DesignConfig.from_data`) every time it records a question batch.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `default_scope` | `"narrowest"` or `"model"` | `"narrowest"` | Whose appetite a declared default follows. Any other value is refused by `vibey new`; a malformed value in a stored record fails the interview job rather than reading as `narrowest`. `vibey new --design-default-scope` overrides the file. |
+
+A default is what `vibey answer ID --defaults` takes, and what an unanswered
+non-blocking question becomes as an assumption. When the model writes both a question
+and its default, accepting defaults accepts the model's appetite: live on issue #998,
+a pure README insertion answered "Yes" to "Should we add a unit test ... / commit the
+generation script / run it in the existing CI pipeline?" and grew a CI change that the
+delegated approver may never approve.
+
+- **`narrowest`** — a yes/no question (it opens with *should*, *do*, *will*, *is* ...)
+  that proposes to *add, also, include, extend, enforce, automate, introduce, create,
+  commit, integrate, provide* or run something *as part of* another thing, and names an
+  artefact the intake does not name — a test, CI, pipeline, workflow, script, hook,
+  lint, check, comment, badge, changelog, generator, tool, automation, configuration,
+  dependency or Makefile target — has an affirmative default rewritten to
+  `No (the intake does not ask for this; out of scope)`. A default that already declines
+  is left alone, and so is every question that proposes no new artefact: *"Should the
+  anchor generation follow GitHub's algorithm exactly?"* is about how to do what was
+  asked, and *"Do we need to include sub-headings?"* is about the granularity of the
+  requested table of contents, not a new thing beside it. The intake is the issue text
+  that seeded the ledger (`vibey new --intake`). Both providers are also asked, in their
+  prompt, for the narrowest default at source (`QUESTION_DEFAULT_CONTRACT`); the rewrite
+  is the deterministic half, since a model can ignore prose.
+- **`model`** — the model's default is recorded as the model wrote it.
+
+A rewritten default is recorded, never silent: the `QuestionAsked` payload carries the
+narrowed `default`, the model's own as `model_default`, and a one-sentence
+`default_reason` naming the artefacts beyond the intake; the gate prompt shows
+`[default: No (...); narrowed from the model's 'Yes']`. A person who answers a question
+explicitly is never overridden. The triaged-delivery bridge creates every project with
+`--design-default-scope narrowest`, whatever the repository declares: accepting defaults
+unattended is bounded only under it.
+
+```toml
+[design.interview]
+default_scope = "narrowest"
 ```
 
 ## `[provision]`

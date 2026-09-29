@@ -46,12 +46,29 @@ def stages_for_cycle(cycle: int) -> tuple[DesignStage, ...]:
     return REENTRANT_DESIGN_STAGES
 
 
+QUESTION_DEFAULT_CONTRACT = (
+    "Every default must be the NARROWEST-SCOPE answer: the one that adds the least work "
+    "beyond what the intake explicitly asks for. For a yes/no question that would add, "
+    "extend, include, enforce or automate something -- a test, a script, a CI or "
+    'pipeline step, a hook, a comment, a tool -- the default is "No" unless the intake '
+    "explicitly requires it. Do not propose scope beyond the intake: ask how to do what "
+    "it asks, not what else could be done."
+)
+"""The rule both DESIGN providers state to their model, in one place so they cannot
+drift. It is prose, and a model can ignore prose, so `DesignInterviewHandler` also
+enforces it deterministically (`vibey.domain.design_default_scope`)."""
+
+
 @dataclass(frozen=True, slots=True)
 class DesignQuestion:
     question_id: str
     text: str
     default: str
     blocking: bool
+    #: The model's own default, kept when the declared one was narrowed; None otherwise.
+    model_default: str | None = None
+    #: Why the default was narrowed, when it was.
+    default_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,17 +90,27 @@ class QuestionBatch:
                 kind=EventKind.QUESTION_ASKED,
                 provenance=Provenance.AGENT,
                 produced_at=now,
-                payload={
-                    "item_id": question.question_id,
-                    "text": question.text,
-                    "default": question.default,
-                    "blocking": question.blocking,
-                    "stage": self.stage.value,
-                    "cycle": cycle,
-                },
+                payload=self._payload(question, cycle=cycle),
             )
             for question in self.questions
         )
+
+    def _payload(self, question: DesignQuestion, *, cycle: int) -> dict[str, object]:
+        """A QuestionAsked payload. A narrowed default carries the model's own beside
+        it -- the ledger is append-only, so what the model proposed is recorded here,
+        once, or never."""
+        payload: dict[str, object] = {
+            "item_id": question.question_id,
+            "text": question.text,
+            "default": question.default,
+            "blocking": question.blocking,
+            "stage": self.stage.value,
+            "cycle": cycle,
+        }
+        if question.model_default is not None:
+            payload["model_default"] = question.model_default
+            payload["default_reason"] = question.default_reason
+        return payload
 
 
 def build_question_batch(

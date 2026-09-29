@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from vibey.application.design import (
+    QUESTION_DEFAULT_CONTRACT,
     DesignEvent,
     DesignQuestion,
     DesignStage,
@@ -43,7 +44,8 @@ class ClaudeLoopDesignProvider:
     async def batch(self, stage: DesignStage, prior_events: Sequence[DesignEvent]) -> QuestionBatch:
         prompt = (
             "You are conducting one bounded stage of a software DESIGN interview. "
-            "Ask 1 to 4 concise questions. Every question needs a useful proposed default. "
+            "Ask 1 to 4 concise questions. Every question needs a proposed default. "
+            f"{QUESTION_DEFAULT_CONTRACT} "
             "Do not inspect files or call tools; answer immediately in this first turn. "
             'Return only JSON with shape {"questions":[{"question_id":str,'
             '"text":str,"default":str,"blocking":bool}]}.\n'

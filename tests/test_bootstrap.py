@@ -190,6 +190,9 @@ async def test_build_design_worker_composes_an_executable_interview(tmp_path: Pa
         gates=gates,
         design_ledger=FakeLedger(),
         design_specs=SimpleNamespace(),
+        # No project store: the interview reads no stored `[design.interview]` and
+        # declares its defaults under the default scope.
+        projects=None,
     )
     project = ProjectRecord(
         project_id=project_id,
@@ -284,6 +287,7 @@ def _design_resources(jobs, ledger):  # type: ignore[no-untyped-def]
         gates=FakeHumanGateRepository(),
         design_ledger=ledger,
         design_specs=SimpleNamespace(),
+        projects=None,
     )
 
 

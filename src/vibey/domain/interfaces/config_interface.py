@@ -1,11 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Contracts for the project notification, telemetry and queue configuration values."""
+"""Contracts for the project notification, telemetry, queue and design configuration values."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from vibey.domain.design_default_scope import DefaultScope
     from vibey.domain.gate_notice import ReminderSchedule
     from vibey.domain.queue_reap import BrokerPolicy, ReapThresholds
 
@@ -106,3 +107,19 @@ class QueueConfigInterface(Protocol):
 
     @property
     def defect(self) -> QueueDefectConfigInterface: ...
+
+
+@runtime_checkable
+class DesignInterviewConfigInterface(Protocol):
+    """`[design.interview]`."""
+
+    @property
+    def default_scope(self) -> DefaultScope: ...
+
+
+@runtime_checkable
+class DesignConfigInterface(Protocol):
+    """`[design]`."""
+
+    @property
+    def interview(self) -> DesignInterviewConfigInterface: ...

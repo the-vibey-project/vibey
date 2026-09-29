@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from vibey.domain.defect import DEFAULT_IDENTICAL_FAILURES, MIN_IDENTICAL_FAILURES
+from vibey.domain.design_default_scope import DEFAULT_SCOPE, DefaultScope
 from vibey.domain.errors import VibeyError
 from vibey.domain.gate_notice import (
     DEFAULT_MAX_REMINDERS,
@@ -589,6 +590,47 @@ class QueueConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class DesignInterviewConfig:
+    """`[design.interview]`: how the DESIGN interview declares its defaults.
+
+    `default_scope` decides whose appetite a question's default follows: `narrowest`
+    (the default) rewrites a yes/no question that proposes an artefact the intake does
+    not name from an affirmative default to "No", keeping the model's own default in
+    the ledger beside it; `model` records the model's default unchanged.
+    """
+
+    default_scope: DefaultScope = DEFAULT_SCOPE
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "DesignInterviewConfig":
+        raw = _optional(table, "default_scope", path, str, DEFAULT_SCOPE.value)
+        try:
+            return cls(default_scope=DefaultScope(raw))
+        except ValueError as exc:
+            allowed = ", ".join(scope.value for scope in DefaultScope)
+            raise ConfigError(
+                f"{path}.default_scope", f"must be one of {allowed}, got {raw!r}"
+            ) from exc
+
+
+@dataclass(frozen=True, slots=True)
+class DesignConfig:
+    """`[design]`: the DESIGN phase's declared policy (not `[phases.design]`, which
+    holds the phase's effort and engine pool)."""
+
+    interview: DesignInterviewConfig = field(default_factory=DesignInterviewConfig)
+
+    @classmethod
+    def from_data(cls, data: Mapping[str, Any]) -> "DesignConfig":
+        """Read `[design]` from a whole parsed document or a project's stored config.
+        Needs nothing else in it, so the interview handler can read its policy from the
+        stored record without the `[project]` table a whole-document parse demands."""
+        table = _optional(dict(data), "design", "design", dict, {})
+        interview = _optional(table, "interview", "design.interview", dict, {})
+        return cls(interview=DesignInterviewConfig.from_table(interview, "design.interview"))
+
+
+@dataclass(frozen=True, slots=True)
 class VibeyConfig:
     project: ProjectConfig
     isolation: IsolationConfig = field(default_factory=IsolationConfig)
@@ -614,6 +656,7 @@ class VibeyConfig:
     blob: BlobConfig = field(default_factory=BlobConfig)
     siem: SiemConfig = field(default_factory=SiemConfig)
     queue: QueueConfig = field(default_factory=QueueConfig)
+    design: DesignConfig = field(default_factory=DesignConfig)
 
 
 def parse_toml_string(text: str) -> dict[str, Any]:
@@ -1027,6 +1070,7 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         blob=_parse_blob(data),
         siem=_parse_siem(data),
         queue=QueueConfig.from_data(data),
+        design=DesignConfig.from_data(data),
     )
 
 

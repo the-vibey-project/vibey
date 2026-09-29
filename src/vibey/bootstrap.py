@@ -305,6 +305,7 @@ def build_design_worker(
                 questions=provider,
                 clock=clock,
                 interviewer=provider.engine_id,
+                projects=resources.projects,
             ),
             "design.research": DesignResearchHandler(
                 ledger=resources.design_ledger,
@@ -616,6 +617,7 @@ def build_full_worker(
             questions=design_provider,
             clock=clock,
             interviewer=design_provider.engine_id,
+            projects=resources.projects,
         ),
         "design.research": DesignResearchHandler(
             ledger=resources.design_ledger,

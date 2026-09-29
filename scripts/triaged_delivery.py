@@ -21,7 +21,9 @@ It never answers a human gate on a person's behalf unless told to. DESIGN interv
 stay parked for a person by default; ``--answer-design-defaults`` (or
 ``VIBEY_TRIAGED_DELIVERY_ANSWER_DESIGN_DEFAULTS=1``) is the explicit opt-in to answer them
 with their declared defaults and accept the design, and every such answer is recorded under
-``--answer-by`` (``automation:triaged-delivery``), never under the account running it. It
+``--answer-by`` (``automation:triaged-delivery``), never under the account running it. Every
+project it creates declares ``--design-default-scope narrowest``, so a declared default is
+the answer that adds the least work beyond the issue, never the model's appetite. It
 never edits a branch or routes around a gate: a finished project is pushed through the push
 gate and opened as a draft pull request, which the PR automation promotes and the merge train
 lands. Run with ``--once``, or ``--interval SECONDS`` for a local supervisor loop.
@@ -661,6 +663,14 @@ class DeliveryBridge:
                 str(worktree),
                 "--intake",
                 self._frame.text(self._settings.repository, verdict),
+                # Not a setting, on purpose. `--answer-design-defaults` accepts every
+                # declared default unattended, and a default the model wrote is the
+                # model's appetite: live on #998 a README insertion grew a script, tests
+                # and a CI step, and the CI change ends at a person. Narrowest is the only
+                # scope under which accepting defaults unattended stays bounded, so a key
+                # that could widen it would be a key that removes the bound (12.d).
+                "--design-default-scope",
+                "narrowest",
             ]
         )
         if output.returncode:

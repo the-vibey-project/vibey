@@ -10,6 +10,8 @@ from vibey.domain.interfaces.budget_caps_interface import (
 )
 from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 from vibey.domain.interfaces.config_interface import (
+    DesignConfigInterface,
+    DesignInterviewConfigInterface,
     NotificationsConfigInterface,
     NotificationWebhookConfigInterface,
     QueueConfigInterface,
@@ -26,6 +28,9 @@ from vibey.domain.interfaces.defect_interface import (
     DefectAnswerPolicyInterface,
     FailureNormalizerInterface,
     RepeatedFailurePolicyInterface,
+)
+from vibey.domain.interfaces.design_default_scope_interface import (
+    DesignDefaultScopeGuardInterface,
 )
 from vibey.domain.interfaces.gate_answer_interface import GateAnswerRequestIdsInterface
 from vibey.domain.interfaces.gate_notice_interface import (
@@ -189,6 +194,9 @@ __all__ = [
     "CredentialRedactorInterface",
     "DecompositionPlannerInterface",
     "DeliveryCorrelationInterface",
+    "DesignConfigInterface",
+    "DesignInterviewConfigInterface",
+    "DesignDefaultScopeGuardInterface",
     "EngineAffordancesInterface",
     "EngineControlsInterface",
     "EngineFailurePolicyInterface",
