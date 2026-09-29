@@ -35,6 +35,10 @@ class PaperFigureAtlasInterface(Protocol):
 class RevisionPinGuardInterface(Protocol):
     """Decides whether a revision may pin the history figures."""
 
-    def problems(self, revision: str) -> list[str]:
+    def problems(self, revision: str, tree: str | None = None) -> list[str]:
         """Why `revision` may not be pinned, one reason per line; empty when it may."""
+        ...
+
+    def resolve(self, revision: str, tree: str | None = None) -> str | None:
+        """The commit in HEAD's history the pin names: itself, or its rebased copy by tree."""
         ...
