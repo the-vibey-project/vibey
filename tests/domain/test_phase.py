@@ -118,6 +118,29 @@ def test_design_to_build_allowed_when_all_guards_pass() -> None:
     assert evaluate_transition(state, request) == ALLOWED
 
 
+def test_design_to_build_denied_while_design_jobs_are_unsettled() -> None:
+    """Acceptance is of the finished spec: research, synthesis and spec must have run."""
+    state = _state(Phase.DESIGN)
+    request = TransitionRequest(
+        to=Phase.BUILD,
+        reason="spec accepted",
+        evidence=TransitionEvidence(
+            acceptance_criteria=1,
+            unsettled_design_jobs=5,
+            user_verdict=UserVerdict.ACCEPT,
+            visual_decision=VisualDecision.DECLINED,
+        ),
+    )
+
+    outcome = evaluate_transition(state, request)
+
+    assert isinstance(outcome, Denied)
+    assert outcome.violations == (
+        "5 design job(s) still unsettled; research, synthesis and spec must finish "
+        "before the design can be accepted",
+    )
+
+
 def test_design_to_build_denied_on_unmapped_criteria() -> None:
     state = _state(Phase.DESIGN)
     request = TransitionRequest(

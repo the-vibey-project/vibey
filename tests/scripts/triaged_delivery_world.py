@@ -100,6 +100,8 @@ class FakeProject:
     intake: str | None = None
     interview_started: bool = False
     spec_ready: bool = False
+    # DESIGN jobs the finished interview queued and the worker has not run yet.
+    design_jobs_left: int = 0
     gates: list[FakeGate] = field(default_factory=list)
 
     def open_gates(self) -> list[FakeGate]:
@@ -183,6 +185,9 @@ class FakeWorld:
         self.merge_train_calls: list[str] = []
         self.pushes: list[str] = []
         self.forge_down = False  # the provenance query fails, as a 502 would
+        # How many DESIGN jobs the interview's completion queues (research, synthesis,
+        # spec). 0 collapses the chain into the run that answers the interview.
+        self.design_chain = 0
 
     # -- setup ---------------------------------------------------------------------------
 
@@ -429,6 +434,8 @@ class FakeWorld:
             return 0, f"answered {gate.gate_id} as {by}\n", ""
         if command == "design" and argv[1] == "accept":
             project = self.projects[argv[2]]
+            if project.design_jobs_left:
+                return 1, "", f"{project.design_jobs_left} design job(s) still unsettled"
             if project.phase != "design" or not project.spec_ready or project.open_gates():
                 return 1, "", "no synthesized spec to accept"
             project.phase = "build"
@@ -456,6 +463,13 @@ class FakeWorld:
                 return 0, "design interview parked on questions\n", ""
             if project.open_gates() or project.spec_ready:
                 return 0, "no claimable job\n", ""
+            if project.design_jobs_left:
+                project.design_jobs_left -= 1
+                project.spec_ready = not project.design_jobs_left
+                return 0, "design job ran\n", ""
+            if self.design_chain:  # the interview finishes and queues the rest of DESIGN
+                project.design_jobs_left = self.design_chain
+                return 0, "design interview finished; research queued\n", ""
             project.spec_ready = True
             return 0, "design spec synthesized\n", ""
         if project.phase == "build":
@@ -476,7 +490,7 @@ class FakeWorld:
             "cycle": 1,
             "max_cycles": 10,
             "repo_path": project.repo_path,
-            "queue_depth": {"ready": 0, "awaiting_capacity": 0},
+            "queue_depth": {"ready": project.design_jobs_left, "awaiting_capacity": 0},
             "circuits": [],
         }
 

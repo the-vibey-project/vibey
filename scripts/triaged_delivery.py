@@ -105,6 +105,10 @@ DESIGN_QUESTION_KINDS = frozenset(
         "premortem",
     }
 )
+# `queue_depth` states of a job that has not settled. While any DESIGN job is one of these
+# the spec is not finished -- the interview's completion only queues research, synthesis
+# and spec -- so the design is not ready to accept (`vibey design accept` refuses too).
+UNSETTLED_JOB_STATES = ("ready", "leased", "awaiting_human", "awaiting_capacity")
 # Outcomes after which the worker demonstrably ran a job or a job parked on a person: a
 # lease left behind by a timed-out worker is no longer the thing holding the project up.
 PROGRESS = frozenset({"done", "parked_at_gate", "worker_progress", "design_awaiting_acceptance"})
@@ -742,6 +746,14 @@ class DeliveryBridge:
         )
 
     @staticmethod
+    def _unsettled_jobs(status: Mapping[str, object]) -> int:
+        """Jobs the project still has in flight, from its status document."""
+        queue = status.get("queue_depth")
+        if not isinstance(queue, dict):
+            return 0
+        return sum(int(queue.get(state, 0)) for state in UNSETTLED_JOB_STATES)
+
+    @staticmethod
     def _is_design_gate(gate: Mapping[str, object]) -> bool:
         return (
             str(gate.get("kind", "")) == "question"
@@ -824,6 +836,16 @@ class DeliveryBridge:
                         project_id, outcome="worker_failed", worker_returncode=worker_returncode
                     )
                     return "worker_failed"
+                if phase == "design" and (unsettled := self._unsettled_jobs(status)):
+                    # The design chain is still running: work it on the next pass, and
+                    # never accept a spec its synthesis has not written yet.
+                    self._evidence.project(
+                        project_id,
+                        outcome="worker_progress",
+                        design_jobs_unsettled=unsettled,
+                        status=status,
+                    )
+                    return "worker_progress"
                 if phase == "design":
                     outcome = self._design_without_gate(project_id)
                     if outcome != "design_accepted":

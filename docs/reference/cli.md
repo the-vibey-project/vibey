@@ -389,7 +389,7 @@ Bare `vibey design` prints help. Subcommands:
 | Subcommand | What it does |
 |---|---|
 | `design resume PROJECT_ID [--priority]` | Enqueue or resume the project's DESIGN interview. Prints `design job <id>`. `--priority` enqueues it bumped, so it runs next after whatever is running — the same grant and ledger record as [`vibey queue bump`](#vibey-queue). On an interview that has already finished, `--priority` is a recorded no-op, as plain `resume` is a no-op. |
-| `design accept PROJECT_ID [--spec-json PATH] [--visual/--no-visual]` | Accept the synthesized spec (optionally importing JSON first) and choose whether to enter the VISUAL_DESIGN interstitial. Defaults to `--no-visual`; the choice is never implicit. Prints `accepted design for <id>; entered <phase>; context under <repo_path>`. |
+| `design accept PROJECT_ID [--spec-json PATH] [--visual/--no-visual]` | Accept the synthesized spec (optionally importing JSON first) and choose whether to enter the VISUAL_DESIGN interstitial. Defaults to `--no-visual`; the choice is never implicit. Refused while any DESIGN job of the cycle (research, synthesis, spec) is unsettled. Prints `accepted design for <id>; entered <phase>; context under <repo_path>`. |
 
 `--spec-json` expects a JSON object with:
 
