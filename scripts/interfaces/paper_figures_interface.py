@@ -30,3 +30,11 @@ class PaperFigureAtlasInterface(Protocol):
     def drift(self, markdown: str, skip: frozenset[str] = frozenset()) -> list[str]:
         """The names of the blocks in `markdown` that regeneration would change."""
         ...
+
+
+class RevisionPinGuardInterface(Protocol):
+    """Decides whether a revision may pin the history figures."""
+
+    def problems(self, revision: str) -> list[str]:
+        """Why `revision` may not be pinned, one reason per line; empty when it may."""
+        ...

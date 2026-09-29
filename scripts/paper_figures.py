@@ -38,7 +38,11 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from interfaces.paper_figures_interface import FigureSourceInterface, PaperFigureAtlasInterface
+from interfaces.paper_figures_interface import (
+    FigureSourceInterface,
+    PaperFigureAtlasInterface,
+    RevisionPinGuardInterface,
+)
 from paper_evidence import DEFAULT_QWEN_STORM_RECORD, DEFAULT_STRESS_RECORD, StressRecord
 
 DEFAULT_PAPER = "docs/paper.md"
@@ -48,6 +52,11 @@ DEFAULT_TEST_TIME_RECORD = "docs/runbooks/expansion/evidence/13-front1-validatio
 DEFAULT_TIMEZONE = "America/New_York"
 DEFAULT_SINCE = date(2026, 8, 9)
 SCRIPT = "scripts/paper_figures.py"
+# Where the repository names its integration branch; the pin must lie on that branch's
+# history as the remote holds it, read from this file rather than assumed.
+BRANCHES_CONFIG = ".vibey-gh.toml"
+DEFAULT_INTEGRATION_BRANCH = "develop"
+DEFAULT_REMOTE = "origin"
 # Each package as (name, source directory, project directory). The project directory holds
 # the package's pyproject.toml, whose pytest `testpaths` say where its suite lives: for the
 # orchestrator that is the repository root's `tests/`, outside `src/vibey`, and a count taken
@@ -1576,6 +1585,58 @@ def build_atlas(repo: Path, revision: str) -> PaperFigureAtlas:
     )
 
 
+class RevisionPinGuard(RevisionPinGuardInterface):
+    """Refuses a pin that a fresh clone of the integration branch could not walk.
+
+    The history figures are pinned to a revision so `--check` is deterministic. A pin taken
+    on a feature branch names a commit a squash merge then discards: it exists only in the
+    clone that made it, and every other clone fails on it (`git log` exit 128) -- which is
+    how develop went red after #1235 pinned 3680d700, a pre-squash commit. A pin is accepted
+    only when it is a commit, an ancestor of the checked-out HEAD, and, where the clone
+    holds the integration branch's remote ref, an ancestor of that too.
+    """
+
+    def __init__(self, repo: Path, integration_ref: str | None = None) -> None:
+        self._repo = repo
+        self._integration_ref = integration_ref or self._configured_ref(repo)
+
+    @staticmethod
+    def _configured_ref(repo: Path) -> str:
+        branch = DEFAULT_INTEGRATION_BRANCH
+        config = repo / BRANCHES_CONFIG
+        if config.is_file():
+            branches = tomllib.loads(config.read_text(encoding="utf-8")).get("branches", {})
+            branch = str(branches.get("integration", branch))
+        return f"{DEFAULT_REMOTE}/{branch}"
+
+    def _git_ok(self, *args: str) -> bool:
+        # push-gate: not a push (asks the history whether a pin is reachable)
+        done = subprocess.run(
+            ["git", *args], cwd=self._repo, capture_output=True, text=True, check=False
+        )
+        return done.returncode == 0
+
+    def _is_commit(self, ref: str) -> bool:
+        return self._git_ok("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+
+    def problems(self, revision: str) -> list[str]:
+        if not self._is_commit(revision):
+            return [
+                f"pinned revision {revision} is not a commit in this clone; a pin must be a "
+                "commit on the integration branch's history, not one a squash merge discarded"
+            ]
+        found = []
+        if not self._git_ok("merge-base", "--is-ancestor", revision, "HEAD"):
+            found.append(f"pinned revision {revision} is not an ancestor of the checked-out HEAD")
+        ref = self._integration_ref
+        if self._is_commit(ref) and not self._git_ok("merge-base", "--is-ancestor", revision, ref):
+            found.append(
+                f"pinned revision {revision} is not on {ref}'s history; a squash merge would "
+                f"orphan it -- pin a commit {ref} already holds, e.g. `git merge-base HEAD {ref}`"
+            )
+        return found
+
+
 # The figures whose only source is the git log; a shallow clone cannot recompute them.
 HISTORY_FIGURES: frozenset[str] = frozenset(
     {"commits-daily", "commit-rhythm", "cumulative-commits", "release-cadence", "codebase-shape"}
@@ -1626,6 +1687,11 @@ def main(argv: list[str] | None = None) -> int:
     # revision is resolved, because that revision is usually absent from such a clone.
     skipped = HISTORY_FIGURES if args.check and _is_shallow(args.repo) else frozenset()
     if not skipped:
+        refused = RevisionPinGuard(args.repo).problems(revision)
+        if refused:
+            for reason in refused:
+                print(f"{SCRIPT}: {reason}", file=sys.stderr)
+            return 2
         revision = subprocess.run(
             ["git", "rev-parse", revision],
             cwd=args.repo,
