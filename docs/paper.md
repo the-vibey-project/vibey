@@ -2789,21 +2789,21 @@ recorded beside it.
 \draw[vibeyink,line width=.6pt] (0,0) -- (7.0,0);
 \draw[vibeyink] (0.00,0) -- (0.00,-0.08); \draw[vibeyink] (0.88,0) -- (0.88,-0.08); \draw[vibeyink] (1.75,0) -- (1.75,-0.08); \draw[vibeyink] (2.62,0) -- (2.62,-0.08); \draw[vibeyink] (3.50,0) -- (3.50,-0.08); \draw[vibeyink] (4.38,0) -- (4.38,-0.08); \draw[vibeyink] (5.25,0) -- (5.25,-0.08); \draw[vibeyink] (6.12,0) -- (6.12,-0.08); \draw[vibeyink] (7.00,0) -- (7.00,-0.08);
 \node[vibeynote,anchor=north] at (0,-0.1) {0};
-\node[vibeynote,anchor=north east] at (7.0,-0.1) {131,072 tokens};
-\draw[vibeyink,line width=.6pt] (1.07,0.12) -- (1.07,0.55) node[vibeynote,anchor=south,text=vibeyink] {p50\\20,070};
-\draw[vibeyink,line width=.6pt] (1.71,0.12) -- (1.71,0.87) node[vibeynote,anchor=south,text=vibeyink] {p90\\32,026};
-\draw[vibeyink,line width=.6pt] (1.97,0.12) -- (1.97,0.55) node[vibeynote,anchor=south,text=vibeyink] {p95\\36,816};
-\draw[vibeyink,line width=.6pt] (2.30,0.12) -- (2.30,0.87) node[vibeynote,anchor=south,text=vibeyink] {p99\\42,979};
-\draw[vibeyink,line width=.6pt] (2.62,0.12) -- (2.62,0.55) node[vibeynote,anchor=south,text=vibeyink] {max\\49,118};
-\draw[vibeyred,line width=.8pt,densely dashed] (1.75,-0.15) -- (1.75,-0.60) node[vibeynote,anchor=north,text=vibeyred,align=center] {32k: truncates 71 turns};
-\draw[vibeygreen,line width=.8pt,densely dashed] (3.50,-0.15) -- (3.50,-0.98) node[vibeynote,anchor=north,text=vibeygreen,align=center] {64k: chosen, 16,418 headroom};
-\draw[vibeygray,line width=.8pt,densely dashed] (7.00,-0.15) -- (7.00,-0.60) node[vibeynote,anchor=north,text=vibeygray,align=center] {128k: baseline, never reached};
-\node[vibeypill,anchor=south] at (7.00,1.35) {A: 18.55\,GB wired, 28.0 tok/s};
-\node[vibeypill,anchor=south] at (3.50,1.63) {B: 17.25\,GB wired, 32.5 tok/s};
-\node[vibeypill,anchor=south] at (3.50,1.35) {C: 17.24\,GB wired, 30.9 tok/s, inconclusive};
-\node[vibeyhead,anchor=south west] at (0,1.95) {context actually used per turn, 838 storm turns};
+\node[vibeynote,anchor=north east] at (6.92,-0.1) {131,072 tokens};
+\draw[vibeyink,line width=.6pt] (1.07,0.12) -- (1.07,0.34) -- (0.35,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p50\\20,070};
+\draw[vibeyink,line width=.6pt] (1.71,0.12) -- (1.71,0.34) -- (1.15,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p90\\32,026};
+\draw[vibeyink,line width=.6pt] (1.97,0.12) -- (1.97,0.34) -- (1.95,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p95\\36,816};
+\draw[vibeyink,line width=.6pt] (2.30,0.12) -- (2.30,0.34) -- (2.75,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p99\\42,979};
+\draw[vibeyink,line width=.6pt] (2.62,0.12) -- (2.62,0.34) -- (3.55,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {max\\49,118};
+\draw[vibeyred,line width=.8pt,densely dashed] (1.75,-0.15) -- (1.75,-0.60) node[vibeynote,anchor=north,text=vibeyred,align=center] (window0) {32k: truncates 71 turns};
+\draw[vibeygreen,line width=.8pt,densely dashed] (3.50,-0.15) -- (3.50,-1.50) node[vibeynote,anchor=north,text=vibeygreen,align=center] (window1) {64k: chosen, 16,418 headroom};
+\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor=north] (window1sweep0) at ([yshift=-1.5pt]window1.south) {B $\cdot$ f16 KV cache\\17.25\,GB wired, 32.5 tok/s};
+\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor=north] (window1sweep1) at ([yshift=-1.5pt]window1sweep0.south) {C $\cdot$ q8\_0 (requested) KV cache\\17.24\,GB wired, 30.9 tok/s, inconclusive};
+\draw[vibeygray,line width=.8pt,densely dashed] (7.00,-0.15) -- (7.00,-0.60) node[vibeynote,anchor=north east,text=vibeygray,align=center] (window2) {128k: baseline, never reached};
+\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor=north east] (window2sweep0) at ([yshift=-1.5pt]window2.south east) {A $\cdot$ f16 KV cache\\18.55\,GB wired, 28.0 tok/s};
+\node[vibeyhead,anchor=south west] at (0,1.25) {context actually used per turn, 838 storm turns};
 \end{tikzpicture}
-\caption{Fitting the model to the iron. The percentiles mark how much context 838 real storm turns used; the dashed lines are the three context windows considered. A 32k window would have truncated 71 turns, and the 128k baseline, never reached by any turn, wired 18.55\,GB of a 24\,GB machine. The 64k window chosen covers every recorded turn with a third again as headroom, and the sweep's pills report what each setting cost and delivered.}
+\caption{Fitting the model to the iron. The percentiles mark how much context 838 real storm turns used; the dashed lines are the three context windows considered. A 32k window would have truncated 71 turns, and the 128k baseline, never reached by any turn, wired 18.55\,GB of a 24\,GB machine. The 64k window chosen covers every recorded turn with a third again as headroom. Beneath each window, the sweep's configurations measured at it report what each setting cost and delivered.}
 \label{fig:host-context}
 \end{figure}
 ```

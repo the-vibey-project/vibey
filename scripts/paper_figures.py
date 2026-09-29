@@ -907,39 +907,62 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             ("p99", ctx["p99"]),
             ("max", ctx["max"]),
         ]
+        # The percentiles crowd one end of the axis, too close together to label in place.
+        # Each keeps a short stem at its true position and a leader fans out to a label on
+        # one row, the labels spaced evenly so none can overprint another.
+        spacing = 0.8
+        centre = sum(value for _, value in marks) * scale / len(marks)
+        first = max(0.35, centre - spacing * (len(marks) - 1) / 2)
         mark_lines = []
         for i, (name, value) in enumerate(marks):
             x = value * scale
-            up = 0.55 + (i % 2) * 0.32
+            lx = first + i * spacing
             mark_lines.append(
-                f"\\draw[vibeyink,line width=.6pt] ({x:.2f},0.12) -- ({x:.2f},{up:.2f}) node[vibeynote,anchor=south,text=vibeyink] {{{name}\\\\{_thousands(int(value))}}};"
+                f"\\draw[vibeyink,line width=.6pt] ({x:.2f},0.12) -- ({x:.2f},0.34) -- ({lx:.2f},0.62) "
+                f"node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {{{name}\\\\{_thousands(int(value))}}};"
             )
+        # Each window's label hangs below the axis at its dashed line, and the sweep's
+        # measurements at that window are listed directly beneath it, so every configuration
+        # reads as a property of the window it was measured at. The 64k group hangs lowest,
+        # clear of the 32k label on its left and the 128k group on its right.
         windows = [
-            (32768, "32k: truncates " + str(ctx["turns_over_32k"]) + " turns", "vibeyred"),
+            (
+                32768,
+                "32k: truncates " + str(ctx["turns_over_32k"]) + " turns",
+                "vibeyred",
+                0.6,
+                "north",
+            ),
             (
                 65536,
                 "64k: chosen, " + _thousands(int(decision["headroom_tokens"])) + " headroom",
                 "vibeygreen",
+                1.5,
+                "north",
             ),
-            (131072, "128k: baseline, never reached", "vibeygray"),
+            (131072, "128k: baseline, never reached", "vibeygray", 0.6, "north east"),
         ]
         window_lines = []
-        for j, (tokens, label, color) in enumerate(windows):
+        for j, (tokens, label, color, depth, anchor) in enumerate(windows):
             x = tokens * scale
-            depth = 0.6 + 0.38 * (j % 2)
             window_lines.append(
-                f"\\draw[{color},line width=.8pt,densely dashed] ({x:.2f},-0.15) -- ({x:.2f},-{depth:.2f}) node[vibeynote,anchor=north,text={color},align=center] {{{label}}};"
+                f"\\draw[{color},line width=.8pt,densely dashed] ({x:.2f},-0.15) -- ({x:.2f},-{depth:.2f}) "
+                f"node[vibeynote,anchor={anchor},text={color},align=center] (window{j}) {{{label}}};"
             )
-        sweep_lines = []
-        for k, row in enumerate(sweep):
-            x = row["context"] * scale
-            note = (
-                f"{row['config']}: {row['wired_gb']}\\,GB wired, {row['tokens_per_second']} tok/s"
-                + (f", {row['result']}" if row.get("result") else "")
-            )
-            sweep_lines.append(
-                f"\\node[vibeypill,anchor=south] at ({x:.2f},{1.35 + (k % 2) * 0.28:.2f}) {{{note}}};"
-            )
+            below = f"window{j}"
+            side = "south east" if anchor == "north east" else "south"
+            # A plain rectangle with fully rounded ends looks like the house pill, but its
+            # corner anchors sit on the bounding box, so a right-aligned pill ends at its line.
+            for k, row in enumerate(r for r in sweep if int(r["context"]) == tokens):
+                note = (
+                    f"{_tex(str(row['config']))} $\\cdot$ {_tex(str(row['kv_cache']))} KV cache\\\\"
+                    f"{row['wired_gb']}\\,GB wired, {row['tokens_per_second']} tok/s"
+                    + (f", {_tex(str(row['result']))}" if row.get("result") else "")
+                )
+                window_lines.append(
+                    f"\\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor={anchor}] (window{j}sweep{k}) at ([yshift=-1.5pt]{below}.{side}) {{{note}}};"
+                )
+                below = f"window{j}sweep{k}"
         tick_marks = " ".join(
             f"\\draw[vibeyink] ({t * scale:.2f},0) -- ({t * scale:.2f},-0.08);"
             for t in range(0, 131073, 16384)
@@ -949,18 +972,18 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\draw[vibeyink,line width=.6pt] (0,0) -- (7.0,0);
 {tick_marks}
 \\node[vibeynote,anchor=north] at (0,-0.1) {{0}};
-\\node[vibeynote,anchor=north east] at (7.0,-0.1) {{131,072 tokens}};
+\\node[vibeynote,anchor=north east] at (6.92,-0.1) {{131,072 tokens}};
 {chr(10).join(mark_lines)}
 {chr(10).join(window_lines)}
-{chr(10).join(sweep_lines)}
-\\node[vibeyhead,anchor=south west] at (0,1.95) {{context actually used per turn, {ctx["turns"]} storm turns}};
+\\node[vibeyhead,anchor=south west] at (0,1.25) {{context actually used per turn, {ctx["turns"]} storm turns}};
 \\end{{tikzpicture}}"""
         caption = (
             f"Fitting the model to the iron. The percentiles mark how much context {ctx['turns']} real storm turns used; "
             f"the dashed lines are the three context windows considered. A 32k window would have truncated "
             f"{ctx['turns_over_32k']} turns, and the 128k baseline, never reached by any turn, wired "
             f"{sweep[0]['wired_gb']}\\,GB of a 24\\,GB machine. The 64k window chosen covers every recorded turn with "
-            f"a third again as headroom, and the sweep's pills report what each setting cost and delivered."
+            f"a third again as headroom. Beneath each window, the sweep's configurations measured at it report what "
+            f"each setting cost and delivered."
         )
         return self._fence("figure", "fig:host-context", caption, body)
 
