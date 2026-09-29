@@ -559,6 +559,8 @@ class _Run:
     gate: dict[str, Any] | None
     gh_calls: list[list[str]]
     errors: list[str]
+    # The gate's record in `vibey_gh.review_outcome`'s vocabulary, as the step wrote it.
+    record: dict[str, Any] | None = None
 
     @property
     def lanes(self) -> dict[str, str]:
@@ -586,7 +588,13 @@ if argv[:2] == ["pr-automation", "record-review"]:
 if argv[:1] == ["local-review"]:
     verdict = os.environ.get("SIM_LOCAL_VERDICT", "")
     if not verdict:
-        print("local model unreachable", file=sys.stderr)
+        # A reviewer that gave no verdict, and -- when the scenario names one -- the code
+        # its outcome record carries, as the real `--outcome` writes it.
+        code = os.environ.get("SIM_LOCAL_CODE", "")
+        if code and "--outcome" in argv:
+            with open(argv[argv.index("--outcome") + 1], "w", encoding="utf-8") as handle:
+                handle.write(json.dumps({{"code": code}}))
+        print(os.environ.get("SIM_LOCAL_REASON", "local model unreachable"), file=sys.stderr)
         raise SystemExit(1)
     from vibey_gh import local_review
 
@@ -720,10 +728,13 @@ class _Workflow:
         paid: dict | None = None,
         refused: str | None = None,
         probe: str = "",
+        local_code: str = "",
+        local_reason: str = "",
     ) -> _Run:
         """`refused` is the text of a paid call the API refused (`is_error` in the execution
-        record) and `probe` the readiness probe's own reason."""
-        for log in ("vibey-gh.jsonl", "gh.jsonl"):
+        record) and `probe` the readiness probe's own reason. `local_code` and
+        `local_reason` are what a local reviewer that gave no verdict wrote and said."""
+        for log in ("vibey-gh.jsonl", "gh.jsonl", "review-outcome/record.json"):
             (self.tmp / log).unlink(missing_ok=True)
         errors: list[str] = []
         github = {
@@ -787,9 +798,10 @@ class _Workflow:
                 assert completed.returncode == 0, completed.stderr
                 job_steps["context"] = {"outcome": "success"}
             result_step = self._step("review-sovereign", id="result")
-            completed, outputs = self._bash(
-                result_step, context, {"SIM_LOCAL_VERDICT": json.dumps(local) if local else ""}
-            )
+            simulated = {"SIM_LOCAL_VERDICT": json.dumps(local) if local else ""}
+            simulated |= {"SIM_LOCAL_CODE": local_code} if local_code else {}
+            simulated |= {"SIM_LOCAL_REASON": local_reason} if local_reason else {}
+            completed, outputs = self._bash(result_step, context, simulated)
             job_steps["result"] = {"outputs": outputs}
             if completed.returncode != 0:
                 why = self._step("review-sovereign", id="why")
@@ -797,6 +809,10 @@ class _Workflow:
                 assert done.returncode == 0, done.stderr
                 job_steps["why"] = {"outputs": said}
                 errors += [line for line in done.stdout.splitlines() if line.startswith("::")]
+            coded = self._step("review-sovereign", id="coded")
+            done, said = self._bash(coded, {**context, "steps": job_steps}, {})
+            assert done.returncode == 0, done.stderr
+            job_steps["coded"] = {"outputs": said}
             needs["review-sovereign"] = {
                 "result": "success" if completed.returncode == 0 else "failure",
                 "outputs": {
@@ -909,6 +925,7 @@ class _Workflow:
                 "summary": fields["output[summary]"],
                 "merge_train": any(call[:2] == ["workflow", "run"] for call in calls),
                 "stdout": completed.stdout,
+                "text": fields.get("output[text]", ""),
             }
 
         gh_log = self.tmp / "gh.jsonl"
@@ -934,6 +951,11 @@ class _Workflow:
             gate=gate,
             gh_calls=gh_calls,
             errors=errors,
+            record=(
+                json.loads(record_path.read_text(encoding="utf-8"))
+                if (record_path := self.tmp / "review-outcome" / "record.json").exists()
+                else None
+            ),
         )
 
 
@@ -2016,3 +2038,327 @@ def test_the_documents_have_a_limit_of_their_own_not_the_diffs(tmp_path):
     cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(fallback=fallback))
     text = render_workflow(WORKFLOWS / "pr-review.yml", cfg)
     assert "--max-chars 50000 \\\n                --max-document-chars 250000" in text
+
+
+# ---------------------------------------------------------------------------
+# G2: every run says why it has a verdict, or why it has none, in a closed vocabulary
+# (`vibey_gh.review_outcome`) -- into the check run and an artifact a program can count.
+# ---------------------------------------------------------------------------
+
+
+def _record_is_well_formed(record: dict | None) -> dict:
+    from vibey_gh.review_outcome import REVIEW_OUTCOMES
+
+    assert record is not None, "the gate wrote no record"
+    assert REVIEW_OUTCOMES.problems(record) == []
+    assert record["schema"] == "vibey-gh.review-outcome/1" and record["source"] == "gate"
+    assert (record["pr"], record["head_sha"], record["run_id"]) == ("12", "abc123", "99")
+    return record
+
+
+@needs_bash_and_jq
+def test_undeclared_a_passing_whole_review_is_recorded_as_reviewed(undeclared):
+    run = undeclared.run(heartbeat=True, credits=True, local=_whole())
+
+    record = _record_is_well_formed(run.record)
+    assert (record["lane"], record["lane_code"]) == ("sovereign_whole", "")
+    assert (record["code"], record["verdict"], record["conclusion"]) == (
+        "reviewed",
+        "pass",
+        "success",
+    )
+    assert (record["sovereign_code"], record["parts"]) == ("reviewed", 1)
+    assert record["paid_review"] is False
+    # The check run carries the same record beside the verdict it explains.
+    assert json.dumps(record, separators=(",", ":")) in run.gate["text"]
+    # And the reviewer was told which head its verdict must be about.
+    (call,) = run.local_calls
+    assert call[call.index("--head-sha") + 1] == "abc123"
+    assert call[call.index("--outcome") + 1].endswith("/outcome.json")
+
+
+@needs_bash_and_jq
+def test_undeclared_a_failing_whole_review_is_recorded_as_a_failed_verdict(undeclared):
+    run = undeclared.run(
+        heartbeat=True, credits=True, local=_whole(**{"pass": False}, findings=[FINDING])
+    )
+
+    record = _record_is_well_formed(run.record)
+    assert (record["code"], record["verdict"], record["conclusion"]) == (
+        "reviewed",
+        "fail",
+        "failure",
+    )
+
+
+@needs_bash_and_jq
+@pytest.mark.parametrize(
+    ("scenario", "code"),
+    [
+        pytest.param({"trusted": False}, "untrusted_author", id="an outside author"),
+        pytest.param({"same_repo": False}, "fork_head", id="a fork"),
+        pytest.param({"heartbeat": False}, "lane_not_ready", id="an unready lane"),
+    ],
+)
+def test_undeclared_every_head_the_lane_is_not_offered_is_coded(undeclared, scenario, code):
+    run = undeclared.run(**({"heartbeat": True, "credits": True} | scenario))
+
+    record = _record_is_well_formed(run.record)
+    assert (record["lane"], record["lane_code"], record["code"]) == ("none", code, code)
+    assert record["verdict"] == "none"
+    assert run.lane["lane_decision"] == "none" and run.lane["lane_code"] == code
+
+
+@needs_bash_and_jq
+def test_undeclared_a_lane_switched_off_is_coded(tmp_path):
+    run = _Workflow(tmp_path, paid_review=False, enabled=False).run(heartbeat=True, credits=True)
+
+    assert _record_is_well_formed(run.record)["code"] == "lane_disabled"
+
+
+@needs_bash_and_jq
+@pytest.mark.parametrize(
+    ("local_code", "reason"),
+    [
+        (
+            "diff_exceeds_window",
+            "part 2 of 3 (big.py): one hunk of big.py is larger than one part may carry",
+        ),
+        ("model_timeout", "local model unreachable or timed out: timed out (2 attempts)"),
+        ("chunk_budget_exceeded", "the diff needs 9 parts and max_chunks allows 6"),
+    ],
+)
+def test_undeclared_a_lane_that_gives_no_verdict_is_coded_by_its_own_record(
+    undeclared, local_code, reason
+):
+    """#1238 and #1241, as a program reads them: the reviewer's own outcome record travels
+    from the step that failed, through the job, into the gate's record -- beside the words
+    the gate has always published."""
+    run = undeclared.run(
+        heartbeat=True, credits=True, local=None, local_code=local_code, local_reason=reason
+    )
+
+    assert run.jobs["review-sovereign"]["outputs"]["code"] == local_code
+    assert run.jobs["review-sovereign"]["outputs"]["reason"] == reason
+    record = _record_is_well_formed(run.record)
+    assert (record["code"], record["sovereign_code"], record["verdict"]) == (
+        local_code,
+        local_code,
+        "none",
+    )
+    assert f"the sovereign lane produced no verdict: {reason}" in run.gate["summary"]
+
+
+@needs_bash_and_jq
+def test_a_reviewer_that_left_no_record_is_coded_unknown_never_guessed(undeclared):
+    run = undeclared.run(heartbeat=True, credits=True, local=None)
+
+    assert run.jobs["review-sovereign"]["outputs"]["code"] == "unknown"
+    assert _record_is_well_formed(run.record)["code"] == "unknown"
+
+
+@needs_bash_and_jq
+@pytest.mark.parametrize(
+    ("state", "paid", "code"),
+    [
+        ("repair", False, "paid_lane_declared_off"),
+        ("repair", True, "scans_failing"),
+        ("blocked", False, "blocked"),
+    ],
+)
+def test_a_state_the_gate_answers_without_a_review_is_coded(tmp_path, state, paid, code):
+    run = _Workflow(tmp_path, paid_review=paid).run(
+        heartbeat=False, credits=True, state=state, paid=_paid_full()
+    )
+
+    record = _record_is_well_formed(run.record)
+    assert (record["state"], record["code"], record["verdict"]) == (state, code, "none")
+
+
+@needs_bash_and_jq
+@pytest.mark.parametrize(
+    ("scenario", "lane", "code", "verdict"),
+    [
+        pytest.param(
+            {"heartbeat": True, "local": "local", "paid": "wider"},
+            "sovereign_carries",
+            "reviewed",
+            "pass",
+            id="split",
+        ),
+        pytest.param(
+            {"heartbeat": False, "paid": "full"}, "paid_only", "reviewed", "pass", id="paid only"
+        ),
+        pytest.param(
+            {"heartbeat": True, "trusted": False, "local": "local", "paid": "full"},
+            "sovereign_reserve",
+            "reviewed",
+            "pass",
+            id="in reserve",
+        ),
+        pytest.param(
+            {"heartbeat": False, "credits": False},
+            "paid_only",
+            "paid_review_no_verdict",
+            "none",
+            id="no verdict at all",
+        ),
+        pytest.param(
+            {"heartbeat": False, "refused": "Credit balance is too low"},
+            "paid_only",
+            "paid_review_refused",
+            "none",
+            id="a refused paid call",
+        ),
+    ],
+)
+def test_declared_every_gate_outcome_is_coded(workflow, scenario, lane, code, verdict):
+    answers = {"local": _local(), "wider": _paid_wider(), "full": _paid_full()}
+    arguments = {"credits": True} | {
+        key: answers[value] if key in ("local", "paid") else value
+        for key, value in scenario.items()
+    }
+    run = workflow.run(**arguments)
+
+    record = _record_is_well_formed(run.record)
+    assert (record["lane"], record["code"], record["verdict"]) == (lane, code, verdict)
+    assert record["paid_review"] is True
+
+
+def _lane_record(tmp_path: Path, *, paid_conflict: bool, pr: str = "12", state: str) -> dict:
+    workflow = _Workflow(tmp_path, paid_review=False, paid_conflict_resolution=paid_conflict)
+    step = workflow._step("evaluate", id="lane_record")
+    context = {
+        "steps": {
+            "resolve": {"outputs": {"pr": pr, "head_sha": "abc123"}},
+            "evaluate": {"outputs": {"state": state, "reason": "why"}},
+            "lane": {"outputs": {"lane_decision": "none", "lane_code": "", "human_reason": ""}},
+        }
+    }
+    completed, _ = workflow._bash(step, context, {})
+    assert completed.returncode == 0, completed.stderr
+    return json.loads((tmp_path / "review-lane" / "record.json").read_text("utf-8"))
+
+
+@needs_bash_and_jq
+@pytest.mark.parametrize(
+    ("outputs", "paid_conflict", "code"),
+    [
+        ({"state": "pending"}, False, "scans_pending"),
+        ({"state": "conflict"}, False, "paid_lane_declared_off"),
+        ({"state": "conflict"}, True, "merge_conflict"),
+        ({"state": "review"}, False, "gate_not_reached"),
+        ({"state": ""}, False, "job_failed"),
+        ({"pr": "", "state": ""}, False, "no_pull_request"),
+    ],
+)
+def test_the_evaluation_records_why_the_gate_may_never_run(tmp_path, outputs, paid_conflict, code):
+    """75 of 150 audited runs skipped the gate, and nothing said why. The evaluation now
+    leaves a record of its own on every run, which the gate's record supersedes."""
+    from vibey_gh.review_outcome import REVIEW_OUTCOMES
+
+    record = _lane_record(tmp_path, paid_conflict=paid_conflict, **outputs)
+
+    assert REVIEW_OUTCOMES.problems(record) == []
+    assert (record["schema"], record["source"]) == ("vibey-gh.review-lane/1", "evaluate")
+    assert (record["code"], record["verdict"]) == (code, "none")
+
+
+def test_every_code_the_workflow_can_write_is_in_the_closed_vocabulary(tmp_path):
+    """The workflow's shell writes codes as literals; the vocabulary lives in Python. This
+    is what keeps the two from drifting: every literal a branch can record is defined."""
+    from vibey_gh.review_outcome import CODES, LANES
+
+    text = render_workflow(WORKFLOWS / "pr-review.yml", GhConfig(root=tmp_path))
+    codes = set(re.findall(r"\bcode=([a-z_]+)\b", text))
+    codes |= set(re.findall(r"CODE:-([a-z_]+)\}", text))
+    codes |= set(re.findall(r"code:-([a-z_]+)\}", text))
+    codes |= set(re.findall(r"RESULT:-([a-z_]+)\}", text))
+    decisions = set(re.findall(r"\bdecision=([a-z_]+)\b", text))
+
+    assert {"reviewed", "unknown", "job_failed", "head_moved"} <= codes
+    assert codes <= set(CODES), codes - set(CODES)
+    assert decisions == set(LANES)
+
+
+def test_the_review_is_bounded_by_what_the_repository_declares(tmp_path):
+    """Chunking and retrying are the repository's declaration (sub-doctrine 12.c), handed
+    to the reviewer explicitly: its runner holds no .vibey-gh.toml of its own."""
+    from vibey_gh.config import PrAutomationConfig, PrAutomationFallbackConfig
+
+    fallback = PrAutomationFallbackConfig(max_chunks=3, retries=2, retry_backoff_seconds=5)
+    cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(fallback=fallback))
+    text = render_workflow(WORKFLOWS / "pr-review.yml", cfg)
+
+    assert "--max-chunks 3 \\\n                --retries 2 \\\n" in text
+    assert "--retry-backoff-seconds 5 \\\n" in text
+    assert '--head-sha "$HEAD_SHA"' in text
+
+
+def test_the_diff_reviewed_is_the_evaluated_heads(tmp_path):
+    """A pass must be a pass on the exact head being gated: a head that moved while the
+    diff was fetched gives no verdict, coded `head_moved`, and a diff rebuilt locally is
+    built from the evaluated head -- never from whatever the head is by then."""
+    text = render_workflow(WORKFLOWS / "pr-review.yml", GhConfig(root=tmp_path))
+    fetch = next(
+        step
+        for step in yaml.safe_load(text)["jobs"]["review-sovereign"]["steps"]
+        if step.get("id") == "diff"
+    )
+
+    assert fetch["env"]["HEAD_SHA"] == "${{ needs.evaluate.outputs.head_sha }}"
+    assert 'if [ "$now" != "$HEAD_SHA" ]; then' in fetch["run"]
+    assert 'echo "code=head_moved"' in fetch["run"]
+    assert 'head_sha="$HEAD_SHA"' in fetch["run"]
+    assert "--json headRefOid -q .headRefOid)\n          git" not in fetch["run"]
+
+
+@needs_bash_and_jq
+@pytest.mark.parametrize(
+    ("steps", "diff_code", "code"),
+    [
+        ({"install": "failure"}, "", "tooling_unavailable"),
+        ({"diff": "failure"}, "head_moved", "head_moved"),
+        ({"diff": "failure"}, "", "diff_unavailable"),
+        ({"context": "failure"}, "", "documents_unavailable"),
+        ({}, "", "job_failed"),
+    ],
+)
+def test_every_step_that_can_stop_the_lane_names_its_code(workflow, steps, diff_code, code):
+    step = workflow._step("review-sovereign", id="why")
+    outcomes = {"install": "success", "diff": "success", "context": "skipped"} | steps
+    context = {
+        "steps": {name: {"outcome": value, "outputs": {}} for name, value in outcomes.items()}
+        | {"result": {"outputs": {}}}
+    }
+    context["steps"]["diff"]["outputs"] = {"code": diff_code}
+    completed, said = workflow._bash(step, context, {})
+
+    assert completed.returncode == 0
+    assert said["code"] == code
+    if code == "head_moved":
+        assert said["reason"].startswith("the head moved while its diff was fetched")
+
+
+def test_a_sovereign_verdict_is_composed_only_for_the_head_it_reviewed():
+    whole = _sovereign_whole() | {"reviewed_head_sha": "abc123"}
+
+    composed = REVIEW_COMPOSER.compose(None, half=NO_PAID, sovereign=whole, head_sha="abc123")
+    assert composed["verdict"]["pass"] is True
+    assert "reviewed_head_sha" not in composed["verdict"]
+    with pytest.raises(ValueError, match="reviewed 'abc123', not the exact head 'def456'"):
+        REVIEW_COMPOSER.compose(None, half=NO_PAID, sovereign=whole, head_sha="def456")
+    split = _sovereign() | {"reviewed_head_sha": "abc123"}
+    with pytest.raises(ValueError, match="not the exact head"):
+        REVIEW_COMPOSER.compose(
+            _paid_wider(), half=REQUIRES_WIDER_CONTEXT, sovereign=split, head_sha="zzz"
+        )
+
+
+def test_a_verdict_reviewed_in_parts_must_name_its_head():
+    parts = _sovereign_whole() | {"review_parts": [{"part": 1, "of": 2}, {"part": 2, "of": 2}]}
+
+    with pytest.raises(ValueError, match="reviewed in parts but names no head"):
+        REVIEW_COMPOSER.compose(None, half=NO_PAID, sovereign=parts, head_sha="abc123")
+    named = parts | {"reviewed_head_sha": "abc123"}
+    assert REVIEW_COMPOSER.compose(None, half=NO_PAID, sovereign=named, head_sha="abc123")

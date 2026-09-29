@@ -12,11 +12,13 @@ uses.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
+
+T = TypeVar("T")
 
 
 @runtime_checkable
@@ -99,6 +101,11 @@ class SizedChatInterface(Protocol):
         prompt, and that carries check code `head` at the start of the system prompt and
         `tail` at the end of the user prompt, with a schema field to echo both in."""
 
+    def size(self, payload: Mapping[str, Any]) -> int:
+        """Every character `ask` would send for `payload`, sealed with check codes of the
+        length it writes: what a caller sizes a request by before it sends one."""
+        ...
+
     def ask(
         self,
         base_url: str,
@@ -128,3 +135,83 @@ class SizedChatInterface(Protocol):
         why there is none: no count of what was read, a count past what the request was
         sized for, `done_reason` other than `stop`, reasoning with no answer, an answer that
         is not JSON, or one that does not echo every one of `codes`."""
+
+
+@runtime_checkable
+class DiffPartInterface(Protocol):
+    """A run of a unified diff reviewed whole, and the files it carries."""
+
+    @property
+    def text(self) -> str: ...
+
+    @property
+    def paths(self) -> tuple[str, ...]: ...
+
+
+@runtime_checkable
+class DiffChunkerInterface(Protocol):
+    """Splits a unified diff into parts a model can review whole: by file, then by hunk."""
+
+    def sections(self, diff: str) -> list[tuple[str, str]]:
+        """`(path, text)` for each file in `diff`, in order. Text before the first file
+        header travels with the first file; a diff with no file header is one section with
+        no path."""
+        ...
+
+    def parts(self, diff: str, budget: int) -> Sequence[DiffPartInterface]:
+        """Each file whole when it fits `budget` characters, else split between its hunks
+        with its header repeated before each run. A file with no hunk boundary, or one hunk
+        with its header, larger than `budget` is refused (`ReviewRefused`) -- never cut."""
+        ...
+
+    def chunks(self, diff: str, budget: int) -> Sequence[DiffPartInterface]:
+        """`parts`, packed in order into as few runs of at most `budget` characters as
+        they fit in."""
+        ...
+
+
+@runtime_checkable
+class TransportRetryInterface(Protocol):
+    """A bounded retry of a model call whose transport failed: unreachable or timed out."""
+
+    @property
+    def retries(self) -> int: ...
+
+    @property
+    def backoff_seconds(self) -> float: ...
+
+    def run(self, call: Callable[[], T]) -> tuple[T, int]:
+        """`call()`'s result and the attempts it took. A transport failure is retried up to
+        `retries` times after a doubling backoff and then raised as `ReviewRefused` coded
+        `model_timeout` or `model_unreachable`; anything else is raised as it came."""
+        ...
+
+
+@runtime_checkable
+class SovereignReviewInterface(Protocol):
+    """One review of one diff: a single request when it fits, bounded parts when not."""
+
+    def room(self, documents: Mapping[str, str], *, part: bool) -> int:
+        """How many characters of diff one request can carry beside everything else it
+        sends, `documents` and -- for a part -- the part note included."""
+        ...
+
+    def plan(self, diff: str, documents: Mapping[str, str]) -> Sequence[DiffPartInterface] | None:
+        """The parts `diff` is reviewed in, or None when the single request answers more
+        honestly; `ReviewRefused` when neither can review it whole."""
+        ...
+
+    def run(self, diff: str) -> tuple[dict[str, Any], dict[str, Any], Any]:
+        """`(verdict, shown, report)`: the composed verdict, what a whole review was shown
+        (`kept`, `cut`, `dropped`), and how many parts and attempts it took."""
+        ...
+
+    def compose(
+        self,
+        parts: Sequence[DiffPartInterface],
+        answers: Sequence[Mapping[str, Any]],
+    ) -> dict[str, Any]:
+        """One verdict from every part's: a boolean holds only when exactly `true` in every
+        part, lists are joined in order, each part's text is kept under its number, and
+        `review_parts` records what each part carried and answered."""
+        ...

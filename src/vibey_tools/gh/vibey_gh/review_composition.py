@@ -44,7 +44,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from vibey_gh.interfaces.review_contract_interface import ReviewContractPort
-from vibey_gh.review_contract import DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
+from vibey_gh.review_contract import (
+    DIFF_GROUNDABLE,
+    REQUIRES_WIDER_CONTEXT,
+    REVIEW_CONTRACT,
+    REVIEWED_HEAD_FIELD,
+)
+
+# Where a chunked local review records its parts (`vibey_gh.local_review.SovereignReview`).
+REVIEW_PARTS_FIELD = "review_parts"
 
 # The two lanes, by the names the gate and the persisted verdict use for them.
 SOVEREIGN_LANE = "sovereign"
@@ -135,6 +143,7 @@ class ReviewComposer:
                 raise TypeError(
                     f"the sovereign verdict must be a JSON object, not {type(sovereign).__name__}"
                 )
+            self._same_head(sovereign, head_sha)
             return self._sovereign_whole(sovereign, head_sha)
         if paid is None and half in (FULL, REQUIRES_WIDER_CONTEXT):
             raise ValueError(f"the paid lane returned no answer to compose for the {half} review")
@@ -152,8 +161,24 @@ class ReviewComposer:
                 raise TypeError(
                     f"the sovereign verdict must be a JSON object, not {type(sovereign).__name__}"
                 )
+            self._same_head(sovereign, head_sha)
             return self._split(paid, sovereign, head_sha)
         raise ValueError(f"the paid half must be one of {', '.join(PAID_HALVES)}, not {half!r}")
+
+    def _same_head(self, sovereign: Mapping[str, Any], head_sha: str) -> None:
+        """A sovereign verdict stamped with the head it reviewed is composed for that head
+        alone, and one reviewed in parts must say which head its parts were cut from: a
+        pass is only ever a pass on the exact head being gated."""
+        reviewed = sovereign.get(REVIEWED_HEAD_FIELD)
+        if reviewed is None and REVIEW_PARTS_FIELD in sovereign:
+            raise ValueError(
+                "the sovereign verdict was reviewed in parts but names no head"
+                f" ({REVIEWED_HEAD_FIELD!r}), so it cannot be read as a verdict on {head_sha!r}"
+            )
+        if reviewed is not None and reviewed != head_sha:
+            raise ValueError(
+                f"the sovereign verdict reviewed {reviewed!r}, not the exact head {head_sha!r}"
+            )
 
     def _holds(self, answer: Mapping[str, Any], findings_field: str) -> bool:
         """Every documentation judgment is exactly `true` and nothing was found.

@@ -5,6 +5,14 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** review verdicts at scale (G2). `local-review` reviews a diff too large for one
+  request in at most `[pr_automation.fallback] max_chunks` parts (default 6), split by file
+  and hunk and composed conservatively; retries a model that was unreachable or timed out
+  (`retries`, `retry_backoff_seconds`); stamps the verdict with `--head-sha`, which the
+  composer enforces; and writes `--outcome` as a code from `vibey_gh.review_outcome`'s closed
+  vocabulary. `pr-review.yml` records the lane decision and every no-verdict reason as a
+  code (check-run `output.text`, `pr-review-outcome` and `pr-review-lane` artifacts), and
+  `vibey-gh review-outcomes` tabulates them, read-only.
 - **Feature:** `[documentation] cookie_consent` (default on) keeps the GA4 snippet lawful:
   with a measurement ID configured, every published page and the channel-picker index
   deny analytics storage by default (Google Consent Mode v2) and show an accept/decline

@@ -199,18 +199,22 @@ def test_stdin_is_the_default_source(monkeypatch, capsys):
         OSError("socket died"),
     ],
 )
-def test_an_unreachable_model_fails_closed(monkeypatch, capsys, tmp_path, error):
-    """No model must never resolve to a default pass — the gate stays red for a human."""
+def test_an_unreachable_model_fails_closed(monkeypatch, capsys, tmp_path, no_sleep, error):
+    """No model must never resolve to a default pass — the gate stays red for a human, once
+    the one bounded retry has been spent."""
     diff = tmp_path / "d.diff"
     diff.write_text("+ a line\n", encoding="utf-8")
+    calls: list[object] = []
 
     def boom(request, timeout=None):
+        calls.append(request)
         raise error
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", boom)
 
     assert local_review.review(["--diff", str(diff)]) == 1
     assert "unreachable or timed out" in capsys.readouterr().err
+    assert len(calls) == 2 and no_sleep == [30]
 
 
 @pytest.mark.parametrize(
@@ -1502,3 +1506,551 @@ def test_a_document_limit_the_configuration_would_refuse_is_refused(capsys, tmp_
     with pytest.raises(SystemExit):
         local_review.review(["--diff", str(_diff(tmp_path)), "--max-document-chars", "10"])
     assert "max_document_chars must be a whole number, at least 1000" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# G2: a diff too large for one request is reviewed in bounded parts (#1238), a model that
+# timed out is retried once (#1241), and every outcome is written as a code.
+# ---------------------------------------------------------------------------
+
+
+def _file_diff(path: str, hunks: list[str]) -> str:
+    """One file of a unified diff: its header, then each hunk under its own `@@` line."""
+    header = f"diff --git a/{path} b/{path}\nindex 111..222 100644\n--- a/{path}\n+++ b/{path}\n"
+    return header + "".join(
+        f"@@ -{n},1 +{n},2 @@ def f{n}():\n{body}" for n, body in enumerate(hunks, 1)
+    )
+
+
+def _outcome(path: pathlib.Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _parts_answering(monkeypatch, answer_for) -> list[dict]:
+    """Every request as it was sent, each answered by `answer_for(index, user_prompt)`."""
+    sent: list[dict] = []
+
+    def fake_urlopen(request, timeout=None):
+        payload = json.loads(request.data)
+        sent.append(payload)
+        return _answer(request, answer_for(len(sent), payload["messages"][1]["content"]))
+
+    monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
+    return sent
+
+
+@pytest.fixture
+def no_sleep(monkeypatch) -> list[float]:
+    """The backoff, recorded rather than slept."""
+    slept: list[float] = []
+    monkeypatch.setattr(local_review.time, "sleep", slept.append)
+    return slept
+
+
+def test_the_chunker_splits_by_file_and_then_by_hunk_never_by_line():
+    chunker = local_review.DiffChunker()
+    diff = _file_diff("a.py", ["+a\n" * 10]) + _file_diff("b.py", ["+b\n" * 10, "+c\n" * 10])
+
+    assert [path for path, _ in chunker.sections(diff)] == ["a.py", "b.py"]
+    # A budget too small for b.py whole splits it between its hunks, header repeated.
+    header_b = _file_diff("b.py", [])
+    parts = chunker.parts(diff, len(header_b) + 60)
+    assert [part.paths for part in parts] == [("a.py",), ("b.py",), ("b.py",)]
+    assert all(part.text.startswith("diff --git a/") for part in parts)
+    for part in parts[1:]:
+        assert [line for line in part.text.splitlines() if line.startswith("@@")] != []
+        assert sum(line.startswith("@@") for line in part.text.splitlines()) == 1
+    # Nothing is lost or reordered: every changed line appears, in order.
+    changed = [line for line in diff.splitlines() if line.startswith("+") and "+++" not in line]
+    shown = [
+        line
+        for part in parts
+        for line in part.text.splitlines()
+        if line.startswith("+") and "+++" not in line
+    ]
+    assert shown == changed
+
+
+def test_the_chunker_packs_parts_in_order_into_as_few_chunks_as_fit():
+    chunker = local_review.DiffChunker()
+    files = [_file_diff(f"f{n}.py", ["+x\n" * 5]) for n in range(5)]
+    diff = "".join(files)
+
+    chunks = chunker.chunks(diff, len(files[0]) * 2 + 1)
+
+    assert [chunk.paths for chunk in chunks] == [("f0.py", "f1.py"), ("f2.py", "f3.py"), ("f4.py",)]
+    assert "".join(chunk.text for chunk in chunks) == diff
+    assert chunker.chunks(diff, len(diff)) == [
+        local_review.DiffPart(diff, tuple(f"f{n}.py" for n in range(5)))
+    ]
+
+
+def test_the_chunker_reads_text_before_the_first_file_and_an_odd_header():
+    chunker = local_review.DiffChunker()
+    diff = "a preamble\n" + "diff --git weird-header\n+x\n"
+
+    ((path, text),) = chunker.sections(diff)
+    assert path == "weird-header" and text == diff
+    assert chunker.sections("+ no headers at all\n") == [("", "+ no headers at all\n")]
+
+
+def test_a_hunk_too_large_for_one_part_is_refused_never_cut():
+    chunker = local_review.DiffChunker()
+    diff = _file_diff("small.py", ["+s\n"]) + _file_diff("big.py", ["+b\n" * 500])
+
+    with pytest.raises(local_review.ReviewRefused) as refused:
+        chunker.parts(diff, 400)
+    assert refused.value.code == "diff_exceeds_window"
+    assert "one hunk of big.py" in str(refused.value) and "never cut" in str(refused.value)
+    assert refused.value.whole is False
+
+
+def test_a_file_with_no_hunk_to_split_at_is_refused_naming_it():
+    chunker = local_review.DiffChunker()
+    binary = "diff --git a/blob.bin b/blob.bin\n" + "x" * 900 + "\n"
+    diff = _file_diff("small.py", ["+s\n"]) + binary
+
+    with pytest.raises(local_review.ReviewRefused) as refused:
+        chunker.parts(diff, 400)
+    assert "blob.bin (" in str(refused.value) and "no hunk boundary" in str(refused.value)
+    assert refused.value.whole is False
+    with pytest.raises(local_review.ReviewRefused) as alone:
+        chunker.parts("x" * 900, 400)
+    assert alone.value.whole is True and "the diff (900 characters)" in str(alone.value)
+
+
+def test_a_diff_too_large_for_one_request_is_reviewed_in_parts(monkeypatch, capsys, tmp_path):
+    """#1238: the diff exceeded the window, so every such pull request went to a human.
+    Now each part is its own request -- sized, sealed, both codes echoed -- told which part
+    it is, and the verdict composed from all of them names every part."""
+    files = [_file_diff(f"f{n}.py", ["+ changed\n" * 100]) for n in range(3)]
+    diff = tmp_path / "big.diff"
+    diff.write_text("".join(files), encoding="utf-8")
+    sent = _parts_answering(monkeypatch, lambda index, _: _verdict(summary=f"part {index} ok"))
+    record = tmp_path / "outcome.json"
+
+    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10), "--head-sha", "abc123"]
+    assert local_review.review([*argv, "--outcome", str(record)]) == 0
+
+    assert len(sent) == 3
+    for index, payload in enumerate(sent, 1):
+        user = payload["messages"][1]["content"]
+        assert f"This is part {index} of 3." in user
+        assert user.count("diff --git") == 1
+        assert payload["truncate"] is False and payload["shift"] is False
+    out = json.loads(capsys.readouterr().out)
+    assert out["pass"] is True and out["findings"] == []
+    assert "(part 1 of 3) part 1 ok (part 2 of 3) part 2 ok" in out["summary"]
+    assert out["reviewed_head_sha"] == "abc123"
+    assert [part["paths"] for part in out["review_parts"]] == [["f0.py"], ["f1.py"], ["f2.py"]]
+    assert all(part["passed"] for part in out["review_parts"])
+    assert _outcome(record) | {"reason": ""} == {
+        "schema": "vibey-gh.local-review/1",
+        "code": "reviewed",
+        "reason": "",
+        "scope": "diff-groundable",
+        "role": "fallback",
+        "head_sha": "abc123",
+        "parts": 3,
+        "attempts": 3,
+    }
+    assert _outcome(record)["reason"] == "reviewed in 3 parts"
+
+
+def test_any_finding_in_any_part_fails_the_whole(monkeypatch, capsys, tmp_path):
+    files = [_file_diff(f"f{n}.py", ["+ changed\n" * 100]) for n in range(3)]
+    diff = tmp_path / "big.diff"
+    diff.write_text("".join(files), encoding="utf-8")
+    finding = {
+        "severity": "blocking",
+        "path": "f1.py",
+        "explanation": "a defect",
+        "recommended_fix": "fix it",
+    }
+    _parts_answering(
+        monkeypatch,
+        lambda index, _: (
+            _verdict(**{"pass": False, "findings": [finding]}) if index == 2 else _verdict()
+        ),
+    )
+
+    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10)]
+    assert local_review.review(argv) == 0
+
+    out = json.loads(capsys.readouterr().out)
+    assert out["pass"] is False
+    assert out["findings"] == [finding]
+    assert [part["passed"] for part in out["review_parts"]] == [True, False, True]
+    assert [part["findings"] for part in out["review_parts"]] == [0, 1, 0]
+
+
+def test_a_part_the_model_could_not_answer_leaves_no_verdict_at_all(monkeypatch, capsys, tmp_path):
+    """A part refused is not a pass by omission: there is no verdict, and the reason names
+    the part and its files."""
+    files = [_file_diff(f"f{n}.py", ["+ changed\n" * 100]) for n in range(3)]
+    diff = tmp_path / "big.diff"
+    diff.write_text("".join(files), encoding="utf-8")
+    sent: list[dict] = []
+
+    def fake_urlopen(request, timeout=None):
+        sent.append(json.loads(request.data))
+        if len(sent) == 2:
+            return _Response(_reply('{"pass', done_reason="length"))
+        return _answer(request, _verdict())
+
+    monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
+    record = tmp_path / "outcome.json"
+
+    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10)]
+    assert local_review.review([*argv, "--outcome", str(record)]) == 1
+
+    assert len(sent) == 2, "nothing after the refused part is sent"
+    assert capsys.readouterr().out == ""
+    assert _outcome(record)["code"] == "answer_incomplete"
+    assert _outcome(record)["reason"].startswith("part 2 of 3 (f1.py): the model ran out")
+
+
+def test_past_max_chunks_a_human_is_asked_with_the_reason(monkeypatch, capsys, tmp_path):
+    files = [_file_diff(f"f{n}.py", ["+ changed\n" * 100]) for n in range(4)]
+    diff = tmp_path / "big.diff"
+    diff.write_text("".join(files), encoding="utf-8")
+    sent = _model_returns(monkeypatch, _verdict())
+    record = tmp_path / "outcome.json"
+
+    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10), "--max-chunks", "3"]
+    assert local_review.review([*argv, "--outcome", str(record)]) == 1
+
+    assert sent == []
+    assert "needs 4 parts of at most" in capsys.readouterr().err
+    assert _outcome(record)["code"] == "chunk_budget_exceeded"
+
+
+def test_one_hunk_too_large_is_refused_by_name_and_nothing_is_sent(monkeypatch, capsys, tmp_path):
+    diff = tmp_path / "big.diff"
+    diff.write_text(
+        _file_diff("small.py", ["+ s\n"]) + _file_diff("big.py", ["+ b\n" * 2000]),
+        encoding="utf-8",
+    )
+    sent = _model_returns(monkeypatch, _verdict())
+    record = tmp_path / "outcome.json"
+
+    argv = ["--diff", str(diff), "--max-chars", "1000", "--outcome", str(record)]
+    assert local_review.review(argv) == 1
+
+    assert sent == []
+    assert "one hunk of big.py" in capsys.readouterr().err
+    assert _outcome(record)["code"] == "diff_exceeds_window"
+
+
+def test_max_chunks_of_one_never_splits(monkeypatch, capsys, tmp_path):
+    files = [_file_diff(f"f{n}.py", ["+ changed\n" * 100]) for n in range(3)]
+    diff = tmp_path / "big.diff"
+    diff.write_text("".join(files), encoding="utf-8")
+    sent = _model_returns(monkeypatch, _verdict())
+
+    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10), "--max-chunks", "1"]
+    assert local_review.review(argv) == 1
+
+    assert sent == []
+    assert "is longer than max_diff_chars" in capsys.readouterr().err
+
+
+def test_a_whole_review_in_parts_shows_every_document_whole_to_every_part(
+    monkeypatch, capsys, tmp_path
+):
+    """The documentation judgments hold only when every part holds them, and every part is
+    shown the whole of every declared document -- so the verdict answers both halves."""
+    from vibey_gh.review_composition import NO_PAID, REVIEW_COMPOSER
+    from vibey_gh.review_contract import DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
+
+    files = [_file_diff(f"f{n}.py", ["+ changed\n" * 1500]) for n in range(3)]
+    diff = tmp_path / "big.diff"
+    diff.write_text("".join(files), encoding="utf-8")
+    documents = _documents(tmp_path, **{"README.md": "# Tool\n" * 200})
+    sent = _parts_answering(
+        monkeypatch,
+        lambda index, _: _whole_verdict(links_valid=index != 3, summary=f"part {index}"),
+    )
+
+    argv = ["--diff", str(diff), "--role", "sovereign", "--scope", "full"]
+    argv += ["--context-dir", str(documents), "--context-window", "16384"]
+    argv += ["--reasoning-reserve", "4096", "--head-sha", "abc123"]
+    assert local_review.review(argv) == 0
+
+    assert len(sent) >= 2
+    for payload in sent:
+        assert "# Tool\n" * 200 in payload["messages"][1]["content"]
+        assert "not all shown in full" not in payload["messages"][1]["content"]
+    out = json.loads(capsys.readouterr().out)
+    assert out["links_valid"] is False  # one part said false, so the whole says false
+    assert out[REVIEW_CONTRACT.scope_field] == [DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT]
+    assert out["summary"].startswith("[SOVEREIGN LANE — gpt-oss:20b — whole review] (part 1 of")
+    composed = REVIEW_COMPOSER.compose(None, half=NO_PAID, sovereign=out, head_sha="abc123")
+    assert composed["verdict"]["pass"] is False
+    with pytest.raises(ValueError, match="not the exact head"):
+        REVIEW_COMPOSER.compose(None, half=NO_PAID, sovereign=out, head_sha="moved")
+
+
+def test_a_whole_review_whose_part_cannot_fit_beside_its_documents_trims_them_instead(
+    monkeypatch, capsys, tmp_path
+):
+    """When no part can carry a hunk beside every document but the diff fits alone, the
+    single request it always was is the more honest answer: it shows the diff whole, says
+    which documents it left out, and claims the diff half alone."""
+    from vibey_gh.review_contract import DIFF_GROUNDABLE, REVIEW_CONTRACT
+
+    diff = tmp_path / "d.diff"
+    diff.write_text(_file_diff("one.py", ["+ changed\n" * 2500]), encoding="utf-8")
+    documents = _documents(tmp_path, **{"README.md": "r" * 20_000})
+    sent = _model_returns(monkeypatch, _whole_verdict())
+
+    argv = ["--diff", str(diff), "--role", "sovereign", "--scope", "full"]
+    argv += ["--context-dir", str(documents), "--context-window", "16384"]
+    assert local_review.review([*argv, "--reasoning-reserve", "4096"]) == 0
+
+    assert len(sent) == 1
+    out = json.loads(capsys.readouterr().out)
+    assert out[REVIEW_CONTRACT.scope_field] == [DIFF_GROUNDABLE]
+
+
+def test_a_whole_review_too_large_either_way_is_refused_with_the_parts_reason(
+    monkeypatch, capsys, tmp_path
+):
+    diff = tmp_path / "d.diff"
+    diff.write_text(_file_diff("one.py", ["+ changed\n" * 6000]), encoding="utf-8")
+    sent = _model_returns(monkeypatch, _whole_verdict())
+    record = tmp_path / "outcome.json"
+
+    argv = ["--diff", str(diff), "--role", "sovereign", "--scope", "full"]
+    argv += ["--context-window", "16384", "--reasoning-reserve", "4096", "--outcome", str(record)]
+    assert local_review.review(argv) == 1
+
+    assert sent == []
+    assert "one hunk of one.py" in capsys.readouterr().err
+    assert _outcome(record)["code"] == "diff_exceeds_window"
+
+
+def test_documents_that_leave_no_room_at_all_fall_back_to_the_single_request(tmp_path):
+    sizer = ContextSizer(ceiling_tokens=16384, reserve_tokens=4096)
+    review = local_review.SovereignReview(
+        "http://model",
+        "m",
+        60000,
+        30,
+        sizer,
+        max_chunks=4,
+        whole=local_review.WHOLE_REVIEW,
+    )
+    huge = {"README.md": "r" * 200_000}
+    diff = _file_diff("a.py", ["+ x\n" * 10])
+
+    assert review.room(huge, part=True) < 1
+    assert review.plan(diff, huge) is None
+
+
+def test_the_part_note_is_counted_so_a_part_is_never_refused_for_its_own_number():
+    sizer = ContextSizer(ceiling_tokens=16384, reserve_tokens=4096)
+    review = local_review.SovereignReview("http://model", "m", 10**6, 30, sizer, max_chunks=12)
+
+    assert review.room({}, part=True) < review.room({}, part=False)
+    note = local_review.PART_NOTE.format(index=12, count=12)
+    assert review.room({}, part=False) - review.room({}, part=True) == len(note)
+
+
+@pytest.mark.parametrize(
+    ("error", "code"),
+    [
+        (urllib.error.URLError("connection refused"), "model_unreachable"),
+        (urllib.error.URLError(TimeoutError("timed out")), "model_timeout"),
+        (TimeoutError("timed out"), "model_timeout"),
+        (ConnectionResetError("reset"), "model_unreachable"),
+    ],
+)
+def test_a_transport_failure_is_retried_once_and_then_named(
+    monkeypatch, capsys, tmp_path, no_sleep, error, code
+):
+    """#1241: one "timed out" sent a pull request to a human. The transport is retried,
+    after a backoff, and only then is the failure the answer -- coded, with its attempts."""
+    calls: list[object] = []
+
+    def boom(request, timeout=None):
+        calls.append(request)
+        raise error
+
+    monkeypatch.setattr(local_review.urllib.request, "urlopen", boom)
+    record = tmp_path / "outcome.json"
+
+    argv = ["--diff", str(_diff(tmp_path)), "--outcome", str(record)]
+    assert local_review.review([*argv, "--retry-backoff-seconds", "7"]) == 1
+
+    assert len(calls) == 2 and no_sleep == [7]
+    assert "unreachable or timed out" in capsys.readouterr().err
+    assert _outcome(record)["code"] == code
+    assert _outcome(record)["reason"].endswith("(2 attempts)")
+
+
+def test_a_model_that_answers_on_the_retry_gives_its_verdict(
+    monkeypatch, capsys, tmp_path, no_sleep
+):
+    calls: list[object] = []
+
+    def flaky(request, timeout=None):
+        calls.append(request)
+        if len(calls) == 1:
+            raise TimeoutError("timed out")
+        return _answer(request, _verdict())
+
+    monkeypatch.setattr(local_review.urllib.request, "urlopen", flaky)
+    record = tmp_path / "outcome.json"
+
+    assert local_review.review(["--diff", str(_diff(tmp_path)), "--outcome", str(record)]) == 0
+
+    assert json.loads(capsys.readouterr().out)["pass"] is True
+    assert no_sleep == [30]
+    assert (_outcome(record)["code"], _outcome(record)["attempts"]) == ("reviewed", 2)
+
+
+def test_the_backoff_doubles_and_retries_are_bounded(no_sleep):
+    retry = local_review.TransportRetry(retries=3, backoff_seconds=5)
+    attempts: list[int] = []
+
+    def always_down() -> None:
+        attempts.append(1)
+        raise ConnectionRefusedError("refused")
+
+    with pytest.raises(local_review.ReviewRefused, match=r"\(4 attempts\)"):
+        retry.run(always_down)
+    assert len(attempts) == 4 and no_sleep == [5, 10, 20]
+    assert local_review.TransportRetry(retries=0).run(lambda: "ok") == ("ok", 1)
+    with pytest.raises(local_review.ReviewRefused, match=r"\(1 attempt\)"):
+        local_review.TransportRetry(retries=0).run(always_down)
+
+
+def test_a_refusal_is_never_retried(monkeypatch, capsys, tmp_path, no_sleep):
+    calls: list[object] = []
+
+    def refuse(request, timeout=None):
+        calls.append(request)
+        raise urllib.error.HTTPError(request.full_url, 400, "Bad Request", {}, io.BytesIO(b"{}"))
+
+    monkeypatch.setattr(local_review.urllib.request, "urlopen", refuse)
+    record = tmp_path / "outcome.json"
+
+    assert local_review.review(["--diff", str(_diff(tmp_path)), "--outcome", str(record)]) == 1
+
+    assert len(calls) == 1 and no_sleep == []
+    assert _outcome(record)["code"] == "model_refused"
+
+
+@pytest.mark.parametrize(
+    ("retries", "backoff"),
+    [(-1, 1), (True, 1), (1, -1)],
+)
+def test_a_retry_that_could_never_be_bounded_is_refused(retries, backoff):
+    with pytest.raises(ValueError):
+        local_review.TransportRetry(retries=retries, backoff_seconds=backoff)
+
+
+def test_every_way_the_review_ends_is_written_as_a_code(monkeypatch, tmp_path):
+    record = tmp_path / "outcome.json"
+    empty = tmp_path / "empty.diff"
+    empty.write_text("\n", encoding="utf-8")
+
+    assert local_review.review(["--diff", str(empty), "--outcome", str(record)]) == 1
+    assert (_outcome(record)["code"], _outcome(record)["parts"]) == ("empty_diff", 0)
+
+    monkeypatch.setattr(
+        local_review.urllib.request,
+        "urlopen",
+        lambda request, timeout=None: _Response(_reply("[1]")),
+    )
+    assert local_review.review(["--diff", str(_diff(tmp_path)), "--outcome", str(record)]) == 1
+    assert _outcome(record)["code"] == "answer_unusable"
+
+    monkeypatch.setattr(
+        local_review.urllib.request,
+        "urlopen",
+        lambda request, timeout=None: _Response(_reply(json.dumps(_verdict()))),
+    )
+    assert local_review.review(["--diff", str(_diff(tmp_path)), "--outcome", str(record)]) == 1
+    assert _outcome(record)["code"] == "prompt_truncated"
+
+
+def test_a_review_with_no_outcome_path_writes_no_record(monkeypatch, tmp_path):
+    _model_returns(monkeypatch, _verdict())
+
+    assert local_review.review(["--diff", str(_diff(tmp_path))]) == 0
+    assert not (tmp_path / "outcome.json").exists()
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [["--max-chunks", "0"], ["--max-chunks", "65"], ["--retries", "6"], ["--retries", "-1"]]
+    + [["--retry-backoff-seconds", "601"]],
+)
+def test_a_bound_the_configuration_would_refuse_is_refused(capsys, tmp_path, flags):
+    with pytest.raises(SystemExit):
+        local_review.review(["--diff", str(_diff(tmp_path)), *flags])
+    assert "--max-chunks, --retries or --retry-backoff-seconds" in capsys.readouterr().err
+
+
+def test_the_cli_forwards_the_bounds_the_head_and_the_outcome(monkeypatch, tmp_path):
+    from vibey_gh import cli
+
+    seen: list[list[str]] = []
+    monkeypatch.setattr(local_review, "review", lambda argv: seen.append(argv) or 0)
+
+    argv = ["local-review", "--max-chunks", "4", "--retries", "2"]
+    argv += ["--retry-backoff-seconds", "9", "--head-sha", "abc", "--outcome", "o.json"]
+    assert cli.main(argv) == 0
+    assert seen == [
+        [
+            "--max-chunks",
+            "4",
+            "--retries",
+            "2",
+            "--retry-backoff-seconds",
+            "9",
+            "--head-sha",
+            "abc",
+            "--outcome",
+            "o.json",
+        ]
+    ]
+
+
+def test_the_bounds_are_configuration_with_documented_defaults(tmp_path):
+    from vibey_gh.config import PrAutomationFallbackConfig, load_config
+
+    defaults = PrAutomationFallbackConfig()
+    assert (defaults.max_chunks, defaults.retries, defaults.retry_backoff_seconds) == (6, 1, 30)
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[pr_automation.fallback]\nmax_chunks = 2\nretries = 0\nretry_backoff_seconds = 0\n",
+        "utf-8",
+    )
+    loaded = load_config(tmp_path).pr_automation.fallback
+    assert (loaded.max_chunks, loaded.retries, loaded.retry_backoff_seconds) == (2, 0, 0)
+    for bad in ({"max_chunks": 1.5}, {"retries": False}, {"retry_backoff_seconds": 601}):
+        with pytest.raises(ValueError):
+            PrAutomationFallbackConfig(**bad)  # type: ignore[arg-type]
+    # Validated only while the lane is enabled, as every other fallback key is.
+    PrAutomationFallbackConfig(enabled=False, max_chunks=0)
+
+
+def test_the_new_seams_are_satisfied():
+    from vibey_gh.interfaces import (
+        DiffChunkerInterface,
+        DiffPartInterface,
+        SizedChatInterface,
+        SovereignReviewInterface,
+        TransportRetryInterface,
+    )
+
+    sizer = ContextSizer()
+    assert isinstance(local_review.DIFF_CHUNKER, DiffChunkerInterface)
+    assert isinstance(local_review.DiffPart("x", ()), DiffPartInterface)
+    assert isinstance(local_review.TransportRetry(), TransportRetryInterface)
+    assert isinstance(local_review.SIZED_CHAT, SizedChatInterface)
+    assert isinstance(
+        local_review.SovereignReview("http://m", "m", 1000, 30, sizer), SovereignReviewInterface
+    )
