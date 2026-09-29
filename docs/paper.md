@@ -3382,16 +3382,16 @@ That is a governance dilation made smaller while the requirement stayed the same
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[vibeybars,width=8.6cm,height=4.8cm,bar width=11pt,xmin=-0.6,xmax=3.6,ymin=0,ymax=1836,
+\begin{axis}[vibeybars,width=8.6cm,height=4.8cm,bar width=13pt,bar shift=0pt,xmin=-0.6,xmax=3.6,ymin=0,ymax=1836,
   xtick={0,1,2,3},xticklabels={four gates before,four gates after,suite before,suite after},
   x tick label style={font=\sffamily\tiny,align=center,text width=1.6cm},ylabel={seconds},
   nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray}]
-\addplot[fill=vibeyred!70,draw=none] coordinates {(0,1530)};
-\addplot[fill=vibeygreen!80,draw=none] coordinates {(1,136)};
-\addplot[fill=vibeyred!70,draw=none] coordinates {(2,383)};
-\addplot[fill=vibeygreen!80,draw=none] coordinates {(3,135)};
-\node[vibeycallout,anchor=south] at (axis cs:1,274) {$11.3\times$ faster};
-\node[vibeycallout,anchor=south] at (axis cs:3,273) {$2.8\times$ faster};
+\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {(0,1530)};
+\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {(1,136)};
+\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {(2,383)};
+\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {(3,135)};
+\node[vibeycallout,anchor=south,align=center] at (axis cs:0.5,356) {$11.3\times$\\faster};
+\node[vibeycallout,anchor=south,align=center] at (axis cs:2.5,355) {$2.8\times$\\faster};
 \end{axis}
 \end{tikzpicture}
 \caption{A governance dilation made smaller without lowering the bar. Computing the four per-layer coverage floors from one instrumented run took the gates from about 1,530\,s to 136\,s, and the suite itself from 383\,s to 135\,s, with no gate removed.}

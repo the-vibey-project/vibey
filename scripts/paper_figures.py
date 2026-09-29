@@ -1307,17 +1307,29 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 
     def governance_time(self) -> str:
         t = self._data("test_time")
+        top = t["gates_before"] * 1.2
+        # One bar per tick: every series is drawn with `bar shift=0pt`, so pgfplots does not
+        # offset the four single-bar series against each other and each bar sits on its label.
+        # The speed-up rides between its before/after pair, above both of the pair's value
+        # labels, so it names the pair rather than either bar.
+        pairs = (
+            (0.5, t["gates_before"], t["gates_after"], t["gates_factor"]),
+            (2.5, t["suite_before"], t["suite_after"], t["suite_factor"]),
+        )
+        speedups = "\n".join(
+            f"\\node[vibeycallout,anchor=south,align=center] at (axis cs:{x},{min(before, after) + top * 0.12:.0f}) {{${factor}\\times$\\\\faster}};"
+            for x, before, after, factor in pairs
+        )
         body = f"""\\begin{{tikzpicture}}
-\\begin{{axis}}[vibeybars,width=8.6cm,height=4.8cm,bar width=11pt,xmin=-0.6,xmax=3.6,ymin=0,ymax={t["gates_before"] * 1.2:.0f},
+\\begin{{axis}}[vibeybars,width=8.6cm,height=4.8cm,bar width=13pt,bar shift=0pt,xmin=-0.6,xmax=3.6,ymin=0,ymax={top:.0f},
   xtick={{0,1,2,3}},xticklabels={{four gates before,four gates after,suite before,suite after}},
   x tick label style={{font=\\sffamily\\tiny,align=center,text width=1.6cm}},ylabel={{seconds}},
   nodes near coords,every node near coord/.append style={{font=\\sffamily\\tiny,text=vibeygray}}]
-\\addplot[fill=vibeyred!70,draw=none] coordinates {{(0,{t["gates_before"]})}};
-\\addplot[fill=vibeygreen!80,draw=none] coordinates {{(1,{t["gates_after"]})}};
-\\addplot[fill=vibeyred!70,draw=none] coordinates {{(2,{t["suite_before"]})}};
-\\addplot[fill=vibeygreen!80,draw=none] coordinates {{(3,{t["suite_after"]})}};
-\\node[vibeycallout,anchor=south] at (axis cs:1,{t["gates_after"] + t["gates_before"] * 0.09:.0f}) {{${t["gates_factor"]}\\times$ faster}};
-\\node[vibeycallout,anchor=south] at (axis cs:3,{t["suite_after"] + t["gates_before"] * 0.09:.0f}) {{${t["suite_factor"]}\\times$ faster}};
+\\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {{(0,{t["gates_before"]})}};
+\\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {{(1,{t["gates_after"]})}};
+\\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {{(2,{t["suite_before"]})}};
+\\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {{(3,{t["suite_after"]})}};
+{speedups}
 \\end{{axis}}
 \\end{{tikzpicture}}"""
         caption = (
