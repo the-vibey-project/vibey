@@ -1626,6 +1626,11 @@ class RevisionPinGuard(RevisionPinGuardInterface):
     the pin's tree beside its SHA, and a pin whose SHA a history lacks is found in it by that
     tree. A squash merge keeps only the branch's final tree, so the tree of a pre-squash
     commit never reaches the integration branch and such a pin is still refused.
+
+    A tag is the third way a pin stays walkable: every clone fetches it and nothing
+    rewrites it. The 3.0.0 promotion was squash-merged, which dropped the pin's own history
+    from main and develop; a tag on the pin keeps that history in every clone, so a pin a
+    tag contains is accepted as it stands and the figures are read at it.
     """
 
     def __init__(self, repo: Path, integration_ref: str | None = None) -> None:
@@ -1672,10 +1677,22 @@ class RevisionPinGuard(RevisionPinGuardInterface):
             return True
         return tree is not None and self._with_tree(tree, ref) is not None
 
+    def _tagged(self, revision: str) -> bool:
+        """Whether a tag contains `revision`, so every clone that fetches tags can walk it."""
+        # push-gate: not a push (asks which tags contain the pin)
+        done = subprocess.run(
+            ["git", "tag", "--contains", revision],
+            cwd=self._repo,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return done.returncode == 0 and bool(done.stdout.strip())
+
     def resolve(self, revision: str, tree: str | None = None) -> str | None:
-        """The commit in HEAD's history the pin names: itself, or its rebased copy."""
-        if self._is_commit(revision) and self._git_ok(
-            "merge-base", "--is-ancestor", revision, "HEAD"
+        """The commit the pin names: itself when HEAD or a tag holds it, else its rebased copy."""
+        if self._is_commit(revision) and (
+            self._git_ok("merge-base", "--is-ancestor", revision, "HEAD") or self._tagged(revision)
         ):
             return revision
         return self._with_tree(tree, "HEAD") if tree is not None else None
@@ -1686,6 +1703,8 @@ class RevisionPinGuard(RevisionPinGuardInterface):
                 f"pinned revision {revision} is not a commit in this clone; a pin must be a "
                 "commit on the integration branch's history, not one a squash merge discarded"
             ]
+        if self._is_commit(revision) and self._tagged(revision):
+            return []
         found = []
         if self.resolve(revision, tree) is None:
             found.append(f"pinned revision {revision} is not an ancestor of the checked-out HEAD")

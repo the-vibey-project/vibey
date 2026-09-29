@@ -20,7 +20,10 @@ what you can use instead, and exits with status 1. It never pretends a hub is ru
 
 ## Releases
 
-Published by `.github/workflows/krypton-app.yml` alone: nightly from `develop` to TestPyPI
-(environment `testpypi`), stable from `main` to PyPI (environment `pypi`), by trusted
-publishing. ADR-0069 records why vibey publishes exactly two packages, `vibey-engine` and
+Published by `.github/workflows/krypton-app.yml` alone, by trusted publishing: a dev build
+to TestPyPI (environment `testpypi`) on each push to `develop` that changes this tree or the
+workflow, and a release to PyPI (environment `pypi`) on each such push to `main`. There is no
+schedule. A push GitHub skips publishes nothing: a squash merge whose message quotes an old
+`[skip ci]` subject skips every push workflow, which is how the 3.0.0 promotion first
+published neither package. Merge a promotion by rebase, or edit the squash message. ADR-0069 records why vibey publishes exactly two packages, `vibey-engine` and
 `krypton-app`.

@@ -2835,9 +2835,9 @@ was not ratified at the cutoff.
 ### Field data
 
 The git history is field data: nothing in it was held fixed. At the pinned source
-revision, 1,515 commits are reachable across nine root histories, the absorbed histories
+revision, 1,514 commits are reachable across nine root histories, the absorbed histories
 of the family's packages. Since 2026-08-09, when the family's own development begins,
-1,503 commits landed on 38 active days, between 1 and 191 per day (median 31, mean 39.6,
+1,502 commits landed on 38 active days, between 1 and 191 per day (median 31, mean 39.5,
 sample standard deviation 38.3). Commits landed in all 24 hours of the day in US
 Eastern time, with the fewest (25) in the 09:00 hour and the most (102) in the 18:00
 hour. The longest
@@ -2861,7 +2861,7 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \begin{tikzpicture}
 \begin{axis}[vibeyaxis,width=17.2cm,height=5.6cm,ybar,bar width=4.2pt,xmin=-0.7,xmax=50.7,ymin=0,ymax=231,
   xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day (2026, c78049b6 and earlier)},ylabel={commits}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(0,5) (1,41) (3,21) (4,130) (5,27) (6,92) (7,47) (8,22) (9,39) (10,20) (11,52) (12,75) (13,13) (14,61) (15,1) (16,38) (17,3) (18,56) (19,29) (20,91) (21,71) (31,3) (32,13) (36,24) (37,61) (38,33) (39,16) (40,191) (41,7) (42,4) (43,8) (44,23) (45,37) (46,41) (47,34) (48,27) (49,45) (50,2)};
+\addplot[fill=vibeyblue,draw=none] coordinates {(0,5) (1,41) (3,21) (4,130) (5,27) (6,92) (7,47) (8,22) (9,39) (10,20) (11,52) (12,75) (13,13) (14,61) (15,1) (16,38) (17,3) (18,56) (19,29) (20,91) (21,71) (31,3) (32,13) (36,24) (37,61) (38,33) (39,16) (40,191) (41,7) (42,4) (43,8) (44,23) (45,37) (46,41) (47,33) (48,27) (49,45) (50,2)};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:7,53) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:7,56) {v0.1.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:11,58) {};
@@ -2890,7 +2890,7 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \node[vibeynote,anchor=north west,align=left] at (axis description cs:0.01,0.97) {\textcolor{vibeygold}{$\bullet$} vibey release tag};
 \end{axis}
 \end{tikzpicture}
-\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision c78049b6: 1,503 commits on 38 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
+\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision c78049b6: 1,502 commits on 38 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
 \label{fig:commits-daily}
 \end{figure*}
 ```
@@ -2915,7 +2915,7 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-15:0.759) arc[start angle=-15,end angle=-30,radius=0.759] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-30:0.885) arc[start angle=-30,end angle=-45,radius=0.885] -- cycle;
 \fill[vibeyred!70,draw=white,line width=.4pt] (0,0) -- (-45:0.527) arc[start angle=-45,end angle=-60,radius=0.527] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-60:1.307) arc[start angle=-60,end angle=-75,radius=1.307] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-60:1.286) arc[start angle=-60,end angle=-75,radius=1.286] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-75:1.223) arc[start angle=-75,end angle=-90,radius=1.223] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-90:1.391) arc[start angle=-90,end angle=-105,radius=1.391] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-105:1.665) arc[start angle=-105,end angle=-120,radius=1.665] -- cycle;
@@ -2934,11 +2934,11 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 \end{scope}
 \begin{axis}[vibeybars,at={(0.0cm,2.7cm)},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
   xtick={0,...,6},xticklabels={Mon,Tue,Wed,Thu,Fri,Sat,Sun},title={b. Commits by weekday},ylabel={commits},enlarge y limits={upper,value=0.12},title style={name=weekdaystitle}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(0,98) (1,161) (2,117) (3,308) (4,356) (5,230) (6,233)};
+\addplot[fill=vibeyblue,draw=none] coordinates {(0,98) (1,161) (2,117) (3,308) (4,355) (5,230) (6,233)};
 \end{axis}
 \begin{axis}[vibeybars,at={(6.1cm,2.7cm)},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=7.6,ymin=0,
   xtick={0,...,7},xticklabels={chore,fix,feat,other,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={c. Conventional Commit types},ylabel={commits},enlarge y limits={upper,value=0.12}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,420) (1,303) (2,291) (3,259) (4,134) (5,41) (6,33) (7,8)};
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,401) (1,302) (2,291) (3,278) (4,134) (5,41) (6,33) (7,8)};
 \end{axis}
 % The clock's title shares the bar charts' title baseline, so the three panels read as one row.
 \node[vibeyhead,anchor=base west] at (-8.0,0 |- weekdaystitle.base) {a. Commits by hour, US Eastern};
@@ -2956,11 +2956,11 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=50,ymin=0,ymax=1583,
+\begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=50,ymin=0,ymax=1582,
   xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day},ylabel={cumulative},legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1429) (48,1456) (49,1501) (50,1503)} \closedcycle;
-\addplot[vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1429) (48,1456) (49,1501) (50,1503)};
-\addlegendentry{commits since Aug 9 (1,503; 12 earlier)}
+\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)} \closedcycle;
+\addplot[vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)};
+\addlegendentry{commits since Aug 9 (1,502; 12 earlier)}
 \addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,575) (46,616) (47,649) (48,675) (49,681) (50,683)};
 \addlegendentry{commit subjects closing a pull request (683)}
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:0,0) {};
