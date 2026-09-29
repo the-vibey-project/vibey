@@ -2937,19 +2937,20 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-240:1.180) arc[start angle=-240,end angle=-255,radius=1.180] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-255:0.632) arc[start angle=-255,end angle=-270,radius=0.632] -- cycle;
 \node[vibeynote,text=vibeygray] at (82.5:2.42) {0}; \node[vibeynote,text=vibeygray] at (37.5:2.42) {3}; \node[vibeynote,text=vibeygray] at (-7.5:2.42) {6}; \node[vibeynote,text=vibeygray] at (-52.5:2.42) {9}; \node[vibeynote,text=vibeygray] at (-97.5:2.42) {12}; \node[vibeynote,text=vibeygray] at (-142.5:2.42) {15}; \node[vibeynote,text=vibeygray] at (-187.5:2.42) {18}; \node[vibeynote,text=vibeygray] at (-232.5:2.42) {21};
-\node[vibeynote,anchor=south west,text=vibeygray] at (-2.6,2.45) {commits by hour, US Eastern};
-\node[vibeynote,anchor=north west,text=vibeygray,align=left] at (-2.6,-2.45) {rings at 25, 50, 75 commits\\\textcolor{vibeygold}{$\blacksquare$} busiest 18:00 (102) \; \textcolor{vibeyred!70}{$\blacksquare$} quietest 09:00 (25)};
+\node[vibeynote,anchor=north,text=vibeygray,align=center] at (0,-2.62) {rings at 25, 50 and 75 commits\\[1pt]\textcolor{vibeygold}{$\blacksquare$} busiest 18:00 (102) \quad \textcolor{vibeyred!70}{$\blacksquare$} quietest 09:00 (25)};
 \end{scope}
-\begin{axis}[vibeybars,at={(0.0cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
-  xtick={0,...,6},xticklabels={Mon,Tue,Wed,Thu,Fri,Sat,Sun},title={commits by weekday},ylabel={commits}]
+\begin{axis}[vibeybars,at={(0.0cm,2.7cm)},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
+  xtick={0,...,6},xticklabels={Mon,Tue,Wed,Thu,Fri,Sat,Sun},title={b. Commits by weekday},ylabel={commits},enlarge y limits={upper,value=0.12},title style={name=weekdaystitle}]
 \addplot[fill=vibeyblue,draw=none] coordinates {(0,98) (1,161) (2,117) (3,308) (4,355) (5,230) (6,233)};
 \end{axis}
-\begin{axis}[vibeybars,at={(6.1cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=7.6,ymin=0,
-  xtick={0,...,7},xticklabels={chore,fix,feat,other,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={Conventional Commit types},ylabel={commits}]
+\begin{axis}[vibeybars,at={(6.1cm,2.7cm)},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=7.6,ymin=0,
+  xtick={0,...,7},xticklabels={chore,fix,feat,other,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={c. Conventional Commit types},ylabel={commits},enlarge y limits={upper,value=0.12}]
 \addplot[fill=vibeyteal!85,draw=none] coordinates {(0,402) (1,302) (2,291) (3,277) (4,134) (5,41) (6,33) (7,8)};
 \end{axis}
+% The clock's title shares the bar charts' title baseline, so the three panels read as one row.
+\node[vibeyhead,anchor=base west] at (-8.0,0 |- weekdaystitle.base) {a. Commits by hour, US Eastern};
 \end{tikzpicture}
-\caption{The rhythm of production since 2026-08-09, at revision 3680d700. Left, a 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 102 and the quietest at 09:00 with 25. Centre, the weekday distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first.}
+\caption{The rhythm of production since 2026-08-09, at revision 3680d700. (a) A 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 102 and the quietest at 09:00 with 25. (b) The weekday distribution. (c) The Conventional Commit types the pre-commit hook enforces, most common first.}
 \label{fig:commit-rhythm}
 \end{figure*}
 ```

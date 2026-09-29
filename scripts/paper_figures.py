@@ -1090,23 +1090,24 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 {rings}
 {chr(10).join(sectors)}
 {hour_labels}
-\\node[vibeynote,anchor=south west,text=vibeygray] at (-2.6,2.45) {{commits by hour, US Eastern}};
-\\node[vibeynote,anchor=north west,text=vibeygray,align=left] at (-2.6,-2.45) {{rings at 25, 50, 75 commits\\\\\\textcolor{{vibeygold}}{{$\\blacksquare$}} busiest {busiest:02d}:00 ({peak}) \\; \\textcolor{{vibeyred!70}}{{$\\blacksquare$}} quietest {quietest:02d}:00 ({min(hours)})}};
+\\node[vibeynote,anchor=north,text=vibeygray,align=center] at (0,-2.62) {{rings at 25, 50 and 75 commits\\\\[1pt]\\textcolor{{vibeygold}}{{$\\blacksquare$}} busiest {busiest:02d}:00 ({peak}) \\quad \\textcolor{{vibeyred!70}}{{$\\blacksquare$}} quietest {quietest:02d}:00 ({min(hours)})}};
 \\end{{scope}}
-\\begin{{axis}}[vibeybars,at={{(0.0cm,-2.6cm)}},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
-  xtick={{0,...,6}},xticklabels={{{",".join(names)}}},title={{commits by weekday}},ylabel={{commits}}]
+\\begin{{axis}}[vibeybars,at={{(0.0cm,2.7cm)}},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
+  xtick={{0,...,6}},xticklabels={{{",".join(names)}}},title={{b. Commits by weekday}},ylabel={{commits}},enlarge y limits={{upper,value=0.12}},title style={{name=weekdaystitle}}]
 \\addplot[fill=vibeyblue,draw=none] coordinates {{{wd_coords}}};
 \\end{{axis}}
-\\begin{{axis}}[vibeybars,at={{(6.1cm,-2.6cm)}},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax={len(types) - 0.4},ymin=0,
-  xtick={{0,...,{len(types) - 1}}},xticklabels={{{ty_labels}}},x tick label style={{rotate=45,anchor=north east,font=\\sffamily\\tiny}},title={{Conventional Commit types}},ylabel={{commits}}]
+\\begin{{axis}}[vibeybars,at={{(6.1cm,2.7cm)}},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax={len(types) - 0.4},ymin=0,
+  xtick={{0,...,{len(types) - 1}}},xticklabels={{{ty_labels}}},x tick label style={{rotate=45,anchor=north east,font=\\sffamily\\tiny}},title={{c. Conventional Commit types}},ylabel={{commits}},enlarge y limits={{upper,value=0.12}}]
 \\addplot[fill=vibeyteal!85,draw=none] coordinates {{{ty_coords}}};
 \\end{{axis}}
+% The clock's title shares the bar charts' title baseline, so the three panels read as one row.
+\\node[vibeyhead,anchor=base west] at (-8.0,0 |- weekdaystitle.base) {{a. Commits by hour, US Eastern}};
 \\end{{tikzpicture}}"""
         caption = (
-            f"The rhythm of production since {data['since'].isoformat()}, at revision {data['head'][:8]}. Left, a "
+            f"The rhythm of production since {data['since'].isoformat()}, at revision {data['head'][:8]}. (a) A "
             f"24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at "
-            f"{busiest:02d}:00 with {peak} and the quietest at {quietest:02d}:00 with {min(hours)}. Centre, the weekday "
-            f"distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first."
+            f"{busiest:02d}:00 with {peak} and the quietest at {quietest:02d}:00 with {min(hours)}. (b) The weekday "
+            f"distribution. (c) The Conventional Commit types the pre-commit hook enforces, most common first."
         )
         return self._fence("figure*", "fig:commit-rhythm", caption, body)
 
