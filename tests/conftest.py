@@ -274,6 +274,26 @@ def _weekday_independent_sabbath(
         monkeypatch.setattr(SABBATH, "_factory", _WeekdayIndependentSabbath)
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_supervisor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """`vibey doctor` asks whether the supervised services run (#1189). Every test sees a
+    host with none installed, so no outcome depends on the machine's own units and no
+    test asks its real service manager. The supervisor's own tests build their own."""
+    from vibey.cli.supervisor import SUPERVISOR
+    from vibey.infrastructure.supervisor import SupervisorHost
+
+    home = tmp_path_factory.getbasetemp() / "unsupervised-home"
+
+    def unsupervised(platform: str) -> SupervisorHost:
+        return SupervisorHost(
+            platform, home=home, environ={}, uid=0, run=lambda argv: (1, "not asked")
+        )
+
+    monkeypatch.setattr(SUPERVISOR, "_host_factory", unsupervised)
+
+
 def pytest_unconfigure(config: pytest.Config) -> None:
     if _BASE_DSN is not None:
         with contextlib.suppress(Exception):

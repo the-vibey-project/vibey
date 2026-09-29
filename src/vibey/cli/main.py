@@ -9,11 +9,13 @@ from vibey.cli.early_signals import SIGTERM_LATCH
 SIGTERM_LATCH.arm()
 
 import asyncio
+import functools
 import json
 import os
 import signal
 import subprocess  # nosec B404 - fixed argv, never shell=True
 import sys
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, cast
@@ -50,6 +52,7 @@ from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
 from vibey.cli.status import STATUS_PRESENTER
+from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -110,6 +113,7 @@ app.add_typer(queue_app, name="queue")
 app.add_typer(budget_app, name="budget")
 app.add_typer(ultra_app, name="ultra")
 app.add_typer(driver_app, name="driver")
+app.add_typer(supervisor_app, name="supervisor")
 
 
 def _version_callback(value: bool) -> None:
@@ -1582,12 +1586,18 @@ def doctor(
         # Gates waiting on a person nobody will tell: reported, not failed -- the default
         # is notifications off, and the gates are still listed by `vibey gates`.
         typer.echo(await GATE_NOTICE_DOCTOR.line())
+        # #1189: whether the worker and the delivery bridge are kept running. A missing
+        # supervisor is a WARN, a FAIL with `[supervisor] required = true` (12.e).
+        supervisor_lines, supervisor_ok = SUPERVISOR.doctor_lines()
+        for line in supervisor_lines:
+            typer.echo(line)
         if (
             (conformance and not all_ok)
             or not database_ok
             or not reach_ok
             or not hub_ok
             or not sabbath_ok
+            or not supervisor_ok
         ):
             raise typer.Exit(1)
 
@@ -1791,10 +1801,23 @@ def worker(
             "`az login` and mutates real resources on consented deploys)",
         ),
     ] = "memory",
+    all_projects: Annotated[
+        bool,
+        typer.Option(
+            "--all-projects",
+            help=(
+                "Serve every project: claim the next ready job in any project, in the "
+                "claim's own order, through that project's own loop (#1189). Waits for "
+                "work instead of exiting when there is none. Not with --project or "
+                "--wait-for-project."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Long-running worker: LISTEN vibey_job_ready, dispatch across all phases."""
     from datetime import timedelta
 
+    from vibey.application.multi_project_worker import MultiProjectWorker
     from vibey.application.worker import WorkerLoop
     from vibey.bootstrap import build_full_worker, database_url
     from vibey.domain.engine import EngineId
@@ -1817,6 +1840,9 @@ def worker(
     if azure not in ("memory", "az"):
         typer.echo("--azure must be 'memory' or 'az'")
         raise typer.Exit(2)
+    if all_projects and (project_opt is not None or wait_for_project is not None):
+        typer.echo("--all-projects serves every project: drop --project and --wait-for-project")
+        raise typer.Exit(EXIT_USAGE)
     azure_client = None
     if azure == "az":
         from vibey.infrastructure.azure.az_cli import AzCliClientAdapter
@@ -1889,172 +1915,238 @@ def worker(
                     err=True,
                 )
 
-            async def _resolve_project() -> ProjectRecord | None:
-                if project_opt is not None:
-                    return await resources.projects.get(project_opt)
-                return await resources.projects.get_latest()
-
-            project = await _resolve_project()
-            # A one-shot CLI run should fail fast when there is nothing to
-            # work on. A long-lived deployment must not: exiting there is a
-            # restart loop that ends only when a human creates a project,
-            # and the crash counter makes a perfectly healthy worker look
-            # broken. Waiting is opt-in so the CLI default stays honest.
-            while project is None and wait_for_project is not None:
-                typer.echo(f"no project yet; polling every {wait_for_project:g}s")
-                await asyncio.sleep(wait_for_project)
-                project = await _resolve_project()
-            if project is None:
-                typer.echo("no projects found; create one with `vibey new` first")
-                raise typer.Exit(1)
-            if not isinstance(project.phase, Phase):
-                typer.echo(
-                    f"project {project.project_id} has unknown phase {project.phase.value!r}; "
-                    "refusing to dispatch; upgrade vibey",
-                    err=True,
-                )
-                raise typer.Exit(1)
-
             # Sovereign by default (8.b, #322); an explicit --provider still wins.
             provider = _resolve_provider(provider_opt)
-            design_provider: DesignProvider
-            decomposer: WorkPlanProducer
-            if provider == "claudeloop":
-                claude_process = ClaudeLoopProcess(
-                    executor=AsyncSubprocessExecutor(
-                        EngineEnvironmentPolicy.from_config(project.config).environment(CLAUDELOOP)
-                    ),
-                    max_turns=max_turns,
-                    max_dollars=max_dollars,
-                    spend_recorder=_build_spend_recorder(
-                        resources.ledger, project.project_id, project.cycle, project.phase
-                    ),
-                )
-                design_provider = ClaudeLoopDesignProvider(
-                    process=claude_process,
-                    worktree_path=project.repo_path,
-                )
-                decomposer = ClaudeLoopWorkPlanProducer(
-                    process=claude_process,
-                    worktree_path=project.repo_path,
-                )
-            elif provider == "gptossloop":
-                # Doctrine 8.a: the sovereign path is the preferred way to run, so the
-                # long-running worker has to be able to select it too, not just the
-                # one-shot `vibey work` -- and for DECOMPOSE as well as DESIGN. This used
-                # to hand BUILD's plan to ScriptedWorkPlanProducer, the test fake, whose
-                # items carry no verification commands. One client, so both providers
-                # talk to the same server and model.
-                from vibey.infrastructure.engines.gptossloop_decompose import (
-                    GptossloopWorkPlanProducer,
-                )
-
-                chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
-                design_provider = GptossloopDesignProvider.from_environment(os.environ, chat=chat)
-                decomposer = GptossloopWorkPlanProducer(chat=chat)
-            else:
-                design_provider = ScriptedDesignProvider()
-                decomposer = ScriptedWorkPlanProducer()
-
-            # The pool has to be the one `build_full_worker` will actually run, so ask
-            # the same resolver it does instead of keeping a second copy of the rule.
-            # Without this a local engine was the one engine the startup sweep could
-            # not see: it ran, but its conformance warning never appeared, so an
-            # operator depending on it had no way to learn it would never be selected.
-            # `--ollama-model` reaches gptossloop's process as GPTOSSLOOP_MODEL too, so
-            # the BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
-            local = LocalEngineSettings(environ=os.environ, config=project.config)
-            for notice in local.notices:
-                typer.echo(f"note: {notice}")
-            adapters = dict(resources.engine_adapters)
-            endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
-            for engine_id, local_adapter in local.adapters(endpoint).items():
-                adapters.setdefault(engine_id, local_adapter)
-            # The sweep probes each engine's auth, so it must probe with what the engine's
-            # sessions will actually receive: the project's `engine_environment` on top of
-            # the defaults. Without it a credential the project declares (agyloop's
-            # Vertex credentials, say) was invisible to the auth check,
-            # and the engine read "auth FAIL" although its sessions would authenticate.
-            engine_environment = EngineEnvironmentPolicy.from_config(project.config)
-            adapters = {
-                engine_id: engine_environment.applied_to(adapter)
-                for engine_id, adapter in adapters.items()
-            }
-            if allow_list is not None:
-                allowed = {eid: a for eid, a in adapters.items() if eid in allow_list}
-                # An allow-list matching nothing used to start a worker with zero
-                # engines, which then deferred every engine-driven job every five
-                # minutes, forever, saying nothing. Nothing downstream can recover from
-                # that, so the only honest answer is to refuse at startup and say why.
-                if not allowed:
-                    available = ", ".join(sorted(e.value for e in adapters))
-                    typer.echo(
-                        f"--engines {engines_opt} matches none of this worker's engines "
-                        f"({available}); a local engine joins them only with its switch "
-                        "on -- gptossloop unless VIBEY_FEATURE_GPTOSSLOOP=0, qwenloop with "
-                        "VIBEY_FEATURE_QWENLOOP=1, claudeloop-local with "
-                        "VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, or the same keys under [features] "
-                        "in the project's config when that environment override is unset."
-                    )
-                    raise typer.Exit(EXIT_USAGE)
-                adapters = allowed
-
-            preflight_report = await resources.conductor_preflight.run(
-                project_id=project.project_id,
-                adapters=adapters,
-            )
-            ineligible = preflight_report.ineligible_engines
-            if ineligible:
-                names = ", ".join(sorted(e.value for e in ineligible))
-                typer.echo(
-                    f"warning: no recorded conformance for {names} -- engine-driven jobs "
-                    "will not select them until `vibey doctor --conformance --record` passes"
-                )
-
-            feasibility = preflight_report.feasibility
-            location = (
-                ""
-                if feasibility.blocked_at is None
-                else f" — blocked at stage {feasibility.blocked_at!r}"
-            )
-            basis = (
-                f"; first repair: {feasibility.first_repair}"
-                if feasibility.first_repair is not None
-                else (
-                    f"; {feasibility.required_measured} of {feasibility.required} "
-                    "required coordinates measured; no measured shortfall"
-                )
-            )
-            typer.echo(
-                f"preflight feasibility: {feasibility.status.upper()}{location}{basis}",
-                err=feasibility.status == "infeasible",
-            )
-
-            count = max(1, min(parallelism, len(adapters) * 2, os.cpu_count() or 1))
             # 8.i: one gate for every loop. The worker keeps running through the window,
             # claiming nothing, and claims again on the first poll after it.
             sabbath = SABBATH.gate()
-            loops = [
-                build_full_worker(
-                    resources=resources,
-                    project=project,
-                    design_provider=design_provider,
-                    visual_provider=ScriptedVisualProvider(),
-                    decomposer=decomposer,
-                    owner=f"worker-{os.getpid()}-{i}",
-                    engine_adapters=adapters,
-                    allow_list=allow_list,
-                    azure_client=azure_client,
-                    sabbath=sabbath,
+
+            async def loops_for(project: ProjectRecord, slots: int | None) -> list[WorkerLoop]:
+                """One project's loops, built exactly as a single-project worker builds
+                them. A refusal is said and raised as typer.Exit: the single-project
+                worker exits with it; `--all-projects` leaves that project's jobs queued."""
+                if not isinstance(project.phase, Phase):
+                    typer.echo(
+                        f"project {project.project_id} has unknown phase "
+                        f"{project.phase.value!r}; refusing to dispatch; upgrade vibey",
+                        err=True,
+                    )
+                    raise typer.Exit(1)
+
+                design_provider: DesignProvider
+                decomposer: WorkPlanProducer
+                if provider == "claudeloop":
+                    claude_process = ClaudeLoopProcess(
+                        executor=AsyncSubprocessExecutor(
+                            EngineEnvironmentPolicy.from_config(project.config).environment(
+                                CLAUDELOOP
+                            )
+                        ),
+                        max_turns=max_turns,
+                        max_dollars=max_dollars,
+                        spend_recorder=_build_spend_recorder(
+                            resources.ledger, project.project_id, project.cycle, project.phase
+                        ),
+                    )
+                    design_provider = ClaudeLoopDesignProvider(
+                        process=claude_process,
+                        worktree_path=project.repo_path,
+                    )
+                    decomposer = ClaudeLoopWorkPlanProducer(
+                        process=claude_process,
+                        worktree_path=project.repo_path,
+                    )
+                elif provider == "gptossloop":
+                    # Doctrine 8.a: the sovereign path is the preferred way to run, so the
+                    # long-running worker has to be able to select it too, not just the
+                    # one-shot `vibey work` -- and for DECOMPOSE as well as DESIGN. This
+                    # used to hand BUILD's plan to ScriptedWorkPlanProducer, the test fake,
+                    # whose items carry no verification commands. One client, so both
+                    # providers talk to the same server and model.
+                    from vibey.infrastructure.engines.gptossloop_decompose import (
+                        GptossloopWorkPlanProducer,
+                    )
+
+                    chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
+                    design_provider = GptossloopDesignProvider.from_environment(
+                        os.environ, chat=chat
+                    )
+                    decomposer = GptossloopWorkPlanProducer(chat=chat)
+                else:
+                    design_provider = ScriptedDesignProvider()
+                    decomposer = ScriptedWorkPlanProducer()
+
+                # The pool has to be the one `build_full_worker` will actually run, so ask
+                # the same resolver it does instead of keeping a second copy of the rule.
+                # Without this a local engine was the one engine the startup sweep could
+                # not see: it ran, but its conformance warning never appeared, so an
+                # operator depending on it had no way to learn it would never be selected.
+                # `--ollama-model` reaches gptossloop's process as GPTOSSLOOP_MODEL too, so
+                # the BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
+                local = LocalEngineSettings(environ=os.environ, config=project.config)
+                for notice in local.notices:
+                    typer.echo(f"note: {notice}")
+                adapters = dict(resources.engine_adapters)
+                endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
+                for engine_id, local_adapter in local.adapters(endpoint).items():
+                    adapters.setdefault(engine_id, local_adapter)
+                # The sweep probes each engine's auth, so it must probe with what the
+                # engine's sessions will actually receive: the project's
+                # `engine_environment` on top of the defaults. Without it a credential the
+                # project declares (agyloop's Vertex credentials, say) was invisible to the
+                # auth check, and the engine read "auth FAIL" although its sessions would
+                # authenticate.
+                engine_environment = EngineEnvironmentPolicy.from_config(project.config)
+                adapters = {
+                    engine_id: engine_environment.applied_to(adapter)
+                    for engine_id, adapter in adapters.items()
+                }
+                if allow_list is not None:
+                    allowed = {eid: a for eid, a in adapters.items() if eid in allow_list}
+                    # An allow-list matching nothing used to start a worker with zero
+                    # engines, which then deferred every engine-driven job every five
+                    # minutes, forever, saying nothing. Nothing downstream can recover from
+                    # that, so the only honest answer is to refuse at startup and say why.
+                    if not allowed:
+                        available = ", ".join(sorted(e.value for e in adapters))
+                        typer.echo(
+                            f"--engines {engines_opt} matches none of this worker's engines "
+                            f"({available}); a local engine joins them only with its switch "
+                            "on -- gptossloop unless VIBEY_FEATURE_GPTOSSLOOP=0, qwenloop "
+                            "with VIBEY_FEATURE_QWENLOOP=1, claudeloop-local with "
+                            "VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, or the same keys under "
+                            "[features] in the project's config when that environment "
+                            "override is unset."
+                        )
+                        raise typer.Exit(EXIT_USAGE)
+                    adapters = allowed
+
+                preflight_report = await resources.conductor_preflight.run(
+                    project_id=project.project_id,
+                    adapters=adapters,
                 )
-                for i in range(count)
-            ]
+                ineligible = preflight_report.ineligible_engines
+                if ineligible:
+                    names = ", ".join(sorted(e.value for e in ineligible))
+                    typer.echo(
+                        f"warning: no recorded conformance for {names} -- engine-driven "
+                        "jobs will not select them until `vibey doctor --conformance "
+                        "--record` passes"
+                    )
+
+                feasibility = preflight_report.feasibility
+                location = (
+                    ""
+                    if feasibility.blocked_at is None
+                    else f" — blocked at stage {feasibility.blocked_at!r}"
+                )
+                basis = (
+                    f"; first repair: {feasibility.first_repair}"
+                    if feasibility.first_repair is not None
+                    else (
+                        f"; {feasibility.required_measured} of {feasibility.required} "
+                        "required coordinates measured; no measured shortfall"
+                    )
+                )
+                typer.echo(
+                    f"preflight feasibility: {feasibility.status.upper()}{location}{basis}",
+                    err=feasibility.status == "infeasible",
+                )
+
+                count = (
+                    slots
+                    if slots is not None
+                    else max(1, min(parallelism, len(adapters) * 2, os.cpu_count() or 1))
+                )
+                return [
+                    build_full_worker(
+                        resources=resources,
+                        project=project,
+                        design_provider=design_provider,
+                        visual_provider=ScriptedVisualProvider(),
+                        decomposer=decomposer,
+                        owner=f"worker-{os.getpid()}-{i}",
+                        engine_adapters=adapters,
+                        allow_list=allow_list,
+                        azure_client=azure_client,
+                        sabbath=sabbath,
+                    )
+                    for i in range(count)
+                ]
+
+            runs: list[Callable[[], Awaitable[bool]]]
+            wake: UUID | None
+            if all_projects:
+                count = max(1, min(parallelism, os.cpu_count() or 1))
+
+                async def serve(project_id: UUID) -> list[WorkerLoop] | None:
+                    served = await resources.projects.get(project_id)
+                    if served is None:
+                        return None
+                    typer.echo(f"serving project={served.name} ({served.project_id})")
+                    try:
+                        return await loops_for(served, count)
+                    except (typer.Exit, ValueError) as exc:
+                        # typer.Exit's reason was said as it was raised; a malformed
+                        # project config (a forbidden `engine_environment`) is said here.
+                        reason = "" if isinstance(exc, typer.Exit) else f" ({exc})"
+                        typer.echo(
+                            f"project {served.name} refused{reason}: its jobs stay queued "
+                            "for a worker that can serve them",
+                            err=True,
+                        )
+                        return None
+
+                everyone = MultiProjectWorker(jobs=resources.jobs, loops_for=serve, sabbath=sabbath)
+                runs = [functools.partial(everyone.run_once, i) for i in range(count)]
+                wake = None
+                # The reaper's pass reads every project; the id only labels its report,
+                # so it runs once this worker has served a project to label it with.
+
+                def reap_target() -> UUID | None:
+                    return everyone.last_served
+
+                # Every project this worker serves has its gates swept, not only the
+                # last one it happened to serve.
+                remind_scope: UUID | None = None
+                target = "all projects"
+            else:
+
+                async def _resolve_project() -> ProjectRecord | None:
+                    if project_opt is not None:
+                        return await resources.projects.get(project_opt)
+                    return await resources.projects.get_latest()
+
+                project = await _resolve_project()
+                # A one-shot CLI run should fail fast when there is nothing to
+                # work on. A long-lived deployment must not: exiting there is a
+                # restart loop that ends only when a human creates a project,
+                # and the crash counter makes a perfectly healthy worker look
+                # broken. Waiting is opt-in so the CLI default stays honest.
+                while project is None and wait_for_project is not None:
+                    typer.echo(f"no project yet; polling every {wait_for_project:g}s")
+                    await asyncio.sleep(wait_for_project)
+                    project = await _resolve_project()
+                if project is None:
+                    typer.echo("no projects found; create one with `vibey new` first")
+                    raise typer.Exit(1)
+                loops = await loops_for(project, None)
+                runs = [functools.partial(loop_.run_once, project.project_id) for loop_ in loops]
+                wake = project.project_id
+                served_id = project.project_id
+
+                def reap_target() -> UUID | None:
+                    return served_id
+
+                remind_scope = served_id
+                count = len(loops)
+                target = f"project={project.name}"
 
             notifier = PostgresJobReadyNotifier(database_url())
             await notifier.connect()
 
             typer.echo(
-                f"worker started: project={project.name} "
+                f"worker started: {target} "
                 f"engines={engines_opt or 'all'} parallelism={count} provider={provider}"
             )
 
@@ -2063,12 +2155,12 @@ def worker(
             # SIGTERM handler registered above never firing its own echo).
             # Cheap enough to leave on: one line per loop per iteration,
             # nothing per-job.
-            async def drive(loop_: WorkerLoop, *, idx: int) -> None:
+            async def drive(run: Callable[[], Awaitable[bool]], *, idx: int) -> None:
                 iteration = 0
                 while not draining.is_set():
                     iteration += 1
                     typer.echo(f"drive[{idx}] iter={iteration} calling run_once", err=True)
-                    worked = await loop_.run_once(project.project_id)
+                    worked = await run()
                     typer.echo(
                         f"drive[{idx}] iter={iteration} run_once returned worked={worked}", err=True
                     )
@@ -2088,30 +2180,31 @@ def worker(
                         typer.echo(f"drive[{idx}] lease reap failed: {exc}", err=True)
                     # Stale ready work and the broker, at most once per interval across
                     # every drive loop (ADR-0056); the lease reap just ran above.
-                    try:
-                        await resources.queue_reaper.run_if_due(project.project_id)
-                    except Exception as exc:
-                        typer.echo(f"drive[{idx}] queue reap failed: {exc}", err=True)
+                    labelled = reap_target()
+                    if labelled is not None:
+                        try:
+                            await resources.queue_reaper.run_if_due(labelled)
+                        except Exception as exc:
+                            typer.echo(f"drive[{idx}] queue reap failed: {exc}", err=True)
                     # Gates still waiting get their reminders, and a gate nobody was
                     # told about is said once -- at most once per interval across every
-                    # drive loop, like the reap above.
+                    # drive loop, like the reap above. Unlike the reap's label, this scope
+                    # filters: an all-projects worker sweeps every project's gates.
                     try:
-                        await resources.gate_reminder.run_if_due(project.project_id)
+                        await resources.gate_reminder.run_if_due(remind_scope)
                     except Exception as exc:
                         typer.echo(f"drive[{idx}] gate reminders failed: {exc}", err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )
-                    await notifier.wait_for_job_ready(
-                        project.project_id, timeout=timedelta(seconds=5)
-                    )
+                    await notifier.wait_for_job_ready(wake, timeout=timedelta(seconds=5))
                 typer.echo(f"drive[{idx}] draining flag observed, exiting loop", err=True)
 
             try:
                 if once or count == 1:
-                    await drive(loops[0], idx=0)
+                    await drive(runs[0], idx=0)
                 else:
-                    await asyncio.gather(*(drive(loop_, idx=i) for i, loop_ in enumerate(loops)))
+                    await asyncio.gather(*(drive(run, idx=i) for i, run in enumerate(runs)))
             finally:
                 await notifier.close()
 

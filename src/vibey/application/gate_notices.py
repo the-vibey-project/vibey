@@ -265,9 +265,10 @@ class GateReminder:
         self._log = logger
         self._interval = interval_seconds
         self._channels = channels
-        self._last: dict[UUID, datetime] = {}
+        # Keyed by the sweep's scope: a project, or None for every project.
+        self._last: dict[UUID | None, datetime] = {}
 
-    async def run_if_due(self, project_id: UUID) -> GateReminderReport | None:
+    async def run_if_due(self, project_id: UUID | None) -> GateReminderReport | None:
         now = self._clock.now()
         last = self._last.get(project_id)
         if last is not None and (now - last).total_seconds() < self._interval:

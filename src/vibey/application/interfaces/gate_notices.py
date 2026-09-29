@@ -61,7 +61,8 @@ class GateReminderInterface(Protocol):
         due. A dry run judges and sends and records nothing."""
         ...
 
-    async def run_if_due(self, project_id: UUID) -> GateReminderReport | None:
-        """A sweep of `project_id`, at most once per `[notifications] sweep_interval_seconds`
-        per process; None when it was not due."""
+    async def run_if_due(self, project_id: UUID | None) -> GateReminderReport | None:
+        """A sweep of `project_id` -- every project's when None -- at most once per
+        `[notifications] sweep_interval_seconds` per scope and process; None when it was
+        not due."""
         ...

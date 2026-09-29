@@ -167,6 +167,17 @@ DEFAULT_RELEASE_RULESET_CHECKS = DEFAULT_RULESET_CHECKS
 IDLESS_BYPASS_ACTOR_TYPES = ("OrganizationAdmin", "DeployKey")
 
 DEFAULT_RULESET_BYPASS_ACTORS = ("RepositoryRole:5",)
+# The merge methods a ruleset's pull_request rule can allow, spelled as the API spells them.
+RULESET_MERGE_METHODS = ("merge", "squash", "rebase")
+# The repository's default squash-commit title and message, spelled as the API spells them.
+# `COMMIT_OR_PR_TITLE` is only accepted beside `COMMIT_MESSAGES`, which is GitHub's own
+# pairing rule; the empty string is "not managed" and leaves the forge's setting alone.
+SQUASH_TITLE_SOURCES = ("PR_TITLE", "COMMIT_OR_PR_TITLE")
+SQUASH_MESSAGE_SOURCES = ("PR_BODY", "COMMIT_MESSAGES", "BLANK")
+# What GitHub reads as an instruction to run no workflow for a push or a pull request. The
+# bracketed forms are matched anywhere in a message; `skip-checks: true` only as a trailer
+# line. Spelled here, lower-case, and matched case-insensitively.
+SKIP_MARKERS = ("[skip ci]", "[ci skip]", "[no ci]", "[skip actions]", "[actions skip]")
 # Managed issue-automation labels. They live here rather than beside the policy because
 # `IssueAutomationConfig` defaults name one of them, and configuration must not import
 # the module that imports configuration.
@@ -255,6 +266,9 @@ class WorkflowNamesConfig:
     release_repair: str = "Release repair"
     github_release: str = "GitHub Release"
     repository_profile: str = "Repository profile"
+    skip_markers: str = "Skip markers"
+    branch_health: str = "Branch health"
+    ruleset_drift: str = "Ruleset drift"
 
 
 # The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` names
@@ -1078,6 +1092,7 @@ def _ruleset(
         allow_force_pushes=section.get("allow_force_pushes", False),
         allow_deletions=section.get("allow_deletions", False),
         bypass_actors=tuple(section.get("bypass_actors", DEFAULT_RULESET_BYPASS_ACTORS)),
+        allowed_merge_methods=tuple(section.get("allowed_merge_methods", ())),
     )
 
 
@@ -1678,8 +1693,32 @@ class RulesetConfig:
     allow_deletions: bool = False
     bypass_actors: tuple[str, ...] = DEFAULT_RULESET_BYPASS_ACTORS
     merge_queue: MergeQueueConfig = MergeQueueConfig()
+    # The merge methods a pull request into this branch may use, per branch. Empty is
+    # "not declared": the rule carries no restriction and the forge's own default (every
+    # method the repository allows) stands, so upgrading never narrows anybody's merges.
+    # A release branch promoted by rebase declares ("rebase",): the one hand-run squash of
+    # a promotion concatenated 221 commit messages into one body, a quoted skip-ci marker
+    # among them, and GitHub then ran no push workflow on the release branch at all.
+    allowed_merge_methods: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
+        _unique_nonempty("rulesets.allowed_merge_methods", self.allowed_merge_methods)
+        unknown = sorted(set(self.allowed_merge_methods) - set(RULESET_MERGE_METHODS))
+        if unknown:
+            raise ValueError(
+                "rulesets.allowed_merge_methods entries must be among "
+                f"{', '.join(RULESET_MERGE_METHODS)}; got {', '.join(unknown)}"
+            )
+        if (
+            self.allowed_merge_methods
+            and self.merge_queue.enabled
+            and self.merge_queue.merge_method.lower() not in self.allowed_merge_methods
+        ):
+            # A queue that merges by a method the branch refuses can never land anything.
+            raise ValueError(
+                f"rulesets.merge_queue.merge_method {self.merge_queue.merge_method} is not "
+                "among rulesets.allowed_merge_methods"
+            )
         if (
             self.merge_queue.enabled
             and self.require_linear_history
@@ -1758,8 +1797,42 @@ class RepositoryProfileConfig:
     web_commit_signoff_required: bool = True
     vulnerability_alerts: bool = True
     automated_security_fixes: bool = True
+    # The title and body a squash merge proposes, as the forge's API names them. Empty is
+    # "not managed" and sends nothing, so an upgrade never changes an adopter's merges.
+    # GitHub's own default is COMMIT_OR_PR_TITLE with COMMIT_MESSAGES -- every commit
+    # message in the pull request concatenated into the body -- and that is how one quoted
+    # skip-ci marker, carried in from a branch's history, turned off every push workflow on
+    # a release (vibey #1244). PR_TITLE with PR_BODY is the pairing that cannot carry a
+    # commit subject the author never read.
+    squash_merge_commit_title: str = ""
+    squash_merge_commit_message: str = ""
 
     def __post_init__(self) -> None:
+        if self.squash_merge_commit_title not in ("", *SQUASH_TITLE_SOURCES):
+            raise ValueError(
+                "repository_profile.squash_merge_commit_title must be one of "
+                f"{', '.join(SQUASH_TITLE_SOURCES)}"
+            )
+        if self.squash_merge_commit_message not in ("", *SQUASH_MESSAGE_SOURCES):
+            raise ValueError(
+                "repository_profile.squash_merge_commit_message must be one of "
+                f"{', '.join(SQUASH_MESSAGE_SOURCES)}"
+            )
+        if bool(self.squash_merge_commit_title) != bool(self.squash_merge_commit_message):
+            # The API takes the two together; half a declaration is sent as a request the
+            # forge refuses, which reads as a failed reconcile rather than a config error.
+            raise ValueError(
+                "repository_profile.squash_merge_commit_title and "
+                "squash_merge_commit_message are declared together or not at all"
+            )
+        if (
+            self.squash_merge_commit_title == "COMMIT_OR_PR_TITLE"
+            and self.squash_merge_commit_message != "COMMIT_MESSAGES"
+        ):
+            raise ValueError(
+                "repository_profile.squash_merge_commit_title COMMIT_OR_PR_TITLE is only "
+                "valid with squash_merge_commit_message COMMIT_MESSAGES"
+            )
         if len(self.description) > 350:
             raise ValueError("repository_profile.description must be at most 350 characters")
         _unique_nonempty("repository_profile.topics", self.topics)
@@ -1767,6 +1840,51 @@ class RepositoryProfileConfig:
             raise ValueError("repository_profile.topics must contain at most 20 entries")
         if any(topic != topic.lower() or " " in topic for topic in self.topics):
             raise ValueError("repository_profile.topics must be lowercase and contain no spaces")
+
+
+@dataclass(frozen=True)
+class SkipMarkersConfig:
+    """`[skip_markers]`: refuse a GitHub skip marker on its way into a permanent branch.
+
+    GitHub runs no `push` or `pull_request` workflow for a commit whose message carries
+    `[skip ci]` or one of its spellings (`SKIP_MARKERS`), or a `skip-checks: true` trailer.
+    On the release branch that means no CI, no publish, no tag and no documentation, and
+    nothing fails to say so: the 3.0.0 promotion was squashed by hand, its body quoted old
+    estimate subjects carrying the marker, and every push workflow on `main` was skipped.
+
+    `exempt_authors` names commit authors -- an exact name or e-mail -- whose own commit
+    messages may carry a marker, for an automation that deliberately skips CI on its own
+    bookkeeping commits. Empty by default: nothing is exempt until somebody says so. An
+    exemption never covers a pull request's title or body, which become the squash commit
+    a person merges, and never a pull request into the release branch, whose push is the
+    publish itself.
+    """
+
+    enabled: bool = True
+    exempt_authors: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _unique_nonempty("skip_markers.exempt_authors", self.exempt_authors)
+
+
+@dataclass(frozen=True)
+class BranchHealthConfig:
+    """`[branch_health]`: a red permanent branch is announced, once, in one issue.
+
+    develop was red for a day and four pull requests merged over a failing `gates` with
+    nothing saying so. The watched checks default to the branch's own required checks
+    (`[rulesets.*] required_checks`), which is the definition of "this branch is green"
+    the repository already declares; `checks` overrides that list for both branches.
+    `labels` must already exist on the forge; none are applied by default.
+    """
+
+    enabled: bool = True
+    checks: tuple[str, ...] = ()
+    labels: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _unique_nonempty("branch_health.checks", self.checks)
+        _unique_nonempty("branch_health.labels", self.labels)
 
 
 @dataclass(frozen=True)
@@ -2330,6 +2448,8 @@ class GhConfig:
     workflow_names: WorkflowNamesConfig = WorkflowNamesConfig()
     rulesets: RulesetsConfig = RulesetsConfig()
     repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
+    skip_markers: SkipMarkersConfig = SkipMarkersConfig()
+    branch_health: BranchHealthConfig = BranchHealthConfig()
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
     estimate: EstimateConfig = EstimateConfig()
@@ -2570,6 +2690,8 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     yanking = data.get("yank", {})
     rulesets_data = data.get("rulesets", {})
     profile = data.get("repository_profile", {})
+    skip_markers = data.get("skip_markers", {})
+    branch_health = data.get("branch_health", {})
     documentation = data.get("documentation", {})
     marketplace = data.get("marketplace", {})
     platform = data.get("platform", {})
@@ -2757,6 +2879,17 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             web_commit_signoff_required=profile.get("web_commit_signoff_required", True),
             vulnerability_alerts=profile.get("vulnerability_alerts", True),
             automated_security_fixes=profile.get("automated_security_fixes", True),
+            squash_merge_commit_title=profile.get("squash_merge_commit_title", ""),
+            squash_merge_commit_message=profile.get("squash_merge_commit_message", ""),
+        ),
+        skip_markers=SkipMarkersConfig(
+            enabled=skip_markers.get("enabled", True),
+            exempt_authors=tuple(skip_markers.get("exempt_authors", ())),
+        ),
+        branch_health=BranchHealthConfig(
+            enabled=branch_health.get("enabled", True),
+            checks=tuple(branch_health.get("checks", ())),
+            labels=tuple(branch_health.get("labels", ())),
         ),
         documentation=DocumentationConfig(
             enabled=documentation.get("enabled", True),

@@ -18,6 +18,7 @@ class GrantInterface(Protocol):
     source: str
     authors: tuple[str, ...]
     forbidden_paths: tuple[str, ...]
+    curators: tuple[str, ...]
 
 
 @runtime_checkable
@@ -48,6 +49,12 @@ class IssueGateInterface(Protocol):
 
     def judge(self, issue: Any, allowed: Sequence[str]) -> tuple[str | None, tuple[str, ...]]:
         """Why this issue may not direct a lane (or None), and every account in its history."""
+        ...
+
+    def judge_labels(
+        self, issue: Any, labels: Sequence[str], allowed: Sequence[str]
+    ) -> tuple[str | None, tuple[str, ...]]:
+        """Why these labels may not queue the issue (or None), and who last applied them."""
         ...
 
     def admit(self, state: Path, number: int) -> str:

@@ -212,6 +212,7 @@ from vibey.application.interfaces.visual import (
     VisualInventoryRepository,
 )
 from vibey.application.interfaces.worker_interface import (
+    MultiProjectWorkerInterface,
     WorkerLoopInterface,
 )
 
@@ -349,6 +350,7 @@ __all__ = [
     "VibeySkillsContextCompilerInterface",
     "VisualInventoryProducer",
     "VisualInventoryRepository",
+    "MultiProjectWorkerInterface",
     "WorkerLoopInterface",
     "WorkPlanProducer",
     "DeployReviewDemoHandlerInterface",
