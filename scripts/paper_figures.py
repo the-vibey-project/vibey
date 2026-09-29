@@ -1234,9 +1234,26 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         records = self._data("forecast")["records"]
         n = len(records)
         ticks = ",".join(str(i) for i in range(1, n + 1))
-        labels = ",".join(
-            datetime.fromisoformat(r["recorded_at"].replace("Z", "+00:00")).strftime("%b %-d")
-            for r in records
+        # Several forecasts are recorded on most days, so a date under every record prints
+        # the same date many times over and the labels overprint. Only the first record of
+        # each day is labelled; the rest keep their tick and grid line. Within one month the
+        # day number alone is legible upright, and the month moves into the axis title.
+        stamps = [datetime.fromisoformat(r["recorded_at"].replace("Z", "+00:00")) for r in records]
+        one_month = len({(s.year, s.month) for s in stamps}) == 1
+        seen_days: set[date] = set()
+        day_labels = []
+        for stamp in stamps:
+            first = stamp.date() not in seen_days
+            seen_days.add(stamp.date())
+            day_labels.append(
+                (str(stamp.day) if one_month else stamp.strftime("%b %-d")) if first else ""
+            )
+        labels = ",".join(day_labels)
+        tick_style = "" if one_month else "x tick label style={rotate=60,anchor=north east},"
+        xlabel = (
+            f"forecast record, by day ({stamps[0].strftime('%B %Y')})"
+            if one_month
+            else "forecast record, by day"
         )
         remaining = " ".join(f"({i},{r['remaining']:.0f})" for i, r in enumerate(records, 1))
         completed = " ".join(f"({i},{r['completed']:.0f})" for i, r in enumerate(records, 1))
@@ -1252,13 +1269,13 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         top = max(r["remaining"] for r in records)
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=2 by 1,horizontal sep=1.7cm}},vibeyaxis,width=7.9cm,height=4.6cm,
-  xmin=0.5,xmax={n + 0.5},xtick={{{ticks}}},xticklabels={{{labels}}},x tick label style={{rotate=30,anchor=north east}},xlabel={{forecast record}}]
-\\nextgroupplot[title={{a. Work units in the tracker}},ylabel={{units}},ymin=0,ymax={top * 1.25:.0f},legend pos=north west]
+  xmin=0.5,xmax={n + 0.5},xtick={{{ticks}}},xticklabels={{{labels}}},{tick_style}xlabel={{{xlabel}}}]
+\\nextgroupplot[title={{a. Work units in the tracker}},ylabel={{units}},ymin=0,ymax={top * 1.25:.0f},legend pos=south east]
 \\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {{{remaining}}};
 \\addlegendentry{{remaining}}
 \\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {{{completed}}};
 \\addlegendentry{{completed}}
-\\nextgroupplot[title={{b. Forecast active days to completion}},ylabel={{active days}},ymin=0,legend pos=north west]
+\\nextgroupplot[title={{b. Forecast active days to completion}},ylabel={{active days}},ymin=0,ymax={max(r["days_high"] for r in records) * 1.15:.0f},legend pos=south east]
 \\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {{{band}}} -- cycle;
 \\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {{{low}}};
 \\addlegendentry{{$W/r_{{\\max}}$}}
