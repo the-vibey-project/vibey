@@ -120,7 +120,11 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     ForgeReadInterface,
 )
 from vibey_gh.interfaces.local_review_interface import (
+    DiffChunkerInterface,
+    DiffPartInterface,
     SizedChatInterface,
+    SovereignReviewInterface,
+    TransportRetryInterface,
     WholeReviewInterface,
 )
 from vibey_gh.interfaces.paper_interface import (
@@ -137,6 +141,12 @@ from vibey_gh.interfaces.review_composition_interface import (
 from vibey_gh.interfaces.review_contract_interface import (
     ReviewContractInterface,
     ReviewContractPort,
+)
+from vibey_gh.interfaces.review_outcome_interface import (
+    OutcomeTableInterface,
+    OutcomeVocabularyInterface,
+    ReviewOutcomeReaderInterface,
+    RunRecordInterface,
 )
 
 __all__ = [
@@ -164,6 +174,8 @@ __all__ = [
     "DeliverySourceReaderInterface",
     "DeliverySourceSnapshotInterface",
     "DeliveryTrackRecordInterface",
+    "DiffChunkerInterface",
+    "DiffPartInterface",
     "DocumentationConfigInterface",
     "DocxErrorInterface",
     "DocxWriterInterface",
@@ -210,6 +222,8 @@ __all__ = [
     "ObservationInterface",
     "OllamaModelSamplerInterface",
     "OperationEstimateInterface",
+    "OutcomeTableInterface",
+    "OutcomeVocabularyInterface",
     "PaperDocumentInterface",
     "PaperErrorInterface",
     "PaperFigureInterface",
@@ -232,20 +246,24 @@ __all__ = [
     "ReviewContractClassInterface",
     "ReviewContractInterface",
     "ReviewContractPort",
+    "ReviewOutcomeReaderInterface",
     "ReviewThreadInterface",
     "RevisionReaderInterface",
     "RulesetConfigInterface",
     "RulesetsConfigInterface",
+    "RunRecordInterface",
     "RunnersConfigInterface",
     "SampleInterface",
     "SizedChatInterface",
     "SnapshotStoreErrorInterface",
+    "SovereignReviewInterface",
     "StageInterface",
     "StageVerdictInterface",
     "StateVectorInterface",
     "TableOfContentsInterface",
     "TidyConfigInterface",
     "TrackRecordInterface",
+    "TransportRetryInterface",
     "VerdictInterface",
     "WholeReviewInterface",
     "WorkHistoryInterface",

@@ -1529,10 +1529,31 @@ def _local_review(args) -> int:
         ("--reasoning-reserve", args.reasoning_reserve),
         ("--chars-per-token", args.chars_per_token),
         ("--think", args.think),
+        ("--max-chunks", args.max_chunks),
+        ("--retries", args.retries),
+        ("--retry-backoff-seconds", args.retry_backoff_seconds),
+        ("--head-sha", args.head_sha),
+        ("--outcome", args.outcome),
     ):
         if value is not None:
             forwarded += [flag, str(value)]
     return local_review.review(forwarded)
+
+
+def _review_outcomes(args) -> int:
+    from vibey_gh.review_outcome import ReviewOutcomeReader
+
+    reader = ReviewOutcomeReader(args.repo or "", workflow=args.workflow)
+    try:
+        table = reader.tabulate(args.runs)
+    except (RuntimeError, ValueError) as error:
+        print(f"vibey-gh review-outcomes: {error}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(table.as_json(), indent=2))
+    else:
+        print(table.render(), end="")
+    return 0
 
 
 def _conversation(args) -> int:
@@ -2060,7 +2081,54 @@ def main(argv: list[str] | None = None) -> int:
         choices=("", "low", "medium", "high"),
         help="override think: the reasoning effort sent to the model (empty sends none)",
     )
+    local.add_argument(
+        "--max-chunks",
+        type=int,
+        help=(
+            "override [pr_automation.fallback] max_chunks: the most parts a diff too large"
+            " for one request is reviewed in"
+        ),
+    )
+    local.add_argument(
+        "--retries",
+        type=int,
+        help="override retries: further attempts after an unreachable or timed-out model",
+    )
+    local.add_argument(
+        "--retry-backoff-seconds",
+        type=int,
+        help="override retry_backoff_seconds: the wait before the first retry, then doubled",
+    )
+    local.add_argument(
+        "--head-sha",
+        help="the exact head the diff is of; stamped into the verdict as reviewed_head_sha",
+    )
+    local.add_argument(
+        "--outcome",
+        help="write the outcome record, coded in vibey_gh.review_outcome's vocabulary, here",
+    )
     local.set_defaults(func=_local_review)
+
+    outcomes = sub.add_parser(
+        "review-outcomes",
+        help=(
+            "tabulate why the last runs of the PR review workflow did or did not produce a"
+            " verdict, from the records each run left (read-only)"
+        ),
+    )
+    outcomes.add_argument(
+        "--runs", type=int, default=50, help="how many of the newest runs to read (default 50)"
+    )
+    outcomes.add_argument(
+        "--repo", help="owner/name; default: the repository gh resolves from here"
+    )
+    outcomes.add_argument(
+        "--workflow",
+        default="pr-review.yml",
+        help="the review workflow's file name (default pr-review.yml)",
+    )
+    outcomes.add_argument("--json", action="store_true", help="print the table as JSON")
+    outcomes.set_defaults(func=_review_outcomes)
 
     doc = sub.add_parser(
         "doctor",

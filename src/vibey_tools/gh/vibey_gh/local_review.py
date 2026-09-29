@@ -30,23 +30,38 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import functools
 import http.client
+import itertools
 import json
 import pathlib
 import secrets
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
+from vibey_gh import review_outcome as outcome
 from vibey_gh.fit import ContextSizer
 from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
-from vibey_gh.interfaces.local_review_interface import SizedChatInterface, WholeReviewInterface
+from vibey_gh.interfaces.local_review_interface import (
+    DiffChunkerInterface,
+    DiffPartInterface,
+    SizedChatInterface,
+    TransportRetryInterface,
+    WholeReviewInterface,
+)
 from vibey_gh.interfaces.review_contract_interface import ReviewContractPort
-from vibey_gh.review_contract import DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
+from vibey_gh.review_contract import (
+    DIFF_GROUNDABLE,
+    REQUIRES_WIDER_CONTEXT,
+    REVIEW_CONTRACT,
+    REVIEWED_HEAD_FIELD,
+)
 
 # What the model is actually asked to decide. Kept small on purpose: every field here is
 # one the model can ground in the diff it was given -- `REVIEW_CONTRACT.diff_groundable`
@@ -180,8 +195,24 @@ class ReviewRefused(Exception):
 
     `str()` is the reason, in words the gate publishes after "the sovereign lane produced
     no verdict:" -- so it names what happened (the window, the reserve, what the model read,
-    why it stopped) rather than the parse error it would otherwise surface as.
+    why it stopped) rather than the parse error it would otherwise surface as. `code` is
+    the same reason in `vibey_gh.review_outcome`'s closed vocabulary, for a program to count.
+    `parts` and `attempts` say how far the review got before it stopped -- the parts it was
+    planned in and the requests it made -- so a record of no verdict still says that much.
     """
+
+    def __init__(
+        self,
+        reason: str,
+        *,
+        code: str = outcome.ANSWER_INCOMPLETE,
+        parts: int = 0,
+        attempts: int = 0,
+    ) -> None:
+        super().__init__(reason)
+        self.code = code
+        self.parts = parts
+        self.attempts = attempts
 
 
 def build_prompt(diff: str, max_chars: int) -> str:
@@ -194,7 +225,8 @@ def build_prompt(diff: str, max_chars: int) -> str:
     if len(diff) > max_chars:
         raise ReviewRefused(
             f"the diff ({len(diff)} characters) is longer than max_diff_chars ({max_chars}):"
-            " a verdict on part of it would pass the rest unread, so it is not reviewed"
+            " a verdict on part of it would pass the rest unread, so it is not reviewed",
+            code=outcome.DIFF_EXCEEDS_LIMIT,
         )
     return f"Review this pull request diff.\n\n<diff>\n{diff}\n</diff>"
 
@@ -430,6 +462,14 @@ class SizedChat:
             "shift": False,
         }
 
+    def size(self, payload: Mapping[str, Any]) -> int:
+        """Every character `ask` would send for `payload`, check codes of the length it
+        writes included -- so a caller can size a request before it has one to send."""
+        code = "0" * (2 * self.code_bytes)
+        sealed = self.seal(payload, code, code)
+        system, user = (message["content"] for message in sealed["messages"])
+        return len(system) + len(user) + len(json.dumps(sealed["format"]))
+
     def ask(
         self,
         base_url: str,
@@ -449,7 +489,8 @@ class SizedChat:
             raise ReviewRefused(
                 f"the {what} (~{sizer.tokens(shown_chars)} tokens) exceeds the sovereign"
                 f" model's window ({sizer.window} tokens) once its ~{instructions} tokens of"
-                f" instructions and the {sizer.reserve}-token reasoning reserve are counted"
+                f" instructions and the {sizer.reserve}-token reasoning reserve are counted",
+                code=outcome.DIFF_EXCEEDS_WINDOW,
             )
         num_ctx = sizer.num_ctx(total)
         sealed["options"]["num_ctx"] = num_ctx
@@ -466,7 +507,8 @@ class SizedChat:
             # server answered, so it is not "unreachable". With truncation off, a prompt
             # over the window is exactly this -- a 400 saying so.
             raise ReviewRefused(
-                f"the model server refused the request (HTTP {error.code}): {self.said(error)}"
+                f"the model server refused the request (HTTP {error.code}): {self.said(error)}",
+                code=outcome.MODEL_REFUSED,
             ) from error
         return self.answer(body, num_ctx=num_ctx, reserve=sizer.reserve, codes=(head, tail))
 
@@ -508,7 +550,8 @@ class SizedChat:
         if not isinstance(read, int):
             raise ReviewRefused(
                 "the model did not report prompt_eval_count, so a truncated prompt cannot be"
-                " ruled out"
+                " ruled out",
+                code=outcome.PROMPT_TRUNCATED,
             )
         # The request was sized so the prompt fits in `num_ctx - reserve` by an estimate. A
         # model that read MORE than that has eaten into the room its reasoning and answer
@@ -521,7 +564,8 @@ class SizedChat:
                 f"the model read {read} prompt tokens of a {num_ctx}-token window, more than"
                 f" the {num_ctx - reserve} this request was sized for beside its"
                 f" {reserve}-token reasoning reserve: the prompt may have been truncated, so"
-                " the model may not have seen all of it"
+                " the model may not have seen all of it",
+                code=outcome.PROMPT_TRUNCATED,
             )
         message = body.get("message") or {}
         content = str(message.get("content") or "")
@@ -559,7 +603,8 @@ class SizedChat:
             raise ReviewRefused(
                 "the model did not echo both of the request's check codes (it wrote"
                 f" {str(echoed)[:80]!r}), so it may not have read the whole prompt: a prompt"
-                " cut to fit the window loses the code at one end"
+                " cut to fit the window loses the code at one end",
+                code=outcome.PROMPT_TRUNCATED,
             )
         return verdict
 
@@ -568,27 +613,38 @@ class SizedChat:
 SIZED_CHAT: SizedChatInterface = SizedChat()
 
 
-def call_ollama(
-    base_url: str,
+# How one part of a chunked review is introduced to the model, after the diff it carries.
+# Sized at its longest -- the highest part number `max_chunks` allows -- whenever a part's
+# room is computed, so no part is refused for the digits its own number takes. The files a
+# part carries are not listed here: the model reads them in the diff's own file headers,
+# and `review_parts` records them for a person.
+PART_NOTE = (
+    "\n\n[NOTE: this pull request's diff is too large for one request, so it is reviewed in"
+    " {count} parts, each on its own. This is part {index} of {count}. Review only what is"
+    " shown here and report a finding only on a line shown here: the other parts are"
+    " reviewed separately and their verdicts are combined with yours. Judge every item of"
+    " the review against this part: answer false only when this part or a supplied document"
+    " shows it broken.]"
+)
+
+
+def review_payload(
     model: str,
     diff: str,
     max_chars: int,
-    timeout: int,
     *,
-    sizer: ContextSizerInterface | None = None,
     whole: WholeReviewInterface | None = None,
     documents: Mapping[str, str] | None = None,
     cut: Sequence[str] = (),
     dropped: Sequence[str] = (),
     think: str = "",
-) -> dict:
-    """One review request. `sizer` sizes it and says whether it fits; the default is
-    `vibey_gh.fit`'s `ContextSizer`, the same rule the triage call uses. `whole` asks the
-    whole review instead of the diff half, judged against `documents` (already trimmed to
-    fit; `cut` and `dropped` name the ones that were cut short or left out). `think` is
-    Ollama's reasoning effort, sent only when set. Raises `ReviewRefused` for a diff past
-    `max_chars` on the diff half, a request that does not fit, or a reply that is not a
-    whole answer to all of it."""
+    part: tuple[int, int] | None = None,
+) -> dict[str, Any]:
+    """The one review request, built but not sent: what `call_ollama` sends, and what a
+    chunked review sizes its parts against, so the two cannot disagree about a request.
+
+    `part` is `(index, count)` for one part of a chunked review; its note follows the diff.
+    Raises `ReviewRefused` for a diff past `max_chars` on the diff half."""
     schema: Mapping[str, object]
     if whole is None:
         payload_prompt = build_prompt(diff, max_chars)
@@ -597,6 +653,8 @@ def call_ollama(
         system = whole.system_prompt()
         payload_prompt = whole.user_prompt(diff, documents or {}, cut=cut, dropped=dropped)
         schema = whole.schema()
+    if part is not None:
+        payload_prompt += PART_NOTE.format(index=part[0], count=part[1])
     payload: dict[str, Any] = {
         "model": model,
         "messages": [
@@ -614,6 +672,42 @@ def call_ollama(
     }
     if think:
         payload["think"] = think
+    return payload
+
+
+def call_ollama(
+    base_url: str,
+    model: str,
+    diff: str,
+    max_chars: int,
+    timeout: int,
+    *,
+    sizer: ContextSizerInterface | None = None,
+    whole: WholeReviewInterface | None = None,
+    documents: Mapping[str, str] | None = None,
+    cut: Sequence[str] = (),
+    dropped: Sequence[str] = (),
+    think: str = "",
+    part: tuple[int, int] | None = None,
+) -> dict:
+    """One review request. `sizer` sizes it and says whether it fits; the default is
+    `vibey_gh.fit`'s `ContextSizer`, the same rule the triage call uses. `whole` asks the
+    whole review instead of the diff half, judged against `documents` (already trimmed to
+    fit; `cut` and `dropped` name the ones that were cut short or left out). `think` is
+    Ollama's reasoning effort, sent only when set; `part` marks one part of a chunked review.
+    Raises `ReviewRefused` for a diff past `max_chars` on the diff half, a request that does
+    not fit, or a reply that is not a whole answer to all of it."""
+    payload = review_payload(
+        model,
+        diff,
+        max_chars,
+        whole=whole,
+        documents=documents,
+        cut=cut,
+        dropped=dropped,
+        think=think,
+        part=part,
+    )
     return SIZED_CHAT.ask(
         base_url,
         payload,
@@ -622,6 +716,373 @@ def call_ollama(
         what="diff",
         shown_chars=len(diff),
     )
+
+
+T = TypeVar("T")
+
+# The parts a diff is reviewed in, as the chunker hands them over.
+type Parts = Sequence[DiffPartInterface]
+
+# What a model call raises when the model could not be reached or did not answer in time.
+# `urllib.error.HTTPError` is a `URLError` too, but it never reaches here: `SizedChat.ask`
+# turns a server's answer into `ReviewRefused`, because a server that answered is reachable.
+TRANSPORT_ERRORS: tuple[type[Exception], ...] = (urllib.error.URLError, TimeoutError, OSError)
+
+
+@dataclass(frozen=True)
+class TransportRetry:
+    """One bounded retry, with backoff, for a model that could not be reached or timed out.
+
+    PR #1241's review gave no verdict because the local model "timed out" once, and a
+    human was asked to review a change the lane would have reviewed a minute later. Only
+    the transport is retried -- never a refusal, a truncated prompt or an unusable answer,
+    which would only say the same thing again. `retries` further attempts, each after
+    `backoff_seconds` doubled per attempt already made, and then the failure stands, named,
+    with the number of attempts it took.
+
+    Not `vibey_bootstrap`'s retry, which ADR-0017 would otherwise prefer: vibey-gh declares
+    no dependencies and `vibey_bootstrap` itself depends on vibey-gh, so it cannot be
+    imported here -- a gap in the dependency direction, not a preference. `sleep` is the
+    seam; `None` means `time.sleep`, looked up when called. (`TransportRetryInterface`, by
+    shape: a frozen dataclass cannot inherit a protocol's read-only properties.)
+    """
+
+    retries: int = 1
+    backoff_seconds: float = 30.0
+    sleep: Callable[[float], None] | None = None
+
+    def __post_init__(self) -> None:
+        if type(self.retries) is not int or self.retries < 0:
+            raise ValueError("retries must be a whole number, never negative")
+        if self.backoff_seconds < 0:
+            raise ValueError("backoff_seconds must not be negative")
+
+    @staticmethod
+    def code(error: BaseException) -> str:
+        """`model_timeout` for a call that ran out of time, `model_unreachable` otherwise."""
+        reason = getattr(error, "reason", None)
+        if isinstance(error, TimeoutError) or isinstance(reason, TimeoutError):
+            return outcome.MODEL_TIMEOUT
+        return outcome.MODEL_UNREACHABLE
+
+    def run(self, call: Callable[[], T]) -> tuple[T, int]:
+        """`call()`'s result and the attempts it took, or `ReviewRefused` naming the last
+        transport failure and every attempt made."""
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                return call(), attempt
+            except TRANSPORT_ERRORS as error:
+                if attempt > self.retries:
+                    raise ReviewRefused(
+                        f"local model unreachable or timed out: {error}"
+                        f" ({attempt} attempt{'s' if attempt > 1 else ''})",
+                        code=self.code(error),
+                        attempts=attempt,
+                    ) from error
+                (self.sleep or time.sleep)(self.backoff_seconds * 2 ** (attempt - 1))
+
+
+@dataclass(frozen=True)
+class DiffPart:
+    """A run of a unified diff that is reviewed whole: `text` is exact lines of the diff,
+    with a file's header repeated before each run of its hunks after the first."""
+
+    text: str
+    paths: tuple[str, ...]
+
+
+class ChunkTooLarge(ReviewRefused):
+    """One indivisible part of a diff -- a file with no hunk boundary, or one hunk with its
+    file's header -- is larger than a chunk may carry. `whole` says the diff had no boundary
+    to split at at all, so it is the diff itself that is too large."""
+
+    def __init__(self, reason: str, *, whole: bool) -> None:
+        super().__init__(reason, code=outcome.DIFF_EXCEEDS_WINDOW)
+        self.whole = whole
+
+
+_FILE_HEADER = "diff --git "
+_HUNK_HEADER = "@@"
+
+
+class DiffChunker(DiffChunkerInterface):
+    """Splits a unified diff into parts a model can review whole, by file and then by hunk.
+
+    Never by line: a hunk is the smallest unit a reviewer can judge, because its context
+    lines are what say where a change sits. A file too large for one chunk is split between
+    its hunks, its header repeated before each run so every part still names the file it is
+    about. A single hunk too large for a chunk is refused, never cut.
+    """
+
+    def sections(self, diff: str) -> list[tuple[str, str]]:
+        lines = diff.splitlines(keepends=True)
+        starts = [index for index, line in enumerate(lines) if line.startswith(_FILE_HEADER)]
+        if not starts:
+            return [("", diff)]
+        bounds = [0, *starts[1:], len(lines)]
+        return [
+            (self._path(lines[start]), "".join(lines[begin:end]))
+            for start, begin, end in zip(starts, bounds, bounds[1:], strict=False)
+        ]
+
+    @staticmethod
+    def _path(header: str) -> str:
+        # `diff --git a/<path> b/<path>`: the new path, after the last " b/".
+        _, marker, after = header.rstrip("\n").rpartition(" b/")
+        return after if marker else header[len(_FILE_HEADER) :].strip()
+
+    def parts(self, diff: str, budget: int) -> list[DiffPart]:
+        sections = self.sections(diff)
+        found: list[DiffPart] = []
+        for path, text in sections:
+            paths = (path,) if path else ()
+            if len(text) <= budget:
+                found.append(DiffPart(text, paths))
+                continue
+            lines = text.splitlines(keepends=True)
+            hunks = [index for index, line in enumerate(lines) if line.startswith(_HUNK_HEADER)]
+            where = path or "the diff"
+            if not hunks:
+                raise ChunkTooLarge(
+                    f"{where} ({len(text)} characters) has no hunk boundary to split at and is"
+                    f" larger than one part may carry ({budget} characters)",
+                    whole=len(sections) == 1,
+                )
+            header = "".join(lines[: hunks[0]])
+            bounds = [*hunks, len(lines)]
+            run = ""
+            for begin, end in itertools.pairwise(bounds):
+                hunk = "".join(lines[begin:end])
+                if len(header) + len(hunk) > budget:
+                    raise ChunkTooLarge(
+                        f"one hunk of {where} ({len(header) + len(hunk)} characters with its"
+                        f" file header) is larger than one part may carry ({budget}"
+                        " characters), and a hunk is never cut",
+                        whole=False,
+                    )
+                if run and len(header) + len(run) + len(hunk) > budget:
+                    found.append(DiffPart(header + run, paths))
+                    run = ""
+                run += hunk
+            found.append(DiffPart(header + run, paths))
+        return found
+
+    def chunks(self, diff: str, budget: int) -> list[DiffPart]:
+        packed: list[DiffPart] = []
+        for part in self.parts(diff, budget):
+            if packed and len(packed[-1].text) + len(part.text) <= budget:
+                last = packed[-1]
+                paths = last.paths + tuple(path for path in part.paths if path not in last.paths)
+                packed[-1] = DiffPart(last.text + part.text, paths)
+            else:
+                packed.append(part)
+        return packed
+
+
+DIFF_CHUNKER: DiffChunkerInterface = DiffChunker()
+
+
+@dataclass(frozen=True)
+class ReviewReport:
+    """What one review did, for its outcome record: how many parts, how many attempts."""
+
+    parts: int = 1
+    attempts: int = 0
+
+
+@dataclass(frozen=True)
+class SovereignReview:
+    """One review of one diff: in a single request when it fits, in bounded parts when not.
+
+    #1238's review gave no verdict -- "the diff (~57195 tokens) exceeds the sovereign
+    model's window (65536 tokens)" -- and so did every other large pull request: each went
+    to a human. A diff that does not fit one request is now reviewed in parts
+    (`DiffChunker`), each sent through the same `SizedChat` -- the server told to refuse
+    rather than cut, both check codes echoed per part, a part too large alone refused -- and
+    composed conservatively (`compose`): any finding or failed judgment in any part fails
+    the whole, and a pass needs every part to pass.
+
+    Bounded: at most `max_chunks` parts. With `max_chunks` 1 nothing is chunked and the
+    review is exactly the single request it always was. A whole review (`whole`) chunks only
+    when every declared document can be shown in full beside every part; when the documents
+    are cut by their own declared limit, or leave no room, it is the single request with
+    its documents trimmed, exactly as before -- a verdict that then claims the diff half
+    alone and asks a human for the rest.
+    """
+
+    base_url: str
+    model: str
+    max_chars: int
+    timeout: int
+    sizer: ContextSizerInterface
+    max_chunks: int = 1
+    retry: TransportRetryInterface = field(default_factory=TransportRetry)
+    whole: WholeReviewInterface | None = None
+    documents: Mapping[str, str] = field(default_factory=dict)
+    max_document_chars: int = 120000
+    think: str = ""
+    chunker: DiffChunkerInterface = field(default_factory=lambda: DIFF_CHUNKER)
+
+    def room(self, documents: Mapping[str, str], *, part: bool) -> int:
+        """How many characters of diff one request can carry beside everything else it
+        sends: the instructions, the schema, the check codes, `documents` and -- for a part
+        -- the part note at its longest. The diff half is never shown more than `max_chars`."""
+        payload = review_payload(
+            self.model,
+            "",
+            self.max_chars,
+            whole=self.whole,
+            documents=documents,
+            think=self.think,
+            part=(self.max_chunks, self.max_chunks) if part else None,
+        )
+        room = self.sizer.room_chars(SIZED_CHAT.size(payload))
+        return room if self.whole is not None else min(room, self.max_chars)
+
+    def run(self, diff: str) -> tuple[dict[str, Any], dict[str, Any], ReviewReport]:
+        """`(verdict, shown, report)`: `shown` says what a whole review was shown -- `kept`,
+        `cut` and `dropped` -- for the verdict's labelling."""
+        declared: Mapping[str, str] = {}
+        documents_whole = True
+        if self.whole is not None:
+            declared, cut, dropped = self.whole.trim(self.documents, self.max_document_chars)
+            documents_whole = not cut and not dropped
+        if len(diff) > self.room(declared, part=False) and self.max_chunks > 1:
+            planned = self.plan(diff, declared) if documents_whole else None
+            if planned is not None:
+                verdict, report = self._chunked(planned, declared)
+                return verdict, {"kept": dict(declared), "cut": [], "dropped": []}, report
+        kept: dict[str, str] = {}
+        cut, dropped = [], []
+        if self.whole is not None:
+            kept, cut, dropped = self.whole.fit(
+                diff, self.documents, self.max_document_chars, self.sizer
+            )
+        verdict, attempts = self.retry.run(
+            functools.partial(
+                call_ollama,
+                self.base_url,
+                self.model,
+                diff,
+                self.max_chars,
+                self.timeout,
+                sizer=self.sizer,
+                whole=self.whole,
+                documents=kept,
+                cut=cut,
+                dropped=dropped,
+                think=self.think,
+            )
+        )
+        return verdict, {"kept": kept, "cut": cut, "dropped": dropped}, ReviewReport(1, attempts)
+
+    def plan(self, diff: str, documents: Mapping[str, str]) -> Parts | None:
+        """The parts to review, or None when chunking cannot help and the single request --
+        refused in its own words, or with its documents trimmed and said so -- is the more
+        honest answer. Raises `ReviewRefused` when neither can review the diff."""
+        budget = self.room(documents, part=True)
+        try:
+            if budget < 1:
+                raise ChunkTooLarge(
+                    "the instructions and the declared documents leave no room for any of the"
+                    f" diff in a {self.sizer.window}-token window",
+                    whole=True,
+                )
+            parts = self.chunker.chunks(diff, budget)
+            if len(parts) > self.max_chunks:
+                raise ReviewRefused(
+                    f"the diff ({len(diff)} characters) needs {len(parts)} parts of at most"
+                    f" {budget} characters to be reviewed whole, and max_chunks allows"
+                    f" {self.max_chunks}",
+                    code=outcome.CHUNK_BUDGET_EXCEEDED,
+                )
+        except ReviewRefused as refused:
+            # A diff with nothing to split at is refused by the single request itself, in
+            # the words it has always used; a whole review whose diff fits alone is better
+            # answered by that request, which says which documents it left out.
+            if getattr(refused, "whole", False) or self._fits_alone(diff):
+                return None
+            raise
+        return parts
+
+    def _fits_alone(self, diff: str) -> bool:
+        return self.whole is not None and len(diff) <= self.room({}, part=False)
+
+    def _chunked(
+        self, parts: Sequence[DiffPartInterface], documents: Mapping[str, str]
+    ) -> tuple[dict[str, Any], ReviewReport]:
+        answers: list[dict[str, Any]] = []
+        attempts = 0
+        count = len(parts)
+        for index, part in enumerate(parts, 1):
+            ask = functools.partial(
+                call_ollama,
+                self.base_url,
+                self.model,
+                part.text,
+                self.max_chars,
+                self.timeout,
+                sizer=self.sizer,
+                whole=self.whole,
+                documents=documents,
+                think=self.think,
+                part=(index, count),
+            )
+            try:
+                answer, took = self.retry.run(ask)
+            except ReviewRefused as refused:
+                where = ", ".join(part.paths) or "the diff"
+                raise ReviewRefused(
+                    f"part {index} of {count} ({where}): {refused}",
+                    code=refused.code,
+                    parts=count,
+                    attempts=attempts + max(refused.attempts, 1),
+                ) from refused
+            attempts += took
+            answers.append(answer)
+        return self.compose(parts, answers), ReviewReport(parts=count, attempts=attempts)
+
+    def compose(
+        self, parts: Sequence[DiffPartInterface], answers: Sequence[Mapping[str, Any]]
+    ) -> dict[str, Any]:
+        """One verdict from every part's, conservatively: a boolean holds only when it is
+        exactly `true` in every part, lists are joined in order, and each part's text is kept
+        under its own number. So any finding, and any judgment any part failed, fails the
+        whole. `review_parts` records what each part carried and answered."""
+        schema = self.whole.schema() if self.whole is not None else REVIEW_SCHEMA
+        properties = schema.get("properties")
+        count = len(parts)
+        composed: dict[str, Any] = {}
+        for name, shape in (properties if isinstance(properties, Mapping) else {}).items():
+            kind = shape.get("type") if isinstance(shape, Mapping) else None
+            if kind == "boolean":
+                composed[name] = all(answer.get(name) is True for answer in answers)
+            elif kind == "array":
+                composed[name] = [
+                    item
+                    for answer in answers
+                    if isinstance(answer.get(name), list)
+                    for item in answer[name]
+                ]
+            else:
+                composed[name] = " ".join(
+                    f"(part {index} of {count}) {str(answer.get(name, '')).strip()}"
+                    for index, answer in enumerate(answers, 1)
+                )
+        composed["review_parts"] = [
+            {
+                "part": index,
+                "of": count,
+                "paths": list(part.paths),
+                "chars": len(part.text),
+                "passed": answer.get("pass") is True,
+                "findings": len(answer.get("findings") or []),
+            }
+            for index, (part, answer) in enumerate(zip(parts, answers, strict=True), 1)
+        ]
+        return composed
 
 
 def _declare_window(parser: argparse.ArgumentParser, defaults: Any) -> None:
@@ -670,7 +1131,7 @@ def _sizer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Context
 
 def review(argv: list[str] | None = None) -> int:
     """Entry point for `vibey-gh local-review`."""
-    from vibey_gh.config import load_config
+    from vibey_gh.config import PrAutomationFallbackConfig, load_config
 
     defaults = load_config().pr_automation.fallback
     parser = argparse.ArgumentParser(description="Review a diff with a local model.")
@@ -712,6 +1173,33 @@ def review(argv: list[str] | None = None) -> int:
             " first when they do not all fit"
         ),
     )
+    parser.add_argument(
+        "--max-chunks",
+        type=int,
+        default=defaults.max_chunks,
+        help="the most parts a diff too large for one request is reviewed in; 1 never splits",
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=defaults.retries,
+        help="further attempts after a model that was unreachable or timed out",
+    )
+    parser.add_argument(
+        "--retry-backoff-seconds",
+        type=int,
+        default=defaults.retry_backoff_seconds,
+        help="the wait before the first retry, doubled before each one after it",
+    )
+    parser.add_argument(
+        "--head-sha",
+        default="",
+        help="the exact head the diff is of, stamped into the verdict as reviewed_head_sha",
+    )
+    parser.add_argument(
+        "--outcome",
+        help="write the outcome record -- a code from vibey_gh.review_outcome -- to this file",
+    )
     _declare_window(parser, defaults)
     args = parser.parse_args(argv)
     whole = args.scope == "full"
@@ -719,6 +1207,38 @@ def review(argv: list[str] | None = None) -> int:
         # A whole review exists only because no paid review is declared, so there is no
         # paid review for it to stand in for.
         parser.error("--scope full is the sovereign lane's whole review; it is never a fallback")
+    try:
+        # Held to the configuration's own rules, by building it, so they are written once.
+        dataclasses.replace(
+            PrAutomationFallbackConfig(),
+            enabled=True,
+            max_chunks=args.max_chunks,
+            retries=args.retries,
+            retry_backoff_seconds=args.retry_backoff_seconds,
+        )
+    except ValueError as error:
+        parser.error(f"--max-chunks, --retries or --retry-backoff-seconds: {error}")
+
+    def said(code: str, reason: str, report: ReviewReport, *, status: int) -> int:
+        # The same reason, twice: in words on standard error for the job log and the gate,
+        # and as a code from the closed vocabulary in the outcome record, for a program.
+        if status:
+            print(reason, file=sys.stderr)
+        if args.outcome:
+            record = {
+                "schema": outcome.LOCAL_SCHEMA,
+                "code": code,
+                "reason": reason,
+                "scope": args.scope,
+                "role": args.role,
+                "head_sha": args.head_sha,
+                "parts": report.parts,
+                "attempts": report.attempts,
+            }
+            pathlib.Path(args.outcome).write_text(
+                json.dumps(record, indent=2) + "\n", encoding="utf-8"
+            )
+        return status
 
     if args.diff:
         diff = pathlib.Path(args.diff).read_text(encoding="utf-8")
@@ -727,47 +1247,51 @@ def review(argv: list[str] | None = None) -> int:
     if not diff.strip():
         # An empty diff is an infrastructure failure, not an approvable change. Fail
         # closed: the gate stays red and a human looks, rather than a vacuous pass.
-        print("refusing to review an empty diff", file=sys.stderr)
-        return 1
+        return said(
+            outcome.EMPTY_DIFF, "refusing to review an empty diff", ReviewReport(0, 0), status=1
+        )
 
-    sizer = _sizer(args, parser)
     documents = (
         WHOLE_REVIEW.documents(pathlib.Path(args.context_dir), args.context_paths.split())
         if whole and args.context_dir
         else {}
     )
     # The optional documents give way to the window, the last declared first; the diff
-    # never does. What was cut or left out is said in the verdict.
-    kept, cut, dropped = (
-        WHOLE_REVIEW.fit(diff, documents, args.max_document_chars, sizer) if whole else ({}, [], [])
+    # never does -- it is reviewed whole, in one request or in bounded parts, or refused.
+    # What was cut or left out is said in the verdict.
+    sovereign = SovereignReview(
+        args.base_url,
+        args.model,
+        args.max_chars,
+        args.timeout,
+        _sizer(args, parser),
+        max_chunks=args.max_chunks,
+        retry=TransportRetry(retries=args.retries, backoff_seconds=args.retry_backoff_seconds),
+        whole=WHOLE_REVIEW if whole else None,
+        documents=documents,
+        max_document_chars=args.max_document_chars,
+        think=args.think,
     )
     try:
-        verdict = call_ollama(
-            args.base_url,
-            args.model,
-            diff,
-            args.max_chars,
-            args.timeout,
-            sizer=sizer,
-            whole=WHOLE_REVIEW if whole else None,
-            documents=kept,
-            cut=cut,
-            dropped=dropped,
-            think=args.think,
-        )
+        verdict, shown, report = sovereign.run(diff)
     except ReviewRefused as refused:
-        print(refused, file=sys.stderr)
-        return 1
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
-        print(f"local model unreachable or timed out: {error}", file=sys.stderr)
-        return 1
+        report = ReviewReport(refused.parts, refused.attempts)
+        return said(refused.code, str(refused), report, status=1)
     except (KeyError, TypeError, json.JSONDecodeError) as error:
-        print(f"local model returned an unusable response: {error}", file=sys.stderr)
-        return 1
+        return said(
+            outcome.ANSWER_UNUSABLE,
+            f"local model returned an unusable response: {error}",
+            ReviewReport(0, 0),
+            status=1,
+        )
 
     if whole:
         verdict = WHOLE_REVIEW.finish(
-            verdict, model=args.model, documents=kept, cut=cut, dropped=dropped
+            verdict,
+            model=args.model,
+            documents=shown["kept"],
+            cut=shown["cut"],
+            dropped=shown["dropped"],
         )
     else:
         lane = "SOVEREIGN LANE" if args.role == "sovereign" else "LOCAL FALLBACK"
@@ -779,10 +1303,15 @@ def review(argv: list[str] | None = None) -> int:
         # Its documentation judgments above are placeholders; this is what says so to the
         # composer, which refuses to read them as a whole review.
         verdict[REVIEW_CONTRACT.scope_field] = [DIFF_GROUNDABLE]
+    if args.head_sha:
+        # Every part was cut from this one diff, so every part was reviewed at this head;
+        # the composer refuses a verdict stamped with any other.
+        verdict[REVIEWED_HEAD_FIELD] = args.head_sha
 
     json.dump(verdict, sys.stdout, indent=2)
     sys.stdout.write("\n")
-    return 0
+    parts = f"{report.parts} parts" if report.parts > 1 else "one request"
+    return said(outcome.REVIEWED, f"reviewed in {parts}", report, status=0)
 
 
 TRIAGE_SCHEMA = {

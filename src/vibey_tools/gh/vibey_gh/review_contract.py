@@ -60,6 +60,11 @@ from dataclasses import dataclass
 DIFF_GROUNDABLE = "diff-groundable"
 REQUIRES_WIDER_CONTEXT = "requires-wider-context"
 
+# The exact head a local verdict was reviewed at, stamped by `vibey-gh local-review
+# --head-sha`. A verdict carrying it is composed only for that head: a chunked review's
+# parts were all cut from one diff, and a pass must be a pass on the head being gated.
+REVIEWED_HEAD_FIELD = "reviewed_head_sha"
+
 # What a reviewer can answer from the diff in front of it: a verdict, a description of the
 # change, and findings that each point at an added or modified line.
 DEFAULT_DIFF_GROUNDABLE_FIELDS = ("pass", "summary", "findings")

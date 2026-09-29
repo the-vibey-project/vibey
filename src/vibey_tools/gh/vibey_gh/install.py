@@ -318,6 +318,13 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     )
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_CHARS_PER_TOKEN__", str(fallback.chars_per_token))
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_THINK__", fallback.think)
+    # How a diff too large for one request is reviewed in parts, and how a transport
+    # failure is retried: bounds the lane declares rather than numbers the step compiles in.
+    wanted = wanted.replace("__VIBEY_GH_FALLBACK_MAX_CHUNKS__", str(fallback.max_chunks))
+    wanted = wanted.replace("__VIBEY_GH_FALLBACK_RETRIES__", str(fallback.retries))
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_RETRY_BACKOFF_SECONDS__", str(fallback.retry_backoff_seconds)
+    )
     wanted = wanted.replace(
         "__VIBEY_GH_SANITIZED_PROGRESS__",
         "true" if cfg.pr_automation.observability.sanitized_progress else "false",

@@ -17,6 +17,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **review:** the PR review gate now reaches a verdict at scale. A diff too large for one
+  request to the sovereign model is reviewed whole in bounded parts (`[pr_automation.fallback]
+  max_chunks`, default 6) -- split by file and then by hunk, each part held to the same
+  guards, composed so any finding or failure in any part fails the whole and a pass needs
+  every part to pass at the exact head -- instead of going to a human (#1238). A model that
+  was unreachable or timed out is retried (`retries`, default 1, after
+  `retry_backoff_seconds`, default 30) before a human is asked (#1241). Every lane decision
+  and every no-verdict reason is recorded as a code from a closed vocabulary
+  (`vibey_gh.review_outcome`) in the gate's check run and a `pr-review-outcome` artifact,
+  and the evaluation leaves a `pr-review-lane` record on every run; the new read-only
+  `vibey-gh review-outcomes` tabulates them over the last runs.
 * **gates:** "a person was told" is evidence, never assumed. Every notice about a human
   gate -- notice 0 when it is raised, reminder 1, 2, ... while it waits -- now ends in one
   ledger event: `GateNotified` when a channel took it, or `GateNoticeUndeliverable` with the

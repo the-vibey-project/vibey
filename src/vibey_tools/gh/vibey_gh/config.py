@@ -562,6 +562,20 @@ class PrAutomationFallbackConfig:
     # nothing and keep the model's default. Empty by default: on #1090 "low" returned the
     # same verdict in an eighth of the tokens, but one sample is not a fidelity study.
     think: str = ""
+    # The most parts a diff too large for one request is reviewed in. #1238's diff (~57,195
+    # tokens) did not fit a 65,536-token window beside its instructions and the reasoning
+    # reserve, and every pull request that large went to a human. Split by file and then by
+    # hunk, each part is its own request held to the same guards, and a pass needs every
+    # part to pass. Past this many parts the lane refuses and a human is asked, with the
+    # reason; 1 never splits. Bounds the time a review may take: at most this many requests,
+    # each up to `timeout_seconds`, each retried as below.
+    max_chunks: int = 6
+    # Further attempts after the model could not be reached or did not answer in time --
+    # never after a refusal or an answer that could not be read. #1241 went to a human on
+    # one "timed out". 0 never retries.
+    retries: int = 1
+    # The wait before the first retry, doubled before each one after it.
+    retry_backoff_seconds: int = 30
 
     def __post_init__(self) -> None:
         _unique_nonempty("pr_automation.fallback.context_paths", self.context_paths)
@@ -631,6 +645,20 @@ class PrAutomationFallbackConfig:
         if self.think not in ("", "low", "medium", "high"):
             raise ValueError(
                 f"pr_automation.fallback.think must be empty, low, medium or high: {self.think!r}"
+            )
+        # `type(...) is int` throughout: TOML hands a float or a bool through unchanged.
+        if type(self.max_chunks) is not int or not 1 <= self.max_chunks <= 64:
+            raise ValueError(
+                "pr_automation.fallback.max_chunks must be a whole number from 1 to 64"
+            )
+        if type(self.retries) is not int or not 0 <= self.retries <= 5:
+            raise ValueError("pr_automation.fallback.retries must be a whole number from 0 to 5")
+        if (
+            type(self.retry_backoff_seconds) is not int
+            or not 0 <= self.retry_backoff_seconds <= 600
+        ):
+            raise ValueError(
+                "pr_automation.fallback.retry_backoff_seconds must be a whole number from 0 to 600"
             )
 
 
@@ -2732,6 +2760,9 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             reasoning_reserve_tokens=fallback.get("reasoning_reserve_tokens", 8192),
             chars_per_token=fallback.get("chars_per_token", 3),
             think=fallback.get("think", ""),
+            max_chunks=fallback.get("max_chunks", 6),
+            retries=fallback.get("retries", 1),
+            retry_backoff_seconds=fallback.get("retry_backoff_seconds", 30),
         ),
     )
     return GhConfig(

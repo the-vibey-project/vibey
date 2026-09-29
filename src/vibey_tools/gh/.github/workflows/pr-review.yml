@@ -77,6 +77,11 @@ jobs:
       sovereign_whole: ${{ steps.lane.outputs.sovereign_whole }}
       human_reason: ${{ steps.lane.outputs.human_reason }}
       human_retry: ${{ steps.lane.outputs.human_retry }}
+      # The same decision in `vibey_gh.review_outcome`'s closed vocabulary, for the gate's
+      # record: who reviews this head, and -- when the sovereign lane was not offered --
+      # why not, as a code a program can count rather than a sentence it cannot.
+      lane_decision: ${{ steps.lane.outputs.lane_decision }}
+      lane_code: ${{ steps.lane.outputs.lane_code }}
     steps:
       - name: Validate diagnostic output policy
         if: inputs.full_claude_output == true
@@ -249,21 +254,46 @@ jobs:
           whole=false
           human_reason=""
           human_retry=false
+          # Why the sovereign lane was not offered, coded (vibey_gh.review_outcome): empty
+          # when it was. On the declared path the same order the offer above tests.
+          lane_code=""
+          if [ "$ENABLED" != true ]; then
+            lane_code=lane_disabled
+          elif [ "$READY" != true ]; then
+            lane_code=lane_not_ready
+          elif [ "$lane" != true ]; then
+            lane_code=fork_head
+          fi
           if [ "$PAID_REVIEW" != true ]; then
             carries=false
             if [ "$HEAD_REPO" != "$REPO" ]; then
               human_reason="the head is in a fork (${HEAD_REPO}), which never reaches the self-hosted sovereign runner"
+              lane_code=fork_head
             elif [ "$TRUSTED" != true ]; then
               human_reason="the author is not a trusted author of this repository, and the sovereign lane reviews trusted authors only"
+              lane_code=untrusted_author
             elif [ "$ENABLED" != true ]; then
               human_reason="the sovereign lane is switched off ([pr_automation.fallback] enabled = false)"
+              lane_code=lane_disabled
             elif [ "$READY" != true ]; then
               human_reason="the sovereign lane is not ready: ${PROBE_REASON:-its readiness probe gave no answer}"
               human_retry=true
+              lane_code=lane_not_ready
             else
               whole=true
+              lane_code=""
             fi
             lane=$whole
+          fi
+          if [ "$PAID_REVIEW" != true ]; then
+            decision=none
+            [ "$whole" != true ] || decision=sovereign_whole
+          elif [ "$carries" = true ]; then
+            decision=sovereign_carries
+          elif [ "$lane" = true ]; then
+            decision=sovereign_reserve
+          else
+            decision=paid_only
           fi
           {
             echo "sovereign_lane=$lane"
@@ -271,6 +301,8 @@ jobs:
             echo "sovereign_whole=$whole"
             echo "human_reason=$human_reason"
             echo "human_retry=$human_retry"
+            echo "lane_decision=$decision"
+            echo "lane_code=$lane_code"
           } >> "$GITHUB_OUTPUT"
           echo "sovereign lane: runs=$lane carries_diff_half=$carries whole_review=$whole"
           if [ -n "$human_reason" ]; then
@@ -295,6 +327,56 @@ jobs:
             echo "::warning::${said}"
             echo "### ${said}" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      # The evaluation's record (`vibey_gh.review_outcome`), left by every run: it is all
+      # there is when the gate never runs -- scans still pending, a merge conflict, a run
+      # cancelled first -- and the gate's own record supersedes it when the gate does.
+      # `vibey-gh review-outcomes` tabulates both.
+      - name: Record the lane decision
+        id: lane_record
+        if: always()
+        env:
+          PR: ${{ steps.resolve.outputs.pr }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          STATE: ${{ steps.evaluate.outputs.state }}
+          PAID_REVIEW: false
+          PAID_CONFLICT_RESOLUTION: false
+          LANE_DECISION: ${{ steps.lane.outputs.lane_decision }}
+          LANE_CODE: ${{ steps.lane.outputs.lane_code }}
+          HUMAN_REASON: ${{ steps.lane.outputs.human_reason }}
+          REASON: ${{ steps.evaluate.outputs.reason }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PR" ]; then
+            code=no_pull_request
+          elif [ -z "$STATE" ]; then
+            code=job_failed
+          elif [ "$STATE" = pending ]; then
+            code=scans_pending
+          elif [ "$STATE" = conflict ]; then
+            code=merge_conflict
+            [ "$PAID_CONFLICT_RESOLUTION" = true ] || code=paid_lane_declared_off
+          else
+            code=gate_not_reached
+          fi
+          mkdir -p "${RUNNER_TEMP}/review-lane"
+          jq -n \
+            --arg schema "vibey-gh.review-lane/1" --arg pr "$PR" --arg head_sha "$HEAD_SHA" \
+            --arg run_id "$GITHUB_RUN_ID" --arg state "$STATE" --arg paid "$PAID_REVIEW" \
+            --arg lane "${LANE_DECISION:-none}" --arg lane_code "$LANE_CODE" --arg code "$code" \
+            --arg reason "${HUMAN_REASON:-$REASON}" \
+            '{schema: $schema, source: "evaluate", pr: $pr, head_sha: $head_sha,
+              run_id: $run_id, state: $state, paid_review: ($paid == "true"), lane: $lane,
+              lane_code: $lane_code, code: $code, verdict: "none", reason: $reason}' \
+            > "${RUNNER_TEMP}/review-lane/record.json"
+          cat "${RUNNER_TEMP}/review-lane/record.json"
+      - name: Archive the lane decision
+        if: always() && steps.lane_record.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pr-review-lane
+          path: ${{ runner.temp }}/review-lane/record.json
+          if-no-files-found: ignore
 
   review-sovereign:
     name: Sovereign diff review
@@ -342,6 +424,10 @@ jobs:
       # Why there is no verdict, when there is none: an unreachable model, an unusable
       # answer, a diff or a document that could not be fetched. Named, never inferred.
       reason: ${{ steps.why.outputs.reason }}
+      # The same outcome as a code from `vibey_gh.review_outcome` -- `reviewed`, or why
+      # not -- and how many parts a diff too large for one request was reviewed in.
+      code: ${{ steps.coded.outputs.code }}
+      parts: ${{ steps.result.outputs.parts }}
     steps:
       - name: Check out trusted automation
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -381,9 +467,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ needs.evaluate.outputs.pr }}
+          HEAD_SHA: ${{ needs.evaluate.outputs.head_sha }}
         run: |
           set -euo pipefail
           if gh pr diff "$PR" --repo "$REPO" > "${RUNNER_TEMP}/pr.diff" 2>"${RUNNER_TEMP}/diff-err"; then
+            # `gh pr diff` answers for whatever the head is NOW. A verdict -- every part of a
+            # chunked one -- must be about the head that was evaluated, so a head that moved
+            # while the diff was fetched gives no verdict; the new head is evaluated anew.
+            now=$(gh pr view "$PR" --repo "$REPO" --json headRefOid -q .headRefOid)
+            if [ "$now" != "$HEAD_SHA" ]; then
+              echo "code=head_moved" >> "$GITHUB_OUTPUT"
+              echo "::error::the head moved from ${HEAD_SHA} to ${now} while its diff was fetched"
+              exit 1
+            fi
             exit 0
           fi
           # GitHub's diff API refuses pull requests beyond roughly 300 files, which is
@@ -394,7 +490,8 @@ jobs:
           # --max-chars still caps what actually reaches the model.
           echo "gh pr diff failed ($(head -c 120 "${RUNNER_TEMP}/diff-err")); reconstructing locally"
           base_sha=$(gh pr view "$PR" --repo "$REPO" --json baseRefOid -q .baseRefOid)
-          head_sha=$(gh pr view "$PR" --repo "$REPO" --json headRefOid -q .headRefOid)
+          # The evaluated head, never whatever the head is now: the diff is of that head.
+          head_sha="$HEAD_SHA"
           git -C automation fetch --quiet origin "$base_sha" "$head_sha"
           if ! merge_base=$(git -C automation merge-base "$base_sha" "$head_sha" 2>/dev/null); then
             # The trusted checkout is shallow; deepen until the histories connect.
@@ -447,6 +544,7 @@ jobs:
           # The declared order of the documents: when they do not all fit, the last gives
           # way first, and the verdict then claims the diff half alone.
           PATHS: "README.md docs/index.md"
+          HEAD_SHA: ${{ needs.evaluate.outputs.head_sha }}
         run: |
           set -euo pipefail
           # Fail closed. An unreachable model or an unusable response must leave no
@@ -459,6 +557,13 @@ jobs:
           # refused rather than sent, and one sent anyway asks Ollama to refuse it too:
           # left to its defaults Ollama cuts an oversized prompt to about half the window,
           # and a model that never read the whole diff must never pass it.
+          #
+          # A diff too large for one request is reviewed in at most `max_chunks` parts, each
+          # held to the same guards, and a pass needs every part to pass at this exact head.
+          # A model that could not be reached or timed out is retried `retries` times after
+          # a doubling backoff. Whatever happens is also written as a code to the outcome
+          # record, so why a review gave no verdict can be counted, not only read.
+          rm -f "${RUNNER_TEMP}/outcome.json"
           if ! vibey-gh local-review \
                 --diff "${RUNNER_TEMP}/pr.diff" \
                 --model 'gpt-oss:20b' \
@@ -470,6 +575,11 @@ jobs:
                 --reasoning-reserve 8192 \
                 --chars-per-token 3 \
                 --think '' \
+                --max-chunks 6 \
+                --retries 1 \
+                --retry-backoff-seconds 30 \
+                --head-sha "$HEAD_SHA" \
+                --outcome "${RUNNER_TEMP}/outcome.json" \
                 --role "$ROLE" \
                 ${SCOPE:+--scope "$SCOPE" --context-dir "${RUNNER_TEMP}/context" --context-paths "$PATHS"} \
                 > "${RUNNER_TEMP}/verdict.json" 2> "${RUNNER_TEMP}/local-review.err"; then
@@ -477,6 +587,8 @@ jobs:
             reason=$(grep -v '^[[:space:]]*$' "${RUNNER_TEMP}/local-review.err" | tail -n 1 \
               | tr -d '\r' | cut -c1-300) || reason=""
             echo "reason=${reason:-local-review exited without saying why}" >> "$GITHUB_OUTPUT"
+            code=$(jq -r '.code // empty' "${RUNNER_TEMP}/outcome.json" 2>/dev/null) || code=""
+            echo "code=${code:-unknown}" >> "$GITHUB_OUTPUT"
             echo "::warning::the sovereign lane produced no verdict: ${reason:-no reason given}"
             exit 1
           fi
@@ -491,6 +603,8 @@ jobs:
             echo "findings=$(jq -r '(.findings // []) | length' "${RUNNER_TEMP}/verdict.json")"
             echo "verdict=$(jq -c . "${RUNNER_TEMP}/verdict.json")"
             echo "model=gpt-oss:20b"
+            echo "code=reviewed"
+            echo "parts=$(jq -r '.parts // 1' "${RUNNER_TEMP}/outcome.json" 2>/dev/null || echo 1)"
           } >> "$GITHUB_OUTPUT"
       # One reason, whichever step it was that failed, so "no verdict" is never all the
       # gate can say.
@@ -500,29 +614,52 @@ jobs:
         env:
           INSTALLED: ${{ steps.install.outcome }}
           DIFF: ${{ steps.diff.outcome }}
+          DIFF_CODE: ${{ steps.diff.outputs.code }}
           CONTEXT: ${{ steps.context.outcome }}
           SAID: ${{ steps.result.outputs.reason }}
+          SAID_CODE: ${{ steps.result.outputs.code }}
         run: |
           set -euo pipefail
           if [ -n "$SAID" ]; then
             reason="$SAID"
+            code="${SAID_CODE:-unknown}"
           elif [ "$INSTALLED" = failure ]; then
             reason="the tooling could not be installed on the self-hosted runner"
+            code=tooling_unavailable
+          elif [ "$DIFF" = failure ] && [ "$DIFF_CODE" = head_moved ]; then
+            reason="the head moved while its diff was fetched; the new head is evaluated anew"
+            code=head_moved
           elif [ "$DIFF" = failure ]; then
             reason="the exact-head diff could not be fetched"
+            code=diff_unavailable
           elif [ "$CONTEXT" = failure ]; then
             reason="the documents the whole review judges could not be fetched at the exact head"
+            code=documents_unavailable
           else
             reason="the job failed before the local model returned a verdict"
+            code=job_failed
           fi
           echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+          echo "code=${code}" >> "$GITHUB_OUTPUT"
           echo "::error::the sovereign lane produced no verdict: ${reason}"
+      # One code, whichever way the job went: `reviewed`, or the reason there is no verdict.
+      - name: Name the outcome in the closed vocabulary
+        id: coded
+        if: always()
+        env:
+          WHY: ${{ steps.why.outputs.code }}
+          RESULT: ${{ steps.result.outputs.code }}
+        run: |
+          set -euo pipefail
+          echo "code=${WHY:-${RESULT:-job_failed}}" >> "$GITHUB_OUTPUT"
       - name: Archive the sovereign verdict
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pr-review-sovereign-${{ needs.evaluate.outputs.pr }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/verdict.json
+          path: |
+            ${{ runner.temp }}/verdict.json
+            ${{ runner.temp }}/outcome.json
           if-no-files-found: ignore
 
   review:
@@ -1724,11 +1861,25 @@ jobs:
           WHOLE_PASSED: ${{ needs.record-sovereign.outputs.passed }}
           WHOLE_FINDINGS: ${{ needs.record-sovereign.outputs.findings }}
           WHOLE_RESULT: ${{ needs.record-sovereign.result }}
+          LANE_DECISION: ${{ needs.evaluate.outputs.lane_decision }}
+          LANE_CODE: ${{ needs.evaluate.outputs.lane_code }}
+          SOVEREIGN_CODE: ${{ needs.review-sovereign.outputs.code }}
+          SOVEREIGN_PARTS: ${{ needs.review-sovereign.outputs.parts }}
         run: |
           set -euo pipefail
           conclusion=failure
           title="PR review: ${STATE}"
           summary="${REASON}."
+          # The outcome, coded (`vibey_gh.review_outcome`): every branch below says why
+          # there is a verdict or why there is none, and the record written after them
+          # carries it -- into the check run and the `pr-review-outcome` artifact.
+          code=unknown
+          verdict=none
+          case "$STATE" in
+            blocked) code=blocked ;;
+            repair) code=paid_lane_declared_off ;;
+          esac
+          [ "$STATE" != repair ] || [ "$PAID_REPAIR" != true ] || code=scans_failing
           # A paid call the API refused says so, in its own words, wherever it is read.
           review_said="review job: ${REVIEW_RESULT}"
           [ -z "$REVIEW_REFUSAL" ] || review_said="$REVIEW_REFUSAL"
@@ -1760,24 +1911,33 @@ jobs:
             # none, the gate says a human is needed and why -- never that a review passed.
             declared="(no paid review is declared, 8.b)"
             if [ "$SOVEREIGN_WHOLE" != true ]; then
+              code="${LANE_CODE:-unknown}"
               title="PR review: needs a human review"
               [ "$HUMAN_RETRY" != true ] || title="PR review: review incomplete (needs a human review)"
               summary="Scans passed for this exact head, but it needs a human review: ${HUMAN_REASON:-the sovereign lane was not offered} ${declared}."
             elif [ "$WHOLE_PASSED" = true ]; then
               conclusion=success
+              code=reviewed
+              verdict=pass
               title="PR review: gate (sovereign lane, whole review)"
               summary="Scans passed for this exact head, and the SOVEREIGN lane, a local model (${SOVEREIGN_MODEL}) on the operator's own runner, answered the whole review -- the diff and the documentation-contract judgments -- and found nothing blocking. No paid review is declared (8.b), so no paid model was asked. It judged the documentation contract from the diff and the documents the repository declares, not a repository-wide audit; its verdict names the documents it saw, in the PR automation state comment."
             elif [ "$WHOLE_PASSED" = false ] && [ "${WHOLE_FINDINGS:-0}" -gt 0 ] 2>/dev/null; then
+              code=reviewed
+              verdict=fail
               title="PR review: sovereign lane found blocking findings"
               summary="Scans passed for this exact head, but the SOVEREIGN lane, a local model (${SOVEREIGN_MODEL}) answering the whole review, reported ${WHOLE_FINDINGS} finding(s) -- they are in the 'Sovereign diff review' job log and the PR automation state comment. It saw the diff and the declared documents only, so verify each against the file before acting. Automated repair never acts on a local verdict: push a fix, or have a human review it ${declared}."
             elif [ "$WHOLE_PASSED" = false ]; then
+              code=reviewed
+              verdict=fail
               title="PR review: sovereign lane did not pass the review"
               summary="Scans passed for this exact head, but the SOVEREIGN lane, a local model (${SOVEREIGN_MODEL}) answering the whole review, returned pass=false with no finding: a documentation-contract judgment failed without a finding pointing at it, or the model declined, which it does when the diff is too large to see in full. Its verdict is in the PR automation state comment. It needs a human review ${declared}."
             else
               if [ "$SOVEREIGN_RESULT" = success ]; then
                 why="its verdict could not be recorded (job 'Record the sovereign whole review': ${WHOLE_RESULT})"
+                code=record_failed
               else
                 why="${SOVEREIGN_REASON:-its job ended '${SOVEREIGN_RESULT}' without saying why}"
+                code="${SOVEREIGN_CODE:-job_failed}"
               fi
               title="PR review: review incomplete (needs a human review)"
               summary="Scans passed for this exact head, but it needs a human review: the sovereign lane produced no verdict: ${why} ${declared}."
@@ -1807,9 +1967,12 @@ jobs:
             else
               wider_said="returned actionable findings; ${repair_next}, and they are in the review job log and the PR automation state comment"
             fi
+            code=reviewed
+            verdict=fail
             summary="Scans passed for this exact head, and the review was split by lane. The diff-groundable half (pass, summary, findings) was carried by the SOVEREIGN lane, a local model (${SOVEREIGN_MODEL}) on the operator's own runner, which ${diff_said}. The requires-wider-context half (the documentation-contract judgments) was carried by the PAID lane (${PAID_MODEL}), which read the whole proposed repository and ${wider_said}."
             if [ "$REVIEW_PASSED" = true ]; then
               conclusion=success
+              verdict=pass
               title="PR review: gate (diff: sovereign lane, documentation: paid lane)"
             elif [ "$wider_passed" != true ] && [ "$diff_passed" != true ]; then
               title="PR review: review findings (both halves)"
@@ -1827,8 +1990,12 @@ jobs:
             case "$REVIEW_PASSED" in
               true)
                 conclusion=success
+                code=reviewed
+                verdict=pass
                 ;;
               false)
+                code=reviewed
+                verdict=fail
                 title="PR review: review findings"
                 summary="Scans passed for this exact head, but the exact-head review returned actionable findings. ${Repair_next}; the findings are in the review job log and the PR automation state comment."
                 ;;
@@ -1839,6 +2006,8 @@ jobs:
                 # months from now can tell the two apart without digging through logs.
                 if [ "$SOVEREIGN_PASSED" = true ]; then
                   conclusion=success
+                  code=reviewed
+                  verdict=pass
                   title="PR review: gate (local fallback)"
                   summary="Scans passed for this exact head. The primary exact-head review returned no verdict (${review_said}), so a LOCAL FALLBACK model (${SOVEREIGN_MODEL}) reviewed the diff and found no blocking defect. It reviewed the DIFF ONLY — the documentation-contract fields were not evaluated, and this is a weaker signal than the primary review."
                 elif [ -n "$SOVEREIGN_PASSED" ] && [ "${SOVEREIGN_FINDINGS:-0}" -gt 0 ] 2>/dev/null; then
@@ -1849,6 +2018,8 @@ jobs:
                   # on a release promotion, where the finding turned out to be a false
                   # positive — which is exactly why the reader must be pointed AT it rather
                   # than away from it.
+                  code=reviewed
+                  verdict=fail
                   title="PR review: local fallback found a blocking defect"
                   summary="Scans passed for this exact head. The primary exact-head review returned no verdict (${review_said}), so a LOCAL FALLBACK model (${SOVEREIGN_MODEL}) reviewed the diff and reported a BLOCKING finding — see the 'Sovereign diff review' job log and its archived verdict. Treat this as a lead, not a ruling: it is a narrower reviewer, it saw the DIFF ONLY, and on a large pull request the diff it saw was TRUNCATED, so verify the finding against the file before acting on it."
                 elif [ -n "$SOVEREIGN_PASSED" ]; then
@@ -1856,20 +2027,41 @@ jobs:
                   # could not see enough to judge, not that the change is defective. Saying
                   # "found a blocking defect" here would send someone hunting for a finding
                   # that does not exist.
+                  code=reviewed
+                  verdict=fail
                   title="PR review: local fallback could not complete the review"
                   summary="Scans passed for this exact head. The primary exact-head review returned no verdict (${review_said}), and the LOCAL FALLBACK model (${SOVEREIGN_MODEL}) declined WITHOUT reporting any finding — which is what it does when the diff is too large to see in full. This is a limit of the fallback reviewer on a change of this size, not a defect claim about the change. Rerun once the primary reviewer is available, or split the pull request."
                 else
+                  code=paid_review_no_verdict
+                  [ -z "$REVIEW_REFUSAL" ] || code=paid_review_refused
                   title="PR review: review incomplete"
                   summary="Scans passed for this exact head, but the exact-head review returned no verdict (${review_said}) and no local fallback verdict was produced either. This is an infrastructure or operator failure rather than a defect in the pull request. Check the review job log for API credit balance, credentials, or model availability, then rerun."
                 fi
                 ;;
             esac
           fi
+          mkdir -p "${RUNNER_TEMP}/review-outcome"
+          jq -n \
+            --arg schema "vibey-gh.review-outcome/1" --arg pr "$PR" --arg head_sha "$HEAD_SHA" \
+            --arg run_id "$GITHUB_RUN_ID" --arg state "$STATE" --arg paid "$PAID_REVIEW" \
+            --arg lane "${LANE_DECISION:-none}" --arg lane_code "$LANE_CODE" --arg code "$code" \
+            --arg verdict "$verdict" --arg conclusion "$conclusion" --arg title "$title" \
+            --arg sovereign_code "$SOVEREIGN_CODE" --arg parts "$SOVEREIGN_PARTS" \
+            '{schema: $schema, source: "gate", pr: $pr, head_sha: $head_sha, run_id: $run_id,
+              state: $state, paid_review: ($paid == "true"), lane: $lane,
+              lane_code: $lane_code, code: $code, verdict: $verdict,
+              conclusion: $conclusion, reason: $title, sovereign_code: $sovereign_code,
+              parts: (($parts | tonumber?) // null)}' \
+            > "${RUNNER_TEMP}/review-outcome/record.json"
+          record=$(jq -c . "${RUNNER_TEMP}/review-outcome/record.json")
+          text=$(printf 'Review outcome (vibey_gh.review_outcome):\n\n```json\n%s\n```' "$record")
+          printf '### Review outcome\n\n%s\n' "$text" >> "$GITHUB_STEP_SUMMARY"
           gh api "repos/${REPO}/check-runs" --method POST \
             -f name='PR review / gate' -f head_sha="$HEAD_SHA" \
             -f status=completed -f conclusion="$conclusion" \
             -f "output[title]=${title}" \
-            -f "output[summary]=${summary} Run ${GITHUB_SERVER_URL}/${REPO}/actions/runs/${GITHUB_RUN_ID} evaluated ${HEAD_SHA}."
+            -f "output[summary]=${summary} Run ${GITHUB_SERVER_URL}/${REPO}/actions/runs/${GITHUB_RUN_ID} evaluated ${HEAD_SHA}." \
+            -f "output[text]=${text}"
           if [ "$conclusion" = success ]; then
             gh workflow run merge-train.yml --repo "$REPO" \
               --ref "${{ github.event.repository.default_branch }}" -f "pr=${PR}"
@@ -1878,3 +2070,12 @@ jobs:
           echo "PR is not ready: state=${STATE}, reason=${REASON}, review_passed=${REVIEW_PASSED:-<none>}, review_job=${REVIEW_RESULT}"
           echo "${summary}"
           exit 1
+      # The gate's record, beside the check run that already carries it: what
+      # `vibey-gh review-outcomes` counts. Kept whatever the gate concluded.
+      - name: Archive the review outcome
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pr-review-outcome
+          path: ${{ runner.temp }}/review-outcome/record.json
+          if-no-files-found: ignore

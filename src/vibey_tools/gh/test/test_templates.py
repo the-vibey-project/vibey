@@ -3535,7 +3535,9 @@ def test_both_review_lanes_write_every_output_they_declare():
             "repairable",
             "refusal",
         },
-        "review-sovereign": {"passed", "findings", "verdict", "model", "reason"},
+        # `code` and `parts`: the outcome in `vibey_gh.review_outcome`'s closed vocabulary,
+        # and how many parts a diff too large for one request was reviewed in.
+        "review-sovereign": {"passed", "findings", "verdict", "model", "reason", "code", "parts"},
         # The sovereign whole review's record, when no paid review is declared (8.b).
         "record-sovereign": {"passed", "findings", "structured", "carried", "halves", "repairable"},
     }

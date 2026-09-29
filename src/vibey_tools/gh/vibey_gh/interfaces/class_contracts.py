@@ -372,6 +372,15 @@ class PrAutomationFallbackConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def think(self) -> str: ...
 
+    @property
+    def max_chunks(self) -> int: ...
+
+    @property
+    def retries(self) -> int: ...
+
+    @property
+    def retry_backoff_seconds(self) -> int: ...
+
 
 @runtime_checkable
 class RunnersConfigInterface(_ConfigRecordInterface, Protocol):

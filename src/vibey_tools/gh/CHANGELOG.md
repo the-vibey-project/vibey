@@ -5,6 +5,14 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** review verdicts at scale (G2). `local-review` reviews a diff too large for one
+  request in at most `[pr_automation.fallback] max_chunks` parts (default 6), split by file
+  and hunk and composed conservatively; retries a model that was unreachable or timed out
+  (`retries`, `retry_backoff_seconds`); stamps the verdict with `--head-sha`, which the
+  composer enforces; and writes `--outcome` as a code from `vibey_gh.review_outcome`'s closed
+  vocabulary. `pr-review.yml` records the lane decision and every no-verdict reason as a
+  code (check-run `output.text`, `pr-review-outcome` and `pr-review-lane` artifacts), and
+  `vibey-gh review-outcomes` tabulates them, read-only.
 - **Feature:** release-path guards, from the 3.0.0 release. `vibey-gh skip-marker-check` and
   the managed `skip-markers.yml` (check `No skip markers`, on `pull_request` and
   `merge_group`) refuse a GitHub skip marker in any commit of a pull request into a permanent

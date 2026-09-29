@@ -247,6 +247,15 @@ mistaken for the primary review's; when neither produced a usable verdict, it ti
 check run `PR review: review incomplete` for an operator to resolve. A red scan gate names
 its failing checks directly, so a failure pinpoints its task without digging through logs.
 
+A diff too large for one request to the local model is reviewed in bounded parts
+(`[pr_automation.fallback] max_chunks`), and a model that was unreachable or timed out is
+retried (`retries`) before a human is asked. Whatever happens, `pr-review.yml` records it
+in a closed vocabulary (`vibey_gh.review_outcome`): the evaluation leaves a `pr-review-lane`
+artifact on every run, and the gate a `pr-review-outcome` artifact and the same record in
+its check run's `output.text` -- the lane decision, the verdict, and a code saying why there
+is one or why there is none. `vibey-gh review-outcomes` tabulates those records over the
+last runs, read-only; see [Configuration](configuration.md#pr_automationfallback).
+
 Every `[pr_automation].scan_workflows` entry names a `workflow_run` this aggregation
 waits on, so each one must be a workflow that runs on `pull_request` or
 `pull_request_target`. A workflow that only triggers on `push` can never complete for a
