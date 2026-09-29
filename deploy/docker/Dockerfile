@@ -13,10 +13,13 @@
 # the source tree; building under /src and copying to /app would leave
 # that pointer dangling. Same path in both stages, no rewriting needed.
 #
-# Migrations ship in the image because the worker applies them at startup
-# (bootstrap resolves them relative to its own file: /app/src/vibey/…
-# -> /app/migrations), so a chart install never depends on someone
-# running SQL by hand first.
+# Migrations ship in the image because the worker applies them at startup,
+# so a chart install never depends on someone running SQL by hand first.
+# They are package data of `vibey` (src/vibey/infrastructure/db/migrations/),
+# so the `COPY src/vibey/` below carries them and the worker reads them
+# there, exactly as an installed wheel does. /app/migrations is a symlink to
+# that directory, kept so the path the image has always offered still lists
+# them -- one copy of the SQL, two names for it.
 #
 # One vendor engine binary ships too: `codex`, which codexloop drives. It is
 # upstream's static musl build, verified by digest in the build stage and
@@ -148,7 +151,6 @@ COPY src/vibey_tools/skills/.claude-plugin/marketplace.json ./src/vibey_tools/sk
 COPY src/vibey_tools/gh/docs/stylesheets/vibey.css ./src/vibey_tools/gh/docs/stylesheets/
 COPY src/vibey_tools/gh/docs/javascripts/channel.js ./src/vibey_tools/gh/docs/javascripts/
 COPY src/vibey_tools/gh/docs/javascripts/math.js ./src/vibey_tools/gh/docs/javascripts/
-COPY migrations/ ./migrations/
 RUN uv sync --frozen --no-dev --extra operator --extra skills
 
 
@@ -189,8 +191,8 @@ RUN useradd --create-home --uid 10001 vibey
 
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
-COPY --from=build /app/migrations /app/migrations
 COPY --from=build /app/src /app/src
+RUN ln -s /app/src/vibey/infrastructure/db/migrations /app/migrations
 
 # The codex executable alone, plus the license and notice it ships under.
 # Nothing it was fetched with -- curl, the tarball -- follows it here.

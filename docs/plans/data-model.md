@@ -1082,10 +1082,14 @@ implemented:
 
 ## 7. Migrations
 
-Plain SQL files in `migrations/`, forward-only, applied in lexical order, tracked in
-`schema_migration(version, applied_at, checksum)`
-(`src/vibey/infrastructure/db/migrator.py`). The migrator creates that table itself
-before reading it:
+Plain SQL files in `src/vibey/infrastructure/db/migrations/` — package data, so the
+published wheel carries them and a `pip install` finds them where a checkout does
+(`MigrationCatalog`, `src/vibey/infrastructure/db/migration_catalog.py`); earlier
+references in this document to `migrations/` mean that directory. They are forward-only,
+applied in lexical order, tracked in `schema_migration(version, applied_at, checksum)`
+(`src/vibey/infrastructure/db/migrator.py`). An install that finds no migration files at
+all is refused (`NoMigrationsFound`), never reported as `applied 0`. The migrator creates
+that table itself before reading it:
 
 ```sql
 CREATE TABLE IF NOT EXISTS schema_migration (

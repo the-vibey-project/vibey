@@ -189,6 +189,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   control that holds (see the runbook). The storm's
   `storm_trust.py` gains `LABELED_QUERY`, `IssueGate.judge_labels`, `Grant.curators` and a
   `query` argument to `GhForge`; its own lanes still ask `QUERY`.
+* **packaging:** the `vibey-engine` wheel now carries the SQL migrations, so a `pip install`
+  or `uv tool install` can create its schema. Measured on 2026-09-29: neither a locally
+  built wheel nor PyPI's 3.0.0 contained any `.sql`, so on an empty database `vibey migrate`
+  printed `applied 0 migration(s)` and exited 1, and `vibey new` then failed on `relation
+  "project" does not exist`; only a source checkout and the image (whose Dockerfile copied
+  the directory by hand) worked. The migrations move from the repository root into the
+  package, `src/vibey/infrastructure/db/migrations/` -- one copy, read through
+  `importlib.resources` by the new `MigrationCatalog` from a checkout, the image and a wheel
+  alike -- and the image keeps `/app/migrations` as a symlink to it. `vibey migrate`, and
+  every worker start, now refuse an install that carries no migration files
+  (`NoMigrationsFound`, exit 1, naming the directory) instead of reporting `applied 0`
+  over an empty schema. `tests/meta/test_wheel_ships_migrations.py` builds the real wheel
+  and asserts every migration is in it, byte for byte, and that code imported from the
+  unpacked wheel finds them there.
 
 ## [3.0.0] (2026-09-29)
 
