@@ -15,6 +15,40 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **release:** the release path now recovers from, or refuses, each silent failure the 3.0.0
+  release met. `vibey-engine.yml` and `krypton-app.yml` accept `workflow_dispatch`, so a push
+  the forge skipped can be published by dispatch on `main` or `develop` (every publishing job
+  stays gated on `github.ref`). The Open VSX publish left the `Release` workflow for its own,
+  `openvsx.yml`, run after a successful Release on `main`: with no `OVSX_PAT` it warns and
+  keeps one tracking issue open instead of failing the Release run that the tag, the GitHub
+  Release and the documentation all wait on; with a token, a failed upload still fails loudly.
+* **gh:** `.vibey-gh.toml` declares that a squash commit proposes the pull request's own title
+  and body (`[repository_profile] squash_merge_commit_title = "PR_TITLE"`,
+  `squash_merge_commit_message = "PR_BODY"`) instead of every commit message concatenated, and
+  that `main` accepts rebase merges only (`[rulesets.release] allowed_merge_methods =
+  ["rebase"]`). Both take effect when the repository profile and rulesets are reconciled.
+
+### Features
+
+* **gh:** `vibey-gh skip-marker-check` and the managed `skip-markers.yml` refuse a GitHub
+  skip-ci marker, in any of its spellings or as a skip-checks trailer, in every commit of a
+  pull request into `develop` or `main`, in its title and in its body, on `pull_request` and
+  `merge_group`, with every place named. `[skip_markers] exempt_authors` (empty) is the only
+  exemption, and it never covers a title, a body or a pull request into the release branch.
+  The check is "No skip markers", required on both branches and in `scan_workflows`.
+* **gh:** `vibey-gh branch-health` and the managed `branch-health.yml` keep one tracking issue
+  per permanent branch while a CI push run fails any of that branch's required checks, and
+  close it when the tip is green again; `[branch_health]` configures it.
+* **gh:** `vibey-gh rulesets --check` and the managed `ruleset-drift.yml` compare every live
+  repository ruleset with the declaration, read-only, and fail on drift: a declared ruleset
+  that differs, a rule nobody declared, and any undeclared ruleset with its bypass actors.
+  Ruleset comparison now reads only the declared parameters, so the defaults the forge echoes
+  back are no longer reported as drift on every reconcile.
+* **gh:** `vibey-gh tracking-issue raise|resolve` opens, updates and closes the one issue that
+  tracks a named condition, found by a marker in its body.
+
 ## [3.0.0] (2026-09-29)
 
 ### Bug Fixes

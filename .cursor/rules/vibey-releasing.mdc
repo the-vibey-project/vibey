@@ -281,6 +281,30 @@ page shows the last final version uploaded there while dev builds keep landing.
 
 ## Common issues
 
+**Nothing ran on `main` after a promotion:** a commit message carrying a GitHub
+skip marker (a bracketed skip-ci spelling, or a skip-checks trailer) makes GitHub run
+no push workflow for it -- no CI, no publish, no tag, no documentation, and nothing red.
+3.0.0 hit this when #1244 was squashed by hand and GitHub's default body concatenated
+old estimate subjects that quoted the marker. Recover by dispatching `vibey-engine.yml`
+and `krypton-app.yml` on `main` (every publishing job is gated on `github.ref`, so a
+dispatch publishes exactly what the push would have). Three things now keep it from
+recurring: `main` accepts rebase merges only (`[rulesets.release]
+allowed_merge_methods`), a squash proposes the pull request's own title and body
+(`[repository_profile] squash_merge_commit_*`), and `skip-markers.yml` ("No skip
+markers") refuses a marker in any commit, title or body on its way into `develop` or
+`main`. Write about the marker in prose; never quote it in a message.
+
+**The PyPI publish succeeded but there is no tag, GitHub Release or docs:**
+`github-release.yml` and `release-surfaces.yml` follow only a *successful* `Release`
+run, so any failing job of `vibey-engine.yml` withholds all three. Optional channels
+therefore live in workflows of their own: the Open VSX publish is `openvsx.yml`, run
+after a successful Release on `main`; without `OVSX_PAT` it warns and keeps one
+tracking issue open rather than failing anything.
+
+**`develop` is red:** `branch-health.yml` keeps one issue per permanent branch open
+while a CI push run fails one of its required checks, and closes it when the tip is
+green. Fix the branch before merging over it.
+
 **Version didn't change on PyPI:** the derivation found nothing under
 `src/vibey/` (docs, workflow and tenant changes release nothing), or the bump was
 never pushed. An unbumped version with `skip-existing: true` is a green run that
@@ -332,7 +356,15 @@ automatically; add the entry (see "The changelog").
   push and PR.
 - `.github/workflows/automation-bootstrap.yml` — the admin-only recovery path for a
   PR that repairs a broken privileged gate.
+- `.github/workflows/openvsx.yml` — the VS Code extension to Open VSX, after a
+  successful `Release` on `main`; outside `Release` so it can never fail the tag.
+- `.github/workflows/skip-markers.yml` — `No skip markers`, on every pull request and
+  merge-queue group into `develop` or `main`.
+- `.github/workflows/branch-health.yml` — one tracking issue per red permanent branch.
+- `.github/workflows/ruleset-drift.yml` — `vibey-gh rulesets --check`, read-only, daily
+  and on every change to `.vibey-gh.toml`.
 
 All but `automation-bootstrap.yml` (manual dispatch only) are triggered by pushes,
 pull requests, workflow completions or schedules. Dispatch one by hand only to
-recover or debug.
+recover or debug -- `vibey-engine.yml` and `krypton-app.yml` accept a dispatch for
+exactly that.
