@@ -217,6 +217,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   notice. The warning is kept for the case it is for: an Application Insights connection
   string is configured but the `vibey-engine[azure]` extra is missing -- said once per
   process.
+* **clients:** every Node package now declares the Node it needs in `engines.node`, so npm
+  says so up front instead of a build failing on an older Node. Measured on 2026-09-29: the
+  Expo app (`clients/app`) exports for the web on Node 20.20.2, 22 and 24 and fails on
+  18.20, so it declares `>=20.19.4`; the VS Code extension and `@vibey/core` pass their
+  tests on 20.20, 22 and 24 and fail them on 18.20, so both declare `>=20`. The two
+  lockfiles carry the same fields (`npm install --package-lock-only`), and the root one
+  also picks up the extension's 0.2.0 version it had not recorded.
 
 ## [3.0.0] (2026-09-29)
 
