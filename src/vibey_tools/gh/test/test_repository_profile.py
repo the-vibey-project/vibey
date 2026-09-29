@@ -65,3 +65,63 @@ def test_repository_profile_workflow_renders_rulesets_enabled_by_default(tmp_pat
     rendered = install.render_workflow(install.WORKFLOWS / "repository-profile.yml", cfg)
     assert "if: true" in rendered
     assert "vibey-gh rulesets" in rendered
+
+
+# ------------------------------------------------------------ the squash commit's message
+
+
+def test_the_squash_message_is_not_managed_unless_declared(tmp_path: Path):
+    """An upgrade must not change an adopter's merges: undeclared, nothing is sent, and
+    nothing is verified, so the forge's own default stands."""
+    rendered = install.render_workflow(
+        install.WORKFLOWS / "repository-profile.yml", GhConfig(root=tmp_path)
+    )
+    assert "squash_merge_commit" not in rendered
+
+
+def test_a_declared_squash_message_is_sent_and_verified(tmp_path: Path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[repository_profile]\nsquash_merge_commit_title = "PR_TITLE"\n'
+        'squash_merge_commit_message = "PR_BODY"\n',
+        encoding="utf-8",
+    )
+    cfg = load_config(tmp_path)
+    assert cfg.repository_profile.squash_merge_commit_title == "PR_TITLE"
+    rendered = install.render_workflow(install.WORKFLOWS / "repository-profile.yml", cfg)
+    pair = '"squash_merge_commit_title":"PR_TITLE","squash_merge_commit_message":"PR_BODY"'
+    # Twice: once in the PATCH the reconcile sends, once in what the verify step expects.
+    assert rendered.count(pair) == 2
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        (
+            {"squash_merge_commit_title": "TITLE", "squash_merge_commit_message": "PR_BODY"},
+            "squash_merge_commit_title must be one of",
+        ),
+        (
+            {"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "BODY"},
+            "squash_merge_commit_message must be one of",
+        ),
+        ({"squash_merge_commit_title": "PR_TITLE"}, "together or not at all"),
+        ({"squash_merge_commit_message": "PR_BODY"}, "together or not at all"),
+        (
+            {
+                "squash_merge_commit_title": "COMMIT_OR_PR_TITLE",
+                "squash_merge_commit_message": "PR_BODY",
+            },
+            "only valid with",
+        ),
+    ],
+)
+def test_a_squash_message_the_forge_would_refuse_is_refused_at_load(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        RepositoryProfileConfig(**kwargs)
+
+
+def test_githubs_own_default_pairing_is_still_declarable():
+    RepositoryProfileConfig(
+        squash_merge_commit_title="COMMIT_OR_PR_TITLE",
+        squash_merge_commit_message="COMMIT_MESSAGES",
+    )

@@ -53,18 +53,18 @@ def desired_rules(policy: RulesetConfig) -> list[dict[str, Any]]:
         rules.append({"type": LINEAR_HISTORY})
     if policy.require_signed_commits:
         rules.append({"type": SIGNATURES})
-    rules.append(
-        {
-            "type": PULL_REQUEST,
-            "parameters": {
-                "required_approving_review_count": policy.required_approvals,
-                "dismiss_stale_reviews_on_push": policy.dismiss_stale_reviews,
-                "require_code_owner_review": policy.require_code_owner_review,
-                "require_last_push_approval": False,
-                "required_review_thread_resolution": policy.require_conversation_resolution,
-            },
-        }
-    )
+    pull_request: dict[str, Any] = {
+        "required_approving_review_count": policy.required_approvals,
+        "dismiss_stale_reviews_on_push": policy.dismiss_stale_reviews,
+        "require_code_owner_review": policy.require_code_owner_review,
+        "require_last_push_approval": False,
+        "required_review_thread_resolution": policy.require_conversation_resolution,
+    }
+    if policy.allowed_merge_methods:
+        # Only when declared: absent, the forge allows every method the repository does,
+        # and an upgrade that narrowed that would decide an adopter's merges for them.
+        pull_request["allowed_merge_methods"] = list(policy.allowed_merge_methods)
+    rules.append({"type": PULL_REQUEST, "parameters": pull_request})
     if policy.required_checks:
         rules.append(
             {
@@ -151,6 +151,34 @@ def _bypass_key(actors: list[dict[str, Any]]) -> list[tuple[str, str, str]]:
     )
 
 
+# Module-level beside `_rules_by_type` and `_bypass_key`, which it joins as a pure helper
+# of `diff_ruleset` (and of `vibey_gh.ruleset_drift`, which names what differs); this
+# module predates the class rule and converges as a whole (ADR-0016).
+def rule_matches(existing: dict[str, Any] | None, desired: dict[str, Any]) -> bool:
+    """Whether a fetched rule already says everything `desired` declares.
+
+    Only the DECLARED parameters are compared. The forge answers with parameters nobody
+    sent -- defaults it added after this module was written -- and comparing whole
+    dictionaries reports those as drift on every run, which makes a drift check that is
+    always red and therefore never read. Status checks compare by context alone, in any
+    order: the forge may echo an integration id the declaration never pinned.
+    """
+    if existing is None:
+        return False
+    have = existing.get("parameters") or {}
+    for key, value in (desired.get("parameters") or {}).items():
+        if key == "required_status_checks":
+            live = sorted(str(check.get("context")) for check in have.get(key) or [])
+            if live != sorted(str(check["context"]) for check in value):
+                return False
+        elif key == "allowed_merge_methods":
+            if sorted(have.get(key) or []) != sorted(value):
+                return False
+        elif have.get(key) != value:
+            return False
+    return True
+
+
 @dataclass(frozen=True)
 class Diff:
     """The result of comparing a desired ruleset against what GitHub actually has."""
@@ -176,7 +204,10 @@ def diff_ruleset(desired: dict[str, Any], existing: dict[str, Any] | None) -> Di
         or existing.get("enforcement") != desired["enforcement"]
         or _bypass_key(existing.get("bypass_actors") or []) != _bypass_key(desired["bypass_actors"])
         or existing.get("conditions") != desired["conditions"]
-        or any(existing_by_type.get(kind) != rule for kind, rule in desired_by_type.items())
+        or any(
+            not rule_matches(existing_by_type.get(kind), rule)
+            for kind, rule in desired_by_type.items()
+        )
     )
     payload = {**desired, "rules": merged_rules}
     return Diff(changed, payload, unexpected)

@@ -5,6 +5,21 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** release-path guards, from the 3.0.0 release. `vibey-gh skip-marker-check` and
+  the managed `skip-markers.yml` (check `No skip markers`, on `pull_request` and
+  `merge_group`) refuse a GitHub skip marker in any commit of a pull request into a permanent
+  branch and in its title and body; `[skip_markers] exempt_authors` (empty) is the only
+  exemption and never reaches a title, a body or the release branch.
+  `vibey-gh branch-health` and `branch-health.yml` keep one tracking issue per permanent
+  branch while a CI push run fails a required check (`[branch_health]`).
+  `vibey-gh rulesets --check` and `ruleset-drift.yml` audit every live repository ruleset
+  against the declaration, read-only, undeclared rulesets and bypass actors included.
+  `vibey-gh tracking-issue raise|resolve` is the one-issue-per-condition primitive under them.
+- **Feature:** `[repository_profile] squash_merge_commit_title` / `squash_merge_commit_message`
+  (not managed by default) and `[rulesets.*] allowed_merge_methods` (no restriction by
+  default) declare what a squash commit proposes and which merge methods a branch accepts.
+- **Fix:** ruleset comparison reads only the declared parameters, so the defaults the forge
+  echoes back are no longer drift on every reconcile.
 - **Feature:** `[documentation] cookie_consent` (default on) keeps the GA4 snippet lawful:
   with a measurement ID configured, every published page and the channel-picker index
   deny analytics storage by default (Google Consent Mode v2) and show an accept/decline

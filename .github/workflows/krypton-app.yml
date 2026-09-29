@@ -18,6 +18,11 @@ on:
     paths:
       - "clients/krypton-app/**"
       - ".github/workflows/krypton-app.yml"
+  # Recovery, as in vibey-engine.yml: a push the forge skipped (a skip-ci marker in its
+  # message) leaves no run to re-run. Dispatched on main or develop this publishes exactly
+  # as that push would have -- the publishing jobs are gated on `github.ref`, never on the
+  # event -- and dispatched anywhere else it only builds and tests.
+  workflow_dispatch:
 
 # A superseded pull-request run is cancelled (12.g); a push to main or develop never is, so
 # no publish is cut off half-way.

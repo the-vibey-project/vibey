@@ -1,0 +1,121 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Skip markers
+
+# GitHub runs no push workflow for a commit whose message carries a skip marker -- the
+# bracketed skip-ci spellings, or a `skip-checks: true` trailer. On a permanent branch that
+# is CI, the publish, the tag and the documentation all skipped with nothing red anywhere:
+# the 3.0.0 promotion's hand-made squash body quoted old estimate subjects carrying one.
+# This refuses a marker in every commit of the range and in the title and body a squash
+# merge turns into a commit (`vibey-gh skip-marker-check`, `[skip_markers]`).
+#
+# `pull_request`, not `pull_request_target`, so the check run lands on the pull request's
+# own head and can be a required check. The one case it cannot see is a HEAD commit that
+# carries the marker: GitHub then starts no run at all, the required check never reports,
+# and the merge stays blocked -- closed rather than open. A merge queue's group is checked
+# too, because its commit is the squash of the title and body this workflow reads.
+on:
+  pull_request:
+    branches: [develop, main]
+    # `edited`: a title or body changed after the last push is what a squash commits.
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+  merge_group:
+
+permissions:
+  contents: read
+
+# A superseded pull-request run is cancelled (12.g); a merge-queue run never is, because a
+# queue run that never reports ejects the pull request (ADR-0036).
+concurrency:
+  group: skip-markers-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: No skip markers
+    if: true
+    runs-on: ubuntu-latest
+    steps:
+      # The configuration read -- what is enabled, who is exempt -- comes from the trusted
+      # default branch, never from the pull request: a branch could otherwise exempt itself.
+      - name: Check out trusted automation
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: automation
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install the tooling
+        working-directory: automation
+        run: |
+          set -euo pipefail
+          # Where this repository keeps its own copy of the tooling, from
+          # `[install] self_source` in .vibey-gh.toml -- a DECLARED path, never a search.
+          # Searching the tree for a pyproject declaring `name = "vibey-gh"` would read a
+          # pull request's own files: a branch that adds one anywhere gets it installed
+          # here, with this job's permissions, and hands the provenance gate a tool of the
+          # contributor's choosing. The path is verified below before anything runs.
+          self="."
+          # Verified, not assumed: a misconfigured path must fall back to the published
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
+          grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
+          if [ -n "$self" ]; then
+            echo "this repository provides the tooling — installing from source"
+            python -m pip install --quiet -e "$self"
+          else
+            python -m pip install --quiet vibey-engine
+          fi
+          command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
+      # Read as data: nothing from this checkout is installed or executed.
+      - name: Check out the change without executing it
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          path: target
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Refuse a skip marker on its way into a permanent branch
+        working-directory: automation
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.merge_group.base_ref }}
+        run: |
+          set -euo pipefail
+          # The tooling comes from the default branch, so the pull request that introduces
+          # this workflow -- and every one after it until a promotion carries the command to
+          # that branch -- meets a vibey-gh without `skip-marker-check`. Failing there would
+          # block the promotion that brings the command: a deadlock, not a guard. Passing
+          # there would be a gate routed around. So the older tooling gets this scan
+          # instead: the same markers (config.SKIP_MARKERS, held equal by a test) and the
+          # same trailer, over the same commits, title and body, stricter only in honouring
+          # no `[skip_markers] exempt_authors`. It stops applying by itself once the
+          # default branch's tooling has the command.
+          if ! vibey-gh skip-marker-check --help >/dev/null 2>&1; then
+            echo "::warning::the default branch's vibey-gh predates skip-marker-check; running the bootstrap scan"
+            bracketed='\[(skip ci|ci skip|no ci|skip actions|actions skip)\]'
+            trailer='^[[:space:]]*skip-checks:[[:space:]]*true[[:space:]]*$'
+            found="$(
+              { git -C ../target log --format=%B "${BASE_SHA}..${HEAD_SHA}"
+                printf '%s\n%s\n' "${PR_TITLE:-}" "${PR_BODY:-}"
+              } | grep -inE "${bracketed}|${trailer}" || true
+            )"
+            if [ -n "$found" ]; then
+              echo "::error::a GitHub skip marker would reach ${BASE_REF#refs/heads/}; remove it from the commit, title or body"
+              printf '%s\n' "$found"
+              exit 1
+            fi
+            echo "no skip marker in ${BASE_SHA}..${HEAD_SHA}, the title or the body (bootstrap scan)"
+            exit 0
+          fi
+          vibey-gh skip-marker-check \
+            --checkout ../target \
+            --commits "${BASE_SHA}..${HEAD_SHA}" \
+            --title "${PR_TITLE:-}" \
+            --body "${PR_BODY:-}" \
+            --base "${BASE_REF#refs/heads/}"

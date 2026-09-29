@@ -372,6 +372,14 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         "true" if cfg.rulesets.enabled else "false",
     )
     wanted = wanted.replace(
+        "__VIBEY_GH_SKIP_MARKERS_ENABLED__",
+        "true" if cfg.skip_markers.enabled else "false",
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_BRANCH_HEALTH_ENABLED__",
+        "true" if cfg.branch_health.enabled else "false",
+    )
+    wanted = wanted.replace(
         "__VIBEY_GH_PROFILE_DESCRIPTION__",
         json.dumps(cfg.repository_profile.description),
     )
@@ -396,6 +404,15 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
             "automated_security_fixes",
         )
     }
+    # Sent, and then verified, only when declared: an empty value means "not managed", and
+    # sending one would ask the forge to set the setting to nothing.
+    profile_settings.update(
+        {
+            name: getattr(cfg.repository_profile, name)
+            for name in ("squash_merge_commit_title", "squash_merge_commit_message")
+            if getattr(cfg.repository_profile, name)
+        }
+    )
     wanted = wanted.replace(
         "__VIBEY_GH_PROFILE_SETTINGS__",
         json.dumps(profile_settings, separators=(",", ":")),

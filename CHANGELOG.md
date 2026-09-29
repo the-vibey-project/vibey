@@ -15,26 +15,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
-### Features
-
-* **worker:** `vibey worker --all-projects` serves every project's queue from one process
-  (#1189). Work queued in any project but the one a worker was started for used to wait for
-  a person: 147 ready jobs across 80 projects, most since 2026-08-22. Each pass asks the queue
-  which projects have a job the claim would hand out now, in the claim's own order, and
-  claims through that project's own loop and the unchanged `FOR UPDATE SKIP LOCKED`
-  statement, so budgets, the Sabbath, capacity circuits, the priority lane, phase gates and
-  engine selection hold as for a single-project worker. A project that cannot be served is
-  refused and its jobs stay queued; with nothing queued the worker waits instead of exiting.
-* **supervisor:** `vibey supervisor install` renders a launchd agent (macOS) or a systemd
-  user service (Linux) for `vibey worker --all-projects` and for the triaged-delivery bridge,
-  from `[supervisor]` in `vibey.toml`: restarted after a failed exit, logging to a durable
-  directory, started with a declared environment file through `vibey supervisor exec`, and
-  refused on volatile storage or inside a linked worktree (10.h). It prints the `launchctl` /
-  `systemctl --user` commands and never loads a unit itself. `vibey supervisor status` reads
-  each service's state, and `vibey doctor` prints a `supervisor-*` line per service -- `WARN`
-  when one is missing or stopped, `FAIL` with `[supervisor] required = true`.
-
 ### Bug Fixes
+
+* **release:** the release path now recovers from, or refuses, each silent failure the 3.0.0
+  release met. `vibey-engine.yml` and `krypton-app.yml` accept `workflow_dispatch`, so a push
+  the forge skipped can be published by dispatch on `main` or `develop` (every publishing job
+  stays gated on `github.ref`). The Open VSX publish left the `Release` workflow for its own,
+  `openvsx.yml`, run after a successful Release on `main`: with no `OVSX_PAT` it warns and
+  keeps one tracking issue open instead of failing the Release run that the tag, the GitHub
+  Release and the documentation all wait on; with a token, a failed upload still fails loudly.
+* **gh:** `.vibey-gh.toml` declares that a squash commit proposes the pull request's own title
+  and body (`[repository_profile] squash_merge_commit_title = "PR_TITLE"`,
+  `squash_merge_commit_message = "PR_BODY"`) instead of every commit message concatenated, and
+  that `main` accepts rebase merges only (`[rulesets.release] allowed_merge_methods =
+  ["rebase"]`). Both take effect when the repository profile and rulesets are reconciled.
 
 * **delivery:** the triaged-delivery bridge no longer dispatches an issue whoever wrote it, and
   no longer hands its raw text to DESIGN (G10). The hourly sweep labels every open issue
@@ -62,6 +56,42 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   control that holds (see the runbook). The storm's
   `storm_trust.py` gains `LABELED_QUERY`, `IssueGate.judge_labels`, `Grant.curators` and a
   `query` argument to `GhForge`; its own lanes still ask `QUERY`.
+
+### Features
+
+* **gh:** `vibey-gh skip-marker-check` and the managed `skip-markers.yml` refuse a GitHub
+  skip-ci marker, in any of its spellings or as a skip-checks trailer, in every commit of a
+  pull request into `develop` or `main`, in its title and in its body, on `pull_request` and
+  `merge_group`, with every place named. `[skip_markers] exempt_authors` (empty) is the only
+  exemption, and it never covers a title, a body or a pull request into the release branch.
+  The check is "No skip markers", required on both branches and in `scan_workflows`.
+* **gh:** `vibey-gh branch-health` and the managed `branch-health.yml` keep one tracking issue
+  per permanent branch while a CI push run fails any of that branch's required checks, and
+  close it when the tip is green again; `[branch_health]` configures it.
+* **gh:** `vibey-gh rulesets --check` and the managed `ruleset-drift.yml` compare every live
+  repository ruleset with the declaration, read-only, and fail on drift: a declared ruleset
+  that differs, a rule nobody declared, and any undeclared ruleset with its bypass actors.
+  Ruleset comparison now reads only the declared parameters, so the defaults the forge echoes
+  back are no longer reported as drift on every reconcile.
+* **gh:** `vibey-gh tracking-issue raise|resolve` opens, updates and closes the one issue that
+  tracks a named condition, found by a marker in its body.
+
+* **worker:** `vibey worker --all-projects` serves every project's queue from one process
+  (#1189). Work queued in any project but the one a worker was started for used to wait for
+  a person: 147 ready jobs across 80 projects, most since 2026-08-22. Each pass asks the queue
+  which projects have a job the claim would hand out now, in the claim's own order, and
+  claims through that project's own loop and the unchanged `FOR UPDATE SKIP LOCKED`
+  statement, so budgets, the Sabbath, capacity circuits, the priority lane, phase gates and
+  engine selection hold as for a single-project worker. A project that cannot be served is
+  refused and its jobs stay queued; with nothing queued the worker waits instead of exiting.
+* **supervisor:** `vibey supervisor install` renders a launchd agent (macOS) or a systemd
+  user service (Linux) for `vibey worker --all-projects` and for the triaged-delivery bridge,
+  from `[supervisor]` in `vibey.toml`: restarted after a failed exit, logging to a durable
+  directory, started with a declared environment file through `vibey supervisor exec`, and
+  refused on volatile storage or inside a linked worktree (10.h). It prints the `launchctl` /
+  `systemctl --user` commands and never loads a unit itself. `vibey supervisor status` reads
+  each service's state, and `vibey doctor` prints a `supervisor-*` line per service -- `WARN`
+  when one is missing or stopped, `FAIL` with `[supervisor] required = true`.
 
 ## [3.0.0] (2026-09-29)
 
