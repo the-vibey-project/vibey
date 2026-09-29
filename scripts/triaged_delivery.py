@@ -23,7 +23,12 @@ stay parked for a person by default; ``--answer-design-defaults`` (or
 with their declared defaults and accept the design, and every such answer is recorded under
 ``--answer-by`` (``automation:triaged-delivery``), never under the account running it. Every
 project it creates declares ``--design-default-scope narrowest``, so a declared default is
-the answer that adds the least work beyond the issue, never the model's appetite. It
+the answer that adds the least work beyond the issue, never the model's appetite. Likewise
+a DESIGN research topic the provider cannot evidence parks a ``research_evidence`` gate for a
+person by default; ``--record-research-gaps`` (or
+``VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1``) is the explicit opt-in to run the worker
+with ``[design.research] on_unavailable = "record_gap"``, so such a topic is recorded as not
+researched -- in the ledger and in the spec -- instead of invented or waited on. It
 never edits a branch or routes around a gate: a finished project is pushed through the push
 gate and opened as a draft pull request, which the PR automation promotes and the merge train
 lands. Run with ``--once``, or ``--interval SECONDS`` for a local supervisor loop.
@@ -111,6 +116,10 @@ DESIGN_QUESTION_KINDS = frozenset(
 # lease left behind by a timed-out worker is no longer the thing holding the project up.
 PROGRESS = frozenset({"done", "parked_at_gate", "worker_progress", "design_awaiting_acceptance"})
 ENV = "VIBEY_TRIAGED_DELIVERY_"
+# The worker's own `[design.research] on_unavailable` overlay (infrastructure/config_loader.py),
+# set for the worker only when the bridge's `record_research_gaps` opt-in is on.
+RESEARCH_POLICY_ENV = "VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE"
+RECORD_GAP = "record_gap"
 TRUE = frozenset({"1", "true", "yes", "on"})
 FALSE = frozenset({"0", "false", "no", "off"})
 
@@ -150,6 +159,9 @@ class BridgeSettings:
     repository: str = "the-vibey-project/vibey"
     database_url: str | None = None
     answer_design_defaults: bool = False
+    # Off: a research topic with no evidence parks for a person. On: the worker records it
+    # as not researched and DESIGN goes on. Never a fabricated source either way.
+    record_research_gaps: bool = False
     answer_by: str = "automation:triaged-delivery"
     draft: bool = True
     base: str = "develop"
@@ -193,6 +205,7 @@ class BridgeSettings:
             repository=environ.get("VIBEY_GITHUB_REPOSITORY", default.repository),
             database_url=environ.get("VIBEY_PG_URL") or None,
             answer_design_defaults=flag("ANSWER_DESIGN_DEFAULTS", default.answer_design_defaults),
+            record_research_gaps=flag("RECORD_RESEARCH_GAPS", default.record_research_gaps),
             answer_by=environ.get(ENV + "ANSWER_BY", default.answer_by),
             draft=flag("DRAFT", default.draft),
             base=environ.get(ENV + "BASE", default.base),
@@ -225,10 +238,18 @@ class SubprocessRunner:
     started (a worker's engine and model processes), not just the child."""
 
     def run(
-        self, argv: Sequence[str], *, timeout: float | None = None, cwd: Path | None = None
+        self,
+        argv: Sequence[str],
+        *,
+        timeout: float | None = None,
+        cwd: Path | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> CommandResultInterface:
+        child_env = None if env is None else {**os.environ, **env}
         if timeout is None:
-            done = subprocess.run(list(argv), capture_output=True, text=True, check=False, cwd=cwd)
+            done = subprocess.run(
+                list(argv), capture_output=True, text=True, check=False, cwd=cwd, env=child_env
+            )
             return CommandResult(done.returncode, done.stdout, done.stderr)
         process = subprocess.Popen(
             list(argv),
@@ -236,6 +257,7 @@ class SubprocessRunner:
             stderr=subprocess.PIPE,
             text=True,
             cwd=cwd,
+            env=child_env,
             start_new_session=True,
         )
         try:
@@ -759,6 +781,12 @@ class DeliveryBridge:
         )
 
     def _worker(self, project_id: str) -> CommandResultInterface:
+        env = None
+        if self._settings.record_research_gaps:
+            # The opt-in only, and said in the evidence: a spec that states research gaps
+            # was produced under this policy, not by a person choosing to skip the reading.
+            env = {RESEARCH_POLICY_ENV: RECORD_GAP}
+            self._evidence.project(project_id, design_research_on_unavailable=RECORD_GAP)
         return self._runner.run(
             [
                 *self._settings.vibey,
@@ -770,6 +798,7 @@ class DeliveryBridge:
                 self._settings.provider,
             ],
             timeout=self._settings.worker_timeout,
+            env=env,
         )
 
     def _answer_design(self, project_id: str, gates: list[dict[str, object]]) -> None:
@@ -1002,6 +1031,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{ENV}ANSWER_DESIGN_DEFAULTS.",
     )
     parser.add_argument(
+        "--record-research-gaps",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Opt in to running the worker with [design.research] on_unavailable = "
+        '"record_gap": a DESIGN research topic with no evidence is recorded as not researched, '
+        "in the ledger and the spec, instead of parking for a person. Off by default. Also "
+        f"{ENV}RECORD_RESEARCH_GAPS.",
+    )
+    parser.add_argument(
         "--answer-by",
         default=None,
         help="The name opt-in answers are recorded under (default automation:triaged-delivery; "
@@ -1054,6 +1092,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     settings = BridgeSettings.from_environ(args.repo.resolve(), os.environ)
     overrides = {
         "answer_design_defaults": args.answer_design_defaults,
+        "record_research_gaps": args.record_research_gaps,
         "answer_by": args.answer_by,
         "draft": args.draft,
         "base": args.base,

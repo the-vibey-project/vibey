@@ -344,6 +344,57 @@ async def test_a_scripted_design_names_no_engine_rather_than_borrowing_one(
     assert ledger.engines == [None]
 
 
+def _research_job(project_id):  # type: ignore[no-untyped-def]
+    job = _design_job(project_id)
+    return job.__class__(
+        **{
+            field: getattr(job, field)
+            for field in job.__dataclass_fields__
+            if field not in {"kind", "payload"}
+        },
+        kind="design.research",
+        payload={"topic": "prior-art"},
+    )
+
+
+@pytest.mark.parametrize(
+    ("declared", "gapped"), [(None, False), ("gate", False), ("record_gap", True)]
+)
+async def test_the_design_worker_researches_under_the_declared_policy(
+    tmp_path: Path, declared: str | None, gapped: bool
+) -> None:
+    """`[design.research] on_unavailable` as `build_app` resolved it reaches the research
+    handler; a harness that resolved none gets the default, which waits for a person."""
+    from vibey.domain.config import DesignResearchConfig
+    from vibey.domain.ledger import EventKind
+    from vibey.domain.research_gap import ResearchOnUnavailable
+
+    project_id = uuid4()
+    job = _research_job(project_id)
+    jobs = FakeJobRepository([job])
+    ledger = FakeLedger()
+    resources = _design_resources(jobs, ledger)
+    if declared is not None:
+        resources.design_research = DesignResearchConfig(ResearchOnUnavailable(declared))
+    worker = build_design_worker(
+        resources=resources,  # type: ignore[arg-type]
+        project=_project(project_id, tmp_path),
+        # The real sovereign provider with no evidence: it refuses before any model runs.
+        provider=GptossloopDesignProvider(evidence_dir=None),
+        owner="test-worker",
+    )
+
+    assert await worker.run_once(project_id)
+    stored = await jobs.get(job.id)
+    assert stored is not None
+    if gapped:
+        assert stored.state is JobState.SUCCEEDED
+        assert [event.kind for event in ledger.events] == [EventKind.RESEARCH_GAP_RECORDED]
+    else:
+        assert stored.state is JobState.AWAITING_HUMAN
+        assert ledger.events == []
+
+
 def test_every_design_provider_declares_the_engine_it_speaks_for() -> None:
     """One declaration each, beside the implementation -- the single source the
     composition root reads instead of repeating a literal per wiring site."""

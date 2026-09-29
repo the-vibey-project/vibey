@@ -175,6 +175,27 @@ def test_the_model_scope_is_declared_in_the_design_interview_table() -> None:
     assert config.design.interview.default_scope is DefaultScope.MODEL
 
 
+def test_one_design_table_carries_both_the_interview_and_research_policies() -> None:
+    config = DesignConfig.from_data(
+        {
+            "design": {
+                "interview": {"default_scope": "model"},
+                "research": {"on_unavailable": "record_gap"},
+            }
+        }
+    )
+
+    assert config.interview.default_scope is DefaultScope.MODEL
+    assert config.research.on_unavailable.value == "record_gap"
+
+
+def test_an_unknown_design_interview_key_is_refused() -> None:
+    with pytest.raises(ConfigError) as caught:
+        DesignConfig.from_data({"design": {"interview": {"default_scop": "model"}}})
+
+    assert "design.interview.default_scop" in str(caught.value)
+
+
 def test_an_unknown_scope_is_refused_naming_the_key_and_the_choices() -> None:
     with pytest.raises(ConfigError) as caught:
         DesignInterviewConfig.from_table({"default_scope": "widest"}, "design.interview")

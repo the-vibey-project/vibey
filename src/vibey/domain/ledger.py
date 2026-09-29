@@ -129,6 +129,11 @@ class EventKind(StrEnum):
     # job's last few back before offering more attempts, and raises a `defect` gate
     # instead when they were all one failure (domain/defect.py).
     JOB_FAILED = "JobFailed"
+    # A DESIGN research topic that was not researched: no evidence could be obtained and
+    # `[design.research] on_unavailable = "record_gap"` let the phase proceed rather than
+    # wait for a person. The topic, the reason and the cycle -- never a source or findings,
+    # so it can never be read as research. The synthesized spec states each one.
+    RESEARCH_GAP_RECORDED = "ResearchGapRecorded"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)

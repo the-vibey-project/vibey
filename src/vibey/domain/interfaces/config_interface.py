@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from vibey.domain.design_default_scope import DefaultScope
     from vibey.domain.gate_notice import ReminderSchedule
     from vibey.domain.queue_reap import BrokerPolicy, ReapThresholds
+    from vibey.domain.research_gap import ResearchOnUnavailable
 
 
 @runtime_checkable
@@ -118,8 +119,21 @@ class DesignInterviewConfigInterface(Protocol):
 
 
 @runtime_checkable
+class DesignResearchConfigInterface(Protocol):
+    """`[design.research]`."""
+
+    @property
+    def on_unavailable(self) -> ResearchOnUnavailable:
+        """`gate` parks for a person; `record_gap` records the topic as not researched."""
+        ...
+
+
+@runtime_checkable
 class DesignConfigInterface(Protocol):
     """`[design]`."""
 
     @property
     def interview(self) -> DesignInterviewConfigInterface: ...
+
+    @property
+    def research(self) -> DesignResearchConfigInterface: ...

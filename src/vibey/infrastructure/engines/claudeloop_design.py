@@ -101,6 +101,9 @@ class ClaudeLoopDesignProvider:
             "constraints [{text,kind}], non_goals, criteria [{criterion_id,given,when,then,fit}], "
             "nfrs [{nfr_id,attribute,scale,meter,must,wish,fit_criterion}], and walking_skeleton. "
             "Constraint kind is hard or soft.\n"
+            # The spec states recorded gaps itself; findings nobody made must not appear.
+            "A ResearchGapRecorded event means that topic was NOT researched: rely on no "
+            "findings about it and cite nothing for it.\n"
             f"Ledger events: {events_json(events)}"
         )
         data = _object(await self._invoke(prompt, effort=Effort.HIGH))

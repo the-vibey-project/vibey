@@ -29,6 +29,10 @@ from vibey.domain.queue_reap import (
     BrokerPolicy,
     ReapThresholds,
 )
+from vibey.domain.research_gap import (
+    DEFAULT_RESEARCH_ON_UNAVAILABLE,
+    ResearchOnUnavailable,
+)
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
@@ -603,6 +607,9 @@ class DesignInterviewConfig:
 
     @classmethod
     def from_table(cls, table: dict[str, Any], path: str) -> "DesignInterviewConfig":
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"{path}.{unknown[0]}", "is not a [design.interview] key")
         raw = _optional(table, "default_scope", path, str, DEFAULT_SCOPE.value)
         try:
             return cls(default_scope=DefaultScope(raw))
@@ -614,11 +621,38 @@ class DesignInterviewConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class DesignResearchConfig:
+    """`[design.research]`: what a research job does when no evidence can be obtained.
+
+    `gate` (the default) parks a `research_evidence` gate for a person, as research always
+    has. `record_gap` records the topic as not researched -- a `ResearchGapRecorded` event
+    and a statement in the spec, never an invented source -- and lets DESIGN proceed
+    (domain/research_gap.py). Evidence that exists is used either way, and evidence that
+    exists but cannot be attributed still parks for a person.
+    """
+
+    on_unavailable: ResearchOnUnavailable = DEFAULT_RESEARCH_ON_UNAVAILABLE
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "DesignResearchConfig":
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"{path}.{unknown[0]}", "is not a [design.research] key")
+        value = table.get("on_unavailable", DEFAULT_RESEARCH_ON_UNAVAILABLE.value)
+        choices = tuple(policy.value for policy in ResearchOnUnavailable)
+        if not isinstance(value, str) or value not in choices:
+            raise ConfigError(f"{path}.on_unavailable", f"must be one of {choices}, got {value!r}")
+        return cls(on_unavailable=ResearchOnUnavailable(value))
+
+
+@dataclass(frozen=True, slots=True)
 class DesignConfig:
-    """`[design]`: the DESIGN phase's declared policy (not `[phases.design]`, which
-    holds the phase's effort and engine pool)."""
+    """`[design]`: how the DESIGN phase's own protocol behaves (not which engines run it,
+    which is `[phases.design]`) -- how the interview declares its defaults
+    (`[design.interview]`) and what research does without evidence (`[design.research]`)."""
 
     interview: DesignInterviewConfig = field(default_factory=DesignInterviewConfig)
+    research: DesignResearchConfig = field(default_factory=DesignResearchConfig)
 
     @classmethod
     def from_data(cls, data: Mapping[str, Any]) -> "DesignConfig":
@@ -626,8 +660,15 @@ class DesignConfig:
         Needs nothing else in it, so the interview handler can read its policy from the
         stored record without the `[project]` table a whole-document parse demands."""
         table = _optional(dict(data), "design", "design", dict, {})
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"design.{unknown[0]}", "is not a [design] table")
         interview = _optional(table, "interview", "design.interview", dict, {})
-        return cls(interview=DesignInterviewConfig.from_table(interview, "design.interview"))
+        research = _optional(table, "research", "design.research", dict, {})
+        return cls(
+            interview=DesignInterviewConfig.from_table(interview, "design.interview"),
+            research=DesignResearchConfig.from_table(research, "design.research"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
