@@ -20,6 +20,7 @@ remain documented inputs for future wiring.
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. `[notifications] sweep_interval_seconds` is read from the same `./vibey.toml`, for the gate-reminder sweep every idle worker runs. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
+ | `./vibey.toml`, `[design.research]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`) | `bootstrap.build_app`, handed to every worker's `design.research` handler | What DESIGN research does when its provider can obtain no evidence ([`[design.research]`](#designresearch)): wait for a person (the default) or record the topic as not researched. A `./vibey.toml` that does not parse is skipped, and the environment alone is read, so the policy falls back to the default -- a person waits -- unless the environment declares otherwise. |
  | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
  | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
 
@@ -86,7 +87,8 @@ worker finds no stored switch and each local engine sits at its default —
 | `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | `bootstrap.build_app()` via `PostgresMigrator.from_environ` (every command that opens the queue) | How long a start waits for another process's migration before failing with `MigrationLockTimeout`, which names the backend pid holding the lock. Seconds, fractions allowed and rounded up to the next millisecond; default `300`; `0` waits indefinitely. Unset or blank means the default; anything that is not a number from `0` to `2147483.647` fails the start with `InvalidMigrationLockTimeout` before the pool opens, rather than falling back. See [the migration lock](../plans/data-model.md#71-the-migration-lock). |
 | `VIBEY_FEATURE_GPTOSSLOOP` | `vibey worker`, `vibey doctor` and `vibey loops`, through `LocalEngineSettings` (`infrastructure/engines/local_engines.py`) | Overrides `features.gptossloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other set value — `0` included — disables. When set it wins over both the stored project record and `./vibey.toml`; when neither sets the switch, gptossloop is on (ADR-0064). For the worker, gptossloop on means a gptossloop adapter in the LOCAL tier, preferred first for BUILD ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md)). |
 | `VIBEY_FEATURE_QWENLOOP` | as `VIBEY_FEATURE_GPTOSSLOOP` | Overrides `features.qwenloop`, with the same values. Off when nothing sets it. Enabling it adds a qwenloop adapter — the same runner on a Qwen model — to the LOCAL tier beside gptossloop, and makes the worker and `vibey doctor` print a `note:` that qwenloop runs a Qwen model since ADR-0064. |
-| `VIBEY_EVIDENCE_DIR` | `vibey work --provider gptossloop`, `vibey worker --provider gptossloop` (the default) | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
+| `VIBEY_EVIDENCE_DIR` | `vibey work --provider gptossloop`, `vibey worker --provider gptossloop` (the default) | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source; what the research job does then is [`[design.research] on_unavailable`](#designresearch) — by default it parks for a person. |
+| `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `bootstrap.build_app` (every worker), through the environment overlay | Overrides [`[design.research] on_unavailable`](#designresearch): `gate` or `record_gap`, exactly. Set, it beats `./vibey.toml`; empty counts as unset; any other value fails the start. How an unattended driver (`scripts/triaged_delivery.py --record-research-gaps`) opts a worker in without writing a file. |
 
 ### Database roles { #database-roles }
 
@@ -201,6 +203,7 @@ The queue reaper's keys have the same overlay, and the same precedence
 | `VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS` | `[queue.reap].consumer_timeout_seconds` |
 | `VIBEY_QUEUE_REAP_DELIVERY_LIMIT` | `[queue.reap].delivery_limit` |
 | `VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES` | `[queue.defect].identical_failures` |
+| `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `[design.research].on_unavailable` |
 
 ## Schema semantics
 
@@ -640,6 +643,45 @@ environment alone (`VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES`) in a pod with none.
 ```toml
 [queue.defect]
 identical_failures = 4
+```
+
+## `[design.research]` { #designresearch }
+
+What a DESIGN research job does when its provider can obtain no evidence. After the
+interview, DESIGN queues one `design.research` job per topic (`prior-art`, `libraries`,
+`api-docs`), and synthesis waits for all of them. The sovereign provider has no web
+access: it summarises reading the operator supplied in `VIBEY_EVIDENCE_DIR`, and with none
+it refuses rather than invent a source ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)).
+Refusing to fabricate is not negotiable (sub-doctrine 10.f); this key only decides what
+happens next.
+
+- **`gate`** (the default). The job parks on a `research_evidence` gate that names the file
+  to supply, and DESIGN waits for a person. This is the behaviour before the key existed.
+- **`record_gap`**. The topic is recorded as **not researched**, and DESIGN proceeds without
+  a person. Nothing is invented: the job writes a `ResearchGapRecorded` ledger event
+  (trusted; `topic`, `reason`, `cycle` -- no source, no content) and succeeds. Synthesis
+  reads the cycle's gaps from the ledger -- not from the model -- into the spec, and the
+  published `spec.md` ends with a **Research not performed** section naming each topic and
+  why; `open-items.md` lists them too, so REVIEW and a person see the gap rather than a
+  silence. The synthesizer is told a gap means no findings exist for that topic.
+
+Either way, evidence that exists is used. And evidence the operator supplied that cannot
+be attributed -- a file with no `source:` first line, or an empty body -- still parks for a
+person under `record_gap`: that is a mistake to fix, and recording it as "not researched"
+would silently set the operator's material aside.
+
+Read like [`[queue.defect]`](#queuedefect): from `./vibey.toml` by `build_app`, or from the
+environment alone (`VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`), which beats the file when set.
+The triaged-delivery bridge opts its worker in with `--record-research-gaps`
+(`VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`); it is off by default there too.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `on_unavailable` | string: `gate` or `record_gap` | `gate` | Exactly one of the two, lower case. Any other value -- a typo, `true`, another case -- is refused at load, so a malformed policy can never read as `record_gap`, nor silently as the default. An unknown key in `[design.research]`, or an unknown table under `[design]`, is refused. |
+
+```toml
+[design.research]
+on_unavailable = "record_gap"
 ```
 
 ## Concurrent local runs: `[local_models]` in `.vibey-gh.toml` { #local_models }

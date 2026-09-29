@@ -372,3 +372,32 @@ def test_the_environment_alone_declares_the_defect_threshold() -> None:
     assert ENVIRONMENT_CONFIG.load({}).queue.defect.identical_failures == 3
     with pytest.raises(ValueError, match="VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES must be an int"):
         ENVIRONMENT_CONFIG.load({"VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES": "three"})
+
+
+def test_the_environment_declares_the_design_research_policy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An unattended driver opts a worker into recording research gaps without writing a
+    vibey.toml; set, the variable beats the file; malformed, it fails the start."""
+    from vibey.domain.research_gap import ResearchOnUnavailable
+    from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG
+
+    variable = "VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE"
+    assert ENVIRONMENT_CONFIG.load({}).design.research.on_unavailable is ResearchOnUnavailable.GATE
+    declared = ENVIRONMENT_CONFIG.load({variable: " record_gap "})
+    assert declared.design.research.on_unavailable is ResearchOnUnavailable.RECORD_GAP
+    with pytest.raises(ConfigError, match=r"design.research.on_unavailable: must be one of"):
+        ENVIRONMENT_CONFIG.load({variable: "yes"})
+
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text(
+        '[project]\nname = "demo"\n[design.research]\non_unavailable = "record_gap"\n'
+    )
+    monkeypatch.setenv(variable, "gate")
+    assert load_config_from_path(config_path).design.research.on_unavailable is (
+        ResearchOnUnavailable.GATE
+    )
+    monkeypatch.setenv(variable, "")  # empty is unset: the file's declaration stands
+    assert load_config_from_path(config_path).design.research.on_unavailable is (
+        ResearchOnUnavailable.RECORD_GAP
+    )

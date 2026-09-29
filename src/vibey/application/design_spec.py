@@ -62,10 +62,20 @@ def render_design_artifacts(
         or "- None"
     )
     non_goals = "\n".join(f"- {item}" for item in spec.non_goals) or "- None"
+    gap_lines = tuple(f"- {gap.statement()}" for gap in spec.research_gaps)
+    # Stated in the spec itself, not only among the open items: a reader of spec.md must
+    # not be able to take its silence about a topic for research that found nothing.
+    research_md = (
+        "\n## Research not performed\n\n"
+        "These research topics were not researched. No source was consulted for them, and "
+        "nothing in this spec rests on findings about them.\n\n" + "\n".join(gap_lines) + "\n"
+        if gap_lines
+        else ""
+    )
     spec_md = (
         f"# Design spec\n\n## Objective\n\n{spec.objective}\n\n"
         f"## Constraints\n\n{constraints}\n\n## Non-goals\n\n{non_goals}\n\n"
-        f"## Walking skeleton\n\n{spec.walking_skeleton}\n"
+        f"## Walking skeleton\n\n{spec.walking_skeleton}\n{research_md}"
     )
 
     acceptance_md = (
@@ -95,11 +105,11 @@ def render_design_artifacts(
         + ("\n".join(f"- {decision}" for decision in decisions) or "- None")
         + "\n"
     )
-    open_items_md = (
-        "# Open items and assumptions\n\n"
-        + ("\n".join(f"- {assumption}" for assumption in assumptions) or "- None")
-        + "\n"
+    open_items = (
+        *(f"- {assumption}" for assumption in assumptions),
+        *(f"- Research not performed -- {gap.statement()}" for gap in spec.research_gaps),
     )
+    open_items_md = "# Open items and assumptions\n\n" + ("\n".join(open_items) or "- None") + "\n"
 
     return {
         "spec.md": spec_md,

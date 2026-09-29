@@ -8,7 +8,7 @@ reaches the world through three seams -- the forge (`gh`), a command runner (the
 evidence directory.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Protocol
 
@@ -30,10 +30,17 @@ class CommandResultInterface(Protocol):
 
 
 class CommandRunnerInterface(Protocol):
-    """Runs one command to completion, or stops it and its descendants at `timeout`."""
+    """Runs one command to completion, or stops it and its descendants at `timeout`.
+
+    `env`, when given, is added to the runner's own environment for that command only."""
 
     def run(
-        self, argv: Sequence[str], *, timeout: float | None = None, cwd: Path | None = None
+        self,
+        argv: Sequence[str],
+        *,
+        timeout: float | None = None,
+        cwd: Path | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> CommandResultInterface: ...
 
 

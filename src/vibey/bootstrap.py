@@ -6,7 +6,7 @@ import os
 import platform
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager, suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Final
@@ -104,10 +104,16 @@ from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanH
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
-from vibey.domain.config import NotificationsConfig, QueueDefectConfig, VibeyConfig
+from vibey.domain.config import (
+    DesignResearchConfig,
+    NotificationsConfig,
+    QueueDefectConfig,
+    VibeyConfig,
+)
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import VibeyError
 from vibey.domain.interfaces.config_interface import (
+    DesignResearchConfigInterface,
     QueueDefectConfigInterface,
     QueueReapConfigInterface,
 )
@@ -247,6 +253,10 @@ class AppResources:
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
     ledger_guard: LedgerGuardStatus | None = None
+    # `[design.research]` as resolved, like `[queue.defect]`: what a research job does when
+    # its provider can obtain no evidence -- park for a person (the default) or record the
+    # topic as not researched.
+    design_research: DesignResearchConfigInterface = field(default_factory=DesignResearchConfig)
 
 
 class SystemClock:
@@ -284,6 +294,17 @@ WORKER_GATE_SEAMS: Final[WorkerGateSeamsInterface] = WorkerGateSeams()
 """What every worker builder composes its gate seams through. Stateless."""
 
 
+# Module-level rather than a method (ADR-0016's written reason): the two worker builders
+# that compose `design.research` are module-level functions themselves, and this is one
+# attribute read with the harness fallback `WorkerGateSeams` uses for `queue_defect`.
+def _design_research(resources: object) -> DesignResearchConfigInterface:
+    """The resolved `[design.research]` policy; a harness without one gets the default."""
+    policy: DesignResearchConfigInterface = getattr(
+        resources, "design_research", DesignResearchConfig()
+    )
+    return policy
+
+
 def build_design_worker(
     *, resources: AppResources, project: ProjectRecord, provider: DesignProvider, owner: str
 ) -> WorkerLoop:
@@ -311,6 +332,7 @@ def build_design_worker(
                 researcher=provider,
                 clock=clock,
                 engine_id=provider.engine_id,
+                on_unavailable=_design_research(resources).on_unavailable,
             ),
             "design.synthesize": DesignSynthesizeHandler(
                 ledger=resources.design_ledger,
@@ -622,6 +644,7 @@ def build_full_worker(
             researcher=design_provider,
             clock=clock,
             engine_id=design_provider.engine_id,
+            on_unavailable=_design_research(resources).on_unavailable,
         ),
         "design.synthesize": DesignSynthesizeHandler(
             ledger=resources.design_ledger,
@@ -1014,6 +1037,9 @@ async def build_app(
         bus_settings = declared.bus
         reap_settings: QueueReapConfigInterface = declared.queue.reap
         defect_settings: QueueDefectConfigInterface = declared.queue.defect
+        # A skipped vibey.toml leaves this at what the environment alone declares, and so at
+        # the default -- a person waits for the reading -- unless the operator said otherwise.
+        design_research_settings: DesignResearchConfigInterface = declared.design.research
         if skipped_toml:
             # A vibey.toml the surfaces could not use is still the operator's word on the
             # reaper: its [queue] table is read on its own, and a malformed one fails the
@@ -1202,6 +1228,7 @@ async def build_app(
             job_failures=PostgresJobFailureHistory(pool),
             gate_reminder=gate_reminder,
             queue_defect=defect_settings,
+            design_research=design_research_settings,
         )
     finally:
         if bus_recomputer_task is not None:

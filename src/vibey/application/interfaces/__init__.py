@@ -190,6 +190,7 @@ from vibey.application.interfaces.queue_reap import (
     QueueReaperInterface,
     QueueReapStore,
 )
+from vibey.application.interfaces.research_gaps import ResearchGapRecordsInterface
 from vibey.application.interfaces.review import (
     AutomatedFinding,
     AutomatedReviewRunner,
@@ -218,6 +219,7 @@ from vibey.application.interfaces.worker_interface import (
 
 __all__ = [
     "DefectGateInterface",
+    "ResearchGapRecordsInterface",
     "DefectTriageInterface",
     "JobFailureHistory",
     "GateNoticeServiceInterface",

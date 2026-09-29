@@ -623,3 +623,53 @@ def test_an_invalid_queue_defect_table_is_refused(fragment: str, match: str) -> 
 def test_a_queue_defect_that_is_not_a_table_is_refused() -> None:
     with pytest.raises(ConfigError, match="queue.defect"):
         load_config_from_string('[queue]\ndefect = 3\n[project]\nname = "demo"\n')
+
+
+def test_design_research_waits_for_a_person_unless_told_otherwise() -> None:
+    from vibey.domain.config import DesignConfig, DesignResearchConfig
+    from vibey.domain.interfaces.config_interface import (
+        DesignConfigInterface,
+        DesignResearchConfigInterface,
+    )
+    from vibey.domain.research_gap import ResearchOnUnavailable
+
+    design = load_config_from_string('[project]\nname = "demo"\n').design
+    assert isinstance(design, DesignConfigInterface)
+    assert isinstance(design.research, DesignResearchConfigInterface)
+    assert design.research.on_unavailable is ResearchOnUnavailable.GATE
+    configured = load_config_from_string(
+        '[project]\nname = "demo"\n[design.research]\non_unavailable = "record_gap"\n'
+    )
+    assert configured.design.research.on_unavailable is ResearchOnUnavailable.RECORD_GAP
+    assert DesignConfig.from_data({"design": {"research": {"on_unavailable": "gate"}}}) == (
+        DesignConfig(research=DesignResearchConfig(on_unavailable=ResearchOnUnavailable.GATE))
+    )
+
+
+@pytest.mark.parametrize(
+    ("fragment", "match"),
+    [
+        (
+            '[design.research]\non_unavailable = "skip"',
+            r"design.research.on_unavailable: must be one of \('gate', 'record_gap'\), got 'skip'",
+        ),
+        (
+            '[design.research]\non_unavailable = "RECORD_GAP"',
+            r"design.research.on_unavailable: must be one of",
+        ),
+        ("[design.research]\non_unavailable = true", r"design.research.on_unavailable: .* True"),
+        (
+            "[design.research]\nsurprise = 1",
+            r"design.research.surprise: is not a \[design.research",
+        ),
+        ("[design.elsewhere]\nx = 1", r"design.elsewhere: is not a \[design\] table"),
+        ("[design]\nresearch = 3", r"design.research"),
+        ('design = "record_gap"', r"design"),
+    ],
+)
+def test_a_malformed_design_research_table_is_refused_at_load(fragment: str, match: str) -> None:
+    """A policy that cannot be read is never taken for one of the two it could have meant:
+    `record_gap` lets DESIGN proceed without a person, so a typo must not turn into it --
+    nor silently into the default."""
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'{fragment}\n[project]\nname = "demo"\n')

@@ -116,6 +116,28 @@ it as always. Two limits to know:
 
 The opt-in never answers a REVIEW verdict, a deployment choice, or any other gate.
 
+### The opt-in: `--record-research-gaps`
+
+On the sovereign provider, DESIGN research has no web access: each topic (`prior-art`,
+`libraries`, `api-docs`) is summarised from reading in `VIBEY_EVIDENCE_DIR`, and with none
+the provider refuses rather than invent a source. By default that refusal parks a
+`research_evidence` gate, so every delivery waits for a person in DESIGN.
+
+`--record-research-gaps` (or `VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`) runs the
+bridge's `vibey worker` with `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE=record_gap`
+([`[design.research]`](../reference/configuration.md#designresearch)): a topic with no
+evidence is recorded as not researched -- a `ResearchGapRecorded` ledger event, and a
+**Research not performed** section in the published `spec.md` -- and DESIGN goes on. No
+source is ever invented; reading that exists is still used; and a supplied file that cannot
+be attributed still parks for a person. The bridge records
+`design_research_on_unavailable: record_gap` in the project's evidence file. It answers no
+gate: DESIGN questions still wait for a person unless `--answer-design-defaults` is on too.
+
+The variable reaches only the worker the bridge runs itself. Under `vibey supervisor`,
+the separate `vibey worker --all-projects` service reads its own environment file and
+`vibey.toml`: set `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE=record_gap` there (or
+`[design.research] on_unavailable = "record_gap"`) for jobs it runs to follow the same policy.
+
 ## Running it unattended
 
 From the repository checkout, with `gh` logged in under a credential a background service can
@@ -181,6 +203,7 @@ Every setting is a flag and an environment variable; the flag wins.
 | Flag | Environment | Default |
 |---|---|---|
 | `--answer-design-defaults` | `VIBEY_TRIAGED_DELIVERY_ANSWER_DESIGN_DEFAULTS` | off |
+| `--record-research-gaps` | `VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS` | off |
 | `--answer-by` | `VIBEY_TRIAGED_DELIVERY_ANSWER_BY` | `automation:triaged-delivery` |
 | `--draft` / `--no-draft` | `VIBEY_TRIAGED_DELIVERY_DRAFT` | draft |
 | `--base` | `VIBEY_TRIAGED_DELIVERY_BASE` | `develop` |

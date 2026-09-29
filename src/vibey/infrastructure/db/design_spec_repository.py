@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from vibey.application.design_spec import render_design_artifacts
+from vibey.domain.research_gap import ResearchGap
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -48,6 +49,11 @@ class FileDesignSpecRepository:
             criteria=tuple(AcceptanceCriterion(**item) for item in raw["criteria"]),
             nfrs=tuple(NonFunctionalRequirement(**item) for item in raw["nfrs"]),
             walking_skeleton=str(raw["walking_skeleton"]),
+            # Absent from a spec saved before gaps were recorded: that spec had none.
+            research_gaps=tuple(
+                ResearchGap(topic=str(item["topic"]), reason=str(item["reason"]))
+                for item in raw.get("research_gaps", [])
+            ),
         )
 
     async def publish(self, project_id: UUID, cycle: int, spec: DesignSpec) -> None:

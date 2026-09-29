@@ -17,6 +17,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **design:** DESIGN research can proceed without a person when no evidence can be had --
+  never by fabricating. Observed live on 2026-09-29 (project 9692abab, issue #998): every
+  delivery on the sovereign provider parked at a `research_evidence` gate in DESIGN,
+  whatever its size, because a local model has no web access and rightly refuses to invent
+  a source. The new `[design.research] on_unavailable` key (`VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`)
+  keeps `gate` as the default -- absence of evidence waits for a person, as before -- and
+  adds `record_gap`: the topic becomes a typed `ResearchGap` (topic and reason, no source),
+  written as a trusted `ResearchGapRecorded` ledger event, and synthesis states every gap
+  of the cycle in the spec, from the ledger rather than the model -- `spec.md` ends with a
+  **Research not performed** section and `open-items.md` lists them -- so REVIEW and a
+  person see the gap. Evidence that exists is still used, and supplied evidence that cannot
+  be attributed still parks for a person under either policy. A malformed value is refused
+  at load. The triaged-delivery bridge opts its worker in only with `--record-research-gaps`
+  (`VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`), off by default, and records that it did.
 * **review:** the PR review gate now reaches a verdict at scale. A diff too large for one
   request to the sovereign model is reviewed whole in bounded parts (`[pr_automation.fallback]
   max_chunks`, default 6) -- split by file and then by hunk, each part held to the same

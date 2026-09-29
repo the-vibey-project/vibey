@@ -39,6 +39,7 @@ fields listed for that kind:
 | `FindingRaised` | `finding_id`, `severity`, `ambiguity`, `text`, `automated` |
 | `FindingResolved` | `finding_id`, `resolution` |
 | `ArtifactProduced` | `artifact_id`, `artifact_type`, `title`, `cycle` |
+| `ResearchGapRecorded` | `topic`, `cycle` (the reason is withheld: it can name a directory on your machine) |
 | `VerdictRendered` | `complete`, `success`, `remaining_work` |
 | `VisualDesign*`, `Deployment*` choices | `choice` |
 | `DeliveryEstimateRecorded` | `schema`, `recorded_at`, `source_fingerprint`, `history`, `time`, `billing`, `materials`, `track_record`, `assumptions`, `problems` |
