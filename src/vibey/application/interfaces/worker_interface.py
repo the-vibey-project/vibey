@@ -18,3 +18,20 @@ class WorkerLoopInterface(Protocol):
         raised, so one lost job cannot stop the loop that drives the rest.
         """
         ...
+
+
+@runtime_checkable
+class MultiProjectWorkerInterface(Protocol):
+    """Serves every project with claimable work through each project's own loops (#1189)."""
+
+    @property
+    def last_served(self) -> UUID | None:
+        """The project whose job this worker last ran, or None before the first."""
+        ...
+
+    async def run_once(self, slot: int = 0) -> bool:
+        """Run at most one job, from the first project in claim order whose own loop
+        claims one. `slot` picks which of that project's loops runs it, so parallel drive
+        loops never share one. False when no project had anything this worker could claim.
+        """
+        ...

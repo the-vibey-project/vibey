@@ -33,12 +33,16 @@ from vibey_gh import (
 )
 from vibey_gh.announce import Announcer
 from vibey_gh.approval_check import ApprovalCheck
+from vibey_gh.branch_health import BranchHealth
 from vibey_gh.config import load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
+from vibey_gh.ruleset_drift import RulesetDrift
+from vibey_gh.skip_markers import SkipMarkerGuard
+from vibey_gh.tracking_issue import TrackingIssue
 
 
 def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -1631,6 +1635,8 @@ def _reconcile(args) -> int:
 
 
 def _rulesets(args) -> int:
+    if args.check:
+        return RulesetDrift.dispatch(args)
     cfg = load_config()
     try:
         outcomes = rulesets.reconcile(cfg, dry_run=args.dry_run)
@@ -2666,7 +2672,30 @@ def main(argv: list[str] | None = None) -> int:
 
     rs = sub.add_parser("rulesets", help="reconcile the integration and release branch rulesets")
     rs.add_argument("--dry-run", action="store_true", help="decide without applying anything")
+    rs.add_argument(
+        "--check",
+        action="store_true",
+        help="read-only: exit 1 when any live repository ruleset differs from the declaration",
+    )
     rs.set_defaults(func=_rulesets)
+
+    sm = sub.add_parser(
+        "skip-marker-check",
+        help="refuse a GitHub skip marker in a pull request's commits, title or body",
+    )
+    SkipMarkerGuard.declare(sm).set_defaults(func=SkipMarkerGuard.dispatch)
+
+    bh = sub.add_parser(
+        "branch-health",
+        help="open, update or close the tracking issue for a red permanent branch",
+    )
+    BranchHealth.declare(bh).set_defaults(func=BranchHealth.dispatch)
+
+    ti = sub.add_parser(
+        "tracking-issue",
+        help="open, update or close the one issue that tracks a named condition",
+    )
+    TrackingIssue.declare(ti).set_defaults(func=TrackingIssue.dispatch)
 
     # A thin delegate for people. The delegated approver never comes this way: it runs
     # `python -m vibey_gh.approval_check`, so this module is not on its trust path.

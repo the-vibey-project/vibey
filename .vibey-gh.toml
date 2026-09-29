@@ -125,7 +125,11 @@ pin_version = true
 # author's own. It refuses to rewrite a branch that already carries merge commits and
 # fails loudly there rather than guessing, which is the right trade: an automated rewrite
 # of somebody's merge is not a tidy-up.
-workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "repository-profile.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
+# skip-markers.yml, branch-health.yml and ruleset-drift.yml are the release-path guards the
+# 3.0.0 release was missing: a skip-ci marker in a hand-made squash body switched off every
+# push workflow on main, develop sat red for a day with nothing saying so, and a hand-made
+# ruleset stood beside the declared one unremarked. See [skip_markers] and [branch_health].
+workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "repository-profile.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml", "skip-markers.yml", "branch-health.yml", "ruleset-drift.yml"]
 
 # Declared here rather than clicked, per ADR-0018. `vibey-gh` has reconciled both of these
 # from configuration since 1.x and vibey-skills has used them for months; this repository,
@@ -142,6 +146,13 @@ topics = [
   "delivery-automation", "devtools", "gemini", "gpt", "llm", "mit-license",
   "orchestration", "postgresql", "python",
 ]
+# What a squash merge proposes as its commit. GitHub's default concatenates every commit
+# message in the pull request into the body, and that is how the hand-squashed 3.0.0
+# promotion (#1244) carried a quoted skip-ci marker onto main and ran no push workflow
+# there at all. The pull request's own title and body cannot carry a commit subject nobody
+# read, and `skip-markers.yml` checks both before they are merged.
+squash_merge_commit_title   = "PR_TITLE"
+squash_merge_commit_message = "PR_BODY"
 
 [rulesets]
 enabled = true
@@ -159,9 +170,12 @@ enabled = true
 [rulesets.integration]
 # The two VS Code extension jobs joined once they had run green on develop (0823cdfd),
 # as ADR-0059 owed: a krypton client that breaks is a failed merge, not a later surprise.
+# "No skip markers" is skip-markers.yml's job: a skip-ci marker in a commit, or in the title
+# or body a squash merge commits, never reaches a permanent branch unrefused.
 required_checks  = [
   "gates", "No-loss property suite (10,000 examples)",
   "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
+  "No skip markers",
 ]
 required_approvals = 1
 # The owner in .github/CODEOWNERS must approve a change to a protected path.
@@ -185,10 +199,15 @@ enabled = true
 required_checks  = [
   "gates", "No-loss property suite (10,000 examples)", "uv.lock is in sync with pyproject.toml",
   "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
+  "No skip markers",
 ]
 required_approvals = 1
 require_code_owner_review = true
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
+# Promotion is a rebase (`vibey-gh promote`, ADR-0028), and nothing else may merge into main:
+# the one squash of a promotion (#1244) concatenated 221 commit messages into one body, a
+# quoted skip-ci marker among them, and main then ran no push workflow at all.
+allowed_merge_methods = ["rebase"]
 
 # Declared and off, rather than absent. Promotion is one controlled rebase of develop into
 # main, so a queue here would batch a group of one and add its wait to every release for
@@ -197,6 +216,26 @@ bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
 # because that is how promotion merges -- wrong the moment `enabled` flips, if left unsaid.
 [rulesets.release.merge_queue]
 enabled = false
+
+# A GitHub skip marker (the bracketed skip-ci spellings, or a `skip-checks: true` trailer)
+# is refused in every commit of a pull request into develop or main and in its title and
+# body, by skip-markers.yml, which gates the PR automation ("Skip markers" in scan_workflows)
+# and the merge queue ("No skip markers" in required_checks).
+#
+# Nothing is exempt. The one automation that ever wrote the marker on purpose,
+# delivery-estimate.yml, stopped on 2026-09-24: its commits now go through a pull request
+# and every CI gate like any other change. Should an automation need it again, name its
+# commit author here -- exactly, name or e-mail -- and the exemption covers that author's
+# own commit messages into develop, never a title or body, and never a pull request into main.
+[skip_markers]
+enabled = true
+exempt_authors = []
+
+# One tracking issue per permanent branch while its CI push run is red, closed when the tip
+# is green again (branch-health.yml). The watched checks are each branch's required_checks
+# above -- the definition of green this file already makes -- so no list is repeated here.
+[branch_health]
+enabled = true
 
 [pr_automation]
 # The review, repair and conflict jobs load this tree's own vibey-skills marketplace, read
@@ -217,8 +256,8 @@ plugins = [
 # completes and announces nothing, so the last scan fires the final evaluation, this one
 # settles after it, and no run ever looks again -- the pull request then sits blocked with
 # every check green and nothing to rerun. That deadlock has happened here before; the two
-# lines move together.
-scan_workflows = ["CI", "Provenance", "Conventional Commits"]
+# lines move together. "Skip markers" is here for the same reason (see [skip_markers]).
+scan_workflows = ["CI", "Provenance", "Conventional Commits", "Skip markers"]
 # Rewrite a nonconforming subject rather than only reporting it. The operator's call, and
 # the trade is worth stating because it is not free: the automatic form is
 # `chore: <the original subject>` -- measured, not assumed -- which conforms without

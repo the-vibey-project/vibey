@@ -318,7 +318,12 @@ ruleset-required approving review cannot be satisfied by the default `GITHUB_TOK
 ## Release
 
 `Release` (not a managed template) runs on push to `main` and `develop` with read-only
-`contents: read`. Its `build` job dogfoods `vibey_gh.install.installed()` before
+`contents: read`, and should also accept `workflow_dispatch`: a push the forge skipped — a
+skip-ci marker in its message — leaves no run to re-run, and a dispatch on the branch is the
+recovery, provided every publishing job is gated on `github.ref` rather than on the event.
+Keep every job of `Release` one whose failure should stop the tag and the documentation:
+`GitHub Release` and `Release surfaces` follow only a successful run, so an optional channel
+belongs in a workflow of its own that runs after it. Its `build` job dogfoods `vibey_gh.install.installed()` before
 publishing, stamps a `--dev` version on `develop` builds via `vibey-gh version --apply`,
 and builds the wheel and sdist. `testpypi` (needs `build`, `develop` only) and `pypi`
 (needs `build`, `main` only) each hold `id-token: write` and publish through
@@ -406,6 +411,39 @@ package is reachable, and `develop`/`main` remain protected. Ruleset reconciliat
 before that verification step in the same job, so the branches it protects are already
 current by the time the check runs. A ruleset the API refuses fails the job with the API's
 own reason instead of being silently skipped.
+
+## Skip markers
+
+`Skip markers` runs on every pull request into the integration or release branch (opened,
+reopened, synchronized, edited, ready for review) and on every merge-queue group, with
+`contents: read` only. Its job, `No skip markers`, installs `vibey-gh` from a checkout of the
+default branch — so the configuration read is never the pull request's own — checks the
+change out as data beside it, and runs `vibey-gh skip-marker-check` over the range's commit
+messages and the pull request's title and body (passed through the environment, never
+interpolated into the script). A GitHub skip marker in any of them fails the job with every
+place named: on a permanent branch it would switch off every push workflow, the publish
+included, with nothing red to say so. `[skip_markers] exempt_authors` is the only exemption.
+A pull request whose HEAD commit carries the marker gets no run from GitHub at all, so a
+required `No skip markers` check blocks it until the commit is reworded.
+
+## Branch health
+
+`Branch health` runs on completion of `CI` on the integration or release branch, only for a
+`push` run, with `actions: read`, `contents: read` and `issues: write`. It runs
+`vibey-gh branch-health --run-id <id>`, which judges the run by that branch's required checks
+and keeps one tracking issue per branch — opened or updated while red, closed when the tip is
+green. A run whose commit is no longer the branch tip, or whose watched jobs were cancelled,
+changes nothing. It is never cancelled: each run only ever judges its own commit.
+
+## Ruleset drift
+
+`Ruleset drift` runs daily, on every push to the integration or release branch that changes
+`.vibey-gh.toml`, and by hand, with `contents: read`. It runs `vibey-gh rulesets --check`
+with `AUTOMERGE_TOKEN` and fails when any live repository ruleset differs from the
+declaration, including a ruleset nobody declared and its bypass actors. It never writes: the
+reconcile is `Repository profile`'s. Without the token it warns that nothing was checked —
+the forge withholds bypass actors from any token without repository-admin authority — and
+never reports that as a pass.
 
 ## Release repair
 

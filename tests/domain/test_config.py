@@ -528,3 +528,98 @@ def test_the_bounds_themselves_are_accepted() -> None:
         "dead_letter_peek_limit = 1000\nconsumer_timeout_seconds = 7200\npolicy_priority = 0\n"
     ).queue.reap
     assert (reap.lease_grace_seconds, reap.dead_letter_peek_limit) == (86_400, 1_000)
+
+
+# -- gate notices ([notifications] reminders) and [queue.defect] ----------------------
+
+
+def test_gate_reminder_defaults_are_the_declared_ones() -> None:
+    from vibey.domain.gate_notice import ReminderSchedule
+    from vibey.domain.interfaces.config_interface import NotificationsConfigInterface
+
+    notifications = load_config_from_string('[project]\nname = "demo"\n').notifications
+    assert isinstance(notifications, NotificationsConfigInterface)
+    assert notifications.enabled is False  # no zero-configuration channel exists
+    assert (
+        notifications.remind_after_seconds,
+        notifications.remind_every_seconds,
+        notifications.max_reminders,
+        notifications.sweep_interval_seconds,
+    ) == (86_400, 86_400, 7, 300)
+    assert notifications.reminders() == ReminderSchedule(
+        after_seconds=86_400, every_seconds=86_400, max_reminders=7
+    )
+
+
+def test_gate_reminders_read_every_key() -> None:
+    notifications = load_config_from_string(
+        '[project]\nname = "demo"\n[notifications]\nremind_after_seconds = 3600\n'
+        "remind_every_seconds = 7200\nmax_reminders = 0\nsweep_interval_seconds = 60\n"
+    ).notifications
+    assert notifications.reminders().after_seconds == 3600
+    assert notifications.reminders().every_seconds == 7200
+    assert notifications.reminders().max_reminders == 0
+    assert notifications.sweep_interval_seconds == 60
+
+
+def test_notifications_read_from_a_stored_project_configuration() -> None:
+    from vibey.domain.config import NotificationsConfig
+
+    stored = {"notifications": {"enabled": True, "max_reminders": 2}, "project": {"name": "x"}}
+    assert NotificationsConfig.from_data(stored).max_reminders == 2
+    assert NotificationsConfig.from_data({}).enabled is False
+
+
+@pytest.mark.parametrize(
+    ("fragment", "match"),
+    [
+        ("remind_after_seconds = 0", r"notifications.remind_after_seconds: must be at least 1"),
+        ("remind_every_seconds = 0", r"notifications.remind_every_seconds: must be at least 1"),
+        ("sweep_interval_seconds = 0", r"notifications.sweep_interval_seconds: must be at least"),
+        ("max_reminders = -1", r"notifications.max_reminders: must not be negative"),
+        ("max_reminders = true", r"notifications.max_reminders: must be a int, got bool"),
+        ('remind_after_seconds = "1d"', r"must be a int, got str"),
+    ],
+)
+def test_an_invalid_gate_reminder_key_is_refused(fragment: str, match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'[project]\nname = "demo"\n[notifications]\n{fragment}\n')
+
+
+def test_queue_defect_defaults_and_reads() -> None:
+    from vibey.domain.config import QueueConfig, QueueDefectConfig
+    from vibey.domain.interfaces.config_interface import (
+        QueueConfigInterface,
+        QueueDefectConfigInterface,
+    )
+
+    queue = load_config_from_string('[project]\nname = "demo"\n').queue
+    assert isinstance(queue, QueueConfigInterface)
+    assert isinstance(queue.defect, QueueDefectConfigInterface)
+    assert queue.defect.identical_failures == 3
+    configured = load_config_from_string(
+        '[project]\nname = "demo"\n[queue.defect]\nidentical_failures = 5\n'
+    )
+    assert configured.queue.defect.identical_failures == 5
+    assert QueueConfig.from_data({"queue": {"defect": {"identical_failures": 0}}}).defect == (
+        QueueDefectConfig(identical_failures=0)
+    )
+
+
+@pytest.mark.parametrize(
+    ("fragment", "match"),
+    [
+        ("identical_failures = 1", r"queue.defect.identical_failures: must be 0 \(off\) or at"),
+        ("identical_failures = -2", r"queue.defect.identical_failures: must be 0"),
+        ("identical_failures = true", r"queue.defect.identical_failures: must be a int, got bool"),
+        ("surprise = 1", r"queue.defect.surprise: is not a \[queue.defect\] key"),
+    ],
+)
+def test_an_invalid_queue_defect_table_is_refused(fragment: str, match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'[queue.defect]\n{fragment}\n[project]\nname = "demo"\n')
+
+
+def test_a_queue_defect_that_is_not_a_table_is_refused() -> None:
+    with pytest.raises(ConfigError, match="queue.defect"):
+        load_config_from_string('[queue]\ndefect = 3\n[project]\nname = "demo"\n')

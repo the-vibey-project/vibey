@@ -37,7 +37,12 @@ from vibey.cli.interfaces.gate_answers_interface import (
     AnswerRuleInterface,
     GateAnswerCommandsInterface,
 )
-from vibey.domain.job import ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND
+from vibey.domain.job import (
+    ATTEMPTS_EXHAUSTED_GATE_KIND,
+    DEFECT_GATE_KIND,
+    DELIVERY_EXHAUSTED_GATE_KIND,
+    ESCALATION_EXHAUSTED_GATE_KIND,
+)
 
 GRANT_PLACEHOLDER: Final = "N"
 """Where a grant's new bound goes. Not a JSON value, so it cannot be sent by accident."""
@@ -144,13 +149,16 @@ ANSWER_RULES: Final[Mapping[str, AnswerRuleInterface]] = MappingProxyType(
         "deploy_interview": CHOICE,
         "deploy_failure_triage": CHOICE,
         BUS_DEAD_LETTER_GATE_KIND: CHOICE,
+        # A defect (worker, in place of a grant): `requeue` once a fix has landed, or
+        # `abandon`. Its options are printed first-first, so the suggestion is `requeue`.
+        DEFECT_GATE_KIND: CHOICE,
         # Spec consent (deploy_acceptance_handler). Its declared default is `reject`, and
         # that is what is printed: accepting also takes explicit mutation consent, which no
         # flag sends and this command never suggests (docs/reference/cli.md, `vibey gates`).
         "deploy_acceptance": CHOICE,
         # Grants, under the key the raising handler reads.
         "budget_exhausted": GrantAnswer("max_dollars"),  # build_implement_handler
-        "escalation_exhausted": GrantAnswer(ATTEMPTS_GRANT_KEY),  # build_implement_handler
+        ESCALATION_EXHAUSTED_GATE_KIND: GrantAnswer(ATTEMPTS_GRANT_KEY),  # build_implement_handler
         ATTEMPTS_EXHAUSTED_GATE_KIND: GrantAnswer(ATTEMPTS_GRANT_KEY),  # worker
         "verify_repair_exhausted": GrantAnswer("max_rounds"),  # build_verify_handler
         "integrate_repair_exhausted": GrantAnswer("max_rounds"),  # build_integrate_handler

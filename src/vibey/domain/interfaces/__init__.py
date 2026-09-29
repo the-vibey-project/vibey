@@ -13,6 +13,7 @@ from vibey.domain.interfaces.config_interface import (
     NotificationsConfigInterface,
     NotificationWebhookConfigInterface,
     QueueConfigInterface,
+    QueueDefectConfigInterface,
     QueuePriorityConfigInterface,
     QueueReapConfigInterface,
     TelemetryConfigInterface,
@@ -21,7 +22,16 @@ from vibey.domain.interfaces.correlation_interface import (
     CorrelationIdInterface,
     DeliveryCorrelationInterface,
 )
+from vibey.domain.interfaces.defect_interface import (
+    DefectAnswerPolicyInterface,
+    FailureNormalizerInterface,
+    RepeatedFailurePolicyInterface,
+)
 from vibey.domain.interfaces.gate_answer_interface import GateAnswerRequestIdsInterface
+from vibey.domain.interfaces.gate_notice_interface import (
+    NoticeChannelsInterface,
+    ReminderScheduleInterface,
+)
 from vibey.domain.interfaces.ledger_chain_interface import (
     ChainFindingInterface,
     ChainLinkInterface,
@@ -205,6 +215,12 @@ __all__ = [
     "LoopInterface",
     "NotificationWebhookConfigInterface",
     "NotificationsConfigInterface",
+    "QueueDefectConfigInterface",
+    "DefectAnswerPolicyInterface",
+    "FailureNormalizerInterface",
+    "RepeatedFailurePolicyInterface",
+    "NoticeChannelsInterface",
+    "ReminderScheduleInterface",
     "PhaseSpendInterface",
     "PhaseTimelineInterface",
     "PhaseTimingProjectionInterface",

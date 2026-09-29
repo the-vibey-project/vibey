@@ -93,6 +93,12 @@ _QUEUE_REAP_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
     ("queue.reap", "delivery_limit", "VIBEY_QUEUE_REAP_DELIVERY_LIMIT", int),
 )
 
+# `[queue.defect]`: how many identical failures make a defect gate instead of a grant. A
+# cluster pod has no vibey.toml, so the chart's environment declares it there.
+_QUEUE_DEFECT_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
+    ("queue.defect", "identical_failures", "VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES", int),
+)
+
 _TRUE: Final = frozenset({"1", "true", "yes", "on"})
 _FALSE: Final = frozenset({"0", "false", "no", "off"})
 
@@ -100,9 +106,13 @@ _FALSE: Final = frozenset({"0", "false", "no", "off"})
 def apply_env_overrides(
     data: dict[str, Any], environ: Mapping[str, str] = os.environ
 ) -> dict[str, Any]:
-    """Overlay surface and `[queue.reap]` environment variables onto parsed TOML data,
-    in place. A dotted table name is a nested table."""
-    for table, key, variable, cast in (*_SURFACE_ENV_VARS, *_QUEUE_REAP_ENV_VARS):
+    """Overlay surface, `[queue.reap]` and `[queue.defect]` environment variables onto
+    parsed TOML data, in place. A dotted table name is a nested table."""
+    for table, key, variable, cast in (
+        *_SURFACE_ENV_VARS,
+        *_QUEUE_REAP_ENV_VARS,
+        *_QUEUE_DEFECT_ENV_VARS,
+    ):
         raw = environ.get(variable)
         if raw is None or not raw.strip():
             continue

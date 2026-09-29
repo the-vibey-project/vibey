@@ -532,6 +532,12 @@ class EventKind(StrEnum):
     ENGINE_FAILED_OVER = "EngineFailedOver"    # ADR-0070
     ENGINE_PROBED = "EngineProbed"
     ENGINE_HANDED_BACK = "EngineHandedBack"
+    # A gate notice: gate, kind, job, notice number (0 raised, 1.. reminders), and the
+    # channels that took it -- or the reason nobody could be told. Once per gate and number.
+    GATE_NOTIFIED = "GateNotified"
+    GATE_NOTICE_UNDELIVERABLE = "GateNoticeUndeliverable"
+    # A handler's failed run: attempt, class, signature (normalized detail, hashed), detail
+    JOB_FAILED = "JobFailed"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({

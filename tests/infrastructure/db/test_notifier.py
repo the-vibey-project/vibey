@@ -79,3 +79,34 @@ async def test_notify_for_a_different_project_does_not_wake_this_waiter(
         assert result is False
     finally:
         await notifier.close()
+
+
+async def test_waiting_for_any_project_wakes_on_every_projects_notification(
+    migrated_pool: asyncpg.Pool, project_id: UUID, notifier: PostgresJobReadyNotifier
+) -> None:
+    """#1189: a worker serving every project waits under no project and is woken by any."""
+    other_project_id = UUID(int=project_id.int ^ 1)
+    await notifier.connect()
+    try:
+        wait_task = asyncio.ensure_future(
+            notifier.wait_for_job_ready(None, timeout=timedelta(seconds=5))
+        )
+        await asyncio.sleep(0.05)
+
+        async with migrated_pool.acquire() as conn:
+            await conn.execute(f"NOTIFY vibey_job_ready, '{other_project_id}'")
+
+        assert await asyncio.wait_for(wait_task, timeout=2.0) is True
+    finally:
+        await notifier.close()
+
+
+async def test_waiting_for_any_project_falls_back_to_the_timeout(
+    migrated_pool: asyncpg.Pool, notifier: PostgresJobReadyNotifier
+) -> None:
+    await notifier.connect()
+    try:
+        assert await notifier.wait_for_job_ready(None, timeout=timedelta(milliseconds=50)) is False
+        assert notifier._waiters == {}
+    finally:
+        await notifier.close()

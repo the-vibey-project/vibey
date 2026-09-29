@@ -204,3 +204,33 @@ async def test_open_all_reads_every_field_a_raised_gate_carries(
 
     assert await gates.open_all() == (raised,)
     assert await gates.open_all() == await gates.open_for_project(project_id)
+
+
+@pytest.mark.parametrize(
+    ("answer", "state"),
+    [({"choice": "abandon"}, JobState.CANCELLED), ({"choice": "requeue"}, JobState.READY)],
+)
+async def test_a_defect_gate_answered_abandon_cancels_its_job(
+    migrated_pool: asyncpg.Pool, project_id: UUID, answer: dict[str, object], state: JobState
+) -> None:
+    """A person who chose to stop a defect is never second-guessed by the queue: the job
+    is cancelled with the answer, in its transaction, and never claimed again. Any other
+    answer runs it once more."""
+    jobs = PostgresJobRepository(migrated_pool)
+    gates = PostgresHumanGateRepository(migrated_pool)
+    job = await jobs.enqueue(_request(project_id))
+    assert await jobs.claim(project_id, owner="w1", lease=LEASE) is not None
+    assert await jobs.park(job.id, owner="w1")
+    raised = await gates.raise_gate(
+        project_id,
+        job.id,
+        HumanGateRequest(kind="defect", prompt="failed alike", options=("requeue", "abandon")),
+    )
+
+    await gates.answer(raised.gate_id, answer=answer, answered_by="adam")
+
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.state is state
+    if state is JobState.CANCELLED:
+        assert await jobs.claim(project_id, owner="w2", lease=LEASE) is None

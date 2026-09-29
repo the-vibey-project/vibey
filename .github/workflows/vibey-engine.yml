@@ -8,6 +8,13 @@ name: Release
 on:
   push:
     branches: [main, develop]
+  # Recovery. A push the forge declined to run -- the 3.0.0 promotion's squash body quoted
+  # a skip-ci marker, so no push workflow ran on main -- has no run to re-run, and until
+  # this line nothing could publish that commit short of pushing another. Dispatch this on
+  # main or develop to publish the tip exactly as its push would have: every publishing
+  # job below is gated on `github.ref`, which a dispatch sets to the selected branch, so a
+  # dispatch on any other branch builds and publishes nothing.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -260,36 +267,8 @@ jobs:
           git config user.email "adam@matthewsteinberger.com"
           vibey-gh realign
 
-  openvsx:
-    # Declared only (ADR-0059, #290): it publishes the VS Code extension to Open VSX when an
-    # OVSX_PAT secret exists, and otherwise says so and does nothing. Creating that token
-    # needs the operator's Open VSX account; using the extension needs no account.
-    name: Publish the VS Code extension to Open VSX
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    env:
-      OVSX_PAT: ${{ secrets.OVSX_PAT }}
-    defaults:
-      run:
-        working-directory: clients/vscode
-    steps:
-      - name: Without a token there is nothing to publish
-        if: env.OVSX_PAT == ''
-        run: echo "OVSX_PAT is not set, so the extension is not published to Open VSX."
-      - uses: actions/checkout@v4
-        if: env.OVSX_PAT != ''
-      - uses: actions/setup-node@v7
-        if: env.OVSX_PAT != ''
-        with:
-          node-version-file: .node-version
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - name: Build and package
-        if: env.OVSX_PAT != ''
-        run: |
-          npm ci --prefix ../..
-          npm run compile
-          npx vsce package --no-dependencies --out vibey.vsix
-      - name: Publish, once per version
-        if: env.OVSX_PAT != ''
-        run: npx ovsx publish vibey.vsix --pat "$OVSX_PAT" --skip-duplicate
+  # The Open VSX publish of the VS Code extension is NOT a job of this workflow any more;
+  # it is openvsx.yml, run after this one succeeds on main. As a job here, an optional
+  # channel whose credential was absent concluded the whole `Release` run as a failure, and
+  # github-release.yml and release-surfaces.yml -- which follow only a SUCCESSFUL Release --
+  # never ran: 3.0.0 reached PyPI with no tag, no GitHub Release and no documentation.

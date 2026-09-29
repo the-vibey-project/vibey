@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from vibey.domain.supervisor import SupervisedService
+
 
 @runtime_checkable
 class TimerUnitRendererInterface(Protocol):
@@ -18,3 +20,15 @@ class TimerUnitRendererInterface(Protocol):
     def systemd(
         self, *, argv: Sequence[str], cwd: str, interval_seconds: int
     ) -> tuple[str, str]: ...
+
+    def launchd_service(
+        self, service: SupervisedService, *, path_env: str, restart_seconds: int
+    ) -> str:
+        """A launchd agent that starts `service` at load and restarts it after a failure."""
+        ...
+
+    def systemd_service(
+        self, service: SupervisedService, *, path_env: str, restart_seconds: int
+    ) -> str:
+        """A systemd user service that restarts `service` after a failure."""
+        ...

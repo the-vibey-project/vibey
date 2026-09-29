@@ -28,6 +28,111 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   (`vibey_gh.review_outcome`) in the gate's check run and a `pr-review-outcome` artifact,
   and the evaluation leaves a `pr-review-lane` record on every run; the new read-only
   `vibey-gh review-outcomes` tabulates them over the last runs.
+* **gates:** "a person was told" is evidence, never assumed. Every notice about a human
+  gate -- notice 0 when it is raised, reminder 1, 2, ... while it waits -- now ends in one
+  ledger event: `GateNotified` when a channel took it, or `GateNoticeUndeliverable` with the
+  reason (`disabled`, `no_channel`, `config_invalid`, `unwired`, `failed`) and a
+  `gate.notice_undeliverable` warning. With `[notifications] enabled = false` -- still the
+  default, since no channel reaches a person with zero configuration (a pod or a launchd
+  worker has no desktop) -- a gate used to leave no trace at all; now it is said once per
+  gate, loudly, and not reminded about. One event per gate and notice number, fleet-wide,
+  so a replayed sweep records nothing (`PostgresGateNoticeStore`).
+* **gates:** stale-gate reminders. An idle worker sweeps its project's open gates every
+  `[notifications] sweep_interval_seconds` (default 300): a gate with no raise notice on
+  record gets one, and a gate open `remind_after_seconds` (default a day) gets a reminder
+  every `remind_every_seconds` (default a day), at most `max_reminders` (default 7; 0 for
+  none) times. `vibey gates --remind [--dry-run] [--json]` runs the same sweep on demand, for
+  a supervisor to schedule where no worker idles; it exits 1 when a project's notices could
+  not be read. `vibey doctor` gains a `gate-notices` line: `WARN ... N gates waiting,
+  nobody will be told`, by project and reason -- a report, never a failure.
+* **queue:** a job whose last failures were all one failure parks on a `defect` gate, not a
+  grant. Every failed handler run is recorded as a `JobFailed` event with its signature --
+  the failure class and detail with ids, timestamps, durations, addresses, temporary paths
+  and attempt counters normalized away, hashed (`domain/defect.py`). When the last
+  `[queue.defect] identical_failures` (default 3; 0 off; env
+  `VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES`) share one signature, the worker raises `defect`
+  in place of `attempts_exhausted` or build.implement's `escalation_exhausted`, naming the
+  signature and the attempts that shared it and offering no more attempts: `--choice
+  requeue` runs it again once a fix has landed (parking at once if it fails the same way),
+  `--choice abandon` cancels the job in the answer's own transaction. Varied failures keep
+  their grant, and unreadable history fails open to it. `GateNotified`,
+  `GateNoticeUndeliverable` and `JobFailed` are withheld from ledger publication.
+
+* **gh:** `vibey-gh skip-marker-check` and the managed `skip-markers.yml` refuse a GitHub
+  skip-ci marker, in any of its spellings or as a skip-checks trailer, in every commit of a
+  pull request into `develop` or `main`, in its title and in its body, on `pull_request` and
+  `merge_group`, with every place named. `[skip_markers] exempt_authors` (empty) is the only
+  exemption, and it never covers a title, a body or a pull request into the release branch.
+  The check is "No skip markers", required on both branches and in `scan_workflows`.
+* **gh:** `vibey-gh branch-health` and the managed `branch-health.yml` keep one tracking issue
+  per permanent branch while a CI push run fails any of that branch's required checks, and
+  close it when the tip is green again; `[branch_health]` configures it.
+* **gh:** `vibey-gh rulesets --check` and the managed `ruleset-drift.yml` compare every live
+  repository ruleset with the declaration, read-only, and fail on drift: a declared ruleset
+  that differs, a rule nobody declared, and any undeclared ruleset with its bypass actors.
+  Ruleset comparison now reads only the declared parameters, so the defaults the forge echoes
+  back are no longer reported as drift on every reconcile.
+* **gh:** `vibey-gh tracking-issue raise|resolve` opens, updates and closes the one issue that
+  tracks a named condition, found by a marker in its body.
+
+* **worker:** `vibey worker --all-projects` serves every project's queue from one process
+  (#1189). Work queued in any project but the one a worker was started for used to wait for
+  a person: 147 ready jobs across 80 projects, most since 2026-08-22. Each pass asks the queue
+  which projects have a job the claim would hand out now, in the claim's own order, and
+  claims through that project's own loop and the unchanged `FOR UPDATE SKIP LOCKED`
+  statement, so budgets, the Sabbath, capacity circuits, the priority lane, phase gates and
+  engine selection hold as for a single-project worker. A project that cannot be served is
+  refused and its jobs stay queued; with nothing queued the worker waits instead of exiting.
+* **supervisor:** `vibey supervisor install` renders a launchd agent (macOS) or a systemd
+  user service (Linux) for `vibey worker --all-projects` and for the triaged-delivery bridge,
+  from `[supervisor]` in `vibey.toml`: restarted after a failed exit, logging to a durable
+  directory, started with a declared environment file through `vibey supervisor exec`, and
+  refused on volatile storage or inside a linked worktree (10.h). It prints the `launchctl` /
+  `systemctl --user` commands and never loads a unit itself. `vibey supervisor status` reads
+  each service's state, and `vibey doctor` prints a `supervisor-*` line per service -- `WARN`
+  when one is missing or stopped, `FAIL` with `[supervisor] required = true`.
+
+### Bug Fixes
+
+* **release:** the release path now recovers from, or refuses, each silent failure the 3.0.0
+  release met. `vibey-engine.yml` and `krypton-app.yml` accept `workflow_dispatch`, so a push
+  the forge skipped can be published by dispatch on `main` or `develop` (every publishing job
+  stays gated on `github.ref`). The Open VSX publish left the `Release` workflow for its own,
+  `openvsx.yml`, run after a successful Release on `main`: with no `OVSX_PAT` it warns and
+  keeps one tracking issue open instead of failing the Release run that the tag, the GitHub
+  Release and the documentation all wait on; with a token, a failed upload still fails loudly.
+* **gh:** `.vibey-gh.toml` declares that a squash commit proposes the pull request's own title
+  and body (`[repository_profile] squash_merge_commit_title = "PR_TITLE"`,
+  `squash_merge_commit_message = "PR_BODY"`) instead of every commit message concatenated, and
+  that `main` accepts rebase merges only (`[rulesets.release] allowed_merge_methods =
+  ["rebase"]`). Both take effect when the repository profile and rulesets are reconciled.
+
+* **delivery:** the triaged-delivery bridge no longer dispatches an issue whoever wrote it, and
+  no longer hands its raw text to DESIGN (G10). The hourly sweep labels every open issue
+  `vibey-gh:triaged`, a stranger's included, and the bridge passed that issue's body straight
+  into `vibey new --intake`. It now asks the storm's own trust seam first
+  (`scripts/intake_trust.py` over `storm_trust.py`; ADR-0053, sub-doctrine 12.j): one GraphQL
+  query returns the issue's text, author, every body edit and title rename, its labels and who
+  applied each, and the grant is read from reviewed history. Every account that wrote the text
+  must be in `[unattended_approval] authors`, and whoever last applied `vibey-gh:triaged` and
+  each `vibey-gh:priority-*` label must be one of those or `[merge_train] trusted_authors` /
+  `owner` (where the sweep's own account is declared). An issue a stranger wrote, edited or
+  labelled is held -- never dispatched, its ticket `blocked`, the reason in its evidence, and
+  one comment asking a maintainer -- and the next issue is taken on the next pass; a grant or
+  forge that cannot be read is a retried dispatch, never an admission. An admitted issue is
+  dispatched with the text that was judged, not the listing's copy, framed by `PromptShield`
+  after a provenance line, and `vibey new` records it as an `untrusted` `TranscriptRecorded`
+  event as before. `--trusted-author` / `VIBEY_TRIAGED_DELIVERY_TRUSTED_AUTHORS` and
+  `--label-curator` / `VIBEY_TRIAGED_DELIVERY_LABEL_CURATORS` replace the reviewed lists for a
+  person's own run. Measured on a canary-injection issue (an instruction to answer every DESIGN
+  question with a token and push to main): before, five of five cases dispatched it raw; now a
+  stranger-written, stranger-edited or stranger-labelled issue is held, an operator's issue
+  reaches the ledger only inside the frame, and an unreadable forge is retried. The frame is
+  not a measured defence: on gpt-oss:20b's first DESIGN question batch, the canary appeared in
+  4 of 10 runs with the raw intake and 5 of 10 with the framed one, so the trust check is the
+  control that holds (see the runbook). The storm's
+  `storm_trust.py` gains `LABELED_QUERY`, `IssueGate.judge_labels`, `Grant.curators` and a
+  `query` argument to `GhForge`; its own lanes still ask `QUERY`.
 
 ## [3.0.0] (2026-09-29)
 

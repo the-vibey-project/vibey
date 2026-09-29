@@ -109,6 +109,14 @@ class FakeJobRepository:
                 return leased
         return None
 
+    async def claimable_projects(self) -> tuple[UUID, ...]:
+        self.calls.append("claimable_projects")
+        return tuple(
+            dict.fromkeys(
+                job.project_id for job in self._jobs.values() if job.state is JobState.READY
+            )
+        )
+
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool:
         self.calls.append("heartbeat")
         job = self._jobs.get(job_id)

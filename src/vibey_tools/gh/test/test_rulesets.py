@@ -627,3 +627,104 @@ def test_a_request_body_is_actually_sent(monkeypatch):
     captured.clear()
     rs._api("repos/o/r/rulesets")
     assert "--input" not in captured[0][0]
+
+
+# ----------------------------------------------------------------- allowed merge methods
+
+
+def test_no_merge_method_restriction_is_sent_until_one_is_declared():
+    """An upgrade must never narrow an adopter's merges: absent, the forge's default (every
+    method the repository allows) stands."""
+    rule = next(r for r in rs.desired_rules(policy()) if r["type"] == rs.PULL_REQUEST)
+    assert "allowed_merge_methods" not in rule["parameters"]
+
+
+def test_a_declared_merge_method_restriction_is_sent_on_the_pull_request_rule():
+    rule = next(
+        r
+        for r in rs.desired_rules(policy(allowed_merge_methods=("rebase",)))
+        if r["type"] == rs.PULL_REQUEST
+    )
+    assert rule["parameters"]["allowed_merge_methods"] == ["rebase"]
+
+
+@pytest.mark.parametrize(
+    "methods, match",
+    [
+        (("fast-forward",), "must be among merge, squash, rebase"),
+        (("rebase", "rebase"), "unique"),
+        (("",), "non-empty"),
+    ],
+)
+def test_allowed_merge_methods_are_validated(methods, match):
+    with pytest.raises(ValueError, match=match):
+        policy(allowed_merge_methods=methods)
+
+
+def test_a_queue_may_not_merge_by_a_method_the_branch_refuses():
+    with pytest.raises(ValueError, match="not among rulesets.allowed_merge_methods"):
+        policy(
+            allowed_merge_methods=("rebase",),
+            merge_queue=MergeQueueConfig(enabled=True, merge_method="SQUASH"),
+        )
+    policy(
+        allowed_merge_methods=("squash",),
+        merge_queue=MergeQueueConfig(enabled=True, merge_method="SQUASH"),
+    )
+    # An undeclared queue says nothing about merges, so any restriction is compatible.
+    policy(allowed_merge_methods=("rebase",), merge_queue=MergeQueueConfig(merge_method="SQUASH"))
+
+
+def test_allowed_merge_methods_load_per_branch_from_toml(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[rulesets.release]\nallowed_merge_methods = ["rebase"]\n', encoding="utf-8"
+    )
+    loaded = load_config(tmp_path).rulesets
+    assert loaded.release.allowed_merge_methods == ("rebase",)
+    assert loaded.integration.allowed_merge_methods == ()
+
+
+# ------------------------------------------------------- comparing what the forge echoes
+
+
+def test_parameters_the_forge_adds_on_its_own_are_not_drift():
+    """The forge answers with parameters nobody sent. Compared whole, every ruleset read
+    back as drifted on every run, and a drift check that is always red is never read."""
+    desired = rs.build_ruleset("develop", policy(allowed_merge_methods=("squash", "rebase")))
+    existing = json.loads(json.dumps({**desired, "id": 1}))
+    for rule in existing["rules"]:
+        rule.setdefault("parameters", {})["added_by_the_forge"] = True
+        if rule["type"] == rs.PULL_REQUEST:
+            rule["parameters"]["allowed_merge_methods"] = ["rebase", "squash"]
+        if rule["type"] == rs.STATUS_CHECKS:
+            checks = rule["parameters"]["required_status_checks"]
+            rule["parameters"]["required_status_checks"] = [
+                {**check, "integration_id": 1} for check in reversed(checks)
+            ]
+    assert not rs.diff_ruleset(desired, existing).changed
+
+
+@pytest.mark.parametrize(
+    "rule_type, key, value",
+    [
+        (rs.STATUS_CHECKS, "required_status_checks", [{"context": "CI"}]),
+        (rs.PULL_REQUEST, "allowed_merge_methods", ["merge"]),
+    ],
+)
+def test_a_declared_list_that_differs_is_drift(rule_type, key, value):
+    desired = rs.build_ruleset("develop", policy(allowed_merge_methods=("rebase",)))
+    existing = json.loads(json.dumps({**desired, "id": 1}))
+    next(r for r in existing["rules"] if r["type"] == rule_type)["parameters"][key] = value
+    assert rs.diff_ruleset(desired, existing).changed
+
+
+def test_a_declared_rule_missing_from_the_forge_is_drift():
+    desired = rs.build_ruleset("develop", policy())
+    existing = {
+        **desired,
+        "id": 1,
+        "rules": [r for r in desired["rules"] if r["type"] != "deletion"],
+    }
+    assert rs.diff_ruleset(desired, existing).changed
+    assert not rs.rule_matches(None, {"type": "deletion"})
+    assert rs.rule_matches({"type": "deletion"}, {"type": "deletion"})

@@ -968,6 +968,14 @@ names are not configured here — `[rulesets.integration]` always targets
 | `allow_force_pushes` | boolean / `false` | **Rejected at load time if `true`.** A permanent branch can never be configured to allow force pushes. |
 | `allow_deletions` | boolean / `false` | **Rejected at load time if `true`.** A permanent branch can never be configured to allow deletion. |
 | `bypass_actors` | string list / `["RepositoryRole:5"]` | `"<ActorType>:<id>"` entries granted to bypass the ruleset. The default is the repository admin role. `[]` means nobody — including the owner. |
+| `allowed_merge_methods` | string list / `[]` | The merge methods a pull request into this branch may use: any of `merge`, `squash`, `rebase`. Empty sends no restriction, so the forge's default (every method the repository allows) stands and an upgrade never narrows anybody's merges. A release branch promoted by rebase declares `["rebase"]`: the one hand-run squash of a promotion concatenated every commit message into one body, a quoted skip-ci marker among them, and no push workflow ran on the release branch. A declared merge queue's `merge_method` must be among them. |
+
+`vibey-gh rulesets --check` (and `ruleset-drift.yml`, daily and on every change to
+`.vibey-gh.toml`) compares every live repository ruleset with what these two tables render,
+read-only, and fails on drift — including a ruleset nobody declared, named with its bypass
+actors. It needs a token with repository-admin authority (`AUTOMERGE_TOKEN`), because the
+forge withholds bypass actors from any other; without one the workflow warns that nothing was
+checked.
 
 ### `[rulesets.integration.merge_queue]` and `[rulesets.release.merge_queue]`
 
@@ -1080,6 +1088,9 @@ the silence is the whole danger.
 | `release_repair` | `Release repair` |
 | `github_release` | `GitHub Release` |
 | `repository_profile` | `Repository profile` |
+| `skip_markers` | `Skip markers` |
+| `branch_health` | `Branch health` |
+| `ruleset_drift` | `Ruleset drift` |
 
 Note the distinction from `required_checks` (see `[rulesets]`): these are **workflow**
 names. A required status check matches a **check-run** name, which for GitHub Actions is the
@@ -1099,6 +1110,40 @@ job's name, not the workflow's.
 | `delete_branch_on_merge` | boolean / `false` | GitHub's own blanket auto-delete-on-merge. Keep false because `develop` heads promotion PRs and would itself be deleted. This is independent of branch cleanup: the merge train and Automation bootstrap already delete a merged PR's head branch themselves, through a guarded API call, whenever it is not a permanent, integration, or release branch and not a fork — regardless of this setting. |
 | `web_commit_signoff_required` | boolean / `true` | Require web-editor signoff. |
 | `vulnerability_alerts`, `automated_security_fixes` | boolean / `true` | Enable dependency security services. |
+| `squash_merge_commit_title`, `squash_merge_commit_message` | string / `""` (not managed) | What a squash merge proposes as its commit, in the API's own words: title `PR_TITLE` or `COMMIT_OR_PR_TITLE`, message `PR_BODY`, `COMMIT_MESSAGES` or `BLANK`. Declared together or not at all, and `COMMIT_OR_PR_TITLE` only with `COMMIT_MESSAGES` (the forge's pairing rule). Empty sends nothing and verifies nothing. The forge's own default concatenates every commit message into the body, which is how a quoted skip-ci marker from a branch's history reached a release commit; `PR_TITLE` with `PR_BODY` proposes only what the author wrote, and `skip-markers.yml` checks both. |
+
+## `[skip_markers]`
+
+GitHub runs no `push` or `pull_request` workflow for a commit whose message carries a skip
+marker — the bracketed skip-ci spellings in `config.SKIP_MARKERS`, or a skip-checks trailer.
+On a permanent branch that is CI, the publish, the tag and the documentation all skipped with
+nothing red anywhere. `vibey-gh skip-marker-check`, run by `skip-markers.yml` (check name
+`No skip markers`) on every pull request into the integration or release branch and on every
+merge-queue group, refuses one in any commit of the range and in the title and body a squash
+commits. List the check in `required_checks` and the workflow in `scan_workflows` for it to
+gate.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `true` | Run the check. `false` renders a job that never runs. |
+| `exempt_authors` | string list / `[]` | Commit authors — an exact name or e-mail — whose own commit messages may carry a marker, for an automation that deliberately skips CI on its bookkeeping. Never covers a title or body, and never a pull request into the release branch, whose push is the publish. |
+
+GitHub does not start a `pull_request` run at all when the pull request's HEAD commit carries
+the marker, so in that one case the check never reports; as a required check, that blocks the
+merge until the commit is reworded.
+
+## `[branch_health]`
+
+After every CI run on a push to the integration or release branch, `branch-health.yml` runs
+`vibey-gh branch-health`, which keeps ONE tracking issue per branch: opened or updated while a
+watched job failed, closed with a note when the tip is green again. A cancelled run, or a run
+whose commit is no longer the tip, changes nothing.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `true` | Run the alert. |
+| `checks` | string list / `[]` | The job names that decide red and green for both branches. Empty uses each branch's own `[rulesets.*] required_checks`. |
+| `labels` | string list / `[]` | Labels applied when the issue is opened. They must already exist. |
 
 ## `[documentation]`
 

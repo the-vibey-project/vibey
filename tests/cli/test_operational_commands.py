@@ -891,6 +891,24 @@ def test_doctor_basic_lists_all_engines() -> None:
     assert "postgresql" in res.output
 
 
+def test_doctor_prints_the_supervisor_and_fails_on_its_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1189: a supervisor nothing runs is said out loud; a FAIL line fails the doctor."""
+    res = runner.invoke(app, ["doctor"])
+    assert res.exit_code == 0, res.output
+    assert "WARN supervisor-worker" in res.output
+
+    class _Failing:
+        def doctor_lines(self) -> tuple[list[str], bool]:
+            return ["FAIL supervisor-worker      installed but stopped"], False
+
+    monkeypatch.setattr("vibey.cli.main.SUPERVISOR", _Failing())
+    res = runner.invoke(app, ["doctor"])
+    assert res.exit_code == 1
+    assert "FAIL supervisor-worker" in res.output
+
+
 def test_install_requires_an_explicit_postgres_target() -> None:
     res = runner.invoke(app, ["install"])
 
@@ -1488,6 +1506,10 @@ def test_a_failing_reap_is_reported_and_the_worker_keeps_going(tmp_path: Path) -
             "vibey.application.queue_reaper.QueueReaper.run_if_due",
             new=AsyncMock(side_effect=RuntimeError("the broker went away")),
         ),
+        patch(
+            "vibey.application.gate_notices.GateReminder.run_if_due",
+            new=AsyncMock(side_effect=RuntimeError("the ledger went away")),
+        ),
     ):
         mock_notifier = AsyncMock()
         mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
@@ -1495,6 +1517,7 @@ def test_a_failing_reap_is_reported_and_the_worker_keeps_going(tmp_path: Path) -
         res = runner.invoke(app, ["worker"])
     assert "lease reap failed: a bad lease row" in res.output
     assert "queue reap failed: the broker went away" in res.output
+    assert "gate reminders failed: the ledger went away" in res.output
     mock_notifier.wait_for_job_ready.assert_awaited()
 
 

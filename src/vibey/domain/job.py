@@ -48,13 +48,31 @@ ATTEMPTS_EXHAUSTED_GATE_KIND: Final = "attempts_exhausted"
 DELIVERY_EXHAUSTED_GATE_KIND: Final = "delivery_exhausted"
 """The queue reaper's gate when a job's worker died on every attempt (ADR-0056)."""
 
-QUEUE_GATE_KINDS: Final = frozenset({ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND})
+ESCALATION_EXHAUSTED_GATE_KIND: Final = "escalation_exhausted"
+"""build.implement's gate when its effort ladder is spent (ADR-0024): a grant of attempts."""
+
+DEFECT_GATE_KIND: Final = "defect"
+"""The worker's gate, in place of a grant, when a job's last failures were all the same one.
+
+More attempts cannot change an outcome that has repeated identically, so this gate offers
+none: `DEFECT_OPTIONS` -- run it again once a fix has landed, or abandon it."""
+
+QUEUE_GATE_KINDS: Final = frozenset(
+    {ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND, DEFECT_GATE_KIND}
+)
 """The gates the queue raises on a job's behalf, never the job itself.
 
 Answering one buys the job another delivery and answers nothing its handler asked, so a
 handler's own gate lookup never returns one (`HumanGateRepository.latest_for_job`). Only the
-worker, which raised them, reads them back -- for the attempt grant an answer may carry.
+worker, which raised them, reads them back -- for the attempt grant an answer may carry --
+and build.implement's ladder, which runs a `defect` gate's requeue at its top effort.
 """
+
+GRANT_EXHAUSTION_KINDS: Final = frozenset(
+    {ATTEMPTS_EXHAUSTED_GATE_KIND, ESCALATION_EXHAUSTED_GATE_KIND}
+)
+"""The exhaustion gates that offer more attempts. The worker checks each against the job's
+recorded failures before raising it: identical failures raise `DEFECT_GATE_KIND` instead."""
 
 
 class FailureClass(StrEnum):
