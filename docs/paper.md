@@ -2736,29 +2736,27 @@ reported and not explained.
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.8cm},vibeyaxis,width=8.6cm,height=4.8cm,
   xmin=0.5,xmax=10.5,xtick={1,...,10},xlabel={turn of a ten-turn session}]
-\nextgroupplot[title={a. Generation speed as the context grows},ylabel={tokens / s},ymin=0,legend pos=south west]
+\nextgroupplot[title={a. Generation speed as the context grows},ylabel={tokens / s},ymin=0]
 \addplot[vibeyblue,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.2) (2,9.8) (3,9.3) (4,9.6) (5,9.4) (6,9.5) (7,7.6) (8,9.0) (9,8.8) (10,8.4)};
-\addlegendentry{A-baseline}
 \addplot[vibeyteal,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.2) (2,10.5) (3,10.0) (4,8.8) (5,9.4) (6,9.1) (7,8.0) (8,7.7) (9,6.9) (10,6.2)};
-\addlegendentry{B-1slot-q8-48k}
 \addplot[vibeygold,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.1) (2,10.8) (3,9.9) (4,9.4) (5,8.7) (6,8.1) (7,7.4) (8,7.5) (9,8.5) (10,7.9)};
-\addlegendentry{C-1slot-q8-48k-draft}
 \addplot[vibeyviolet,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.3) (2,10.4) (3,10.3) (4,10.1) (5,9.8) (6,8.0) (7,9.2) (8,8.3) (9,7.5) (10,8.5)};
-\addlegendentry{D-1slot-f16-32k}
-\nextgroupplot[title={b. Wall time per turn},ylabel={seconds},ymin=0,legend pos=north west]
+\nextgroupplot[title={b. Wall time per turn},ylabel={seconds},ymin=0,legend to name=bench-hosts-legend,legend columns=-1,
+  legend style={/tikz/every even column/.append style={column sep=6pt}}]
 \addplot[vibeyblue,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.44) (2,17.22) (3,18.32) (4,19.09) (5,22.51) (6,23.45) (7,26.94) (8,23.22) (9,25.76) (10,27.07)};
-\addlegendentry{A-baseline}
+\addlegendentry{A-baseline (215\,s)}
 \addplot[vibeyteal,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.63) (2,15.81) (3,17.54) (4,19.0) (5,20.66) (6,23.4) (7,26.1) (8,24.77) (9,29.29) (10,32.29)};
-\addlegendentry{B-1slot-q8-48k}
+\addlegendentry{B-1slot-q8-48k (220\,s)}
 \addplot[vibeygold,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.65) (2,15.3) (3,17.47) (4,18.63) (5,21.39) (6,25.27) (7,26.71) (8,25.26) (9,26.03) (10,27.83)};
-\addlegendentry{C-1slot-q8-48k-draft}
+\addlegendentry{C-1slot-q8-48k-draft (216\,s)}
 \addplot[vibeyviolet,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.41) (2,16.36) (3,17.7) (4,18.06) (5,20.31) (6,25.87) (7,24.37) (8,23.61) (9,27.42) (10,27.09)};
-\addlegendentry{D-1slot-f16-32k}
+\addlegendentry{D-1slot-f16-32k (212\,s)}
 \addplot[vibeyred,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,8.89) (2,9.64) (3,8.46) (4,6.78) (5,8.43) (6,7.9) (7,8.44) (8,8.03) (9,10.48) (10,8.56)};
-\addlegendentry{E-gptoss-20b-ollama}
+\addlegendentry{E-gptoss-20b-ollama (86\,s)}
 \end{groupplot}
-\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
-  {whole session: A-baseline: 215\,s; B-1slot-q8-48k: 220\,s; C-1slot-q8-48k-draft: 216\,s; D-1slot-f16-32k: 212\,s; E-gptoss-20b-ollama: 86\,s. E-gptoss-20b-64k: server exited during load, bench failed};
+\node[anchor=north,inner sep=0pt] (legend) at ($(group c1r1.south west)!0.5!(group c2r1.south east)+(0,-0.95cm)$)
+  {\pgfplotslegendfromname{bench-hosts-legend}};
+\node[vibeynote,anchor=north] at ([yshift=-0.08cm]legend.south) {in brackets, each configuration's whole-session wall time; E-gptoss-20b-64k: server exited during load, bench failed};
 \end{tikzpicture}
 \caption{The host benchmark of 2026-09-22: the same ten-turn session replayed against five server configurations on one 24\,GB machine. (a) Generation speed falls as the context fills for every llama.cpp configuration of Qwen2.5-Coder-14B, whatever the slot count or cache type. (b) The gpt-oss:20b model on Ollama completed the session in a fraction of the wall time; the same model served by llama.cpp at a 64k context failed to load at all. Every point is one row of the tracked results file.}
 \label{fig:bench-hosts}

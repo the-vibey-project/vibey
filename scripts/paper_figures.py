@@ -852,7 +852,9 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         data = self._data("bench")
         turns, summaries = data["turns"], data["summaries"]
         palette = ["vibeyblue", "vibeyteal", "vibeygold", "vibeyviolet", "vibeyred", "vibeygreen"]
-        tps_plots, wall_plots, legend = [], [], []
+        # One legend serves both panels (they share colours), drawn beneath them rather than
+        # over either panel's curves; each entry carries the configuration's whole-session time.
+        tps_plots, wall_plots = [], []
         for i, label in enumerate(sorted(turns)):
             rows = sorted(turns[label], key=lambda r: r["turn"])
             color = palette[i % len(palette)]
@@ -860,30 +862,30 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
                 tps_plots.append(
                     f"\\addplot[{color},line width=.9pt,mark=*,mark size=1.1pt] coordinates {{"
                     + " ".join(f"({r['turn']},{r['gen_tps']})" for r in rows)
-                    + "};\n\\addlegendentry{"
-                    + _tex(label)
-                    + "}"
+                    + "};"
                 )
+            total = summaries.get(label, {}).get("total_wall_s")
+            entry = f"{_tex(label)} ({total:.0f}\\,s)" if total is not None else _tex(label)
             wall_plots.append(
                 f"\\addplot[{color},line width=.9pt,mark=*,mark size=1.1pt] coordinates {{"
                 + " ".join(f"({r['turn']},{r['wall_s']})" for r in rows)
                 + "};\n\\addlegendentry{"
-                + _tex(label)
+                + entry
                 + "}"
             )
-            total = summaries.get(label, {}).get("total_wall_s")
-            legend.append(f"{_tex(label)}: {total:.0f}\\,s" if total is not None else _tex(label))
         errors = "; ".join(f"{_tex(k)}: {_tex(', '.join(v))}" for k, v in data["errors"].items())
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=2 by 1,horizontal sep=1.8cm}},vibeyaxis,width=8.6cm,height=4.8cm,
   xmin=0.5,xmax=10.5,xtick={{1,...,10}},xlabel={{turn of a ten-turn session}}]
-\\nextgroupplot[title={{a. Generation speed as the context grows}},ylabel={{tokens / s}},ymin=0,legend pos=south west]
+\\nextgroupplot[title={{a. Generation speed as the context grows}},ylabel={{tokens / s}},ymin=0]
 {chr(10).join(tps_plots)}
-\\nextgroupplot[title={{b. Wall time per turn}},ylabel={{seconds}},ymin=0,legend pos=north west]
+\\nextgroupplot[title={{b. Wall time per turn}},ylabel={{seconds}},ymin=0,legend to name=bench-hosts-legend,legend columns=-1,
+  legend style={{/tikz/every even column/.append style={{column sep=6pt}}}}]
 {chr(10).join(wall_plots)}
 \\end{{groupplot}}
-\\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
-  {{whole session: {"; ".join(legend)}. {errors}}};
+\\node[anchor=north,inner sep=0pt] (legend) at ($(group c1r1.south west)!0.5!(group c2r1.south east)+(0,-0.95cm)$)
+  {{\\pgfplotslegendfromname{{bench-hosts-legend}}}};
+\\node[vibeynote,anchor=north] at ([yshift=-0.08cm]legend.south) {{in brackets, each configuration's whole-session wall time{"; " + errors if errors else ""}}};
 \\end{{tikzpicture}}"""
         caption = (
             "The host benchmark of 2026-09-22: the same ten-turn session replayed against five server "
