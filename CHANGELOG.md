@@ -108,6 +108,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **design:** `vibey design accept` accepts the finished spec, never the interview. The
+  DESIGN -> BUILD / VISUAL_DESIGN guard now refuses while any DESIGN job of the cycle --
+  research, synthesis, spec -- is unsettled ("N design job(s) still unsettled"). The
+  interview's completion only queues that chain, yet accept passed on any `spec.json` for
+  the cycle: on 2026-09-29 the triaged-delivery bridge accepted straight after the interview,
+  a stale `.vibey/runs/1/design/spec.json` the repository carried in stood in for the spec,
+  and the project entered BUILD with `build.decompose` queued against a foreign spec while
+  research, synthesis and spec were still ready. The bridge now also waits: with the
+  `answer_design_defaults` opt-in it works the queued design jobs on later passes and runs
+  `design accept` only once the project's queue has settled.
 * **deps:** `oauthlib` 3.3.1 -> 4.0.0 (CVE-2026-49265) and `pyjwt` 2.13.0 -> 2.15.1
   (CVE-2026-102274) in `uv.lock`. Both arrive only transitively (`requests-oauthlib` under
   `kubernetes` and the Azure exporter; `mcp[crypto]` and `msal`), and the new advisories

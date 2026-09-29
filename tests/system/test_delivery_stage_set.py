@@ -10,7 +10,7 @@ deployment path: ①→②→③→④→⑤→⑥→DONE.
 
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
@@ -339,6 +339,18 @@ async def _run_interview_to_completion(
         await gates.answer(gate.gate_id, answer={"answers": answers}, answered_by="tester")
 
 
+async def _run_design_chain(
+    jobs: FakeJobRepository,
+    project_id: UUID,
+    handlers: Mapping[str, DesignResearchHandler | DesignSynthesizeHandler | DesignSpecHandler],
+) -> None:
+    """Works the jobs the finished interview queued (research x3 -> synthesize -> spec)
+    through the queue, acking each, so the design is accepted only once they settled."""
+    while (job := await jobs.claim(project_id, owner="system", lease=timedelta(1))) is not None:
+        assert isinstance(await handlers[job.kind].handle(job), Success)
+        assert await jobs.ack(job.id, owner="system")
+
+
 @pytest.mark.system
 async def test_delivery_stage_set_visual_opt_out_and_deploy_opt_out(tmp_path: Path) -> None:
     """End-to-end delivery stage set:
@@ -387,22 +399,21 @@ async def test_delivery_stage_set_visual_opt_out_and_deploy_opt_out(tmp_path: Pa
         clock=clock,
         engine_id=EngineId.CLAUDELOOP,
     )
-    for topic in ("prior-art", "libraries", "api-docs"):
-        res_job = _make_job(project_id=project_id, kind="design.research")
-        res_job = replace(res_job, payload={"topic": topic})
-        assert isinstance(await research_handler.handle(res_job), Success)
-
     synthesize_handler = DesignSynthesizeHandler(
         ledger=ledger,
         synthesizer=design_provider,
         specs=specs,
     )
-    synth_job = _make_job(project_id=project_id, kind="design.synthesize")
-    assert isinstance(await synthesize_handler.handle(synth_job), Success)
-
     spec_handler = DesignSpecHandler(specs=specs)
-    spec_job = _make_job(project_id=project_id, kind="design.spec")
-    assert isinstance(await spec_handler.handle(spec_job), Success)
+    await _run_design_chain(
+        jobs,
+        project_id,
+        {
+            "design.research": research_handler,
+            "design.synthesize": synthesize_handler,
+            "design.spec": spec_handler,
+        },
+    )
 
     # 2. DESIGN ACCEPTANCE -> Visual Opt-Out -> Phase.BUILD
     design_acceptance = DesignAcceptanceService(
@@ -855,24 +866,21 @@ async def test_full_delivery_to_deployment_stage_set(tmp_path: Path) -> None:
         clock=clock,
         engine_id=EngineId.CLAUDELOOP,
     )
-    for topic in ("prior-art", "libraries"):
-        res_job = _make_job(project_id=project_id, kind="design.research")
-        from dataclasses import replace as _replace
-
-        res_job = _replace(res_job, payload={"topic": topic})
-        assert isinstance(await research_handler.handle(res_job), Success)
-
     synthesize_handler = DesignSynthesizeHandler(
         ledger=ledger,
         synthesizer=design_provider,
         specs=specs,
     )
-    synth_job = _make_job(project_id=project_id, kind="design.synthesize")
-    assert isinstance(await synthesize_handler.handle(synth_job), Success)
-
     spec_handler = DesignSpecHandler(specs=specs)
-    spec_job = _make_job(project_id=project_id, kind="design.spec")
-    assert isinstance(await spec_handler.handle(spec_job), Success)
+    await _run_design_chain(
+        jobs,
+        project_id,
+        {
+            "design.research": research_handler,
+            "design.synthesize": synthesize_handler,
+            "design.spec": spec_handler,
+        },
+    )
 
     # Accept design, visual opt-out → BUILD
     design_acceptance = DesignAcceptanceService(
@@ -1074,7 +1082,7 @@ async def test_full_delivery_to_deployment_stage_set(tmp_path: Path) -> None:
     deploy_route_job = _make_job(
         project_id=project_id, phase=Phase.DEPLOY_REVIEW, kind="deploy.route"
     )
-    deploy_route_job = _replace(deploy_route_job, payload={"action": "approve"})
+    deploy_route_job = replace(deploy_route_job, payload={"action": "approve"})
     route_outcome = await deploy_routing_handler.handle(deploy_route_job)
     assert isinstance(route_outcome, Success)
     assert route_outcome.result.get("target_phase") == Phase.DONE.name

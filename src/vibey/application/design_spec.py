@@ -20,10 +20,12 @@ def build_design_evidence(
     # Callers get a real visual choice once that stage exists; this is not "yes
     # by default," it is the only decision that's currently honest.
     visual_decision: VisualDecision = VisualDecision.DECLINED,
+    unsettled_design_jobs: int = 0,
 ) -> TransitionEvidence:
     return TransitionEvidence(
         acceptance_criteria=len(spec.criteria),
         open_blocking_questions=open_blocking_questions,
+        unsettled_design_jobs=unsettled_design_jobs,
         user_verdict=UserVerdict.ACCEPT if accepted else None,
         visual_decision=visual_decision,
     )
