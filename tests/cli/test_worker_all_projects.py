@@ -190,6 +190,31 @@ def test_a_project_it_cannot_serve_is_refused_and_its_jobs_stay_queued(
     assert _states([project_id])[project_id] == {JobState.READY}
 
 
+def test_a_project_with_a_malformed_config_is_refused_with_its_reason(tmp_path: Path) -> None:
+    (project_id,) = _seed(tmp_path, ("iota",))
+
+    async def break_config() -> None:
+        conn = await asyncpg.connect(database_url())
+        try:
+            await conn.execute(
+                """UPDATE project SET config = '{"engine_environment": 3}'::jsonb WHERE id = $1""",
+                project_id,
+            )
+        finally:
+            await conn.close()
+
+    asyncio.run(break_config())
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as cls:
+        cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--all-projects", "--once"])
+
+    assert res.exit_code == 0, res.output
+    assert "project iota refused (engine_environment project config must be an object)" in (
+        res.output
+    )
+    assert _states([project_id])[project_id] == {JobState.READY}
+
+
 def test_a_project_gone_between_listing_and_lookup_is_passed_over(tmp_path: Path) -> None:
     _seed(tmp_path, ("zeta",))
     with (

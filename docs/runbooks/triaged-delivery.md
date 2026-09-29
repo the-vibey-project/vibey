@@ -75,6 +75,41 @@ uv run python scripts/triaged_delivery.py --once
 uv run python scripts/triaged_delivery.py --interval 300
 ```
 
+### Supervised: `vibey supervisor install`
+
+Nothing restarts a loop started by hand after a crash, a logout or a reboot. The bridge and
+the worker that serves every project's queue (`vibey worker --all-projects`, #1189) are
+declared as services instead: a launchd agent on macOS, a systemd user service on Linux,
+rendered from [`[supervisor]`](../reference/configuration.md#supervisor), restarted after a
+failed exit, logging to a durable directory, and started with a declared environment file.
+
+```bash
+# from the main checkout (not a lane's worktree: install refuses one), with vibey on PATH
+vibey supervisor install --repo "$PWD"
+# fill in the environment file it names (it is created from a template, mode 0600):
+#   VIBEY_PG_URL, VIBEY_OLLAMA_URL, GH_TOKEN if gh cannot reach your keychain from a
+#   service, and VIBEY_TRIAGED_DELIVERY_VIBEY=<absolute path to vibey> -- the bridge's
+#   default `uv run vibey` needs `uv` on the service's PATH
+# then run the load commands it printed, e.g. on macOS
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.vibey.worker.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.vibey.delivery.plist
+# or on Linux
+systemctl --user daemon-reload
+systemctl --user enable --now dev.vibey.worker.service dev.vibey.delivery.service
+loginctl enable-linger "$USER"
+
+vibey supervisor status      # running / stopped / not loaded / not installed, exit 1 unless all run
+vibey doctor                 # supervisor-worker and supervisor-delivery lines
+```
+
+The units run `vibey supervisor exec --env-file <file> -- <command>`, so the environment
+reaches both platforms the same way. Logs are `~/Library/Logs/vibey/{worker,delivery}.log`
+on macOS and `~/.local/state/vibey/logs/` on Linux unless `log_dir` says otherwise. Set
+`[supervisor] required = true` in the machine's `vibey.toml` to make `vibey doctor` fail,
+rather than warn, while either service is missing or stopped. Re-run `install` after
+changing `[supervisor]`, then reload the unit (`launchctl kickstart -k gui/$(id -u)/<label>`
+after a `bootout`/`bootstrap`, or `systemctl --user restart <label>.service`).
+
 With `VIBEY_PG_URL` set the ticket store is used; without it the bridge falls back to the
 dispatch and publication markers in issue comments. Worktrees are created in the storm home
 (`VIBEY_STORM_HOME`), never on volatile storage.

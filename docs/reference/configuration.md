@@ -476,6 +476,28 @@ key is optional. An unknown key or a wrong type is refused by name.
 The argv templates fill `{brief}`, `{cwd}`, `{run_id}`, `{session_id}` and
 `{prompt}`; any other text is passed through unchanged.
 
+## `[supervisor]` { #supervisor }
+
+What `vibey supervisor install` renders, and what `vibey supervisor status` and
+`vibey doctor` ask about
+([#1189](https://github.com/the-vibey-project/vibey/issues/1189)). Read from
+`<repo>/vibey.toml` by `install` (or `--config`) and from `./vibey.toml` by `status` and
+`doctor`. Every key is optional; an unknown key or a wrong type is refused by name.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `log_dir` | string | `~/Library/Logs/vibey` (macOS), `$XDG_STATE_HOME/vibey/logs` else `~/.local/state/vibey/logs` (Linux) | Each service appends to `<log_dir>/worker.log` or `delivery.log`. Refused on volatile storage or in a linked worktree. |
+| `env_file` | string | `~/Library/Application Support/vibey/supervisor.env` (macOS), `$XDG_CONFIG_HOME/vibey/supervisor.env` else `~/.config/vibey/supervisor.env` (Linux) | The environment every service starts with, through `vibey supervisor exec`. Created from a commented template (mode 0600) when missing. |
+| `vibey` | string | `vibey` on `PATH` | The `vibey` each unit runs. |
+| `python` | string | the interpreter running `vibey supervisor install` | The Python that runs the delivery bridge. |
+| `delivery` | boolean | `true` | `false` supervises the worker alone. |
+| `delivery_interval_seconds` | integer | `300` | The bridge's `--interval`; at least 1. |
+| `delivery_args` | list of strings | `[]` | Appended to the bridge's command, e.g. `["--answer-design-defaults"]`. |
+| `worker_args` | list of strings | `[]` | Appended to `vibey worker --all-projects`, e.g. `["-j", "2", "--provider", "gptossloop"]`. |
+| `restart_seconds` | integer | `30` | How long after a failed exit the service manager restarts a service (launchd `ThrottleInterval`, systemd `RestartSec`). |
+| `label_prefix` | string | `"dev.vibey"` | Units are `<label_prefix>.worker` and `<label_prefix>.delivery`. |
+| `required` | boolean | `false` | `true` turns `vibey doctor`'s `WARN` for a missing or stopped service into a `FAIL`. |
+
 ## `[hub]` { #hub }
 
 The hub, `vibey serve` (ADR-0067). Every key is optional, and the defaults are the closed

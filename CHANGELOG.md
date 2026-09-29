@@ -15,6 +15,25 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **worker:** `vibey worker --all-projects` serves every project's queue from one process
+  (#1189). Work queued in any project but the one a worker was started for used to wait for
+  a person: 147 ready jobs across 80 projects, most since 2026-08-22. Each pass asks the queue
+  which projects have a job the claim would hand out now, in the claim's own order, and
+  claims through that project's own loop and the unchanged `FOR UPDATE SKIP LOCKED`
+  statement, so budgets, the Sabbath, capacity circuits, the priority lane, phase gates and
+  engine selection hold as for a single-project worker. A project that cannot be served is
+  refused and its jobs stay queued; with nothing queued the worker waits instead of exiting.
+* **supervisor:** `vibey supervisor install` renders a launchd agent (macOS) or a systemd
+  user service (Linux) for `vibey worker --all-projects` and for the triaged-delivery bridge,
+  from `[supervisor]` in `vibey.toml`: restarted after a failed exit, logging to a durable
+  directory, started with a declared environment file through `vibey supervisor exec`, and
+  refused on volatile storage or inside a linked worktree (10.h). It prints the `launchctl` /
+  `systemctl --user` commands and never loads a unit itself. `vibey supervisor status` reads
+  each service's state, and `vibey doctor` prints a `supervisor-*` line per service -- `WARN`
+  when one is missing or stopped, `FAIL` with `[supervisor] required = true`.
+
 ## [3.0.0] (2026-09-29)
 
 ### Bug Fixes

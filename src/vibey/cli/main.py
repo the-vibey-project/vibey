@@ -51,6 +51,7 @@ from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
 from vibey.cli.status import STATUS_PRESENTER
+from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -111,6 +112,7 @@ app.add_typer(queue_app, name="queue")
 app.add_typer(budget_app, name="budget")
 app.add_typer(ultra_app, name="ultra")
 app.add_typer(driver_app, name="driver")
+app.add_typer(supervisor_app, name="supervisor")
 
 
 def _version_callback(value: bool) -> None:
@@ -1557,12 +1559,18 @@ def doctor(
         sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
         for line in sabbath_lines:
             typer.echo(line)
+        # #1189: whether the worker and the delivery bridge are kept running. A missing
+        # supervisor is a WARN, a FAIL with `[supervisor] required = true` (12.e).
+        supervisor_lines, supervisor_ok = SUPERVISOR.doctor_lines()
+        for line in supervisor_lines:
+            typer.echo(line)
         if (
             (conformance and not all_ok)
             or not database_ok
             or not reach_ok
             or not hub_ok
             or not sabbath_ok
+            or not supervisor_ok
         ):
             raise typer.Exit(1)
 
@@ -2051,10 +2059,13 @@ def worker(
                     typer.echo(f"serving project={served.name} ({served.project_id})")
                     try:
                         return await loops_for(served, count)
-                    except typer.Exit:
+                    except (typer.Exit, ValueError) as exc:
+                        # typer.Exit's reason was said as it was raised; a malformed
+                        # project config (a forbidden `engine_environment`) is said here.
+                        reason = "" if isinstance(exc, typer.Exit) else f" ({exc})"
                         typer.echo(
-                            f"project {served.name} refused: its jobs stay queued for a "
-                            "worker that can serve them",
+                            f"project {served.name} refused{reason}: its jobs stay queued "
+                            "for a worker that can serve them",
                             err=True,
                         )
                         return None
