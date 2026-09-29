@@ -27,7 +27,7 @@ import json
 import os
 import re
 import sys
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 
 import pytest
@@ -68,10 +68,18 @@ class WorldRunner:
     def __init__(self, world: FakeWorld) -> None:
         self.world = world
         self.time_out_next_worker = False
+        # Every command's extra environment, in order: what the bridge set for the child.
+        self.envs: list[tuple[list[str], dict[str, str] | None]] = []
 
     def run(
-        self, argv: Sequence[str], *, timeout: float | None = None, cwd: Path | None = None
+        self,
+        argv: Sequence[str],
+        *,
+        timeout: float | None = None,
+        cwd: Path | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> CommandResult:
+        self.envs.append((list(argv), None if env is None else dict(env)))
         if self.time_out_next_worker and "worker" in argv:
             self.time_out_next_worker = False
             self.world.commands.append(list(argv))
@@ -240,6 +248,49 @@ def test_design_gates_stay_parked_and_the_design_unaccepted_without_the_opt_in(
     assert project.phase == "design"
     assert not [command for command in world.commands if "accept" in command]
     assert evidence(tmp_path, project.project_id)["outcome"] == "design_awaiting_acceptance"
+    assert world.answered_through("bridge") == 0
+
+
+def _worker_envs(runner: WorldRunner) -> list[dict[str, str] | None]:
+    return [env for argv, env in runner.envs if "worker" in argv]
+
+
+def test_without_the_research_opt_in_the_worker_keeps_its_own_research_policy(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    """Default off: the bridge adds nothing to the worker's environment, so a research topic
+    with no evidence parks for a person exactly as the worker's own config says."""
+    world, _ = scratch
+    world.open_issue(7, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, runner = bridge(world, tmp_path)
+
+    delivery.run_once()
+
+    envs = _worker_envs(runner)
+    assert envs and all(env is None for env in envs)
+    (project,) = world.projects.values()
+    assert "design_research_on_unavailable" not in evidence(tmp_path, project.project_id)
+
+
+def test_with_the_research_opt_in_only_the_worker_records_gaps_and_says_so(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    world, _ = scratch
+    world.open_issue(7, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, runner = bridge(world, tmp_path, record_research_gaps=True)
+
+    delivery.run_once()
+
+    envs = _worker_envs(runner)
+    assert envs and all(
+        env == {"VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE": "record_gap"} for env in envs
+    )
+    # Nothing else the bridge runs is given the policy: it is the worker's alone.
+    assert all(env is None for argv, env in runner.envs if "worker" not in argv)
+    (project,) = world.projects.values()
+    recorded = evidence(tmp_path, project.project_id)
+    assert recorded["design_research_on_unavailable"] == "record_gap"
+    # The research opt-in answers no gate: DESIGN questions still wait for a person.
     assert world.answered_through("bridge") == 0
 
 
@@ -754,12 +805,14 @@ def test_settings_read_every_knob_from_the_environment(tmp_path: Path) -> None:
         True,
         None,
     )
+    assert default.record_research_gaps is False
     assert default.answer_by == AUTOMATION
     configured = BridgeSettings.from_environ(
         tmp_path,
         {
             "VIBEY_PG_URL": "postgresql:///x",
             "VIBEY_TRIAGED_DELIVERY_ANSWER_DESIGN_DEFAULTS": "yes",
+            "VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS": "on",
             "VIBEY_TRIAGED_DELIVERY_DRAFT": "0",
             "VIBEY_TRIAGED_DELIVERY_VIBEY": "vibey --verbose",
             "VIBEY_TRIAGED_DELIVERY_BASE": "main",
@@ -767,6 +820,7 @@ def test_settings_read_every_knob_from_the_environment(tmp_path: Path) -> None:
         },
     )
     assert configured.answer_design_defaults is True
+    assert configured.record_research_gaps is True
     assert configured.draft is False
     assert (default.trusted_authors, default.label_curators) == ((), ())  # the reviewed grant
     listed = BridgeSettings.from_environ(
@@ -783,6 +837,10 @@ def test_settings_read_every_knob_from_the_environment(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="ANSWER_DESIGN_DEFAULTS"):
         BridgeSettings.from_environ(
             tmp_path, {"VIBEY_TRIAGED_DELIVERY_ANSWER_DESIGN_DEFAULTS": "maybe"}
+        )
+    with pytest.raises(ValueError, match="RECORD_RESEARCH_GAPS"):
+        BridgeSettings.from_environ(
+            tmp_path, {"VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS": "perhaps"}
         )
 
 
@@ -801,6 +859,7 @@ def test_main_applies_flags_over_the_environment(
 
     monkeypatch.setattr(DeliveryBridge, "production", classmethod(production))
     monkeypatch.setenv("VIBEY_TRIAGED_DELIVERY_ANSWER_DESIGN_DEFAULTS", "1")
+    monkeypatch.setenv("VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS", "0")
     monkeypatch.delenv("VIBEY_PG_URL", raising=False)
     monkeypatch.setenv("VIBEY_TRIAGED_DELIVERY_TRUSTED_AUTHORS", "from-the-environment")
     code = triaged_delivery.main(
@@ -809,6 +868,7 @@ def test_main_applies_flags_over_the_environment(
             "--repo",
             str(tmp_path),
             "--no-answer-design-defaults",
+            "--record-research-gaps",
             "--no-draft",
             "--trusted-author",
             "adam",
@@ -821,6 +881,7 @@ def test_main_applies_flags_over_the_environment(
     assert code == 7
     (settings,) = seen
     assert (settings.answer_design_defaults, settings.draft) == (False, False)
+    assert settings.record_research_gaps is True  # the flag beats the environment's "0"
     assert settings.trusted_authors == ("adam", "contributor")
     assert settings.label_curators == ("adam",)
 
@@ -832,6 +893,18 @@ def test_the_subprocess_runner_runs_and_stops_a_command() -> None:
     stopped = runner.run([sys.executable, "-c", "import time; time.sleep(60)"], timeout=0.5)
     assert stopped.timed_out is True
     assert stopped.returncode != 0
+
+
+def test_the_subprocess_runner_adds_the_given_environment_to_its_own() -> None:
+    """`env` is added for that command only -- with and without a timeout -- and the
+    runner's own environment (PATH, the database URL) still reaches the child."""
+    runner = SubprocessRunner()
+    show = "import os; print(os.environ.get('VIBEY_PROBE'), bool(os.environ.get('PATH')))"
+    for timeout in (None, 30.0):
+        told = runner.run([sys.executable, "-c", show], timeout=timeout, env={"VIBEY_PROBE": "x"})
+        assert told.stdout.split() == ["x", "True"]
+        untold = runner.run([sys.executable, "-c", show], timeout=timeout)
+        assert untold.stdout.split()[0] == "None"
 
 
 def test_the_storm_seam_is_read_from_beside_the_push_gate_or_refused(tmp_path: Path) -> None:

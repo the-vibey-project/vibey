@@ -103,6 +103,9 @@ DEFAULT_ALLOWLIST: Final[Mapping[EventKind, frozenset[str]]] = MappingProxyType(
         ),
         EventKind.FINDING_RESOLVED: frozenset({"finding_id", "resolution"}),
         EventKind.ARTIFACT_PRODUCED: frozenset({"artifact_id", "artifact_type", "title", "cycle"}),
+        # That a topic went unresearched is part of the record of what was decided; the
+        # reason is left out, since it can name a directory on the operator's machine.
+        EventKind.RESEARCH_GAP_RECORDED: frozenset({"topic", "cycle"}),
         EventKind.VERDICT_RENDERED: frozenset({"complete", "success", "remaining_work"}),
         EventKind.VISUAL_DESIGN_OPTED_IN: frozenset({"choice"}),
         EventKind.VISUAL_DESIGN_DECLINED: frozenset({"choice"}),

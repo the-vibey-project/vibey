@@ -127,12 +127,26 @@ class SovereignResearchUnavailable(VibeyError):
     research handler can turn the refusal into a human gate without importing
     infrastructure. `evidence_name` is the file the provider looked for, or None when the
     topic reduces to no usable file name and no evidence file could ever match it.
+
+    `evidence_supplied` says whether the operator supplied reading that could not be used
+    (a file without a `source:` line, or with no body). That is a mistake to fix, not an
+    absence to record: `[design.research] on_unavailable = "record_gap"` records a gap only
+    when there was no evidence at all, and still parks this case for a person, so material
+    the operator provided is never silently set aside.
     """
 
-    def __init__(self, topic: str, detail: str, *, evidence_name: str | None = None) -> None:
+    def __init__(
+        self,
+        topic: str,
+        detail: str,
+        *,
+        evidence_name: str | None = None,
+        evidence_supplied: bool = False,
+    ) -> None:
         self.topic = topic
         self.detail = detail
         self.evidence_name = evidence_name
+        self.evidence_supplied = evidence_supplied
         super().__init__(detail)
 
 

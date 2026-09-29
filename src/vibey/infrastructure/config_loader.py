@@ -99,6 +99,13 @@ _QUEUE_DEFECT_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
     ("queue.defect", "identical_failures", "VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES", int),
 )
 
+# `[design.research]`: what DESIGN research does when no evidence can be obtained -- park
+# for a person (`gate`, the default) or record the topic as not researched (`record_gap`).
+# An unattended driver opts in here without writing a vibey.toml.
+_DESIGN_RESEARCH_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
+    ("design.research", "on_unavailable", "VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE", str),
+)
+
 _TRUE: Final = frozenset({"1", "true", "yes", "on"})
 _FALSE: Final = frozenset({"0", "false", "no", "off"})
 
@@ -106,12 +113,13 @@ _FALSE: Final = frozenset({"0", "false", "no", "off"})
 def apply_env_overrides(
     data: dict[str, Any], environ: Mapping[str, str] = os.environ
 ) -> dict[str, Any]:
-    """Overlay surface, `[queue.reap]` and `[queue.defect]` environment variables onto
-    parsed TOML data, in place. A dotted table name is a nested table."""
+    """Overlay surface, `[queue.reap]`, `[queue.defect]` and `[design.research]` environment
+    variables onto parsed TOML data, in place. A dotted table name is a nested table."""
     for table, key, variable, cast in (
         *_SURFACE_ENV_VARS,
         *_QUEUE_REAP_ENV_VARS,
         *_QUEUE_DEFECT_ENV_VARS,
+        *_DESIGN_RESEARCH_ENV_VARS,
     ):
         raw = environ.get(variable)
         if raw is None or not raw.strip():

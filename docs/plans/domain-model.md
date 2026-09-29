@@ -538,6 +538,9 @@ class EventKind(StrEnum):
     GATE_NOTICE_UNDELIVERABLE = "GateNoticeUndeliverable"
     # A handler's failed run: attempt, class, signature (normalized detail, hashed), detail
     JOB_FAILED = "JobFailed"
+    # A DESIGN research topic not researched (`[design.research] on_unavailable =
+    # "record_gap"`): topic, reason, cycle -- never a source. The spec states each one.
+    RESEARCH_GAP_RECORDED = "ResearchGapRecorded"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({

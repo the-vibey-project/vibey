@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Contracts for the project notification, telemetry and queue configuration values."""
+"""Contracts for the project notification, telemetry, queue and design configuration values."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from vibey.domain.gate_notice import ReminderSchedule
     from vibey.domain.queue_reap import BrokerPolicy, ReapThresholds
+    from vibey.domain.research_gap import ResearchOnUnavailable
 
 
 @runtime_checkable
@@ -106,3 +107,21 @@ class QueueConfigInterface(Protocol):
 
     @property
     def defect(self) -> QueueDefectConfigInterface: ...
+
+
+@runtime_checkable
+class DesignResearchConfigInterface(Protocol):
+    """`[design.research]`."""
+
+    @property
+    def on_unavailable(self) -> ResearchOnUnavailable:
+        """`gate` parks for a person; `record_gap` records the topic as not researched."""
+        ...
+
+
+@runtime_checkable
+class DesignConfigInterface(Protocol):
+    """`[design]`."""
+
+    @property
+    def research(self) -> DesignResearchConfigInterface: ...

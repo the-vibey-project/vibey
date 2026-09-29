@@ -10,6 +10,8 @@ from vibey.domain.interfaces.budget_caps_interface import (
 )
 from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 from vibey.domain.interfaces.config_interface import (
+    DesignConfigInterface,
+    DesignResearchConfigInterface,
     NotificationsConfigInterface,
     NotificationWebhookConfigInterface,
     QueueConfigInterface,
@@ -103,6 +105,7 @@ from vibey.domain.interfaces.queue_reap_interface import (
     QueueReapPolicyInterface,
     ReapThresholdsInterface,
 )
+from vibey.domain.interfaces.research_gap_interface import ResearchGapInterface
 from vibey.domain.interfaces.stored_value_interface import (
     StoredValueParserInterface,
     UnrecognizedValueInterface,
@@ -172,7 +175,10 @@ __all__ = [
     "QueueConfigInterface",
     "QueuePriorityConfigInterface",
     "QueueReapConfigInterface",
+    "DesignConfigInterface",
+    "DesignResearchConfigInterface",
     "QueuedJobInterface",
+    "ResearchGapInterface",
     "UnbumpPlanInterface",
     "UnbumpPlannerInterface",
     "ActorInterface",

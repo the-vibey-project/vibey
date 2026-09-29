@@ -1,5 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from dataclasses import replace
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from tests.application.fakes import make_job
@@ -8,8 +9,10 @@ from vibey.application.design_synthesis_handler import (
     DesignSpecHandler,
     DesignSynthesizeHandler,
 )
+from vibey.application.research_gaps import RESEARCH_GAP_RECORDS
 from vibey.application.worker import Failure, Success
 from vibey.domain.job import FailureClass
+from vibey.domain.research_gap import ResearchGap
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
 
 
@@ -63,6 +66,37 @@ async def test_synthesize_saves_a_buildable_spec() -> None:
     ).handle(job)
     assert isinstance(outcome, Success)
     assert specs.value == spec()
+
+
+class GapLedger(FakeLedger):
+    def __init__(self, events: tuple[DesignEvent, ...]) -> None:
+        self.events = events
+
+    async def all_for_project(self, project_id: UUID) -> tuple[DesignEvent, ...]:
+        return self.events
+
+
+async def test_synthesize_states_every_gap_the_ledger_recorded_whatever_the_model_wrote() -> None:
+    """The gaps come from the ledger, not the synthesizer: a model that says nothing about
+    an unresearched topic cannot make the spec silent about it."""
+    now = datetime(2026, 9, 29, tzinfo=UTC)
+    gap = ResearchGap("prior-art", "a local model has no web access.")
+    ledger = GapLedger(
+        (
+            RESEARCH_GAP_RECORDS.event(gap, now=now, cycle=1),
+            RESEARCH_GAP_RECORDS.event(ResearchGap("libraries", "cycle two"), now=now, cycle=2),
+        )
+    )
+    specs = FakeSpecs()
+    job = replace(make_job(uuid4()), kind="design.synthesize")
+    assert job.cycle == 1
+
+    outcome = await DesignSynthesizeHandler(
+        ledger=ledger, synthesizer=FakeSynthesizer(spec()), specs=specs
+    ).handle(job)
+
+    assert outcome == Success({"acceptance_criteria": 1, "research_gaps": ["prior-art"]})
+    assert specs.value == replace(spec(), research_gaps=(gap,))
 
 
 async def test_synthesize_rejects_wrong_kind_and_unbuildable_result() -> None:

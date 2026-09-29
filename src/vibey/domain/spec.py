@@ -2,6 +2,8 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
+from vibey.domain.research_gap import ResearchGap
+
 
 class ConstraintKind(StrEnum):
     HARD = "hard"
@@ -44,6 +46,10 @@ class DesignSpec:
     criteria: tuple[AcceptanceCriterion, ...]
     nfrs: tuple[NonFunctionalRequirement, ...]
     walking_skeleton: str
+    # The research topics that were not researched (`[design.research] on_unavailable =
+    # "record_gap"`). Taken from the ledger by the synthesis handler, never from a model,
+    # so the spec states every gap whatever the synthesizer wrote.
+    research_gaps: tuple[ResearchGap, ...] = ()
 
     def is_buildable(self) -> tuple[str, ...]:
         """Returns violations; empty means the DESIGN -> BUILD guard can pass."""

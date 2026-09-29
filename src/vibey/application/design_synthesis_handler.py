@@ -1,12 +1,16 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Synthesis and final publication handlers for DESIGN."""
 
+from dataclasses import replace
+
 from vibey.application.design_handler import DesignLedger
 from vibey.application.dto import JobRecord
 from vibey.application.interfaces import (
     DesignSpecRepository,
     SpecSynthesizer,
 )
+from vibey.application.interfaces.research_gaps import ResearchGapRecordsInterface
+from vibey.application.research_gaps import RESEARCH_GAP_RECORDS
 from vibey.application.worker import Failure, Outcome, Success
 from vibey.domain.job import FailureClass
 
@@ -18,10 +22,12 @@ class DesignSynthesizeHandler:
         ledger: DesignLedger,
         synthesizer: SpecSynthesizer,
         specs: DesignSpecRepository,
+        gaps: ResearchGapRecordsInterface = RESEARCH_GAP_RECORDS,
     ) -> None:
         self._ledger = ledger
         self._synthesizer = synthesizer
         self._specs = specs
+        self._gaps = gaps
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "design.synthesize":
@@ -31,8 +37,18 @@ class DesignSynthesizeHandler:
         violations = spec.is_buildable()
         if violations:
             return Failure(FailureClass.WORK, "; ".join(violations))
+        # The gaps come from the ledger, not the model: whatever the synthesizer wrote, the
+        # spec states every topic this cycle did not research, so REVIEW and a person see
+        # the gap rather than a silence.
+        gaps = self._gaps.gaps(events, cycle=job.cycle)
+        spec = replace(spec, research_gaps=gaps)
         await self._specs.save(job.project_id, job.cycle, spec)
-        return Success({"acceptance_criteria": len(spec.criteria)})
+        return Success(
+            {
+                "acceptance_criteria": len(spec.criteria),
+                "research_gaps": [gap.topic for gap in gaps],
+            }
+        )
 
 
 class DesignSpecHandler:

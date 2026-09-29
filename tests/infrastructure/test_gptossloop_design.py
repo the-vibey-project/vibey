@@ -164,6 +164,8 @@ async def test_research_refuses_rather_than_inventing_a_source() -> None:
     assert caught.value.__class__ is errors.SovereignResearchUnavailable
     assert caught.value.topic == "OAuth device flow"
     assert caught.value.evidence_name == "oauthdeviceflow.md"
+    # An absence, not a supplied file gone wrong: `record_gap` may record it as a gap.
+    assert caught.value.evidence_supplied is False
     # And the model is never asked: there is nothing honest for it to summarise.
     assert sent == []
 
@@ -221,6 +223,8 @@ async def test_research_refuses_a_document_with_no_source_line(tmp_path: Path) -
     with pytest.raises(SovereignResearchUnavailable, match="no `source:` first line") as caught:
         await GptossloopDesignProvider(evidence_dir=tmp_path).research("no source")
     assert caught.value.evidence_name == "nosource.md"
+    # The operator supplied this reading: it is fixed, never recorded as a gap.
+    assert caught.value.evidence_supplied is True
 
 
 @pytest.mark.asyncio
@@ -233,6 +237,7 @@ async def test_research_refuses_an_empty_source_or_empty_body(tmp_path: Path) ->
     with pytest.raises(SovereignResearchUnavailable, match="empty source or carries no body") as c:
         await GptossloopDesignProvider(evidence_dir=tmp_path).research("empty body")
     assert c.value.evidence_name == "emptybody.txt"
+    assert c.value.evidence_supplied is True
 
 
 def test_the_evidence_directory_comes_from_the_environment(tmp_path: Path) -> None:

@@ -15,7 +15,8 @@ from vibey.application.worker import Failure, Park, Success
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import SovereignResearchUnavailable
 from vibey.domain.job import FailureClass
-from vibey.domain.ledger import Provenance
+from vibey.domain.ledger import EventKind, Provenance
+from vibey.domain.research_gap import ResearchOnUnavailable
 
 
 class FixedClock:
@@ -139,3 +140,92 @@ async def test_a_topic_no_evidence_file_can_match_points_at_a_retrieving_provide
     assert "No evidence file can match this topic" in outcome.request.prompt
     assert "--provider claudeloop" in outcome.request.prompt
     assert EVIDENCE_DIR_ENV not in outcome.request.prompt
+
+
+# -- [design.research] on_unavailable ------------------------------------------------------
+
+
+class UnusableEvidenceResearcher:
+    """The operator supplied a file, and it cannot be attributed (no `source:` line)."""
+
+    async def research(self, topic: str) -> ResearchResult:
+        raise SovereignResearchUnavailable(
+            topic,
+            "prior-art.md carries no `source:` first line.",
+            evidence_name="prior-art.md",
+            evidence_supplied=True,
+        )
+
+
+def _handler(
+    ledger: FakeLedger, researcher: object, policy: ResearchOnUnavailable | None = None
+) -> DesignResearchHandler:
+    options = {} if policy is None else {"on_unavailable": policy}
+    return DesignResearchHandler(
+        ledger=ledger,
+        researcher=researcher,  # type: ignore[arg-type]
+        clock=FixedClock(),
+        engine_id=EngineId.GPTOSSLOOP,
+        **options,  # type: ignore[arg-type]
+    )
+
+
+async def test_by_default_absence_of_evidence_still_waits_for_a_person() -> None:
+    """The default is today's behaviour: no policy declared means a gate, never a gap."""
+    ledger = FakeLedger()
+    outcome = await _handler(ledger, RefusingResearcher("prior-art.md")).handle(
+        _research_job("prior-art")
+    )
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == RESEARCH_EVIDENCE_GATE_KIND
+    assert ledger.events == []
+    # The gate names the other way on, so the knob is discoverable where it is needed.
+    assert 'on_unavailable = "record_gap"' in outcome.request.prompt
+
+
+async def test_record_gap_records_the_topic_as_not_researched_and_proceeds() -> None:
+    ledger = FakeLedger()
+    researcher = RefusingResearcher("prior-art.md")
+    job = _research_job("prior-art")
+
+    outcome = await _handler(ledger, researcher, ResearchOnUnavailable.RECORD_GAP).handle(job)
+
+    assert outcome == Success(
+        {"topic": "prior-art", "researched": False, "gap": "a local model has no web access."}
+    )
+    assert "source" not in outcome.result  # there is none, and none is implied
+    (event,) = ledger.events
+    assert event.kind is EventKind.RESEARCH_GAP_RECORDED
+    # vibey's own words about what it could not do: trusted, with no content to distrust.
+    assert event.provenance is Provenance.TRUSTED
+    assert event.payload == {
+        "topic": "prior-art",
+        "reason": "a local model has no web access.",
+        "cycle": job.cycle,
+    }
+    assert researcher.calls == 1
+
+
+async def test_record_gap_never_sets_aside_reading_the_operator_supplied() -> None:
+    """A supplied file that cannot be attributed is a mistake to fix, not an absence: it
+    still parks, whatever the policy, and the gate does not offer the gap as a way out."""
+    ledger = FakeLedger()
+    outcome = await _handler(
+        ledger, UnusableEvidenceResearcher(), ResearchOnUnavailable.RECORD_GAP
+    ).handle(_research_job("prior-art"))
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == RESEARCH_EVIDENCE_GATE_KIND
+    assert "record_gap" not in outcome.request.prompt
+    assert ledger.events == []
+
+
+async def test_record_gap_still_uses_evidence_that_exists() -> None:
+    """The policy decides only what an absence does: research that can be done is done."""
+    ledger = FakeLedger()
+    outcome = await _handler(ledger, FixedResearcher(), ResearchOnUnavailable.RECORD_GAP).handle(
+        _research_job("prior-art")
+    )
+    assert outcome == Success({"topic": "prior-art", "source": "https://example.test"})
+    (event,) = ledger.events
+    assert event.kind is EventKind.ARTIFACT_PRODUCED
+    assert event.provenance is Provenance.UNTRUSTED

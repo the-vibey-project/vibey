@@ -226,6 +226,20 @@ class SovereignResearchUnavailableInterface(Protocol):
     @property
     def args(self) -> tuple[object, ...]: ...
 
+    @property
+    def topic(self) -> str: ...
+
+    @property
+    def detail(self) -> str: ...
+
+    @property
+    def evidence_name(self) -> str | None: ...
+
+    @property
+    def evidence_supplied(self) -> bool:
+        """True when reading was supplied but could not be used; False when there was none."""
+        ...
+
 
 @runtime_checkable
 class UnrecognizedJobStateInterface(StringValueInterface, Protocol):
