@@ -87,8 +87,9 @@ def _command(
 
 
 def test_the_command_is_its_interface(tmp_path: Path) -> None:
-    assert isinstance(_command(tmp_path), SupervisorCommand)
-    assert issubclass(SupervisorCommand, SupervisorCommandInterface)
+    # The interface is not runtime-checkable (as SabbathCommandInterface is not); the
+    # class inherits it, so its MRO names it.
+    assert SupervisorCommandInterface in type(_command(tmp_path)).__mro__
 
 
 # --- install ----------------------------------------------------------------------------

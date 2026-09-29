@@ -19,6 +19,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from uuid import UUID
 
 from vibey.application.interfaces import Logger
+from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.worker_interface import WorkerLoopInterface
 from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import JobRepository
@@ -36,7 +37,11 @@ class MultiProjectWorker:
         jobs: JobRepository,
         loops_for: ProjectLoops,
         logger: Logger | None = None,
+        sabbath: SabbathGateInterface | None = None,
     ) -> None:
+        # 8.i: while the Sabbath holds, not even the listing is read and no project's
+        # engines are preflighted; each project's own loop keeps its own gate as well.
+        self._sabbath = sabbath
         self._jobs = jobs
         self._loops_for = loops_for
         self._log: Logger = logger if logger is not None else StandardLibraryLogger(__name__)
@@ -49,6 +54,8 @@ class MultiProjectWorker:
         return self._last_served
 
     async def run_once(self, slot: int = 0) -> bool:
+        if self._sabbath is not None and self._sabbath.hold() is not None:
+            return False
         for project_id in await self._jobs.claimable_projects():
             loops = await self._loops(project_id)
             if not loops:

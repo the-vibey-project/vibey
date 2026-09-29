@@ -2070,7 +2070,7 @@ def worker(
                         )
                         return None
 
-                everyone = MultiProjectWorker(jobs=resources.jobs, loops_for=serve)
+                everyone = MultiProjectWorker(jobs=resources.jobs, loops_for=serve, sabbath=sabbath)
                 runs = [functools.partial(everyone.run_once, i) for i in range(count)]
                 wake = None
                 # The reaper's pass reads every project; the id only labels its report,

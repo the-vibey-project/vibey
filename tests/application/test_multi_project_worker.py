@@ -181,3 +181,26 @@ async def test_a_project_drained_by_another_worker_is_passed_over() -> None:
 
     assert await worker.run_once() is True
     assert worker.last_served == next_up
+
+
+class _Resting:
+    def __init__(self, held: object | None) -> None:
+        self.held = held
+
+    def hold(self) -> object | None:
+        return self.held
+
+
+async def test_nothing_is_listed_built_or_claimed_while_the_sabbath_holds() -> None:
+    project = uuid4()
+    jobs = FakeJobRepository([make_job(project)])
+    builder = _Builder(jobs)
+    gate = _Resting(object())
+    worker = MultiProjectWorker(jobs=jobs, loops_for=builder, sabbath=gate)  # type: ignore[arg-type]
+
+    assert await worker.run_once() is False
+    assert builder.built == []
+    assert "claimable_projects" not in jobs.calls
+
+    gate.held = None
+    assert await worker.run_once() is True
