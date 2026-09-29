@@ -2094,9 +2094,11 @@ and successes across the 14 rungs is plotted in [Fig. 19](#fig:stress-cumulative
 \begin{axis}[vibeyaxis,width=8.6cm,height=5cm,xmin=1,xmax=14,ymin=0,ymax=474,
   xtick={1,2,3,4,5,6,7,8,9,10,11,12,13,14},xticklabels={1,2,3,4,6,8,12,16,24,32,48,64,96,128},
   xlabel={rung (offered concurrency $N$)},ylabel={generations, cumulative},legend pos=north west]
-\addplot[fill=vibeysilver!35,draw=vibeysilver,line width=.5pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,76) (10,108) (11,156) (12,220) (13,316) (14,444)} \closedcycle;
+\addplot[fill=vibeysilver!35,draw=none,forget plot] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,76) (10,108) (11,156) (12,220) (13,316) (14,444)} \closedcycle;
+\addplot[fill=vibeygreen!45,draw=none,forget plot] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,73) (10,103) (11,127) (12,167) (13,220) (14,243)} \closedcycle;
+\addplot[vibeysilver,line width=.5pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,76) (10,108) (11,156) (12,220) (13,316) (14,444)};
 \addlegendentry{attempted}
-\addplot[fill=vibeygreen!45,draw=vibeygreen,line width=.8pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,73) (10,103) (11,127) (12,167) (13,220) (14,243)} \closedcycle;
+\addplot[vibeygreen,line width=.8pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,73) (10,103) (11,127) (12,167) (13,220) (14,243)};
 \addlegendentry{succeeded}
 \node[vibeynote,anchor=east,align=right] at (axis cs:12.4,346) {243 of 444\\54.7\% overall};
 \end{axis}
@@ -2357,7 +2359,7 @@ in the consumed span.
 \begin{scope}[on background layer]
 \draw[vibeyline] (0.00,-8.95) -- (0.00,0.25) node[vibeynote,anchor=south] {0}; \draw[vibeyline] (2.08,-8.95) -- (2.08,0.25) node[vibeynote,anchor=south] {40}; \draw[vibeyline] (4.16,-8.95) -- (4.16,0.25) node[vibeynote,anchor=south] {80}; \draw[vibeyline] (6.24,-8.95) -- (6.24,0.25) node[vibeynote,anchor=south] {120}; \draw[vibeyline] (8.32,-8.95) -- (8.32,0.25) node[vibeynote,anchor=south] {160};
 \end{scope}
-\node[vibeyhead] at (-4.0,0.55) {lane};
+\node[vibeyhead,anchor=south east] at (-0.15,0.55) {lane};
 \node[vibeyhead,anchor=south] at (4.47,0.55) {turns spent, attempt after attempt};
 \node[vibeyhead,anchor=south west] at (9.04,0.55) {issue \; outcome \; turns};
 \fill[vibeyred!55,rounded corners=1pt] (0.00,-0.11) rectangle (1.46,0.11);
@@ -2872,13 +2874,13 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \node[vibeyanchor,fill=vibeygold] at (axis cs:7,53) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:7,56) {v0.1.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:11,58) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:11,61) {v0.1.1, v0.1.2};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:11,61) {v0.1.1--v0.1.2};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:15,7) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:15,10) {v0.2.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:20,97) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:20,100) {v0.3.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:21,77) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:21,80) {v0.4.0, v0.5.0};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:21,80) {v0.4.0--v0.5.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:36,30) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:36,33) {v0.6.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:37,67) {};
@@ -2886,9 +2888,9 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \node[vibeyanchor,fill=vibeygold] at (axis cs:38,39) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:38,42) {v0.8.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:40,197) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:40,200) {v1.0.0, v1.1.0, v1.2.0, v1.3.0};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:40,200) {v1.0.0--v1.3.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:41,13) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:41,16) {v1.4.0, v1.5.0};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:41,16) {v1.4.0--v1.5.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:43,14) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:43,17) {v2.0.0};
 \draw[decorate,decoration={brace,amplitude=3pt},vibeygray] (axis cs:22,6) -- (axis cs:30,6);
@@ -2965,7 +2967,8 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 \begin{tikzpicture}
 \begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=50,ymin=0,ymax=1582,
   xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day},ylabel={cumulative},legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)} \closedcycle;
+\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)} \closedcycle;
+\addplot[vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)};
 \addlegendentry{commits since Aug 9 (1,502; 12 earlier)}
 \addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,575) (46,616) (47,649) (48,675) (49,681) (50,683)};
 \addlegendentry{commit subjects closing a pull request (683)}

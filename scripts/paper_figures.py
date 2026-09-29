@@ -646,9 +646,11 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\begin{{axis}}[vibeyaxis,width=8.6cm,height=5cm,xmin=1,xmax={n},ymin=0,ymax={attempted + 30},
   xtick={{{",".join(str(i) for i in range(1, n + 1))}}},xticklabels={{{",".join(labels)}}},
   xlabel={{rung (offered concurrency $N$)}},ylabel={{generations, cumulative}},legend pos=north west]
-\\addplot[fill=vibeysilver!35,draw=vibeysilver,line width=.5pt] coordinates {{{" ".join(att_coords)}}} \\closedcycle;
+\\addplot[fill=vibeysilver!35,draw=none,forget plot] coordinates {{{" ".join(att_coords)}}} \\closedcycle;
+\\addplot[fill=vibeygreen!45,draw=none,forget plot] coordinates {{{" ".join(suc_coords)}}} \\closedcycle;
+\\addplot[vibeysilver,line width=.5pt] coordinates {{{" ".join(att_coords)}}};
 \\addlegendentry{{attempted}}
-\\addplot[fill=vibeygreen!45,draw=vibeygreen,line width=.8pt] coordinates {{{" ".join(suc_coords)}}} \\closedcycle;
+\\addplot[vibeygreen,line width=.8pt] coordinates {{{" ".join(suc_coords)}}};
 \\addlegendentry{{succeeded}}
 \\node[vibeynote,anchor=east,align=right] at (axis cs:{n - 1.6},{attempted * 0.78:.0f}) {{{succeeded} of {attempted}\\\\{succeeded / attempted * 100:.1f}\\% overall}};
 \\end{{axis}}
@@ -767,7 +769,7 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\begin{{scope}}[on background layer]
 {axis}
 \\end{{scope}}
-\\node[vibeyhead] at (-4.0,0.55) {{lane}};
+\\node[vibeyhead,anchor=south east] at (-0.15,0.55) {{lane}};
 \\node[vibeyhead,anchor=south] at ({max_turns * scale / 2:.2f},0.55) {{turns spent, attempt after attempt}};
 \\node[vibeyhead,anchor=south west] at ({max_turns * scale + 0.1:.2f},0.55) {{issue \\; outcome \\; turns}};
 {chr(10).join(lines)}
@@ -1028,7 +1030,7 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             y = per_day.get(day, 0)
             tag_marks.append(
                 f"\\node[vibeyanchor,fill=vibeygold] at (axis cs:{x},{y + 6}) {{}};\n"
-                f"\\node[font=\\sffamily\\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:{x},{y + 9}) {{{', '.join(names)}}};"
+                f"\\node[font=\\sffamily\\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:{x},{y + 9}) {{{names[0] if len(names) == 1 else names[0] + '--' + names[-1]}}};"
             )
         # the longest gap
         active = sorted(per_day)
@@ -1149,7 +1151,8 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         body = f"""\\begin{{tikzpicture}}
 \\begin{{axis}}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax={days},ymin=0,ymax={running + 80},
   xtick={{{",".join(ticks)}}},xticklabels={{{",".join(labels)}}},xlabel={{day}},ylabel={{cumulative}},legend pos=north west]
-\\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {{{" ".join(coords)}}} \\closedcycle;
+\\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {{{" ".join(coords)}}} \\closedcycle;
+\\addplot[vibeyblue,line width=1pt] coordinates {{{" ".join(coords)}}};
 \\addlegendentry{{commits since {since.strftime("%b %-d")} ({_thousands(data["window_commits"])}; {earlier} earlier)}}
 \\addplot[vibeyteal,line width=1pt] coordinates {{{" ".join(pr_coords)}}};
 \\addlegendentry{{commit subjects closing a pull request ({pr_running})}}
