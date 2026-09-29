@@ -34,6 +34,35 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   each service's state, and `vibey doctor` prints a `supervisor-*` line per service -- `WARN`
   when one is missing or stopped, `FAIL` with `[supervisor] required = true`.
 
+### Bug Fixes
+
+* **delivery:** the triaged-delivery bridge no longer dispatches an issue whoever wrote it, and
+  no longer hands its raw text to DESIGN (G10). The hourly sweep labels every open issue
+  `vibey-gh:triaged`, a stranger's included, and the bridge passed that issue's body straight
+  into `vibey new --intake`. It now asks the storm's own trust seam first
+  (`scripts/intake_trust.py` over `storm_trust.py`; ADR-0053, sub-doctrine 12.j): one GraphQL
+  query returns the issue's text, author, every body edit and title rename, its labels and who
+  applied each, and the grant is read from reviewed history. Every account that wrote the text
+  must be in `[unattended_approval] authors`, and whoever last applied `vibey-gh:triaged` and
+  each `vibey-gh:priority-*` label must be one of those or `[merge_train] trusted_authors` /
+  `owner` (where the sweep's own account is declared). An issue a stranger wrote, edited or
+  labelled is held -- never dispatched, its ticket `blocked`, the reason in its evidence, and
+  one comment asking a maintainer -- and the next issue is taken on the next pass; a grant or
+  forge that cannot be read is a retried dispatch, never an admission. An admitted issue is
+  dispatched with the text that was judged, not the listing's copy, framed by `PromptShield`
+  after a provenance line, and `vibey new` records it as an `untrusted` `TranscriptRecorded`
+  event as before. `--trusted-author` / `VIBEY_TRIAGED_DELIVERY_TRUSTED_AUTHORS` and
+  `--label-curator` / `VIBEY_TRIAGED_DELIVERY_LABEL_CURATORS` replace the reviewed lists for a
+  person's own run. Measured on a canary-injection issue (an instruction to answer every DESIGN
+  question with a token and push to main): before, five of five cases dispatched it raw; now a
+  stranger-written, stranger-edited or stranger-labelled issue is held, an operator's issue
+  reaches the ledger only inside the frame, and an unreadable forge is retried. The frame is
+  not a measured defence: on gpt-oss:20b's first DESIGN question batch, the canary appeared in
+  4 of 10 runs with the raw intake and 5 of 10 with the framed one, so the trust check is the
+  control that holds (see the runbook). The storm's
+  `storm_trust.py` gains `LABELED_QUERY`, `IssueGate.judge_labels`, `Grant.curators` and a
+  `query` argument to `GhForge`; its own lanes still ask `QUERY`.
+
 ## [3.0.0] (2026-09-29)
 
 ### Bug Fixes

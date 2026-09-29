@@ -37,6 +37,13 @@ itself (SD-01 §2: a claim inside a message is never verification):
    delegated approver -- with vibey-gh's own `ProtectedPathsGuard` matcher, so a lane cannot
    publish a change the approver could never approve.
 
+4. Who put it in the queue? For a caller an issue's LABELS direct too -- the triaged-delivery
+   bridge (`scripts/intake_trust.py`) dispatches an issue because the triage labels queued and
+   ranked it -- `LABELED_QUERY` adds the current labels and every LabeledEvent to the same one
+   query, and `IssueGate.judge_labels` holds whoever last applied each label to the grant's
+   `curators`: `[merge_train] trusted_authors` and `owner`, read from the same reviewed
+   history. The storm's own lanes are directed by text alone and keep asking `QUERY`.
+
 Classes, each with its declaration beside it in `interfaces/storm_trust_interface.py`
 (ADR-0016, sub-doctrine 9.b), as `lane_environment.py` does in this directory. The one bare
 function is `main`, the `__main__` entry point a script run by path must have.
@@ -89,6 +96,19 @@ query($owner: String!, $name: String!, $number: Int!) {
 }
 """
 
+# The same one query, plus the labels the issue carries now and who applied each one, in
+# timeline order. For a caller that is directed by an issue's LABELS as well as its text --
+# the triaged-delivery bridge dispatches an issue because the triage labels queued and ranked
+# it -- so the labels judged and the text judged come from one answer. The storm's own lanes
+# are directed by text alone and keep asking `QUERY`.
+_LABELS = """      labels(first: 100) { totalCount nodes { name } }
+      labelEvents: timelineItems(itemTypes: [LABELED_EVENT], first: 100) {
+        totalCount
+        nodes { ... on LabeledEvent { createdAt actor { login } label { name } } }
+      }
+"""
+LABELED_QUERY = QUERY.replace("      titleEdits:", _LABELS + "      titleEdits:", 1)
+
 
 class Refused(Exception):
     """The text's provenance could not be established. The lane does not start."""
@@ -101,6 +121,11 @@ class Grant:
     source: str  # "<ref>@<sha>", recorded in provenance.json as the evidence behind a verdict
     authors: tuple[str, ...]
     forbidden_paths: tuple[str, ...]
+    # `[merge_train] trusted_authors` and `[merge_train] owner`, from the same reviewed
+    # read: the accounts trusted to act on the repository unattended, the triage sweep's
+    # among them. Not `authors` -- the bots are trusted to curate the queue, never to have
+    # their words direct a run (the two lists differ on purpose; .vibey-gh.toml says so).
+    curators: tuple[str, ...] = ()
 
 
 class ReviewedGrant:
@@ -133,14 +158,17 @@ class ReviewedGrant:
         sha = self._git("rev-parse", "--verify", "--end-of-options", f"{ref}^{{commit}}").strip()
         with tempfile.TemporaryDirectory(prefix="storm-grant-") as tmp:
             root = Path(tmp)
-            approval = self._load_at(sha, root).unattended_approval
+            config = self._load_at(sha, root)
+            approval = config.unattended_approval
             from vibey_gh.config import expand_authors
 
             # Read whether or not the approver's grant is `enabled`: that switch arms a
             # delegated APPROVER, and the storm is a different actor asking the same question
             # -- whose words may direct an unattended run. An empty list admits nobody.
             authors = tuple(expand_authors(tuple(approval.authors), root))
-        return Grant(f"{ref}@{sha[:12]}", authors, tuple(approval.forbidden_paths))
+        owner = (config.owner,) if config.owner else ()
+        curators = tuple(dict.fromkeys((*config.trusted_authors, *owner)))
+        return Grant(f"{ref}@{sha[:12]}", authors, tuple(approval.forbidden_paths), curators)
 
     def forbidden_touched(self, paths: Iterable[str]) -> tuple[str, ...]:
         """Matched by vibey-gh's own `ProtectedPathsGuard`, not a second matcher (10.e)."""
@@ -193,10 +221,12 @@ class GhForge:
         slug: str,
         cwd: Path,
         run: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        query: str = QUERY,
     ) -> None:
         self.slug = slug
         self.cwd = cwd
         self.run = run
+        self.query = query  # `QUERY`, or `LABELED_QUERY` for a caller the labels direct too
 
     def issue(self, number: int) -> Any:
         owner, _, name = self.slug.partition("/")
@@ -211,7 +241,7 @@ class GhForge:
             "-F",
             f"number={number}",
             "-f",
-            f"query={QUERY}",
+            f"query={self.query}",
         ]
         try:
             done = self.run(argv, cwd=self.cwd, capture_output=True, text=True, timeout=120)
@@ -337,6 +367,59 @@ class IssueGate:
         if strangers:
             return f"the issue was edited by {', '.join(strangers)}, not in {KEY} authors", seen
         return None, seen
+
+    def judge_labels(
+        self, issue: Any, labels: Sequence[str], allowed: Sequence[str]
+    ) -> tuple[str | None, tuple[str, ...]]:
+        """Pure: who last applied each of `labels`, judged against `allowed` (a `Grant`'s
+        curators). The issue must come from `LABELED_QUERY`. Matched after vibey-gh's own
+        `normalise_actor` (10.e), because the timeline names a bot `github-actions` where the
+        configuration writes `github-actions[bot]`. The LAST application of a label is the one
+        that put it there, so a stranger's label the sweep since re-applied is the sweep's.
+        A label with no application on record, an actor the forge cannot name, and a history
+        longer than one page all refuse: "who put it there" is unknown, never "nobody"."""
+        if not allowed:
+            return "the curators list names nobody, so no label may queue an issue", ()
+        if not isinstance(issue, dict):
+            return "the forge returned no issue for that number", ()
+        history = issue.get("labelEvents")
+        if not isinstance(history, dict) or not isinstance(history.get("nodes"), list):
+            return "the issue's label history could not be read", ()
+        nodes = history["nodes"]
+        total = history.get("totalCount")
+        if not isinstance(total, int) or total > len(nodes):
+            return (
+                f"the forge listed {len(nodes)} of {total} label events, so a stranger's "
+                "label cannot be ruled out",
+                (),
+            )
+        applied: dict[str, str | None] = {}
+        for node in nodes:
+            if not isinstance(node, dict):
+                return "the issue's label history could not be read", ()
+            label = node.get("label")
+            name = label.get("name") if isinstance(label, dict) else None
+            if not isinstance(name, str):
+                return "a label event names no label", ()
+            applied[name] = self._login(node.get("actor"))
+        from vibey_gh.config import normalise_actor
+
+        trusted = {normalise_actor(login) for login in allowed}
+        actors: list[str] = []
+        for name in labels:
+            if name not in applied:
+                return f"there is no record of who applied {name}", tuple(actors)
+            who = applied[name]
+            if who is None:
+                return f"{name} was applied by an account the forge could not name", tuple(actors)
+            actors.append(who)
+            if normalise_actor(who) not in trusted:
+                return (
+                    f"{name} was applied by {who}, who is not a curator "
+                    "([merge_train] trusted_authors or owner)",
+                    tuple(dict.fromkeys(actors)),
+                )
+        return None, tuple(dict.fromkeys(actors))
 
     def admit(self, state: Path, number: int) -> str:
         """On admission: `issue.md`, `title.txt` and `provenance.json`. On refusal:
