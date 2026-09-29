@@ -55,7 +55,7 @@ def test_all_empirical_figures_present_in_paper() -> None:
 
 
 def test_every_figure_of_the_atlas_is_present_and_numbered_in_order() -> None:
-    """The paper's visual atlas: twenty drawn figures and fifteen computed ones, in the
+    """The paper's visual atlas: thirty drawn figures and fifteen computed ones, in the
     order the PDF numbers them, with every `[Fig. N]` reference carrying that number."""
     text = PAPER.read_text(encoding="utf-8")
     expected_labels = (
@@ -95,15 +95,15 @@ def test_every_figure_of_the_atlas_is_present_and_numbered_in_order() -> None:
         "fig:forecast",
         "fig:governance-time",
         "fig:delivery-pipeline",
-        "fig:probe-lifecycle",
-        "fig:microslice-contract",
-        "fig:exact-head-lifecycle",
+        "fig:queue-state",
         "fig:authority-map",
         "fig:process-reaping",
-        "fig:queue-state",
-        "fig:environment-boundary",
-        "fig:publication-ladder",
         "fig:capacity-precedence",
+        "fig:probe-lifecycle",
+        "fig:environment-boundary",
+        "fig:exact-head-lifecycle",
+        "fig:microslice-contract",
+        "fig:publication-ladder",
     )
     positions = [text.index(rf"\label{{{label}}}") for label in expected_labels]
     assert positions == sorted(positions), "the figures are not in the order the paper lists them"
