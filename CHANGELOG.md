@@ -1,7 +1,10 @@
 # Changelog
 
-Every release of `vibey` on [PyPI](https://pypi.org/project/vibey/), newest first. From 0.2.0 on there
-are no `vibey-v*` tags, so headings carry the release commit's date instead of a compare link, and
+Every release of the vibey engine, newest first. The engine publishes to PyPI as
+[`vibey-engine`](https://pypi.org/project/vibey-engine/) and the apps as `krypton-app`
+([ADR-0069](docs/architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md));
+earlier releases were published as `vibey`. Releases are tagged `vibey-v<version>`
+(`vibey-v0.1.0` through `vibey-v2.0.0` exist). Headings carry the release commit's date, and
 0.2.0 through 0.6.0 were reconstructed from the release commits on 2026-09-15 (ADR-0028).
 
 The design behind these releases is written up as a research paper —
@@ -13,6 +16,43 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ## [Unreleased]
 
 ### Features
+
+* **bus:** measured dispatch for every service-bus surface
+  ([ADR-0074](docs/architecture/decisions/0074-measured-service-bus-dispatch.md), #1212).
+  `[bus]` gains `mode` (`auto`, `singleton`, `multiplexer` or `hybrid`, default `auto`) and
+  `hybrid_concurrency` (default `4`). `auto` uses the durable per-machine benchmark winner,
+  recomputed at most once a week, and falls back to singleton when no valid measurement
+  exists; an explicit mode always wins. qwenloop gains `HybridTurnMultiplexer` beside the
+  direct and RabbitMQ turn dispatchers, and `qwenloop server benchmark` measures
+  direct-versus-hybrid-versus-RabbitMQ turns and stores the winner for
+  `turn_dispatch_mode = "auto"`. A provider-benchmark executor and a paid-benchmark budget
+  guard are added; no command runs them yet.
+* **delivery:** a triaged-issue delivery bridge, `scripts/triaged_delivery.py`. It claims one
+  prioritized GitHub issue by an idempotent comment, creates the project with the new
+  `vibey new --intake TEXT` (which seeds the DESIGN ledger with the issue as one untrusted
+  `TranscriptRecorded` event), and leaves the worker to drive BUILD and REVIEW. It advances
+  accepted designs, runs each issue in its own worktree under bounded, reaped worker
+  subprocesses, holds dispatch while capacity is exhausted, records evidence under
+  `.vibey/delivery-evidence/`, and publishes a reviewed integration branch only through the
+  push gate and the merge train; it never bypasses a human or deployment gate. Migration
+  0020 adds `triaged_ticket`, the durable triage order (priority rank, bump sequence and
+  leased claims) that `scripts/triage_queue.py` reconciles from GitHub and the bridge claims
+  from when `VIBEY_PG_URL` is set (#1232).
+* **doctor:** `vibey doctor --sovereign-fit` runs `scripts/sovereign_probe.py`, a JSON-mode
+  capacity probe of the local GPT-OSS server, and persists the measured fit to
+  `--fit-output` (default `~/.local/state/vibey/sovereign-fit.json`) (#1232). Pointed to by
+  `VIBEY_OLLAMA_FIT`, a record bound to the same URL, model and (when `VIBEY_REVISION` is
+  set) revision replaces the sovereign client's context and output ceilings, for requests no
+  larger than the prompt it measured; anything else keeps the configured ceilings, `8192`
+  and `2048` by default. See
+  [Local models](docs/guides/local-models-ollama.md#measuring-a-capacity-fit).
+* **skills:** a linked microslice corpus, under proposed
+  [ADR-0075](docs/architecture/decisions/0075-context-microslices-and-linked-surfaces.md) and
+  proposed sub-doctrine 10.k. [`docs/context-microslices.md`](docs/context-microslices.md)
+  states the contract: small identified slices, explicit links, measured budgets and no
+  silent truncation. `src/vibey_tools/skills/tools/slice_markdown.py` converts a Markdown
+  source, or the whole skills tree, into numbered slices with one `index.json` per skill and
+  a `manifest.json`; the generated mirror is `docs/microslices/skills/`.
 
 * **qwenloop:** add explicit direct or RabbitMQ shared-turn dispatch, configurable
   durable queue names, and `server turn-worker` hosting for multiple lanes. Direct
@@ -558,6 +598,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   the append-only ledger and read back verbatim as an unrecognized engine id.
 
 ### Fixed
+
+* **engines:** the sovereign DESIGN and DECOMPOSE client is bounded end to end. Its context
+  window (`num_ctx`) is sized to the prompt between `4096` and `VIBEY_OLLAMA_CONTEXT`
+  (default `8192`), and an over-long ledger is elided in the middle rather than overflowing
+  the window. Its output is capped by `VIBEY_OLLAMA_OUTPUT` (default `2048`). DESIGN and
+  DECOMPOSE ask in bounded JSON mode instead of compiling a grammar that could stall
+  generation, and an empty reply is retried once in JSON mode before it is refused. A
+  measured fit is applied only to prompts within the shape it was measured on.
 
 * **triaged delivery:** `scripts/triaged_delivery.py` no longer answers DESIGN gates or accepts
   a design on a person's behalf: they stay parked unless `--answer-design-defaults` opts in,

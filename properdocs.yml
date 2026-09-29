@@ -50,11 +50,13 @@ nav:
       - Continuous delivery estimate: guides/delivery-estimate.md
       - Self-hosted sovereign surfaces: guides/self-hosted-surfaces.md
       - The Sabbath: guides/sabbath.md
+      - Sovereign review runner: runbooks/sovereign-review-runner.md
   - Current estimate: estimate.md
   - Reference:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
       - Hub API: reference/hub-api.md
+      - Context microslices: context-microslices.md
   - Design:
       - The design system: design/README.md
       - Motion: design/motion.md

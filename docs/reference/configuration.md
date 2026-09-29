@@ -306,6 +306,28 @@ Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
 longer an engine: its engine and runner were deleted, and a `vibey.toml` that names
 it is refused as an unknown engine.
 
+### `[engines.claudeloop_local]` { #enginesclaudeloop_local }
+
+Which claudeloop backend profile the `claudeloop-local` engine runs, and what vibey
+may claim about it ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md),
+`ClaudeloopLocalConfig`). The engine itself is switched on by
+[`features.claudeloop_local`](#features); this table only describes it.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `profile` | string | `"local"` | Names a `[profiles.NAME]` table in claudeloop's own config; that profile, not vibey, carries the local server's `base_url` and the model tiers. Must not be empty. `VIBEY_CLAUDELOOP_LOCAL_PROFILE`, when set and non-empty, overrides it. |
+| `context_window` | integer | `32768` | The engine descriptor's context window. Must be a positive integer. Keep it equal to the profile's own `context_window` and the server's `OLLAMA_CONTEXT_LENGTH`. |
+| `structured_verdict` | boolean | `false` | Claims the structured-verdict capability. A local model earns it only when `vibey doctor --conformance` proves it for the model the profile configures; a claim conformance cannot prove makes the engine ineligible rather than trusted. |
+
+`vibey doctor` and `vibey loops` read this table from `./vibey.toml`, as they read
+`[features]`; a malformed table makes `vibey loops` exit 3. The worker reads it from
+the project's stored config, which no creation path writes today (`vibey new` copies
+only the tables listed [above](#what-is-read-at-runtime-today), and the Kubernetes
+operator stores `engines` as a flat list, which is read as "not configured"), so a
+worker runs `claudeloop-local` on these defaults unless `VIBEY_CLAUDELOOP_LOCAL_PROFILE`
+names another profile. The [local models guide](../guides/local-models-ollama.md) shows
+a working profile.
+
 ## `[phases.design]`, `[phases.build]`, `[phases.review]`
 
 Each phase table accepts the same three fields:

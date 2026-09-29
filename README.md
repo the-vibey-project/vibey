@@ -201,22 +201,27 @@ Every command's flags and defaults are in the
 
 ## Configuration
 
-`vibey.toml`'s schema — `[project]`, `[isolation]`, `[budget]`, `[engines]`,
-`[phases.design/build/review]`, `[provision]`, `[deploy]`, `[features]`,
-`[qwenloop]`, `[notifications]`, and `[telemetry]` — is fully implemented and unit-tested in
-`domain/config.py`/`infrastructure/config_loader.py`, with defaults and an
-example file in the [configuration reference](docs/reference/configuration.md).
+`vibey.toml`'s schema — `[project]`, `[isolation]`, `[budget]`, `[engines]` (with
+`[engines.claudeloop_local]`), `[phases.design/build/review]`, `[provision]`,
+`[deploy]`, `[notifications]`, `[telemetry]`, `[features]`, `[qwenloop]`,
+`[queue.priority]`, `[queue.reap]`, and the operational surfaces `[tracker]`,
+`[docs]`, `[secrets]`, `[files]`, `[email]`, `[sms]`, `[messaging]`,
+`[config_store]`, `[cache]`, `[bus]`, `[blob]` and `[siem]` — is implemented and
+unit-tested in `domain/config.py` (`parse_config`) and
+`infrastructure/config_loader.py`. `[verify]`, `[gates]`, `[engine_environment]`,
+`[failover]`, `[hub]` and `[sabbath]` are read by their own loaders. Defaults and an
+example file are in the [configuration reference](docs/reference/configuration.md).
 The local-engine keys are read at runtime today: `[features] gptossloop`,
 `[features] qwenloop`, `[features] claudeloop_local` and
-`[engines.claudeloop_local]`. `vibey doctor`
-reads them from `./vibey.toml` in the current directory, and the worker reads the
+`[engines.claudeloop_local]`. `vibey doctor` and `vibey loops`
+read them from `./vibey.toml` in the current directory, and the worker reads the
 same keys from the project's stored config (which no CLI flag sets yet);
 `VIBEY_FEATURE_GPTOSSLOOP`, `VIBEY_FEATURE_QWENLOOP`,
 `VIBEY_FEATURE_CLAUDELOOP_LOCAL` and
-`VIBEY_CLAUDELOOP_LOCAL_PROFILE` override them. `[notifications]` and
-`[telemetry]` are copied from the repository's `vibey.toml` into the stored
-project config by `vibey new`; the worker and lifecycle repository then use
-those settings. Telemetry is an in-process recorder for now, so it is available
+`VIBEY_CLAUDELOOP_LOCAL_PROFILE` override them. `[notifications]`,
+`[telemetry]`, `[gates]` and `[engine_environment]` are copied from the
+repository's `vibey.toml` into the stored project config by `vibey new`; the
+worker and lifecycle repository then use those settings. Telemetry is an in-process recorder for now, so it is available
 to the running app but has no external exporter yet.
 
 What does configure a project today is a handful of `vibey new` CLI flags
