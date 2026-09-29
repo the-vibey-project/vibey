@@ -669,31 +669,36 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             f"({i},{r['output_tokens'] / 1000:.1f})" for i, r in enumerate(runs, 1)
         )
         strip = "\n".join(
-            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:{i},-4.5) {{}};"
+            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:{i},0) {{}};"
             for i, r in enumerate(runs, 1)
         )
         strip_tokens = "\n".join(
-            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:{i},-27) {{}};"
+            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:{i},0) {{}};"
             for i, r in enumerate(runs, 1)
         )
         counts = Counter(r.get("disposition") for r in runs)
+        # Headroom above the tallest bar, so no bar meets the axis top; each legend entry is
+        # one filled swatch, drawn by its own image code, instead of the ybar default of two
+        # outlined bars.
+        top_count = max(max(r["turns"], r["tool_calls"]) for r in runs) * 1.2
+        top_tokens = max(max(r["input_tokens"], r["output_tokens"]) for r in runs) / 1000 * 1.2
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=2 by 1,horizontal sep=1.8cm}},vibeyaxis,width=8.6cm,height=4.6cm,
-  xmin=0.3,xmax={n + 0.7},xtick={{{ticks}}},xlabel={{run, in order of start}}]
-\\nextgroupplot[title={{a. Turns and tool calls per run}},ylabel={{count}},ymin=0,legend pos=north west,ybar,bar width=4pt]
+  xmin=0.3,xmax={n + 0.7},xtick={{{ticks}}},xlabel={{run, in order of start}},x tick label style={{yshift=-5pt}}]
+\\nextgroupplot[title={{a. Turns and tool calls per run}},ylabel={{count}},ymin=0,ymax={top_count:.0f},legend pos=north west,ybar,bar width=4pt,legend image code/.code={{\\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}}]
 \\addplot[fill=vibeyblue,draw=none] coordinates {{{turns}}};
 \\addlegendentry{{model turns}}
 \\addplot[fill=vibeyteal!80,draw=none] coordinates {{{calls}}};
 \\addlegendentry{{tool calls}}
 {strip}
-\\nextgroupplot[title={{b. Tokens per run (thousands)}},ylabel={{tokens ($\\times 10^3$)}},ymin=0,legend pos=north west,ybar,bar width=4pt]
+\\nextgroupplot[title={{b. Tokens per run}},ylabel={{tokens (thousands)}},ymin=0,ymax={top_tokens:.0f},legend pos=north west,ybar,bar width=4pt,legend image code/.code={{\\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}}]
 \\addplot[fill=vibeyviolet!85,draw=none] coordinates {{{tokens_in}}};
 \\addlegendentry{{input}}
 \\addplot[fill=vibeygold,draw=none] coordinates {{{tokens_out}}};
 \\addlegendentry{{output}}
 {strip_tokens}
 \\end{{groupplot}}
-\\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
+\\node[vibeynote,anchor=north west,align=left] at ([yshift=-2pt]current bounding box.south -| group c1r1.south west)
   {{disposition strip: \\textcolor{{vibeygreen}}{{$\\blacksquare$}} completed ({counts.get("completed", 0)}) \\;
    \\textcolor{{vibeygold}}{{$\\blacksquare$}} verdict only ({counts.get("incomplete_verdict_only", 0)}) \\;
    \\textcolor{{vibeyred}}{{$\\blacksquare$}} no verdict ({counts.get("incomplete_without_verdict", 0)}) \\;

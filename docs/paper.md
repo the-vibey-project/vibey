@@ -2141,45 +2141,45 @@ would have suggested 6/13, or 46.2%.
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.8cm},vibeyaxis,width=8.6cm,height=4.6cm,
-  xmin=0.3,xmax=13.7,xtick={1,2,3,4,5,6,7,8,9,10,11,12,13},xlabel={run, in order of start}]
-\nextgroupplot[title={a. Turns and tool calls per run},ylabel={count},ymin=0,legend pos=north west,ybar,bar width=4pt]
+  xmin=0.3,xmax=13.7,xtick={1,2,3,4,5,6,7,8,9,10,11,12,13},xlabel={run, in order of start},x tick label style={yshift=-5pt}]
+\nextgroupplot[title={a. Turns and tool calls per run},ylabel={count},ymin=0,ymax=48,legend pos=north west,ybar,bar width=4pt,legend image code/.code={\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}]
 \addplot[fill=vibeyblue,draw=none] coordinates {(1,11) (2,1) (3,0) (4,0) (5,0) (6,5) (7,9) (8,9) (9,2) (10,6) (11,40) (12,22) (13,0)};
 \addlegendentry{model turns}
 \addplot[fill=vibeyteal!80,draw=none] coordinates {(1,13) (2,1) (3,0) (4,0) (5,0) (6,4) (7,8) (8,12) (9,2) (10,5) (11,20) (12,20) (13,0)};
 \addlegendentry{tool calls}
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:1,-4.5) {};
-\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:2,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:3,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:4,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:5,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:6,-4.5) {};
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:7,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:8,-4.5) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:9,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:10,-4.5) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:11,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:12,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:13,-4.5) {};
-\nextgroupplot[title={b. Tokens per run (thousands)},ylabel={tokens ($\times 10^3$)},ymin=0,legend pos=north west,ybar,bar width=4pt]
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:1,0) {};
+\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:2,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:3,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:4,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:5,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:6,0) {};
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:7,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:8,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:9,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:10,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:11,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:12,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:13,0) {};
+\nextgroupplot[title={b. Tokens per run},ylabel={tokens (thousands)},ymin=0,ymax=286,legend pos=north west,ybar,bar width=4pt,legend image code/.code={\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}]
 \addplot[fill=vibeyviolet!85,draw=none] coordinates {(1,93.4) (2,1.3) (3,0.0) (4,0.0) (5,0.0) (6,23.4) (7,62.3) (8,17.1) (9,4.3) (10,8.6) (11,238.6) (12,101.6) (13,0.0)};
 \addlegendentry{input}
 \addplot[fill=vibeygold,draw=none] coordinates {(1,9.8) (2,0.4) (3,0.0) (4,0.0) (5,0.0) (6,4.1) (7,8.1) (8,7.5) (9,0.9) (10,5.7) (11,30.5) (12,16.5) (13,0.0)};
 \addlegendentry{output}
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:1,-27) {};
-\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:2,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:3,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:4,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:5,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:6,-27) {};
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:7,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:8,-27) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:9,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:10,-27) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:11,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:12,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:13,-27) {};
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:1,0) {};
+\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:2,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:3,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:4,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:5,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:6,0) {};
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:7,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:8,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:9,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:10,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:11,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:12,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:13,0) {};
 \end{groupplot}
-\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
+\node[vibeynote,anchor=north west,align=left] at ([yshift=-2pt]current bounding box.south -| group c1r1.south west)
   {disposition strip: \textcolor{vibeygreen}{$\blacksquare$} completed (4) \;
    \textcolor{vibeygold}{$\blacksquare$} verdict only (2) \;
    \textcolor{vibeyred}{$\blacksquare$} no verdict (2) \;
