@@ -8,6 +8,8 @@ from collections.abc import Mapping
 import pytest
 
 from vibey.domain.config import ConfigError
+from vibey.domain.errors import OutputBudgetExhausted
+from vibey.domain.job import FailureClass
 from vibey.infrastructure.engines.interfaces import (
     OllamaChatClientInterface,
     OllamaTransportInterface,
@@ -21,6 +23,7 @@ from vibey.infrastructure.engines.ollama_chat import (
     OLLAMA_FIT_ENV,
     OLLAMA_MODEL_ENV,
     OLLAMA_OUTPUT_ENV,
+    OLLAMA_RETRY_THINK_ENV,
     OLLAMA_TIMEOUT_ENV,
     OLLAMA_URL_ENV,
     VIBEY_REVISION_ENV,
@@ -424,3 +427,94 @@ async def test_thinking_alone_is_no_answer() -> None:
     client = OllamaChatClient(transport=FakeTransport(reply))
     with pytest.raises(ValueError, match="no message content"):
         await client.ask("system", "user", {"type": "object"})
+
+
+def _cut_short(content: str = "", *, prompt_tokens: int | None = 1000) -> dict[str, object]:
+    """gpt-oss:20b's reply when reasoning spends the whole budget (observed live)."""
+    body: dict[str, object] = {
+        "done_reason": "length",
+        "message": {"role": "assistant", "content": content, "thinking": "Let me think..."},
+    }
+    if prompt_tokens is not None:
+        body["prompt_eval_count"] = prompt_tokens
+    return body
+
+
+@pytest.mark.asyncio
+async def test_a_reply_cut_short_by_its_budget_is_retried_once_with_room_to_finish() -> None:
+    """done_reason=length with empty content: the reasoning ate the budget. The retry
+    doubles the budget within the context ceiling and asks for lighter reasoning."""
+    transport = SequenceTransport(
+        [_cut_short(), {"done_reason": "stop", "message": {"content": '{"ok": true}'}}]
+    )
+
+    result = await OllamaChatClient(transport=transport).ask("s", "u", "json")
+
+    assert result == {"ok": True}
+    first, second = (call[1] for call in transport.calls)
+    assert "think" not in first
+    assert first["options"] == {"temperature": 0, "num_ctx": 4096, "num_predict": 2048}
+    assert second["think"] == "low"
+    assert second["format"] == "json"
+    # 1000 prompt tokens (reported by the server) + a doubled 4096-token budget.
+    assert second["options"] == {"temperature": 0, "num_ctx": 5096, "num_predict": 4096}
+
+
+@pytest.mark.asyncio
+async def test_a_second_cut_short_reply_is_a_typed_capacity_failure() -> None:
+    transport = SequenceTransport([_cut_short(), _cut_short()])
+
+    with pytest.raises(OutputBudgetExhausted) as caught:
+        await OllamaChatClient(model="gpt-oss:20b", transport=transport).ask("s", "u", "json")
+
+    assert caught.value.failure_class is FailureClass.CAPACITY
+    assert (caught.value.output_tokens, caught.value.context_tokens) == (4096, 5096)
+    assert "VIBEY_OLLAMA_OUTPUT" in str(caught.value)
+    assert len(transport.calls) == 2  # bounded: never a third request
+
+
+@pytest.mark.asyncio
+async def test_truncated_json_or_a_missing_message_at_the_limit_is_cut_short_too() -> None:
+    for first in (_cut_short('{"questions": [{"te'), {"done_reason": "length"}):
+        transport = SequenceTransport([first, {"message": {"content": '{"ok": 1}'}}])
+        assert await OllamaChatClient(transport=transport).ask("s", "u", "json") == {"ok": 1}
+        assert len(transport.calls) == 2
+
+
+@pytest.mark.asyncio
+async def test_a_whole_answer_that_ends_at_the_limit_is_accepted_without_a_retry() -> None:
+    transport = SequenceTransport([_cut_short('{"ok": true}')])
+    assert await OllamaChatClient(transport=transport).ask("s", "u", "json") == {"ok": True}
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_the_widened_budget_never_outgrows_the_context_ceiling() -> None:
+    """With the prompt estimated (no prompt_eval_count) and nearly filling the window,
+    the retry grows the budget only as far as the window allows, not to double."""
+    transport = SequenceTransport(
+        [_cut_short(prompt_tokens=None), {"message": {"content": '{"ok": true}'}}]
+    )
+    client = OllamaChatClient(context_ceiling=8192, retry_think=None, transport=transport)
+
+    await client.ask("s", "x" * 18_000, "json")  # ~6000 estimated prompt tokens
+
+    second = transport.calls[1][1]
+    assert "think" not in second  # "none" keeps the model's own reasoning default
+    assert second["options"]["num_predict"] == 2192
+    assert second["options"]["num_ctx"] == 8192
+
+
+def test_the_retry_reasoning_level_is_configurable_and_checked() -> None:
+    assert OLLAMA_RETRY_THINK_ENV == "VIBEY_OLLAMA_RETRY_THINK"
+    assert OllamaChatClient.from_environment({})._retry_think == "low"
+    high = OllamaChatClient.from_environment({OLLAMA_RETRY_THINK_ENV: " HIGH "})
+    assert high._retry_think == "high"
+    unset = OllamaChatClient.from_environment({OLLAMA_RETRY_THINK_ENV: "none"})
+    assert unset._retry_think is None
+    off = OllamaChatClient.from_environment({OLLAMA_RETRY_THINK_ENV: "false"})
+    assert off._retry_think is False
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_RETRY_THINK: must be one of"):
+        OllamaChatClient.from_environment({OLLAMA_RETRY_THINK_ENV: "loud"})
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_RETRY_THINK: must be one of"):
+        OllamaChatClient(retry_think="loud")

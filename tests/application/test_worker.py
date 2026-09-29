@@ -20,6 +20,7 @@ from vibey.application.worker import (
     Success,
     WorkerLoop,
 )
+from vibey.domain.errors import ModelAnswerRejected, OutputBudgetExhausted
 from vibey.domain.job import FailureClass, JobState
 from vibey.infrastructure.otel import TelemetryMetrics, TelemetryTracer
 
@@ -322,6 +323,31 @@ async def test_handler_exception_becomes_a_vibey_class_failure() -> None:
     record = await jobs.get(job.id)
     assert record is not None
     assert record.last_error == {"class": "vibey", "detail": "unexpected"}
+
+
+@pytest.mark.parametrize(
+    ("error", "failure_class"),
+    [
+        (OutputBudgetExhausted("m", output_tokens=4096, context_tokens=8192), "capacity"),
+        (ModelAnswerRejected("DESIGN question batch", ("missing question_id",)), "engine"),
+    ],
+)
+async def test_a_classified_failure_is_recorded_as_its_own_class(
+    error: Exception, failure_class: str
+) -> None:
+    """A cause known where it is raised is not reported as vibey's own bug."""
+    job = make_job(PROJECT_ID)
+    jobs = FakeJobRepository([job])
+    loop = WorkerLoop(
+        jobs=jobs, gates=FakeHumanGateRepository(), handler=_FixedHandler(error), owner="w1"
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.last_error == {"class": failure_class, "detail": str(error)}
+    assert record.attempts == job.attempts + 1  # bounded: it spends an attempt
 
 
 async def test_capacity_exception_defers_without_consuming_an_attempt() -> None:

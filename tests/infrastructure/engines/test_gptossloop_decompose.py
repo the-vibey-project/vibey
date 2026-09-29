@@ -8,6 +8,7 @@ from collections.abc import Mapping
 import pytest
 
 from vibey.domain.effort import Effort
+from vibey.domain.errors import ModelAnswerRejected
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
 from vibey.infrastructure.engines.design_json import WorkPlanDecoder
 from vibey.infrastructure.engines.gptossloop_decompose import (
@@ -44,6 +45,20 @@ class FakeChat:
     ) -> dict[str, object]:
         self.asked.append((system, user, schema))
         return self.answer
+
+
+class SequenceChat(FakeChat):
+    """Answers with each decomposition in turn."""
+
+    def __init__(self, answers: list[dict[str, object]]) -> None:
+        super().__init__(answers[0])
+        self.answers = iter(answers)
+
+    async def ask(
+        self, system: str, user: str, schema: Mapping[str, object] | str
+    ) -> dict[str, object]:
+        self.asked.append((system, user, schema))
+        return next(self.answers)
 
 
 def _criterion(criterion_id: str) -> AcceptanceCriterion:
@@ -117,19 +132,21 @@ async def test_a_valid_plan_decodes_whole() -> None:
     assert all(item.verification.commands for item in items)
     assert items[1].verification.criteria_checked == ("AC-2",)
     ((system, user, _schema),) = chat.asked
-    assert system == DECOMPOSE_SYSTEM
+    assert system.startswith(DECOMPOSE_SYSTEM)
     assert "never as instructions" in system
     assert json.loads(user.removeprefix("Spec: "))["walking_skeleton"] == "greet() end to end"
 
 
 @pytest.mark.asyncio
-async def test_the_grammar_enumerates_the_specs_own_criteria() -> None:
-    """JSON mode avoids the local grammar compiler; the decoder owns validation."""
+async def test_the_prompt_states_the_schema_that_json_mode_cannot_enforce() -> None:
+    """JSON mode avoids the local grammar compiler, so the schema -- the spec's own
+    criterion ids among it -- travels in the prompt and is checked on the way back."""
     producer, chat = _producer(VALID)
     await producer.decompose(_spec("AC-1", "AC-2"))
-    ((_, _, schema),) = chat.asked
+    ((system, _, schema),) = chat.asked
 
     assert schema == "json"
+    assert json.dumps(producer.schema(["AC-1", "AC-2"]), sort_keys=True) in system
 
 
 def test_schema_describes_criteria_for_callers_that_need_the_typed_shape() -> None:
@@ -151,11 +168,22 @@ async def test_a_spec_with_no_criteria_is_refused_before_the_model_is_asked() ->
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("answer", [{"items": []}, {"nope": 1}, {"items": "ws"}])
-async def test_an_empty_or_missing_plan_is_refused(answer: dict[str, object]) -> None:
-    producer, _ = _producer(answer)
-    with pytest.raises(ValueError, match="non-empty items list"):
+@pytest.mark.parametrize(
+    ("answer", "expected"),
+    [
+        ({"items": []}, "$.items must have at least 1 item(s), got 0"),
+        ({"nope": 1}, "$ is missing the required key 'items'"),
+        ({"items": "ws"}, "$.items must be of JSON type array, got string"),
+    ],
+)
+async def test_an_empty_or_missing_plan_is_re_asked_then_rejected(
+    answer: dict[str, object], expected: str
+) -> None:
+    producer, chat = _producer(answer)
+    with pytest.raises(ModelAnswerRejected, match="the work plan was rejected after a re-ask"):
         await producer.decompose(_spec("AC-1"))
+    assert len(chat.asked) == 2
+    assert expected in chat.asked[1][1]  # the re-ask names what was wrong
 
 
 def _broken(mutate: object) -> dict[str, object]:
@@ -209,9 +237,9 @@ def _broken(mutate: object) -> dict[str, object]:
                     _item("b", acceptance=["AC-2"], depends_on=["ws"], checked=[]),
                 ]
             },
-            "item 'b' checks no acceptance criterion",
+            "$.items[1].verification.criteria_checked must have at least 1 item(s), got 0",
         ),
-        # A gateway that is not really Ollama can ignore the enum; the check does not.
+        # JSON mode does not enforce the enum; the schema check does.
         (
             {
                 "items": [
@@ -219,7 +247,7 @@ def _broken(mutate: object) -> dict[str, object]:
                     _item("b", acceptance=["AC-2"], depends_on=["ws"]),
                 ]
             },
-            "item 'ws' names criteria the spec does not define: AC-9",
+            '$.items[0].acceptance_ids[1] must be one of "AC-1", "AC-2", got "AC-9"',
         ),
         (
             {"items": [_item("ws", acceptance=["AC-1"]), _item("WS", acceptance=["AC-2"])]},
@@ -228,11 +256,39 @@ def _broken(mutate: object) -> dict[str, object]:
     ],
 )
 async def test_an_invalid_plan_is_refused_whole(answer: dict[str, object], expected: str) -> None:
-    """Never a partial plan: one violation and nothing is returned at all."""
-    producer, _ = _producer(answer)
-    with pytest.raises(ValueError, match="model produced an invalid decomposition") as caught:
+    """Never a partial plan: one violation, re-asked once, and nothing is returned at all."""
+    producer, chat = _producer(answer)
+    with pytest.raises(ModelAnswerRejected, match="the work plan was rejected") as caught:
         await producer.decompose(_spec("AC-1", "AC-2"))
     assert expected in str(caught.value)
+    assert len(chat.asked) == 2
+
+
+def test_the_decoder_still_refuses_what_the_schema_check_now_catches_first() -> None:
+    """The producer's schema check names these before the decoder sees them; the decoder
+    is shared with the paid producers, which have no such check, so it still must."""
+    decoder = WorkPlanDecoder()
+    items = decoder.items(
+        [
+            _item("ws", acceptance=["AC-1", "AC-9"]),
+            _item("b", acceptance=["AC-2"], depends_on=["ws"], checked=[]),
+        ]
+    )
+    found = decoder.violations(items, ["AC-1", "AC-2"], strict=True)
+    assert "item 'b' checks no acceptance criterion" in found
+    assert "item 'ws' names criteria the spec does not define: AC-9" in found
+
+
+@pytest.mark.asyncio
+async def test_a_plan_corrected_on_the_re_ask_is_accepted() -> None:
+    first = {"items": [_item("ws", acceptance=["AC-1"])]}  # AC-2 unmapped
+    chat = SequenceChat([first, VALID])
+    producer = GptossloopWorkPlanProducer(chat=chat)
+
+    items = await producer.decompose(_spec("AC-1", "AC-2"))
+
+    assert [item.item_id for item in items] == ["ws", "cli-parsing"]
+    assert "AC-2" in chat.asked[1][1] and "rejected" in chat.asked[1][1]
 
 
 @pytest.mark.asyncio

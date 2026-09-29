@@ -33,6 +33,7 @@ from vibey.application.interfaces import (
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import HumanGateRepository, JobRepository
+from vibey.domain.errors import ClassifiedFailure
 from vibey.domain.job import ATTEMPTS_EXHAUSTED_GATE_KIND, FailureClass
 from vibey.domain.phase import Phase
 
@@ -194,6 +195,11 @@ class WorkerLoop:
                         capacity=True,
                         capacity_state=exc.capacity_state,
                     )
+                except ClassifiedFailure as exc:
+                    # A failure that knows its cause is recorded as that cause: an
+                    # exhausted model output budget is CAPACITY and a malformed model
+                    # answer is ENGINE, and the exhausted-attempts gate says which.
+                    outcome = Failure(exc.failure_class, str(exc))
                 except Exception as exc:  # noqa: BLE001 - any handler bug becomes a VIBEY-class nack
                     outcome = Failure(FailureClass.VIBEY, str(exc))
             finally:

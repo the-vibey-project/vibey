@@ -1,0 +1,784 @@
+{
+  "started_at": "2026-09-29T07:36:40.116174+00:00",
+  "finished_at": "2026-09-29T08:04:41.984491+00:00",
+  "model": "gpt-oss:20b",
+  "runs_per_workload": 10,
+  "environment": {
+    "VIBEY_OLLAMA_URL": null,
+    "VIBEY_OLLAMA_MODEL": null,
+    "VIBEY_OLLAMA_CONTEXT": null,
+    "VIBEY_OLLAMA_OUTPUT": null,
+    "VIBEY_OLLAMA_FIT": null,
+    "VIBEY_OLLAMA_RETRY_THINK": null
+  },
+  "summary": {
+    "design.interview": {
+      "n": 10,
+      "outcomes": {
+        "schema_violation": 10
+      },
+      "ok_rate": 0.0,
+      "empty_content_rate": 0.0,
+      "schema_violation_rate": 1.0,
+      "empty_content_done_reasons": {},
+      "first_call_empty_rate": 0.0,
+      "first_call_done_reasons": {
+        "stop": 10
+      },
+      "mean_seconds": 20.7,
+      "mean_calls": 1.0
+    },
+    "design.interview (production replay)": {
+      "n": 10,
+      "outcomes": {
+        "schema_violation": 10
+      },
+      "ok_rate": 0.0,
+      "empty_content_rate": 0.0,
+      "schema_violation_rate": 1.0,
+      "empty_content_done_reasons": {},
+      "first_call_empty_rate": 0.0,
+      "first_call_done_reasons": {
+        "stop": 10
+      },
+      "mean_seconds": 24.4,
+      "mean_calls": 1.0
+    },
+    "build.decompose": {
+      "n": 10,
+      "outcomes": {
+        "empty_content": 7,
+        "schema_violation": 3
+      },
+      "ok_rate": 0.0,
+      "empty_content_rate": 0.7,
+      "schema_violation_rate": 0.3,
+      "empty_content_done_reasons": {
+        "length": 7
+      },
+      "first_call_empty_rate": 0.7,
+      "first_call_done_reasons": {
+        "length": 7,
+        "stop": 3
+      },
+      "mean_seconds": 123.1,
+      "mean_calls": 1.7
+    }
+  },
+  "runs": [
+    {
+      "workload": "design.interview",
+      "label": "context_free/brief-0",
+      "seconds": 24.23,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 24.23,
+          "done_reason": "stop",
+          "eval_count": 570,
+          "prompt_eval_count": 293,
+          "content_chars": 666,
+          "thinking_chars": 1939
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 21.93,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 21.93,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 134.32,
+      "outcome": "empty_content",
+      "error": "ValueError: Ollama response carried empty message content",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 69.01,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 8274
+        },
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 65.31,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 7873
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "job_story/brief-1",
+      "seconds": 19.02,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 19.02,
+          "done_reason": "stop",
+          "eval_count": 584,
+          "prompt_eval_count": 298,
+          "content_chars": 596,
+          "thinking_chars": 1970
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 24.52,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 24.52,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-1",
+      "seconds": 144.95,
+      "outcome": "empty_content",
+      "error": "ValueError: Ollama response carried empty message content",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 74.92,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 517,
+          "content_chars": 0,
+          "thinking_chars": 8896
+        },
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 70.03,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 517,
+          "content_chars": 0,
+          "thinking_chars": 8790
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "laddering/brief-2",
+      "seconds": 18.84,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 18.84,
+          "done_reason": "stop",
+          "eval_count": 518,
+          "prompt_eval_count": 289,
+          "content_chars": 1046,
+          "thinking_chars": 1292
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 27.74,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 27.74,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-2",
+      "seconds": 77.87,
+      "outcome": "schema_violation",
+      "error": "ValueError: verification must be an object",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 77.87,
+          "done_reason": "stop",
+          "eval_count": 1578,
+          "prompt_eval_count": 594,
+          "content_chars": 1217,
+          "thinking_chars": 5419
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "example_mapping/brief-0",
+      "seconds": 16.06,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 16.06,
+          "done_reason": "stop",
+          "eval_count": 370,
+          "prompt_eval_count": 293,
+          "content_chars": 753,
+          "thinking_chars": 955
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 29.97,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 29.97,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 160.87,
+      "outcome": "empty_content",
+      "error": "ValueError: Ollama response carried empty message content",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 87.31,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 8274
+        },
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 73.56,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 7873
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "walking_skeleton/brief-1",
+      "seconds": 12.93,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 12.93,
+          "done_reason": "stop",
+          "eval_count": 376,
+          "prompt_eval_count": 299,
+          "content_chars": 743,
+          "thinking_chars": 965
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 24.36,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 24.36,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-1",
+      "seconds": 152.88,
+      "outcome": "empty_content",
+      "error": "ValueError: Ollama response carried empty message content",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 73.97,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 517,
+          "content_chars": 0,
+          "thinking_chars": 8896
+        },
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 78.91,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 517,
+          "content_chars": 0,
+          "thinking_chars": 8790
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "nfr_planguage/brief-2",
+      "seconds": 22.55,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 22.55,
+          "done_reason": "stop",
+          "eval_count": 672,
+          "prompt_eval_count": 291,
+          "content_chars": 584,
+          "thinking_chars": 2500
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 22.42,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 22.42,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-2",
+      "seconds": 60.62,
+      "outcome": "schema_violation",
+      "error": "ValueError: verification must be an object",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 60.62,
+          "done_reason": "stop",
+          "eval_count": 1578,
+          "prompt_eval_count": 594,
+          "content_chars": 1217,
+          "thinking_chars": 5419
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "premortem/brief-0",
+      "seconds": 29.38,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 29.38,
+          "done_reason": "stop",
+          "eval_count": 721,
+          "prompt_eval_count": 294,
+          "content_chars": 1051,
+          "thinking_chars": 2221
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 21.07,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 21.07,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 141.88,
+      "outcome": "empty_content",
+      "error": "ValueError: Ollama response carried empty message content",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 78.01,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 8274
+        },
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 63.87,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 7873
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "context_free/brief-1",
+      "seconds": 16.82,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 16.82,
+          "done_reason": "stop",
+          "eval_count": 514,
+          "prompt_eval_count": 298,
+          "content_chars": 630,
+          "thinking_chars": 1730
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 22.85,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 22.85,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-1",
+      "seconds": 156.91,
+      "outcome": "empty_content",
+      "error": "ValueError: Ollama response carried empty message content",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 73.31,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 517,
+          "content_chars": 0,
+          "thinking_chars": 8896
+        },
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 83.6,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 517,
+          "content_chars": 0,
+          "thinking_chars": 8790
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "job_story/brief-2",
+      "seconds": 28.54,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 28.53,
+          "done_reason": "stop",
+          "eval_count": 705,
+          "prompt_eval_count": 289,
+          "content_chars": 581,
+          "thinking_chars": 2868
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 27.45,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 27.45,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-2",
+      "seconds": 64.94,
+      "outcome": "schema_violation",
+      "error": "ValueError: verification must be an object",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 64.93,
+          "done_reason": "stop",
+          "eval_count": 1578,
+          "prompt_eval_count": 594,
+          "content_chars": 1217,
+          "thinking_chars": 5419
+        }
+      ]
+    },
+    {
+      "workload": "design.interview",
+      "label": "laddering/brief-0",
+      "seconds": 18.39,
+      "outcome": "schema_violation",
+      "error": "KeyError: 'question_id'",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 18.39,
+          "done_reason": "stop",
+          "eval_count": 544,
+          "prompt_eval_count": 293,
+          "content_chars": 775,
+          "thinking_chars": 1500
+        }
+      ]
+    },
+    {
+      "workload": "design.interview (production replay)",
+      "label": "walking_skeleton",
+      "seconds": 21.72,
+      "outcome": "schema_violation",
+      "error": "ValueError: questions must be a list",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 8192,
+          "num_predict": 2048,
+          "seconds": 21.72,
+          "done_reason": "stop",
+          "eval_count": 320,
+          "prompt_eval_count": 5501,
+          "content_chars": 534,
+          "thinking_chars": 509
+        }
+      ]
+    },
+    {
+      "workload": "build.decompose",
+      "label": "spec-0",
+      "seconds": 135.83,
+      "outcome": "empty_content",
+      "error": "ValueError: Ollama response carried empty message content",
+      "exchanges": [
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 69.49,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 8274
+        },
+        {
+          "format": "json",
+          "think": null,
+          "num_ctx": 4096,
+          "num_predict": 2048,
+          "seconds": 66.34,
+          "done_reason": "length",
+          "eval_count": 2048,
+          "prompt_eval_count": 559,
+          "content_chars": 0,
+          "thinking_chars": 7873
+        }
+      ]
+    }
+  ]
+}
