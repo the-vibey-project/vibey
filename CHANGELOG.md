@@ -104,6 +104,11 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   research, synthesis and spec were still ready. The bridge now also waits: with the
   `answer_design_defaults` opt-in it works the queued design jobs on later passes and runs
   `design accept` only once the project's queue has settled.
+* **deps:** `oauthlib` 3.3.1 -> 4.0.0 (CVE-2026-49265) and `pyjwt` 2.13.0 -> 2.15.1
+  (CVE-2026-102274) in `uv.lock`. Both arrive only transitively (`requests-oauthlib` under
+  `kubernetes` and the Azure exporter; `mcp[crypto]` and `msal`), and the new advisories
+  failed the `pip-audit` gate on every push and CI run.
+
 * **release:** the release path now recovers from, or refuses, each silent failure the 3.0.0
   release met. `vibey-engine.yml` and `krypton-app.yml` accept `workflow_dispatch`, so a push
   the forge skipped can be published by dispatch on `main` or `develop` (every publishing job
