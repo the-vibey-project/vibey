@@ -2028,24 +2028,25 @@ Throughput is successful generations per minute of rung wall clock, reported acr
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
-\begin{groupplot}[group style={group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.45cm},
+\begin{groupplot}[group style={group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.75cm},
   vibeyaxis,width=7.9cm,height=4.3cm,xmode=log,log basis x=2,xtick={1,2,4,8,16,32,64,128},xticklabels={1,2,4,8,16,32,64,128},
   xmin=0.8,xmax=160,xlabel={offered concurrency $N$}]
-\nextgroupplot[title={a. Successful throughput},ylabel={generations / min},ymin=0,ymax=4]
-\fill[vibeyblue!9] (axis cs:2,0) rectangle (axis cs:32,4);
+\nextgroupplot[title={a. Successful throughput},ylabel={generations / min},ymin=0,ymax=4.6,ytick={0,...,4}]
+\fill[vibeyblue!9] (axis cs:2,0) rectangle (axis cs:32,4.6);
 \node[vibeynote,text=vibeyblue,anchor=south] at (axis cs:8,3.55) {stable region $N=2$--$32$};
 \draw[vibeydashed] (axis cs:0.8,0.99) -- (axis cs:160,0.99) node[vibeynote,anchor=west,text=vibeygray] {0.99};
 \draw[vibeydashed] (axis cs:0.8,2.0) -- (axis cs:160,2.0) node[vibeynote,anchor=west,text=vibeygray] {2.00};
 \addplot[vibeyblue,line width=1pt,mark=*,mark size=1.4pt,mark options={fill=white,line width=.7pt}] coordinates {(1,0.36) (2,0.99) (3,0.99) (4,1.17) (6,1.72) (8,1.27) (12,1.54) (16,1.37) (24,1.4) (32,2.0) (48,1.6) (64,2.66) (96,3.52) (128,1.53)};
 \node[vibeycallout,anchor=south east] at (axis cs:96,3.52) {peak 3.52/min\\55.2\% success};
-\node[vibeycallout,anchor=north west] at (axis cs:128,1.53) {collapse};
+\node[vibeycallout,anchor=east,xshift=-3pt] at (axis cs:128,1.53) {collapse};
 \nextgroupplot[title={b. Success fraction},ylabel={succeeded (\%)},ymin=0,ymax=124,ytick={0,25,50,75,100}]
 \draw[vibeydashed] (axis cs:0.8,87.5) -- (axis cs:160,87.5) node[vibeynote,anchor=west,text=vibeygray] {87.5};
 \addplot[ybar,bar width=5pt,bar shift=0pt,draw=none,fill=vibeygreen!80] coordinates {(1,100.0) (2,100.0) (3,100.0) (4,100.0) (6,100.0) (8,100.0) (12,100.0) (16,100.0)};
 \addplot[ybar,bar width=5pt,bar shift=0pt,draw=none,fill=vibeygold!90] coordinates {(24,87.5) (32,93.8)};
 \addplot[ybar,bar width=5pt,bar shift=0pt,draw=none,fill=vibeyred!75] coordinates {(48,50.0) (64,62.5) (96,55.2) (128,18.0)};
 \node[vibeynote,anchor=north west,align=left] at (axis cs:0.9,122) {\textcolor{vibeygreen}{$\blacksquare$} 100\% \quad \textcolor{vibeygold}{$\blacksquare$} 87.5--93.8\% \quad \textcolor{vibeyred}{$\blacksquare$} overloaded};
-\nextgroupplot[title={c. Latency against the 900\,s deadline},ylabel={seconds},ymin=0,ymax=1000,legend pos=north west]
+\nextgroupplot[title={c. Latency against the 900\,s deadline},ylabel={seconds},ymin=0,ymax=1000,
+  legend style={at={(axis cs:0.9,800)},anchor=north west}]
 \addplot[fill=vibeyblue!12,draw=none,forget plot] coordinates {(1,166.0) (2,118.0) (3,132.0) (4,154.0) (6,59.0) (8,191.0) (12,174.0) (16,440.0) (24,701.0) (32,292.0) (48,900.0) (64,555.0) (96,821.0) (128,901.0) (128,901.0) (96,901.0) (64,901.0) (48,901.0) (32,900.0) (24,900.0) (16,700.0) (12,464.0) (8,375.0) (6,206.0) (4,203.0) (3,180.0) (2,118.0) (1,166.0)} -- cycle;
 \draw[vibeyred,densely dashed,line width=.7pt] (axis cs:0.8,900) -- (axis cs:160,900) node[vibeycallout,anchor=south east] {deadline};
 \addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,166.0) (2,118.0) (3,132.0) (4,154.0) (6,59.0) (8,191.0) (12,174.0) (16,440.0) (24,701.0) (32,292.0) (48,900.0) (64,555.0) (96,821.0) (128,901.0)};

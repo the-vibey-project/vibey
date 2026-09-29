@@ -582,22 +582,23 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         last = summary["last"]
         ticks = "1,2,4,8,16,32,64,128"
         body = f"""\\begin{{tikzpicture}}
-\\begin{{groupplot}}[group style={{group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.45cm}},
+\\begin{{groupplot}}[group style={{group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.75cm}},
   vibeyaxis,width=7.9cm,height=4.3cm,xmode=log,log basis x=2,xtick={{{ticks}}},xticklabels={{{ticks}}},
   xmin=0.8,xmax=160,xlabel={{offered concurrency $N$}}]
-\\nextgroupplot[title={{a. Successful throughput}},ylabel={{generations / min}},ymin=0,ymax=4]
-\\fill[vibeyblue!9] (axis cs:{low},0) rectangle (axis cs:{high},4);
+\\nextgroupplot[title={{a. Successful throughput}},ylabel={{generations / min}},ymin=0,ymax=4.6,ytick={{0,...,4}}]
+\\fill[vibeyblue!9] (axis cs:{low},0) rectangle (axis cs:{high},4.6);
 \\node[vibeynote,text=vibeyblue,anchor=south] at (axis cs:8,3.55) {{stable region $N={low}$--${high}$}};
 \\draw[vibeydashed] (axis cs:0.8,{band_lo}) -- (axis cs:160,{band_lo}) node[vibeynote,anchor=west,text=vibeygray] {{{_fmt(band_lo)}}};
 \\draw[vibeydashed] (axis cs:0.8,{band_hi}) -- (axis cs:160,{band_hi}) node[vibeynote,anchor=west,text=vibeygray] {{{_fmt(band_hi)}}};
 \\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.4pt,mark options={{fill=white,line width=.7pt}}] coordinates {{{coords}}};
 \\node[vibeycallout,anchor=south east] at (axis cs:{peak["concurrency"]},{peak["throughput"]}) {{peak {_fmt(peak["throughput"])}/min\\\\{peak["success"] * 100:.1f}\\% success}};
-\\node[vibeycallout,anchor=north west] at (axis cs:{last["concurrency"]},{last["throughput"]}) {{collapse}};
+\\node[vibeycallout,anchor=east,xshift=-3pt] at (axis cs:{last["concurrency"]},{last["throughput"]}) {{collapse}};
 \\nextgroupplot[title={{b. Success fraction}},ylabel={{succeeded (\\%)}},ymin=0,ymax=124,ytick={{0,25,50,75,100}}]
 \\draw[vibeydashed] (axis cs:0.8,87.5) -- (axis cs:160,87.5) node[vibeynote,anchor=west,text=vibeygray] {{87.5}};
 {success_bars}
 \\node[vibeynote,anchor=north west,align=left] at (axis cs:0.9,122) {{\\textcolor{{vibeygreen}}{{$\\blacksquare$}} 100\\% \\quad \\textcolor{{vibeygold}}{{$\\blacksquare$}} 87.5--93.8\\% \\quad \\textcolor{{vibeyred}}{{$\\blacksquare$}} overloaded}};
-\\nextgroupplot[title={{c. Latency against the 900\\,s deadline}},ylabel={{seconds}},ymin=0,ymax=1000,legend pos=north west]
+\\nextgroupplot[title={{c. Latency against the 900\\,s deadline}},ylabel={{seconds}},ymin=0,ymax=1000,
+  legend style={{at={{(axis cs:0.9,800)}},anchor=north west}}]
 \\addplot[fill=vibeyblue!12,draw=none,forget plot] coordinates {{{envelope}}} -- cycle;
 \\draw[vibeyred,densely dashed,line width=.7pt] (axis cs:0.8,900) -- (axis cs:160,900) node[vibeycallout,anchor=south east] {{deadline}};
 \\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {{{p50}}};
