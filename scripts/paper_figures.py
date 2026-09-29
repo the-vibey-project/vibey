@@ -38,7 +38,11 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from interfaces.paper_figures_interface import FigureSourceInterface, PaperFigureAtlasInterface
+from interfaces.paper_figures_interface import (
+    FigureSourceInterface,
+    PaperFigureAtlasInterface,
+    RevisionPinGuardInterface,
+)
 from paper_evidence import DEFAULT_QWEN_STORM_RECORD, DEFAULT_STRESS_RECORD, StressRecord
 
 DEFAULT_PAPER = "docs/paper.md"
@@ -48,17 +52,26 @@ DEFAULT_TEST_TIME_RECORD = "docs/runbooks/expansion/evidence/13-front1-validatio
 DEFAULT_TIMEZONE = "America/New_York"
 DEFAULT_SINCE = date(2026, 8, 9)
 SCRIPT = "scripts/paper_figures.py"
-PACKAGES: tuple[tuple[str, str], ...] = (
-    ("vibey", "src/vibey"),
-    ("vibey-gh", "src/vibey_tools/gh"),
-    ("claudeloop", "src/vibey_runners/claude"),
-    ("vibey-bootstrap", "src/vibey_tools/bootstrap"),
-    ("agyloop", "src/vibey_runners/agy"),
-    ("codexloop", "src/vibey_runners/codex"),
-    ("cursorloop", "src/vibey_runners/cursor"),
-    ("qwenloop", "src/vibey_runners/qwen"),
-    ("vibey-skills", "src/vibey_tools/skills"),
-    ("runners-common", "src/vibey_runners/common"),
+# Where the repository names its integration branch; the pin must lie on that branch's
+# history as the remote holds it, read from this file rather than assumed.
+BRANCHES_CONFIG = ".vibey-gh.toml"
+DEFAULT_INTEGRATION_BRANCH = "develop"
+DEFAULT_REMOTE = "origin"
+# Each package as (name, source directory, project directory). The project directory holds
+# the package's pyproject.toml, whose pytest `testpaths` say where its suite lives: for the
+# orchestrator that is the repository root's `tests/`, outside `src/vibey`, and a count taken
+# from the source directory alone would credit it with no tests at all.
+PACKAGES: tuple[tuple[str, str, str], ...] = (
+    ("vibey", "src/vibey", ""),
+    ("vibey-gh", "src/vibey_tools/gh", "src/vibey_tools/gh"),
+    ("claudeloop", "src/vibey_runners/claude", "src/vibey_runners/claude"),
+    ("vibey-bootstrap", "src/vibey_tools/bootstrap", "src/vibey_tools/bootstrap"),
+    ("agyloop", "src/vibey_runners/agy", "src/vibey_runners/agy"),
+    ("codexloop", "src/vibey_runners/codex", "src/vibey_runners/codex"),
+    ("cursorloop", "src/vibey_runners/cursor", "src/vibey_runners/cursor"),
+    ("qwenloop", "src/vibey_runners/qwen", "src/vibey_runners/qwen"),
+    ("vibey-skills", "src/vibey_tools/skills", "src/vibey_tools/skills"),
+    ("runners-common", "src/vibey_runners/common", "src/vibey_runners/common"),
 )
 LAYERS: tuple[str, ...] = ("domain", "application", "infrastructure", "cli", "tui")
 # The release tag family this repository holds. The absorbed packages tagged their own
@@ -410,6 +423,22 @@ class CodebaseShape(FigureSourceInterface):
         self._repo = repo
         self._revision = revision
 
+    def _test_roots(self, project: str) -> list[str]:
+        """The directories the project's pytest configuration collects, at the revision."""
+        pyproject = f"{project}/pyproject.toml" if project else "pyproject.toml"
+        shown = subprocess.run(
+            ["git", "show", f"{self._revision}:{pyproject}"],
+            cwd=self._repo,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if shown.returncode != 0:
+            return []
+        options = tomllib.loads(shown.stdout).get("tool", {}).get("pytest", {})
+        testpaths = options.get("ini_options", {}).get("testpaths", [])
+        return [f"{project}/{path}".strip("/") if project else path for path in testpaths]
+
     def load(self) -> dict[str, Any]:
         rev = self._revision
         listing = subprocess.run(
@@ -440,23 +469,23 @@ class CodebaseShape(FigureSourceInterface):
             if re.search(r"(^|/)tests?/", path):
                 tests_by_path[path] = len(_TEST_DEF.findall(content))
         packages = []
-        for name, prefix in PACKAGES:
-            inside = [p for p in paths if p.startswith(prefix + "/")]
+        for name, source, project in PACKAGES:
+            roots = [source, *self._test_roots(project)]
+            inside = [p for p in paths if any(p.startswith(root + "/") for root in roots)]
             packages.append(
                 {
                     "package": name,
                     "lines": sum(lines_by_path[p] for p in inside),
                     "tests": sum(tests_by_path.get(p, 0) for p in inside),
+                    "suites": [root for root in roots[1:] if not root.startswith(source + "/")],
                 }
             )
-        root_tests = sum(n for p, n in tests_by_path.items() if p.startswith("tests/"))
         layers = {
             layer: sum(lines_by_path[p] for p in paths if p.startswith(f"src/vibey/{layer}/"))
             for layer in LAYERS
         }
         return {
             "packages": packages,
-            "root_tests": root_tests,
             "layers": layers,
             "python_files": len(paths),
             "python_lines": sum(lines_by_path.values()),
@@ -562,22 +591,23 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         last = summary["last"]
         ticks = "1,2,4,8,16,32,64,128"
         body = f"""\\begin{{tikzpicture}}
-\\begin{{groupplot}}[group style={{group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.45cm}},
+\\begin{{groupplot}}[group style={{group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.75cm}},
   vibeyaxis,width=7.9cm,height=4.3cm,xmode=log,log basis x=2,xtick={{{ticks}}},xticklabels={{{ticks}}},
   xmin=0.8,xmax=160,xlabel={{offered concurrency $N$}}]
-\\nextgroupplot[title={{a. Successful throughput}},ylabel={{generations / min}},ymin=0,ymax=4]
-\\fill[vibeyblue!9] (axis cs:{low},0) rectangle (axis cs:{high},4);
+\\nextgroupplot[title={{a. Successful throughput}},ylabel={{generations / min}},ymin=0,ymax=4.6,ytick={{0,...,4}}]
+\\fill[vibeyblue!9] (axis cs:{low},0) rectangle (axis cs:{high},4.6);
 \\node[vibeynote,text=vibeyblue,anchor=south] at (axis cs:8,3.55) {{stable region $N={low}$--${high}$}};
 \\draw[vibeydashed] (axis cs:0.8,{band_lo}) -- (axis cs:160,{band_lo}) node[vibeynote,anchor=west,text=vibeygray] {{{_fmt(band_lo)}}};
 \\draw[vibeydashed] (axis cs:0.8,{band_hi}) -- (axis cs:160,{band_hi}) node[vibeynote,anchor=west,text=vibeygray] {{{_fmt(band_hi)}}};
 \\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.4pt,mark options={{fill=white,line width=.7pt}}] coordinates {{{coords}}};
 \\node[vibeycallout,anchor=south east] at (axis cs:{peak["concurrency"]},{peak["throughput"]}) {{peak {_fmt(peak["throughput"])}/min\\\\{peak["success"] * 100:.1f}\\% success}};
-\\node[vibeycallout,anchor=north west] at (axis cs:{last["concurrency"]},{last["throughput"]}) {{collapse}};
+\\node[vibeycallout,anchor=east,xshift=-3pt] at (axis cs:{last["concurrency"]},{last["throughput"]}) {{collapse}};
 \\nextgroupplot[title={{b. Success fraction}},ylabel={{succeeded (\\%)}},ymin=0,ymax=124,ytick={{0,25,50,75,100}}]
 \\draw[vibeydashed] (axis cs:0.8,87.5) -- (axis cs:160,87.5) node[vibeynote,anchor=west,text=vibeygray] {{87.5}};
 {success_bars}
 \\node[vibeynote,anchor=north west,align=left] at (axis cs:0.9,122) {{\\textcolor{{vibeygreen}}{{$\\blacksquare$}} 100\\% \\quad \\textcolor{{vibeygold}}{{$\\blacksquare$}} 87.5--93.8\\% \\quad \\textcolor{{vibeyred}}{{$\\blacksquare$}} overloaded}};
-\\nextgroupplot[title={{c. Latency against the 900\\,s deadline}},ylabel={{seconds}},ymin=0,ymax=1000,legend pos=north west]
+\\nextgroupplot[title={{c. Latency against the 900\\,s deadline}},ylabel={{seconds}},ymin=0,ymax=1000,
+  legend style={{at={{(axis cs:0.9,800)}},anchor=north west}}]
 \\addplot[fill=vibeyblue!12,draw=none,forget plot] coordinates {{{envelope}}} -- cycle;
 \\draw[vibeyred,densely dashed,line width=.7pt] (axis cs:0.8,900) -- (axis cs:160,900) node[vibeycallout,anchor=south east] {{deadline}};
 \\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {{{p50}}};
@@ -616,11 +646,13 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\begin{{axis}}[vibeyaxis,width=8.6cm,height=5cm,xmin=1,xmax={n},ymin=0,ymax={attempted + 30},
   xtick={{{",".join(str(i) for i in range(1, n + 1))}}},xticklabels={{{",".join(labels)}}},
   xlabel={{rung (offered concurrency $N$)}},ylabel={{generations, cumulative}},legend pos=north west]
-\\addplot[fill=vibeysilver!35,draw=vibeysilver,line width=.5pt] coordinates {{{" ".join(att_coords)}}} \\closedcycle;
+\\addplot[fill=vibeysilver!35,draw=none,forget plot] coordinates {{{" ".join(att_coords)}}} \\closedcycle;
+\\addplot[fill=vibeygreen!45,draw=none,forget plot] coordinates {{{" ".join(suc_coords)}}} \\closedcycle;
+\\addplot[vibeysilver,line width=.5pt] coordinates {{{" ".join(att_coords)}}};
 \\addlegendentry{{attempted}}
-\\addplot[fill=vibeygreen!45,draw=vibeygreen,line width=.8pt] coordinates {{{" ".join(suc_coords)}}} \\closedcycle;
+\\addplot[vibeygreen,line width=.8pt] coordinates {{{" ".join(suc_coords)}}};
 \\addlegendentry{{succeeded}}
-\\node[vibeynote,anchor=south east,align=right] at (axis cs:{n},{succeeded + 8}) {{{succeeded} of {attempted}\\\\{succeeded / attempted * 100:.1f}\\% overall}};
+\\node[vibeynote,anchor=east,align=right] at (axis cs:{n - 1.6},{attempted * 0.78:.0f}) {{{succeeded} of {attempted}\\\\{succeeded / attempted * 100:.1f}\\% overall}};
 \\end{{axis}}
 \\end{{tikzpicture}}"""
         caption = (
@@ -649,31 +681,36 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             f"({i},{r['output_tokens'] / 1000:.1f})" for i, r in enumerate(runs, 1)
         )
         strip = "\n".join(
-            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:{i},-4.5) {{}};"
+            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:{i},0) {{}};"
             for i, r in enumerate(runs, 1)
         )
         strip_tokens = "\n".join(
-            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:{i},-27) {{}};"
+            f"\\node[fill={colors.get(r.get('disposition'), 'vibeygray')},minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:{i},0) {{}};"
             for i, r in enumerate(runs, 1)
         )
         counts = Counter(r.get("disposition") for r in runs)
+        # Headroom above the tallest bar, so no bar meets the axis top; each legend entry is
+        # one filled swatch, drawn by its own image code, instead of the ybar default of two
+        # outlined bars.
+        top_count = max(max(r["turns"], r["tool_calls"]) for r in runs) * 1.2
+        top_tokens = max(max(r["input_tokens"], r["output_tokens"]) for r in runs) / 1000 * 1.2
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=2 by 1,horizontal sep=1.8cm}},vibeyaxis,width=8.6cm,height=4.6cm,
-  xmin=0.3,xmax={n + 0.7},xtick={{{ticks}}},xlabel={{run, in order of start}}]
-\\nextgroupplot[title={{a. Turns and tool calls per run}},ylabel={{count}},ymin=0,legend pos=north west,ybar,bar width=4pt]
+  xmin=0.3,xmax={n + 0.7},xtick={{{ticks}}},xlabel={{run, in order of start}},x tick label style={{yshift=-5pt}}]
+\\nextgroupplot[title={{a. Turns and tool calls per run}},ylabel={{count}},ymin=0,ymax={top_count:.0f},legend pos=north west,ybar,bar width=4pt,legend image code/.code={{\\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}}]
 \\addplot[fill=vibeyblue,draw=none] coordinates {{{turns}}};
 \\addlegendentry{{model turns}}
 \\addplot[fill=vibeyteal!80,draw=none] coordinates {{{calls}}};
 \\addlegendentry{{tool calls}}
 {strip}
-\\nextgroupplot[title={{b. Tokens per run (thousands)}},ylabel={{tokens ($\\times 10^3$)}},ymin=0,legend pos=north west,ybar,bar width=4pt]
+\\nextgroupplot[title={{b. Tokens per run}},ylabel={{tokens (thousands)}},ymin=0,ymax={top_tokens:.0f},legend pos=north west,ybar,bar width=4pt,legend image code/.code={{\\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}}]
 \\addplot[fill=vibeyviolet!85,draw=none] coordinates {{{tokens_in}}};
 \\addlegendentry{{input}}
 \\addplot[fill=vibeygold,draw=none] coordinates {{{tokens_out}}};
 \\addlegendentry{{output}}
 {strip_tokens}
 \\end{{groupplot}}
-\\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
+\\node[vibeynote,anchor=north west,align=left] at ([yshift=-2pt]current bounding box.south -| group c1r1.south west)
   {{disposition strip: \\textcolor{{vibeygreen}}{{$\\blacksquare$}} completed ({counts.get("completed", 0)}) \\;
    \\textcolor{{vibeygold}}{{$\\blacksquare$}} verdict only ({counts.get("incomplete_verdict_only", 0)}) \\;
    \\textcolor{{vibeyred}}{{$\\blacksquare$}} no verdict ({counts.get("incomplete_without_verdict", 0)}) \\;
@@ -732,7 +769,7 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\begin{{scope}}[on background layer]
 {axis}
 \\end{{scope}}
-\\node[vibeyhead] at (-4.0,0.55) {{lane}};
+\\node[vibeyhead,anchor=south east] at (-0.15,0.55) {{lane}};
 \\node[vibeyhead,anchor=south] at ({max_turns * scale / 2:.2f},0.55) {{turns spent, attempt after attempt}};
 \\node[vibeyhead,anchor=south west] at ({max_turns * scale + 0.1:.2f},0.55) {{issue \\; outcome \\; turns}};
 {chr(10).join(lines)}
@@ -773,13 +810,12 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             x0 = (s["start"] - t0).total_seconds() / 3600 * per_h
             if s["end"] is None:
                 x1 = x0 + 0.12
+                # A start with no logged end is a grey stub, explained once in the key: a
+                # "no end" label beside each stub overprinted its twin on a lane started twice
+                # and ran into the next bar on its row.
                 lines.append(
-                    f"\\fill[vibeysilver] ({x0:.2f},{y - 0.09:.2f}) rectangle ({x1:.2f},{y + 0.09:.2f});"
+                    f"\\filldraw[fill=vibeysilver,draw=white,line width=.4pt] ({x0:.2f},{y - 0.09:.2f}) rectangle ({x1:.2f},{y + 0.09:.2f});"
                 )
-                if not any(f"at ({x1 + 0.03:.2f},{y:.2f})" in line for line in lines):
-                    lines.append(
-                        f"\\node[vibeynote,anchor=west,text=vibeysilver] at ({x1 + 0.03:.2f},{y:.2f}) {{no end}};"
-                    )
             else:
                 x1 = max(x0 + 0.06, (s["end"] - t0).total_seconds() / 3600 * per_h)
                 lines.append(
@@ -807,8 +843,11 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         while day <= t_end:
             if day > t0:
                 x = (day - t0).total_seconds() / 3600 * per_h
+                # The dashed midnight line stops below the hour labels, and the date sits
+                # above them, so the line never strikes through its own "00:00".
                 day_marks.append(
-                    f"\\draw[vibeydashed] ({x:.2f},{height - 0.3:.2f}) -- ({x:.2f},0.45) node[vibeynote,anchor=south,text=vibeygray] {{{day.strftime('%Y-%m-%d')} UTC}};"
+                    f"\\draw[vibeydashed] ({x:.2f},{height - 0.3:.2f}) -- ({x:.2f},0.17);"
+                    f"\\node[vibeynote,anchor=south,text=vibeygray] at ({x:.2f},0.46) {{{day.strftime('%Y-%m-%d')} UTC}};"
                 )
             day += timedelta(days=1)
         body = f"""\\begin{{tikzpicture}}[x=1cm,y=1cm]
@@ -818,7 +857,8 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\end{{scope}}
 {chr(10).join(lines)}
 \\node[vibeynote,anchor=north west,align=left] at (0,{height - 0.55:.2f})
-  {{one bar per logged start--end pair; time in UTC from {t0.strftime("%Y-%m-%d %H:%M")}; a lane started twice is drawn twice}};
+  {{\\textcolor{{vibeyblue!80}}{{$\\blacksquare$}} one bar per logged start--end pair \\quad \\textcolor{{vibeysilver}}{{$\\blacksquare$}} a start with no logged end \\quad
+   time in UTC from {t0.strftime("%Y-%m-%d %H:%M")}; a lane started twice is drawn twice}};
 \\end{{tikzpicture}}"""
         caption = (
             f"Lane starts and ends as the storm's progress log recorded them, over {span_h:.1f} hours from "
@@ -832,7 +872,9 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         data = self._data("bench")
         turns, summaries = data["turns"], data["summaries"]
         palette = ["vibeyblue", "vibeyteal", "vibeygold", "vibeyviolet", "vibeyred", "vibeygreen"]
-        tps_plots, wall_plots, legend = [], [], []
+        # One legend serves both panels (they share colours), drawn beneath them rather than
+        # over either panel's curves; each entry carries the configuration's whole-session time.
+        tps_plots, wall_plots = [], []
         for i, label in enumerate(sorted(turns)):
             rows = sorted(turns[label], key=lambda r: r["turn"])
             color = palette[i % len(palette)]
@@ -840,30 +882,30 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
                 tps_plots.append(
                     f"\\addplot[{color},line width=.9pt,mark=*,mark size=1.1pt] coordinates {{"
                     + " ".join(f"({r['turn']},{r['gen_tps']})" for r in rows)
-                    + "};\n\\addlegendentry{"
-                    + _tex(label)
-                    + "}"
+                    + "};"
                 )
+            total = summaries.get(label, {}).get("total_wall_s")
+            entry = f"{_tex(label)} ({total:.0f}\\,s)" if total is not None else _tex(label)
             wall_plots.append(
                 f"\\addplot[{color},line width=.9pt,mark=*,mark size=1.1pt] coordinates {{"
                 + " ".join(f"({r['turn']},{r['wall_s']})" for r in rows)
                 + "};\n\\addlegendentry{"
-                + _tex(label)
+                + entry
                 + "}"
             )
-            total = summaries.get(label, {}).get("total_wall_s")
-            legend.append(f"{_tex(label)}: {total:.0f}\\,s" if total is not None else _tex(label))
         errors = "; ".join(f"{_tex(k)}: {_tex(', '.join(v))}" for k, v in data["errors"].items())
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=2 by 1,horizontal sep=1.8cm}},vibeyaxis,width=8.6cm,height=4.8cm,
   xmin=0.5,xmax=10.5,xtick={{1,...,10}},xlabel={{turn of a ten-turn session}}]
-\\nextgroupplot[title={{a. Generation speed as the context grows}},ylabel={{tokens / s}},ymin=0,legend pos=south west]
+\\nextgroupplot[title={{a. Generation speed as the context grows}},ylabel={{tokens / s}},ymin=0]
 {chr(10).join(tps_plots)}
-\\nextgroupplot[title={{b. Wall time per turn}},ylabel={{seconds}},ymin=0,legend pos=north west]
+\\nextgroupplot[title={{b. Wall time per turn}},ylabel={{seconds}},ymin=0,legend to name=bench-hosts-legend,legend columns=-1,
+  legend style={{/tikz/every even column/.append style={{column sep=6pt}}}}]
 {chr(10).join(wall_plots)}
 \\end{{groupplot}}
-\\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
-  {{whole session: {"; ".join(legend)}. {errors}}};
+\\node[anchor=north,inner sep=0pt] (legend) at ($(group c1r1.south west)!0.5!(group c2r1.south east)+(0,-0.95cm)$)
+  {{\\pgfplotslegendfromname{{bench-hosts-legend}}}};
+\\node[vibeynote,anchor=north] at ([yshift=-0.08cm]legend.south) {{in brackets, each configuration's whole-session wall time{"; " + errors if errors else ""}}};
 \\end{{tikzpicture}}"""
         caption = (
             "The host benchmark of 2026-09-22: the same ten-turn session replayed against five server "
@@ -885,39 +927,62 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             ("p99", ctx["p99"]),
             ("max", ctx["max"]),
         ]
+        # The percentiles crowd one end of the axis, too close together to label in place.
+        # Each keeps a short stem at its true position and a leader fans out to a label on
+        # one row, the labels spaced evenly so none can overprint another.
+        spacing = 0.8
+        centre = sum(value for _, value in marks) * scale / len(marks)
+        first = max(0.35, centre - spacing * (len(marks) - 1) / 2)
         mark_lines = []
         for i, (name, value) in enumerate(marks):
             x = value * scale
-            up = 0.55 + (i % 2) * 0.32
+            lx = first + i * spacing
             mark_lines.append(
-                f"\\draw[vibeyink,line width=.6pt] ({x:.2f},0.12) -- ({x:.2f},{up:.2f}) node[vibeynote,anchor=south,text=vibeyink] {{{name}\\\\{_thousands(int(value))}}};"
+                f"\\draw[vibeyink,line width=.6pt] ({x:.2f},0.12) -- ({x:.2f},0.34) -- ({lx:.2f},0.62) "
+                f"node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {{{name}\\\\{_thousands(int(value))}}};"
             )
+        # Each window's label hangs below the axis at its dashed line, and the sweep's
+        # measurements at that window are listed directly beneath it, so every configuration
+        # reads as a property of the window it was measured at. The 64k group hangs lowest,
+        # clear of the 32k label on its left and the 128k group on its right.
         windows = [
-            (32768, "32k: truncates " + str(ctx["turns_over_32k"]) + " turns", "vibeyred"),
+            (
+                32768,
+                "32k: truncates " + str(ctx["turns_over_32k"]) + " turns",
+                "vibeyred",
+                0.6,
+                "north",
+            ),
             (
                 65536,
                 "64k: chosen, " + _thousands(int(decision["headroom_tokens"])) + " headroom",
                 "vibeygreen",
+                1.5,
+                "north",
             ),
-            (131072, "128k: baseline, never reached", "vibeygray"),
+            (131072, "128k: baseline, never reached", "vibeygray", 0.6, "north east"),
         ]
         window_lines = []
-        for j, (tokens, label, color) in enumerate(windows):
+        for j, (tokens, label, color, depth, anchor) in enumerate(windows):
             x = tokens * scale
-            depth = 0.6 + 0.38 * (j % 2)
             window_lines.append(
-                f"\\draw[{color},line width=.8pt,densely dashed] ({x:.2f},-0.15) -- ({x:.2f},-{depth:.2f}) node[vibeynote,anchor=north,text={color},align=center] {{{label}}};"
+                f"\\draw[{color},line width=.8pt,densely dashed] ({x:.2f},-0.15) -- ({x:.2f},-{depth:.2f}) "
+                f"node[vibeynote,anchor={anchor},text={color},align=center] (window{j}) {{{label}}};"
             )
-        sweep_lines = []
-        for k, row in enumerate(sweep):
-            x = row["context"] * scale
-            note = (
-                f"{row['config']}: {row['wired_gb']}\\,GB wired, {row['tokens_per_second']} tok/s"
-                + (f", {row['result']}" if row.get("result") else "")
-            )
-            sweep_lines.append(
-                f"\\node[vibeypill,anchor=south] at ({x:.2f},{1.35 + (k % 2) * 0.28:.2f}) {{{note}}};"
-            )
+            below = f"window{j}"
+            side = "south east" if anchor == "north east" else "south"
+            # A plain rectangle with fully rounded ends looks like the house pill, but its
+            # corner anchors sit on the bounding box, so a right-aligned pill ends at its line.
+            for k, row in enumerate(r for r in sweep if int(r["context"]) == tokens):
+                note = (
+                    f"{_tex(str(row['config']))} $\\cdot$ {_tex(str(row['kv_cache']))} KV cache\\\\"
+                    f"{row['wired_gb']}\\,GB wired, {row['tokens_per_second']} tok/s"
+                    + (f", {_tex(str(row['result']))}" if row.get("result") else "")
+                )
+                window_lines.append(
+                    f"\\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor={anchor}] (window{j}sweep{k}) at ([yshift=-1.5pt]{below}.{side}) {{{note}}};"
+                )
+                below = f"window{j}sweep{k}"
         tick_marks = " ".join(
             f"\\draw[vibeyink] ({t * scale:.2f},0) -- ({t * scale:.2f},-0.08);"
             for t in range(0, 131073, 16384)
@@ -927,18 +992,18 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\draw[vibeyink,line width=.6pt] (0,0) -- (7.0,0);
 {tick_marks}
 \\node[vibeynote,anchor=north] at (0,-0.1) {{0}};
-\\node[vibeynote,anchor=north east] at (7.0,-0.1) {{131,072 tokens}};
+\\node[vibeynote,anchor=north east] at (6.92,-0.1) {{131,072 tokens}};
 {chr(10).join(mark_lines)}
 {chr(10).join(window_lines)}
-{chr(10).join(sweep_lines)}
-\\node[vibeyhead,anchor=south west] at (0,1.95) {{context actually used per turn, {ctx["turns"]} storm turns}};
+\\node[vibeyhead,anchor=south west] at (0,1.25) {{context actually used per turn, {ctx["turns"]} storm turns}};
 \\end{{tikzpicture}}"""
         caption = (
             f"Fitting the model to the iron. The percentiles mark how much context {ctx['turns']} real storm turns used; "
             f"the dashed lines are the three context windows considered. A 32k window would have truncated "
             f"{ctx['turns_over_32k']} turns, and the 128k baseline, never reached by any turn, wired "
             f"{sweep[0]['wired_gb']}\\,GB of a 24\\,GB machine. The 64k window chosen covers every recorded turn with "
-            f"a third again as headroom, and the sweep's pills report what each setting cost and delivered."
+            f"a third again as headroom. Beneath each window, the sweep's configurations measured at it report what "
+            f"each setting cost and delivered."
         )
         return self._fence("figure", "fig:host-context", caption, body)
 
@@ -965,7 +1030,7 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             y = per_day.get(day, 0)
             tag_marks.append(
                 f"\\node[vibeyanchor,fill=vibeygold] at (axis cs:{x},{y + 6}) {{}};\n"
-                f"\\node[font=\\sffamily\\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:{x},{y + 9}) {{{', '.join(names)}}};"
+                f"\\node[font=\\sffamily\\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:{x},{y + 9}) {{{names[0] if len(names) == 1 else names[0] + '--' + names[-1]}}};"
             )
         # the longest gap
         active = sorted(per_day)
@@ -1036,23 +1101,24 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 {rings}
 {chr(10).join(sectors)}
 {hour_labels}
-\\node[vibeynote,anchor=south west,text=vibeygray] at (-2.6,2.45) {{commits by hour, US Eastern}};
-\\node[vibeynote,anchor=north west,text=vibeygray,align=left] at (-2.6,-2.45) {{rings at 25, 50, 75 commits\\\\\\textcolor{{vibeygold}}{{$\\blacksquare$}} busiest {busiest:02d}:00 ({peak}) \\; \\textcolor{{vibeyred!70}}{{$\\blacksquare$}} quietest {quietest:02d}:00 ({min(hours)})}};
+\\node[vibeynote,anchor=north,text=vibeygray,align=center] at (0,-2.62) {{rings at 25, 50 and 75 commits\\\\[1pt]\\textcolor{{vibeygold}}{{$\\blacksquare$}} busiest {busiest:02d}:00 ({peak}) \\quad \\textcolor{{vibeyred!70}}{{$\\blacksquare$}} quietest {quietest:02d}:00 ({min(hours)})}};
 \\end{{scope}}
-\\begin{{axis}}[vibeybars,at={{(0.0cm,-2.6cm)}},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
-  xtick={{0,...,6}},xticklabels={{{",".join(names)}}},title={{commits by weekday}},ylabel={{commits}}]
+\\begin{{axis}}[vibeybars,at={{(0.0cm,2.7cm)}},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
+  xtick={{0,...,6}},xticklabels={{{",".join(names)}}},title={{b. Commits by weekday}},ylabel={{commits}},enlarge y limits={{upper,value=0.12}},title style={{name=weekdaystitle}}]
 \\addplot[fill=vibeyblue,draw=none] coordinates {{{wd_coords}}};
 \\end{{axis}}
-\\begin{{axis}}[vibeybars,at={{(6.1cm,-2.6cm)}},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax={len(types) - 0.4},ymin=0,
-  xtick={{0,...,{len(types) - 1}}},xticklabels={{{ty_labels}}},x tick label style={{rotate=45,anchor=north east,font=\\sffamily\\tiny}},title={{Conventional Commit types}},ylabel={{commits}}]
+\\begin{{axis}}[vibeybars,at={{(6.1cm,2.7cm)}},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax={len(types) - 0.4},ymin=0,
+  xtick={{0,...,{len(types) - 1}}},xticklabels={{{ty_labels}}},x tick label style={{rotate=45,anchor=north east,font=\\sffamily\\tiny}},title={{c. Conventional Commit types}},ylabel={{commits}},enlarge y limits={{upper,value=0.12}}]
 \\addplot[fill=vibeyteal!85,draw=none] coordinates {{{ty_coords}}};
 \\end{{axis}}
+% The clock's title shares the bar charts' title baseline, so the three panels read as one row.
+\\node[vibeyhead,anchor=base west] at (-8.0,0 |- weekdaystitle.base) {{a. Commits by hour, US Eastern}};
 \\end{{tikzpicture}}"""
         caption = (
-            f"The rhythm of production since {data['since'].isoformat()}, at revision {data['head'][:8]}. Left, a "
+            f"The rhythm of production since {data['since'].isoformat()}, at revision {data['head'][:8]}. (a) A "
             f"24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at "
-            f"{busiest:02d}:00 with {peak} and the quietest at {quietest:02d}:00 with {min(hours)}. Centre, the weekday "
-            f"distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first."
+            f"{busiest:02d}:00 with {peak} and the quietest at {quietest:02d}:00 with {min(hours)}. (b) The weekday "
+            f"distribution. (c) The Conventional Commit types the pre-commit hook enforces, most common first."
         )
         return self._fence("figure*", "fig:commit-rhythm", caption, body)
 
@@ -1085,7 +1151,8 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         body = f"""\\begin{{tikzpicture}}
 \\begin{{axis}}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax={days},ymin=0,ymax={running + 80},
   xtick={{{",".join(ticks)}}},xticklabels={{{",".join(labels)}}},xlabel={{day}},ylabel={{cumulative}},legend pos=north west]
-\\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {{{" ".join(coords)}}} \\closedcycle;
+\\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {{{" ".join(coords)}}} \\closedcycle;
+\\addplot[vibeyblue,line width=1pt] coordinates {{{" ".join(coords)}}};
 \\addlegendentry{{commits since {since.strftime("%b %-d")} ({_thousands(data["window_commits"])}; {earlier} earlier)}}
 \\addplot[vibeyteal,line width=1pt] coordinates {{{" ".join(pr_coords)}}};
 \\addlegendentry{{commit subjects closing a pull request ({pr_running})}}
@@ -1207,26 +1274,44 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             else f"\\node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:{layers[layer] + 900},{i}) {{{_thousands(layers[layer])} $\\cdot$ exempt}};"
             for i, layer in enumerate(LAYERS)
         )
+        # The thousands separator is left at pgf's default, `{,}`, whose braces keep the comma
+        # an ordinary symbol in math mode; overriding it through nested style keys stripped the
+        # braces and set a punctuation comma, which prints as "75, 594".
+        top_lines = max(p["lines"] for p in packages)
+        top_tests = max(p["tests"] for p in packages)
+        blank = "," * (n - 1)
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=3 by 1,horizontal sep=1.9cm}},vibeyaxis,height=5.6cm,
   y dir=reverse,ytick={{0,...,{n - 1}}},ymin=-0.7,ymax={n - 0.3},xmin=0,y tick label style={{font=\\sffamily\\tiny}},
-  scaled x ticks=false,x tick label style={{/pgf/number format/fixed,/pgf/number format/1000 sep={{{{,}}}}}},point meta=x,
-  nodes near coords,every node near coord/.append style={{font=\\sffamily\\tiny,text=vibeygray,/pgf/number format/fixed,/pgf/number format/1000 sep={{{{,}}}}}}]
-\\nextgroupplot[title={{a. Lines of Python per package}},xbar,bar width=6pt,width=5.9cm,yticklabels={{{names}}},xlabel={{lines}}]
+  scaled x ticks=false,x tick label style={{/pgf/number format/fixed}},point meta=x,
+  nodes near coords,every node near coord/.append style={{font=\\sffamily\\tiny,text=vibeygray,/pgf/number format/fixed}}]
+\\nextgroupplot[title={{a. Lines of Python per package}},xbar,bar width=6pt,width=5.9cm,yticklabels={{{names}}},xlabel={{lines}},xmax={top_lines * 1.25:.0f}]
 \\addplot[fill=vibeyblue,draw=none] coordinates {{{loc}}};
-\\nextgroupplot[title={{b. Test functions per package}},xbar,bar width=6pt,width=4.9cm,yticklabels={{,,,,,,,,,,,}},xlabel={{tests}}]
+\\nextgroupplot[title={{b. Test functions per package}},xbar,bar width=6pt,width=4.9cm,yticklabels={{{blank}}},xlabel={{tests}},xmax={top_tests * 1.25:.0f}]
 \\addplot[fill=vibeyteal!85,draw=none] coordinates {{{tests}}};
 \\nextgroupplot[title={{c. The orchestrator's layers}},xbar,bar width=6pt,width=4.9cm,ytick={{0,...,{len(LAYERS) - 1}}},yticklabels={{{",".join(LAYERS)}}},ymin=-0.7,ymax={len(LAYERS) - 0.3},xlabel={{lines}},xmax={max(layers.values()) * 1.9:.0f},nodes near coords={{}}]
 \\addplot[fill=vibeyviolet!85,draw=none] coordinates {{{layer_coords}}};
 {floor_marks}
 \\end{{groupplot}}
 \\end{{tikzpicture}}"""
+        suites = [
+            f"\\texttt{{{_tex(p['package'])}}}'s in the top-level \\texttt{{{_tex(root)}/}}"
+            for p in packages
+            for root in p["suites"]
+        ]
+        empty = [f"\\texttt{{{_tex(p['package'])}}}" for p in packages if p["tests"] == 0]
         caption = (
             f"The shape of the tree at revision {self._revision[:8]}: {_thousands(data['python_lines'])} lines of Python in "
             f"{_thousands(data['python_files'])} files and {_thousands(data['test_functions'])} test functions. "
-            f"(a) Lines per package; (b) test functions per package, with {_thousands(data['root_tests'])} more in the "
-            f"orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below "
-            f"100\\% branch coverage."
+            f"(a) Lines and (b) test functions per package, each package counted together with the test suite its "
+            f"pytest configuration collects"
+            + (f", {' and '.join(suites)}" if suites else "")
+            + (
+                f"; {', '.join(empty)} {'has' if len(empty) == 1 else 'have'} no test functions at this revision"
+                if empty
+                else ""
+            )
+            + ". (c) The orchestrator's layers, four of which fail the build below 100\\% branch coverage."
         )
         return self._fence("figure*", "fig:codebase-shape", caption, body)
 
@@ -1234,9 +1319,26 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         records = self._data("forecast")["records"]
         n = len(records)
         ticks = ",".join(str(i) for i in range(1, n + 1))
-        labels = ",".join(
-            datetime.fromisoformat(r["recorded_at"].replace("Z", "+00:00")).strftime("%b %-d")
-            for r in records
+        # Several forecasts are recorded on most days, so a date under every record prints
+        # the same date many times over and the labels overprint. Only the first record of
+        # each day is labelled; the rest keep their tick and grid line. Within one month the
+        # day number alone is legible upright, and the month moves into the axis title.
+        stamps = [datetime.fromisoformat(r["recorded_at"].replace("Z", "+00:00")) for r in records]
+        one_month = len({(s.year, s.month) for s in stamps}) == 1
+        seen_days: set[date] = set()
+        day_labels = []
+        for stamp in stamps:
+            first = stamp.date() not in seen_days
+            seen_days.add(stamp.date())
+            day_labels.append(
+                (str(stamp.day) if one_month else stamp.strftime("%b %-d")) if first else ""
+            )
+        labels = ",".join(day_labels)
+        tick_style = "" if one_month else "x tick label style={rotate=60,anchor=north east},"
+        xlabel = (
+            f"forecast record, by day ({stamps[0].strftime('%B %Y')})"
+            if one_month
+            else "forecast record, by day"
         )
         remaining = " ".join(f"({i},{r['remaining']:.0f})" for i, r in enumerate(records, 1))
         completed = " ".join(f"({i},{r['completed']:.0f})" for i, r in enumerate(records, 1))
@@ -1252,13 +1354,13 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         top = max(r["remaining"] for r in records)
         body = f"""\\begin{{tikzpicture}}
 \\begin{{groupplot}}[group style={{group size=2 by 1,horizontal sep=1.7cm}},vibeyaxis,width=7.9cm,height=4.6cm,
-  xmin=0.5,xmax={n + 0.5},xtick={{{ticks}}},xticklabels={{{labels}}},x tick label style={{rotate=30,anchor=north east}},xlabel={{forecast record}}]
-\\nextgroupplot[title={{a. Work units in the tracker}},ylabel={{units}},ymin=0,ymax={top * 1.25:.0f},legend pos=north west]
+  xmin=0.5,xmax={n + 0.5},xtick={{{ticks}}},xticklabels={{{labels}}},{tick_style}xlabel={{{xlabel}}}]
+\\nextgroupplot[title={{a. Work units in the tracker}},ylabel={{units}},ymin=0,ymax={top * 1.25:.0f},legend pos=south east]
 \\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {{{remaining}}};
 \\addlegendentry{{remaining}}
 \\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {{{completed}}};
 \\addlegendentry{{completed}}
-\\nextgroupplot[title={{b. Forecast active days to completion}},ylabel={{active days}},ymin=0,legend pos=north west]
+\\nextgroupplot[title={{b. Forecast active days to completion}},ylabel={{active days}},ymin=0,ymax={max(r["days_high"] for r in records) * 1.15:.0f},legend pos=south east]
 \\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {{{band}}} -- cycle;
 \\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {{{low}}};
 \\addlegendentry{{$W/r_{{\\max}}$}}
@@ -1307,17 +1409,29 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 
     def governance_time(self) -> str:
         t = self._data("test_time")
+        top = t["gates_before"] * 1.2
+        # One bar per tick: every series is drawn with `bar shift=0pt`, so pgfplots does not
+        # offset the four single-bar series against each other and each bar sits on its label.
+        # The speed-up rides between its before/after pair, above both of the pair's value
+        # labels, so it names the pair rather than either bar.
+        pairs = (
+            (0.5, t["gates_before"], t["gates_after"], t["gates_factor"]),
+            (2.5, t["suite_before"], t["suite_after"], t["suite_factor"]),
+        )
+        speedups = "\n".join(
+            f"\\node[vibeycallout,anchor=south,align=center] at (axis cs:{x},{min(before, after) + top * 0.12:.0f}) {{${factor}\\times$\\\\faster}};"
+            for x, before, after, factor in pairs
+        )
         body = f"""\\begin{{tikzpicture}}
-\\begin{{axis}}[vibeybars,width=8.6cm,height=4.8cm,bar width=11pt,xmin=-0.6,xmax=3.6,ymin=0,ymax={t["gates_before"] * 1.2:.0f},
+\\begin{{axis}}[vibeybars,width=8.6cm,height=4.8cm,bar width=13pt,bar shift=0pt,xmin=-0.6,xmax=3.6,ymin=0,ymax={top:.0f},
   xtick={{0,1,2,3}},xticklabels={{four gates before,four gates after,suite before,suite after}},
   x tick label style={{font=\\sffamily\\tiny,align=center,text width=1.6cm}},ylabel={{seconds}},
   nodes near coords,every node near coord/.append style={{font=\\sffamily\\tiny,text=vibeygray}}]
-\\addplot[fill=vibeyred!70,draw=none] coordinates {{(0,{t["gates_before"]})}};
-\\addplot[fill=vibeygreen!80,draw=none] coordinates {{(1,{t["gates_after"]})}};
-\\addplot[fill=vibeyred!70,draw=none] coordinates {{(2,{t["suite_before"]})}};
-\\addplot[fill=vibeygreen!80,draw=none] coordinates {{(3,{t["suite_after"]})}};
-\\node[vibeycallout,anchor=south] at (axis cs:1,{t["gates_after"] + t["gates_before"] * 0.09:.0f}) {{${t["gates_factor"]}\\times$ faster}};
-\\node[vibeycallout,anchor=south] at (axis cs:3,{t["suite_after"] + t["gates_before"] * 0.09:.0f}) {{${t["suite_factor"]}\\times$ faster}};
+\\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {{(0,{t["gates_before"]})}};
+\\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {{(1,{t["gates_after"]})}};
+\\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {{(2,{t["suite_before"]})}};
+\\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {{(3,{t["suite_after"]})}};
+{speedups}
 \\end{{axis}}
 \\end{{tikzpicture}}"""
         caption = (
@@ -1474,6 +1588,58 @@ def build_atlas(repo: Path, revision: str) -> PaperFigureAtlas:
     )
 
 
+class RevisionPinGuard(RevisionPinGuardInterface):
+    """Refuses a pin that a fresh clone of the integration branch could not walk.
+
+    The history figures are pinned to a revision so `--check` is deterministic. A pin taken
+    on a feature branch names a commit a squash merge then discards: it exists only in the
+    clone that made it, and every other clone fails on it (`git log` exit 128) -- which is
+    how develop went red after #1235 pinned 3680d700, a pre-squash commit. A pin is accepted
+    only when it is a commit, an ancestor of the checked-out HEAD, and, where the clone
+    holds the integration branch's remote ref, an ancestor of that too.
+    """
+
+    def __init__(self, repo: Path, integration_ref: str | None = None) -> None:
+        self._repo = repo
+        self._integration_ref = integration_ref or self._configured_ref(repo)
+
+    @staticmethod
+    def _configured_ref(repo: Path) -> str:
+        branch = DEFAULT_INTEGRATION_BRANCH
+        config = repo / BRANCHES_CONFIG
+        if config.is_file():
+            branches = tomllib.loads(config.read_text(encoding="utf-8")).get("branches", {})
+            branch = str(branches.get("integration", branch))
+        return f"{DEFAULT_REMOTE}/{branch}"
+
+    def _git_ok(self, *args: str) -> bool:
+        # push-gate: not a push (asks the history whether a pin is reachable)
+        done = subprocess.run(
+            ["git", *args], cwd=self._repo, capture_output=True, text=True, check=False
+        )
+        return done.returncode == 0
+
+    def _is_commit(self, ref: str) -> bool:
+        return self._git_ok("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+
+    def problems(self, revision: str) -> list[str]:
+        if not self._is_commit(revision):
+            return [
+                f"pinned revision {revision} is not a commit in this clone; a pin must be a "
+                "commit on the integration branch's history, not one a squash merge discarded"
+            ]
+        found = []
+        if not self._git_ok("merge-base", "--is-ancestor", revision, "HEAD"):
+            found.append(f"pinned revision {revision} is not an ancestor of the checked-out HEAD")
+        ref = self._integration_ref
+        if self._is_commit(ref) and not self._git_ok("merge-base", "--is-ancestor", revision, ref):
+            found.append(
+                f"pinned revision {revision} is not on {ref}'s history; a squash merge would "
+                f"orphan it -- pin a commit {ref} already holds, e.g. `git merge-base HEAD {ref}`"
+            )
+        return found
+
+
 # The figures whose only source is the git log; a shallow clone cannot recompute them.
 HISTORY_FIGURES: frozenset[str] = frozenset(
     {"commits-daily", "commit-rhythm", "cumulative-commits", "release-cadence", "codebase-shape"}
@@ -1524,6 +1690,11 @@ def main(argv: list[str] | None = None) -> int:
     # revision is resolved, because that revision is usually absent from such a clone.
     skipped = HISTORY_FIGURES if args.check and _is_shallow(args.repo) else frozenset()
     if not skipped:
+        refused = RevisionPinGuard(args.repo).problems(revision)
+        if refused:
+            for reason in refused:
+                print(f"{SCRIPT}: {reason}", file=sys.stderr)
+            return 2
         revision = subprocess.run(
             ["git", "rev-parse", revision],
             cwd=args.repo,
