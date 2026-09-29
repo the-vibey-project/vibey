@@ -117,7 +117,7 @@ Create a project and enqueue its first DESIGN interview.
 | Option | Default | What it does |
 |---|---|---|
 | `--repo PATH` | `.` | Repository the project builds against. |
-| `--intake TEXT` | unset | Initial issue or task text to seed the DESIGN ledger with. Before the DESIGN job is enqueued it is appended as one `TranscriptRecorded` event with `untrusted` provenance and the payload `{"text": TEXT, "source": "github-issue"}`, so the interview starts from it. The triaged-delivery bridge (`scripts/triaged_delivery.py`) hands a GitHub issue over this way. |
+| `--intake TEXT` | unset | Initial issue or task text to seed the DESIGN ledger with. Before the DESIGN job is enqueued it is appended as one `TranscriptRecorded` event with `untrusted` provenance and the payload `{"text": TEXT, "source": "github-issue"}`, so the interview starts from it. The triaged-delivery bridge (`scripts/triaged_delivery.py`) hands a GitHub issue over this way, and only an issue whose author, editors and triage-label curators are trusted, quoted through `PromptShield` ([runbook](../runbooks/triaged-delivery.md#who-may-put-an-issue-in-the-queue)). |
 | `--max-cycles N` | `10` | Cap on delivery cycles before the project stops (min 1). |
 | `--max-cycle-dollars F` | unset | Per-cycle dollar cap (min 0.01), stored as `max_cycle_dollars` in project config. Tripping it parks a `budget_exhausted` gate instead of starting more sessions (ADR-0024). Unset means no dollar cap. |
 | `--max-cycle-turns N` | unset | Per-cycle engine-turn cap (min 1), stored as `max_cycle_turns`. |
