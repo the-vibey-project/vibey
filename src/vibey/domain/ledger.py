@@ -104,6 +104,12 @@ class EventKind(StrEnum):
     # refused or replayed answer writes none. Not a design answer: `AnswerGiven` closes a
     # question the design phase asked, and is written by the phase that asked it.
     GATE_ANSWERED = "GateAnswered"
+    # A human gate was closed without an answer because its project was abandoned (`vibey
+    # abandon`): the gate, its kind, its job, the request that closed it, why, who named
+    # themselves and which account ran it. Written in the same transaction as the move into
+    # abandoned and the row it closes, so an abandoned project never leaves a gate open and
+    # never closes one without saying so. Nobody answered: it is not `GateAnswered`.
+    GATE_WITHDRAWN = "GateWithdrawn"
     # A device was paired with the hub, or its pairing revoked (ADR-0068): the device's id,
     # the name it gave and the scopes the host granted -- never its key. Written to every
     # project's ledger, since each project's history should say who could read it. The

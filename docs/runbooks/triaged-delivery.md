@@ -16,7 +16,9 @@ bridge unattended, and what it will and will not do while nobody is watching.
 2. **Resume before selecting.** For each dispatched project, in priority order:
    - DONE: publish it (idempotently: an existing pull request is reused) and mark the ticket
      `completed`. The slot is free.
-   - abandoned: the ticket is `blocked`. The slot is free.
+   - abandoned: the ticket is `blocked`. The slot is free. A project that will not finish
+     -- built on the wrong spec, superseded -- holds the slot until a person abandons it:
+     `vibey abandon PROJECT_ID --reason "..."` (`--dry-run` first to see what it stops).
    - waiting on a person (an open human gate, or a design waiting for `vibey design accept`):
      record it and stop. **Nothing new is selected**: one active project at a time.
    - otherwise: drive it again, bounded by `--max-steps`, and stop.

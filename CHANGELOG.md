@@ -17,6 +17,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **cli:** `vibey abandon PROJECT_ID --reason TEXT [--by NAME] [--json] [--dry-run]` --
+  the operator's clean exit for a project that is not going to finish. Found live on
+  2026-09-29: project 9692abab sat in BUILD on a foreign spec with no way to stop it, and
+  the triaged-delivery bridge holds its one slot until a dispatched project is done or
+  abandoned, so one bad project blocked the whole backlog. In one transaction under a lock
+  on the project's row, every open gate is withdrawn (never deleted: the row records the
+  withdrawal, and a later answer is refused), every unsettled job is cancelled with its
+  lease cleared, and the project moves into abandoned through the phase machine's own
+  guard -- recorded as one `PhaseTransitioned` carrying the reason, `by`, `account` and the
+  ids of every job and gate it stopped, plus a new trusted `GateWithdrawn` event per gate
+  (withheld from ledger publication). Abandoning twice changes nothing and exits 0; a done
+  project is refused; `--dry-run` lists what would stop and writes nothing. The claim no
+  longer hands out a job of an abandoned project, so a follow-up a still-running handler
+  enqueues afterwards never runs.
 * **design:** DESIGN research can proceed without a person when no evidence can be had --
   never by fabricating. Observed live on 2026-09-29 (project 9692abab, issue #998): every
   delivery on the sovereign provider parked at a `research_evidence` gate in DESIGN,

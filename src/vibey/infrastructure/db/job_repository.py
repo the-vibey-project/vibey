@@ -89,11 +89,16 @@ KNOWN_PHASES: Final = tuple(phase.value for phase in Phase)
 
 # What `claim` may hand out, and in which order. One text for both statements that ask
 # (`claim` and `claimable_projects`), so a worker serving every project can never be told a
-# project has work its own claim would then refuse. `$1` is always KNOWN_PHASES.
+# project has work its own claim would then refuse. `$1` is always KNOWN_PHASES. A job of an
+# abandoned project is never handed out: nothing leads out of abandoned, so a job a running
+# handler enqueued after `vibey abandon` cancelled the rest could only spend.
 _CLAIMABLE: Final = """
     j.state = 'ready'
     AND j.run_after <= now()
     AND j.phase::text = ANY($1::text[])
+    AND NOT EXISTS (
+        SELECT 1 FROM project pr WHERE pr.id = j.project_id AND pr.phase = 'abandoned'
+    )
     AND NOT EXISTS (
         SELECT 1 FROM job_dependency d
         JOIN job p ON p.id = d.depends_on_job_id

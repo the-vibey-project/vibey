@@ -586,6 +586,9 @@ WHERE id = (
       AND j.run_after <= now()
       AND j.project_id = $3
       AND j.phase::text = ANY($4::text[])   -- only phases this vibey knows (vibey#287)
+      AND NOT EXISTS (                      -- never a job of an abandoned project
+          SELECT 1 FROM project pr WHERE pr.id = j.project_id AND pr.phase = 'abandoned'
+      )
       AND NOT EXISTS (
           SELECT 1 FROM job_dependency d
           JOIN job p ON p.id = d.depends_on_job_id
@@ -929,6 +932,12 @@ answers racing for one gate exactly one lands. `answer_request_id` names the req
 that landed: the same request replayed with the same answer is a no-op, and any other
 answer is refused (`GateAlreadyAnswered`) and writes nothing. A gate answered before
 0018 has no request id, so every later answer to it is refused.
+
+**An abandonment withdraws a gate on the same compare-and-set.** `vibey abandon` closes
+every open gate of the project in the transaction that moves it into abandoned: the row
+records `{"withdrawn": true, "reason": "project abandoned"}` as its answer, the abandoning
+name as `answered_by`, and `abandon:<project_id>` as its request id, and a `GateWithdrawn`
+event records it. No gate row is deleted, and a later answer is refused as a second one.
 
 `kind` is unconstrained text. Values raised by handlers today include `question`,
 `choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,

@@ -106,6 +106,18 @@ class WrongPhase(VibeyError):
     """The project is not in a phase the requested command applies to."""
 
 
+class InvalidAbandonment(VibeyError):
+    """A request to abandon a project that vibey will not record: a reason that is empty,
+    over-long or carries control or formatting characters, or a `--by` label that cannot
+    be recorded. Nothing was changed."""
+
+
+class AbandonmentRefused(VibeyError):
+    """The project cannot be abandoned from where it stands: it is done -- finished, a
+    different ending from abandoned -- or in a phase with no edge to abandoned, or in a
+    phase this vibey does not know. Nothing was changed."""
+
+
 class InvalidAnswer(VibeyError):
     """A human-gate answer was not in the expected QUESTION_ID=ANSWER form."""
 

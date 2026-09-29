@@ -37,6 +37,7 @@ from vibey.bootstrap import (
     build_design_worker,
     build_visual_worker,
 )
+from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
 from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
@@ -112,6 +113,7 @@ ledger_app.command("export")(ledger_export)
 ledger_app.command("site")(ledger_site)
 app.add_typer(queue_app, name="queue")
 app.add_typer(budget_app, name="budget")
+app.command("abandon")(abandon_command)
 app.add_typer(ultra_app, name="ultra")
 app.add_typer(driver_app, name="driver")
 app.add_typer(supervisor_app, name="supervisor")

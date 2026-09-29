@@ -87,7 +87,14 @@ class PhaseTransitionedDraftBuilder:
     def __init__(self, correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION) -> None:
         self._correlation = correlation
 
-    def build(self, settled: ProjectRecord, expected: Phase, guard: str | None) -> LedgerEventDraft:
+    def build(
+        self,
+        settled: ProjectRecord,
+        expected: Phase,
+        guard: str | None,
+        *,
+        attribution: Mapping[str, object] | None = None,
+    ) -> LedgerEventDraft:
         """Build the draft for one settled transition.
 
         `guard` is carried end to end -- port, interface and payload -- but no
@@ -99,7 +106,12 @@ class PhaseTransitionedDraftBuilder:
         is true. The parameter stays because removing it would make the seam
         less configurable than it is (ADR-0018) and because the guard is the
         caller's to name, not this builder's to invent; what is missing is the
-        call sites, and that is the work, not the signature.
+        call sites, and that is the work, not the signature. The one exception is
+        an operator's abandonment (`vibey abandon`), which names its guard.
+
+        `attribution` is what a person-made move adds beside the four fields --
+        who made it, why, and what it stopped -- and is merged in after them, so
+        it can add a field but never change one of the four.
         """
         phase = settled.phase
         if not isinstance(phase, Phase):
@@ -110,12 +122,10 @@ class PhaseTransitionedDraftBuilder:
                 f"project {settled.project_id} settled in phase {phase.value!r}, which "
                 "this vibey does not know; it will not ledger a move into it"
             )
-        payload: dict[str, object] = {
-            "from": expected.value,
-            "to": phase.value,
-            "cycle": settled.cycle,
-            "guard": guard,
-        }
+        payload: dict[str, object] = dict(attribution or {})
+        payload.update(
+            {"from": expected.value, "to": phase.value, "cycle": settled.cycle, "guard": guard}
+        )
         return LedgerEventDraft(
             project_id=settled.project_id,
             cycle=settled.cycle,
@@ -241,69 +251,96 @@ class PostgresProjectRepository:
         invents on the caller's behalf.
         """
         async with self._pool.acquire() as conn, conn.transaction():
-            if cycle is not None:
-                row = await conn.fetchrow(
-                    """
-                    UPDATE project
-                    SET phase = $3, cycle = $4, updated_at = now()
-                    WHERE id = $1 AND phase = $2
-                    RETURNING *
-                    """,
-                    project_id,
-                    expected.value,
-                    to.value,
-                    cycle,
-                )
-            else:
-                row = await conn.fetchrow(
-                    """
-                    UPDATE project
-                    SET phase = $3, updated_at = now()
-                    WHERE id = $1 AND phase = $2
-                    RETURNING *
-                    """,
-                    project_id,
-                    expected.value,
-                    to.value,
-                )
-            if row is None:
-                raise ValueError(
-                    f"project {project_id} is not in expected phase {expected.value!r}"
-                )
-            settled = self._rows.to_record(row)
-            await self._events.append(conn, self._drafts.build(settled, expected, guard))
-
-        if self._notifications is not None:
-            kind = "run_completed" if to is Phase.DONE else "phase_transitioned"
-            title = "Run Completed" if to is Phase.DONE else "Phase Transitioned"
-            message = (
-                f"Project entered {to.value}"
-                if to is not Phase.DONE
-                else f"Project completed in cycle {settled.cycle}"
+            settled = await self.transition_on(
+                conn, project_id, expected=expected, to=to, cycle=cycle, guard=guard
             )
-            try:
-                result = await self._notifications.notify(
-                    project_id=settled.project_id,
-                    kind=kind,
-                    title=title,
-                    message=message,
-                    payload={
-                        "from": expected.value,
-                        "to": to.value,
-                        "cycle": settled.cycle,
-                    },
-                    config=settled.config,
-                )
-                if self._notification_failed(result, settled.config):
-                    logger.warning(
-                        "notification delivery failed for project %s: %s",
-                        settled.project_id,
-                        result,
-                    )
-            except Exception as exc:  # noqa: BLE001 - delivery cannot undo a committed transition
-                logger.warning(
-                    "notification delivery raised for project %s: %s",
-                    settled.project_id,
-                    exc,
-                )
+        await self.announce(settled, expected=expected)
         return settled
+
+    async def transition_on(
+        self,
+        conn: asyncpg.Connection,
+        project_id: UUID,
+        *,
+        expected: Phase,
+        to: Phase,
+        cycle: int | None = None,
+        guard: str | None = None,
+        attribution: Mapping[str, object] | None = None,
+    ) -> ProjectRecord:
+        """The compare-and-set and its `PhaseTransitioned`, on the caller's connection and
+        inside the caller's transaction: `transition` wraps it in its own, and a store
+        whose move is one part of a larger change (`vibey abandon`) runs it in that
+        change's, so the move, its event and the rest commit or roll back together.
+        Announcing the move is the caller's, once its transaction has committed."""
+        if cycle is not None:
+            row = await conn.fetchrow(
+                """
+                UPDATE project
+                SET phase = $3, cycle = $4, updated_at = now()
+                WHERE id = $1 AND phase = $2
+                RETURNING *
+                """,
+                project_id,
+                expected.value,
+                to.value,
+                cycle,
+            )
+        else:
+            row = await conn.fetchrow(
+                """
+                UPDATE project
+                SET phase = $3, updated_at = now()
+                WHERE id = $1 AND phase = $2
+                RETURNING *
+                """,
+                project_id,
+                expected.value,
+                to.value,
+            )
+        if row is None:
+            raise ValueError(f"project {project_id} is not in expected phase {expected.value!r}")
+        settled = self._rows.to_record(row)
+        await self._events.append(
+            conn, self._drafts.build(settled, expected, guard, attribution=attribution)
+        )
+        return settled
+
+    async def announce(self, settled: ProjectRecord, *, expected: Phase) -> None:
+        """Tells the configured notification sink a committed move landed. Delivery never
+        undoes the move: a failure is logged, never raised."""
+        if self._notifications is None:
+            return
+        done = settled.phase is Phase.DONE
+        kind = "run_completed" if done else "phase_transitioned"
+        title = "Run Completed" if done else "Phase Transitioned"
+        message = (
+            f"Project completed in cycle {settled.cycle}"
+            if done
+            else f"Project entered {settled.phase.value}"
+        )
+        try:
+            result = await self._notifications.notify(
+                project_id=settled.project_id,
+                kind=kind,
+                title=title,
+                message=message,
+                payload={
+                    "from": expected.value,
+                    "to": settled.phase.value,
+                    "cycle": settled.cycle,
+                },
+                config=settled.config,
+            )
+            if self._notification_failed(result, settled.config):
+                logger.warning(
+                    "notification delivery failed for project %s: %s",
+                    settled.project_id,
+                    result,
+                )
+        except Exception as exc:  # noqa: BLE001 - delivery cannot undo a committed transition
+            logger.warning(
+                "notification delivery raised for project %s: %s",
+                settled.project_id,
+                exc,
+            )

@@ -68,6 +68,7 @@ from vibey.application.interfaces import (
     IssueTrackerPort,
     JobHandler,
     MessagingPort,
+    ProjectAbandonmentInterface,
     ProjectBudgetServiceInterface,
     QueuePriorityServiceInterface,
     QueueReaperInterface,
@@ -91,6 +92,7 @@ from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
+from vibey.application.project_abandonment import ProjectAbandonment
 from vibey.application.project_budget import ProjectBudgetService
 from vibey.application.queue_priority import QueuePriorityService
 from vibey.application.queue_reaper import QueueReaper
@@ -142,6 +144,7 @@ from vibey.infrastructure.db.ledger_guard import (
 )
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
+from vibey.infrastructure.db.project_abandonment_store import PostgresProjectAbandonmentStore
 from vibey.infrastructure.db.project_budget_store import PostgresProjectBudgetStore
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 from vibey.infrastructure.db.queue_reap_store import PostgresQueueReapStore
@@ -233,6 +236,10 @@ class AppResources:
     # Project budgets (`vibey budget`). Only the service: the store that writes a
     # project's caps and their ledger events is built here and handed to nothing else.
     project_budgets: ProjectBudgetServiceInterface
+    # Abandoning a project (`vibey abandon`). Only the service: the store that moves a
+    # project into abandoned with everything it stops is built here and handed to nothing
+    # else.
+    project_abandonment: ProjectAbandonmentInterface
     ultra: UltraControlServiceInterface
     # Answering gates (`vibey answer`, the operator). The service names who answered and
     # which request; the repository answers each gate once and records it on the ledger.
@@ -1212,6 +1219,10 @@ async def build_app(
                 gates=gates,
                 caller=ProcessCaller(),
                 clock=clock,
+            ),
+            project_abandonment=ProjectAbandonment(
+                store=PostgresProjectAbandonmentStore(pool, projects=projects),
+                caller=ProcessCaller(),
             ),
             ultra=UltraControlService(
                 projects=projects,
