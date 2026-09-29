@@ -41,7 +41,7 @@ documentation is published as a book:
 [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) and
 [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html). Every
 empirical figure in the section on production rate is recomputed from tracked sources
-by `scripts/paper_figures.py`. The visual atlas holds thirty-five figures: twenty
+by `scripts/paper_figures.py`. The visual atlas holds forty-five figures: thirty
 drawn from the model as deterministic TikZ in this source, and fifteen computed from
 tracked repository records, so the PDF, its labels and its diagrams are reviewable and
 reproducible rather than screenshots detached from the system. Every section closes
@@ -639,8 +639,8 @@ The complete state topology is depicted in [Fig. 4](#fig:six-phase-machine).
   \draw[vibeyflow] (V) -- (B);
   \draw[vibeyflow] (B) -- (R);
   \draw[vibeyflow] (R) -- (DL) node[lab,midway,above=1pt] {declined};
-  \draw[vibeyflow,rounded corners=3pt] ([xshift=10pt]D.south) |- ($(B.south)+(0,-0.38)$) -- ([xshift=-10pt]B.south);
-  \path ($(D.south)+(0.35,-0.38)$) -- ($(B.south)+(-0.35,-0.38)$) node[lab,fill=vibeymist,midway] {no visual opt-in};
+  \draw[vibeyflow,rounded corners=3pt] ([xshift=10pt]D.south) |- ($([xshift=-10pt]B.south)+(0,-0.38)$) -- ([xshift=-10pt]B.south);
+  \path ($(D.south)+(0.35,-0.38)$) -- ($([xshift=-10pt]B.south)+(0,-0.38)$) node[lab,fill=vibeymist,midway] {no visual opt-in};
   \draw[vibeyflow] (Dd) -- (De);
   \draw[vibeyflow] (De) -- (Dr);
   \draw[vibeyflow] (Dr) -- (DD);
@@ -865,7 +865,7 @@ modeled in [Fig. 7](#fig:digital-atom).
   \node[vibeypill, fill=vibeyblue!12, text=vibeyink, font=\sffamily\scriptsize, inner ysep=1.2pt] (o4) at (105:2.2) {project};
   \node[vibeypill, fill=vibeyblue!12, text=vibeyink, font=\sffamily\scriptsize, inner ysep=1.2pt] (o3) at (255:1.75) {phase};
   \node[vibeypill, fill=vibeyblue!12, text=vibeyink, font=\sffamily\scriptsize, inner ysep=1.2pt] (o2) at (90:1.3) {epic};
-  \node[vibeypill, fill=vibeyblue!12, text=vibeyink, font=\sffamily\scriptsize, inner ysep=1.2pt] (o1) at (270:0.85) {item};
+  \node[vibeypill, fill=vibeyblue!12, text=vibeyink, font=\sffamily\scriptsize, inner ysep=1.2pt] (o1) at (300:0.85) {item};
   \node[vibeynote, text=vibeygreen!60!black, anchor=north] (dl) at (-1.55,-2.02) {delivery merges\\work into core};
   \draw[vibeyarrow, draw=vibeygreen!75!black] (dl.north) -- (core);
 
@@ -874,8 +874,8 @@ modeled in [Fig. 7](#fig:digital-atom).
   \draw[vibeydashed] (4.85,0.55) circle (0.75);
   \draw[vibeydashed] (4.85,0.55) circle (1.0);
   \node[vibeynote] (tnote) at (4.85,-0.85) {no orbitals left:\\terminal};
-  \node[vibeypill, fill=vibeygreen!14, text=vibeygreen!55!black] (tc) at (4.55,-1.5) {complete};
-  \node[vibeypill, fill=vibeyred!10, text=vibeyred] (td) at (5.45,-1.5) {dead};
+  \node[vibeypill, fill=vibeygreen!14, text=vibeygreen!55!black] (tc) at (4.85,-1.45) {complete};
+  \node[vibeypill, fill=vibeyred!10, text=vibeyred] (td) at (4.85,-1.9) {dead};
 
   % ---------------------------------------------------------- lanes
   \begin{pgfonlayer}{background}
@@ -1439,16 +1439,16 @@ first either way.
   \node[sub,anchor=north] at (11.3,5.5) {no clock, never scheduled to reopen;\\re-probed on a bounded backoff};
   % ---- three independent enforcement layers hang under credits
   \begin{scope}[on background layer]
-    \draw[vibeyedge] (credits.south) -- (11.3,3.95);
+    \draw[vibeyedge] (credits.south) -- (11.3,3.8);
   \end{scope}
-  \foreach \y/\txt in {4.72/{\textbf{Type}: no reset field},
-                       4.30/{\textbf{Property test}: never a deadline},
-                       3.88/{\textbf{CHECK constraint}: no reset time}}{
+  \foreach \y/\txt in {4.55/{\textbf{Type}: no reset field},
+                       4.13/{\textbf{Property test}: never a deadline},
+                       3.71/{\textbf{CHECK constraint}: no reset time}}{
     \draw[shield] (11.3-1.55,\y+.19) -- (11.3+1.55,\y+.19) -- (11.3+1.55,\y-.06) -- (11.3,\y-.26) -- (11.3-1.55,\y-.06) -- cycle;
     \node[shieldtext] at (11.3,\y-.01) {\txt};
   }
   % ---- runner vocabularies beneath
-  \node[runner] (qwen)   at (2.4,1.9)   {qwenloop $\cdot$ 3 states\\hardware, not a balance};
+  \node[runner] (qwen)   at (2.4,1.9)   {gptossloop, qwenloop $\cdot$ 3 states\\hardware, not a balance};
   \node[runner] (codex)  at (6.85,1.9)  {codexloop $\cdot$ 6 states\\error code before HTTP status};
   \node[runner] (agy)    at (11.3,1.9)  {agyloop $\cdot$ 5 states\\quota day in Pacific time};
   \node[runner] (claude) at (15.75,1.9) {claudeloop\\checks credits before the window};
@@ -1527,51 +1527,44 @@ every handoff has a well-defined ledger range $\rho$, shown in [Fig. 13](#fig:en
   lab/.style={font=\sffamily\scriptsize,text=vibeygray,inner sep=1.5pt,align=center},
   redlab/.style={lab,text=vibeyred}]
   % ------------------------------------------------ local tier (preferred first)
-  \node[vibeytealbox,eng,minimum width=2.45cm] (qwen) at (1.3,2.1)
-    {\textbf{gptossloop}\\local Ollama, sovereign default};
-  \node[vibeytealbox,eng,minimum width=2.45cm] (qwen2) at (3.95,2.1)
-    {\textbf{qwenloop}\\local Ollama, opt-in};
-  \node[vibeytealbox,eng,minimum width=2.7cm] (cll) at (6.7,2.1)
-    {\textbf{claudeloop-local}\\local backend profile};
+  \node[vibeytealbox,eng,minimum width=2.5cm] (qwen) at (1.35,2.1)
+    {\textbf{gptossloop}\\local Ollama\\sovereign default};
+  \node[vibeytealbox,eng,minimum width=2.5cm] (qwen2) at (4.0,2.1)
+    {\textbf{qwenloop}\\local Ollama\\opt-in};
+  \node[vibeytealbox,eng,minimum width=2.6cm] (cll) at (6.65,2.1)
+    {\textbf{claudeloop-local}\\claudeloop on a\\local backend profile};
   % ------------------------------------------------ paid tier (fallback)
-  \node[vibeysoft,eng,minimum width=1.45cm] (claude)   at (0.825,-0.7) {\textbf{claudeloop}\\Anthropic};
-  \node[vibeysoft,eng,minimum width=1.4cm]  (codex)    at (2.4,-0.7)   {\textbf{codexloop}\\OpenAI};
-  \node[vibeysoft,eng,minimum width=1.4cm]  (cursor)   at (3.95,-0.7)  {\textbf{cursorloop}\\Cursor};
-  \node[vibeysoft,eng,minimum width=1.15cm] (agy)      at (5.375,-0.7) {\textbf{agyloop}\\Google};
-  \node[lab,font=\sffamily\tiny,text width=1.75cm,align=center] at (7.05,-0.7) {paid engines are declared, never default};
+  \node[vibeysoft,eng,minimum width=1.75cm] (claude) at (1.05,-0.7) {\textbf{claudeloop}\\Anthropic};
+  \node[vibeysoft,eng,minimum width=1.75cm] (codex)  at (3.0,-0.7)  {\textbf{codexloop}\\OpenAI};
+  \node[vibeysoft,eng,minimum width=1.75cm] (cursor) at (4.95,-0.7) {\textbf{cursorloop}\\Cursor};
+  \node[vibeysoft,eng,minimum width=1.75cm] (agy)    at (6.9,-0.7)  {\textbf{agyloop}\\Google};
   % lane extents: shared x-range, headroom for the lane label
-  \coordinate (p1a) at (0.05,2.905);  \coordinate (p1b) at (9.1,1.675);
-  \coordinate (p2a) at (0.05,0.105);  \coordinate (p2b) at (7.95,-1.125);
+  \coordinate (p1a) at (0.05,3.2);  \coordinate (p1b) at (7.95,1.4);
+  \coordinate (p2a) at (0.05,0.3);  \coordinate (p2b) at (7.95,-1.2);
   \begin{scope}[on background layer]
     \node[vibeylane,fit=(qwen)(qwen2)(cll)(p1a)(p1b)] (L1) {};
     \node[vibeylane,fit=(claude)(agy)(p2a)(p2b)] (L2) {};
   \end{scope}
-  \node[vibeylanelabel] at (L1.north west) {Local tier};
-  \node[vibeylanelabel] at (L2.north west) {Paid tier};
+  \node[vibeylanelabel] at (L1.north west) {Local tier: eligible local engines are chosen first (sub-doctrine 8.a)};
+  \node[vibeylanelabel] at (L2.north west) {Paid tier: declared, never default; chosen only when no local engine is eligible};
   % ------------------------------------------------ the selector
-  \node[vibeycore,minimum width=4.4cm] (sel) at (11.0,0.7)
+  \node[vibeycore,minimum width=4.0cm] (sel) at (11.1,0.7)
     {Engine selector\\smooth weighted round robin\\$w_i=\max(1,\mathrm{round}(b_i h_i f_i c_i a_i))$};
-  \draw[vibeyflow,rounded corners=3pt] (L1.east) -- ++(0.3,0) |- ([yshift=7pt]sel.west);
-  \draw[vibeyflow,rounded corners=3pt] (L2.east) -- ++(0.3,0) |- ([yshift=-7pt]sel.west);
-  \node[lab,anchor=west] at (8.62,1.65) {eligible local engines\\first (sub-doctrine 8.a)};
-  \node[lab,anchor=west] at (8.62,-0.3) {paid engines only when\\no local engine is eligible};
+  \draw[vibeyflow,rounded corners=3pt] (L1.east) -- ++(0.45,0) |- ([yshift=7pt]sel.west);
+  \draw[vibeyflow,rounded corners=3pt] (L2.east) -- ++(0.45,0) |- ([yshift=-7pt]sel.west);
   % ------------------------------------------------ the session and the handoff
-  \node[vibeybox,eng,minimum width=3.6cm] (sess) at (15.75,2.1)
+  \node[vibeybox,eng,minimum width=3.2cm] (sess) at (15.35,2.1)
     {\textbf{Turns on the chosen engine}\\unattended; ledger range $\rho$};
-  \node[vibeybox,eng,minimum width=3.6cm] (brief) at (15.75,-0.7)
+  \node[vibeybox,eng,minimum width=3.2cm] (brief) at (15.35,-0.7)
     {\textbf{Handoff brief}\\checked by the no-loss gate};
-  \node[vibeygate,minimum width=2.8cm] (gate) at (15.75,-2.45)
+  \node[vibeygate,minimum width=2.8cm] (gate) at (15.35,-2.55)
     {\textbf{Human gate}\\never a silent partial};
-  \draw[vibeyflow,rounded corners=3pt] ([yshift=7pt]sel.east) -- ++(0.4,0) |- (sess.west);
-  \node[lab,anchor=east] at (13.45,1.6) {chosen engine};
-  \draw[vibeyback] ([xshift=0.95cm]sess.south) -- ([xshift=0.95cm]brief.north);
-  \node[redlab,anchor=east] at (16.55,0.7) {capacity rejection\\at a boundary};
-  \draw[vibeyback,rounded corners=3pt] (brief.west) -| (sel.south);
-  \node[redlab,anchor=north] at (12.5,-0.85) {seeds the successor;\\rejecting engine excluded};
-  \draw[vibeyback] ([xshift=0.95cm]brief.south) -- ([xshift=0.95cm]gate.north);
-  \node[redlab,anchor=east] at (16.55,-1.56) {gate fails: retry, full\\transcript, or a human};
+  \draw[vibeyflow,rounded corners=3pt] ([yshift=7pt]sel.east) -- ++(0.35,0) |- node[lab,pos=.3,left] {chosen\\engine} (sess.west);
+  \draw[vibeyback] (sess.south) -- node[redlab,right,xshift=2pt] {capacity rejection\\at a boundary} (brief.north);
+  \draw[vibeyback,rounded corners=3pt] (brief.west) -| node[redlab,pos=.25,below,yshift=-2pt] {seeds the successor;\\rejecting engine excluded} (sel.south);
+  \draw[vibeyback] (brief.south) -- node[redlab,right,xshift=2pt] {gate fails: retry,\\transcript, or a person} (gate.north);
   % ------------------------------------------------ the boundary rule
-  \node[vibeypill] at (4.0,-2.45)
+  \node[vibeypill] at (4.0,-2.55)
     {rotation fires only at a boundary, never inside a turn:\\
      new item $\cdot$ capacity rejection $\cdot$ wind-down $\cdot$ effort escalation $\cdot$ crash $\cdot$ phase transition};
 \end{tikzpicture}
@@ -1660,8 +1653,8 @@ after the freshness test $r \neq h$. Reviews are free; only repairs are counted.
   st/.style={minimum width=1.65cm,minimum height=.8cm},
   g/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.2pt}]
   % ---- states: top row
-  \node[vibeybox,st]  (P) at (1.0,0)  {\textbf{Pending}\\checks incomplete};
-  \node[vibeysoft,st] (R) at (4.25,0) {\textbf{Review}\\$h$ awaits its verdict};
+  \node[vibeybox,st]  (P) at (0.95,0) {\textbf{Pending}\\checks\\incomplete};
+  \node[vibeysoft,st] (R) at (4.25,0) {\textbf{Review}\\$h$ awaits\\its verdict};
   \node[vibeygood,st] (G) at (7.5,0)  {\textbf{Ready}\\absorbing};
   % ---- states: bottom row
   \node[vibeysoft,st] (F) at (2.3,-2.3) {\textbf{Repair}\\agent pushes $h'$};
@@ -1670,20 +1663,18 @@ after the freshness test $r \neq h$. Reviews are free; only repairs are counted.
   \node[vibeyanchor] (S) at (-0.2,0) {};
   \draw[vibeyarrow] (S) -- (P);
   % ---- forward flow
-  \draw[vibeyflow] (P) -- (R) node[g,midway,above] {checks complete};
-  \draw[vibeyarrow,draw=vibeygreen] (R) -- (G) node[g,midway,above,text=vibeygreen] {$r=h,\ v=\top$};
+  \draw[vibeyflow] (P) -- node[g,above] {checks\\complete} (R);
+  \draw[vibeyarrow,draw=vibeygreen] (R) -- node[g,above,text=vibeygreen] {$r=h$\\$v=\top$} (G);
   % ---- fail with budget left: repair, then a new head returns to review
-  \draw[vibeyback] (R) to[bend right=22] (F);
-  \node[g,text=vibeyred] at (1.95,-1.05) {$r=h,\ v=\bot,\ a<A$\\$a:=a+1$};
+  \draw[vibeyback] (R) to[bend right=22] node[g,text=vibeyred,left=3pt] {$r=h,\ v=\bot$\\$a<A$, $a:=a+1$} (F);
   \draw[vibeyflow] (F) to[bend right=22] (R);
   \node[g,text=vibeyblue] at (2.3,-3.1) {repair pushes $h'$: $a:=a+1$\\$r\neq h'$, back to review};
   % ---- fail with budget spent: blocked, until an operator refills
-  \draw[vibeyback] (R) to[bend left=22] (B);
-  \node[g,text=vibeyred] at (6.55,-1.05) {$r=h,\ v=\bot,\ a\ge A$};
+  \draw[vibeyback] (R) to[bend left=22] node[g,text=vibeyred,right=3pt] {$r=h,\ v=\bot$\\$a\ge A$} (B);
   \draw[vibeyarrow,draw=vibeygold] (B) to[bend left=22] (R);
   \node[g,text=vibeygold!80!black] at (6.2,-3.1) {operator refill, $k\le k_{\max}$\\$a:=0$, back to review};
   % ---- the invariant: freshness is tested before the budget
-  \node[vibeypill,fill=vibeygold!22] (pill) at (4.25,0.85) {freshness first: $r\neq h$ is tested before $a\ge A$};
+  \node[vibeypill,fill=vibeygold!22] (pill) at (4.25,1.3) {freshness first: $r\neq h$ is tested before $a\ge A$};
   \draw[vibeydashed] (pill.south) -- (R.north);
   % ---- footnote
   \node[vibeynote] at (4.25,-4.05) {$E(h,\sigma)$ depends only on the head $h$ and $\sigma=(a,r,v,k)$.\\Reviews are free; only repairs count toward the budget $A$.};
@@ -2023,29 +2014,30 @@ deadline per generation. Each generation was a real unit of work, an issue triag
 a pull-request diff reviewed, drawn from a pool of seven artifacts of 2 to 22 KB.
 Throughput is successful generations per minute of rung wall clock, reported across four views in [Fig. 18](#fig:stress-rate).
 
-<!-- BEGIN GENERATED figure:stress-dashboard rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:stress-dashboard rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
-\begin{groupplot}[group style={group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.45cm},
+\begin{groupplot}[group style={group size=2 by 2,horizontal sep=1.7cm,vertical sep=1.75cm},
   vibeyaxis,width=7.9cm,height=4.3cm,xmode=log,log basis x=2,xtick={1,2,4,8,16,32,64,128},xticklabels={1,2,4,8,16,32,64,128},
   xmin=0.8,xmax=160,xlabel={offered concurrency $N$}]
-\nextgroupplot[title={a. Successful throughput},ylabel={generations / min},ymin=0,ymax=4]
-\fill[vibeyblue!9] (axis cs:2,0) rectangle (axis cs:32,4);
+\nextgroupplot[title={a. Successful throughput},ylabel={generations / min},ymin=0,ymax=4.6,ytick={0,...,4}]
+\fill[vibeyblue!9] (axis cs:2,0) rectangle (axis cs:32,4.6);
 \node[vibeynote,text=vibeyblue,anchor=south] at (axis cs:8,3.55) {stable region $N=2$--$32$};
 \draw[vibeydashed] (axis cs:0.8,0.99) -- (axis cs:160,0.99) node[vibeynote,anchor=west,text=vibeygray] {0.99};
 \draw[vibeydashed] (axis cs:0.8,2.0) -- (axis cs:160,2.0) node[vibeynote,anchor=west,text=vibeygray] {2.00};
 \addplot[vibeyblue,line width=1pt,mark=*,mark size=1.4pt,mark options={fill=white,line width=.7pt}] coordinates {(1,0.36) (2,0.99) (3,0.99) (4,1.17) (6,1.72) (8,1.27) (12,1.54) (16,1.37) (24,1.4) (32,2.0) (48,1.6) (64,2.66) (96,3.52) (128,1.53)};
 \node[vibeycallout,anchor=south east] at (axis cs:96,3.52) {peak 3.52/min\\55.2\% success};
-\node[vibeycallout,anchor=north west] at (axis cs:128,1.53) {collapse};
+\node[vibeycallout,anchor=east,xshift=-3pt] at (axis cs:128,1.53) {collapse};
 \nextgroupplot[title={b. Success fraction},ylabel={succeeded (\%)},ymin=0,ymax=124,ytick={0,25,50,75,100}]
 \draw[vibeydashed] (axis cs:0.8,87.5) -- (axis cs:160,87.5) node[vibeynote,anchor=west,text=vibeygray] {87.5};
 \addplot[ybar,bar width=5pt,bar shift=0pt,draw=none,fill=vibeygreen!80] coordinates {(1,100.0) (2,100.0) (3,100.0) (4,100.0) (6,100.0) (8,100.0) (12,100.0) (16,100.0)};
 \addplot[ybar,bar width=5pt,bar shift=0pt,draw=none,fill=vibeygold!90] coordinates {(24,87.5) (32,93.8)};
 \addplot[ybar,bar width=5pt,bar shift=0pt,draw=none,fill=vibeyred!75] coordinates {(48,50.0) (64,62.5) (96,55.2) (128,18.0)};
 \node[vibeynote,anchor=north west,align=left] at (axis cs:0.9,122) {\textcolor{vibeygreen}{$\blacksquare$} 100\% \quad \textcolor{vibeygold}{$\blacksquare$} 87.5--93.8\% \quad \textcolor{vibeyred}{$\blacksquare$} overloaded};
-\nextgroupplot[title={c. Latency against the 900\,s deadline},ylabel={seconds},ymin=0,ymax=1000,legend pos=north west]
+\nextgroupplot[title={c. Latency against the 900\,s deadline},ylabel={seconds},ymin=0,ymax=1000,
+  legend style={at={(axis cs:0.9,800)},anchor=north west}]
 \addplot[fill=vibeyblue!12,draw=none,forget plot] coordinates {(1,166.0) (2,118.0) (3,132.0) (4,154.0) (6,59.0) (8,191.0) (12,174.0) (16,440.0) (24,701.0) (32,292.0) (48,900.0) (64,555.0) (96,821.0) (128,901.0) (128,901.0) (96,901.0) (64,901.0) (48,901.0) (32,900.0) (24,900.0) (16,700.0) (12,464.0) (8,375.0) (6,206.0) (4,203.0) (3,180.0) (2,118.0) (1,166.0)} -- cycle;
 \draw[vibeyred,densely dashed,line width=.7pt] (axis cs:0.8,900) -- (axis cs:160,900) node[vibeycallout,anchor=south east] {deadline};
 \addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,166.0) (2,118.0) (3,132.0) (4,154.0) (6,59.0) (8,191.0) (12,174.0) (16,440.0) (24,701.0) (32,292.0) (48,900.0) (64,555.0) (96,821.0) (128,901.0)};
@@ -2085,7 +2077,7 @@ In all, 243 of 444 generations succeeded over 2.18 hours. Every failure was a cl
 timeout; not one response was malformed or corrupt. The cumulative progression of attempts
 and successes across the 14 rungs is plotted in [Fig. 19](#fig:stress-cumulative).
 
-<!-- BEGIN GENERATED figure:stress-cumulative rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:stress-cumulative rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -2093,11 +2085,13 @@ and successes across the 14 rungs is plotted in [Fig. 19](#fig:stress-cumulative
 \begin{axis}[vibeyaxis,width=8.6cm,height=5cm,xmin=1,xmax=14,ymin=0,ymax=474,
   xtick={1,2,3,4,5,6,7,8,9,10,11,12,13,14},xticklabels={1,2,3,4,6,8,12,16,24,32,48,64,96,128},
   xlabel={rung (offered concurrency $N$)},ylabel={generations, cumulative},legend pos=north west]
-\addplot[fill=vibeysilver!35,draw=vibeysilver,line width=.5pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,76) (10,108) (11,156) (12,220) (13,316) (14,444)} \closedcycle;
+\addplot[fill=vibeysilver!35,draw=none,forget plot] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,76) (10,108) (11,156) (12,220) (13,316) (14,444)} \closedcycle;
+\addplot[fill=vibeygreen!45,draw=none,forget plot] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,73) (10,103) (11,127) (12,167) (13,220) (14,243)} \closedcycle;
+\addplot[vibeysilver,line width=.5pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,76) (10,108) (11,156) (12,220) (13,316) (14,444)};
 \addlegendentry{attempted}
-\addplot[fill=vibeygreen!45,draw=vibeygreen,line width=.8pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,73) (10,103) (11,127) (12,167) (13,220) (14,243)} \closedcycle;
+\addplot[vibeygreen,line width=.8pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,73) (10,103) (11,127) (12,167) (13,220) (14,243)};
 \addlegendentry{succeeded}
-\node[vibeynote,anchor=south east,align=right] at (axis cs:14,251) {243 of 444\\54.7\% overall};
+\node[vibeynote,anchor=east,align=right] at (axis cs:12.4,346) {243 of 444\\54.7\% overall};
 \end{axis}
 \end{tikzpicture}
 \caption{Cumulative generations across the fourteen rungs of the stress record: 444 attempted, 243 succeeded. The gap opens only after the stable region; every failure in the run was a clean timeout, never a malformed response.}
@@ -2135,51 +2129,51 @@ file-write calls totalling 32,073 bytes, as detailed across each run in [Fig. 20
 Thus the accepted completion rate at the cutoff was 4/13, or 30.8%, while a verdict alone
 would have suggested 6/13, or 46.2%.
 
-<!-- BEGIN GENERATED figure:qwen-runs rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:qwen-runs rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.8cm},vibeyaxis,width=8.6cm,height=4.6cm,
-  xmin=0.3,xmax=13.7,xtick={1,2,3,4,5,6,7,8,9,10,11,12,13},xlabel={run, in order of start}]
-\nextgroupplot[title={a. Turns and tool calls per run},ylabel={count},ymin=0,legend pos=north west,ybar,bar width=4pt]
+  xmin=0.3,xmax=13.7,xtick={1,2,3,4,5,6,7,8,9,10,11,12,13},xlabel={run, in order of start},x tick label style={yshift=-5pt}]
+\nextgroupplot[title={a. Turns and tool calls per run},ylabel={count},ymin=0,ymax=48,legend pos=north west,ybar,bar width=4pt,legend image code/.code={\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}]
 \addplot[fill=vibeyblue,draw=none] coordinates {(1,11) (2,1) (3,0) (4,0) (5,0) (6,5) (7,9) (8,9) (9,2) (10,6) (11,40) (12,22) (13,0)};
 \addlegendentry{model turns}
 \addplot[fill=vibeyteal!80,draw=none] coordinates {(1,13) (2,1) (3,0) (4,0) (5,0) (6,4) (7,8) (8,12) (9,2) (10,5) (11,20) (12,20) (13,0)};
 \addlegendentry{tool calls}
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:1,-4.5) {};
-\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:2,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:3,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:4,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:5,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:6,-4.5) {};
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:7,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:8,-4.5) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:9,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:10,-4.5) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:11,-4.5) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:12,-4.5) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:13,-4.5) {};
-\nextgroupplot[title={b. Tokens per run (thousands)},ylabel={tokens ($\times 10^3$)},ymin=0,legend pos=north west,ybar,bar width=4pt]
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:1,0) {};
+\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:2,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:3,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:4,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:5,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:6,0) {};
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:7,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:8,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:9,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:10,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:11,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:12,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:13,0) {};
+\nextgroupplot[title={b. Tokens per run},ylabel={tokens (thousands)},ymin=0,ymax=286,legend pos=north west,ybar,bar width=4pt,legend image code/.code={\fill[#1,draw=none] (0cm,-2.2pt) rectangle (0.28cm,2.2pt);}]
 \addplot[fill=vibeyviolet!85,draw=none] coordinates {(1,93.4) (2,1.3) (3,0.0) (4,0.0) (5,0.0) (6,23.4) (7,62.3) (8,17.1) (9,4.3) (10,8.6) (11,238.6) (12,101.6) (13,0.0)};
 \addlegendentry{input}
 \addplot[fill=vibeygold,draw=none] coordinates {(1,9.8) (2,0.4) (3,0.0) (4,0.0) (5,0.0) (6,4.1) (7,8.1) (8,7.5) (9,0.9) (10,5.7) (11,30.5) (12,16.5) (13,0.0)};
 \addlegendentry{output}
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:1,-27) {};
-\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:2,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:3,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:4,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:5,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:6,-27) {};
-\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:7,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:8,-27) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:9,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:10,-27) {};
-\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:11,-27) {};
-\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:12,-27) {};
-\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at (axis cs:13,-27) {};
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:1,0) {};
+\node[fill=vibeyred!60,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:2,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:3,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:4,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:5,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:6,0) {};
+\node[fill=vibeygold,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:7,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:8,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:9,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:10,0) {};
+\node[fill=vibeyred,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:11,0) {};
+\node[fill=vibeygreen,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:12,0) {};
+\node[fill=vibeysilver,minimum width=8pt,minimum height=4pt,inner sep=0pt] at ([yshift=-5pt]axis cs:13,0) {};
 \end{groupplot}
-\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
+\node[vibeynote,anchor=north west,align=left] at ([yshift=-2pt]current bounding box.south -| group c1r1.south west)
   {disposition strip: \textcolor{vibeygreen}{$\blacksquare$} completed (4) \;
    \textcolor{vibeygold}{$\blacksquare$} verdict only (2) \;
    \textcolor{vibeyred}{$\blacksquare$} no verdict (2) \;
@@ -2320,14 +2314,14 @@ in the consumed span.
   \node[font=\sffamily\tiny,text=vibeyink,align=center] at (8.225,2.1) {rec 7\\same tick};
   \node[font=\sffamily\tiny,text=vibeygray,align=center] at (9.425,2.1) {next\\write};
   \node[vibeynote,anchor=north] at (0.45,1.7) {offset 0};
-  \node[vibeynote,anchor=north west] at (6.5,1.7) {offset 13,245};
+  \node[vibeynote,anchor=north east] at (6.4,1.7) {offset 13,245};
   % the position watermark
   \draw[vibeyflow,-] (6.45,1.35) -- (6.45,3.15);
   \node[vibeytag,fill=vibeyblue,anchor=south] at (6.45,3.2) {watermark = byte offset};
   \node[vibeynote,text=vibeyblue,anchor=north,align=center] at (3.4,1.35) {everything before the offset\\is in the ledger, by identity};
   % the timestamp cutoff, which loses records
   \draw[vibeyback,-] (7.65,0.55) -- (7.65,2.75);
-  \node[vibeycallout,anchor=north,align=center] at (7.5,0.5) {a timestamp cutoff drawn here\\would skip the late record and\\the one that shares its second};
+  \node[vibeycallout,anchor=west,align=left] at (7.75,1.0) {a timestamp cutoff drawn here\\would skip the late record and\\the one that shares its second};
   \node[vibeynote,anchor=west,align=left] at (0.35,3.95) {records arrive late, out of order, or in the cutoff's own second;\\a clock cannot tell which of them it has already seen};
   % the loop
   \begin{scope}[on background layer]
@@ -2348,7 +2342,7 @@ in the consumed span.
 \label{fig:evidence-watermark}
 \end{figure*}
 ```
-<!-- BEGIN GENERATED figure:storm-lanes rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:storm-lanes rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2356,7 +2350,7 @@ in the consumed span.
 \begin{scope}[on background layer]
 \draw[vibeyline] (0.00,-8.95) -- (0.00,0.25) node[vibeynote,anchor=south] {0}; \draw[vibeyline] (2.08,-8.95) -- (2.08,0.25) node[vibeynote,anchor=south] {40}; \draw[vibeyline] (4.16,-8.95) -- (4.16,0.25) node[vibeynote,anchor=south] {80}; \draw[vibeyline] (6.24,-8.95) -- (6.24,0.25) node[vibeynote,anchor=south] {120}; \draw[vibeyline] (8.32,-8.95) -- (8.32,0.25) node[vibeynote,anchor=south] {160};
 \end{scope}
-\node[vibeyhead] at (-4.0,0.55) {lane};
+\node[vibeyhead,anchor=south east] at (-0.15,0.55) {lane};
 \node[vibeyhead,anchor=south] at (4.47,0.55) {turns spent, attempt after attempt};
 \node[vibeyhead,anchor=south west] at (9.04,0.55) {issue \; outcome \; turns};
 \fill[vibeyred!55,rounded corners=1pt] (0.00,-0.11) rectangle (1.46,0.11);
@@ -2505,7 +2499,7 @@ overlapped in time. The timeline in [Fig. 24](#fig:storm-timeline) shows the lan
 the progress log recorded them; the bars never overlap, and the blank stretches between
 them are the reviewer's and the operator's time, not the machine's.
 
-<!-- BEGIN GENERATED figure:storm-timeline rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:storm-timeline rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -2522,7 +2516,7 @@ them are the reviewer's and the operator's time, not the machine's.
 \draw[vibeyline] (9.62,-9.56) -- (9.62,0.2) node[vibeynote,anchor=south] {06:00};
 \draw[vibeyline] (10.69,-9.56) -- (10.69,0.2) node[vibeynote,anchor=south] {08:00};
 \draw[vibeyline] (11.77,-9.56) -- (11.77,0.2) node[vibeynote,anchor=south] {10:00};
-\draw[vibeydashed] (6.41,-9.66) -- (6.41,0.45) node[vibeynote,anchor=south,text=vibeygray] {2026-09-23 UTC};
+\draw[vibeydashed] (6.41,-9.66) -- (6.41,0.17);\node[vibeynote,anchor=south,text=vibeygray] at (6.41,0.46) {2026-09-23 UTC};
 \end{scope}
 \fill[vibeyblue!80,rounded corners=1pt] (0.00,-0.09) rectangle (0.62,0.09);
 \fill[vibeyblue!80,rounded corners=1pt] (0.94,-0.33) rectangle (1.00,-0.15);
@@ -2533,13 +2527,11 @@ them are the reviewer's and the operator's time, not the machine's.
 \fill[vibeyblue!80,rounded corners=1pt] (1.56,-1.29) rectangle (1.62,-1.11);
 \fill[vibeyblue!80,rounded corners=1pt] (1.70,-1.53) rectangle (1.77,-1.35);
 \fill[vibeyblue!80,rounded corners=1pt] (1.79,-1.77) rectangle (1.85,-1.59);
-\fill[vibeysilver] (5.39,-0.09) rectangle (5.51,0.09);
-\node[vibeynote,anchor=west,text=vibeysilver] at (5.54,0.00) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (5.39,-0.09) rectangle (5.51,0.09);
 \fill[vibeyblue!80,rounded corners=1pt] (5.40,-2.01) rectangle (5.51,-1.83);
 \fill[vibeyblue!80,rounded corners=1pt] (5.51,-2.25) rectangle (5.57,-2.07);
 \fill[vibeyblue!80,rounded corners=1pt] (5.54,-2.49) rectangle (5.65,-2.31);
-\fill[vibeysilver] (5.65,-2.25) rectangle (5.77,-2.07);
-\node[vibeynote,anchor=west,text=vibeysilver] at (5.80,-2.16) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (5.65,-2.25) rectangle (5.77,-2.07);
 \fill[vibeyblue!80,rounded corners=1pt] (6.04,-2.73) rectangle (6.13,-2.55);
 \fill[vibeyblue!80,rounded corners=1pt] (6.13,-2.97) rectangle (6.23,-2.79);
 \fill[vibeyblue!80,rounded corners=1pt] (6.23,-3.21) rectangle (6.29,-3.03);
@@ -2548,19 +2540,15 @@ them are the reviewer's and the operator's time, not the machine's.
 \fill[vibeyblue!80,rounded corners=1pt] (6.59,-3.93) rectangle (6.69,-3.75);
 \fill[vibeyblue!80,rounded corners=1pt] (6.69,-3.69) rectangle (6.85,-3.51);
 \fill[vibeyblue!80,rounded corners=1pt] (6.85,-4.17) rectangle (6.91,-3.99);
-\fill[vibeysilver] (6.89,-4.41) rectangle (7.01,-4.23);
-\node[vibeynote,anchor=west,text=vibeysilver] at (7.04,-4.32) {no end};
-\fill[vibeysilver] (7.23,-4.65) rectangle (7.35,-4.47);
-\node[vibeynote,anchor=west,text=vibeysilver] at (7.38,-4.56) {no end};
-\fill[vibeysilver] (7.33,-4.65) rectangle (7.45,-4.47);
-\node[vibeynote,anchor=west,text=vibeysilver] at (7.48,-4.56) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (6.89,-4.41) rectangle (7.01,-4.23);
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (7.23,-4.65) rectangle (7.35,-4.47);
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (7.33,-4.65) rectangle (7.45,-4.47);
 \fill[vibeyblue!80,rounded corners=1pt] (7.34,-4.65) rectangle (7.46,-4.47);
 \fill[vibeyblue!80,rounded corners=1pt] (7.46,-4.89) rectangle (7.53,-4.71);
 \fill[vibeyblue!80,rounded corners=1pt] (7.53,-5.13) rectangle (7.85,-4.95);
 \fill[vibeyblue!80,rounded corners=1pt] (7.85,-5.37) rectangle (8.18,-5.19);
 \fill[vibeyblue!80,rounded corners=1pt] (8.18,-5.61) rectangle (8.34,-5.43);
-\fill[vibeysilver] (8.34,-5.85) rectangle (8.46,-5.67);
-\node[vibeynote,anchor=west,text=vibeysilver] at (8.49,-5.76) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (8.34,-5.85) rectangle (8.46,-5.67);
 \fill[vibeyblue!80,rounded corners=1pt] (8.88,-6.09) rectangle (9.21,-5.91);
 \fill[vibeyblue!80,rounded corners=1pt] (9.21,-2.97) rectangle (9.34,-2.79);
 \fill[vibeyblue!80,rounded corners=1pt] (9.34,-5.85) rectangle (9.63,-5.67);
@@ -2576,11 +2564,9 @@ them are the reviewer's and the operator's time, not the machine's.
 \fill[vibeyblue!80,rounded corners=1pt] (10.79,-8.49) rectangle (10.98,-8.31);
 \fill[vibeyblue!80,rounded corners=1pt] (10.98,-8.73) rectangle (11.21,-8.55);
 \fill[vibeyblue!80,rounded corners=1pt] (11.21,-8.97) rectangle (11.27,-8.79);
-\fill[vibeysilver] (11.25,-9.21) rectangle (11.37,-9.03);
-\node[vibeynote,anchor=west,text=vibeysilver] at (11.40,-9.12) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (11.25,-9.21) rectangle (11.37,-9.03);
 \fill[vibeyblue!80,rounded corners=1pt] (12.22,-9.21) rectangle (12.40,-9.03);
-\fill[vibeysilver] (12.40,-9.45) rectangle (12.52,-9.27);
-\node[vibeynote,anchor=west,text=vibeysilver] at (12.55,-9.36) {no end};
+\filldraw[fill=vibeysilver,draw=white,line width=.4pt] (12.40,-9.45) rectangle (12.52,-9.27);
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,0.00) {engines-provider};
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-0.24) {qwenloop-edit-tool};
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-0.48) {qwenloop-request-timeout};
@@ -2622,7 +2608,8 @@ them are the reviewer's and the operator's time, not the machine's.
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-9.12) {gap-ci-tenants-arch-macos-1};
 \node[font=\sffamily\tiny,anchor=east,text=vibeyink] at (-0.12,-9.36) {gap-ci-tenants-arch-macos-2};
 \node[vibeynote,anchor=north west,align=left] at (0,-9.91)
-  {one bar per logged start--end pair; time in UTC from 2026-09-22 12:03; a lane started twice is drawn twice};
+  {\textcolor{vibeyblue!80}{$\blacksquare$} one bar per logged start--end pair \quad \textcolor{vibeysilver}{$\blacksquare$} a start with no logged end \quad
+   time in UTC from 2026-09-22 12:03; a lane started twice is drawn twice};
 \end{tikzpicture}
 \caption{Lane starts and ends as the storm's progress log recorded them, over 23.1 hours from 2026-09-22 12:03 UTC. One local model served every lane in turn, one instance per model; the bars therefore never overlap in time, and the blank stretches are the reviewer's and the operator's, not the machine's.}
 \label{fig:storm-timeline}
@@ -2729,36 +2716,34 @@ time. The Ollama configuration finished the same session in 86 s, and the same
 record does not separate the model from the serving stack, so the difference is
 reported and not explained.
 
-<!-- BEGIN GENERATED figure:bench-hosts rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:bench-hosts rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.8cm},vibeyaxis,width=8.6cm,height=4.8cm,
   xmin=0.5,xmax=10.5,xtick={1,...,10},xlabel={turn of a ten-turn session}]
-\nextgroupplot[title={a. Generation speed as the context grows},ylabel={tokens / s},ymin=0,legend pos=south west]
+\nextgroupplot[title={a. Generation speed as the context grows},ylabel={tokens / s},ymin=0]
 \addplot[vibeyblue,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.2) (2,9.8) (3,9.3) (4,9.6) (5,9.4) (6,9.5) (7,7.6) (8,9.0) (9,8.8) (10,8.4)};
-\addlegendentry{A-baseline}
 \addplot[vibeyteal,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.2) (2,10.5) (3,10.0) (4,8.8) (5,9.4) (6,9.1) (7,8.0) (8,7.7) (9,6.9) (10,6.2)};
-\addlegendentry{B-1slot-q8-48k}
 \addplot[vibeygold,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.1) (2,10.8) (3,9.9) (4,9.4) (5,8.7) (6,8.1) (7,7.4) (8,7.5) (9,8.5) (10,7.9)};
-\addlegendentry{C-1slot-q8-48k-draft}
 \addplot[vibeyviolet,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.3) (2,10.4) (3,10.3) (4,10.1) (5,9.8) (6,8.0) (7,9.2) (8,8.3) (9,7.5) (10,8.5)};
-\addlegendentry{D-1slot-f16-32k}
-\nextgroupplot[title={b. Wall time per turn},ylabel={seconds},ymin=0,legend pos=north west]
+\nextgroupplot[title={b. Wall time per turn},ylabel={seconds},ymin=0,legend to name=bench-hosts-legend,legend columns=-1,
+  legend style={/tikz/every even column/.append style={column sep=6pt}}]
 \addplot[vibeyblue,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.44) (2,17.22) (3,18.32) (4,19.09) (5,22.51) (6,23.45) (7,26.94) (8,23.22) (9,25.76) (10,27.07)};
-\addlegendentry{A-baseline}
+\addlegendentry{A-baseline (215\,s)}
 \addplot[vibeyteal,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.63) (2,15.81) (3,17.54) (4,19.0) (5,20.66) (6,23.4) (7,26.1) (8,24.77) (9,29.29) (10,32.29)};
-\addlegendentry{B-1slot-q8-48k}
+\addlegendentry{B-1slot-q8-48k (220\,s)}
 \addplot[vibeygold,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.65) (2,15.3) (3,17.47) (4,18.63) (5,21.39) (6,25.27) (7,26.71) (8,25.26) (9,26.03) (10,27.83)};
-\addlegendentry{C-1slot-q8-48k-draft}
+\addlegendentry{C-1slot-q8-48k-draft (216\,s)}
 \addplot[vibeyviolet,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,11.41) (2,16.36) (3,17.7) (4,18.06) (5,20.31) (6,25.87) (7,24.37) (8,23.61) (9,27.42) (10,27.09)};
-\addlegendentry{D-1slot-f16-32k}
+\addlegendentry{D-1slot-f16-32k (212\,s)}
 \addplot[vibeyred,line width=.9pt,mark=*,mark size=1.1pt] coordinates {(1,8.89) (2,9.64) (3,8.46) (4,6.78) (5,8.43) (6,7.9) (7,8.44) (8,8.03) (9,10.48) (10,8.56)};
-\addlegendentry{E-gptoss-20b-ollama}
+\addlegendentry{E-gptoss-20b-ollama (86\,s)}
 \end{groupplot}
-\node[vibeynote,anchor=north west,align=left] at ([yshift=-0.85cm]group c1r1.south west)
-  {whole session: A-baseline: 215\,s; B-1slot-q8-48k: 220\,s; C-1slot-q8-48k-draft: 216\,s; D-1slot-f16-32k: 212\,s; E-gptoss-20b-ollama: 86\,s. E-gptoss-20b-64k: server exited during load, bench failed};
+\node[anchor=north,inner sep=0pt] (legend) at ($(group c1r1.south west)!0.5!(group c2r1.south east)+(0,-0.95cm)$)
+  {\pgfplotslegendfromname{bench-hosts-legend}};
+\node[vibeynote,anchor=north] at ([yshift=-0.08cm]legend.south) {in brackets, each configuration's whole-session wall time; E-gptoss-20b-64k: server exited during load, bench failed};
 \end{tikzpicture}
 \caption{The host benchmark of 2026-09-22: the same ten-turn session replayed against five server configurations on one 24\,GB machine. (a) Generation speed falls as the context fills for every llama.cpp configuration of Qwen2.5-Coder-14B, whatever the slot count or cache type. (b) The gpt-oss:20b model on Ollama completed the session in a fraction of the wall time; the same model served by llama.cpp at a 64k context failed to load at all. Every point is one row of the tracked results file.}
 \label{fig:bench-hosts}
@@ -2782,7 +2767,7 @@ difference is inside the noise and we do not claim it. That is sub-doctrine 8.j,
 to the iron: a setting moves against a number read from this host, and the number is
 recorded beside it.
 
-<!-- BEGIN GENERATED figure:host-context rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:host-context rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -2791,21 +2776,21 @@ recorded beside it.
 \draw[vibeyink,line width=.6pt] (0,0) -- (7.0,0);
 \draw[vibeyink] (0.00,0) -- (0.00,-0.08); \draw[vibeyink] (0.88,0) -- (0.88,-0.08); \draw[vibeyink] (1.75,0) -- (1.75,-0.08); \draw[vibeyink] (2.62,0) -- (2.62,-0.08); \draw[vibeyink] (3.50,0) -- (3.50,-0.08); \draw[vibeyink] (4.38,0) -- (4.38,-0.08); \draw[vibeyink] (5.25,0) -- (5.25,-0.08); \draw[vibeyink] (6.12,0) -- (6.12,-0.08); \draw[vibeyink] (7.00,0) -- (7.00,-0.08);
 \node[vibeynote,anchor=north] at (0,-0.1) {0};
-\node[vibeynote,anchor=north east] at (7.0,-0.1) {131,072 tokens};
-\draw[vibeyink,line width=.6pt] (1.07,0.12) -- (1.07,0.55) node[vibeynote,anchor=south,text=vibeyink] {p50\\20,070};
-\draw[vibeyink,line width=.6pt] (1.71,0.12) -- (1.71,0.87) node[vibeynote,anchor=south,text=vibeyink] {p90\\32,026};
-\draw[vibeyink,line width=.6pt] (1.97,0.12) -- (1.97,0.55) node[vibeynote,anchor=south,text=vibeyink] {p95\\36,816};
-\draw[vibeyink,line width=.6pt] (2.30,0.12) -- (2.30,0.87) node[vibeynote,anchor=south,text=vibeyink] {p99\\42,979};
-\draw[vibeyink,line width=.6pt] (2.62,0.12) -- (2.62,0.55) node[vibeynote,anchor=south,text=vibeyink] {max\\49,118};
-\draw[vibeyred,line width=.8pt,densely dashed] (1.75,-0.15) -- (1.75,-0.60) node[vibeynote,anchor=north,text=vibeyred,align=center] {32k: truncates 71 turns};
-\draw[vibeygreen,line width=.8pt,densely dashed] (3.50,-0.15) -- (3.50,-0.98) node[vibeynote,anchor=north,text=vibeygreen,align=center] {64k: chosen, 16,418 headroom};
-\draw[vibeygray,line width=.8pt,densely dashed] (7.00,-0.15) -- (7.00,-0.60) node[vibeynote,anchor=north,text=vibeygray,align=center] {128k: baseline, never reached};
-\node[vibeypill,anchor=south] at (7.00,1.35) {A: 18.55\,GB wired, 28.0 tok/s};
-\node[vibeypill,anchor=south] at (3.50,1.63) {B: 17.25\,GB wired, 32.5 tok/s};
-\node[vibeypill,anchor=south] at (3.50,1.35) {C: 17.24\,GB wired, 30.9 tok/s, inconclusive};
-\node[vibeyhead,anchor=south west] at (0,1.95) {context actually used per turn, 838 storm turns};
+\node[vibeynote,anchor=north east] at (6.92,-0.1) {131,072 tokens};
+\draw[vibeyink,line width=.6pt] (1.07,0.12) -- (1.07,0.34) -- (0.35,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p50\\20,070};
+\draw[vibeyink,line width=.6pt] (1.71,0.12) -- (1.71,0.34) -- (1.15,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p90\\32,026};
+\draw[vibeyink,line width=.6pt] (1.97,0.12) -- (1.97,0.34) -- (1.95,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p95\\36,816};
+\draw[vibeyink,line width=.6pt] (2.30,0.12) -- (2.30,0.34) -- (2.75,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {p99\\42,979};
+\draw[vibeyink,line width=.6pt] (2.62,0.12) -- (2.62,0.34) -- (3.55,0.62) node[vibeynote,anchor=south,text=vibeyink,inner sep=1.5pt] {max\\49,118};
+\draw[vibeyred,line width=.8pt,densely dashed] (1.75,-0.15) -- (1.75,-0.60) node[vibeynote,anchor=north,text=vibeyred,align=center] (window0) {32k: truncates 71 turns};
+\draw[vibeygreen,line width=.8pt,densely dashed] (3.50,-0.15) -- (3.50,-1.50) node[vibeynote,anchor=north,text=vibeygreen,align=center] (window1) {64k: chosen, 16,418 headroom};
+\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor=north] (window1sweep0) at ([yshift=-1.5pt]window1.south) {B $\cdot$ f16 KV cache\\17.25\,GB wired, 32.5 tok/s};
+\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor=north] (window1sweep1) at ([yshift=-1.5pt]window1sweep0.south) {C $\cdot$ q8\_0 (requested) KV cache\\17.24\,GB wired, 30.9 tok/s, inconclusive};
+\draw[vibeygray,line width=.8pt,densely dashed] (7.00,-0.15) -- (7.00,-0.60) node[vibeynote,anchor=north east,text=vibeygray,align=center] (window2) {128k: baseline, never reached};
+\node[vibeypill,shape=rectangle,rounded corners=4.5pt,anchor=north east] (window2sweep0) at ([yshift=-1.5pt]window2.south east) {A $\cdot$ f16 KV cache\\18.55\,GB wired, 28.0 tok/s};
+\node[vibeyhead,anchor=south west] at (0,1.25) {context actually used per turn, 838 storm turns};
 \end{tikzpicture}
-\caption{Fitting the model to the iron. The percentiles mark how much context 838 real storm turns used; the dashed lines are the three context windows considered. A 32k window would have truncated 71 turns, and the 128k baseline, never reached by any turn, wired 18.55\,GB of a 24\,GB machine. The 64k window chosen covers every recorded turn with a third again as headroom, and the sweep's pills report what each setting cost and delivered.}
+\caption{Fitting the model to the iron. The percentiles mark how much context 838 real storm turns used; the dashed lines are the three context windows considered. A 32k window would have truncated 71 turns, and the 128k baseline, never reached by any turn, wired 18.55\,GB of a 24\,GB machine. The 64k window chosen covers every recorded turn with a third again as headroom. Beneath each window, the sweep's configurations measured at it report what each setting cost and delivered.}
 \label{fig:host-context}
 \end{figure}
 ```
@@ -2849,16 +2834,16 @@ was not ratified at the cutoff.
 
 ### Field data
 
-The git history is field data: nothing in it was held fixed. At the current source
-revision, 1,513 commits are reachable across nine root histories, the absorbed histories
+The git history is field data: nothing in it was held fixed. At the pinned source
+revision, 1,514 commits are reachable across nine root histories, the absorbed histories
 of the family's packages. Since 2026-08-09, when the family's own development begins,
-1,501 commits landed on 38 active days, between 1 and 191 per day (median 31, mean 39.5,
+1,502 commits landed on 38 active days, between 1 and 191 per day (median 31, mean 39.5,
 sample standard deviation 38.3). Commits landed in all 24 hours of the day in US
-Eastern time, with the fewest (19) in the 09:00 hour and the most (90) in the 18:00
+Eastern time, with the fewest (25) in the 09:00 hour and the most (102) in the 18:00
 hour. The longest
 pause was nine days with no commit, from 2026-08-30 to 2026-09-09, and nothing in the
 repository records its cause. Seventeen `vibey` release tags point at commits dated
-between 2026-08-16 and 2026-09-21, and 686 commit subjects across the absorbed
+between 2026-08-16 and 2026-09-21, and 683 commit subjects across the absorbed
 histories end in a pull-request reference.
 
 The daily rate's spread is 100% of its mean, against 24% in the controlled region.
@@ -2869,24 +2854,24 @@ mistaken for a field rate.
 
 The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily).
 
-<!-- BEGIN GENERATED figure:commits-daily rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:commits-daily rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{axis}[vibeyaxis,width=17.2cm,height=5.6cm,ybar,bar width=4.2pt,xmin=-0.7,xmax=50.7,ymin=0,ymax=231,
-  xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day (2026, 3680d700 and earlier)},ylabel={commits}]
+  xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day (2026, c78049b6 and earlier)},ylabel={commits}]
 \addplot[fill=vibeyblue,draw=none] coordinates {(0,5) (1,41) (3,21) (4,130) (5,27) (6,92) (7,47) (8,22) (9,39) (10,20) (11,52) (12,75) (13,13) (14,61) (15,1) (16,38) (17,3) (18,56) (19,29) (20,91) (21,71) (31,3) (32,13) (36,24) (37,61) (38,33) (39,16) (40,191) (41,7) (42,4) (43,8) (44,23) (45,37) (46,41) (47,33) (48,27) (49,45) (50,2)};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:7,53) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:7,56) {v0.1.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:11,58) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:11,61) {v0.1.1, v0.1.2};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:11,61) {v0.1.1--v0.1.2};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:15,7) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:15,10) {v0.2.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:20,97) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:20,100) {v0.3.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:21,77) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:21,80) {v0.4.0, v0.5.0};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:21,80) {v0.4.0--v0.5.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:36,30) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:36,33) {v0.6.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:37,67) {};
@@ -2894,9 +2879,9 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \node[vibeyanchor,fill=vibeygold] at (axis cs:38,39) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:38,42) {v0.8.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:40,197) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:40,200) {v1.0.0, v1.1.0, v1.2.0, v1.3.0};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:40,200) {v1.0.0--v1.3.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:41,13) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:41,16) {v1.4.0, v1.5.0};
+\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:41,16) {v1.4.0--v1.5.0};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:43,14) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:43,17) {v2.0.0};
 \draw[decorate,decoration={brace,amplitude=3pt},vibeygray] (axis cs:22,6) -- (axis cs:30,6);
@@ -2905,7 +2890,7 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 \node[vibeynote,anchor=north west,align=left] at (axis description cs:0.01,0.97) {\textcolor{vibeygold}{$\bullet$} vibey release tag};
 \end{axis}
 \end{tikzpicture}
-\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision 3680d700: 1,502 commits on 38 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
+\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision c78049b6: 1,502 commits on 38 active days, with the busiest day at 191. Gold marks are the 17 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
 \label{fig:commits-daily}
 \end{figure*}
 ```
@@ -2913,20 +2898,20 @@ The daily cadence and release events are tracked in [Fig. 27](#fig:commits-daily
 
 The circadian rhythm, weekday distribution, and Conventional Commit types are captured in [Fig. 28](#fig:commit-rhythm).
 
-<!-- BEGIN GENERATED figure:commit-rhythm rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:commit-rhythm rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{scope}[xshift=-5.4cm]
 \draw[vibeyline] (0,0) circle (0.527); \draw[vibeyline] (0,0) circle (1.054); \draw[vibeyline] (0,0) circle (1.581);
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (90:1.159) arc[start angle=90,end angle=75,radius=1.159] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (90:1.138) arc[start angle=90,end angle=75,radius=1.138] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (75:1.075) arc[start angle=75,end angle=60,radius=1.075] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (60:1.750) arc[start angle=60,end angle=45,radius=1.750] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (45:1.180) arc[start angle=45,end angle=30,radius=1.180] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (30:1.750) arc[start angle=30,end angle=15,radius=1.750] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (15:0.822) arc[start angle=15,end angle=0,radius=0.822] -- cycle;
-\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (0:0.927) arc[start angle=0,end angle=-15,radius=0.927] -- cycle;
+\fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (0:0.949) arc[start angle=0,end angle=-15,radius=0.949] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-15:0.759) arc[start angle=-15,end angle=-30,radius=0.759] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-30:0.885) arc[start angle=-30,end angle=-45,radius=0.885] -- cycle;
 \fill[vibeyred!70,draw=white,line width=.4pt] (0,0) -- (-45:0.527) arc[start angle=-45,end angle=-60,radius=0.527] -- cycle;
@@ -2945,19 +2930,20 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-240:1.180) arc[start angle=-240,end angle=-255,radius=1.180] -- cycle;
 \fill[vibeyblue!85,draw=white,line width=.4pt] (0,0) -- (-255:0.632) arc[start angle=-255,end angle=-270,radius=0.632] -- cycle;
 \node[vibeynote,text=vibeygray] at (82.5:2.42) {0}; \node[vibeynote,text=vibeygray] at (37.5:2.42) {3}; \node[vibeynote,text=vibeygray] at (-7.5:2.42) {6}; \node[vibeynote,text=vibeygray] at (-52.5:2.42) {9}; \node[vibeynote,text=vibeygray] at (-97.5:2.42) {12}; \node[vibeynote,text=vibeygray] at (-142.5:2.42) {15}; \node[vibeynote,text=vibeygray] at (-187.5:2.42) {18}; \node[vibeynote,text=vibeygray] at (-232.5:2.42) {21};
-\node[vibeynote,anchor=south west,text=vibeygray] at (-2.6,2.45) {commits by hour, US Eastern};
-\node[vibeynote,anchor=north west,text=vibeygray,align=left] at (-2.6,-2.45) {rings at 25, 50, 75 commits\\\textcolor{vibeygold}{$\blacksquare$} busiest 18:00 (102) \; \textcolor{vibeyred!70}{$\blacksquare$} quietest 09:00 (25)};
+\node[vibeynote,anchor=north,text=vibeygray,align=center] at (0,-2.62) {rings at 25, 50 and 75 commits\\[1pt]\textcolor{vibeygold}{$\blacksquare$} busiest 18:00 (102) \quad \textcolor{vibeyred!70}{$\blacksquare$} quietest 09:00 (25)};
 \end{scope}
-\begin{axis}[vibeybars,at={(0.0cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
-  xtick={0,...,6},xticklabels={Mon,Tue,Wed,Thu,Fri,Sat,Sun},title={commits by weekday},ylabel={commits}]
+\begin{axis}[vibeybars,at={(0.0cm,2.7cm)},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=6.6,ymin=0,
+  xtick={0,...,6},xticklabels={Mon,Tue,Wed,Thu,Fri,Sat,Sun},title={b. Commits by weekday},ylabel={commits},enlarge y limits={upper,value=0.12},title style={name=weekdaystitle}]
 \addplot[fill=vibeyblue,draw=none] coordinates {(0,98) (1,161) (2,117) (3,308) (4,355) (5,230) (6,233)};
 \end{axis}
-\begin{axis}[vibeybars,at={(6.1cm,-2.6cm)},anchor=south west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=7.6,ymin=0,
-  xtick={0,...,7},xticklabels={chore,fix,feat,other,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={Conventional Commit types},ylabel={commits}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,402) (1,302) (2,291) (3,277) (4,134) (5,41) (6,33) (7,8)};
+\begin{axis}[vibeybars,at={(6.1cm,2.7cm)},anchor=north west,width=5.3cm,height=5.2cm,bar width=9pt,xmin=-0.6,xmax=7.6,ymin=0,
+  xtick={0,...,7},xticklabels={chore,fix,feat,other,docs,ci,test,refactor},x tick label style={rotate=45,anchor=north east,font=\sffamily\tiny},title={c. Conventional Commit types},ylabel={commits},enlarge y limits={upper,value=0.12}]
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(0,401) (1,302) (2,291) (3,278) (4,134) (5,41) (6,33) (7,8)};
 \end{axis}
+% The clock's title shares the bar charts' title baseline, so the three panels read as one row.
+\node[vibeyhead,anchor=base west] at (-8.0,0 |- weekdaystitle.base) {a. Commits by hour, US Eastern};
 \end{tikzpicture}
-\caption{The rhythm of production since 2026-08-09, at revision 3680d700. Left, a 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 102 and the quietest at 09:00 with 25. Centre, the weekday distribution. Right, the Conventional Commit types the pre-commit hook enforces, most common first.}
+\caption{The rhythm of production since 2026-08-09, at revision c78049b6. (a) A 24-hour clock of commits in US Eastern time: every hour of the day carries commits, the busiest at 18:00 with 102 and the quietest at 09:00 with 25. (b) The weekday distribution. (c) The Conventional Commit types the pre-commit hook enforces, most common first.}
 \label{fig:commit-rhythm}
 \end{figure*}
 ```
@@ -2965,17 +2951,18 @@ The circadian rhythm, weekday distribution, and Conventional Commit types are ca
 
 Cumulative deliveries, including the absorbed package roots and pull requests, appear in [Fig. 29](#fig:cumulative-commits).
 
-<!-- BEGIN GENERATED figure:cumulative-commits rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:cumulative-commits rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{axis}[vibeyaxis,width=17.2cm,height=5.4cm,xmin=0,xmax=50,ymin=0,ymax=1582,
   xtick={0,7,14,21,28,35,42,49},xticklabels={Aug 9,Aug 16,Aug 23,Aug 30,Sep 6,Sep 13,Sep 20,Sep 27},xlabel={day},ylabel={cumulative},legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)} \closedcycle;
+\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)} \closedcycle;
+\addplot[vibeyblue,line width=1pt] coordinates {(0,0) (0,5) (1,46) (2,46) (3,67) (4,197) (5,224) (6,316) (7,363) (8,385) (9,424) (10,444) (11,496) (12,571) (13,584) (14,645) (15,646) (16,684) (17,687) (18,743) (19,772) (20,863) (21,934) (22,934) (23,934) (24,934) (25,934) (26,934) (27,934) (28,934) (29,934) (30,934) (31,937) (32,950) (33,950) (34,950) (35,950) (36,974) (37,1035) (38,1068) (39,1084) (40,1275) (41,1282) (42,1286) (43,1294) (44,1317) (45,1354) (46,1395) (47,1428) (48,1455) (49,1500) (50,1502)};
 \addlegendentry{commits since Aug 9 (1,502; 12 earlier)}
-\addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,575) (46,616) (47,649) (48,675) (49,681) (50,682)};
-\addlegendentry{commit subjects closing a pull request (682)}
+\addplot[vibeyteal,line width=1pt] coordinates {(0,0) (0,0) (1,7) (2,7) (3,9) (4,20) (5,20) (6,31) (7,47) (8,69) (9,104) (10,124) (11,145) (12,181) (13,188) (14,218) (15,218) (16,242) (17,244) (18,281) (19,304) (20,373) (21,426) (22,426) (23,426) (24,426) (25,426) (26,426) (27,426) (28,426) (29,426) (30,426) (31,426) (32,426) (33,426) (34,426) (35,426) (36,434) (37,451) (38,483) (39,494) (40,501) (41,505) (42,508) (43,515) (44,538) (45,575) (46,616) (47,649) (48,675) (49,681) (50,683)};
+\addlegendentry{commit subjects closing a pull request (683)}
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:0,0) {};
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:1,0) {};
 \node[vibeyanchor,fill=vibeyviolet] at (axis cs:4,0) {};
@@ -2987,7 +2974,7 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 \node[vibeynote,anchor=south east,align=right] at (axis description cs:0.99,0.04) {\textcolor{vibeyviolet}{$\bullet$} a package's root commit: 8 of 9 root histories begin in the window};
 \end{axis}
 \end{tikzpicture}
-\caption{Cumulative production at revision 3680d700: commits since 2026-08-09 and, beneath them, the commits whose subject closes a pull request. The violet marks on the baseline are the days on which the absorbed packages' own histories begin; the family was written as several repositories and merged into one tree with every history preserved.}
+\caption{Cumulative production at revision c78049b6: commits since 2026-08-09 and, beneath them, the commits whose subject closes a pull request. The violet marks on the baseline are the days on which the absorbed packages' own histories begin; the family was written as several repositories and merged into one tree with every history preserved.}
 \label{fig:cumulative-commits}
 \end{figure*}
 ```
@@ -2995,7 +2982,7 @@ Cumulative deliveries, including the absorbed package roots and pull requests, a
 
 The timeline of releases across each package in the family is shown in [Fig. 30](#fig:release-cadence).
 
-<!-- BEGIN GENERATED figure:release-cadence rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:release-cadence rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
@@ -3036,33 +3023,33 @@ The timeline of releases across each package in the family is shown in [Fig. 30]
 \draw[vibeyline] (15.40,0.06) -- (15.40,0.48);
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.48) {2.0.0};
 \end{tikzpicture}
-\caption{Every release tag reachable at revision 3680d700, 17 tags on the repository. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
+\caption{Every release tag reachable at revision c78049b6, 17 tags on the repository. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
 <!-- END GENERATED figure:release-cadence -->
 
-Finally, the architectural shape of the consolidated repository across its 11 packages and layers is depicted in [Fig. 31](#fig:codebase-shape).
+Finally, the architectural shape of the consolidated repository across its ten packages and the orchestrator's layers is depicted in [Fig. 31](#fig:codebase-shape).
 
-<!-- BEGIN GENERATED figure:codebase-shape rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:codebase-shape rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=3 by 1,horizontal sep=1.9cm},vibeyaxis,height=5.6cm,
   y dir=reverse,ytick={0,...,9},ymin=-0.7,ymax=9.7,xmin=0,y tick label style={font=\sffamily\tiny},
-  scaled x ticks=false,x tick label style={/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}},point meta=x,
-  nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray,/pgf/number format/fixed,/pgf/number format/1000 sep={{,}}}]
-\nextgroupplot[title={a. Lines of Python per package},xbar,bar width=6pt,width=5.9cm,yticklabels={vibey-gh,vibey,claudeloop,vibey-bootstrap,agyloop,codexloop,cursorloop,qwenloop,vibey-skills,runners-common},xlabel={lines}]
-\addplot[fill=vibeyblue,draw=none] coordinates {(75594,0) (58279,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (10909,7) (3109,8) (258,9)};
-\nextgroupplot[title={b. Test functions per package},xbar,bar width=6pt,width=4.9cm,yticklabels={,,,,,,,,,,,},xlabel={tests}]
-\addplot[fill=vibeyteal!85,draw=none] coordinates {(2011,0) (0,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (291,7) (33,8) (0,9)};
+  scaled x ticks=false,x tick label style={/pgf/number format/fixed},point meta=x,
+  nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray,/pgf/number format/fixed}]
+\nextgroupplot[title={a. Lines of Python per package},xbar,bar width=6pt,width=5.9cm,yticklabels={vibey,vibey-gh,claudeloop,vibey-bootstrap,agyloop,codexloop,cursorloop,qwenloop,vibey-skills,runners-common},xlabel={lines},xmax=183432]
+\addplot[fill=vibeyblue,draw=none] coordinates {(146746,0) (75594,1) (36869,2) (32732,3) (23972,4) (22614,5) (16750,6) (10909,7) (3109,8) (258,9)};
+\nextgroupplot[title={b. Test functions per package},xbar,bar width=6pt,width=4.9cm,yticklabels={,,,,,,,,,},xlabel={tests},xmax=4868]
+\addplot[fill=vibeyteal!85,draw=none] coordinates {(3894,0) (2011,1) (1478,2) (971,3) (678,4) (711,5) (562,6) (291,7) (33,8) (0,9)};
 \nextgroupplot[title={c. The orchestrator's layers},xbar,bar width=6pt,width=4.9cm,ytick={0,...,4},yticklabels={domain,application,infrastructure,cli,tui},ymin=-0.7,ymax=4.7,xlabel={lines},xmax=45323,nodes near coords={}]
-\addplot[fill=vibeyviolet!85,draw=none] coordinates {(12488,0) (13786,1) (23854,2) (6347,3) (590,4)};
-\node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:13388,0) {12,488 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:14686,1) {13,786 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:24754,2) {23,854 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:7247,3) {6,347 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:1490,4) {590 $\cdot$ exempt};
+\addplot[fill=vibeyviolet!85,draw=none] coordinates {(12488,0) (13786,1) (23854,2) (6348,3) (590,4)};
+\node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:13388,0) {12,488 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:14686,1) {13,786 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:24754,2) {23,854 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeygreen!15,text=vibeygreen!60!black] at (axis cs:7248,3) {6,348 $\cdot$ 100\% branch floor}; \node[vibeypill,anchor=west,fill=vibeysilver!30,text=vibeygray] at (axis cs:1490,4) {590 $\cdot$ exempt};
 \end{groupplot}
 \end{tikzpicture}
-\caption{The shape of the tree at revision 3680d700: 389,222 lines of Python in 2,245 files and 10,638 test functions. (a) Lines per package; (b) test functions per package, with 3,893 more in the orchestrator's own top-level suite; (c) the orchestrator's layers, four of which fail the build below 100\% branch coverage.}
+\caption{The shape of the tree at revision c78049b6: 389,277 lines of Python in 2,245 files and 10,639 test functions. (a) Lines and (b) test functions per package, each package counted together with the test suite its pytest configuration collects, \texttt{vibey}'s in the top-level \texttt{tests/}; \texttt{runners-common} has no test functions at this revision. (c) The orchestrator's layers, four of which fail the build below 100\% branch coverage.}
 \label{fig:codebase-shape}
 \end{figure*}
 ```
@@ -3267,8 +3254,8 @@ are illustrated in [Fig. 32](#fig:six-materials).
   \draw[vibeylink] (m4) -- (m5);
   \draw[vibeylink] (m5) -- (m6) node[midway,vibeypill,left=2pt] {$\mathcal{C}_{56}$};
   \draw[vibeylink] (m6) -- (m1);
-  \node[vibeynote,anchor=south east] at (8.75,0.5)
-    {links $\mathcal{C}_{ij}$: coordination is a coupling,\\not a seventh material};
+  \node[vibeynote,anchor=south east] at (8.8,0.45)
+    {links $\mathcal{C}_{ij}$:\\coordination is a coupling,\\not a seventh material};
 
   % ---------------------------------------------------------------- from state to duration
   \node[vibeybox,minimum width=5.4cm] (S) at (14.35,5.7)
@@ -3317,7 +3304,7 @@ it. Because the held-out check exceeded the ceiling, the firm half of the predic
 is the upper end: with every coordinate at its target, the work should take no longer
 than $W / r_{\min}$, as plotted in [Fig. 33](#fig:completion-band).
 
-<!-- BEGIN GENERATED figure:completion-band rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:completion-band rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
@@ -3343,19 +3330,19 @@ than $W / r_{\min}$, as plotted in [Fig. 33](#fig:completion-band).
 Beyond single-task completion bands, project delivery velocity is tracked over time
 in the delivery-estimate ledger, shown in [Fig. 34](#fig:forecast).
 
-<!-- BEGIN GENERATED figure:forecast rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:forecast rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.7cm},vibeyaxis,width=7.9cm,height=4.6cm,
-  xmin=0.5,xmax=21.5,xtick={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21},xticklabels={Sep 19,Sep 19,Sep 19,Sep 20,Sep 21,Sep 23,Sep 23,Sep 24,Sep 24,Sep 24,Sep 25,Sep 25,Sep 25,Sep 26,Sep 26,Sep 26,Sep 26,Sep 26,Sep 26,Sep 27,Sep 27},x tick label style={rotate=30,anchor=north east},xlabel={forecast record}]
-\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=890,legend pos=north west]
+  xmin=0.5,xmax=21.5,xtick={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21},xticklabels={19,,,20,21,23,,24,,,25,,,26,,,,,,27,},xlabel={forecast record, by day (September 2026)}]
+\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=890,legend pos=south east]
 \addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {(1,0) (2,24) (3,24) (4,24) (5,25) (6,708) (7,706) (8,709) (9,710) (10,711) (11,712) (12,706) (13,711) (14,706) (15,699) (16,681) (17,687) (18,686) (19,693) (20,688) (21,688)};
 \addlegendentry{remaining}
 \addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {(1,235) (2,235) (3,235) (4,238) (5,247) (6,264) (7,279) (8,340) (9,342) (10,349) (11,351) (12,366) (13,376) (14,385) (15,386) (16,389) (17,393) (18,396) (19,400) (20,408) (21,415)};
 \addlegendentry{completed}
-\nextgroupplot[title={b. Forecast active days to completion},ylabel={active days},ymin=0,legend pos=north west]
+\nextgroupplot[title={b. Forecast active days to completion},ylabel={active days},ymin=0,ymax=90,legend pos=south east]
 \addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89) (11,48.68) (12,48.22) (13,47.27) (14,45.84) (15,47.08) (16,45.52) (17,45.45) (18,45.04) (19,45.05) (20,45.53) (21,44.76) (21,62.55) (20,62.55) (19,60.26) (18,62.36) (17,65.43) (16,64.86) (15,66.57) (14,64.18) (13,64.64) (12,64.18) (11,67.81) (10,67.71) (9,67.62) (8,67.52) (7,70.60) (6,78.67) (5,3.12) (4,3.00) (3,3.00) (2,3.00) (1,0.00)} -- cycle;
 \addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89) (11,48.68) (12,48.22) (13,47.27) (14,45.84) (15,47.08) (16,45.52) (17,45.45) (18,45.04) (19,45.05) (20,45.53) (21,44.76)};
 \addlegendentry{$W/r_{\max}$}
@@ -3377,21 +3364,21 @@ and the bare suite falling from 383 s to 135 s, without removing a gate
 (`docs/runbooks/expansion/evidence/13-front1-validation.md`), as illustrated in [Fig. 35](#fig:governance-time).
 That is a governance dilation made smaller while the requirement stayed the same.
 
-<!-- BEGIN GENERATED figure:governance-time rev:3680d700dc60f6d9e863d03b87682bc6b87540b9 — regenerated by scripts/paper_figures.py -->
+<!-- BEGIN GENERATED figure:governance-time rev:c78049b6fc6052be04c7da49510ed6bebe6e63bd — regenerated by scripts/paper_figures.py -->
 ```latex
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[vibeybars,width=8.6cm,height=4.8cm,bar width=11pt,xmin=-0.6,xmax=3.6,ymin=0,ymax=1836,
+\begin{axis}[vibeybars,width=8.6cm,height=4.8cm,bar width=13pt,bar shift=0pt,xmin=-0.6,xmax=3.6,ymin=0,ymax=1836,
   xtick={0,1,2,3},xticklabels={four gates before,four gates after,suite before,suite after},
   x tick label style={font=\sffamily\tiny,align=center,text width=1.6cm},ylabel={seconds},
   nodes near coords,every node near coord/.append style={font=\sffamily\tiny,text=vibeygray}]
-\addplot[fill=vibeyred!70,draw=none] coordinates {(0,1530)};
-\addplot[fill=vibeygreen!80,draw=none] coordinates {(1,136)};
-\addplot[fill=vibeyred!70,draw=none] coordinates {(2,383)};
-\addplot[fill=vibeygreen!80,draw=none] coordinates {(3,135)};
-\node[vibeycallout,anchor=south] at (axis cs:1,274) {$11.3\times$ faster};
-\node[vibeycallout,anchor=south] at (axis cs:3,273) {$2.8\times$ faster};
+\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {(0,1530)};
+\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {(1,136)};
+\addplot[fill=vibeyred!70,draw=none,bar shift=0pt] coordinates {(2,383)};
+\addplot[fill=vibeygreen!80,draw=none,bar shift=0pt] coordinates {(3,135)};
+\node[vibeycallout,anchor=south,align=center] at (axis cs:0.5,356) {$11.3\times$\\faster};
+\node[vibeycallout,anchor=south,align=center] at (axis cs:2.5,355) {$2.8\times$\\faster};
 \end{axis}
 \end{tikzpicture}
 \caption{A governance dilation made smaller without lowering the bar. Computing the four per-layer coverage floors from one instrumented run took the gates from about 1,530\,s to 136\,s, and the suite itself from 383\,s to 135\,s, with no gate removed.}
@@ -3438,233 +3425,435 @@ We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally
 \end{plainwords}
 ```
 
-## Validation
-
 ## The 3.0.0 operational atlas
 
-The post-cutoff work is not one feature but a change in the system's control surface.
-The following atlas makes those changes inspectable without asking the reader to infer
-them from a changelog. The counts are source-tree counts at the paper revision; the
-arrows describe contracts, not an assertion that every path is exercised on every run.
+The work after the paper's cutoff is not one feature. It changes where the system can
+be stopped, where it can be wrong without saying so, and who may act at each step. The
+ten figures of this section draw those changes from the code rather than the changelog.
+Each shows a contract: what is recorded, what is refused, and what a failure turns
+into. None of them asserts that every path has been exercised on a live run, and the
+text says where one has not.
+
+**The delivery path.** 3.0.0 adds a bridge from the forge's issue list to the
+six-phase machine: `scripts/triaged_delivery.py`, run once or on an interval, claims
+one triaged issue, creates a vibey project for it in a worktree of its own, drives the
+normal worker on the sovereign engine, and publishes the result as a pull request
+([Fig. 36](#fig:delivery-pipeline)). The bridge never edits a branch itself; the worker
+writes the code and the phase machine decides when it may. Every step writes its
+observations to a per-project evidence file under `.vibey/delivery-evidence/`, and
+every exit from the path that is not success is recorded there as what it was: a
+timeout, a pause for capacity, a parked gate, or a pull request whose checks have not
+passed. None of them is recorded as a completion.
 
 ```latex
-\begin{figure*}[t]
+\begin{figure*}[!t]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm,
-  box/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum height=.72cm,align=center,font=\sffamily\scriptsize},
-  gate/.style={draw=vibeyviolet!65,fill=vibeyviolet!10,rounded corners=3pt,minimum height=.72cm,align=center,font=\sffamily\scriptsize},
-  local/.style={draw=vibeyteal!70,fill=vibeyteal!12,rounded corners=3pt,minimum height=.72cm,align=center,font=\sffamily\scriptsize},
-  arrow/.style={-latex,line width=.65pt,draw=vibeygray}]
-  \node[box,minimum width=2.2cm] (issue) at (0,0) {GitHub issue\\688 open units};
-  \node[box,minimum width=2.2cm] (queue) at (3.0,0) {durable triage queue\\PostgreSQL};
-  \node[gate,minimum width=2.2cm] (design) at (6,0) {design gate\\parked if unanswered};
-  \node[local,minimum width=2.2cm] (worker) at (9,0) {gptossloop worker\\isolated worktree};
-  \node[gate,minimum width=2.2cm] (review) at (12,0) {sovereign review\\exact head};
-  \node[box,minimum width=2.2cm] (pr) at (15,0) {draft PR\\merge train};
-  \foreach \a/\b in {issue/queue,queue/design,design/worker,worker/review,review/pr}{\draw[arrow] (\a) -- (\b);}
-  \node[font=\sffamily\tiny,text=vibeyred,align=center] at (3,-1.05) {priority is derived\\not hand-edited};
-  \node[font=\sffamily\tiny,text=vibeyred,align=center] at (9,-1.05) {timeout + descendant reaping\\before evidence};
-  \node[font=\sffamily\tiny,text=vibeyred,align=center] at (15,-1.05) {push is not merge\\checks remain required};
+  stp/.style={minimum width=2.45cm,minimum height=1.3cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred}]
+  % ---- the forward path
+  \node[vibeysoft,stp]      (tri)   at (0,0)     {\textbf{Triaged issue}\\forge labels\\order derived};
+  \node[vibeysoft,stp]      (lease) at (3.05,0)  {\textbf{Ticket lease}\\PostgreSQL row\\900\,s lease};
+  \node[vibeyvioletbox,stp] (des)   at (6.1,0)   {\textbf{Design}\\interview defaults\\answered, recorded};
+  \node[vibeytealbox,stp]   (bld)   at (9.15,0)  {\textbf{Build}\\gptossloop worker\\own worktree};
+  \node[vibeygate,stp]      (rev)   at (12.2,0)  {\textbf{Review}\\human gate\\project parks};
+  \node[vibeybox,stp]       (pub)   at (15.25,0) {\textbf{Publish}\\push gate, PR\\train on green};
+  \foreach \a/\b in {tri/lease,lease/des,des/bld,bld/rev,rev/pub}{\draw[vibeyflow] (\a) -- (\b);}
+  % ---- the evidence rail every exit lands on
+  \node[vibeywarn,minimum width=17.5cm,minimum height=.6cm] (ev) at (7.625,-2.35)
+    {\textbf{evidence record} \texttt{.vibey/delivery-evidence/<project>.json}: every exit is recorded as what it was, never as a completion};
+  \draw[vibeyback] (lease.south) -- node[redlab,right] {lease expired:\\ticket back to ready} (lease.south |- ev.north);
+  \draw[vibeyback] (bld.south) -- node[redlab,right] {deadline: tree reaped;\\capacity short: paused} (bld.south |- ev.north);
+  \draw[vibeyback] (rev.south) -- node[redlab,right] {gate open:\\project parked} (rev.south |- ev.north);
+  \draw[vibeyback] (pub.south) -- node[redlab,left] {checks not green:\\PR left open} (pub.south |- ev.north);
+  % ---- the rule above it
+  \node[lab,anchor=south] at (7.625,0.85) {the bridge never edits a branch: the worker writes code, the phase machine decides when it may, the forge decides when it merges};
 \end{tikzpicture}
-\caption{The durable delivery path added around the paper cutoff. Triage, dispatch, design answers, worker execution, review and publication are separate evidence-bearing states. A failure parks or requeues the item; it does not become a completion claim.}
+\caption{The durable delivery path. A triaged issue is claimed under a lease, becomes an ordinary vibey project in its own worktree, is built by the sovereign engine, stops at the human review gate, and is published through the push gate as a pull request that the merge train takes only when every check is green. Each non-success exit (dashed) is written to the project's evidence record as what it was.}
 \label{fig:delivery-pipeline}
 \end{figure*}
 ```
 
+**Ordering and claiming.** The bridge keeps its tickets in PostgreSQL, not in a
+process's memory ([Fig. 37](#fig:queue-state)). A reconcile pass mirrors the forge's
+open, triaged issues into rows, and a claim takes the first `ready` row under a
+900-second lease with `FOR UPDATE SKIP LOCKED`, the same primitive the job queue uses.
+The order is derived, never edited: issues a person has bumped come first, in the order
+they were bumped, then the priority label from critical to low, then the issue least
+recently updated, then the issue number. A reap pass returns an expired lease to
+`ready`; at the cutoff that pass runs only when the queue tool is invoked with
+`--reap`, not on the bridge's own loop, so an expired lease stays held until an
+operator reaps it. A dispatch is also marked on the issue
+itself, by a comment carrying the project's identity, so a second bridge that lost its
+database would still not dispatch the same issue twice.
+
 ```latex
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm,
-  s/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum width=2.1cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
-  a/.style={-latex,line width=.7pt,draw=vibeygray}]
-  \node[s] (probe) at (0,0) {probe grid};
-  \node[s] (measure) at (0,-1.25) {measure\\context/output};
-  \node[s] (persist) at (0,-2.5) {persist\\revision + shape};
-  \node[s] (select) at (3,-1.25) {select fastest\\valid fit};
-  \node[s,fill=vibeyteal!12,draw=vibeyteal!70] (run) at (3,-2.5) {runtime\\accepts match};
-  \node[s,fill=vibeyred!10,draw=vibeyred!65] (fallback) at (-3,-2.5) {stale/malformed\\safe fallback};
-  \draw[a] (probe) -- (measure) -- (persist) -- (select) -- (run);
-  \draw[a] (persist) -- (fallback);
-  \draw[a] (run) |- (fallback);
-  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (0,-3.35) {producer and consumer share the `valid` contract};
+  st/.style={minimum width=1.85cm,minimum height=.8cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred}]
+  \node[vibeysoft,st] (ready) at (0,0)     {\textbf{ready}\\claimable};
+  \node[vibeysoft,st] (leased) at (2.9,0)  {\textbf{leased}\\900\,s owner};
+  \node[vibeytealbox,st] (disp) at (5.8,0) {\textbf{dispatched}\\project made};
+  \node[vibeygood,st] (done) at (5.8,-2.05) {\textbf{completed}\\PR published};
+  \node[vibeyghost,st] (blk) at (2.9,-2.05) {\textbf{blocked}\\set by hand};
+  \node[vibeybox,minimum width=1.85cm] (gh) at (0,1.6) {forge: open issues\\labelled triaged};
+  \draw[vibeyflow] (gh) -- node[lab,right] {reconcile} (ready);
+  \draw[vibeyflow] (ready) -- node[lab,above] {claim,\\skip locked} (leased);
+  \draw[vibeyflow] (leased) -- node[lab,above] {dispatch} (disp);
+  \draw[vibeyflow] (disp) -- node[lab,right] {publish} (done);
+  \draw[vibeyback] (leased.south) to[bend left=40] node[redlab,below] {reap: lease expired} (ready.south);
+  \draw[vibeydashed,-{Stealth[length=1.8mm]}] (disp) -- (blk);
+  \node[vibeypill] at (2.9,-3.25) {claim order: bumped first, then critical $\to$ low,\\then least recently updated, then issue number};
 \end{tikzpicture}
-\caption{Measured local capacity is a lifecycle, not a magic number. The persisted fit is bound to endpoint, model, revision and prompt shape; a mismatch fails closed to configured ceilings.}
-\label{fig:probe-lifecycle}
+\caption{The triage ticket. Rows mirror the forge's triaged issues and are claimed under a lease with \texttt{FOR UPDATE SKIP LOCKED}; an expired lease returns the row to ready. The claim order is derived from labels and update time, so no one reorders the queue by hand, and the only state a person sets directly is blocked.}
+\label{fig:queue-state}
 \end{figure}
 ```
 
-```latex
-\begin{figure*}[t]
-\centering
-\begin{tikzpicture}[x=1cm,y=1cm,
-  n/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.1cm,minimum height=.6cm,align=center,font=\sffamily\scriptsize},
-  e/.style={-latex,line width=.65pt,draw=vibeygray}]
-  \node[n] (spec) at (0,0) {specification};
-  \node[n] (slice) at (3,0) {bounded slice};
-  \node[n] (link) at (6,0) {requires / links};
-  \node[n] (budget) at (9,0) {budget measured};
-  \node[n] (review) at (12,0) {reviewed boundary};
-  \node[n,fill=vibeyteal!12,draw=vibeyteal!70] (index) at (15,0) {numbered index};
-  \foreach \a/\b in {spec/slice,slice/link,link/budget,budget/review,review/index}{\draw[e] (\a) -- (\b);}
-  \draw[e,draw=vibeyred] (budget.south) |- ++(0,-.95) -| (slice.south);
-  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.55) {ADR-0075: identity, provenance, bounded size, explicit links; split or park, never truncate};
-\end{tikzpicture}
-\caption{The context-microslice contract. Large context is converted into identified, bounded slices with measured budgets and explicit provenance. The converter may split or park; it may not silently drop the tail.}
-\label{fig:microslice-contract}
-\end{figure*}
-```
+**Who may act.** The six-phase machine names the gates; the bridge adds actors who
+were not in the original model ([Fig. 38](#fig:authority-map)). A person labels and
+prioritises issues, answers the review gate, approves the merge, and is the only party
+who can opt a project into deployment, which is never inferred. The bridge claims,
+orders and publishes. The engine writes code only inside BUILD and only in its own
+worktree. The forge's required checks decide whether the merge train may take a pull
+request. One cell of the map needs stating plainly, because it departs from the
+original model: the DESIGN interview. The bridge answers the design interview's
+question gates with their declared defaults and then accepts the design itself, so on
+this path DESIGN does not wait for a person. Worse, the answers are recorded under the
+operator's own name with trusted provenance: on the first delivered issue three of the
+four interview gates were answered one second after they were raised, and the ledger
+cannot tell those answers from a person's. The path still stops at REVIEW, but a design
+gate answered by a default is not a design gate a person answered. We report this as a
+defect of the bridge, not a property of the model, and the model's rule, a parked gate
+and a recorded human answer, is the one the bridge must be brought back to.
 
 ```latex
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm,
-  c/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum width=2.65cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
-  a/.style={-latex,line width=.7pt,draw=vibeygray}]
-  \node[c] (head) at (0,0) {head $h_i$};
-  \node[c] (scan) at (0,-1.2) {scan claim $(c,h_i)$};
-  \node[c] (change) at (3,-1.2) {head changes $h_j$};
-  \node[c,fill=vibeyred!10,draw=vibeyred!65] (reject) at (3,-2.4) {reject stale claim};
-  \node[c,fill=vibeyteal!12,draw=vibeyteal!70] (fresh) at (0,-2.4) {fresh claim only};
-  \draw[a] (head) -- (scan) -- (fresh);
-  \draw[a] (scan) -- (change) -- (reject);
-  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3.2) {exact-head calculus: revision is part of every verdict};
+  rowl/.style={font=\sffamily\scriptsize,text=vibeyink,anchor=east},
+  colh/.style={font=\sffamily\tiny\bfseries,text=vibeyink,align=center},
+  yes/.style={circle,fill=vibeyblue,inner sep=2.1pt},
+  hum/.style={circle,fill=vibeygold!90!black,inner sep=2.1pt},
+  flag/.style={circle,fill=vibeyred,inner sep=2.1pt}]
+  \foreach \x/\h in {3.35/{person},4.6/{delivery\\bridge},5.85/{engine},7.1/{forge\\checks}}
+    {\node[colh] at (\x,0.45) {\h};}
+  \foreach \y/\r in {0/{label and prioritise an issue},
+                     -0.45/{claim, order and lease},
+                     -0.9/{answer the design interview},
+                     -1.35/{accept the design},
+                     -1.8/{write code in BUILD},
+                     -2.25/{give the review verdict},
+                     -2.7/{push, open the pull request},
+                     -3.15/{merge into develop},
+                     -3.6/{opt into deployment}}
+    {\node[rowl] at (2.65,\y) {\r};
+     \draw[vibeyedge] (0.2,\y-0.225) -- (7.65,\y-0.225);}
+  \node[hum] at (3.35,0) {};
+  \node[yes] at (4.6,-0.45) {};
+  \node[flag] at (4.6,-0.9) {};
+  \node[flag] at (4.6,-1.35) {};
+  \node[yes] at (5.85,-1.8) {};
+  \node[hum] at (3.35,-2.25) {};
+  \node[yes] at (4.6,-2.7) {};
+  \node[hum] at (3.35,-3.15) {};
+  \node[yes] at (7.1,-3.15) {};
+  \node[hum] at (3.35,-3.6) {};
+  \node[font=\sffamily\tiny,text=vibeygray,align=left,anchor=north west] at (0.2,-4.0)
+    {\tikz\node[hum]{}; a person's recorded decision\quad \tikz\node[yes]{}; automated\\
+     \tikz\node[flag]{}; automated on this path; the model reserves it to a person};
 \end{tikzpicture}
-\caption{Exact-head evaluation prevents a valid claim about one revision from authorizing an action on another. A new head invalidates prior claims and forces a fresh scan.}
-\label{fig:exact-head-lifecycle}
-\end{figure}
-```
-
-```latex
-\begin{figure*}[t]
-\centering
-\begin{tikzpicture}[x=1cm,y=1cm,
-  p/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.45cm,minimum height=.7cm,align=center,font=\sffamily\scriptsize},
-  g/.style={draw=vibeyviolet!65,fill=vibeyviolet!10,rounded corners=3pt,minimum width=2.45cm,minimum height=.7cm,align=center,font=\sffamily\scriptsize},
-  a/.style={-latex,line width=.65pt,draw=vibeygray}]
-  \node[p] (claim) at (0,0) {worker claim};
-  \node[g] (design) at (3,0) {design answer};
-  \node[p] (build) at (6,0) {build evidence};
-  \node[g] (review) at (9,0) {review verdict};
-  \node[p] (deploy) at (12,0) {deploy opt-in};
-  \node[g] (audit) at (15,0) {deployment review};
-  \foreach \a/\b in {claim/design,design/build,build/review,review/deploy,deploy/audit}{\draw[a] (\a) -- (\b);}
-  \draw[a,draw=vibeyred] (design.south) -- ++(0,-.85) -| (claim.south);
-  \draw[a,draw=vibeyred] (review.south) -- ++(0,-.85) -| (build.south);
-  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.5) {local completion is terminal when deployment is declined; deployment is never inferred};
-\end{tikzpicture}
-\caption{The six-phase machine as an authority map. Human gates are explicit state transitions; unattended workers occupy only build and deployment-execute phases. Declining deployment records a successful local completion rather than waiting indefinitely.}
+\caption{The authority map of the delivery path. Gold marks a decision a person records, blue an automated step. Red marks the two design steps the bridge performs with declared defaults, recorded under the operator's name, which the six-phase model reserves to a person; review, merge approval and deployment remain a person's, and deployment is never inferred.}
 \label{fig:authority-map}
-\end{figure*}
+\end{figure}
 ```
 
+**A worker that overruns.** The bridge gives each worker run a deadline, 900 seconds
+by default ([Fig. 39](#fig:process-reaping)). A worker that overruns is not merely
+signalled: the bridge walks its process tree, sends the terminate signal to the
+deepest descendants first and the worker last, waits two seconds, and kills whatever
+is still alive, because `uv run` starts children that outlive a signal sent only to
+their parent (the defect commit 19896f1 fixed). Only then does it record the timeout, and it
+leaves the job's lease to the queue's own reaper rather than releasing it, so the job
+returns to the queue by the same path a crashed worker's does and is fenced the same
+way: a late acknowledgement from the old worker is refused.
+
 ```latex
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm,
-  r/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.3cm,minimum height=.6cm,align=center,font=\sffamily\scriptsize},
-  a/.style={-latex,line width=.7pt,draw=vibeygray}]
-  \node[r] (run) at (0,0) {worker process};
-  \node[r] (timeout) at (0,-1.1) {deadline};
-  \node[r] (term) at (3,-1.1) {terminate group};
-  \node[r] (reap) at (3,-2.2) {reap descendants};
-  \node[r,fill=vibeyteal!12,draw=vibeyteal!70] (evidence) at (0,-2.2) {record evidence};
-  \draw[a] (run) -- (timeout) -- (term) -- (reap) -- (evidence);
-  \draw[a,draw=vibeyred] (term) -- (evidence);
-  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3) {no orphaned process can masquerade as a completed lane};
+  r/.style={minimum width=3.4cm,minimum height=.7cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt}]
+  \node[vibeysoft,r] (run) at (0,0) {\textbf{worker run}\\own session, own process group};
+  \node[vibeywarn,r] (dl) at (0,-1.25) {\textbf{deadline passes}\\900\,s by default};
+  \node[vibeybox,r] (term) at (0,-2.5) {\textbf{terminate the tree}\\deepest descendants first};
+  \node[vibeybox,r] (kill) at (0,-3.75) {\textbf{kill survivors}\\after a 2\,s grace};
+  \node[vibeytealbox,r] (ev) at (0,-5.0) {\textbf{record the timeout}\\in the evidence file};
+  \node[vibeysoft,r] (reap) at (0,-6.25) {\textbf{lease left to the reaper}\\job requeued; late ack refused};
+  \draw[vibeyflow] (run) -- (dl);
+  \draw[vibeyflow] (dl) -- (term);
+  \draw[vibeyflow] (term) -- (kill);
+  \draw[vibeyflow] (kill) -- (ev);
+  \draw[vibeyflow] (ev) -- (reap);
+  \node[lab,anchor=west,align=left] at (1.95,-3.1) {no process of the old\\run is left alive to\\write after the timeout\\is recorded};
 \end{tikzpicture}
-\caption{Worker timeout handling. The delivery runner stops the process group, reaps descendants, and records the timeout before any retry or publication decision.}
+\caption{Worker timeout handling in the delivery bridge. The whole process tree is stopped before the timeout is recorded, and the lease is left to the queue's reaper, so a timed-out job returns to the queue by the same fenced path as a crashed worker's.}
 \label{fig:process-reaping}
 \end{figure}
 ```
 
-```latex
-\begin{figure*}[t]
-\centering
-\begin{tikzpicture}[x=1cm,y=1cm,
-  q/.style={draw=vibeyblue!55,fill=vibeyblue!8,rounded corners=3pt,minimum width=2.45cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
-  a/.style={-latex,line width=.65pt,draw=vibeygray}]
-  \node[q] (open) at (0,0) {open issue};
-  \node[q] (triage) at (3,0) {triaged label};
-  \node[q] (bump) at (6,0) {priority bump};
-  \node[q] (claim) at (9,0) {leased claim};
-  \node[q] (park) at (12,0) {parked gate};
-  \node[q,fill=vibeyteal!12,draw=vibeyteal!70] (done) at (15,0) {evidence done};
-  \foreach \a/\b in {open/triage,triage/bump,bump/claim,claim/park,park/done}{\draw[a] (\a) -- (\b);}
-  \draw[a,draw=vibeyred] (claim.south) -- ++(0,-.8) -| (triage.south);
-  \draw[a,draw=vibeyred] (park.south) -- ++(0,-.8) -| (claim.south);
-  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.45) {ordering is derived from labels and age; no manual reorder bypasses a gate};
-\end{tikzpicture}
-\caption{Durable queue state. Priority changes alter ordering but never erase history, bypass a human gate, or turn a lease timeout into success.}
-\label{fig:queue-state}
-\end{figure*}
-```
+**Capacity before completion.** The bridge applies the session-runner rule of
+[Fig. 12](#fig:capacity-taxonomy) at its own level ([Fig. 40](#fig:capacity-precedence)).
+After every worker run it reads the project's status, and if any job is awaiting
+capacity or any engine's circuit reports a capacity state other than available, it
+records a pause for capacity and stops before it acts on the phase or the open gates.
+The run's phase is acted on only on the branch where capacity was available. The same order holds
+inside each runner, where a capacity verdict outranks a completion claim, so a starved
+run cannot be laundered into success at either level.
 
 ```latex
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm,
-  b/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.25cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
-  a/.style={-latex,line width=.7pt,draw=vibeygray}]
-  \node[b,fill=vibeyteal!12,draw=vibeyteal!70] (engine) at (0,0) {engine};
-  \node[b] (allow) at (0,-1.15) {allow-list};
-  \node[b] (prompt) at (0,-2.3) {bounded prompt};
-  \node[b] (model) at (3,-2.3) {local model};
-  \node[b,fill=vibeyred!10,draw=vibeyred!65] (secret) at (3,-1.15) {secret names\\rejected};
-  \draw[a] (engine) -- (allow) -- (prompt) -- (model);
-  \draw[a,draw=vibeyred] (allow) -- (secret);
-  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-3.05) {configuration declares permitted variables; defaults are sovereign and fail closed};
+  n/.style={minimum width=2.6cm,minimum height=.75cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred}]
+  \node[vibeysoft,n] (end) at (0,0) {\textbf{worker run ends}\\status and gates read};
+  \node[vibeycore,diamond,aspect=2.2,inner sep=1pt,font=\sffamily\tiny\bfseries] (cap) at (0,-1.55) {capacity\\available?};
+  \node[vibeywarn,n] (pause) at (3.55,-1.55) {\textbf{paused for capacity}\\phase not acted on};
+  \node[vibeybox,n] (claim) at (0,-3.1) {\textbf{act on the phase}\\answer, accept, publish};
+  \node[vibeygood,n] (done) at (0,-4.45) {\textbf{progress recorded}};
+  \draw[vibeyflow] (end) -- (cap);
+  \draw[vibeyback] (cap) -- node[redlab,above] {no} (pause);
+  \draw[vibeyflow] (cap) -- node[lab,right] {yes} (claim);
+  \draw[vibeyflow] (claim) -- (done);
+  \node[lab,anchor=north,text width=3.1cm] at (3.55,-2.15) {awaiting-capacity jobs, or any engine circuit not available};
 \end{tikzpicture}
-\caption{The engine environment boundary. A project declares the narrow variables a gate or adapter needs; credential-shaped names and inherited process state are excluded before the model can choose a command.}
-\label{fig:environment-boundary}
-\end{figure}
-```
-
-```latex
-\begin{figure*}[t]
-\centering
-\begin{tikzpicture}[x=1cm,y=1cm,
-  pubnode/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.4cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
-  pubarr/.style={-latex,line width=.65pt,draw=vibeygray}]
-  \node[pubnode] (source) at (0,0) {source markdown};
-  \node[pubnode] (evidence) at (3,0) {evidence JSON};
-  \node[pubnode] (fig) at (6,0) {TikZ atlas};
-  \node[pubnode] (tex) at (9,0) {LaTeX};
-  \node[pubnode] (pdf) at (12,0) {PDF};
-  \node[pubnode,fill=vibeyteal!12,draw=vibeyteal!70] (site) at (15,0) {site / book};
-  \foreach \a/\b in {source/evidence,evidence/fig,fig/tex,tex/pdf,pdf/site}{\draw[pubarr] (\a) -- (\b);}
-  \draw[pubarr,draw=vibeyred] (pdf.south) -- ++(0,-.8) -| (tex.south);
-  \node[font=\sffamily\tiny,text=vibeygray] at (7.5,-1.45) {canonical source; revision markers; visual inspection; separate output checks};
-\end{tikzpicture}
-\caption{Publication provenance. Evidence and figure generation are deterministic inputs to the canonical source, while rendering and visual inspection remain explicit release gates for PDF, site and book surfaces.}
-\label{fig:publication-ladder}
-\end{figure*}
-```
-
-```latex
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}[x=1cm,y=1cm,
-  c/.style={draw=vibeyline,fill=vibeymist,rounded corners=3pt,minimum width=2.5cm,minimum height=.65cm,align=center,font=\sffamily\scriptsize},
-  a/.style={-latex,line width=.7pt,draw=vibeygray}]
-  \node[c] (claim) at (0,0) {completion claim};
-  \node[c] (capacity) at (0,-1.15) {capacity verdict};
-  \node[c,fill=vibeyred!10,draw=vibeyred!65] (reject) at (3,-1.15) {capacity wins};
-  \node[c,fill=vibeyteal!12,draw=vibeyteal!70] (done) at (3,0) {done accepted};
-  \draw[a] (claim) -- (done);
-  \draw[a,draw=vibeyred] (capacity) -- (reject);
-  \draw[a,draw=vibeyred] (claim) -- (reject);
-  \node[font=\sffamily\tiny,text=vibeygray,align=center] at (1.5,-2) {a plausible answer never launders a starved run into success};
-\end{tikzpicture}
-\caption{Capacity precedence. Completion is admissible only after the capacity classifier says the run was able to complete; an exhaustion verdict outranks any final-looking text.}
+\caption{Capacity precedence in the delivery bridge. The capacity check runs before the bridge acts on the run's phase, so an exhausted or busy engine records a pause, never progress; the same order holds inside each session runner, where a capacity verdict outranks a completion claim.}
 \label{fig:capacity-precedence}
 \end{figure}
 ```
 
-These diagrams expose the paper's new boundary conditions: durable work is distinct
-from live work, local capacity is measured and revision-bound, context is sliced with
-provenance, and publication has a visual gate. They also make the limitations visible:
-the atlas does not claim that an open issue is delivered, that a selected fit is
-portable across hosts, or that a generated figure proves a release is publishable.
+**Measured local capacity.** A sovereign engine's context and output ceilings are no
+longer guessed ([Fig. 41](#fig:probe-lifecycle)). A probe (`scripts/sovereign_probe.py`,
+also reachable as a doctor check) runs a grid of context and output sizes against the
+local server and writes a record: the endpoint, the model, the source revision, the
+shape of the prompt it measured, and the fastest fit that answered validly. At start,
+the chat client loads that record only if its endpoint, model and revision match the
+running configuration and its fit is marked valid; any mismatch, a missing field, or
+an unreadable file drops back to the configured ceilings. At each request the client
+applies the fit only if the prompt is no larger than the shape it was measured on; a
+longer prompt runs under the conservative defaults of 8,192 context tokens and 2,048
+output tokens. The fit is therefore a measurement about one host, one model and one
+revision, and it is never carried to a place it was not measured.
+
+```latex
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  s/.style={minimum width=2.9cm,minimum height=.7cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred}]
+  \node[vibeysoft,s] (probe) at (0,0) {\textbf{probe a grid}\\contexts $\times$ outputs};
+  \node[vibeysoft,s] (rec) at (0,-1.3) {\textbf{record the fit}\\endpoint, model, revision,\\prompt shape, fastest valid};
+  \node[vibeybox,s] (load) at (0,-2.75) {\textbf{load at start}\\all four must match};
+  \node[vibeybox,s] (req) at (0,-4.05) {\textbf{each request}\\prompt within the shape?};
+  \node[vibeytealbox,s] (fit) at (0,-5.35) {\textbf{measured ceilings}};
+  \node[vibeywarn,minimum width=2.4cm,minimum height=.7cm] (fb) at (3.6,-3.4) {\textbf{configured ceilings}\\8,192 in, 2,048 out};
+  \draw[vibeyflow] (probe) -- (rec);
+  \draw[vibeyflow] (rec) -- (load);
+  \draw[vibeyflow] (load) -- (req);
+  \draw[vibeyflow] (req) -- node[lab,right] {yes} (fit);
+  \draw[vibeyback] (load.east) -| node[redlab,pos=.25,above] {stale or malformed} (fb.north);
+  \draw[vibeyback] (req.east) -| node[redlab,pos=.25,below] {longer prompt} (fb.south);
+\end{tikzpicture}
+\caption{The measured-capacity lifecycle. A probed fit is bound to its endpoint, model, revision and prompt shape; any mismatch at load, or a prompt longer than the one measured, falls back to the configured ceilings rather than to a guess.}
+\label{fig:probe-lifecycle}
+\end{figure}
+```
+
+**The engine's environment.** An engine session runs commands the model chooses, so
+what it can see of the worker's environment is a boundary, and in 3.0.0 it is built
+from an allow-list rather than copied ([Fig. 42](#fig:environment-boundary)). Three
+sources may add a variable: the system basics every process needs, the engine's own
+declared variables and its own API credential, and whatever the project's stored
+configuration declares under `engine_environment`, for every engine or for one. Beneath
+all three sits a forbidden set: vibey's own variables, among them the queue and ledger
+connection string, libpq's variables, and anything shaped like a database credential.
+A declaration that names one of them is refused when the worker is built, not when the
+first session would have received it. A forge token or a cloud credential is not
+forbidden, but it is on no default list; it reaches only an engine a project declares
+it for.
+
+```latex
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  src/.style={minimum width=2.25cm,minimum height=.95cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred}]
+  \node[vibeysoft,src] (sys) at (0,0) {\textbf{system basics}\\every process};
+  \node[vibeysoft,src] (eng) at (2.75,0) {\textbf{engine's own}\\declared vars,\\its credential};
+  \node[vibeysoft,src] (proj) at (5.5,0) {\textbf{project config}\\\texttt{engine\_}\\\texttt{environment}};
+  \node[vibeycore,minimum width=7.75cm,minimum height=.7cm] (al) at (2.75,-1.6) {allow-list, checked when the worker is built};
+  \node[vibeytealbox,minimum width=3.3cm,minimum height=.8cm] (sess) at (1.1,-3.1) {\textbf{engine session}\\sees only the list};
+  \node[vibeywarn,minimum width=3.3cm,minimum height=.8cm] (forb) at (4.75,-3.1) {\textbf{refused}\\a forbidden name};
+  \foreach \s in {sys,eng,proj}{\draw[vibeyflow] (\s) -- (\s |- al.north);}
+  \draw[vibeyflow] (sess.north |- al.south) -- (sess);
+  \draw[vibeyback] (forb.north |- al.south) -- (forb);
+  \node[lab,anchor=north] at (2.75,-3.65) {forbidden: vibey's own variables (the queue and ledger DSN among them),\\libpq's, and anything shaped like a database credential; forge and cloud\\tokens are on no default list and reach only an engine the project names};
+\end{tikzpicture}
+\caption{The engine environment boundary. A session's environment is assembled from three allow-listed sources, never copied from the worker, and a declaration that names a forbidden variable fails when the worker is built.}
+\label{fig:environment-boundary}
+\end{figure}
+```
+
+**What a verdict is about.** [Fig. 15](#fig:exact-head) binds a claim to the revision it
+evaluated. The sovereign reviewer adds the second binding described in the section on
+the release calculus: to the input the model actually read ([Fig. 43](#fig:exact-head-lifecycle)).
+A verdict on head $h$ is admitted only if it passes four checks in order. The diff
+must fit the window, or the request is never sent and the gate asks a person. The
+server must be told to refuse rather than truncate, so a cut is reported in the
+server's own words. The answer must echo both random check codes, one placed at the
+start of the system prompt and one after the diff, so a silent cut at either end is
+caught. And if a supporting document had to be cut or left out, the verdict may claim
+only the half of the review the diff alone can ground. Each failure is a refusal with
+its reason, and none is a pass.
+
+```latex
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  c/.style={minimum width=3.3cm,minimum height=.65cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred,anchor=west}]
+  \node[vibeysoft,c] (h) at (0,0) {\textbf{review of head $h$}\\exact head: $r = h$};
+  \node[vibeybox,c] (fit) at (0,-1.15) {diff fits the window};
+  \node[vibeybox,c] (trunc) at (0,-2.05) {server told: refuse, never cut};
+  \node[vibeybox,c] (codes) at (0,-2.95) {both check codes echoed};
+  \node[vibeybox,c] (docs) at (0,-3.85) {supporting documents whole};
+  \node[vibeygood,c] (ok) at (0,-5.0) {\textbf{verdict admitted}\\about what was read};
+  \draw[vibeyflow] (h) -- (fit);
+  \draw[vibeyflow] (fit) -- (trunc);
+  \draw[vibeyflow] (trunc) -- (codes);
+  \draw[vibeyflow] (codes) -- (docs);
+  \draw[vibeyflow] (docs) -- (ok);
+  \draw[vibeyback] (fit.east) -- ++(.35,0) node[redlab] {not sent; a person decides};
+  \draw[vibeyback] (trunc.east) -- ++(.35,0) node[redlab] {refusal, in its words};
+  \draw[vibeyback] (codes.east) -- ++(.35,0) node[redlab] {verdict discarded};
+  \draw[vibeyback] (docs.east) -- ++(.35,0) node[redlab] {half review only};
+\end{tikzpicture}
+\caption{The exact-head lifecycle extended to the reviewer's input. After $r = h$, a sovereign verdict must survive four checks, each of which refuses rather than passes: the diff fits, the server may not truncate, both check codes return, and the supporting documents were read whole.}
+\label{fig:exact-head-lifecycle}
+\end{figure}
+```
+
+**Context in slices.** The same no-silent-truncation rule is proposed for everything
+the system loads into a finite window: skills, guides, decisions, prompts and
+specifications ([Fig. 44](#fig:microslice-contract)). Under the proposed ADR-0075, a
+converter (`slice_markdown.py`) turns a source document into numbered slices without
+changing the source; each slice carries a stable identity, one purpose, its provenance,
+a measured size, and explicit `requires` and `links` relations, and an index records
+them. Retrieval starts at the slice that matches the request, follows its required
+safety and acceptance slices, measures the whole closure against the budget, and
+records the identities and size it loaded. A closure over budget is split or parked,
+never cut, and optional links are followed only when needed. The converter's slice
+boundaries are mechanical and still need review; a split is not a claim that each
+slice reads well on its own.
+
+```latex
+\begin{figure*}[!t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  n/.style={minimum width=2.3cm,minimum height=1.35cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred}]
+  \node[vibeybox,n] (src) at (0,0) {\textbf{source}\\unchanged,\\authoritative};
+  \node[vibeysoft,n] (conv) at (3.0,0) {\textbf{converter}\\\texttt{slice\_}\\\texttt{markdown.py}};
+  \node[vibeysoft,n] (sl) at (6.0,0) {\textbf{numbered slices}\\id, purpose,\\provenance, size,\\requires, links};
+  \node[vibeybox,n] (q) at (9.0,0) {\textbf{retrieval}\\matching slice,\\then its required\\slices};
+  \node[vibeycore,diamond,aspect=1.9,inner sep=1pt,font=\sffamily\tiny\bfseries] (b) at (12.1,0) {closure\\within\\budget?};
+  \node[vibeygood,n] (load) at (15.2,0) {\textbf{load, record}\\slice ids,\\measured size};
+  \node[vibeywarn,n,minimum height=.9cm] (split) at (12.1,-2.15) {\textbf{split or park}\\never truncate};
+  \draw[vibeyflow] (src) -- (conv);
+  \draw[vibeyflow] (conv) -- (sl);
+  \draw[vibeyflow] (sl) -- (q);
+  \draw[vibeyflow] (q) -- (b);
+  \draw[vibeyflow] (b) -- node[lab,above] {yes} (load);
+  \draw[vibeyback] (b) -- node[redlab,right] {no} (split);
+  \draw[vibeyback,rounded corners=3pt] (split.west) -| node[redlab,pos=.3,below] {smaller slices, or the request parks} (sl.south);
+  \node[lab,anchor=north] at (3.0,-0.85) {mechanical boundaries;\\each split is reviewed};
+\end{tikzpicture}
+\caption{The context-microslice contract (proposed ADR-0075). Source material is converted into identified, bounded slices with provenance and explicit links; retrieval loads a slice with its required closure only when the closure fits the budget, and otherwise splits or parks it rather than dropping the tail.}
+\label{fig:microslice-contract}
+\end{figure*}
+```
+
+**How this paper is published.** The paper itself follows the discipline it describes
+([Fig. 45](#fig:publication-ladder)). `docs/paper.md` is the one source. Evidence is
+recomputed by `scripts/paper_evidence.py`, and every computed figure is written between
+revision-pinned markers by `scripts/paper_figures.py`, whose `--check` mode fails CI
+when a block has drifted from the records. From that source `vibey-gh paper` writes the
+LaTeX and DOCX, the pinned Tectonic typesets the PDF, and `vibey-gh paper-figures`
+compiles each figure on its own and turns it into SVG for the site and the book. Two
+steps are not automated and we do not claim they are. A figure that fails to compile
+for the site keeps its source and shows its caption, with a warning in the build log,
+rather than failing the release; and whether a drawing is legible, with no label on a
+line and no box on another, is judged by a person looking at it, which is how the
+defects repaired in this revision were found.
+
+```latex
+\begin{figure*}[!t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,
+  n/.style={minimum width=2.45cm,minimum height=1.05cm},
+  lab/.style={font=\sffamily\tiny,text=vibeygray,align=center,inner sep=1.5pt},
+  redlab/.style={lab,text=vibeyred}]
+  \node[vibeysoft,n] (ev) at (0,1.2) {\textbf{evidence}\\\texttt{paper\_evidence.py}};
+  \node[vibeysoft,n] (fg) at (0,-1.2) {\textbf{computed figures}\\\texttt{paper\_figures.py}\\revision-pinned};
+  \node[vibeycore,n] (md) at (3.35,0) {\textbf{docs/paper.md}\\the one source};
+  \node[vibeybox,n] (tex) at (6.7,1.2) {\textbf{LaTeX, DOCX}\\\texttt{vibey-gh paper}};
+  \node[vibeybox,n] (svg) at (6.7,-1.2) {\textbf{per-figure SVG}\\\texttt{paper-figures}};
+  \node[vibeytealbox,n] (pdf) at (10.05,1.2) {\textbf{PDF}\\pinned Tectonic};
+  \node[vibeytealbox,n] (site) at (10.05,-1.2) {\textbf{site and book}\\HTML, EPUB, PDF};
+  \node[vibeygate,n] (eye) at (13.7,0) {\textbf{visual inspection}\\a person looks};
+  \draw[vibeyflow] (ev.east) -- ++(.35,0) |- ([yshift=5pt]md.west);
+  \draw[vibeyflow] (fg.east) -- ++(.35,0) |- ([yshift=-5pt]md.west);
+  \draw[vibeyflow] ([yshift=5pt]md.east) -- ++(.35,0) |- (tex.west);
+  \draw[vibeyflow] ([yshift=-5pt]md.east) -- ++(.35,0) |- (svg.west);
+  \draw[vibeyflow] (tex) -- (pdf);
+  \draw[vibeyflow] (svg) -- (site);
+  \draw[vibeyflow] (pdf.east) -| (eye.north);
+  \draw[vibeyflow] (site.east) -| (eye.south);
+  \draw[vibeyback,rounded corners=3pt] (eye.east) -- ++(.35,0) |- (3.35,-2.55) -- (md.south);
+  \node[redlab,anchor=north] at (8.5,-2.6) {a defect found by eye is fixed in the source, never in an output};
+  \node[redlab,anchor=north] at (svg.south) {fails to compile: caption shown,\\warning logged};
+  \node[lab,anchor=south] at (ev.north) {\texttt{--check} fails CI on drift};
+\end{tikzpicture}
+\caption{Publication provenance. Evidence and computed figures are written into the one source, from which every output is derived by a pinned tool; the legibility of a drawing is still judged by a person, and a defect found that way is repaired in the source.}
+\label{fig:publication-ladder}
+\end{figure*}
+```
+
+Read together, the ten figures draw one boundary: durable work is distinct from live
+work, and nothing crosses from one to the other on a claim alone. A ticket, a lease, a
+measured fit and a verdict are each bound to what they were measured on, and each
+failure is recorded as what it was. They also draw the limits. The atlas does not
+claim that an open issue will be delivered, that a fit measured on one host holds on
+another, that the bridge's defaults for the design interview are the answers a person
+would give, or that a generated figure is a legible one.
+
+```latex
+\begin{plainwords}
+This part of the paper is a picture book of the newest machinery. A robot helper now takes a job from the project's to-do list, but only after a person has sorted and labelled it, and it holds the job for fifteen minutes at a time so that a stuck helper cannot keep it forever. The helper builds the change in its own copy of the project, and then it stops and waits for a person to check the work. If a helper runs too long, it is stopped completely, every little process it started included, before anything is written down. If the computer is too busy or out of allowance, the helper writes down that it paused, not that it finished. The helper only uses as much memory as was actually measured on this computer, and it only sees the secrets it was allowed to see. A grader must prove it read the whole change. One thing we tell you straight: on this path the helper fills in the first design questions with standard answers by itself, and we think a person should look at whether that is right. And the pictures in this paper are checked by a person with their own eyes, which is how we found the ones we fixed.
+\end{plainwords}
+```
+
+## Validation
 
 The model is validated at three levels. At the *property* level, the gate, the phase
 guards and the selector are pure functions under a 100% branch-coverage floor per
