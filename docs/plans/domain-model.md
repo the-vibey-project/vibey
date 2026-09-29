@@ -529,6 +529,9 @@ class EventKind(StrEnum):
     BUDGET_CAP_CHANGED = "BudgetCapChanged"
     # A gate answered once: gate, kind, answer, request id, by, account; with the answer
     GATE_ANSWERED = "GateAnswered"
+    # A gate closed by `vibey abandon`, never answered: gate, kind, job, request id,
+    # reason, by, account; with the move into abandoned and the gate's own row
+    GATE_WITHDRAWN = "GateWithdrawn"
     ENGINE_FAILED_OVER = "EngineFailedOver"    # ADR-0070
     ENGINE_PROBED = "EngineProbed"
     ENGINE_HANDED_BACK = "EngineHandedBack"

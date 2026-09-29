@@ -154,6 +154,10 @@ from vibey.application.interfaces.preflight_interface import (
     RunFeasibilityEvaluatorInterface,
     StartupPreflightReportInterface,
 )
+from vibey.application.interfaces.project_abandonment import (
+    ProjectAbandonmentInterface,
+    ProjectAbandonmentStore,
+)
 from vibey.application.interfaces.project_budget import (
     OpenGateReader,
     ProjectBudgetServiceInterface,
@@ -312,6 +316,8 @@ __all__ = [
     "Park",
     "PhaseLedger",
     "OpenGateReader",
+    "ProjectAbandonmentInterface",
+    "ProjectAbandonmentStore",
     "ProjectBudgetServiceInterface",
     "GateAnswerServiceInterface",
     "ProjectBudgetStore",

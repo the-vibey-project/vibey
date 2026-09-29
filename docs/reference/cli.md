@@ -49,8 +49,8 @@ with payloads.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), `abandon`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 | `78` | A supervisor setting no service could run with (EX_CONFIG): `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
@@ -68,7 +68,7 @@ Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `VibeyError` keep their Python traceback.
 
 `budget`, `budget show`, `budget set` and `budget clear` run inside `guard()` as
-well.
+well, and so does `abandon`.
 
 The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
 `cost`, `ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
@@ -365,6 +365,64 @@ its prompt, and the `vibey answer` command that answers it;
 `vibey gates PROJECT_ID` lists one project's. The worker also sends
 `NOTIFY vibey_gate_raised` with the gate id when one is raised, for a program
 that would rather listen than poll.
+
+## `vibey abandon PROJECT_ID --reason TEXT`
+
+Abandon a project that is not going to finish -- built on the wrong spec, superseded,
+no longer wanted. Nothing in vibey abandons a project on its own; until a person does,
+anything waiting on it waits (the triaged-delivery bridge holds its one delivery slot
+for a dispatched project until it is done or abandoned).
+
+| Option | Default | What it does |
+|---|---|---|
+| `--reason TEXT` | required | Why. Recorded on the project's ledger with the move. Visible text, up to 2000 characters. |
+| `--by NAME` | the account running it | The name the abandonment is recorded under, for a tool that runs the command. A label for the record, not a permission: the account is always recorded beside it. |
+| `--dry-run` | off | List the jobs that would be cancelled and the gates that would be withdrawn; write nothing. It checks what the real run checks, so a refusal is the same refusal. |
+| `--json` | off | Print JSON instead (below). |
+
+In one transaction, under a lock on the project's row:
+
+- every open human gate of the project is **withdrawn**: the gate row records
+  `{"withdrawn": true, "reason": "project abandoned"}` as its answer, the name above as
+  `answered_by` and `abandon:<project_id>` as its request id, so a later `vibey answer`
+  to it is refused as a second answer. No row is deleted;
+- every job that could still run -- `ready`, `leased`, `awaiting_human`,
+  `awaiting_capacity` -- is **cancelled**, its lease cleared, so a worker still running
+  one finds its lease gone and nothing it reports revives the job. Succeeded, failed and
+  cancelled jobs are left as they are;
+- the project moves into `abandoned` through the phase machine's own guard, and its
+  ledger gets one `PhaseTransitioned` (`guard: "operator abandoned"`, with `reason`,
+  `by`, `account`, `cancelled_jobs` and `withdrawn_gates`) and one `GateWithdrawn` per
+  withdrawn gate.
+
+A failure anywhere leaves all of it as it was. The claim never hands out a job of an
+abandoned project, so a follow-up job a still-running handler enqueues after the
+abandonment never runs.
+
+```text
+Abandoned greeter (9692abab-...): build -> abandoned, cycle 1.
+  by adam (account adam)
+  reason: built on a foreign spec
+  cancelled 2 jobs:
+    6f1c... build.implement (was ready)
+    8a07... build.verify (was awaiting_human)
+  withdrew 1 gate:
+    c3d9... defect
+```
+
+With `--dry-run` the block starts `Dry run: nothing was written.` and says `Would
+abandon`, `would cancel` and `would withdraw`. `--json` prints one object:
+`project_id`, `name`, `from`, `to`, `cycle`, `dry_run`, `already_abandoned`,
+`written`, `reason`, `by`, `account`, `cancelled_jobs` (`job_id`, `kind`, `state` as it
+was) and `withdrawn_gates` (`gate_id`, `kind`, `job_id`).
+
+Abandoning a project that is already abandoned changes nothing, prints
+`<name> (<id>) is already abandoned; nothing was changed.` and exits 0. A project that
+is `done` is refused (exit 3, `Error: the project is done ...`): it finished, which is a
+different ending. So is a project still in `intake`, which the phase machine gives no
+edge to `abandoned`, and one in a phase this vibey does not know. An unknown
+`PROJECT_ID` exits 1; a missing, empty or control-bearing `--reason`, or an unusable
+`--by`, exits 2 before the database is opened.
 
 ## `vibey work PROJECT_ID`
 

@@ -68,7 +68,8 @@ export until the policy can withhold it (see [Widening or narrowing](#widening-o
     `FileEdited` (diffs);
   - `BudgetSpent` (your spend) and `BudgetCapChanged` (the caps you set with
     `vibey budget`, and the account that set them);
-  - `GateAnswered` (what you answered a gate with, and the account that answered);
+  - `GateAnswered` (what you answered a gate with, and the account that answered) and
+    `GateWithdrawn` (a gate closed by `vibey abandon`, and the account that abandoned);
   - `GateNotified` and `GateNoticeUndeliverable` (whether, and over which of your
     channels, you were told a gate was waiting);
   - `JobFailed` (a failure's detail quotes whatever the handler raised, tool and model

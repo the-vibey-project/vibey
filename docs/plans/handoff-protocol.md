@@ -118,7 +118,7 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `SavePointCreated` | A git savepoint is taken | no | `sha`, `label` |
 | `HandoffInitiated` | Rotation begins (defined; not yet emitted) | no | `from_engine`, `to_engine`, `reason` |
 | `HandoffAccepted` | Gate passed, engine seeded (defined; not yet emitted) | no | `handoff_id`, `envelope_digest`, `gate_attempts` |
-| `PhaseTransitioned` | Phase machine moves | no | `from`, `to`, `cycle`, `guard` |
+| `PhaseTransitioned` | Phase machine moves. A move into abandoned by `vibey abandon` names its guard (`operator abandoned`) and adds who, why and what it stopped, in the same transaction as all of it | no | `from`, `to`, `cycle`, `guard`; on an abandonment also `reason`, `by`, `account`, `cancelled_jobs[]`, `withdrawn_gates[]` |
 | `BudgetSpent` | Cost accrues | no | `dollars`, `turns`, `phase` |
 | `VisualDesignOptedIn` | User opts into the VISUAL_DESIGN interstitial (`vibey design accept --visual`) | no | — |
 | `VisualDesignDeclined` | User declines it (`vibey design accept`, default or `--no-visual`) | no | — |
@@ -133,6 +133,7 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `QueueReaped` | The queue reaper acted on, or surfaced, a stuck item (ADR-0056); a dead letter's is `untrusted` | no | `object`, `queue`, `condition`, `measured`, `threshold`, `unit`, `action`, `detail` |
 | `BudgetCapChanged` | `vibey budget set` or `clear` changed a project's cap, in the same transaction as the config; one per changed cap, `trusted`. Not spend: nothing counts it | no | `field`, `old`, `new`, `by`, `account` |
 | `GateAnswered` | A human gate was answered (`vibey answer`, the operator, any client), in the same transaction as the compare-and-set that records the answer; `trusted`. A refused or replayed answer writes none. Not a design answer: that is `AnswerGiven` | no | `gate_id`, `gate_kind`, `job_id`, `request_id`, `by`, `account`, `answer` |
+| `GateWithdrawn` | An open human gate was closed without an answer because `vibey abandon` abandoned its project, in the same transaction as the move into abandoned and the compare-and-set that closes the gate; `trusted`. Nobody answered: it is not `GateAnswered` | no | `gate_id`, `gate_kind`, `job_id`, `request_id`, `reason`, `by`, `account` |
 
 `EventKind` in `domain/ledger.py` has these 33 members. The four bolded kinds are
 the **closable set** (`CLOSABLE`) — the things the gate checks. Only two kinds

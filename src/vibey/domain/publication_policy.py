@@ -164,6 +164,8 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         # Who answered a gate, from which account, and what they answered: the answer
         # can carry anything a person typed, and the account is the operator's.
         EventKind.GATE_ANSWERED,
+        # Who closed a gate by abandoning its project, and from which account.
+        EventKind.GATE_WITHDRAWN,
         # Whether, and over which of the operator's channels, a person was told a gate
         # was waiting: webhook outcomes describe the operator's own endpoints.
         EventKind.GATE_NOTIFIED,

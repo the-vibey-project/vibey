@@ -144,6 +144,29 @@ class HumanGateRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class AbandonmentReport:
+    """What abandoning a project did -- or, for a dry run, would do.
+
+    `project` is the row as it now stands; `left` is the phase it was in before, the same
+    as `project.phase` when nothing moved. `jobs` are the unsettled jobs cancelled (or
+    that would be), as they stood before; `gates` are the open gates withdrawn (or that
+    would be), as they stood before. `written` is whether anything was written: never
+    for a dry run, and never for a project already abandoned. `reason`, `by` and
+    `account` are the attribution the abandonment is (or would be) recorded under.
+    """
+
+    project: ProjectRecord
+    left: StoredPhase
+    already_abandoned: bool
+    written: bool
+    jobs: tuple[JobRecord, ...] = ()
+    gates: tuple[HumanGateRecord, ...] = ()
+    reason: str | None = None
+    by: str | None = None
+    account: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class GateAnswerOutcome:
     """What answering a gate did: the gate as it now stands, and whether this request
     had already answered it (`replayed`), in which case nothing was written."""
