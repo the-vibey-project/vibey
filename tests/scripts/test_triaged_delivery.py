@@ -192,6 +192,31 @@ def test_with_the_opt_in_design_answers_carry_the_automations_name(
     assert recorded["design_accepted_by"] == AUTOMATION
 
 
+def test_the_opt_in_accepts_the_design_only_once_its_chain_has_settled(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    """Live 2026-09-29: the bridge accepted straight after the interview, with research,
+    synthesis and spec still queued, and the project entered BUILD without its spec."""
+    world, _ = scratch
+    world.design_chain = 3
+    world.open_issue(5, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, _ = bridge(world, tmp_path, answer_design_defaults=True)
+
+    for left in (3, 2, 1):
+        assert delivery.run_once() == 0
+        (project,) = world.projects.values()
+        assert (project.phase, project.design_jobs_left) == ("design", left)
+        assert not [command for command in world.commands if "accept" in command]
+        recorded = evidence(tmp_path, project.project_id)
+        assert recorded["outcome"] == "worker_progress"
+        assert recorded["design_jobs_unsettled"] == left
+
+    assert delivery.run_once() == 0
+    assert project.phase == "review"
+    assert len([command for command in world.commands if "accept" in command]) == 1
+    assert evidence(tmp_path, project.project_id)["design_accepted_by"] == AUTOMATION
+
+
 # -- gap 1: a DESIGN gate is a person's by default ---------------------------------------
 
 

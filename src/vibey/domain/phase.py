@@ -136,6 +136,10 @@ class TransitionEvidence:
 
     acceptance_criteria: int = 0
     open_blocking_questions: int = 0
+    # DESIGN jobs of this cycle not yet succeeded, failed or cancelled. The design
+    # accepted is the finished spec, so research, synthesis and publication must
+    # have run first; a spec file alone may be a stale one this cycle never wrote.
+    unsettled_design_jobs: int = 0
     unmapped_criteria: tuple[str, ...] = ()
     work_items_total: int = 0
     work_items_settled: int = 0
@@ -184,6 +188,11 @@ def _guard_design_common(evidence: TransitionEvidence) -> list[str]:
         violations.append("at least one acceptance criterion is required")
     if evidence.open_blocking_questions > 0:
         violations.append(f"{evidence.open_blocking_questions} blocking question(s) still open")
+    if evidence.unsettled_design_jobs > 0:
+        violations.append(
+            f"{evidence.unsettled_design_jobs} design job(s) still unsettled; research, "
+            "synthesis and spec must finish before the design can be accepted"
+        )
     if evidence.unmapped_criteria:
         violations.append(
             f"{len(evidence.unmapped_criteria)} acceptance criterion/criteria unmapped"
