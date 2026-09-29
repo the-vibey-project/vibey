@@ -1,5 +1,5 @@
 %%{init: {"flowchart": {"htmlLabels": true}} }%%
-%% Vibey — comprehensive architecture map. Status as of 2026-09-21.
+%% Vibey — comprehensive architecture map. Status as of 2026-09-29.
 %% Layers: source modules & onion boundaries, public interfaces, the six-phase
 %% workflow, the ledger/handoff data flow, the isolation/security boundary, the
 %% uv-workspace monorepo tenants, the governance canon, and the CI/release/docs
@@ -11,7 +11,7 @@ flowchart TB
     User(("Developer"))
 
     subgraph Interfaces["Public interfaces — cli/, tui/ are the outermost onion ring"]
-        CLI["cli/main.py<br/>vibey new · answer · work · design · visual ·<br/>watch · recover · status · engines · cost ·<br/>ledger · deploy · doctor · operator · worker<br/>(+ cli/early_signals.py SIGTERM latch, ADR-0026)"]
+        CLI["cli/main.py (+ budget · driver · gates · hub_pair · ledger_search ·<br/>ledger_publication · loops · projects · queue · sabbath · serve · status · ultra)<br/>vibey new (--intake) · serve · sabbath · projects · gates · answer · work ·<br/>watch · recover · status · engines · loops · cost · install ·<br/>doctor (--sovereign-fit) · migrate · operator · worker ·<br/>design · visual · deploy · ledger (search · export · site · show) ·<br/>queue · budget (no-cap · cap) · ultra · driver · hub<br/>(+ cli/early_signals.py SIGTERM latch, ADR-0026)"]
         TUI["tui/dashboard.py<br/>live dashboard + ledger replay"]
         TomlCfg["vibey.toml<br/>domain/config.py schema + infrastructure/config_loader.py<br/>[features] local engines read by doctor/worker; [notifications] + [telemetry]<br/>copied into project config by vibey new<br/>(see docs/reference/configuration.md)"]
         K8sCRD["VibeyProject CRD (vibey.dev/v1alpha1)<br/>reconciled by infrastructure/operator/<br/>(pip install 'vibey-engine[operator]')"]
@@ -55,7 +55,7 @@ flowchart TB
 
     subgraph Infrastructure["infrastructure/ — adapters, all I/O"]
         IDb[("PostgreSQL<br/>queue (FOR UPDATE SKIP LOCKED) + ledger + repositories")]
-        IDbMods["db/ — 15 modules: job · ledger · project · handoff · human_gate ·<br/>engine_health · rotation_cursor repositories · build/design/review ledgers ·<br/>design_spec · visual_inventory repositories · notifier.py (LISTEN/NOTIFY) ·<br/>migrator.py · advisory_lock.py (integration lock, ADR-0029)"]
+        IDbMods["db/ — 27 modules: job · job_priority · ledger · ledger_search · project ·<br/>handoff · human_gate · engine_health · rotation_cursor · design_spec ·<br/>visual_inventory repositories · build/design/review ledgers · failover_store ·<br/>project_budget_store · queue_reap_store · ultra_control_store · ledger_guard ·<br/>local_auth · passwordless_reach · database_setup · orm · orm_models ·<br/>notifier.py (LISTEN/NOTIFY) · migrator.py (migrations 0001–0020) ·<br/>advisory_lock.py (integration lock, ADR-0029)"]
         IEngines["engines/ — LoopProcessAdapter × 4 (paid tier)<br/>claudeloop · codexloop · cursorloop · agyloop<br/>+ local tier, preferred first (ADR-0038): gptossloop (on by default, ADR-0064) ·<br/>qwenloop · claudeloop-local (opt-in)<br/>(features.* / VIBEY_FEATURE_* via LocalEngineSettings) — added when on"]
         IDesignProviders["engines/ DESIGN + decompose providers<br/>GptossloopDesignProvider · GptossloopWorkPlanProducer (sovereign, the default — ADR-0027, ADR-0064;<br/>one OllamaChatClient calling the local Ollama chat API directly, not the gptossloop binary) ·<br/>ClaudeLoopDesignProvider · ClaudeLoop decompose ·<br/>Scripted Design / Decompose / Visual providers<br/>selected by vibey work / worker --provider gptossloop (default), claudeloop, scripted"]
         IEngineInternals["engines/ internals — argv.py · classify.py · tailer.py ·<br/>loop_events.py · plan_writer.py · design_json.py (shared decoders) · ollama_chat.py · descriptors.py"]
@@ -108,6 +108,56 @@ flowchart TB
     CLI -->|"vibey operator (kopf)"| IOperatorHandlers
     K8sCRD -->|reconciled by| IOperatorHandlers
     IOperatorHandlers --> AppResources
+
+    subgraph Clients["Krypton clients — every app and interface (sub-doctrine 9.e, ADR-0065 – ADR-0068, ADR-0073)"]
+        KryptonApp["clients/krypton-app — krypton-app package<br/>the krypton launcher for the local hub (ADR-0069)"]
+        VibeyCore["packages/vibey-core — @vibey/core<br/>pure TypeScript shared by every client, HubTransport (ADR-0067)"]
+        VSCodeExt["clients/vscode — krypton VS Code extension (ADR-0059)"]
+        MobileWeb["clients/app — Krypton for iOS, Android and the web<br/>(Expo, react-native-web)"]
+        Desktop["clients/desktop — Krypton desktop, C17 on GTK 4 + libadwaita<br/>libkryptondesktop core, _vibey._tcp discovery (ADR-0073)"]
+    end
+
+    subgraph HubLayer["The hub — vibey serve (ADR-0068, ADR-0071)"]
+        Hub["infrastructure/hub/ — HTTP API every Krypton client reaches,<br/>loopback by default; WS live feed (migration 0019 NOTIFY);<br/>pairing: QR + 6-digit code, per-device HMAC keys, deny by default;<br/>declared LAN over self-signed TLS, mDNS _vibey._tcp ·<br/>application/hub/hub_service.py"]
+    end
+    CLI -->|"vibey serve · vibey hub pair / devices / revoke"| Hub
+    Hub --> AppResources
+    VibeyCore --> Hub
+    VSCodeExt --> VibeyCore
+    MobileWeb --> VibeyCore
+    Desktop --> Hub
+    KryptonApp -->|starts vibey serve| Hub
+
+    subgraph Operations["Operator controls — effort, failover, rest and dispatch"]
+        Ultra["ULTRA (ADR-0063) — cli/ultra.py · application/ultra_control.py ·<br/>db/ultra_control_store.py; budget no-cap / cap (sub-doctrine 8.b)"]
+        Driver["Failover and handback (ADR-0070) — cli/driver.py · infrastructure/driver/<br/>StopFailure hook → no-loss-gated brief → gptossloop at ULTRA;<br/>hands back only after a recorded probe ·<br/>application/driver_failover.py · engine_failover.py · db/failover_store.py"]
+        Sabbath["The Sabbath (ADR-0072, sub-doctrine 8.i) — infrastructure/sabbath.py ·<br/>cli/sabbath.py: sundown Friday to sundown Saturday, workers claim no lease,<br/>new and work exit 75, merge train and promotion stand down"]
+        BusDispatch["Measured bus dispatch (ADR-0074) — infrastructure/bus/dispatch.py<br/>[bus] mode auto · singleton · multiplexer · hybrid (hybrid_concurrency);<br/>auto = the per-machine benchmark winner, singleton when unmeasured ·<br/>rabbitmq.py · qwenloop TurnDispatcher: direct · hybrid · RabbitMQ"]
+    end
+    CLI --> Ultra
+    CLI --> Driver
+    CLI --> Sabbath
+    Ultra --> AWorker
+    Driver --> DNoLoss
+    Driver -->|starts| IEngines
+    Sabbath -.->|no lease while resting| AWorker
+    AppResources --> BusDispatch
+
+    subgraph Intake0["Triaged issue intake — scripts/ (bounded bridge, never bypasses a gate)"]
+        TriageQueue["scripts/triage_queue.py<br/>migration 0020 triaged_ticket: durable GitHub triage order,<br/>priority rank + bump sequence, leased claims"]
+        TriagedDelivery["scripts/triaged_delivery.py<br/>claims one issue by an idempotent comment, then<br/>vibey new --intake; the worker drives BUILD and REVIEW"]
+        TriageQueue --> TriagedDelivery
+    end
+    TriageQueue --> IDb
+    TriagedDelivery -->|"vibey new --intake (TranscriptRecorded, untrusted)"| CLI
+
+    subgraph SovereignFit["Sovereign capacity fit"]
+        Probe["scripts/sovereign_probe.py<br/>run by vibey doctor --sovereign-fit;<br/>probes num_ctx 4096/8192 × num_predict 512/1024/2048 in JSON mode"]
+        FitRecord[("sovereign-fit.json<br/>~/.local/state/vibey/ (--fit-output)<br/>url · model · revision · prompt_shape · selected_fit")]
+        Probe --> FitRecord
+    end
+    CLI -->|doctor --sovereign-fit| Probe
+    FitRecord -.->|"VIBEY_OLLAMA_FIT: used only on a matching url, model (and VIBEY_REVISION);<br/>else the configured ceilings, default 8192 / 2048"| IEngineInternals
 
     subgraph Workflow["The six-phase delivery workflow — domain/phase.py"]
         Intake(["INTAKE"]) --> PDesign["① DESIGN — interactive"]
@@ -188,12 +238,14 @@ flowchart TB
         Canon["doctrines.md (the sealed Twelve + sub-doctrines, e.g. 8.a sovereign-first) ·<br/>constitution.md · commandments.md · bill-of-rights.md ·<br/>sd-01-counterparties-trust-verification.md (carried verbatim in CLAUDE.md)"]
         CorpusIdx["src/vibey_tools/gh/corpus-index.json<br/>33 chunks + corpus_sha256<br/>checked by vibey-gh corpus-index --check"]
         Canon --> CorpusIdx
+        Microslices["Context microslices — proposed ADR-0075 / sub-doctrine 10.k<br/>docs/context-microslices.md contract · docs/microslices/skills/<br/>(generated by src/vibey_tools/skills/tools/slice_markdown.py,<br/>one index.json per skill + manifest.json)"]
     end
+    ToolSkills -->|slice_markdown.py| Microslices
     ToolGh --> CorpusIdx
     Canon -.->|"8.a: sovereign path preferred"| IDesignProviders
 
     subgraph Release["CI, release and docs channels — .github/workflows/ (ADR-0023, ADR-0028)"]
-        PR(["pull request or push → develop / main"]) --> CIWF["CI (ci.yml)<br/>uv-lock · gates: ruff · format · mypy --strict · pytest+cov ·<br/>4× per-layer 100% branch gates · lint-imports · bandit · pip-audit ·<br/>PostgreSQL compatibility 14–18 · tools matrix, every tenant suite on<br/>Python 3.12/3.13/3.14 plus its static gates and strict docs builds ·<br/>reports, not required in .vibey-gh.toml · tools-lint ·<br/>image: amd64 + arm64, one Image contract step per Dockerfile claim, not pushed ·<br/>cluster-smoke: helm on minikube, KEDA + SIGTERM drain"]
+        PR(["pull request or push → develop / main"]) --> CIWF["CI (ci.yml)<br/>uv-lock · gates (postgres:17 + rabbitmq): Gate 0 corpus-index --check ·<br/>ruff · format · mypy --strict · pytest+cov · 4× per-layer 100% branch gates ·<br/>lint-imports · bandit · pip-audit --skip-editable ·<br/>noloss: the no-loss suite at 10,000 examples ·<br/>PostgreSQL compatibility 14–18 · tools matrix, every tenant suite on<br/>Python 3.12/3.13/3.14 plus its static gates and strict docs builds ·<br/>tools-lint: vibey-gh linters + both rendered automation copies ·<br/>krypton-app · @vibey/core · app (mobile + web) · vscode-extension (Ubuntu + macOS) ·<br/>desktop (Ubuntu + Arch) · image: amd64 + arm64, one Image contract step per<br/>Dockerfile claim, not pushed · chart: helm lint + golden render ·<br/>cluster-smoke: helm on minikube, KEDA + SIGTERM drain"]
         AnyPush(["git push: any branch · every PR"]) --> Provenance["Provenance workflow (provenance.yml)<br/>vibey-gh check --ci on every push and PR"]
         PR --> Provenance
         CIWF --> PRAuto["PR evaluate (pr-evaluate.yml) / PR review (pr-review.yml)<br/>vibey-gh pr-automation evaluate · review · repair · mirror-fork"]
@@ -206,7 +258,10 @@ flowchart TB
         MergeTrain --> SourcePush
         ReleaseWF --> BuildDist["build wheel + sdist<br/>one package: vibey-engine + every tenant package<br/>and every console script (ADR-0037)"]
         BuildDist -->|develop| TestPyPI["TestPyPI<br/>vibey-engine, dev-versioned<br/>(+ verify-testpypi)"]
-        BuildDist -->|main| PyPI["PyPI<br/>package vibey, OIDC trusted publishing"]
+        BuildDist -->|main| PyPI["PyPI<br/>vibey-engine, OIDC trusted publishing (ADR-0069)"]
+        KryptonPush(["git push: develop or main,<br/>touching clients/krypton-app/"]) --> KryptonWF["krypton-app.yml<br/>build + tests, then TestPyPI + verify on develop,<br/>PyPI on main — the krypton-app package (ADR-0069)"]
+        KryptonWF -->|develop| TestPyPI
+        KryptonWF -->|main| PyPI
         ReleaseWF -->|main only| Realign["realign job<br/>vibey-gh realign: develop := main"]
         ReleaseWF -.->|"workflow_run: completed, success, main only"| GhRelease["GitHub Release (github-release.yml)<br/>vibey-gh github-release: immutable tag + release"]
         ReleaseWF -.->|"workflow_run: completed, success"| ReleaseSurfaces["Release surfaces workflow<br/>(release-surfaces.yml)<br/>re-downloads the dist artifact by run id"]
@@ -224,6 +279,8 @@ flowchart TB
     CIWF -->|tools matrix| ToolBootstrap
     CIWF -->|"tools matrix: the six runner suites and every runner's static gates"| Runners
     CIWF -->|image + cluster-smoke| DockerImg
+    CIWF -->|"krypton-app · vibey-core · app · vscode-extension · desktop"| Clients
+    KryptonWF -.->|packages| KryptonApp
     Provenance -->|vibey-gh check --ci| ToolGh
     ReleaseSurfaces -->|"vibey-gh book · paper"| ToolGh
     Bootstrap0 -.-> MergeTrain

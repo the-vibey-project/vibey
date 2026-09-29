@@ -105,7 +105,8 @@ names — the tree ships as one `vibey-engine` package (ADR-0037, ADR-0069); the
 
 ## Queue and engines
 
-- **Queue:** PostgreSQL 17, never SQLite (`FOR UPDATE SKIP LOCKED`, ADR-0002).
+- **Queue:** PostgreSQL 14+, never SQLite (`FOR UPDATE SKIP LOCKED`, ADR-0002);
+  CI exercises 14–18, the Helm chart defaults to 17.
 - **Engines:** claudeloop, codexloop, cursorloop, agyloop — the paid pool,
   rotated per BUILD job via smooth weighted round robin
   (`SelectingEngineProvider` → `EngineSelector` → `domain/rotation.select()`,
@@ -136,8 +137,10 @@ Interactive: ①, ③, ④, ⑥, VISUAL_DESIGN. Autonomous: ②, ⑤.
 # CI job `uv-lock` (runs first)
 uv lock --check
 
-# CI job `gates`: the 7-gate sweep over src/vibey (Postgres 17 service)
+# CI job `gates`: Gate 0 plus the 7-gate sweep over src/vibey (services:
+# postgres:17 and rabbitmq; the broker tests skip without it)
 uv sync --extra dev
+uv run vibey-gh corpus-index --check
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy --strict src/vibey
@@ -151,11 +154,11 @@ uv run coverage report --include='src/vibey/cli/*' --fail-under=100
 
 uv run lint-imports
 uv run bandit -q -r src/vibey
-uv run pip-audit
+uv run pip-audit --skip-editable
 
-# CI job `tools`: each tool's own suite, plain pip, on its Python floor and newer
+# CI job `tools`: each tool's own suite, plain pip, on Python 3.12, 3.13 and 3.14
 (cd src/vibey_tools/gh && pip install -e ".[dev]" && python -m pytest -q)
-(cd src/vibey_tools/skills && pip install -e . && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
+(cd src/vibey_tools/skills && pip install -e ".[dev]" && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
 (cd src/vibey_tools/bootstrap && pip install -e ../gh && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
 # ...and on each tenant's floor row, its own static gates (the row's `static` key), e.g.
 (cd src/vibey_runners/claude && pip install -e ../common && pip install -e ".[dev]" && mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop)
@@ -164,11 +167,16 @@ uv run pip-audit
 (cd src/vibey_tools/gh && python -m black --check vibey_gh test && isort --check-only vibey_gh test && python -m mypy vibey_gh)
 ```
 
-CI (`.github/workflows/ci.yml`) also runs `image` (amd64 and arm64 builds; each
-`Image contract - …` step asserts one claim the Dockerfile makes) and
-`cluster-smoke` (Helm install on minikube; each `Contract - …` step asserts one
-cluster behaviour). `tools-lint` additionally checks that vibey-gh's managed
-automation has no drift.
+CI (`.github/workflows/ci.yml`) also runs `noloss` (the no-loss property suite
+at 10,000 examples), `postgres-compatibility` (the database suite on PostgreSQL
+14–18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (Krypton mobile and
+web), `vscode-extension` (Ubuntu and macOS), `desktop` (Krypton desktop on
+Ubuntu and Arch), `image` (amd64 and arm64 builds; each `Image contract - …`
+step asserts one claim the Dockerfile makes), `chart` (Helm lint and golden
+render of every profile) and `cluster-smoke` (Helm install on minikube; each
+`Contract - …` step asserts one cluster behaviour). `tools-lint` additionally
+checks that both rendered copies of vibey-gh's managed automation — vibey-gh's
+own and the repository root's — have no drift.
 
 ## Surfaces
 
