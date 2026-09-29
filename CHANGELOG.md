@@ -607,6 +607,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   generation, and an empty reply is retried once in JSON mode before it is refused. A
   measured fit is applied only to prompts within the shape it was measured on.
 
+* **triaged delivery:** `scripts/triaged_delivery.py` no longer answers DESIGN gates or accepts
+  a design on a person's behalf: they stay parked unless `--answer-design-defaults` opts in,
+  and opt-in answers are recorded as `automation:triaged-delivery`. Each pass reaps expired
+  ticket leases, retires tickets whose issue was closed, and resumes dispatched projects
+  before selecting new work, so a parked project is driven again and published once DONE, as
+  a draft pull request on a branch naming its issue and project. `triage_queue.set_state`
+  failed on every call ("inconsistent types deduced for parameter $3") and now records the
+  project it dispatched. See the [runbook](docs/runbooks/triaged-delivery.md).
 * **ci:** the minikube smoke's ledger-guard probe passes each role's password to `psql`
   inside the postgres pod. Local connections authenticate with scram-sha-256 since #1142
   (sub-doctrine 10.j, ADR-0061), so the passwordless probe failed there and on every PR after it.
