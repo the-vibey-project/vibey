@@ -207,6 +207,9 @@ as a silent omission.
 
 - ≥ 1 acceptance criterion in the synthesized spec
 - 0 open `blocking` questions
+- 0 unsettled DESIGN jobs in the cycle: research, synthesis and spec have all run,
+  so what is accepted is the spec this cycle synthesized, never a `spec.json` that
+  was already on disk (the interview's completion only queues the rest of the chain)
 - the developer's acceptance (issuing the command is the acceptance)
 - an explicit visual decision matching the target phase
 

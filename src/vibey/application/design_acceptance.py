@@ -8,6 +8,11 @@
 `VisualDesignOptedIn`/`VisualDesignDeclined` before the phase transitions, and
 silence is never treated as consent because the default is DECLINED, not
 OPTED_IN.
+
+What is accepted is the finished spec, not the interview: while any DESIGN job of
+the cycle (research, synthesis, spec) is unsettled the guard refuses, because a
+`spec.json` present before synthesis ran is not this cycle's -- it can be a stale
+file the repository carried in -- and `build.decompose` would plan from it.
 """
 
 from datetime import datetime
@@ -70,6 +75,9 @@ class DesignAcceptanceService:
             open_blocking_questions=count_open_blocking_questions(events),
             accepted=True,
             visual_decision=visual_choice,
+            unsettled_design_jobs=await self._jobs.count_unsettled(
+                project_id, cycle=project.cycle, phase=Phase.DESIGN
+            ),
         )
         state = PhaseState(project.phase, project.cycle, project.max_cycles, project.updated_at)
         target = Phase.VISUAL_DESIGN if visual_choice is VisualDecision.OPTED_IN else Phase.BUILD

@@ -9,7 +9,8 @@ import pytest
 from tests.application.fakes import FakeJobRepository
 from vibey.application.design import DesignEvent
 from vibey.application.design_acceptance import DesignAcceptanceService
-from vibey.application.dto import ProjectRecord
+from vibey.application.dto import EnqueueRequest, ProjectRecord
+from vibey.domain.job import JobState
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.phase import Phase, VisualDecision
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
@@ -143,3 +144,54 @@ async def test_accept_rejects_open_blocking_question() -> None:
         await _service(
             projects=Projects(value), ledger=Ledger((event,)), specs=Specs(spec())
         ).accept(value.project_id)
+
+
+async def _design_job(jobs: FakeJobRepository, value: ProjectRecord, kind: str) -> UUID:
+    record = await jobs.enqueue(
+        EnqueueRequest(
+            project_id=value.project_id,
+            cycle=value.cycle,
+            phase=Phase.DESIGN,
+            kind=kind,
+            idempotency_key=f"{value.project_id}:{kind}",
+        )
+    )
+    return record.id
+
+
+async def test_accept_refuses_while_the_design_chain_is_still_queued() -> None:
+    """Live 2026-09-29: accepted straight after the interview, a stale spec.json on disk
+    took the project to BUILD with research, synthesis and spec still ready."""
+    value = project()
+    projects = Projects(value)
+    ledger = Ledger()
+    specs = Specs(spec())
+    jobs = FakeJobRepository()
+    for kind in ("design.research", "design.synthesize", "design.spec"):
+        await _design_job(jobs, value, kind)
+    with pytest.raises(ValueError, match="3 design job\\(s\\) still unsettled"):
+        await _service(projects=projects, ledger=ledger, specs=specs, jobs=jobs).accept(
+            value.project_id
+        )
+    assert projects.project is not None
+    assert projects.project.phase is Phase.DESIGN
+    assert ledger.appended == []
+    assert not specs.published
+    assert await jobs.list_for_cycle(value.project_id, cycle=1, kind="build.decompose") == ()
+
+
+async def test_accept_proceeds_once_every_design_job_has_settled() -> None:
+    value = project()
+    projects = Projects(value)
+    jobs = FakeJobRepository()
+    for kind in ("design.interview", "design.synthesize", "design.spec"):
+        await _design_job(jobs, value, kind)
+    while (
+        claimed := await jobs.claim(value.project_id, owner="w", lease=timedelta(1))
+    ) is not None:
+        assert await jobs.ack(claimed.id, owner="w")
+    service = _service(projects=projects, ledger=Ledger(), specs=Specs(spec()), jobs=jobs)
+    accepted = await service.accept(value.project_id)
+    assert accepted.phase is Phase.BUILD
+    (decompose,) = await jobs.list_for_cycle(value.project_id, cycle=1, kind="build.decompose")
+    assert decompose.state is JobState.READY
