@@ -66,7 +66,7 @@ def make(
 def test_no_vibey_says_how_to_install_it() -> None:
     launcher, out, spawned, _ = make(found=None)
     assert launcher.launch("127.0.0.1", 8765, open_browser=True) == 1
-    assert "pip install vibey-engine" in out.getvalue()
+    assert "pip install 'vibey-engine[hub]'" in out.getvalue()
     assert spawned == []
 
 

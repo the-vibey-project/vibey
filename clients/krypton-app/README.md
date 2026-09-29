@@ -4,7 +4,7 @@ krypton is every app and interface of [vibey](https://the-vibey-project.github.i
 This package carries them and installs one command, `krypton`.
 
 ```bash
-pip install krypton-app      # brings vibey-engine with it
+pip install krypton-app      # brings vibey-engine[hub] with it: the engine and its web hub
 krypton                      # start the local vibey hub and open it in your browser
 krypton --help
 ```

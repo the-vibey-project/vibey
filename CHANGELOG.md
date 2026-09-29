@@ -203,6 +203,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   over an empty schema. `tests/meta/test_wheel_ships_migrations.py` builds the real wheel
   and asserts every migration is in it, byte for byte, and that code imported from the
   unpacked wheel finds them there.
+* **krypton-app:** `pip install krypton-app` now brings `vibey-engine[hub]`, not bare
+  `vibey-engine`. The launcher's one job is `vibey serve`, whose web stack (fastapi,
+  uvicorn) is the engine's `hub` extra, so on its own the package installed a `krypton`
+  that crashed on `No module named 'fastapi'`. Still unpinned; the launcher's install hint
+  names the extra too, and `clients/krypton-app/tests/test_packaging.py` holds the
+  requirement to an extra the engine actually declares.
 
 ## [3.0.0] (2026-09-29)
 

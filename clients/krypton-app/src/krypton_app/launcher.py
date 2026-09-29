@@ -67,7 +67,7 @@ class KryptonLauncher(KryptonLauncherInterface):
         if vibey is None:
             self.out.write(
                 "krypton: the vibey command is not installed, so there is no hub to start.\n"
-                "Install the engine with: pip install vibey-engine\n"
+                "Install the engine and its hub with: pip install 'vibey-engine[hub]'\n"
             )
             return 1
         if self.run([vibey, "serve", "--help"]) != 0:
