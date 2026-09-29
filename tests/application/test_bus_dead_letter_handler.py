@@ -43,6 +43,9 @@ class RecordingBus:
     async def consume(self, queue: str) -> dict[str, object] | None:
         return None
 
+    async def delete_queue(self, queue: str) -> None:
+        return None
+
 
 def _payload(**overrides: object) -> dict[str, object]:
     values: dict[str, object] = {

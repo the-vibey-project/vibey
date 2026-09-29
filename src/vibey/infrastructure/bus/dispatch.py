@@ -41,6 +41,9 @@ class BusDispatchAdapter(BusPort):
     async def consume(self, queue: str) -> dict[str, object] | None:
         return await self._run(lambda: self._delegate.consume(queue))  # type: ignore[return-value]
 
+    async def delete_queue(self, queue: str) -> None:
+        await self._run(lambda: self._delegate.delete_queue(queue))
+
 
 class BusDispatchSelection:
     """Load a measured local winner for `auto` mode."""
@@ -57,25 +60,47 @@ class BusDispatchSelection:
 
 
 class BusDispatchBenchmark:
-    """Measure the three bus policies using an isolated queue."""
+    """Measure the three bus policies, each on a transient queue of its own.
 
-    def __init__(self, *, messages: int = 8, hybrid_concurrency: int = 4) -> None:
+    A benchmark queue is a measurement artifact, not a job queue, so it is named outside
+    the reap policy's owned namespace (`[queue.reap] owned_queue_pattern`, `^vibey\\.` by
+    default): the reap verifier holds every owned queue to its policy, and a queue
+    declared seconds earlier still reads 'no policy' in the broker's statistics. Each one
+    is deleted once its measurement ends, whether or not the round trips succeeded, so a
+    run leaves nothing on the broker.
+    """
+
+    QUEUE_PREFIX = "vibey-dispatch-benchmark."
+
+    def __init__(
+        self,
+        *,
+        messages: int = 8,
+        hybrid_concurrency: int = 4,
+        queue_prefix: str = QUEUE_PREFIX,
+    ) -> None:
         if messages <= 0 or hybrid_concurrency <= 0:
             raise ValueError("messages and hybrid_concurrency must be positive")
+        if not queue_prefix.strip():
+            raise ValueError("queue_prefix must name the benchmark's queues")
         self._messages = messages
         self._hybrid_concurrency = hybrid_concurrency
+        self._queue_prefix = queue_prefix
 
     async def run(self, bus: BusPort) -> dict[str, object]:
         rates: dict[str, float] = {}
         for mode in ("singleton", "multiplexer", "hybrid"):
-            queue = f"vibey.dispatch.benchmark.{uuid.uuid4().hex}"
+            queue = f"{self._queue_prefix}{uuid.uuid4().hex}"
             policy = BusDispatchAdapter(bus, mode, hybrid_concurrency=self._hybrid_concurrency)
             await policy.declare_queue(queue, dead_letter=False)
-            started = time.perf_counter()
-            await asyncio.gather(
-                *(self._round_trip(policy, queue, i) for i in range(self._messages))
-            )
-            rates[mode] = self._messages / max(time.perf_counter() - started, 1e-9)
+            try:
+                started = time.perf_counter()
+                await asyncio.gather(
+                    *(self._round_trip(policy, queue, i) for i in range(self._messages))
+                )
+                rates[mode] = self._messages / max(time.perf_counter() - started, 1e-9)
+            finally:
+                await bus.delete_queue(queue)
         return {
             "winner": max(rates, key=rates.__getitem__),
             "rates": rates,

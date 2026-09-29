@@ -54,7 +54,10 @@ class InMemoryBus(BusPort, BusInspectorPort):
             self._dead[queue] = dlq
 
     async def publish(self, queue: str, payload: dict[str, object]) -> None:
-        await self.declare_queue(queue)
+        # Declared only when missing, as the RabbitMQ adapter does (#1108 review finding
+        # 11): a queue declared without a dead-letter queue must not acquire one here.
+        if queue not in self._queues:
+            await self.declare_queue(queue)
         self._queues[queue].append(
             InMemoryMessage(
                 payload=dict(payload), published_at=self._clock(), message_id=uuid.uuid4().hex
@@ -66,6 +69,10 @@ class InMemoryBus(BusPort, BusInspectorPort):
         if not pending:
             return None
         return pending.popleft().payload
+
+    async def delete_queue(self, queue: str) -> None:
+        self._queues.pop(queue, None)
+        self._dead.pop(queue, None)
 
     async def reject(self, queue: str, *, reason: str = "rejected") -> bool:
         """Dead-letter the head of `queue`: to its dead-letter queue, or -- declared

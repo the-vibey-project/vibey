@@ -24,3 +24,11 @@ class BusPort(Protocol):
     async def consume(self, queue: str) -> dict[str, object] | None:
         """Take one message off a queue, or None when it is empty."""
         ...
+
+    async def delete_queue(self, queue: str) -> None:
+        """Delete a queue and the messages on it; deleting one that is gone is not an error.
+
+        Only the named queue: its `<queue>.dlq`, if it has one, is a queue in its own right
+        whose dead letters are evidence, and is deleted only by name.
+        """
+        ...

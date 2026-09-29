@@ -13,6 +13,9 @@ that dies after `consume` returns has lost the message (ADR-0056 records this).
 A publish declares its queue only when the queue does not exist yet, so it never
 re-declares one that exists with other arguments (#1108 review finding 11).
 
+Deleting a queue that is already gone is a no-op, not an error: a 404 from the
+management API means the caller's intent already holds.
+
 Every publish carries a `message_id` and a `timestamp` (ADR-0056): the id makes a
 dead letter's identity its own, so parking it is idempotent, and the timestamp
 lets the reaper measure how long the oldest ready message has waited.
@@ -102,6 +105,16 @@ class RabbitMqBusAdapter(BusPort):
         )
         if not isinstance(result, dict) or not result.get("routed"):
             raise RuntimeError(f"RabbitMQ did not route the payload to {queue!r}")
+
+    async def delete_queue(self, queue: str) -> None:
+        await asyncio.to_thread(self._delete_sync, queue)
+
+    def _delete_sync(self, queue: str) -> None:
+        try:
+            self._request("DELETE", f"queues/{self._vhost}/{self._api.name(queue)}")
+        except RabbitMqApiError as exc:
+            if exc.status != 404:
+                raise
 
     def _exists(self, queue: str) -> bool:
         try:

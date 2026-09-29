@@ -22,6 +22,7 @@ import pytest
 import pytest_asyncio
 
 from vibey.domain.config import QueueReapConfig
+from vibey.infrastructure.bus.dispatch import BusDispatchBenchmark
 from vibey.infrastructure.bus.management import RabbitMqApiError, RabbitMqManagementApi
 from vibey.infrastructure.bus.rabbitmq import RabbitMqBusAdapter
 from vibey.infrastructure.bus.rabbitmq_inspector import RabbitMqBusInspector
@@ -235,6 +236,21 @@ async def test_probe_forge_a_forged_origin_is_read_as_what_it_claims(broker: Bro
     (item,) = (await broker.inspector.peek_dead_letters("vibey.forge.dlq", limit=10)).items
     assert (item.origin_queue, item.reason) == ("celery", "expired")
     assert not POLICY.owns(item.origin_queue)
+
+
+async def test_a_dispatch_benchmark_leaves_no_queue_and_the_policy_verifies(
+    broker: Broker,
+) -> None:
+    """The #1244 cluster-smoke flake: three `vibey.dispatch.benchmark.<uuid>` queues per run,
+    never deleted, owned by the reap policy and reading 'no policy' when it was checked."""
+    _declare(broker, "vibey.jobs")
+    result = await BusDispatchBenchmark(messages=2, hybrid_concurrency=2).run(broker.bus)
+    assert result["winner"] in {"singleton", "multiplexer", "hybrid"}
+    queues = broker.api.request("GET", f"queues/{broker.api.vhost}")
+    assert [queue["name"] for queue in queues] == ["vibey.jobs"]
+    await broker.bus.delete_queue("vibey.never-declared")
+    outcome = await broker.inspector.apply_policy(POLICY)
+    assert outcome.verified, outcome.detail
 
 
 def test_an_unreachable_broker_is_named_without_its_password() -> None:

@@ -1359,6 +1359,66 @@ async def test_in_memory_bus_satisfies_port() -> None:
     assert await bus.consume("plain") == {"b": 2}
 
 
+@pytest.mark.asyncio
+async def test_rabbitmq_adapter_delete_queue_sends_one_delete() -> None:
+    opener = MagicMock(return_value=_mock_response(b""))
+    adapter = RabbitMqBusAdapter(url="http://bus:15672", username="u", password="p", opener=opener)
+    await adapter.delete_queue("lab/bench q")
+    assert len(opener.call_args_list) == 1
+    sent = _bus_call(opener)
+    assert sent.get_method() == "DELETE"
+    assert sent.full_url == "http://bus:15672/api/queues/%2F/lab%2Fbench%20q"
+
+
+@pytest.mark.asyncio
+async def test_rabbitmq_adapter_deleting_a_missing_queue_is_not_an_error() -> None:
+    missing = urllib.error.HTTPError("http://x", 404, "Not Found", {}, None)
+    adapter = RabbitMqBusAdapter(
+        url="http://bus:15672", username="u", password="p", opener=_raising_opener(missing)
+    )
+    await adapter.delete_queue("gone")
+
+
+@pytest.mark.asyncio
+async def test_rabbitmq_adapter_delete_queue_raises_any_other_http_error() -> None:
+    err = urllib.error.HTTPError("http://x", 500, "boom", {}, None)
+    adapter = RabbitMqBusAdapter(
+        url="http://bus:15672", username="u", password="p", opener=_raising_opener(err)
+    )
+    with pytest.raises(RuntimeError, match="500"):
+        await adapter.delete_queue("jobs")
+
+
+@pytest.mark.asyncio
+async def test_in_memory_bus_delete_queue_drops_the_queue_and_keeps_its_dead_letters() -> None:
+    bus = InMemoryBus()
+    await bus.declare_queue("jobs")
+    await bus.publish("jobs", {"a": 1})
+    await bus.publish("jobs", {"a": 2})
+    assert await bus.reject("jobs") is True
+    await bus.delete_queue("jobs")
+    assert [depth.queue for depth in await bus.depths()] == ["jobs.dlq"]
+    assert await bus.consume("jobs") is None
+    # A queue declared afresh under the old name has no dead-letter wiring left over.
+    await bus.declare_queue("jobs", dead_letter=False)
+    await bus.publish("jobs", {"a": 3})
+    assert await bus.reject("jobs") is True
+    assert [(d.queue, d.ready) for d in await bus.depths()] == [("jobs", 0), ("jobs.dlq", 1)]
+    await bus.delete_queue("never-declared")
+
+
+@pytest.mark.asyncio
+async def test_in_memory_bus_publish_does_not_redeclare_an_existing_queue() -> None:
+    """As the RabbitMQ adapter (#1108 review finding 11): publishing into a queue declared
+    without a dead-letter queue must not give it one."""
+    bus = InMemoryBus()
+    await bus.declare_queue("plain", dead_letter=False)
+    await bus.publish("plain", {"b": 2})
+    assert [depth.queue for depth in await bus.depths()] == ["plain"]
+    await bus.publish("fresh", {"c": 3})
+    assert [depth.queue for depth in await bus.depths()] == ["fresh", "fresh.dlq", "plain"]
+
+
 # ----------------------------------------------------
 # 7. Blob surface (Garage, S3 API)
 # ----------------------------------------------------

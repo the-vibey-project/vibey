@@ -17,6 +17,24 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [3.0.0] (2026-09-29)
 
+### Bug Fixes
+
+* **bus:** the dispatch benchmark no longer leaves queues on the broker, and no longer fails
+  `vibey queue reap`. Every run declared three durable `vibey.dispatch.benchmark.<uuid>`
+  queues and never deleted them -- weekly, and at every fresh pod start, since the cached
+  winner is missing there. Those names fell inside the reap policy's owned namespace
+  (`^vibey\.`), and a queue declared seconds earlier still reads 'no policy' in the broker's
+  statistics, so the policy verifier reported `read back, but not in force on:
+  vibey.dispatch.benchmark.…` and exited 1 whenever one was alive (seen in the minikube
+  cluster smoke of #1244). Benchmark queues are now named `vibey-dispatch-benchmark.<uuid>`,
+  outside the owned namespace (the prefix is a `BusDispatchBenchmark(queue_prefix=...)`
+  argument), and each is deleted in a `finally` once its measurement ends, so a failed round
+  trip cleans up too. The bus port gains `delete_queue(queue)`: the RabbitMQ adapter issues a
+  management-API `DELETE queues/{vhost}/{name}` and treats a 404 as already done, the
+  in-memory bus and the dispatch adapter implement it, and a queue's `.dlq` is never deleted
+  with it. The in-memory bus's `publish` now declares a queue only when it is missing, as the
+  RabbitMQ adapter does, so a queue declared without a dead-letter queue no longer acquires one.
+
 ### Features
 
 * **bus:** measured dispatch for every service-bus surface
