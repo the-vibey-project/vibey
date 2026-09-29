@@ -87,6 +87,32 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref || github.event.merge_group.base_ref }}
         run: |
           set -euo pipefail
+          # The tooling comes from the default branch, so the pull request that introduces
+          # this workflow -- and every one after it until a promotion carries the command to
+          # that branch -- meets a vibey-gh without `skip-marker-check`. Failing there would
+          # block the promotion that brings the command: a deadlock, not a guard. Passing
+          # there would be a gate routed around. So the older tooling gets this scan
+          # instead: the same markers (config.SKIP_MARKERS, held equal by a test) and the
+          # same trailer, over the same commits, title and body, stricter only in honouring
+          # no `[skip_markers] exempt_authors`. It stops applying by itself once the
+          # default branch's tooling has the command.
+          if ! vibey-gh skip-marker-check --help >/dev/null 2>&1; then
+            echo "::warning::the default branch's vibey-gh predates skip-marker-check; running the bootstrap scan"
+            bracketed='\[(skip ci|ci skip|no ci|skip actions|actions skip)\]'
+            trailer='^[[:space:]]*skip-checks:[[:space:]]*true[[:space:]]*$'
+            found="$(
+              { git -C ../target log --format=%B "${BASE_SHA}..${HEAD_SHA}"
+                printf '%s\n%s\n' "${PR_TITLE:-}" "${PR_BODY:-}"
+              } | grep -inE "${bracketed}|${trailer}" || true
+            )"
+            if [ -n "$found" ]; then
+              echo "::error::a GitHub skip marker would reach ${BASE_REF#refs/heads/}; remove it from the commit, title or body"
+              printf '%s\n' "$found"
+              exit 1
+            fi
+            echo "no skip marker in ${BASE_SHA}..${HEAD_SHA}, the title or the body (bootstrap scan)"
+            exit 0
+          fi
           vibey-gh skip-marker-check \
             --checkout ../target \
             --commits "${BASE_SHA}..${HEAD_SHA}" \

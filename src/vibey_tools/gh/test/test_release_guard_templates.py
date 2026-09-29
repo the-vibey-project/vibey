@@ -128,3 +128,95 @@ def test_this_tree_deploys_the_guards_exactly_as_rendered():
     root = Path(__file__).resolve().parent.parent
     for name in ("skip-markers.yml", "branch-health.yml", "ruleset-drift.yml"):
         assert (root / ".github" / "workflows" / name).is_file(), name
+
+
+# The pull request that introduces skip-markers.yml, and every one after it until a
+# promotion, runs the default branch's older vibey-gh, which has no skip-marker-check.
+# The guard must still refuse a marker there -- and still let a clean change through,
+# or the promotion that carries the command could never merge.
+def _bootstrap_run(tmp_path: Path, *, message: str, title: str = "", body: str = ""):
+    import os
+    import subprocess
+
+    _, spec = rendered("skip-markers.yml", GhConfig(root=tmp_path))
+    script = spec["jobs"]["check"]["steps"][-1]["run"]
+    tmp_path.mkdir(exist_ok=True)
+    target = tmp_path / "target"
+    automation = tmp_path / "automation"
+    bin_dir = tmp_path / "bin"
+    for directory in (target, automation, bin_dir):
+        directory.mkdir()
+    # An older vibey-gh: every subcommand it lacks is an argparse error, exit 2.
+    fake = bin_dir / "vibey-gh"
+    fake.write_text("#!/bin/sh\nexit 2\n", encoding="utf-8")
+    fake.chmod(0o755)
+    git = [
+        "git",
+        "-c",
+        "user.name=guard-test",
+        "-c",
+        "user.email=guard-test@example.invalid",
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "-C",
+        str(target),
+    ]
+    subprocess.run([*git, "init", "-q", "-b", "develop"], check=True)
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "chore: base"], check=True)
+    base = subprocess.run(
+        [*git, "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+    ).stdout.strip()
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", message], check=True)
+    head = subprocess.run(
+        [*git, "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+    ).stdout.strip()
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        "PR_TITLE": title,
+        "PR_BODY": body,
+        "BASE_SHA": base,
+        "HEAD_SHA": head,
+        "BASE_REF": "develop",
+    }
+    return subprocess.run(
+        ["bash", "-c", script],
+        cwd=automation,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_the_bootstrap_scan_knows_every_marker_the_command_knows(tmp_path):
+    from vibey_gh.config import SKIP_MARKERS
+
+    _, spec = rendered("skip-markers.yml", GhConfig(root=tmp_path))
+    script = spec["jobs"]["check"]["steps"][-1]["run"]
+    alternation = script.split("bracketed='\\[(", 1)[1].split(")\\]'", 1)[0]
+    assert {f"[{spelling}]" for spelling in alternation.split("|")} == set(SKIP_MARKERS)
+
+
+def test_older_tooling_still_refuses_a_marker_in_a_commit(tmp_path):
+    marker = "[" + "skip ci" + "]"
+    done = _bootstrap_run(tmp_path, message=f"docs: quiet change {marker}")
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert "bootstrap scan" in done.stdout
+
+
+def test_older_tooling_still_refuses_a_marker_in_the_body_or_a_trailer(tmp_path):
+    body = "Squashed text\n\n" + "skip-checks" + ": true\n"
+    assert _bootstrap_run(tmp_path / "body", message="fix: ok", body=body).returncode == 1
+    title = "chore: x " + "[" + "CI SKIP" + "]"
+    assert _bootstrap_run(tmp_path / "title", message="fix: ok", title=title).returncode == 1
+
+
+def test_older_tooling_lets_a_clean_change_through(tmp_path):
+    done = _bootstrap_run(
+        tmp_path, message="feat: add the guard", title="feat: add the guard", body="skip-ci is fine"
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "no skip marker" in done.stdout
