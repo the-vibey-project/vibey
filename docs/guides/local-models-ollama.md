@@ -160,6 +160,55 @@ default. Set `structured_verdict = true` only for a model you intend to hold to 
 conformance then requires a `VerdictRendered` event from the configured model, and a
 claim it cannot prove fails conformance and makes the engine ineligible.
 
+### Measuring a capacity fit
+
+The sovereign DESIGN and DECOMPOSE providers reach Ollama through one client with two
+ceilings: the context window it asks for (`num_ctx`: `VIBEY_OLLAMA_CONTEXT`, default
+`8192`, at least `4096`) and the output it allows (`num_predict`:
+`VIBEY_OLLAMA_OUTPUT`, default `2048`). `vibey doctor --sovereign-fit` measures what
+this host's server actually answers, and records it:
+
+```bash
+vibey doctor --sovereign-fit                   # writes ~/.local/state/vibey/sovereign-fit.json
+vibey doctor --sovereign-fit --fit-output ./sovereign-fit.json
+export VIBEY_OLLAMA_FIT=~/.local/state/vibey/sovereign-fit.json   # for work and worker
+```
+
+The probe is `scripts/sovereign_probe.py`, run with doctor's own interpreter against
+`VIBEY_OLLAMA_URL` and `VIBEY_OLLAMA_MODEL`. It sends one JSON-mode chat request for each
+combination of context `4096`, `8192` and output `512`, `1024`, `2048`, each with a
+120-second timeout. A combination is valid when the reply carries non-empty content, and
+the fastest valid one becomes `selected_fit`. The record holds `measured_at`, `url`,
+`model`, `revision` (`git rev-parse HEAD` in the directory doctor runs in, else
+`unknown`), `prompt_shape` (the probe's own prompt size), every result, and
+`selected_fit`. With no valid combination doctor prints `sovereign fit FAIL` and exits 1.
+The file is still written, with `selected_fit: null`, which the client ignores.
+
+Doctor does not export anything: set `VIBEY_OLLAMA_FIT` in the environment of `vibey
+work` and `vibey worker`. The client then uses the record only when all of these hold:
+
+- its `url` equals `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`) exactly, as a
+  string, so a trailing slash is a different server;
+- its `model` equals the model in effect: `--ollama-model`, else `VIBEY_OLLAMA_MODEL`,
+  else `gpt-oss:20b`;
+- when `VIBEY_REVISION` is set, its `revision` equals it;
+- its `selected_fit` is valid, with a context of at least `4096` and a positive output,
+  and it carries a `prompt_shape`.
+
+Otherwise (unset, unreadable, malformed or mismatched) the configured ceilings apply:
+`VIBEY_OLLAMA_CONTEXT` and `VIBEY_OLLAMA_OUTPUT`, `8192` and `2048` by default.
+
+A matching record replaces those two ceilings with its measured context and output, but
+only for a request no larger than the prompt it was measured with (the record's system
+plus user characters). A larger request falls back to the built-in ceilings, `8192` and
+`2048`, not to the two variables. The probe's prompt is 42 characters today, so real
+DESIGN and DECOMPOSE prompts run on the built-in ceilings: the record proves what the
+server answers at each size, not yet a working size for a full ledger.
+
+The probe script ships in the repository, not in the `vibey-engine` wheel. Doctor looks
+for it beside the source tree it runs from, so `--sovereign-fit` works from a checkout
+(an editable install) and fails with `sovereign fit FAIL` from a wheel install.
+
 ## 6. Run
 
 ```bash
