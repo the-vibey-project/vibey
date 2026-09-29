@@ -197,11 +197,22 @@ class ReviewRefused(Exception):
     no verdict:" -- so it names what happened (the window, the reserve, what the model read,
     why it stopped) rather than the parse error it would otherwise surface as. `code` is
     the same reason in `vibey_gh.review_outcome`'s closed vocabulary, for a program to count.
+    `parts` and `attempts` say how far the review got before it stopped -- the parts it was
+    planned in and the requests it made -- so a record of no verdict still says that much.
     """
 
-    def __init__(self, reason: str, *, code: str = outcome.ANSWER_INCOMPLETE) -> None:
+    def __init__(
+        self,
+        reason: str,
+        *,
+        code: str = outcome.ANSWER_INCOMPLETE,
+        parts: int = 0,
+        attempts: int = 0,
+    ) -> None:
         super().__init__(reason)
         self.code = code
+        self.parts = parts
+        self.attempts = attempts
 
 
 def build_prompt(diff: str, max_chars: int) -> str:
@@ -768,6 +779,7 @@ class TransportRetry:
                         f"local model unreachable or timed out: {error}"
                         f" ({attempt} attempt{'s' if attempt > 1 else ''})",
                         code=self.code(error),
+                        attempts=attempt,
                     ) from error
                 (self.sleep or time.sleep)(self.backoff_seconds * 2 ** (attempt - 1))
 
@@ -1023,7 +1035,10 @@ class SovereignReview:
             except ReviewRefused as refused:
                 where = ", ".join(part.paths) or "the diff"
                 raise ReviewRefused(
-                    f"part {index} of {count} ({where}): {refused}", code=refused.code
+                    f"part {index} of {count} ({where}): {refused}",
+                    code=refused.code,
+                    parts=count,
+                    attempts=attempts + max(refused.attempts, 1),
                 ) from refused
             attempts += took
             answers.append(answer)
@@ -1260,7 +1275,8 @@ def review(argv: list[str] | None = None) -> int:
     try:
         verdict, shown, report = sovereign.run(diff)
     except ReviewRefused as refused:
-        return said(refused.code, str(refused), ReviewReport(0, 0), status=1)
+        report = ReviewReport(refused.parts, refused.attempts)
+        return said(refused.code, str(refused), report, status=1)
     except (KeyError, TypeError, json.JSONDecodeError) as error:
         return said(
             outcome.ANSWER_UNUSABLE,

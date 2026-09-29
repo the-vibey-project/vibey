@@ -1708,6 +1708,8 @@ def test_a_part_the_model_could_not_answer_leaves_no_verdict_at_all(monkeypatch,
     assert capsys.readouterr().out == ""
     assert _outcome(record)["code"] == "answer_incomplete"
     assert _outcome(record)["reason"].startswith("part 2 of 3 (f1.py): the model ran out")
+    # How far it got is kept: planned in 3 parts, 2 requests made.
+    assert (_outcome(record)["parts"], _outcome(record)["attempts"]) == (3, 2)
 
 
 def test_past_max_chunks_a_human_is_asked_with_the_reason(monkeypatch, capsys, tmp_path):
@@ -1887,6 +1889,7 @@ def test_a_transport_failure_is_retried_once_and_then_named(
     assert "unreachable or timed out" in capsys.readouterr().err
     assert _outcome(record)["code"] == code
     assert _outcome(record)["reason"].endswith("(2 attempts)")
+    assert _outcome(record)["attempts"] == 2
 
 
 def test_a_model_that_answers_on_the_retry_gives_its_verdict(
@@ -2054,3 +2057,38 @@ def test_the_new_seams_are_satisfied():
     assert isinstance(
         local_review.SovereignReview("http://m", "m", 1000, 30, sizer), SovereignReviewInterface
     )
+
+
+def test_a_part_that_timed_out_on_every_attempt_keeps_the_count_of_what_was_tried(
+    monkeypatch, tmp_path, no_sleep
+):
+    """Seen live on #1238's diff: part 1 answered, part 2 timed out on both attempts. The
+    record of no verdict still says the review was planned in 2 parts and made 3 requests."""
+    files = [_file_diff(f"f{n}.py", ["+ changed\n" * 100]) for n in range(2)]
+    diff = tmp_path / "big.diff"
+    diff.write_text("".join(files), encoding="utf-8")
+    calls: list[object] = []
+
+    def second_part_times_out(request, timeout=None):
+        calls.append(request)
+        if len(calls) > 1:
+            raise TimeoutError("timed out")
+        return _answer(request, _verdict())
+
+    monkeypatch.setattr(local_review.urllib.request, "urlopen", second_part_times_out)
+    record = tmp_path / "outcome.json"
+
+    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10)]
+    assert local_review.review([*argv, "--outcome", str(record)]) == 1
+
+    assert _outcome(record) | {"reason": ""} == {
+        "schema": "vibey-gh.local-review/1",
+        "code": "model_timeout",
+        "reason": "",
+        "scope": "diff-groundable",
+        "role": "fallback",
+        "head_sha": "",
+        "parts": 2,
+        "attempts": 3,
+    }
+    assert _outcome(record)["reason"].startswith("part 2 of 2 (f1.py): local model unreachable")
