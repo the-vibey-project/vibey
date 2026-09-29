@@ -641,7 +641,7 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 \\addlegendentry{{attempted}}
 \\addplot[fill=vibeygreen!45,draw=vibeygreen,line width=.8pt] coordinates {{{" ".join(suc_coords)}}} \\closedcycle;
 \\addlegendentry{{succeeded}}
-\\node[vibeynote,anchor=south east,align=right] at (axis cs:{n},{succeeded + 8}) {{{succeeded} of {attempted}\\\\{succeeded / attempted * 100:.1f}\\% overall}};
+\\node[vibeynote,anchor=east,align=right] at (axis cs:{n - 1.6},{attempted * 0.78:.0f}) {{{succeeded} of {attempted}\\\\{succeeded / attempted * 100:.1f}\\% overall}};
 \\end{{axis}}
 \\end{{tikzpicture}}"""
         caption = (

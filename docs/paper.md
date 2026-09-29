@@ -2098,7 +2098,7 @@ and successes across the 14 rungs is plotted in [Fig. 19](#fig:stress-cumulative
 \addlegendentry{attempted}
 \addplot[fill=vibeygreen!45,draw=vibeygreen,line width=.8pt] coordinates {(1,1) (2,3) (3,6) (4,10) (5,16) (6,24) (7,36) (8,52) (9,73) (10,103) (11,127) (12,167) (13,220) (14,243)} \closedcycle;
 \addlegendentry{succeeded}
-\node[vibeynote,anchor=south east,align=right] at (axis cs:14,251) {243 of 444\\54.7\% overall};
+\node[vibeynote,anchor=east,align=right] at (axis cs:12.4,346) {243 of 444\\54.7\% overall};
 \end{axis}
 \end{tikzpicture}
 \caption{Cumulative generations across the fourteen rungs of the stress record: 444 attempted, 243 succeeded. The gap opens only after the stable region; every failure in the run was a clean timeout, never a malformed response.}
