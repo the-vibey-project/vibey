@@ -11,6 +11,12 @@ A bounded bridge, one project at a time. Each pass:
 3. Only with nothing in flight does it take the next issue: claims it by an idempotent GitHub
    comment (and a ticket lease), creates the normal Vibey project, and drives the worker.
 
+Before it dispatches an issue it asks whose words the issue carries and who applied the labels
+that queued it (`scripts/intake_trust.py`, the storm's own trust seam): an issue a stranger
+wrote, edited or labelled is held for a person -- its ticket blocked, the reason recorded, and
+one comment on the issue -- and never dispatched. An admitted issue reaches ``vibey new
+--intake`` only quoted through PromptShield, so DESIGN reads it as data.
+
 It never answers a human gate on a person's behalf unless told to. DESIGN interview gates
 stay parked for a person by default; ``--answer-design-defaults`` (or
 ``VIBEY_TRIAGED_DELIVERY_ANSWER_DESIGN_DEFAULTS=1``) is the explicit opt-in to answer them
@@ -39,6 +45,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 try:
+    from scripts.intake_trust import IntakeFrame, IntakeTrust, Untrusted
+    from scripts.interfaces.intake_trust_interface import (
+        IntakeFrameInterface,
+        IntakeTrustInterface,
+    )
     from scripts.interfaces.triage_queue_interface import (
         ForgeInterface,
         TicketSourceInterface,
@@ -51,6 +62,15 @@ try:
     )
     from scripts.triage_queue import GhCli, GithubTicketSource, TriageQueue
 except ModuleNotFoundError:  # Direct execution keeps the script directory on sys.path.
+    from intake_trust import (  # type: ignore[import-not-found,no-redef]
+        IntakeFrame,
+        IntakeTrust,
+        Untrusted,
+    )
+    from interfaces.intake_trust_interface import (  # type: ignore[import-not-found,no-redef]
+        IntakeFrameInterface,
+        IntakeTrustInterface,
+    )
     from interfaces.triage_queue_interface import (  # type: ignore[import-not-found,no-redef]
         ForgeInterface,
         TicketSourceInterface,
@@ -72,6 +92,7 @@ TRIAGED = "vibey-gh:triaged"
 BUMPED = "vibey-gh:priority-bumped"
 MARKER = "<!-- vibey-delivery-dispatch issue:{number} -->"
 PUBLISHED_MARKER = "<!-- vibey-delivery-published issue:{number} -->"
+HELD_MARKER = "<!-- vibey-delivery-held issue:{number} -->"
 EVIDENCE_DIR = ".vibey/delivery-evidence"
 DESIGN_QUESTION_KINDS = frozenset(
     {
@@ -140,10 +161,19 @@ class BridgeSettings:
     max_dispatch_failures: int = 3
     storm_home: Path = Path.home() / "git" / "vibey-storm"
     push_gate: str = ""
+    # Whose words may direct a delivery, and who may queue one. Empty: the lists the
+    # repository declares in reviewed history -- `[unattended_approval] authors`, and those
+    # plus `[merge_train] trusted_authors` and `owner` for the labels. A list given here
+    # replaces the declared one (scripts/intake_trust.py).
+    trusted_authors: tuple[str, ...] = ()
+    label_curators: tuple[str, ...] = ()
 
     @classmethod
     def from_environ(cls, repo: Path, environ: Mapping[str, str]) -> BridgeSettings:
         default = cls(repo=repo)
+
+        def logins(name: str) -> tuple[str, ...]:
+            return tuple(environ.get(ENV + name, "").replace(",", " ").split())
 
         def flag(name: str, fallback: bool) -> bool:
             value = environ.get(ENV + name)
@@ -181,6 +211,8 @@ class BridgeSettings:
                 "VIBEY_PUSH_GATE",
                 str(repo / "docs" / "plans" / "qwenstorm-3.0.0" / "tools" / "push_gate.py"),
             ),
+            trusted_authors=logins("TRUSTED_AUTHORS"),
+            label_curators=logins("LABEL_CURATORS"),
         )
 
 
@@ -288,6 +320,8 @@ class DeliveryBridge:
         forge: ForgeInterface,
         runner: CommandRunnerInterface,
         evidence: DeliveryEvidenceInterface,
+        trust: IntakeTrustInterface,
+        frame: IntakeFrameInterface | None = None,
         store: TicketStoreInterface | None = None,
         source: TicketSourceInterface | None = None,
     ) -> None:
@@ -297,6 +331,10 @@ class DeliveryBridge:
         self._forge = forge
         self._runner = runner
         self._evidence = evidence
+        # Required, never defaulted: a bridge that could be built without it would be a
+        # bridge that dispatches whoever wrote the issue (G10).
+        self._trust = trust
+        self._frame = frame or IntakeFrame()
         self._store = store
         self._source = source
 
@@ -308,11 +346,19 @@ class DeliveryBridge:
         if settings.database_url:
             store = TriageQueue(settings.database_url, settings.repository)
             source = GithubTicketSource(settings.repository, forge)
+        trust = IntakeTrust.production(
+            repo=settings.repo,
+            repository=settings.repository,
+            tools=Path(settings.push_gate).parent,
+            authors=settings.trusted_authors,
+            curators=settings.label_curators,
+        )
         return cls(
             settings,
             forge=forge,
             runner=SubprocessRunner(),
             evidence=DeliveryEvidence(settings.repo / EVIDENCE_DIR),
+            trust=trust,
             store=store,
             source=source,
         )
@@ -410,7 +456,12 @@ class DeliveryBridge:
         else:
             assert issue_list is not None
             candidate = next(
-                (i for i in issue_list if self.dispatched_project(i.number) is None), None
+                (
+                    i
+                    for i in issue_list
+                    if self.dispatched_project(i.number) is None and not self._held(i.number)
+                ),
+                None,
             )
             if candidate is None:
                 print("no eligible triaged issue without a dispatch marker")
@@ -418,6 +469,9 @@ class DeliveryBridge:
             issue = candidate
         try:
             project_id = self.dispatch(issue)
+        except Untrusted as refused:
+            self._hold(issue, refused)
+            return 0
         except Exception as exc:
             self._dispatch_failed(issue, exc)
             raise
@@ -442,6 +496,36 @@ class DeliveryBridge:
         else:
             # Handed back now rather than left leased: the next pass retries it.
             self._store.release(issue.number)
+
+    def _hold(self, issue: Issue, refused: Untrusted) -> None:
+        """A stranger wrote, edited or labelled the issue: never dispatched, and a person is
+        asked, once. Sticky by design -- the history that refused it does not change."""
+        self._evidence.ticket(
+            issue.number,
+            outcome="held_untrusted",
+            state="blocked",
+            reason=refused.reason,
+            accounts=list(refused.accounts),
+            grant=refused.grant,
+        )
+        if self._store is not None:
+            self._store.set_state(issue.number, "blocked")
+        if not self._held(issue.number):
+            self._forge.gh(
+                "issue",
+                "comment",
+                str(issue.number),
+                "--body",
+                f"{HELD_MARKER.format(number=issue.number)}\n\n"
+                "Vibey's triaged delivery is holding this issue for a maintainer and has not "
+                f"dispatched it: {refused.reason}.\n\n"
+                "The delivery bridge dispatches an issue only when its author, everyone who "
+                "edited it, and whoever applied its triage labels are named in the trust grant "
+                f"this repository declares in reviewed history ({refused.grant}). To go ahead, "
+                "a maintainer can review the request and re-file it under their own account, "
+                "or name the account in a reviewed change to `.vibey-gh.toml`.",
+            )
+        print(f"held #{issue.number}: {refused.reason}")
 
     def _finish(self, issue: Issue, project_id: str) -> None:
         pull_request = self.publish(project_id, issue.number, issue.title)
@@ -549,18 +633,34 @@ class DeliveryBridge:
     def _published(self, number: int) -> bool:
         return PUBLISHED_MARKER.format(number=number) in self._comments(number)
 
+    def _held(self, number: int) -> bool:
+        return HELD_MARKER.format(number=number) in self._comments(number)
+
     def dispatch(self, issue: Issue) -> str:
+        """Admit, frame, create. The trust check is here, not in the caller, so nothing --
+        a pass, a test, a later caller -- can dispatch an issue it did not pass. The text
+        dispatched is the text judged, never `issue.body` (the listing's copy)."""
+        verdict = self._trust.admit(issue.number)
+        self._evidence.ticket(
+            issue.number,
+            outcome="admitted",
+            author=verdict.author,
+            accounts=list(verdict.accounts),
+            curators=list(verdict.curators),
+            grant=verdict.grant,
+            injection_heuristic=self._frame.suspicious(verdict),
+        )
         marker = MARKER.format(number=issue.number)
         worktree = self._worktree(issue)
         output = self._runner.run(
             [
                 *self._settings.vibey,
                 "new",
-                f"github#{issue.number}: {issue.title}",
+                self._frame.name(verdict),
                 "--repo",
                 str(worktree),
                 "--intake",
-                f"GitHub issue #{issue.number}: {issue.title}\n\n{issue.body}",
+                self._frame.text(self._settings.repository, verdict),
             ]
         )
         if output.returncode:
@@ -925,6 +1025,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=None,
         help=f"Ticket lease length (default 900; {ENV}LEASE_SECONDS)",
     )
+    parser.add_argument(
+        "--trusted-author",
+        action="append",
+        default=None,
+        help="A login whose issues may be delivered; repeat for more. Replaces the reviewed "
+        f"[unattended_approval] authors (the default; also {ENV}TRUSTED_AUTHORS).",
+    )
+    parser.add_argument(
+        "--label-curator",
+        action="append",
+        default=None,
+        help="A login whose triage labels may queue an issue; repeat for more. Replaces the "
+        "reviewed authors plus [merge_train] trusted_authors and owner (the default; also "
+        f"{ENV}LABEL_CURATORS).",
+    )
     args = parser.parse_args(argv)
     settings = BridgeSettings.from_environ(args.repo.resolve(), os.environ)
     overrides = {
@@ -936,6 +1051,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "worker_timeout": args.worker_timeout,
         "max_steps": args.max_steps,
         "lease_seconds": args.lease_seconds,
+        "trusted_authors": tuple(args.trusted_author) if args.trusted_author else None,
+        "label_curators": tuple(args.label_curator) if args.label_curator else None,
     }
     settings = dataclasses.replace(
         settings, **{key: value for key, value in overrides.items() if value is not None}

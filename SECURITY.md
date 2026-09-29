@@ -57,10 +57,16 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   - Modification of files outside declared `spec.md` work item paths
   would be blocked with a `ScopeViolation` before staging, once wired in.
 
-### 4. Untrusted Prompt Defense & Delimiter Shielding (Task 9.4) — implemented and unit-tested, not yet an active runtime path
-- `PromptShield` (`src/vibey/domain/prompt_shield.py`) implements the
-  protections described below, but nothing outside its own test file
-  (`tests/domain/test_prompt_shield.py`) ever constructs or calls it — no
+### 4. Untrusted Prompt Defense & Delimiter Shielding (Task 9.4) — implemented and unit-tested; active on one path, the triaged-delivery intake
+- **Active on the triaged-delivery intake.** `scripts/triaged_delivery.py` hands a GitHub
+  issue to `vibey new --intake` only after `scripts/intake_trust.py` has checked, from one
+  forge query and against the trust grant in reviewed history, that the issue's author,
+  every editor and whoever applied its triage labels are trusted (the storm's own seam,
+  `storm_trust.py`; ADR-0053, sub-doctrine 12.j). An issue a stranger wrote, edited or
+  labelled is held for a person and never dispatched. An admitted issue is framed by
+  `PromptShield` before it enters the ledger, where `vibey new` records it as an
+  `untrusted` `TranscriptRecorded` event (`docs/runbooks/triaged-delivery.md`).
+- **Nowhere else.** Outside that one path, nothing constructs or calls `PromptShield` — no
   design or build handler (`application/seed_prompt.py`,
   `application/design_handler.py`, `application/build_implement_handler.py`,
   etc.) frames untrusted input through it. This includes the skills-context
@@ -70,7 +76,8 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   subprocess), whose skill files are themselves third-party content, and `build_implement_handler.py` appends it
   verbatim to the BUILD prompt whenever a project's `skills_context.mode` is
   `inject` — with no `PromptShield` framing. **Do not rely on the controls
-  below: seed prompts, interview answers, issue descriptions, skills-context
+  below anywhere but the triaged-delivery intake: seed prompts, interview answers,
+  issue text given to `vibey new --intake` by any other caller, skills-context
   packets, and other third-party inputs are not currently shielded.**
   - Strips non-printable ASCII control codes and ANSI escape sequences.
   - Generates unique cryptographic nonces per interaction (`<{label}_{nonce}>...<{label}_{nonce}>`).

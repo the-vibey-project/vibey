@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -27,6 +28,8 @@ import asyncpg
 
 TRIAGED = "vibey-gh:triaged"
 DESIGN_PROMPTS = ("context_free: What problem does this solve?", "job_story: When ... I want ...")
+OPERATOR = "adam"  # the person, and the one account the grant admits as an author
+SWEEP = "github-actions"  # the triage sweep's account, as the forge's timeline names it
 
 
 @dataclass
@@ -38,6 +41,42 @@ class FakeIssue:
     state: str = "OPEN"
     labels: set[str] = field(default_factory=set)
     comments: list[str] = field(default_factory=list)
+    author: str | None = OPERATOR
+    body: str | None = None
+    body_editors: list[str | None] = field(default_factory=list)
+    renamers: list[str | None] = field(default_factory=list)
+    # (label, who applied it), in timeline order -- what LABELED_EVENT reports.
+    label_events: list[tuple[str, str | None]] = field(default_factory=list)
+
+    @property
+    def text(self) -> str:
+        return self.body if self.body is not None else f"body of {self.number}"
+
+
+class FakeGrants:
+    """The reviewed trust grant, as `storm_trust.ReviewedGrant.read` would return it."""
+
+    def __init__(
+        self,
+        storm_trust: Any,
+        authors: tuple[str, ...] = (OPERATOR,),
+        curators: tuple[str, ...] = (f"{SWEEP}[bot]", OPERATOR),
+        fail: Exception | None = None,
+    ) -> None:
+        self.storm_trust, self.authors, self.curators, self.fail = (
+            storm_trust,
+            authors,
+            curators,
+            fail,
+        )
+
+    def read(self) -> Any:
+        if self.fail is not None:
+            raise self.fail
+        return self.storm_trust.Grant("origin/develop@fake", self.authors, (), self.curators)
+
+    def forbidden_touched(self, paths: Any) -> tuple[str, ...]:
+        return ()
 
 
 @dataclass
@@ -56,6 +95,9 @@ class FakeProject:
     issue_number: int
     repo_path: str
     phase: str = "design"
+    name: str = ""
+    # What `vibey new --intake` would have written to the DESIGN ledger, verbatim.
+    intake: str | None = None
     interview_started: bool = False
     spec_ready: bool = False
     gates: list[FakeGate] = field(default_factory=list)
@@ -140,17 +182,37 @@ class FakeWorld:
         self.new_for_closed_issue: list[int] = []
         self.merge_train_calls: list[str] = []
         self.pushes: list[str] = []
+        self.forge_down = False  # the provenance query fails, as a 502 would
 
     # -- setup ---------------------------------------------------------------------------
 
-    def open_issue(self, number: int, priority: str, *, created_at: str) -> None:
+    def open_issue(
+        self,
+        number: int,
+        priority: str,
+        *,
+        created_at: str,
+        author: str | None = OPERATOR,
+        body: str | None = None,
+        labelled_by: str | None = SWEEP,
+    ) -> FakeIssue:
+        """An open issue the triage sweep has labelled (by default: the operator's own)."""
+        labels = [TRIAGED, f"vibey-gh:priority-{priority}"]
         self.issues[number] = FakeIssue(
             number=number,
             title=f"issue {number}",
             priority=priority,
             created_at=created_at,
-            labels={TRIAGED, f"vibey-gh:priority-{priority}"},
+            labels=set(labels),
+            author=author,
+            body=body,
+            label_events=[(label, labelled_by) for label in labels],
         )
+        return self.issues[number]
+
+    def label(self, number: int, label: str, *, by: str | None) -> None:
+        self.issues[number].labels.add(label)
+        self.issues[number].label_events.append((label, by))
 
     def close_issue(self, number: int) -> None:
         self.issues[number].state = "CLOSED"
@@ -179,6 +241,8 @@ class FakeWorld:
         argv = list(args)
         self.commands.append(["gh", *argv])
         head = argv[:2]
+        if head == ["api", "graphql"]:
+            return self._graphql(argv)
         if head == ["issue", "list"]:
             fields = argv[argv.index("--json") + 1].split(",")
             listed = [
@@ -218,11 +282,62 @@ class FakeWorld:
             return json.dumps({k: pr[k] for k in argv[argv.index("--json") + 1].split(",")})
         raise RuntimeError(f"fake gh: unsupported {argv}")
 
+    def process(self, argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        """`subprocess.run` as the storm's `GhForge` calls it (`gh api graphql ...`),
+        answered by this forge: exit 1 with the error when the forge fails."""
+        try:
+            return subprocess.CompletedProcess(argv, 0, self.gh(*argv[1:]), "")
+        except RuntimeError as exc:
+            return subprocess.CompletedProcess(argv, 1, "", str(exc))
+
+    def _graphql(self, argv: list[str]) -> str:
+        """`storm_trust.LABELED_QUERY`, answered as GitHub shapes it."""
+        if self.forge_down:
+            raise RuntimeError("HTTP 502: Bad Gateway")
+        values = dict(arg.split("=", 1) for arg in argv[2:] if "=" in arg)
+        assert "labelEvents" in values["query"], "the bridge must ask who applied the labels"
+        issue = self.issues.get(int(values["number"]))
+        if issue is None:
+            return json.dumps({"data": {"repository": {"issue": None}}})
+
+        def actor(login: str | None) -> dict[str, str] | None:
+            return {"login": login} if login is not None else None
+
+        edited = bool(issue.body_editors)
+        document = {
+            "number": issue.number,
+            "title": issue.title,
+            "body": issue.text,
+            "lastEditedAt": "2026-09-29T00:00:00Z" if edited else None,
+            "author": actor(issue.author),
+            "editor": actor(issue.body_editors[-1]) if edited else None,
+            "userContentEdits": {
+                "totalCount": len(issue.body_editors),
+                "nodes": [{"editedAt": "t", "editor": actor(e)} for e in issue.body_editors],
+            },
+            "labels": {
+                "totalCount": len(issue.labels),
+                "nodes": [{"name": name} for name in sorted(issue.labels)],
+            },
+            "labelEvents": {
+                "totalCount": len(issue.label_events),
+                "nodes": [
+                    {"createdAt": "t", "actor": actor(who), "label": {"name": name}}
+                    for name, who in issue.label_events
+                ],
+            },
+            "titleEdits": {
+                "totalCount": len(issue.renamers),
+                "nodes": [{"createdAt": "t", "actor": actor(r)} for r in issue.renamers],
+            },
+        }
+        return json.dumps({"data": {"repository": {"issue": document}}})
+
     def _issue_document(self, issue: FakeIssue, fields: list[str]) -> dict[str, Any]:
         document = {
             "number": issue.number,
             "title": issue.title,
-            "body": f"body of {issue.number}",
+            "body": issue.text,
             "labels": [{"name": name} for name in sorted(issue.labels)],
             "createdAt": issue.created_at,
             "updatedAt": issue.created_at,
@@ -283,7 +398,10 @@ class FakeWorld:
             project_id = str(uuid.uuid4())
             repo = argv[argv.index("--repo") + 1]
             self.tickets.insert_project(project_id, argv[1], f"{repo}#{project_id}")
-            self.projects[project_id] = FakeProject(project_id, number, repo)
+            intake = argv[argv.index("--intake") + 1] if "--intake" in argv else None
+            self.projects[project_id] = FakeProject(
+                project_id, number, repo, name=argv[1], intake=intake
+            )
             return 0, f"project {project_id}\ndesign job {uuid.uuid4()}\n", ""
         if command == "worker":
             return self._worker(self.projects[argv[argv.index("--project") + 1]])
