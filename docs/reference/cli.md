@@ -12,7 +12,7 @@ Top-level commands, in `vibey --help` order: `new`, `serve`, `sabbath`,
 `projects`, `gates`, `answer`, `work`, `watch`, `recover`, `status`, `engines`,
 `loops`, `cost`, `install`, `doctor`, `migrate`, `operator`, `worker`, and the
 command groups `design`, `visual`, `deploy`, `ledger`, `queue`, `budget`,
-`ultra`, `driver`, `hub`.
+`ultra`, `driver`, `supervisor`, `hub`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -53,6 +53,7 @@ with payloads.
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
+| `78` | A supervisor setting no service could run with (EX_CONFIG): `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
 | `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
 
 ### Guarded and unguarded commands
@@ -117,7 +118,7 @@ Create a project and enqueue its first DESIGN interview.
 | Option | Default | What it does |
 |---|---|---|
 | `--repo PATH` | `.` | Repository the project builds against. |
-| `--intake TEXT` | unset | Initial issue or task text to seed the DESIGN ledger with. Before the DESIGN job is enqueued it is appended as one `TranscriptRecorded` event with `untrusted` provenance and the payload `{"text": TEXT, "source": "github-issue"}`, so the interview starts from it. The triaged-delivery bridge (`scripts/triaged_delivery.py`) hands a GitHub issue over this way. |
+| `--intake TEXT` | unset | Initial issue or task text to seed the DESIGN ledger with. Before the DESIGN job is enqueued it is appended as one `TranscriptRecorded` event with `untrusted` provenance and the payload `{"text": TEXT, "source": "github-issue"}`, so the interview starts from it. The triaged-delivery bridge (`scripts/triaged_delivery.py`) hands a GitHub issue over this way, and only an issue whose author, editors and triage-label curators are trusted, quoted through `PromptShield` ([runbook](../runbooks/triaged-delivery.md#who-may-put-an-issue-in-the-queue)). |
 | `--max-cycles N` | `10` | Cap on delivery cycles before the project stops (min 1). |
 | `--max-cycle-dollars F` | unset | Per-cycle dollar cap (min 0.01), stored as `max_cycle_dollars` in project config. Tripping it parks a `budget_exhausted` gate instead of starting more sessions (ADR-0024). Unset means no dollar cap. |
 | `--max-cycle-turns N` | unset | Per-cycle engine-turn cap (min 1), stored as `max_cycle_turns`. |
@@ -713,6 +714,29 @@ left in `.vibey/driver/` and nothing is started. `CreditsExhausted` has no
 reset time; a window's reset only schedules the probe, and only a recorded
 successful probe hands back.
 
+## `vibey supervisor`
+
+Keeps `vibey worker --all-projects` and the triaged-delivery bridge
+(`scripts/triaged_delivery.py --interval N`) running
+([#1189](https://github.com/the-vibey-project/vibey/issues/1189)): a launchd agent on
+macOS, a systemd user service on Linux, rendered from
+[`[supervisor]`](configuration.md#supervisor) by the same renderer as `vibey driver timer`.
+Each unit starts its process at load, restarts it `restart_seconds` after it exits with a
+failure (never after a clean exit, so a worker drained by SIGTERM stays down), and appends
+its output to `<log_dir>/<name>.log`. vibey never loads a unit for you: `install` prints
+the commands.
+
+| Subcommand | Option | What it does |
+|---|---|---|
+| `supervisor install` | `--repo PATH` (`.`), `--out DIR`, `--platform launchd\|systemd`, `--config PATH` | Writes `<label_prefix>.worker` and `<label_prefix>.delivery` into the service manager's directory (`~/Library/LaunchAgents`, or `$XDG_CONFIG_HOME/systemd/user`), or `--out`. Creates the log directory, and the environment file from a commented template, readable by you alone, when it does not exist (an existing one is kept). Prints the `launchctl bootstrap` or `systemctl --user enable --now` commands that load them. Refuses, exit 78, a log directory, environment file, `vibey`, Python or `--repo` under a directory a reboot empties or inside a linked worktree (10.h), `vibey` not on `PATH`, and a `--repo` with no `scripts/triaged_delivery.py` unless `delivery = false`. `--config` defaults to `<repo>/vibey.toml`. |
+| `supervisor status` | `--platform launchd\|systemd`, `--config PATH` | One line per service: `running`, `stopped`, `not loaded` or `not installed`, read from the unit file and `launchctl print` / `systemctl --user is-active`. Exit 0 only when every service runs, else 1. `--config` defaults to `./vibey.toml`. |
+| `supervisor exec` | `--env-file PATH` `-- COMMAND...` | What every unit runs. Reads `KEY=VALUE` lines from the file (`#` comments, an optional `export `, one pair of matching quotes removed, nothing expanded; a declared value wins over the inherited one), then replaces itself with COMMAND. Exit 2 with no command, 78 when the file is missing or a line is not a pair (named by line number, never quoted), 127 when COMMAND cannot run. |
+
+`vibey doctor` prints one `supervisor-worker` and one `supervisor-delivery` line: `PASS`
+when the service runs; `WARN` when it is not installed, not loaded or stopped, naming what
+is missing; `FAIL` instead of `WARN` with `[supervisor] required = true`. An unreadable
+`[supervisor]` table is a `FAIL`.
+
 ## `vibey ledger`
 
 Bare `vibey ledger` prints help. Subcommands, in `vibey ledger --help` order:
@@ -996,7 +1020,7 @@ without it the command prints
 ## `vibey worker`
 
 Long-running worker: listens on `vibey_job_ready` and dispatches jobs across
-every phase for one project.
+every phase for one project, or with `--all-projects` for every project.
 
 | Option | Default | What it does |
 |---|---|---|
@@ -1008,6 +1032,7 @@ every phase for one project.
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
 | `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` | Local model for `--provider gptossloop`, and the model the worker hands gptossloop (below); ignored by the other providers. |
 | `--project ID` | latest | Project to work on. |
+| `--all-projects` | off | Serve every project ([#1189](https://github.com/the-vibey-project/vibey/issues/1189)). Each pass asks the queue which projects have a job the claim would hand out now, ordered by each project's next job in the claim's own order (bump, priority, due time), and claims through that project's own loop — the same `FOR UPDATE SKIP LOCKED` claim, budgets, Sabbath gate, capacity circuits, phase gates and engine selection a single-project worker uses. A project's loops are built, and its engines preflighted, the first time it has work. A project that cannot be served (an unknown phase, an `--engines` list matching none of its engines, a forbidden `engine_environment`) prints `project <name> refused: its jobs stay queued for a worker that can serve them` and the worker goes on with the others. With nothing queued anywhere it waits on any project's `vibey_job_ready` instead of exiting, so a supervised worker never restart-loops. Parallel loops (`-j`) are clamped to the CPU count only. Exits 2 with `--project` or `--wait-for-project`. This is what `vibey supervisor install` runs. |
 | `--wait-for-project SECONDS` | unset (min 1.0) | Poll every N seconds for a project instead of exiting 1 when none exists yet — for long-lived deployments, where exiting means a restart loop. |
 | `--azure {memory,az}` | `memory` | Azure client for the deploy stage set. `memory` is an in-memory adapter that touches no real infrastructure. `az` uses the real Azure CLI and mutates real resources on consented deploys; the worker runs `az account show` first and exits 1 if you are not logged in. Any other value exits 2. |
 
@@ -1018,7 +1043,9 @@ engine that is switched on, so a local engine is visible in `vibey engines`
 like every other. Engines with no passing recorded conformance produce
 ``warning: no recorded conformance for <names> -- engine-driven jobs will not select them until `vibey doctor --conformance --record` passes``.
 It then prints
-`worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`.
+`worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`
+(`worker started: all projects ...` with `--all-projects`, which preflights each
+project when it is first served and prints `serving project=<name> (<id>)` then).
 
 Local engines (ADR-0015, ADR-0038, ADR-0064): the worker runs `gptossloop`
 unless `VIBEY_FEATURE_GPTOSSLOOP` is set to a value that is not truthy, and

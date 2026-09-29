@@ -75,13 +75,15 @@ def git(repo: Path, *args: str) -> None:
     )
 
 
-def repo_with_grant(tmp_path: Path, authors: str = f'["{OPERATOR}", "@codeowners"]') -> Path:
+def repo_with_grant(
+    tmp_path: Path, authors: str = f'["{OPERATOR}", "@codeowners"]', extra: str = ""
+) -> Path:
     """A repository whose REVIEWED history -- `origin/<integration>`, named by `origin/HEAD`
     -- carries a grant and a CODEOWNERS behind it. The working tree is the same, until a test
-    edits it to prove the edit does not count."""
+    edits it to prove the edit does not count. `extra` is more TOML, appended."""
     repo = tmp_path / "repo"
     (repo / ".github").mkdir(parents=True)
-    (repo / ".vibey-gh.toml").write_text(GRANT.format(authors=authors), encoding="utf-8")
+    (repo / ".vibey-gh.toml").write_text(GRANT.format(authors=authors) + extra, encoding="utf-8")
     (repo / ".github/CODEOWNERS").write_text("/tests/live/** @owner-two\n", encoding="utf-8")
     git(repo.parent, "init", "-q", str(repo))
     git(repo, "add", "-A")
@@ -372,6 +374,126 @@ def test_a_well_formed_forge_answer_is_admitted(tmp_path: Path) -> None:
     assert "admitted #7" in line
 
 
+# --- the labels: who put an issue in the queue ------------------------------------------
+#
+# The triaged-delivery bridge (scripts/triaged_delivery.py) dispatches an issue because it
+# carries the triage labels. Whose words the issue carries is `judge`; who applied the labels
+# that queued and ranked it is `judge_labels`, against the accounts the reviewed
+# configuration already trusts to act on the repository unattended (`Grant.curators`).
+
+BOT = "github-actions"  # how the forge's timeline names the triage sweep's account
+
+
+def labelled(
+    events: tuple[tuple[str, str | None], ...] = (("vibey-gh:triaged", BOT),),
+    *,
+    total: int | None = None,
+) -> dict[str, Any]:
+    """`issue()` as `storm_trust.LABELED_QUERY` returns it: its current labels, and every
+    LabeledEvent in timeline order."""
+    return {
+        **issue(),
+        "labels": {"totalCount": len(events), "nodes": [{"name": n} for n, _ in events]},
+        "labelEvents": {
+            "totalCount": total if total is not None else len(events),
+            "nodes": [
+                {"createdAt": "t", "actor": {"login": a} if a else None, "label": {"name": n}}
+                for n, a in events
+            ],
+        },
+    }
+
+
+def test_the_labelled_query_asks_for_the_issue_and_its_label_history() -> None:
+    """One query still: the text judged, its authorship and its labels in one answer."""
+    query = storm_trust.LABELED_QUERY
+    assert query.startswith(storm_trust.QUERY.split("titleEdits:")[0])
+    assert "userContentEdits" in query and "titleEdits" in query
+    assert "labelEvents: timelineItems(itemTypes: [LABELED_EVENT]" in query
+    assert "labels(first: 100)" in query
+    assert "labelEvents" not in storm_trust.QUERY  # the storm's own query is unchanged
+
+
+def test_the_forge_asks_the_query_it_was_given(tmp_path: Path) -> None:
+    seen: list[list[str]] = []
+
+    def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        seen.append(argv)
+        body = json.dumps({"data": {"repository": {"issue": labelled()}}})
+        return subprocess.CompletedProcess(argv, 0, stdout=body, stderr="")
+
+    forge = storm_trust.GhForge(SLUG, tmp_path, run=run, query=storm_trust.LABELED_QUERY)
+    assert forge.issue(7)["labelEvents"]["totalCount"] == 1
+    assert f"query={storm_trust.LABELED_QUERY}" in seen[0]
+    storm_trust.GhForge(SLUG, tmp_path, run=run).issue(7)
+    assert f"query={storm_trust.QUERY}" in seen[1]
+
+
+def test_curators_are_the_reviewed_merge_train_trust_and_its_owner(tmp_path: Path) -> None:
+    """Read from the same reviewed history as `authors`, never a second list."""
+    repo = repo_with_grant(
+        tmp_path,
+        extra='[merge_train]\nowner = "the-owner"\ntrusted_authors = ["github-actions[bot]"]\n',
+    )
+    found = storm_trust.ReviewedGrant(repo).read()
+    assert found.curators == ("github-actions[bot]", "the-owner")
+    assert found.authors == (OPERATOR, "owner-two")
+
+
+def test_a_repository_without_a_merge_train_trusts_no_curator(tmp_path: Path) -> None:
+    assert storm_trust.ReviewedGrant(repo_with_grant(tmp_path)).read().curators == ()
+
+
+def test_labels_applied_by_a_curator_are_admitted() -> None:
+    answer = labelled(
+        (("vibey-gh:triaged", STRANGER), ("vibey-gh:triaged", BOT), ("vibey-gh:priority-high", BOT))
+    )
+    refusal, actors = gate().judge_labels(
+        answer, ("vibey-gh:triaged", "vibey-gh:priority-high"), ("github-actions[bot]",)
+    )
+    # The LAST application is the one that counts: the sweep re-applied what a stranger did.
+    assert refusal is None
+    assert actors == (BOT,)
+
+
+@pytest.mark.parametrize(
+    ("answer", "labels", "why"),
+    [
+        (labelled((("vibey-gh:triaged", STRANGER),)), ("vibey-gh:triaged",), "by stranger"),
+        (
+            labelled((("vibey-gh:triaged", BOT), ("vibey-gh:priority-bumped", STRANGER))),
+            ("vibey-gh:triaged", "vibey-gh:priority-bumped"),
+            "vibey-gh:priority-bumped was applied by stranger",
+        ),
+        (labelled(), ("vibey-gh:priority-critical",), "no record of who applied"),
+        (labelled((("vibey-gh:triaged", None),)), ("vibey-gh:triaged",), "could not name"),
+        (labelled(total=101), ("vibey-gh:triaged",), "cannot be ruled out"),
+        ({**labelled(), "labelEvents": None}, ("vibey-gh:triaged",), "could not be read"),
+        (
+            {**labelled(), "labelEvents": {"totalCount": 1, "nodes": ["x"]}},
+            ("vibey-gh:triaged",),
+            "could not be read",
+        ),
+        (
+            {**labelled(), "labelEvents": {"totalCount": 1, "nodes": [{"label": None}]}},
+            ("vibey-gh:triaged",),
+            "names no label",
+        ),
+        (None, ("vibey-gh:triaged",), "no issue"),
+    ],
+)
+def test_a_stranger_label_or_an_unreadable_label_history_is_refused(
+    answer: Any, labels: tuple[str, ...], why: str
+) -> None:
+    refusal, _ = gate().judge_labels(answer, labels, ("github-actions[bot]",))
+    assert refusal is not None and why in refusal
+
+
+def test_no_curator_admits_no_label() -> None:
+    refusal, _ = gate().judge_labels(labelled(), ("vibey-gh:triaged",), ())
+    assert refusal is not None and "names nobody" in refusal
+
+
 # --- the prompt -------------------------------------------------------------------------
 
 
@@ -537,7 +659,7 @@ def test_each_class_honours_the_interface_declared_beside_it(tmp_path: Path) -> 
     method and parameter by parameter, so the declaration cannot drift from the classes."""
     declared = _load("storm_trust_interface", "interfaces/storm_trust_interface.py")
     pairs = [
-        (storm_trust.Grant("s", (), ()), declared.GrantInterface),
+        (storm_trust.Grant("s", (), (), ()), declared.GrantInterface),
         (storm_trust.ReviewedGrant(tmp_path), declared.GrantReaderInterface),
         (storm_trust.GhForge(SLUG, tmp_path), declared.ForgeInterface),
         (gate(), declared.IssueGateInterface),
