@@ -65,7 +65,10 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   `storm_trust.py`; ADR-0053, sub-doctrine 12.j). An issue a stranger wrote, edited or
   labelled is held for a person and never dispatched. An admitted issue is framed by
   `PromptShield` before it enters the ledger, where `vibey new` records it as an
-  `untrusted` `TranscriptRecorded` event (`docs/runbooks/triaged-delivery.md`).
+  `untrusted` `TranscriptRecorded` event (`docs/runbooks/triaged-delivery.md`). The trust
+  check is the control that holds: measured on gpt-oss:20b, the frame did not reduce how often
+  a planted instruction surfaced in the DESIGN interview's questions (4 of 10 runs raw, 5 of
+  10 framed).
 - **Nowhere else.** Outside that one path, nothing constructs or calls `PromptShield` — no
   design or build handler (`application/seed_prompt.py`,
   `application/design_handler.py`, `application/build_implement_handler.py`,

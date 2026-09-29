@@ -37,7 +37,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   person's own run. Measured on a canary-injection issue (an instruction to answer every DESIGN
   question with a token and push to main): before, five of five cases dispatched it raw; now a
   stranger-written, stranger-edited or stranger-labelled issue is held, an operator's issue
-  reaches the ledger only inside the frame, and an unreadable forge is retried. The storm's
+  reaches the ledger only inside the frame, and an unreadable forge is retried. The frame is
+  not a measured defence: on gpt-oss:20b's first DESIGN question batch, the canary appeared in
+  4 of 10 runs with the raw intake and 5 of 10 with the framed one, so the trust check is the
+  control that holds (see the runbook). The storm's
   `storm_trust.py` gains `LABELED_QUERY`, `IssueGate.judge_labels`, `Grant.curators` and a
   `query` argument to `GhForge`; its own lanes still ask `QUERY`.
 
