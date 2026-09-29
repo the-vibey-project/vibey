@@ -996,7 +996,7 @@ without it the command prints
 ## `vibey worker`
 
 Long-running worker: listens on `vibey_job_ready` and dispatches jobs across
-every phase for one project.
+every phase for one project, or with `--all-projects` for every project.
 
 | Option | Default | What it does |
 |---|---|---|
@@ -1008,6 +1008,7 @@ every phase for one project.
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
 | `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` | Local model for `--provider gptossloop`, and the model the worker hands gptossloop (below); ignored by the other providers. |
 | `--project ID` | latest | Project to work on. |
+| `--all-projects` | off | Serve every project ([#1189](https://github.com/the-vibey-project/vibey/issues/1189)). Each pass asks the queue which projects have a job the claim would hand out now, ordered by each project's next job in the claim's own order (bump, priority, due time), and claims through that project's own loop — the same `FOR UPDATE SKIP LOCKED` claim, budgets, Sabbath gate, capacity circuits, phase gates and engine selection a single-project worker uses. A project's loops are built, and its engines preflighted, the first time it has work. A project that cannot be served (an unknown phase, an `--engines` list matching none of its engines, a forbidden `engine_environment`) prints `project <name> refused: its jobs stay queued for a worker that can serve them` and the worker goes on with the others. With nothing queued anywhere it waits on any project's `vibey_job_ready` instead of exiting, so a supervised worker never restart-loops. Parallel loops (`-j`) are clamped to the CPU count only. Exits 2 with `--project` or `--wait-for-project`. This is what `vibey supervisor install` runs. |
 | `--wait-for-project SECONDS` | unset (min 1.0) | Poll every N seconds for a project instead of exiting 1 when none exists yet — for long-lived deployments, where exiting means a restart loop. |
 | `--azure {memory,az}` | `memory` | Azure client for the deploy stage set. `memory` is an in-memory adapter that touches no real infrastructure. `az` uses the real Azure CLI and mutates real resources on consented deploys; the worker runs `az account show` first and exits 1 if you are not logged in. Any other value exits 2. |
 
@@ -1018,7 +1019,9 @@ engine that is switched on, so a local engine is visible in `vibey engines`
 like every other. Engines with no passing recorded conformance produce
 ``warning: no recorded conformance for <names> -- engine-driven jobs will not select them until `vibey doctor --conformance --record` passes``.
 It then prints
-`worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`.
+`worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`
+(`worker started: all projects ...` with `--all-projects`, which preflights each
+project when it is first served and prints `serving project=<name> (<id>)` then).
 
 Local engines (ADR-0015, ADR-0038, ADR-0064): the worker runs `gptossloop`
 unless `VIBEY_FEATURE_GPTOSSLOOP` is set to a value that is not truthy, and

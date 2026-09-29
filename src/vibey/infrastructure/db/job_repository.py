@@ -87,6 +87,21 @@ STRICT_JOB_ROWS: Final[JobRowMapperInterface] = JobRowMapper(lenient=False)
 KNOWN_PHASES: Final = tuple(phase.value for phase in Phase)
 """The phases this vibey can run. The claim selects only these (vibey#287)."""
 
+# What `claim` may hand out, and in which order. One text for both statements that ask
+# (`claim` and `claimable_projects`), so a worker serving every project can never be told a
+# project has work its own claim would then refuse. `$1` is always KNOWN_PHASES.
+_CLAIMABLE: Final = """
+    j.state = 'ready'
+    AND j.run_after <= now()
+    AND j.phase::text = ANY($1::text[])
+    AND NOT EXISTS (
+        SELECT 1 FROM job_dependency d
+        JOIN job p ON p.id = d.depends_on_job_id
+        WHERE d.job_id = j.id AND p.state <> 'succeeded'
+    )
+"""
+_CLAIM_ORDER: Final = "j.bump_seq ASC NULLS LAST, j.priority DESC, j.run_after ASC, j.id ASC"
+
 
 class PostgresJobRepository:
     def __init__(
@@ -231,37 +246,45 @@ class PostgresJobRepository:
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
-                """
+                f"""
                 UPDATE job SET
                     state            = 'leased',
-                    lease_owner      = $1,
-                    lease_expires_at = now() + $2::interval,
+                    lease_owner      = $2,
+                    lease_expires_at = now() + $3::interval,
                     attempts         = attempts + 1,
                     updated_at       = now()
                 WHERE id = (
                     SELECT j.id FROM job j
-                    WHERE j.state = 'ready'
-                      AND j.run_after <= now()
-                      AND j.project_id = $3
-                      AND j.phase::text = ANY($4::text[])
-                      AND NOT EXISTS (
-                          SELECT 1 FROM job_dependency d
-                          JOIN job p ON p.id = d.depends_on_job_id
-                          WHERE d.job_id = j.id AND p.state <> 'succeeded'
-                      )
-                    ORDER BY j.bump_seq ASC NULLS LAST, j.priority DESC,
-                             j.run_after ASC, j.id ASC
+                    WHERE j.project_id = $4 AND {_CLAIMABLE}
+                    ORDER BY {_CLAIM_ORDER}
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                 )
                 RETURNING *
-                """,
+                """,  # nosec B608 -- module constants only; every value is a bind parameter
+                list(KNOWN_PHASES),
                 owner,
                 lease,
                 project_id,
-                list(KNOWN_PHASES),
             )
             return STRICT_JOB_ROWS.to_record(row) if row is not None else None
+
+    async def claimable_projects(self) -> tuple[UUID, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                f"""
+                SELECT j.project_id FROM (
+                    SELECT DISTINCT ON (j.project_id)
+                           j.project_id, j.bump_seq, j.priority, j.run_after, j.id
+                    FROM job j
+                    WHERE {_CLAIMABLE}
+                    ORDER BY j.project_id, {_CLAIM_ORDER}
+                ) j
+                ORDER BY {_CLAIM_ORDER}
+                """,  # nosec B608 -- module constants only; every value is a bind parameter
+                list(KNOWN_PHASES),
+            )
+            return tuple(row["project_id"] for row in rows)
 
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool:
         async with self._pool.acquire() as conn:
