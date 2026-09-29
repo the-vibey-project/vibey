@@ -23,7 +23,7 @@ from vibey.infrastructure.interfaces.class_contracts import (
 # The tables `vibey new` copies from vibey.toml into the project record. `gates` and
 # `engine_environment` decide what a gate command and an engine session may see of the
 # worker's environment; they are declared here, never hand-edited into the record.
-RUNTIME_CONFIG_KEYS = ("notifications", "telemetry", "gates", "engine_environment")
+RUNTIME_CONFIG_KEYS = ("notifications", "telemetry", "gates", "engine_environment", "design")
 
 # Every operational surface's environment overlay: (table, key, variable,
 # cast). An empty variable counts as unset, the way the Ollama client treats

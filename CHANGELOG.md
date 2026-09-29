@@ -108,6 +108,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
+  the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
+  add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit
+  tests and a CI step, and the `.github/**` change ended at a person. Both providers are now
+  told to default to the minimal answer (`QUESTION_DEFAULT_CONTRACT`), and the interview
+  handler enforces it deterministically: a yes/no question that proposes to add, include,
+  extend, enforce or automate an artefact the intake does not name (a test, CI, script,
+  hook, comment, ...) has an affirmative default rewritten to "No", with the model's own kept
+  as `model_default` and a `default_reason` in the `QuestionAsked` payload, and shown in the
+  gate prompt (`vibey.domain.design_default_scope`). Declared as `[design.interview]
+  default_scope` (`narrowest`, the default, or `model`), overridable by
+  `vibey new --design-default-scope`; the triaged-delivery bridge always creates projects
+  with `narrowest`.
 * **design:** `vibey design accept` accepts the finished spec, never the interview. The
   DESIGN -> BUILD / VISUAL_DESIGN guard now refuses while any DESIGN job of the cycle --
   research, synthesis, spec -- is unsettled ("N design job(s) still unsettled"). The

@@ -200,6 +200,21 @@ def test_with_the_opt_in_design_answers_carry_the_automations_name(
     assert recorded["design_accepted_by"] == AUTOMATION
 
 
+def test_every_project_declares_the_narrowest_design_default_scope(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    """Accepting declared defaults unattended is bounded only when a default is the answer
+    that adds the least work beyond the issue (#998: a README insertion grew a CI step)."""
+    world, _ = scratch
+    world.open_issue(7, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, _ = bridge(world, tmp_path, answer_design_defaults=True)
+
+    assert delivery.run_once() == 0
+    (created,) = new_commands(world)
+    scope = created.index("--design-default-scope")
+    assert created[scope + 1] == "narrowest"
+
+
 def test_the_opt_in_accepts_the_design_only_once_its_chain_has_settled(
     scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
 ) -> None:

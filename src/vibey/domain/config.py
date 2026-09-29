@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from vibey.domain.defect import DEFAULT_IDENTICAL_FAILURES, MIN_IDENTICAL_FAILURES
+from vibey.domain.design_default_scope import DEFAULT_SCOPE, DefaultScope
 from vibey.domain.errors import VibeyError
 from vibey.domain.gate_notice import (
     DEFAULT_MAX_REMINDERS,
@@ -593,6 +594,33 @@ class QueueConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class DesignInterviewConfig:
+    """`[design.interview]`: how the DESIGN interview declares its defaults.
+
+    `default_scope` decides whose appetite a question's default follows: `narrowest`
+    (the default) rewrites a yes/no question that proposes an artefact the intake does
+    not name from an affirmative default to "No", keeping the model's own default in
+    the ledger beside it; `model` records the model's default unchanged.
+    """
+
+    default_scope: DefaultScope = DEFAULT_SCOPE
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "DesignInterviewConfig":
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"{path}.{unknown[0]}", "is not a [design.interview] key")
+        raw = _optional(table, "default_scope", path, str, DEFAULT_SCOPE.value)
+        try:
+            return cls(default_scope=DefaultScope(raw))
+        except ValueError as exc:
+            allowed = ", ".join(scope.value for scope in DefaultScope)
+            raise ConfigError(
+                f"{path}.default_scope", f"must be one of {allowed}, got {raw!r}"
+            ) from exc
+
+
+@dataclass(frozen=True, slots=True)
 class DesignResearchConfig:
     """`[design.research]`: what a research job does when no evidence can be obtained.
 
@@ -620,19 +648,27 @@ class DesignResearchConfig:
 @dataclass(frozen=True, slots=True)
 class DesignConfig:
     """`[design]`: how the DESIGN phase's own protocol behaves (not which engines run it,
-    which is `[phases.design]`)."""
+    which is `[phases.design]`) -- how the interview declares its defaults
+    (`[design.interview]`) and what research does without evidence (`[design.research]`)."""
 
+    interview: DesignInterviewConfig = field(default_factory=DesignInterviewConfig)
     research: DesignResearchConfig = field(default_factory=DesignResearchConfig)
 
     @classmethod
-    def from_data(cls, data: dict[str, Any]) -> "DesignConfig":
-        """Read `[design]` from a whole parsed document."""
-        table = _optional(data, "design", "design", dict, {})
+    def from_data(cls, data: Mapping[str, Any]) -> "DesignConfig":
+        """Read `[design]` from a whole parsed document or a project's stored config.
+        Needs nothing else in it, so the interview handler can read its policy from the
+        stored record without the `[project]` table a whole-document parse demands."""
+        table = _optional(dict(data), "design", "design", dict, {})
         unknown = sorted(set(table) - set(cls.__dataclass_fields__))
         if unknown:
             raise ConfigError(f"design.{unknown[0]}", "is not a [design] table")
+        interview = _optional(table, "interview", "design.interview", dict, {})
         research = _optional(table, "research", "design.research", dict, {})
-        return cls(research=DesignResearchConfig.from_table(research, "design.research"))
+        return cls(
+            interview=DesignInterviewConfig.from_table(interview, "design.interview"),
+            research=DesignResearchConfig.from_table(research, "design.research"),
+        )
 
 
 @dataclass(frozen=True, slots=True)

@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from vibey.domain.design_default_scope import DefaultScope
     from vibey.domain.gate_notice import ReminderSchedule
     from vibey.domain.queue_reap import BrokerPolicy, ReapThresholds
     from vibey.domain.research_gap import ResearchOnUnavailable
@@ -110,6 +111,14 @@ class QueueConfigInterface(Protocol):
 
 
 @runtime_checkable
+class DesignInterviewConfigInterface(Protocol):
+    """`[design.interview]`."""
+
+    @property
+    def default_scope(self) -> DefaultScope: ...
+
+
+@runtime_checkable
 class DesignResearchConfigInterface(Protocol):
     """`[design.research]`."""
 
@@ -122,6 +131,9 @@ class DesignResearchConfigInterface(Protocol):
 @runtime_checkable
 class DesignConfigInterface(Protocol):
     """`[design]`."""
+
+    @property
+    def interview(self) -> DesignInterviewConfigInterface: ...
 
     @property
     def research(self) -> DesignResearchConfigInterface: ...

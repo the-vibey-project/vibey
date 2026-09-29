@@ -124,6 +124,7 @@ Create a project and enqueue its first DESIGN interview.
 | `--max-cycle-turns N` | unset | Per-cycle engine-turn cap (min 1), stored as `max_cycle_turns`. |
 | `--skills-context-mode {off,shadow,inject}` | `off` | `vibey-skills` retrieval mode (ADR-0031) — see [Configuration reference](configuration.md#skills_context). Any other value exits 2. |
 | `--skills-context-budget N` | `6000` | Token budget for skills retrieval (1,000–32,000). Stored only when the mode is not `off`. |
+| `--design-default-scope {narrowest,model}` | unset | Whose appetite a DESIGN question's default follows — see [`[design.interview]`](configuration.md#designinterview). Stored as `design.interview.default_scope`, over whatever `vibey.toml` declares; unset keeps the file's value, and with neither the default is `narrowest`. Any other value exits 2. The triaged-delivery bridge always passes `narrowest`. |
 
 Prints `project <id>` and `design job <id>`. The project id is the
 `PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
@@ -308,7 +309,7 @@ anywhere in `src/vibey` without an entry there.
 
 | Kind | `answer_with` (`ID` is the gate id) | Raised by |
 |---|---|---|
-| `question` | `vibey answer ID --defaults` | The DESIGN interview. Accepts every question's default. |
+| `question` | `vibey answer ID --defaults` | The DESIGN interview. Accepts every question's default -- under the default [`narrowest`](configuration.md#designinterview) scope, a question proposing an artefact the intake does not name defaults to "No". |
 | `approval` | `vibey answer ID --verdict accept` | REVIEW. Its other options are `changes` and `cancel`. |
 | `deploy_demo_review` | `vibey answer ID --verdict approve` | The Phase ⑥ demo. Or `request_changes`. |
 | `choice` | `vibey answer ID --choice local_only` | The deployment opt-in after REVIEW. `deploy` opts in. |

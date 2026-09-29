@@ -15,7 +15,7 @@ import os
 import signal
 import subprocess  # nosec B404 - fixed argv, never shell=True
 import sys
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, cast
@@ -54,6 +54,7 @@ from vibey.cli.serve import serve as serve_command
 from vibey.cli.status import STATUS_PRESENTER
 from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
+from vibey.domain.design_default_scope import DefaultScope
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -239,6 +240,15 @@ def new_project(
         int,
         typer.Option("--skills-context-budget", min=1_000, max=32_000),
     ] = 6_000,
+    design_default_scope: Annotated[
+        str | None,
+        typer.Option(
+            "--design-default-scope",
+            help="Whose appetite a DESIGN question's default follows: narrowest (a question "
+            "proposing an artefact the intake does not name defaults to No) or model. "
+            "Overrides [design.interview] default_scope; unset keeps it (default narrowest)",
+        ),
+    ] = None,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview."""
     SABBATH.decline_if_resting("new")
@@ -247,6 +257,12 @@ def new_project(
         if skills_context_mode not in {"off", "shadow", "inject"}:
             raise typer.BadParameter(
                 "must be off, shadow, or inject", param_hint="--skills-context-mode"
+            )
+        allowed_scopes = {scope.value for scope in DefaultScope}
+        if design_default_scope is not None and design_default_scope not in allowed_scopes:
+            raise typer.BadParameter(
+                f"must be one of {', '.join(sorted(allowed_scopes))}",
+                param_hint="--design-default-scope",
             )
         config: dict[str, object] = {"project": {"name": name, "repo": str(repo)}}
         try:
@@ -265,6 +281,14 @@ def new_project(
                 "mode": skills_context_mode,
                 "budget": skills_context_budget,
             }
+        if design_default_scope is not None:
+            # The flag beats the file, and only the one key: the rest of a declared
+            # [design] table stays as vibey.toml wrote it.
+            design = dict(cast(Mapping[str, object], config.get("design", {})))
+            interview = dict(cast(Mapping[str, object], design.get("interview", {})))
+            interview["default_scope"] = design_default_scope
+            design["interview"] = interview
+            config["design"] = design
         async with build_app() as resources:
             project = await resources.projects.create(
                 name,

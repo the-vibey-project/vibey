@@ -2,6 +2,7 @@
 """Durable ``design.interview`` handler for the seven-stage protocol."""
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 
 from vibey.application.design import (
     DesignEvent,
@@ -17,10 +18,16 @@ from vibey.application.interfaces import (
     DesignLedger,
     DesignQuestionProvider,
 )
+from vibey.application.interfaces.projects import ProjectStore
 from vibey.application.ports import Clock, HumanGateRepository, JobRepository
 from vibey.application.worker import Outcome, Park, Success
+from vibey.domain.config import DesignConfig
+from vibey.domain.design_default_scope import DEFAULT_SCOPE, DESIGN_DEFAULT_SCOPE, DefaultScope
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId
+from vibey.domain.interfaces.design_default_scope_interface import (
+    DesignDefaultScopeGuardInterface,
+)
 from vibey.domain.job import idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
@@ -36,13 +43,20 @@ class DesignInterviewHandler:
         questions: DesignQuestionProvider,
         clock: Clock,
         interviewer: EngineId | None,
+        projects: ProjectStore | None = None,
+        scope_guard: DesignDefaultScopeGuardInterface = DESIGN_DEFAULT_SCOPE,
     ) -> None:
+        """`projects` is where `[design.interview] default_scope` is read from, in the
+        project's stored config; without it (or without the key) the declared default,
+        narrowest, applies."""
         self._ledger = ledger
         self._jobs = jobs
         self._gates = gates
         self._questions = questions
         self._clock = clock
         self._interviewer = interviewer
+        self._projects = projects
+        self._scope_guard = scope_guard
 
     async def handle(self, job: JobRecord) -> Outcome:
         events = list(await self._ledger.all_for_project(job.project_id))
@@ -50,7 +64,9 @@ class DesignInterviewHandler:
         for stage in stages:
             questions = _questions_for_stage(events, stage, cycle=job.cycle)
             if not questions:
-                batch = await self._questions.batch(stage, events)
+                batch = await self._narrowed(
+                    job, await self._questions.batch(stage, events), events
+                )
                 for event in batch.events(now=self._clock.now(), cycle=job.cycle):
                     await self._append(job, event)
                     events.append(event)
@@ -89,6 +105,50 @@ class DesignInterviewHandler:
 
         await self._enqueue_followups(job)
         return Success({"stages": len(stages)})
+
+    async def _narrowed(
+        self, job: JobRecord, batch: QuestionBatch, events: Sequence[DesignEvent]
+    ) -> QuestionBatch:
+        """The batch with each default declared under the project's `default_scope`.
+
+        Applied before the questions are recorded, so the default a person sees in the
+        gate, the one `accept_defaults` takes and the assumption an unanswered question
+        becomes are all the same narrowed value -- and the model's own stays in the
+        QuestionAsked payload beside it. The intake is whatever issue text seeded the
+        ledger; the guard only reads it for which artefacts it names.
+        """
+        policy = await self._policy(job)
+        intake = "\n".join(
+            str(event.payload.get("text", ""))
+            for event in events
+            if event.kind is EventKind.TRANSCRIPT_RECORDED
+        )
+        narrowed = []
+        for question in batch.questions:
+            scoped = self._scope_guard.scope(
+                question.text, question.default, intake=intake, policy=policy
+            )
+            narrowed.append(
+                replace(
+                    question,
+                    default=scoped.default,
+                    model_default=scoped.model_default,
+                    default_reason=scoped.reason,
+                )
+                if scoped.rewritten
+                else question
+            )
+        return QuestionBatch(batch.stage, tuple(narrowed))
+
+    async def _policy(self, job: JobRecord) -> DefaultScope:
+        if self._projects is None:
+            return DEFAULT_SCOPE
+        project = await self._projects.get(job.project_id)
+        if project is None:
+            return DEFAULT_SCOPE
+        # A malformed stored value raises: a declaration that cannot be read is not the
+        # same fact as no declaration, and must not quietly read as narrowest (10.f).
+        return DesignConfig.from_data(project.config).interview.default_scope
 
     async def _append(self, job: JobRecord, event: DesignEvent) -> None:
         await self._ledger.append(job.project_id, job.cycle, job.id, self._interviewer, event)
@@ -154,12 +214,18 @@ def _questions_for_stage(
             text=str(event.payload["text"]),
             default=str(event.payload["default"]),
             blocking=bool(event.payload["blocking"]),
+            model_default=_optional_text(event.payload.get("model_default")),
+            default_reason=_optional_text(event.payload.get("default_reason")),
         )
         for event in events
         if event.kind is EventKind.QUESTION_ASKED
         and event.payload.get("stage") == stage.value
         and (cycle is None or event.payload.get("cycle", cycle) == cycle)
     )
+
+
+def _optional_text(value: object) -> str | None:
+    return None if value is None else str(value)
 
 
 def _answered_ids(events: Sequence[DesignEvent]) -> frozenset[str]:
@@ -185,7 +251,13 @@ def _answers_from(answer: Mapping[str, object]) -> dict[str, str]:
 
 def _gate_for(batch: QuestionBatch) -> HumanGateRequest:
     prompt = f"{batch.stage.value}: " + " | ".join(
-        f"{question.question_id}: {question.text} [default: {question.default}]"
+        f"{question.question_id}: {question.text} [default: {question.default}"
+        + (
+            ""
+            if question.model_default is None
+            else f"; narrowed from the model's {question.model_default!r}"
+        )
+        + "]"
         for question in batch.questions
     )
     return HumanGateRequest(
