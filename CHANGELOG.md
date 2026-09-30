@@ -17,6 +17,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **gh:** declared coverage floors. `[rulesets.integration]` and `[rulesets.release]` take
+  `minimum_coverage` and `max_coverage_drop` (numbers 0-100, absent by default, which sends
+  no rule); declaring either renders GitHub's `code_coverage` rule, the unset one as null,
+  and `vibey-gh rulesets --check` reports a declared floor missing live, a live one that
+  differs, or one nobody declared. A non-number is a `TypeError` at load. This repository
+  now declares `minimum_coverage = 100` on both branches, moving the floor out of the
+  hand-made `develop` and `main` rulesets so the operator can delete them without losing
+  it.
 * **specs:** rolling minimum system requirements, re-measured weekly.
   `scripts/minimum_specs.py` (configured in `scripts/minimum_specs.toml`) has four
   subcommands. `measure` probes the host: the Python floor on each candidate interpreter;

@@ -181,6 +181,11 @@ required_approvals = 1
 # The owner in .github/CODEOWNERS must approve a change to a protected path.
 require_code_owner_review = true
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
+# The 100% coverage floor used to live only in the hand-made rulesets "develop" and "main"
+# (created 2026-08-15), beside these declared ones. Declared here it moves into the rulesets
+# vibey-gh reconciles, so those two can be deleted by the operator without losing it.
+# `max_coverage_drop` stays unset: the forge holds it as null, and so does this.
+minimum_coverage = 100
 
 # The queue exists because a green pull request is not a green merge: its checks ran
 # against the base as it stood then, and nothing between that base and develop's tip was
@@ -204,6 +209,9 @@ required_checks  = [
 required_approvals = 1
 require_code_owner_review = true
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
+# The same floor the hand-made "main" ruleset carries, moved into the declared one so that
+# ruleset can be deleted without losing it (see [rulesets.integration]).
+minimum_coverage = 100
 # Promotion is a rebase (`vibey-gh promote`, ADR-0028), and nothing else may merge into main:
 # the one squash of a promotion (#1244) concatenated 221 commit messages into one body, a
 # quoted skip-ci marker among them, and main then ran no push workflow at all.
