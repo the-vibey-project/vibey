@@ -157,6 +157,8 @@ class QwenloopTurnPool(TurnPoolBuilderInterface):
     def _one(self, run_dir: Path, lane: Path, plan: str, attempt: int) -> dict[str, Any]:
         meta = json.loads((run_dir / "meta.json").read_text(encoding="utf-8"))
         window = int(meta.get("context_window") or 65536)
+        # Each result truncated at the cap this run itself ran with, not today's default.
+        cap = int(meta.get("max_tool_result_chars") or LEGACY_TOOL_RESULT_CHARS)
         cwd = Path(meta.get("cwd") or lane)
         if attempt > 1:
             plan += self._repair.format(attempt=attempt, max_attempts=self._max_attempts)
@@ -208,7 +210,7 @@ class QwenloopTurnPool(TurnPoolBuilderInterface):
                     )
                     after.append((message("assistant", answer, tool_calls=calls), None))
                     for (name, result), call in zip(results, calls, strict=True):
-                        text = r._truncate_tool_result(str(result))
+                        text = r._truncate_tool_result(str(result), cap)
                         after.append((message("tool", text, tool_call_id=call["id"]), name))
                 elif answer:
                     after.append((message("assistant", answer), None))
@@ -231,6 +233,11 @@ class QwenloopTurnPool(TurnPoolBuilderInterface):
         }
 
 
+#: The fixed tool-result cap every qwenloop run ran with before `max_tool_result_chars` was
+#: configurable and recorded in meta.json: a run without the key is replayed at this cap.
+LEGACY_TOOL_RESULT_CHARS = 8_000
+
+
 class SpecTurnPool(SpecTurnPoolInterface):
     """Storm-shaped runs from the storm's committed specs and the repository's own files."""
 
@@ -247,6 +254,7 @@ class SpecTurnPool(SpecTurnPoolInterface):
         context_window: int = 65536,
         response_reserve: int = 2048,
         author: str = "Adam Matthew Steinberger",
+        max_tool_result_chars: int | None = None,
     ) -> None:
         self._q = QwenloopRunner(qwenloop_src)
         from qwenloop.application.storm import build_plan
@@ -257,6 +265,8 @@ class SpecTurnPool(SpecTurnPoolInterface):
         self._repo = repo
         self._rng = random.Random(seed)
         self._budget_chars = (context_window - response_reserve) * CHARS_PER_TOKEN
+        # None: the runner's own default, the cap a run started today would use.
+        self._max_tool_result_chars = max_tool_result_chars
         self._author = author
         rules = repo / "docs/plans/qwenstorm-3.0.0/EDITING-RULES.md"
         self._rules = rules.read_text(encoding="utf-8") if rules.is_file() else ""
@@ -279,6 +289,11 @@ class SpecTurnPool(SpecTurnPoolInterface):
         rest = [p for p in self._files if p not in named]
         self._rng.shuffle(rest)
         return list(dict.fromkeys(named)) + rest
+
+    def _truncated(self, runner: Any, text: str) -> str:
+        if self._max_tool_result_chars is None:
+            return str(runner._truncate_tool_result(text))
+        return str(runner._truncate_tool_result(text, self._max_tool_result_chars))
 
     def build(self, specs: list[Path]) -> Iterator[dict[str, Any]]:
         q = self._q
@@ -314,9 +329,7 @@ class SpecTurnPool(SpecTurnPoolInterface):
                 after = [
                     q.native(message("assistant", "", tool_calls=(call,))),
                     q.native(
-                        message(
-                            "tool", r._truncate_tool_result(str(result)), tool_call_id=call["id"]
-                        ),
+                        message("tool", self._truncated(r, str(result)), tool_call_id=call["id"]),
                         "read_file",
                     ),
                 ]

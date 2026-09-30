@@ -149,6 +149,49 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **build:** a work plan whose verification runs or reads a file nothing provides is refused
+  before BUILD starts. Live on #963 (a README insertion) DECOMPOSE verified its one item with
+  `python generate_toc.py` and `python anchor_verify.py`, scripts that never existed, and the
+  engine spent four attempts searching for them. Every file a verification command executes
+  or reads (an interpreter's script, a path-named program, a pytest target, a sourced or
+  `cat` file, an input redirection) must now exist in the project's checkout, be listed in
+  `files_touched_hint` by the item or an item it depends on, or be written by an earlier
+  command of the item (`vibey.domain.plan_references`). The sovereign producer re-asks once
+  naming every missing path, then fails `ModelAnswerRejected`; `build.decompose` judges
+  every producer's plan against the same checkout and fails the job naming the files. Both
+  decompose prompts now state the rule, and that verification commands check the work,
+  never perform it, and run unchanged on macOS and Linux.
+* **gptossloop:** a run now tells the model the host its shell commands run on and keeps
+  file edits out of the shell. Live on #963 gpt-oss:20b ran GNU `sed -i '34i ...' README.md`
+  twice on macOS (`sed: 1: "README.md\n": invalid command code R`) although `edit_file`
+  existed: the plan it was handed spelled the edit as a `sed -i` command, the `shell` tool's
+  description said only "Run a bounded command", and nothing named the platform. The system
+  prompt now names the host (`uname`, with the BSD-versus-GNU difference that matters, via a
+  configurable `HostPlatform`) and says a plan command that edits a file describes the
+  change, to be made with `edit_file`; the `shell` and `edit_file` descriptions say the same,
+  including how to insert lines with `edit_file`, and that `argv` runs without a shell. The
+  host is recorded in the run's `meta.json`.
+* **gptossloop:** a tool result is no longer cut at a fixed 8,000 characters. Live on #963 the
+  model opened README.md 19 times over four attempts. In the one run whose record survives
+  history was never trimmed (prompts at most 6,022 of 65,536 tokens), but each of the six
+  whole-file reads (8,730 characters of content) lost its tail and its line count to the
+  cap, with only "...[truncated N characters]" to show for it.
+  The cap is now the config key `max_tool_result_chars` (default 24,000, under a fifth of the
+  default context window; recorded in `meta.json`), and a cut result says how to read the
+  rest (`read_file` with `line_start`/`line_end`, or `search`). The storm turn pool replays
+  each run at the cap it recorded, and at the old 8,000 when it recorded none.
+* **design:** narrowest scope never narrows away the deliverable. Live on #963 (a README
+  insertion) "Should the lane commit the change to README.md?" and "Should the lane generate
+  the table of contents using the provided Python script or hardcode the list?" were both
+  declared "No" -- by the model itself, not the guard (no `model_default` in the ledger), with
+  the narrowest-scope contract in its prompt. `QUESTION_DEFAULT_CONTRACT` now says the
+  deliverable itself is never optional: narrowest means nothing beyond the intake, never
+  less, and a question about making, committing or applying the requested change, or using
+  something the intake provides, defaults to "Yes" unless the intake says otherwise. The
+  guard's classifier exempts both shapes from narrowing (`ScopeClassification.delivers`): a
+  delivery verb whose object is the change (commit, deliver, apply, push, land, merge the
+  change/edit/fix/update ...), and "use the provided X" where X is named in the intake. The
+  #998 questions it narrowed are still narrowed; it still never rewrites a default to "Yes".
 * **build:** BUILD's worktrees and branches are scoped per project, and a branch is used only
   when it proves it is the project's own. Found live on 2026-09-30: project 893c4fc1,
   delivering issue #963 in a triaged-bridge checkout that shares the main repository's refs,

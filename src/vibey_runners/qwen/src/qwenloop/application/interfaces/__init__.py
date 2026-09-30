@@ -15,6 +15,7 @@ from qwenloop.application.interfaces.backend_selection_interface import (
 from qwenloop.application.interfaces.class_contracts import AutonomousRunnerInterface
 from qwenloop.application.interfaces.clock_interface import ClockInterface
 from qwenloop.application.interfaces.desktop_notifier_interface import DesktopNotifierInterface
+from qwenloop.application.interfaces.host_platform_interface import HostPlatformInterface
 from qwenloop.application.interfaces.ollama_probe_interface import OllamaProbeInterface
 from qwenloop.application.interfaces.turn_dispatch_interface import TurnDispatcherInterface
 from qwenloop.domain.interfaces import ChatChunkInterface, FollowUpInterface
@@ -25,6 +26,7 @@ __all__ = [
     "BackendSelectorInterface",
     "ClockInterface",
     "DesktopNotifierInterface",
+    "HostPlatformInterface",
     "InferenceServer",
     "OllamaProbeInterface",
     "RunStore",

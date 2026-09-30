@@ -58,8 +58,9 @@ class Decomposer:
         self.items = items
         self.calls = 0
 
-    async def decompose(self, spec):  # type: ignore[no-untyped-def]
+    async def decompose(self, spec, *, checkout=None):  # type: ignore[no-untyped-def]
         self.calls += 1
+        self.checkout = checkout
         return self.items
 
 
@@ -331,3 +332,100 @@ async def test_fan_out_stamps_the_integration_base_ref_on_every_item() -> None:
         # project in the same repository shares.
         assert record.payload["base_ref"] == WorktreeNaming(job.project_id, 1).integration_branch
         assert record.payload["base_ref"] == f"vibey/{job.project_id.hex[:8]}/1/integration"
+
+
+class Checkout:
+    def __init__(self, *present: str) -> None:
+        self.present = frozenset(present)
+
+    def exists(self, path: str) -> bool:
+        return path in self.present
+
+
+class Checkouts:
+    def __init__(self, view: Checkout | None) -> None:
+        self.view = view
+        self.asked: list[object] = []
+
+    async def checkout(self, project_id):  # type: ignore[no-untyped-def]
+        self.asked.append(project_id)
+        return self.view
+
+
+async def test_a_plan_running_a_script_nothing_provides_is_refused_naming_it() -> None:
+    """#963: the plan ran `python generate_toc.py`, which no item created and the
+    checkout did not hold. Refused before anything is enqueued, the file named."""
+    job = replace(make_job(uuid4()), kind="build.decompose")
+    items = (
+        _item(
+            "ws",
+            acceptance_ids=("AC-1", "AC-2"),
+            verification=VerificationSpec(
+                commands=("python generate_toc.py > toc.txt", "grep -c x README.md"),
+                criteria_checked=("AC-1",),
+            ),
+        ),
+    )
+    jobs = FakeJobRepository()
+    decomposer = Decomposer(items)
+    checkouts = Checkouts(Checkout("README.md"))
+    handler = BuildDecomposeHandler(
+        specs=Specs(spec()), decomposer=decomposer, jobs=jobs, checkouts=checkouts
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.WORK
+    assert "generate_toc.py (the command 'python generate_toc.py > toc.txt' executes it)" in (
+        outcome.detail
+    )
+    assert _fan_out(jobs) == []
+    # The producer was handed the same checkout, so a model-backed one can re-ask.
+    assert decomposer.checkout is checkouts.view
+    assert checkouts.asked == [job.project_id]
+
+
+async def test_a_plan_over_files_the_checkout_holds_fans_out() -> None:
+    job = replace(make_job(uuid4()), kind="build.decompose")
+    items = (
+        _item(
+            "ws",
+            acceptance_ids=("AC-1", "AC-2"),
+            verification=VerificationSpec(
+                commands=("python scripts/check.py",), criteria_checked=("AC-1",)
+            ),
+        ),
+    )
+    jobs = FakeJobRepository()
+    handler = BuildDecomposeHandler(
+        specs=Specs(spec()),
+        decomposer=Decomposer(items),
+        jobs=jobs,
+        checkouts=Checkouts(Checkout("scripts/check.py")),
+    )
+
+    assert await handler.handle(job) == Success({"work_items": 1})
+    assert [record.work_item_id for record in _fan_out(jobs)] == ["ws"]
+
+
+async def test_without_a_checkout_the_reference_rule_is_not_applied() -> None:
+    """A project whose checkout is gone is judged on the structural rules alone."""
+    job = replace(make_job(uuid4()), kind="build.decompose")
+    items = (
+        _item(
+            "ws",
+            acceptance_ids=("AC-1", "AC-2"),
+            verification=VerificationSpec(commands=("python gone.py",), criteria_checked=()),
+        ),
+    )
+    decomposer = Decomposer(items)
+    handler = BuildDecomposeHandler(
+        specs=Specs(spec()),
+        decomposer=decomposer,
+        jobs=FakeJobRepository(),
+        checkouts=Checkouts(None),
+    )
+
+    assert await handler.handle(job) == Success({"work_items": 1})
+    assert decomposer.checkout is None

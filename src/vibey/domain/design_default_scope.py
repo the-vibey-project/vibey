@@ -18,7 +18,18 @@ negative, rewrites it to the minimal answer. The rule is deliberately small enou
 to state in one sentence, so every rewrite can be explained from the record alone:
 
     a yes/no question that proposes to add, include, extend, enforce or automate
-    something, naming an artefact the intake does not name, defaults to "No".
+    something, naming an artefact the intake does not name, defaults to "No" --
+    unless it asks whether to deliver the change the intake asks for.
+
+The exception is the deliverable itself (measured live on 2026-09-30, project
+893c4fc1, issue #963, again a README insertion): "Should the lane commit the change to
+README.md?" and "Should the lane generate the table of contents using the provided
+Python script ...?" were both declared "No". Declining to commit the requested change is
+not a narrower scope, it is no deliverable, and a script the intake itself supplies is
+part of what it asks for. Those two were the model's own defaults -- the guard never
+rewrites to "Yes" -- but a question of either shape is never narrowed here: one that
+proposes to commit, deliver, apply, push, land or merge *the change* (or edit, fix,
+update ...), and one that proposes to use *the provided* X where X is named in the intake.
 
 It is conservative by construction. A question about *how* to do what the intake
 asks ("Should the anchor generation follow GitHub's algorithm exactly?") names no
@@ -73,6 +84,25 @@ _EXTENSION = re.compile(
     re.IGNORECASE,
 )
 
+# Delivering the requested change: a delivery verb whose object is the change itself.
+# "Commit the TOC generation script" names a new thing; "commit the change" names none.
+_DELIVERS = re.compile(
+    r"\b(?:commit|deliver|apply|push|land|merge|submit|ship)\w*\s+"
+    r"(?:the|this|these|that|its|their|our)\s+(?:[\w.`'-]+\s+){0,3}?"
+    r"(?:change|changes|edit|edits|fix|fixes|update|updates|insertion|modification"
+    r"|modifications|deliverable|diff|patch)\b",
+    re.IGNORECASE,
+)
+
+# Using what the intake itself supplies: "use the provided Python script". The words after
+# "provided" are checked against the intake, so an unnamed "provided linter" still widens.
+_PROVIDED = re.compile(
+    r"\b(?:use|uses|using|run|runs|running|follow|following|apply|applying|with)\s+"
+    r"the\s+(?:provided|given|supplied)\s+((?:[\w.+-]+\s+){0,2}[\w.+-]+)",
+    re.IGNORECASE,
+)
+_NOT_NAMES: Final[frozenset[str]] = frozenset({"and", "the", "for", "with", "that", "this"})
+
 # The artefacts a widening question proposes, each under one canonical name so the
 # recorded reason reads the same however the model phrased it. Order is the order a
 # reason lists them in.
@@ -114,10 +144,14 @@ class ScopeClassification:
     artefacts: tuple[str, ...]
     #: The subset of `artefacts` the intake does not name.
     beyond_intake: tuple[str, ...]
+    #: Whether the question asks about delivering what the intake asks for -- committing
+    #: or applying the change, or using something the intake itself provides. Such a
+    #: question is never widening: declining it is no deliverable, not a narrower one.
+    delivers: bool = False
 
     @property
     def widening(self) -> bool:
-        return self.yes_no and self.extends and bool(self.beyond_intake)
+        return self.yes_no and self.extends and bool(self.beyond_intake) and not self.delivers
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,7 +185,23 @@ class DesignDefaultScopeGuard:
             beyond_intake=tuple(
                 name for name, pattern in _ARTEFACTS if name in named and not pattern.search(intake)
             ),
+            delivers=self._delivers(question, intake=intake),
         )
+
+    @staticmethod
+    def _delivers(question: str, *, intake: str) -> bool:
+        """Whether the question asks to deliver the requested change, or to use a thing
+        the intake names as provided -- any significant word after "the provided" that
+        the intake also contains."""
+        if _DELIVERS.search(question):
+            return True
+        provided = (
+            word
+            for match in _PROVIDED.finditer(question)
+            for word in re.findall(r"[A-Za-z][\w+-]*", match.group(1))
+            if len(word) > 2 and word.lower() not in _NOT_NAMES
+        )
+        return any(re.search(rf"\b{re.escape(word)}\b", intake, re.IGNORECASE) for word in provided)
 
     def declines(self, default: str) -> bool:
         return _NEGATIVE.search(default) is not None

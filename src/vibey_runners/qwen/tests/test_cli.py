@@ -1004,7 +1004,8 @@ def test_run_hands_the_declared_empty_reply_bound_to_the_runner(
     isolated_settings.write_text(
         "max_empty_reply_retries = 5\n"
         "max_recorded_argument_chars = 64\n"
-        "empty_reply_reasoning_excerpt_chars = 32\n",
+        "empty_reply_reasoning_excerpt_chars = 32\n"
+        "max_tool_result_chars = 16000\n",
         encoding="utf-8",
     )
     monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
@@ -1019,7 +1020,8 @@ def test_run_hands_the_declared_empty_reply_bound_to_the_runner(
         call["max_empty_reply_retries"],
         call["max_recorded_argument_chars"],
         call["empty_reply_reasoning_excerpt_chars"],
-    ) == (5, 64, 32)
+        call["max_tool_result_chars"],
+    ) == (5, 64, 32, 16000)
 
 
 def test_storm_hands_the_declared_empty_reply_bound_to_every_run(
@@ -1031,7 +1033,7 @@ def test_storm_hands_the_declared_empty_reply_bound_to_every_run(
     (tmp_path / "a" / ".git").mkdir(parents=True)
     isolated_settings.write_text(
         "max_empty_reply_retries = 0\nmax_recorded_argument_chars = 7\n"
-        "empty_reply_reasoning_excerpt_chars = 0\n",
+        "empty_reply_reasoning_excerpt_chars = 0\nmax_tool_result_chars = 9\n",
         encoding="utf-8",
     )
     monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
@@ -1050,9 +1052,10 @@ def test_storm_hands_the_declared_empty_reply_bound_to_every_run(
             call["max_empty_reply_retries"],
             call["max_recorded_argument_chars"],
             call["empty_reply_reasoning_excerpt_chars"],
+            call["max_tool_result_chars"],
         )
         for call in recording_runner
-    ] == [(0, 7, 0)]
+    ] == [(0, 7, 0, 9)]
 
 
 def test_run_fails_loudly_when_the_endpoint_lacks_the_model(

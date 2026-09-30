@@ -33,6 +33,13 @@ DEFAULT_MAX_RECORDED_ARGUMENT_CHARS = 200
 #: How many characters from the start of an empty reply's reasoning a `turn.empty` event
 #: keeps, beside the reasoning's full length. 0 records no excerpt at all.
 DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS = 400
+#: How many characters of one tool result the model is shown; the rest is cut and the cut
+#: named, with how to read what was cut. Was a fixed 8,000: on vibey #963 (2026-09-30) a
+#: whole-file read of a 435-line README (8,730 characters of content) lost its tail and its
+#: line count on every read, and gpt-oss:20b opened it 19 times over four attempts. 24,000
+#: is about 6,000 tokens, under a fifth of the default 32,768-token context window. Must be
+#: positive.
+DEFAULT_MAX_TOOL_RESULT_CHARS = 24_000
 
 
 class Effort(StrEnum):
@@ -166,6 +173,7 @@ class QwenConfig:
     max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES
     max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS
     empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS
+    max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS
     # The OpenAI-compatible base URL to attach to, `/v1` included. Empty means none is
     # configured, and `auto` selection then never picks the openai-compat backend.
     base_url: str = ""
@@ -235,6 +243,9 @@ class QwenConfigParser:
                 "empty_reply_reasoning_excerpt_chars",
                 defaults.empty_reply_reasoning_excerpt_chars,
             ),
+            max_tool_result_chars=self._bound(
+                data, "max_tool_result_chars", defaults.max_tool_result_chars
+            ),
             base_url=self._base_url(str(data.get("base_url", defaults.base_url))),
             model=str(data.get("model", defaults.model)).strip(),
             endpoint_timeout_seconds=int(
@@ -255,6 +266,9 @@ class QwenConfigParser:
             or config.endpoint_timeout_seconds <= 0
         ):
             raise ValueError("timeouts, context_window, and max_turns must be positive")
+        if config.max_tool_result_chars == 0:
+            # 0 would show the model an empty result for every tool call.
+            raise ValueError("max_tool_result_chars must be positive")
         if not config.model:
             raise ValueError("model must name the model the endpoint serves")
         if config.turn_dispatch_mode not in {"auto", "direct", "hybrid", "rabbitmq"}:

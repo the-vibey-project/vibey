@@ -21,7 +21,13 @@ The plan is all-or-nothing, end to end (#265):
    every item or none, with each item's key derived from (project, cycle,
    item_id), so a crash mid-fan-out leaves nothing to orphan and a replay
    neither duplicates nor orphans.
-4. **Never decomposed twice.** A replay that finds its own fan-out already
+4. **Only files something provides.** Given a checkout, a plan whose verification
+   executes or reads a file that is neither in the checkout nor created by the item
+   or an item it depends on is refused, naming every such file (#963's plan ran
+   `python generate_toc.py`, a script nothing created, and BUILD burned four attempts
+   looking for it). The producer is handed the checkout so it can re-ask its model;
+   the handler judges the result again, whichever producer answered.
+5. **Never decomposed twice.** A replay that finds its own fan-out already
    committed (the worker died between the commit and the ack) returns it
    instead of asking the producer again: the producers are models, and a
    second answer would enqueue a second plan beside the first.
@@ -31,15 +37,18 @@ from dataclasses import asdict
 
 from vibey.application.dto import EnqueueRequest, JobRecord
 from vibey.application.interfaces import (
+    CheckoutLocator,
     DesignSpecReader,
     WorkPlanProducer,
 )
 from vibey.application.ports import JobRepository
 from vibey.application.worker import Failure, Outcome, Success
 from vibey.domain.interfaces.plan_interface import DecompositionPlannerInterface
+from vibey.domain.interfaces.plan_references_interface import PlanReferenceCheckerInterface
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.phase import Phase
 from vibey.domain.plan import DECOMPOSITION_PLANNER, WorkItem
+from vibey.domain.plan_references import PLAN_REFERENCE_CHECKER
 from vibey.domain.worktree import WorktreeNaming
 
 
@@ -53,11 +62,17 @@ class BuildDecomposeHandler:
         decomposer: WorkPlanProducer,
         jobs: JobRepository,
         planner: DecompositionPlannerInterface = DECOMPOSITION_PLANNER,
+        checkouts: CheckoutLocator | None = None,
+        references: PlanReferenceCheckerInterface = PLAN_REFERENCE_CHECKER,
     ) -> None:
         self._specs = specs
         self._decomposer = decomposer
         self._jobs = jobs
         self._planner = planner
+        # None: no checkout to judge references against (a deployment without one, and
+        # the unit tests of the rules above); the reference rule is then not applied.
+        self._checkouts = checkouts
+        self._references = references
 
     async def handle(self, job: JobRecord) -> Outcome:
         # "build.plan" is the review fast loop-back's spelling of the same
@@ -74,7 +89,10 @@ class BuildDecomposeHandler:
         if spec is None:
             return Failure(FailureClass.WORK, "no accepted design spec exists")
 
-        items = await self._decomposer.decompose(spec)
+        checkout = (
+            await self._checkouts.checkout(job.project_id) if self._checkouts is not None else None
+        )
+        items = await self._decomposer.decompose(spec, checkout=checkout)
         if not items:
             return Failure(FailureClass.WORK, "decomposition produced no work items")
 
@@ -82,6 +100,8 @@ class BuildDecomposeHandler:
         violations = self._planner.violations(
             items, criteria_ids=criteria_ids, walking_skeleton_item_id=items[0].item_id
         )
+        if checkout is not None:
+            violations += self._references.violations(items, exists=checkout.exists)
         if violations:
             return Failure(FailureClass.WORK, "; ".join(violations))
 
@@ -141,6 +161,7 @@ class BuildDecomposeHandler:
 # Re-exported for the same reason `application/ports.py` re-exports the
 # interfaces package: the seam moved, the import path should not break.
 __all__ = [
+    "CheckoutLocator",
     "DesignSpecReader",
     "WorkPlanProducer",
 ]

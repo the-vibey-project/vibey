@@ -33,6 +33,7 @@ from qwenloop.domain.config import (
     DEFAULT_ENDPOINT_MODEL,
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    DEFAULT_MAX_TOOL_RESULT_CHARS,
     DEFAULT_QWEN_ENDPOINT_MODEL,
     GPTOSSLOOP,
     QWENLOOP,
@@ -58,6 +59,7 @@ from qwenloop.infrastructure.github import (
     list_open_pull_requests,
     list_repo_names,
 )
+from qwenloop.infrastructure.host_platform import HostPlatform
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
 from qwenloop.infrastructure.model_cache import ModelCache
 from qwenloop.infrastructure.ollama_probe import OllamaProbe
@@ -310,6 +312,7 @@ def _run_single(
                 max_empty_reply_retries=config.max_empty_reply_retries,
                 max_recorded_argument_chars=config.max_recorded_argument_chars,
                 empty_reply_reasoning_excerpt_chars=config.empty_reply_reasoning_excerpt_chars,
+                max_tool_result_chars=config.max_tool_result_chars,
                 dispatcher=_dispatcher_for(config),
             )
         )
@@ -336,6 +339,7 @@ async def _run_plan(
     max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
     empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
+    max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
     dispatcher: object | None = None,
 ) -> RunState:
     """Start (or, for an attached endpoint, check) the server if it is not healthy, then
@@ -351,6 +355,7 @@ async def _run_plan(
         DesktopNotifier(enabled=desktop_notifications),
         clock=SystemClock(),
         dispatcher=dispatcher,  # type: ignore[arg-type]
+        host=HostPlatform(),
     )
     return await runner.run(
         run_id=run_id,
@@ -362,6 +367,7 @@ async def _run_plan(
         max_empty_reply_retries=max_empty_reply_retries,
         max_recorded_argument_chars=max_recorded_argument_chars,
         empty_reply_reasoning_excerpt_chars=empty_reply_reasoning_excerpt_chars,
+        max_tool_result_chars=max_tool_result_chars,
     )
 
 
@@ -504,6 +510,7 @@ def _run_storm(
                             empty_reply_reasoning_excerpt_chars=(
                                 config.empty_reply_reasoning_excerpt_chars
                             ),
+                            max_tool_result_chars=config.max_tool_result_chars,
                         )
                     )
                 except (OSError, RuntimeError) as exc:

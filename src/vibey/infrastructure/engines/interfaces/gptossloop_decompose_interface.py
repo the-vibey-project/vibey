@@ -10,6 +10,7 @@ with the grammar the class is judged by. Interfaces declare; they never consume.
 from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
+from vibey.application.interfaces import CheckoutView
 from vibey.domain.plan import WorkItem
 from vibey.domain.spec import DesignSpec
 
@@ -20,6 +21,9 @@ class GptossloopWorkPlanProducerInterface(Protocol):
         """The JSON schema a decomposition of a spec with these criteria must match."""
         ...
 
-    async def decompose(self, spec: DesignSpec) -> tuple[WorkItem, ...]:
-        """A whole, valid plan, or ValueError naming why not -- never part of one."""
+    async def decompose(
+        self, spec: DesignSpec, *, checkout: CheckoutView | None = None
+    ) -> tuple[WorkItem, ...]:
+        """A whole, valid plan, or ValueError naming why not -- never part of one. Given
+        a checkout, a plan whose verification names a file nothing provides is invalid."""
         ...

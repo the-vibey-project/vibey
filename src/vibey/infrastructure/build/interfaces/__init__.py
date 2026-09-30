@@ -4,8 +4,17 @@
 from vibey.infrastructure.build.interfaces.automated_review_runner_interface import (
     ConfigurableAutomatedReviewRunnerInterface,
 )
+from vibey.infrastructure.build.interfaces.checkout_interface import (
+    FilesystemCheckoutInterface,
+    ProjectCheckoutLocatorInterface,
+)
 from vibey.infrastructure.build.interfaces.gate_runner_interface import (
     ConfigurableGateRunnerInterface,
 )
 
-__all__ = ["ConfigurableAutomatedReviewRunnerInterface", "ConfigurableGateRunnerInterface"]
+__all__ = [
+    "ConfigurableAutomatedReviewRunnerInterface",
+    "ConfigurableGateRunnerInterface",
+    "FilesystemCheckoutInterface",
+    "ProjectCheckoutLocatorInterface",
+]

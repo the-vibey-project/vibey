@@ -579,7 +579,9 @@ _CODING_TOOLS: list[dict[str, object]] = [
             "description": (
                 "Replace exactly one occurrence of old_string with new_string in an existing "
                 "file inside the assigned worktree. Use this for every change to an existing "
-                "file; copy old_string exactly from read_file output."
+                "file, never sed -i or other shell rewriting; copy old_string exactly from "
+                "read_file output. To insert lines, set old_string to a unique nearby line "
+                "and new_string to that line plus the new ones."
             ),
             "parameters": {
                 "type": "object",
@@ -597,7 +599,13 @@ _CODING_TOOLS: list[dict[str, object]] = [
         "type": "function",
         "function": {
             "name": "shell",
-            "description": "Run a bounded command in the assigned worktree.",
+            "description": (
+                "Run a bounded command in the assigned worktree to build, test or inspect. "
+                "argv runs directly, not through a shell: no pipes, redirection or $(...) "
+                "unless argv starts a shell itself. Never use it to change a file (sed -i, "
+                "perl -i, echo > file): use edit_file or write_file, which behave the same "
+                "on every platform."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {

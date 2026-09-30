@@ -151,6 +151,74 @@ def test_the_classification_is_evidence_not_just_a_verdict() -> None:
     assert not GUARD.classify("What should the TOC be called?", intake=INTAKE_998).yes_no
 
 
+# -- the deliverable is never narrowed (#963) -------------------------------------------
+
+#: Issue #963's intake, abridged verbatim from the ledger: the same README insertion, this
+#: time supplying the generator script itself.
+INTAKE_963 = (
+    "GitHub issue #963: docs(readme): add a table of contents to README.md\n"
+    "Generate the anchor list mechanically rather than by hand, with this script run from\n"
+    "the repository root:\n```python\nimport re\nfrom pathlib import Path\n```\n"
+    "Commit as `docs(readme): add a table of contents`. Do not push."
+)
+
+#: The two #963 questions whose declared "No" meant no deliverable, verbatim.
+DELIVERABLE_963 = [
+    "Should the lane commit the change to README.md?",
+    "Should the lane generate the table of contents using the provided Python script or "
+    "hardcode the list?",
+]
+
+
+@pytest.mark.parametrize("question", DELIVERABLE_963)
+def test_the_963_deliverable_questions_are_never_narrowed(question: str) -> None:
+    found = GUARD.classify(question, intake=INTAKE_963)
+
+    assert found.delivers
+    assert not found.widening
+    assert GUARD.scope(
+        question, "Yes", intake=INTAKE_963, policy=DefaultScope.NARROWEST
+    ) == ScopedDefault(default="Yes")
+
+
+def test_the_guard_never_rewrites_a_declining_default_to_yes() -> None:
+    """#963's "No" was the model's own (no `model_default` in the ledger): the guard only
+    ever narrows, so the prompt contract is what asks for the deliverable."""
+    question = DELIVERABLE_963[0]
+    assert GUARD.scope(question, "No", intake=INTAKE_963, policy=DefaultScope.NARROWEST) == (
+        ScopedDefault(default="No")
+    )
+
+
+def test_committing_the_change_is_exempt_even_beside_an_artefact_beyond_the_intake() -> None:
+    question = "Should the lane commit the change together with its updated test expectations?"
+    found = GUARD.classify(question, intake=INTAKE_998)
+
+    # Without the exemption this would narrow: "commit" extends and "test" is beyond 998.
+    assert found.yes_no and found.extends and found.beyond_intake == ("test",)
+    assert found.delivers and not found.widening
+
+
+def test_the_provided_thing_must_be_named_in_the_intake() -> None:
+    question = "Should the lane use the provided generator script?"
+    named = "Generate the anchors with the generator in this issue."
+
+    assert GUARD.classify(question, intake=named).delivers
+    assert GUARD.classify(question, intake=named).beyond_intake == ("script",)
+    assert not GUARD.scope(question, "Yes", intake=named, policy=DefaultScope.NARROWEST).rewritten
+    # The same question against an intake that provides nothing still narrows.
+    assert not GUARD.classify(question, intake=INTAKE_998).delivers
+    assert GUARD.scope(question, "Yes", intake=INTAKE_998, policy=DefaultScope.NARROWEST).rewritten
+
+
+@pytest.mark.parametrize(("question", "model_default"), WIDENING_998)
+def test_no_998_widening_question_is_mistaken_for_the_deliverable(
+    question: str, model_default: str
+) -> None:
+    # "Should we commit the TOC generation script" commits a new thing, not the change.
+    assert not GUARD.classify(question, intake=INTAKE_998).delivers
+
+
 def test_the_shared_guard_is_the_interface() -> None:
     assert isinstance(DESIGN_DEFAULT_SCOPE, DesignDefaultScopeGuardInterface)
     assert DEFAULT_SCOPE is DefaultScope.NARROWEST

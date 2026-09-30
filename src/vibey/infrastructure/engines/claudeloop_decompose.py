@@ -17,6 +17,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from vibey.application.dto import RunSpec
+from vibey.application.interfaces import CheckoutView
 from vibey.domain.effort import Effort
 from vibey.domain.engine import IsolationLevel
 from vibey.domain.plan import WorkItem
@@ -41,7 +42,12 @@ class ClaudeLoopWorkPlanProducer:
         self._worktree_path = worktree_path
         self._decoder = decoder if decoder is not None else WorkPlanDecoder()
 
-    async def decompose(self, spec: DesignSpec) -> tuple[WorkItem, ...]:
+    async def decompose(
+        self, spec: DesignSpec, *, checkout: CheckoutView | None = None
+    ) -> tuple[WorkItem, ...]:
+        # `checkout` is not consulted here: this producer answers in one turn and has no
+        # re-ask to spend on it. BuildDecomposeHandler judges the plan's file references
+        # against the same checkout, and the prompt states the rule.
         prompt = (
             "Decompose this accepted design spec into a dependency-ordered work-item graph. "
             "The FIRST item must be the walking skeleton, with no dependencies. Every "
@@ -54,10 +60,15 @@ class ClaudeLoopWorkPlanProducer:
             "merges conflict). Every verification command must be self-contained and "
             "pass in a clean checkout with nothing installed (no pip install, no "
             "network); prefer one pytest suite under tests/ shared by all items over "
-            "inventing per-item test styles. Do not inspect files; "
+            "inventing per-item test styles. A verification command may run or read only "
+            "files that already exist in the repository, or that this item or an item it "
+            "depends on creates and lists in files_touched_hint; verification commands "
+            "check the work, never perform it, and must run unchanged on macOS and Linux. "
+            "Do not inspect files; "
             "answer immediately in this first turn. Return only JSON with shape "
             '{"items":[{"item_id":str,"title":str,"acceptance_ids":[str],'
             '"depends_on":[str],"est_effort":"trivial|low|standard|high|max",'
+            '"files_touched_hint":[str],'
             '"verification":{"commands":[str],"criteria_checked":[str]}}]}.\n'
             f"Spec: {json.dumps(self._decoder.spec_json(spec), default=str)}"
         )
