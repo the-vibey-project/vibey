@@ -1452,7 +1452,7 @@
       "value": 75.2,
       "unit": "MiB",
       "status": "measured",
-      "method": "/usr/bin/time -l vibey new hw-cli-1-1790732597 --repo /var/folders/_8/kbndvzyd60dgqj2sq8rffpp00000gn/T/hw/proj/repo-cli-1-1790732597 --intake Add a greet() function that returns hello",
+      "method": "/usr/bin/time -l vibey new hw-cli-1-1790732597 --repo $TMPDIR/hw/proj/repo-cli-1-1790732597 --intake Add a greet() function that returns hello",
       "measured_at": "2026-09-30T01:46:12.815Z",
       "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
       "conditions": {
@@ -1475,7 +1475,7 @@
       "value": 0.34,
       "unit": "s",
       "status": "measured",
-      "method": "/usr/bin/time -l vibey new hw-cli-1-1790732597 --repo /var/folders/_8/kbndvzyd60dgqj2sq8rffpp00000gn/T/hw/proj/repo-cli-1-1790732597 --intake Add a greet() function that returns hello",
+      "method": "/usr/bin/time -l vibey new hw-cli-1-1790732597 --repo $TMPDIR/hw/proj/repo-cli-1-1790732597 --intake Add a greet() function that returns hello",
       "measured_at": "2026-09-30T01:46:12.815Z",
       "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
       "conditions": {

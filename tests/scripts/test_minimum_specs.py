@@ -1061,3 +1061,27 @@ def test_the_host_model_buffer_is_read_whether_or_not_the_weights_are_mapped() -
     # Ollama 0.34 wrote the plain `CPU` form on the 2026-09-30 smoke run under memory pressure.
     read_in = "load_tensors:          CPU model buffer size =  1104.61 MiB\n"
     assert ms.LlamaServerLog.accounting(read_in) == {"host_model_mib": 1104.61}
+
+
+def test_volatile_temp_paths_never_reach_the_committed_record() -> None:
+    """The record is committed, so a probe's scratch path must not be (tests/meta guard)."""
+    mac = "/usr/bin/time -l vibey new x --repo /var/folders/_8/abc123/T/hw/proj/repo"
+    assert ms.VolatilePaths.scrub(mac) == "/usr/bin/time -l vibey new x --repo $TMPDIR/hw/proj/repo"
+    assert ms.VolatilePaths.scrub("cd /private/tmp/claude-501/x") == "cd $TMPDIR/claude-501/x"
+    assert (
+        ms.VolatilePaths.scrub("/usr/bin/time -l vibey --version")
+        == "/usr/bin/time -l vibey --version"
+    )
+    assert ms.VolatilePaths.scrub(None) is None
+    figure = ms.Figure(
+        id="cli.new.rss",
+        label="vibey new peak RSS",
+        value=74.0,
+        unit="MiB",
+        status="measured",
+        method=mac,
+        measured_at="2026-09-29T00:00:00Z",
+        note="scratch under /tmp/x",
+    )
+    assert "/var/folders" not in figure.method and "$TMPDIR" in figure.method
+    assert figure.note == "scratch under $TMPDIR/x"

@@ -129,6 +129,36 @@ class SpecsSettings:
 # ------------------------------------------------------------------------ the record
 
 
+class VolatilePaths:
+    """Rewrites a host's temporary directories to `$TMPDIR` in a figure's free text.
+
+    A probe runs its scratch work under the temp directory, and the command it records can
+    quote that path. It is throwaway and machine-specific, and the record is committed, so
+    the tree's volatile-storage guard (tests/meta) refuses it -- and a weekly run would
+    otherwise write it back each time. Scrubbed where every figure is built, not per probe.
+    """
+
+    # Assembled from parts, as tests/meta/test_no_volatile_work_paths.py assembles its own,
+    # so these patterns -- which remove volatile paths -- are not mistaken for one.
+    _PATTERNS = (
+        re.compile(r"(?:/private)?/var/" + r"folders/[^/\s]+/[^/\s]+/T(?=/|\b)"),
+        re.compile(r"(?:/private)?/" + r"tmp(?=/)"),
+    )
+
+    @classmethod
+    def scrub(cls, text: str | None) -> str | None:
+        if text is None:
+            return None
+        # The known shapes first, so the result does not depend on where it runs; then the
+        # running host's own temp directory, whatever it is called.
+        for pattern in cls._PATTERNS:
+            text = pattern.sub("$TMPDIR", text)
+        here = tempfile.gettempdir().rstrip("/")
+        if len(here) > 1:
+            text = text.replace(here, "$TMPDIR")
+        return text
+
+
 @dataclass(frozen=True)
 class Figure:
     """One number (or verdict) with everything needed to trust it or not."""
@@ -152,6 +182,8 @@ class Figure:
     note: str | None = None
 
     def __post_init__(self) -> None:
+        for name in ("method", "reason", "note"):
+            object.__setattr__(self, name, VolatilePaths.scrub(getattr(self, name)))
         if self.status not in STATUSES:
             raise ValueError(f"{self.id}: unknown status {self.status!r}")
         if self.cadence not in CADENCES:
