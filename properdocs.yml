@@ -60,6 +60,8 @@ nav:
       - Self-hosted sovereign surfaces: guides/self-hosted-surfaces.md
       - The Sabbath: guides/sabbath.md
       - Sovereign review runner: runbooks/sovereign-review-runner.md
+  - Case studies:
+      - How vibey survives a crashed agent: case-studies/how-vibey-survives-a-crashed-agent.md
   - Current estimate: estimate.md
   - Reference:
       - CLI: reference/cli.md

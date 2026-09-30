@@ -23,6 +23,10 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [The Sabbath](https://the-vibey-project.github.io/vibey/main/guides/sabbath/): From sundown on Friday to sundown on Saturday, vibey rests.
 - [Sovereign review runner](https://the-vibey-project.github.io/vibey/main/runbooks/sovereign-review-runner/): How to stand up, verify and remove the self-hosted runner that runs pr-review.yml's review-sovereign job on [self-hosted, vibey-local-vibey] (sub-doctrine 8.a).
 
+## Case studies
+
+- [How vibey survives a crashed agent](https://the-vibey-project.github.io/vibey/main/case-studies/how-vibey-survives-a-crashed-agent/): When an AI coding agent crashes mid-task, vibey loses no job and commits no job twice — leases, an append-only ledger and parked human gates, with the chaos test that proves it and the costs it pays.
+
 ## Reference
 
 - [CLI](https://the-vibey-project.github.io/vibey/main/reference/cli/): Every vibey command and subcommand, written by hand against src/vibey/cli/main.py and checked against it as of 2026-09-29.
