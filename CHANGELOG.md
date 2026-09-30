@@ -122,6 +122,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **build:** a work plan whose verification runs or reads a file nothing provides is refused
+  before BUILD starts. Live on #963 (a README insertion) DECOMPOSE verified its one item with
+  `python generate_toc.py` and `python anchor_verify.py`, scripts that never existed, and the
+  engine spent four attempts searching for them. Every file a verification command executes
+  or reads (an interpreter's script, a path-named program, a pytest target, a sourced or
+  `cat` file, an input redirection) must now exist in the project's checkout, be listed in
+  `files_touched_hint` by the item or an item it depends on, or be written by an earlier
+  command of the item (`vibey.domain.plan_references`). The sovereign producer re-asks once
+  naming every missing path, then fails `ModelAnswerRejected`; `build.decompose` judges
+  every producer's plan against the same checkout and fails the job naming the files. Both
+  decompose prompts now state the rule, and that verification commands check the work,
+  never perform it, and run unchanged on macOS and Linux.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

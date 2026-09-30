@@ -43,7 +43,9 @@ class FixedClock:
 
 
 class Decomposer:
-    async def decompose(self, spec: DesignSpec) -> tuple[WorkItem, ...]:
+    async def decompose(
+        self, spec: DesignSpec, *, checkout: object | None = None
+    ) -> tuple[WorkItem, ...]:
         return (
             WorkItem(
                 item_id="skeleton",

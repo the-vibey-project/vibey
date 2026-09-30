@@ -69,7 +69,9 @@ class Decomposer:
         self.items = items
         self.calls = 0
 
-    async def decompose(self, spec: DesignSpec) -> tuple[WorkItem, ...]:
+    async def decompose(
+        self, spec: DesignSpec, *, checkout: object | None = None
+    ) -> tuple[WorkItem, ...]:
         self.calls += 1
         return self.items
 

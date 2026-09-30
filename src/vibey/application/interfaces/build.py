@@ -109,5 +109,30 @@ class VerifyWorktrees(Protocol):
 
 
 @runtime_checkable
+class CheckoutView(Protocol):
+    """A read-only view of a project's checkout, as DECOMPOSE may consult it."""
+
+    def exists(self, path: str) -> bool:
+        """Whether this checkout-relative path is a file or directory in the checkout.
+        A path that escapes the checkout does not exist."""
+        ...
+
+
+@runtime_checkable
+class CheckoutLocator(Protocol):
+    """Finds the checkout a project's plan is verified against."""
+
+    async def checkout(self, project_id: UUID) -> CheckoutView | None:
+        """The project's checkout, or None when the project or its checkout is gone."""
+        ...
+
+
+@runtime_checkable
 class WorkPlanProducer(Protocol):
-    async def decompose(self, spec: DesignSpec) -> tuple[WorkItem, ...]: ...
+    async def decompose(
+        self, spec: DesignSpec, *, checkout: CheckoutView | None = None
+    ) -> tuple[WorkItem, ...]:
+        """A whole plan. Given a `checkout`, a producer that can re-ask its model should
+        refuse a plan whose verification names files nothing provides; the handler
+        judges the returned plan against the same checkout either way."""
+        ...

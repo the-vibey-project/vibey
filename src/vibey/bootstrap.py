@@ -122,6 +122,7 @@ from vibey.domain.interfaces.config_interface import (
 from vibey.domain.phase import Phase
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
+from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG, QUEUE_CONFIG
 from vibey.infrastructure.db.advisory_lock import PostgresAdvisoryLock
@@ -673,6 +674,7 @@ def build_full_worker(
             specs=resources.design_specs,
             decomposer=decomposer,
             jobs=resources.jobs,
+            checkouts=ProjectCheckoutLocator(resources.projects),
         ),
         "review.demo": ReviewDemoHandler(
             specs=resources.design_specs,

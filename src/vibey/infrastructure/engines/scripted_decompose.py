@@ -9,6 +9,7 @@ by construction for any buildable spec. The live, model-driven producer
 lands with rotation wiring; this one powers `--provider scripted` and CI.
 """
 
+from vibey.application.interfaces import CheckoutView
 from vibey.domain.effort import Effort
 from vibey.domain.plan import VerificationSpec, WorkItem
 from vibey.domain.spec import DesignSpec
@@ -17,7 +18,11 @@ WALKING_SKELETON_ITEM_ID = "ws"
 
 
 class ScriptedWorkPlanProducer:
-    async def decompose(self, spec: DesignSpec) -> tuple[WorkItem, ...]:
+    async def decompose(
+        self, spec: DesignSpec, *, checkout: CheckoutView | None = None
+    ) -> tuple[WorkItem, ...]:
+        # `checkout` is not consulted: every scripted verification is empty, so the
+        # plan names no file for it to judge.
         # build.verify refuses any item whose verification checks no
         # criteria (an item that names nothing can never be verified), so
         # the skeleton checks the first criterion -- the walking skeleton

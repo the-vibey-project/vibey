@@ -309,6 +309,63 @@ async def test_an_unknown_dependency_is_named_once() -> None:
     assert "does not come before it" not in message
 
 
+class _Checkout:
+    def __init__(self, *present: str) -> None:
+        self.present = frozenset(present)
+
+    def exists(self, path: str) -> bool:
+        return path in self.present
+
+
+def _live_963(*, hint: list[str], commands: list[str]) -> dict[str, object]:
+    item = _item("ws", acceptance=["AC-1"], commands=commands)
+    item["files_touched_hint"] = hint
+    return {"items": [item]}
+
+
+#: The plan DECOMPOSE wrote for #963: its verification ran two scripts nothing provided.
+_963_MISSING = _live_963(
+    hint=["README.md"],
+    commands=["python generate_toc.py > toc.txt", "python anchor_verify.py README.md"],
+)
+
+
+@pytest.mark.asyncio
+async def test_a_plan_naming_missing_scripts_is_re_asked_with_the_paths_named() -> None:
+    fixed = _live_963(hint=["README.md"], commands=["grep -c '^## Contents$' README.md"])
+    chat = SequenceChat([_963_MISSING, fixed])
+    producer = GptossloopWorkPlanProducer(chat=chat)
+
+    items = await producer.decompose(_spec("AC-1"), checkout=_Checkout("README.md"))
+
+    assert items[0].verification.commands == ("grep -c '^## Contents$' README.md",)
+    reask = chat.asked[1][1]
+    assert "generate_toc.py (the command 'python generate_toc.py > toc.txt' executes it)" in reask
+    assert "anchor_verify.py" in reask
+    # The rule itself is stated up front, not only after a rejection.
+    assert "Never reference a helper script you have not planned" in chat.asked[0][0]
+
+
+@pytest.mark.asyncio
+async def test_a_plan_still_naming_missing_scripts_after_the_re_ask_is_rejected() -> None:
+    producer, chat = _producer(_963_MISSING)
+    with pytest.raises(ModelAnswerRejected, match="the work plan was rejected after a re-ask"):
+        await producer.decompose(_spec("AC-1"), checkout=_Checkout("README.md"))
+    assert len(chat.asked) == 2
+
+
+@pytest.mark.asyncio
+async def test_a_script_the_item_declares_it_creates_is_accepted() -> None:
+    planned = _live_963(
+        hint=["README.md", "scripts/generate_toc.py"],
+        commands=["python scripts/generate_toc.py"],
+    )
+    producer, chat = _producer(planned)
+    items = await producer.decompose(_spec("AC-1"), checkout=_Checkout("README.md"))
+    assert items[0].files_touched_hint == ("README.md", "scripts/generate_toc.py")
+    assert len(chat.asked) == 1
+
+
 def test_the_producer_meets_its_declared_seams() -> None:
     producer = GptossloopWorkPlanProducer()
     assert isinstance(producer, GptossloopWorkPlanProducerInterface)
