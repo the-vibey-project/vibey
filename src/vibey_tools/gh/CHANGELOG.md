@@ -5,6 +5,20 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Fix:** three of the research paper's ```latex fences printed as raw LaTeX on the
+  documentation site: the two `table`/`table*` environments (the dispatch experiments and the
+  minimum requirements), which `math.js` did not know, and the bounded-convergence theorem,
+  whose fence holds the theorem and its proof and was refused because a fence was matched only
+  as one environment. `math.js` now reads a fence as its run of top-level environments and
+  converts it only when every one is understood (anything else still stays source, never
+  guessed at); a `table` with a `tabular` becomes an HTML table numbered with its caption, its
+  header row, column alignment from the spec, and text-mode TeX in cells (`\textbf`,
+  `\texttt`, `\emph`, `{[}...{]}`, escaped specials, `$...$` math) converted after HTML
+  escaping; a titled `proof` shows its title as its label ("Proof sketch."), as LaTeX does; and
+  a display-math environment is escaped before it reaches the page. Run over all 75 fences of
+  the paper: 75 convert (was 72), and the 72 already converted are byte-identical.
+  `test/test_math_js.py` runs the script under node.
+
 - **Fix:** the sovereign review no longer gives up on a pull request that adds a large file.
   The 3.1.0 promotion (head fa3b391703ff) got no verdict: `scripts/minimum_specs.py` was
   new, so its 136,308 characters were one `@@ -0,0 +1,N @@` hunk, larger than the 100,852 a

@@ -1359,7 +1359,10 @@ def test_latex_renders_on_the_site_from_a_verified_self_served_mathjax(tmp_path)
     assert "convertLatexFences();" in script
     assert "DOMContentLoaded" in script
     assert "pre.language-latex > code" in script
-    assert "\\begin\\{verbatim\\}" in script
+    assert 'name === "verbatim"' in script
+    # A fence is read as its run of environments, and tables become HTML (test_math_js).
+    assert "const environments = (source) =>" in script
+    assert 'name === "table" || name === "table*"' in script
 
 
 def test_math_loads_from_the_config_file(tmp_path):
