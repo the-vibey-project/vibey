@@ -33,6 +33,7 @@ SIGNATURES = "required_signatures"
 PULL_REQUEST = "pull_request"
 STATUS_CHECKS = "required_status_checks"
 MERGE_QUEUE = "merge_queue"
+CODE_COVERAGE = "code_coverage"
 
 
 def ruleset_name(branch: str) -> str:
@@ -92,6 +93,20 @@ def desired_rules(policy: RulesetConfig) -> list[dict[str, Any]]:
                     "merge_method": queue.merge_method,
                     "min_entries_to_merge": queue.min_entries_to_merge,
                     "min_entries_to_merge_wait_minutes": queue.min_entries_to_merge_wait_minutes,
+                },
+            }
+        )
+    if policy.declares_code_coverage:
+        # Emitted only when declared: a coverage floor blocks every pull request that has
+        # not uploaded coverage data, so an upgrade must never switch one on. Both keys are
+        # always sent, an unset one as null -- the shape the forge echoes back -- so the
+        # comparison below reads a live threshold nobody declared as drift, not as a match.
+        rules.append(
+            {
+                "type": CODE_COVERAGE,
+                "parameters": {
+                    "minimum_coverage": policy.minimum_coverage,
+                    "max_coverage_drop": policy.max_coverage_drop,
                 },
             }
         )

@@ -22,6 +22,7 @@ import typer
 
 from vibey.domain.errors import (
     BudgetExceeded,
+    CheckoutHeld,
     EscalationExhausted,
     GateAlreadyAnswered,
     HandoffRejected,
@@ -89,6 +90,12 @@ _NEXT_STEP: dict[type[BaseException], str] = {
         "answer is a no-op once it has landed."
     ),
     UnknownGate: _FINDING_A_GATE,
+    CheckoutHeld: (
+        "Nothing was created. If the project holding the checkout should stop,\n"
+        "`vibey abandon PROJECT_ID --reason TEXT` lets the checkout go; otherwise\n"
+        "start the new project in another checkout with --repo. `vibey projects --json`\n"
+        "lists every project with its checkout and phase."
+    ),
 }
 
 

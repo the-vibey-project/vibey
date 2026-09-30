@@ -122,7 +122,14 @@ class ProjectOrm(VibeyOrmModel, table=True):
             "cycle >= 1 AND cycle <= max_cycles + 1",
             name="project_cycle_bounded",
         ),
-        Index("project_repo_uniq", "repo_path", unique=True),
+        # One LIVE project per checkout (migration 0021): an abandoned project, which
+        # can never become live again, no longer holds its path.
+        Index(
+            "project_repo_live_uniq",
+            "repo_path",
+            unique=True,
+            postgresql_where=text("phase <> 'abandoned'"),
+        ),
     )
 
     id: UUID = Field(

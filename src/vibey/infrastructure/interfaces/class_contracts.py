@@ -162,7 +162,11 @@ class PostgresMigratorInterface(MigratorInterface, Protocol):
 
 @runtime_checkable
 class PostgresProjectRepositoryInterface(ProjectStore, Protocol):
-    async def create(self, *args: object, **kwargs: object) -> object: ...
+    async def create(self, *args: object, **kwargs: object) -> object:
+        """Insert a project in `intake`. A checkout a live project holds (any phase but
+        `abandoned`) is refused with `CheckoutHeld`, naming the holder; one whose every
+        earlier project was abandoned is free."""
+        ...
 
     async def get_latest(self) -> object: ...
 

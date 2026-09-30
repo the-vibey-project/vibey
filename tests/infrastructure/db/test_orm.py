@@ -106,3 +106,19 @@ async def test_orm_columns_match_every_migrated_relation(
         for table_name in EXPECTED_TABLE_NAMES
     }
     assert actual == mapped
+
+
+async def test_orm_project_indexes_match_the_migrated_ones(owner_pool: asyncpg.Pool) -> None:
+    """The ORM declares the project table's indexes as the migrations build them: the
+    checkout rule is 0021's partial index on every phase but abandoned, not 0001's."""
+    rows = await owner_pool.fetch(
+        "SELECT indexname FROM pg_indexes "
+        "WHERE schemaname = 'public' AND tablename = 'project' AND indexname <> 'project_pkey'"
+    )
+    declared = {index.name: index for index in SQLModel.metadata.tables["project"].indexes}
+
+    assert {row["indexname"] for row in rows} == set(declared)
+    live = declared["project_repo_live_uniq"]
+    assert live.unique
+    assert [column.name for column in live.columns] == ["repo_path"]
+    assert str(live.dialect_options["postgresql"]["where"]) == "phase <> 'abandoned'"

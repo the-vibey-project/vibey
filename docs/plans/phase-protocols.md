@@ -698,7 +698,8 @@ then enqueues `review.collect`.
   explanation is returned as the job's result; the job settles and no new gate
   is raised.
 - `--verdict cancel` → the job settles with `cancelled: true`. The project
-  stays in REVIEW; no transition to `ABANDONED` is implemented.
+  stays in REVIEW; the verdict never moves it to `ABANDONED` -- a person ends a
+  project with [`vibey abandon`](../reference/cli.md#vibey-abandon-project_id-reason-text).
 
 There is no `vibey review` command group.
 

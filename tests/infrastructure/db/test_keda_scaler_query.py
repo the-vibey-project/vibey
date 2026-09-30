@@ -17,14 +17,16 @@ interface beside it (ADR-0016), following tests/meta/: the rule is about product
 from __future__ import annotations
 
 import os
+import re
 from datetime import timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
 import asyncpg
+import pytest
 import yaml
 
-from vibey.infrastructure.db.job_repository import PostgresJobRepository
+from vibey.infrastructure.db.job_repository import _CLAIMABLE, PostgresJobRepository
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 
 GOLDEN = Path(__file__).resolve().parents[3] / "deploy" / "helm" / "golden"
@@ -155,6 +157,51 @@ def test_the_scaler_counts_exactly_the_phases_the_claim_takes() -> None:
         assert listed is not None, f"{profile}: the scaler has no known-phase filter"
         phases = tuple(p.strip().strip("'") for p in listed.group(1).split(","))
         assert phases == KNOWN_PHASES
+
+
+@pytest.mark.parametrize("profile", ["keda-project", "keda-latest"])
+async def test_a_scaler_counts_nothing_for_an_abandoned_project(
+    migrated_pool: asyncpg.Pool, profile: str
+) -> None:
+    """`vibey abandon` makes a project's jobs unclaimable; a ready one a handler enqueued
+    afterwards would otherwise hold a worker up for work that will never run."""
+    newest = await _seed(migrated_pool)
+    served = BOUND if profile == "keda-project" else newest
+    async with migrated_pool.acquire() as conn:
+        await conn.execute("UPDATE project SET phase = 'abandoned' WHERE id = $1", served)
+        counted = await conn.fetchval(_scaler_query(profile))
+
+    claimed = await _claim_all(migrated_pool, served)
+
+    assert (counted, claimed) == (0, 0)
+
+
+def _not_exists_clauses(sql: str) -> list[str]:
+    """Every top-level `NOT EXISTS (...)` of `sql`, whitespace-normalised."""
+    clauses = []
+    for start in (m.start() for m in re.finditer(r"NOT EXISTS\s*\(", sql)):
+        depth, end = 0, start
+        for end in range(sql.index("(", start), len(sql)):
+            depth += {"(": 1, ")": -1}.get(sql[end], 0)
+            if depth == 0:
+                break
+        clauses.append(_normalised(sql[start : end + 1]))
+    return [c for c in clauses if not any(c != o and c in o for o in clauses)]
+
+
+def _normalised(sql: str) -> str:
+    return re.sub(r"\s*\)", ")", re.sub(r"\(\s*", "(", " ".join(sql.split())))
+
+
+def test_the_scaler_excludes_exactly_what_the_claim_excludes() -> None:
+    """Each `NOT EXISTS` the claim applies -- the abandoned-project exclusion and the
+    unsatisfied-dependency one -- appears word for word in both scaler queries, so an
+    exclusion added to the claim and not to the chart fails here."""
+    claim = _not_exists_clauses(_CLAIMABLE)
+    assert any("pr.phase = 'abandoned'" in clause for clause in claim)
+    assert any("job_dependency" in clause for clause in claim)
+    for profile in ("keda-project", "keda-latest"):
+        assert _not_exists_clauses(_scaler_query(profile)) == claim, profile
 
 
 async def test_an_unbound_scaler_with_no_project_counts_nothing(

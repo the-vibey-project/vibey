@@ -209,6 +209,25 @@ def test_abandon_stops_everything_and_says_what_it_stopped(tmp_path: Path) -> No
     assert kinds[-2:] == [EventKind.PHASE_TRANSITIONED, EventKind.GATE_WITHDRAWN]
 
 
+def test_a_project_still_in_intake_is_abandoned_cleanly(tmp_path: Path) -> None:
+    """A dispatch that never reached DESIGN leaves a project in intake; it ends like any
+    other: jobs cancelled, gates withdrawn, one move from intake to abandoned."""
+    pid, ready, gate = _project(tmp_path, Phase.INTAKE)
+    _, _, kinds_before = asyncio.run(_state(pid))
+
+    code, out = _run(str(pid), "--reason", "dispatch never reached design")
+
+    assert code == 0, out
+    lines = out.splitlines()
+    assert lines[0] == f"Abandoned greeter ({pid}): intake -> abandoned, cycle 1."
+    assert f"    {ready} build.implement (was ready)" in lines
+    assert lines[-1] == f"    {gate} defect"
+    phase, states, kinds = asyncio.run(_state(pid))
+    assert (phase, states) == ("abandoned", ["cancelled", "cancelled"])
+    appended = kinds[len(kinds_before) :]
+    assert appended == [EventKind.PHASE_TRANSITIONED, EventKind.GATE_WITHDRAWN]
+
+
 def test_the_json_is_a_fixed_contract(tmp_path: Path) -> None:
     pid, ready, gate = _project(tmp_path)
 
@@ -298,6 +317,62 @@ def test_a_done_project_is_refused_with_exit_3_and_left_as_it_is(tmp_path: Path)
         assert "Error: the project is done" in result.output
 
     assert asyncio.run(_state(pid)) == before
+
+
+# -- the checkout it leaves -------------------------------------------------------------
+
+
+def _new(repo: Path) -> tuple[int, str]:
+    result = runner.invoke(app, ["new", "greeter", "--repo", str(repo)])
+    return result.exit_code, result.output
+
+
+def test_abandoning_a_project_frees_its_checkout_for_a_new_one(tmp_path: Path) -> None:
+    """Live on #963: the retry's `vibey new` in the abandoned project's checkout died on a
+    raw unique violation. Abandoning now lets the checkout go, and the new project is
+    created beside the abandoned one, which stays readable by id."""
+    repo = tmp_path / "triaged-963"
+    repo.mkdir()
+    code, out = _new(repo)
+    assert code == 0, out
+    first = UUID(out.splitlines()[0].removeprefix("project "))
+    code, out = _run(str(first), "--reason", "retry approved by the operator")
+    assert code == 0, out
+
+    code, out = _new(repo)
+
+    assert code == 0, out
+    second = UUID(out.splitlines()[0].removeprefix("project "))
+    assert second != first
+    assert asyncio.run(_state(first))[0] == "abandoned"
+    assert asyncio.run(_state(second))[0] == "design"
+
+
+def test_new_in_a_live_projects_checkout_is_refused_naming_it(tmp_path: Path) -> None:
+    """Two live projects never share a checkout: the refusal is one `Error:` naming the
+    holder's id and phase, with what to do next -- never a traceback -- and exit 3."""
+    repo = tmp_path / "held"
+    repo.mkdir()
+    code, out = _new(repo)
+    assert code == 0, out
+    holder = UUID(out.splitlines()[0].removeprefix("project "))
+
+    result = runner.invoke(app, ["new", "second", "--repo", str(repo)])
+
+    assert result.exit_code == 3
+    assert (
+        f"Error: checkout {repo.resolve()} is held by live project {holder} (phase design)"
+        in result.output
+    )
+    assert "vibey abandon PROJECT_ID --reason TEXT" in result.output
+    assert "Traceback" not in result.output
+    assert "UniqueViolationError" not in result.output
+
+    async def count() -> int:
+        async with build_app() as resources:
+            return len(await resources.projects.list_all())
+
+    assert asyncio.run(count()) == 1
 
 
 # -- the presenter -----------------------------------------------------------------------

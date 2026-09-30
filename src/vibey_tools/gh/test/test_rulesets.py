@@ -27,6 +27,7 @@ from vibey_gh.config import (
     load_config,
 )
 from vibey_gh.install import render_workflow
+from vibey_gh.interfaces import RulesetConfigInterface
 from vibey_gh.rulesets import bypass_actor_payload
 
 
@@ -728,3 +729,109 @@ def test_a_declared_rule_missing_from_the_forge_is_drift():
     assert rs.diff_ruleset(desired, existing).changed
     assert not rs.rule_matches(None, {"type": "deletion"})
     assert rs.rule_matches({"type": "deletion"}, {"type": "deletion"})
+
+
+# ------------------------------------------------------------------------ code coverage
+
+
+def coverage_rule(ruleset: dict) -> dict:
+    return next(rule for rule in ruleset["rules"] if rule["type"] == rs.CODE_COVERAGE)
+
+
+def test_no_code_coverage_rule_is_declared_until_a_repository_asks_for_one():
+    """A coverage floor blocks every pull request that uploaded no coverage data, so an
+    upgrade must never switch one on: absent keys send no rule at all."""
+    assert not policy().declares_code_coverage
+    assert all(rule["type"] != rs.CODE_COVERAGE for rule in rs.desired_rules(policy()))
+
+
+def test_a_declared_minimum_renders_the_exact_shape_the_forge_holds():
+    """The shape the hand-made rulesets carry, byte for byte: an unset drop is sent as
+    null, the way the forge spells a threshold nobody set."""
+    rules = rs.desired_rules(policy(minimum_coverage=100))
+    assert rules[-1] == {
+        "type": "code_coverage",
+        "parameters": {"minimum_coverage": 100, "max_coverage_drop": None},
+    }
+    assert json.dumps(rules[-1]) == (
+        '{"type": "code_coverage", "parameters": '
+        '{"minimum_coverage": 100, "max_coverage_drop": null}}'
+    )
+
+
+def test_a_declared_drop_alone_still_declares_the_rule():
+    coverage = coverage_rule({"rules": rs.desired_rules(policy(max_coverage_drop=2.5))})
+    assert coverage["parameters"] == {"minimum_coverage": None, "max_coverage_drop": 2.5}
+
+
+@pytest.mark.parametrize("field", ["minimum_coverage", "max_coverage_drop"])
+@pytest.mark.parametrize("value", [True, "100", [100]])
+def test_a_coverage_threshold_that_is_not_a_number_is_a_type_error(field, value):
+    with pytest.raises(TypeError, match=f"rulesets.{field} must be a number from 0 to 100"):
+        policy(**{field: value})
+
+
+@pytest.mark.parametrize("field", ["minimum_coverage", "max_coverage_drop"])
+@pytest.mark.parametrize("value", [-1, 100.5, float("nan"), float("inf")])
+def test_a_coverage_threshold_outside_0_to_100_is_refused(field, value):
+    with pytest.raises(ValueError, match=f"rulesets.{field} must be a number from 0 to 100"):
+        policy(**{field: value})
+
+
+def test_coverage_loads_per_branch_from_toml_and_stays_absent_where_undeclared(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[rulesets.integration]\nminimum_coverage = 100\n\n"
+        "[rulesets.release]\nminimum_coverage = 90\nmax_coverage_drop = 0.5\n",
+        encoding="utf-8",
+    )
+    loaded = load_config(tmp_path).rulesets
+    assert loaded.integration.minimum_coverage == 100
+    assert loaded.integration.max_coverage_drop is None
+    assert (loaded.release.minimum_coverage, loaded.release.max_coverage_drop) == (90, 0.5)
+
+    (tmp_path / ".vibey-gh.toml").write_text("[rulesets.integration]\n", encoding="utf-8")
+    absent = load_config(tmp_path).rulesets
+    assert not absent.integration.declares_code_coverage
+    assert not absent.release.declares_code_coverage
+
+
+def test_a_mistyped_coverage_key_in_toml_fails_the_load(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[rulesets.release]\nminimum_coverage = "100"\n', encoding="utf-8"
+    )
+    with pytest.raises(TypeError, match="rulesets.minimum_coverage"):
+        load_config(tmp_path)
+
+
+def test_a_matching_live_coverage_rule_is_not_drift_and_a_differing_one_is():
+    desired = rs.build_ruleset("develop", policy(minimum_coverage=100))
+    existing = json.loads(json.dumps({**desired, "id": 1}))
+    assert not rs.diff_ruleset(desired, existing).changed
+
+    # The forge may omit a null it was sent; that is still the declared "unset".
+    del coverage_rule(existing)["parameters"]["max_coverage_drop"]
+    assert not rs.diff_ruleset(desired, existing).changed
+
+    coverage_rule(existing)["parameters"] = {"minimum_coverage": 80, "max_coverage_drop": None}
+    assert rs.diff_ruleset(desired, existing).changed
+
+
+def test_a_live_drop_nobody_declared_is_drift():
+    desired = rs.build_ruleset("develop", policy(minimum_coverage=100))
+    existing = json.loads(json.dumps({**desired, "id": 1}))
+    coverage_rule(existing)["parameters"]["max_coverage_drop"] = 5
+    assert rs.diff_ruleset(desired, existing).changed
+
+
+def test_a_declared_coverage_rule_missing_live_is_drift():
+    desired = rs.build_ruleset("develop", policy(minimum_coverage=100))
+    existing = {
+        **desired,
+        "id": 1,
+        "rules": [r for r in desired["rules"] if r["type"] != rs.CODE_COVERAGE],
+    }
+    assert rs.diff_ruleset(desired, existing).changed
+
+
+def test_ruleset_policy_honours_its_interface():
+    assert isinstance(policy(minimum_coverage=100), RulesetConfigInterface)

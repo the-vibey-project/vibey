@@ -174,6 +174,10 @@ guard applies — it just looks the edge up.
 - `DONE` and `ABANDONED` have no outgoing edges except `DONE`'s bridge into
   `DEPLOY` / `DEPLOY_DESIGN`.
 - No transition is legal when `cycle > max_cycles` except `→ ABANDONED`.
+- Every non-terminal phase, `INTAKE` included, has an unguarded edge to
+  `ABANDONED`, so `vibey abandon` can end a project wherever it stalled -- a
+  dispatch that never reached `DESIGN` included. `DONE` has none: it is a
+  different ending.
 - `DESIGN → BUILD` and `DESIGN → VISUAL_DESIGN` share a common guard: at least
   one acceptance criterion, no open blocking question, no unmapped criterion, and
   a user verdict of `ACCEPT`.

@@ -110,6 +110,7 @@ exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 | `InvalidPhaseError` | Likely a bug in vibey rather than the project. | |
 | `GateAlreadyAnswered` | A gate is answered once and the first answer stands; the hint names `vibey ledger search --kind GateAnswered` and says a `--request-id` makes a retry of the same answer a no-op. | |
 | `UnknownGate` | No gate has that id; the hint names [`vibey gates`](#vibey-gates-project_id). | |
+| `CheckoutHeld` | Nothing was created; `vibey abandon PROJECT_ID --reason TEXT` lets the checkout go if the holding project should stop, otherwise start the new one elsewhere with `--repo`; `vibey projects --json` lists every project with its checkout and phase. | Raised by `vibey new` when a live project holds the checkout. |
 
 ## `vibey new NAME`
 
@@ -129,6 +130,14 @@ Create a project and enqueue its first DESIGN interview.
 Prints `project <id>` and `design job <id>`. The project id is the
 `PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
 prints it again later.
+
+One checkout holds at most one live project. `--repo` is stored resolved to an
+absolute path, and a checkout a project in any phase but `abandoned` holds -- `done`
+included -- is refused: `Error: checkout <path> is held by live project <id> (phase
+<phase>); two live projects never share a checkout, so no project was created`, with a
+hint naming [`vibey abandon`](#vibey-abandon-project_id-reason-text), and exit 3.
+Nothing is created. A checkout whose every earlier project was abandoned is free:
+the new project is created beside them, and they stay readable by id.
 
 ## `vibey serve`
 
@@ -370,9 +379,10 @@ that would rather listen than poll.
 ## `vibey abandon PROJECT_ID --reason TEXT`
 
 Abandon a project that is not going to finish -- built on the wrong spec, superseded,
-no longer wanted. Nothing in vibey abandons a project on its own; until a person does,
-anything waiting on it waits (the triaged-delivery bridge holds its one delivery slot
-for a dispatched project until it is done or abandoned).
+no longer wanted, or stuck in `intake` because its dispatch never reached DESIGN. Any
+phase short of `done` can be abandoned. Nothing in vibey abandons a project on its own;
+until a person does, anything waiting on it waits (the triaged-delivery bridge holds its
+one delivery slot for a dispatched project until it is done or abandoned).
 
 | Option | Default | What it does |
 |---|---|---|
@@ -400,6 +410,13 @@ A failure anywhere leaves all of it as it was. The claim never hands out a job o
 abandoned project, so a follow-up job a still-running handler enqueues after the
 abandonment never runs.
 
+Abandoning lets the project's checkout go: [`vibey new`](#vibey-new-name) can start a
+fresh project with the same `--repo`, beside the abandoned one, which stays readable by
+id. Nothing on disk is removed. The files the abandoned project wrote under the
+checkout's `.vibey/` (`runs/<cycle>/...`, `context/`, `deploy/`) stay where they are, and
+the new project's own writes replace them cycle by cycle; they are not keyed by project,
+so start the new project on a clean checkout when the old files must not be read.
+
 ```text
 Abandoned greeter (9692abab-...): build -> abandoned, cycle 1.
   by adam (account adam)
@@ -420,8 +437,7 @@ was) and `withdrawn_gates` (`gate_id`, `kind`, `job_id`).
 Abandoning a project that is already abandoned changes nothing, prints
 `<name> (<id>) is already abandoned; nothing was changed.` and exits 0. A project that
 is `done` is refused (exit 3, `Error: the project is done ...`): it finished, which is a
-different ending. So is a project still in `intake`, which the phase machine gives no
-edge to `abandoned`, and one in a phase this vibey does not know. An unknown
+different ending. So is one in a phase this vibey does not know. An unknown
 `PROJECT_ID` exits 1; a missing, empty or control-bearing `--reason`, or an unusable
 `--by`, exits 2 before the database is opened.
 

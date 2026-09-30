@@ -45,16 +45,21 @@ spec:
         # JobRepository.claim's SELECT arm: ready, due now, in the project
         # this worker serves, in a phase this release knows (a phase a newer
         # vibey wrote is never claimed, vibey#287 -- the list is pinned to
-        # `Phase` by tests/infrastructure/db/test_keda_scaler_query.py), and
-        # not blocked behind an unsatisfied dependency. Scaling on total
+        # `Phase` by tests/infrastructure/db/test_keda_scaler_query.py), not
+        # of an abandoned project (`vibey abandon`: the claim never hands one
+        # out, so counting it would scale up for work that will never run),
+        # and not blocked behind an unsatisfied dependency. Scaling on total
         # queue depth instead would spin up workers for jobs nothing can
-        # claim yet.
+        # claim yet. The same test pins each exclusion to the claim's own.
         query: >-
           SELECT count(*) FROM job j
           WHERE j.state = 'ready'
             AND j.run_after <= now()
             AND j.project_id = (SELECT id FROM project ORDER BY created_at DESC LIMIT 1)
             AND j.phase::text IN ('intake', 'design', 'visual_design', 'build', 'review', 'deploy_design', 'deploy_execute', 'deploy_review', 'deploy', 'done', 'abandoned')
+            AND NOT EXISTS (
+              SELECT 1 FROM project pr WHERE pr.id = j.project_id AND pr.phase = 'abandoned'
+            )
             AND NOT EXISTS (
               SELECT 1 FROM job_dependency d
               JOIN job p ON p.id = d.depends_on_job_id

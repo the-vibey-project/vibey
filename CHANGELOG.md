@@ -17,6 +17,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **gh:** declared coverage floors. `[rulesets.integration]` and `[rulesets.release]` take
+  `minimum_coverage` and `max_coverage_drop` (numbers 0-100, absent by default, which sends
+  no rule); declaring either renders GitHub's `code_coverage` rule, the unset one as null,
+  and `vibey-gh rulesets --check` reports a declared floor missing live, a live one that
+  differs, or one nobody declared. A non-number is a `TypeError` at load. This repository
+  now declares `minimum_coverage = 100` on both branches, moving the floor out of the
+  hand-made `develop` and `main` rulesets so the operator can delete them without losing
+  it.
 * **specs:** rolling minimum system requirements, re-measured weekly.
   `scripts/minimum_specs.py` (configured in `scripts/minimum_specs.toml`) has four
   subcommands. `measure` probes the host: the Python floor on each candidate interpreter;
@@ -161,6 +169,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   removed lines is never split, and a line too long for a part alone is still refused.
   `[pr_automation.fallback] split_added_hunks` (default `true`) declares it, and
   `pr-review.yml` passes it as `--split-added-hunks`.
+* **db:** abandoning a project now lets its checkout go. `project_repo_uniq` made
+  `repo_path` unique across every project, so an abandoned project held its checkout for
+  ever: live on #963 the approved retry's `vibey new --repo .../triaged-963` failed twice
+  with a raw `UniqueViolationError`. Migration `0021_project_repo_live_uniq` replaces it
+  with a partial unique index on every phase but `abandoned` (terminal, so it never
+  becomes live again); `done` still holds its checkout. `vibey new` on a checkout a live
+  project holds is refused as `CheckoutHeld` -- one `Error:` line naming the holder's id
+  and phase, a hint naming `vibey abandon`, exit 3 -- never a traceback. Abandoned rows
+  stay, readable by id; `get_latest` now breaks a `created_at` tie by id, as `list_all`
+  does ([#963](https://github.com/the-vibey-project/vibey/issues/963)).
 
 * **worker:** with `-j 2` or more, a drive loop that raises now stops its sibling loops
   before the worker closes the job notifier and the database pool. A bare `asyncio.gather`
@@ -231,6 +249,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   ownership record, instead of rebuilding a cycle-keyed name; and a fresh dispatch moves a
   leftover `triaged-<issue>` checkout to the current `--base` (refusing one with changes)
   rather than starting from it as found.
+* **phase:** a project still in `intake` can be abandoned. The phase machine had no
+  `INTAKE -> ABANDONED` edge, so `vibey abandon` refused (exit 3) a project whose dispatch
+  never reached DESIGN, and it held the triaged-delivery slot with no way out. The edge is
+  added, unguarded like every other move into abandoned, so every phase short of done can
+  now be abandoned: its jobs are cancelled, its gates withdrawn, and one
+  `PhaseTransitioned` from intake to abandoned is recorded.
+* **chart:** the KEDA scaler no longer counts ready jobs of an abandoned project. `vibey
+  abandon` made them unclaimable, but the ScaledObject's claimable-work query still counted
+  them, so a follow-up job a still-running handler enqueued after the abandonment could scale
+  a worker up for work that will never run. The query now carries the claim's own
+  abandoned-project exclusion, and `tests/infrastructure/db/test_keda_scaler_query.py` pins
+  every `NOT EXISTS` of `JobRepository`'s claim condition word for word into both KEDA
+  goldens, and checks that a scaler bound to an abandoned project counts nothing.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

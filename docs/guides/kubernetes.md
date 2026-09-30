@@ -266,10 +266,12 @@ helm install keda kedacore/keda -n keda --create-namespace --wait
 helm upgrade vibey deploy/helm/vibey -n vibey --set keda.enabled=true
 ```
 
-The trigger is the **claimable-work** query — ready, due now, and not
-blocked behind an unsatisfied dependency — deliberately mirroring
-`JobRepository.claim`'s SELECT arm. Scaling on raw queue depth would
-start workers for jobs nothing can claim yet.
+The trigger is the **claimable-work** query — ready, due now, not of an
+abandoned project, and not blocked behind an unsatisfied dependency —
+deliberately mirroring `JobRepository.claim`'s SELECT arm
+(`tests/infrastructure/db/test_keda_scaler_query.py` pins each exclusion to
+the claim's own). Scaling on raw queue depth would start workers for jobs
+nothing can claim yet.
 
 Measured behavior on minikube with `maxReplicas: 4`:
 
