@@ -35,6 +35,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **gh:** the research paper's tables and its theorem-with-proof fence render on the
+  documentation site instead of printing as LaTeX. `math.js` reads a fence as its run of
+  environments and converts it only when every one is understood, turns a `table`/`table*`
+  into a numbered HTML table with its caption, header row and column alignment, labels a
+  titled proof by its title, and escapes display math before it reaches the page. All 75 of the
+  paper's fences now convert (was 72); the 72 already converted are byte-identical
+  ([#1286](https://github.com/the-vibey-project/vibey/pull/1286)).
 * **deps:** urllib3 2.8.0 for CVE-2026-97687, CVE-2026-97688 and CVE-2026-97689 (2.7.0 is
   affected). The lock carries 2.8.0 and every declared floor — the root manifest's two and
   vibey-bootstrap's, which lists the advisory ids — is raised to `>=2.8.0`, so a fresh install
