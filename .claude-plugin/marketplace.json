@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 140 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 141 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -148,6 +148,17 @@
       "description": "Banking, SWIFT and Payment Networks: what a payment actually is, what a bank is and how deposits are created, central banks and reserves, the payment system taxonomy, clearing, netting and settlement risk, correspondent banking, what SWIFT actually is, message formats from MT to ISO 20022, gpi and tracking, governance, sanctions and geopolitics, alternatives and parallel systems, Ripple versus XRP versus the XRP Ledger, XRP Ledger mechanics, Ripple's products, legal status, instant payment systems, stablecoins, CBDCs, tokenized deposits, compliance, security, and the costs and economics of remittances.",
       "version": "0.1.0",
       "category": "finance",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "biblical-languages-texts-archaeology-and-history",
+      "source": "./src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history",
+      "description": "From Autograph to Your Bible -- the biblical languages, translation, textual criticism, archaeology and historical method as one connected reference, because a translator cannot choose a word until a textual critic has decided which words are there, a textual critic weighs manuscripts that archaeologists dug up and palaeographers dated, and historians use all of it and then argue about what it means. Where the source marks a claim settled, majority, contested or as of 2026, the marker stays exactly where the source put it, and contested questions stay contested. Biblical Hebrew and the three layers of a printed Hebrew Bible, the Masorah and ketiv/qere, the Aleppo and Leningrad codices, the linguistic-dating fight, the unsolved verbal system, Biblical Aramaic, and the words that break translators' hearts; Koine Greek, the papyri and Semitisms, verbal aspect and deponency, and the Septuagint's legend and reality. The Vetus Latina, Jerome and the composite Vulgate, the Latin renderings that changed Western history; Gothic, the Heliand, the pre-Luther printed Bibles, Luther's September Testament and Sendbrief, the Lutherbibel 2017; Old English to Wycliffe, Tyndale and Geneva, how the King James Version was actually made, and the modern English spectrum. How committees really translate -- base texts, drafting and votes, the root fallacy, gender language, the divine name -- and how minority-language field translation works in 2026, from comprehension testing and back translation to Paratext and AI drafting. Textual criticism: copying errors, external and internal evidence after Royse, Erasmus to NA28, NA29 and the Editio Critica Maior, how many manuscripts there really are, the CBGM and the initial text, the famous variants, and the Hebrew Bible's plural text with BHQ, HUBP and HBCE. Archaeology: context, stratigraphy and the Harris Matrix, radiocarbon and the Hallstatt plateau, ancient DNA and archaeometallurgy, the inscriptions from the Merneptah Stele to the Gallio inscription, the Iron Age chronology and emergence-of-Israel debates, and how to read a headline. History: external and internal criticism, the historical-critical toolkit, the Synoptic Problem, the quests for the historical Jesus and the critique of the criteria. Forgeries, looting and provenance; Isaiah 7:14, Deuteronomy 32:8 and Luke 2:1-2 walked through every discipline; and learning paths, free tools, the glossary, the questions still open, and the sources.",
+      "version": "0.1.0",
+      "category": "religion",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
