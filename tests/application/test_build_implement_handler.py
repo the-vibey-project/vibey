@@ -11,7 +11,8 @@ from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.dto import EngineEvent
 from vibey.application.interfaces import SkillsContextResult
 from vibey.application.worker import Defer, Failure, Park, Success
-from vibey.domain.job import FailureClass
+from vibey.domain.errors import ForeignBranchRefused
+from vibey.domain.job import FOREIGN_BRANCH_GATE_KIND, FailureClass
 from vibey.domain.provision import ProvisionSpec
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.scripted import ScriptedEngine
@@ -136,6 +137,43 @@ async def test_completed_repair_resolves_its_finding_so_reverify_can_count_round
     assert len(resolved) == 1
     assert resolved[0].payload["finding_id"] == "f_verify_item-1_deadbeef"
     assert "awaiting re-verification" in str(resolved[0].payload["resolution"])
+
+
+class ForeignWorktrees(FakeWorktrees):
+    """A repository where the item's branch, or its base, is another project's."""
+
+    async def create(self, item_id: str, *, base_ref: str = "HEAD") -> Path:
+        raise ForeignBranchRefused("vibey/1/ws", "p", "it records no creating project")
+
+
+async def test_a_foreign_branch_parks_for_a_person_before_any_engine_session(
+    tmp_path: Path,
+) -> None:
+    """The live defect: BUILD built on another project's `vibey/1/ws`. A branch the project
+    cannot prove is its own parks the job at once with the precise reason -- no engine
+    session, no provisioning, no retry that would only refuse again."""
+    engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    ledger = FakeLedger()
+    provisioner = FakeProvisioner()
+    jobs = FakeJobRepository()
+    handler = BuildImplementHandler(
+        worktrees=ForeignWorktrees(tmp_path),
+        provisioner=provisioner,
+        engine=engine,
+        ledger=ledger,
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job(payload={"base_ref": "vibey/1/integration"}))
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == FOREIGN_BRANCH_GATE_KIND
+    assert "refusing branch 'vibey/1/ws'" in outcome.request.prompt
+    assert "records no creating project" in outcome.request.prompt
+    assert provisioner.calls == []
+    assert ledger.recorded == []
+    assert jobs._jobs == {}
 
 
 async def test_rejects_wrong_kind_and_missing_work_item_id() -> None:

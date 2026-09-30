@@ -17,6 +17,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **specs:** rolling minimum system requirements, re-measured weekly.
+  `scripts/minimum_specs.py` (configured in `scripts/minimum_specs.toml`) has four
+  subcommands. `measure` probes the host: the Python floor on each candidate interpreter;
+  cold installs of this checkout's `vibey-engine`, `[hub]` and `krypton-app` wheels, with
+  their downloads and sizes; PostgreSQL against the declared floor, on a scratch database
+  it creates and drops; model sizes from the registry; `gpt-oss:20b` memory against context
+  from llama-server's own accounting, with GPU and CPU-only throughput, only when an idle
+  gate says the host is quiet; and CLI, hub and launcher memory. `derive` computes the
+  requirements from those inputs, recording the formula and every input. `render` writes
+  them into GENERATED blocks in the new `docs/reference/system-requirements.md` and in a
+  table in the paper. `check` fails when either the derivations or the tables disagree with
+  the committed record (`docs/architecture/evidence/minimum-specs.json`); CI runs it. Each
+  figure is measured, declared, derived, stale or skipped. A figure that could not be
+  re-measured keeps its last value and is shown as stale since its date, with the reason;
+  it is never reused silently. The record is seeded from the 2026-09-29/30 software,
+  network and hardware passes on an Apple M5 with 24 GiB: 24 GB minimum and 32 GB
+  recommended memory (derived from measured model memory against context); a 16 GB Mac is
+  insufficient (derived); CPU only is enough for DESIGN, not for BUILD; 20 GB minimum and
+  50 GB recommended free disk; no internet at runtime on the sovereign path. The weekly
+  workflow `minimum-specs.yml` measures on the self-hosted runner, with no write token
+  there, and opens a `chore(specs)` pull request from a hosted runner.
 * **cli:** `vibey abandon PROJECT_ID --reason TEXT [--by NAME] [--json] [--dry-run]` --
   the operator's clean exit for a project that is not going to finish. Found live on
   2026-09-29: project 9692abab sat in BUILD on a foreign spec with no way to stop it, and
@@ -45,6 +66,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   be attributed still parks for a person under either policy. A malformed value is refused
   at load. The triaged-delivery bridge opts its worker in only with `--record-research-gaps`
   (`VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`), off by default, and records that it did.
+* **gh:** `[unattended_approval] live_switch_required` (default `true`, unchanged). Set to
+  `false`, the declared `enabled = true` is the delegated approver's grant and the repository
+  variable `VIBEY_UNATTENDED_APPROVAL` becomes withdrawal only: unset or `on` leaves the grant
+  standing, any other value withdraws it at once, and an unreadable or malformed variable
+  still refuses (12.f: granting declared and reviewed, withdrawal immediate).
+
 * **review:** the PR review gate now reaches a verdict at scale. A diff too large for one
   request to the sovereign model is reviewed whole in bounded parts (`[pr_automation.fallback]
   max_chunks`, default 6) -- split by file and then by hunk, each part held to the same
@@ -165,6 +192,25 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   delivery verb whose object is the change (commit, deliver, apply, push, land, merge the
   change/edit/fix/update ...), and "use the provided X" where X is named in the intake. The
   #998 questions it narrowed are still narrowed; it still never rewrites a default to "Yes".
+* **build:** BUILD's worktrees and branches are scoped per project, and a branch is used only
+  when it proves it is the project's own. Found live on 2026-09-30: project 893c4fc1,
+  delivering issue #963 in a triaged-bridge checkout that shares the main repository's refs,
+  reached BUILD cycle 1 and checked out `vibey/1/ws` -- an unrelated August project's branch,
+  on a README of 160 lines where develop has 472 -- edited that codebase, and would have
+  published `vibey/1/integration`'s foreign history as #963's pull request. Names were keyed
+  by cycle alone (`vibey/<cycle>/<item>`); they are now `vibey/<project8>/<cycle>/<item>` on
+  `.vibey/worktrees/<project8>/<cycle>/<item>` (`WorktreeNaming`). Every branch BUILD creates
+  records its project and base commit in the repository's config
+  (`branch.<name>.vibey-project`, `branch.<name>.vibey-base`) before it exists, and a branch
+  is reused, based on or merged only when that record names the project and its base is
+  still in its history; otherwise nothing is touched and the job parks on the new
+  `foreign_branch` gate (answer `--raw '{}'` after moving the branch aside). A job enqueued
+  before the change reads its recorded `vibey/<cycle>/integration` base as the project's own
+  scoped branch; no cycle-keyed branch is ever adopted. `vibey status --json` gains
+  `integration_branch`, which the delivery bridge now publishes, after checking the same
+  ownership record, instead of rebuilding a cycle-keyed name; and a fresh dispatch moves a
+  leftover `triaged-<issue>` checkout to the current `--base` (refusing one with changes)
+  rather than starting from it as found.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

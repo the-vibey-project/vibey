@@ -137,6 +137,9 @@ def test_status_command_text_and_json(tmp_path: Path) -> None:
     assert payload["name"] == "ops-status-proj"
     assert payload["phase"] == "intake"
     assert payload["cycle"] == 1
+    # The project's own integration branch, named by the domain: the delivery bridge
+    # publishes exactly this, never a cycle-keyed name another project shares.
+    assert payload["integration_branch"] == f"vibey/{project_id.hex[:8]}/1/integration"
     assert payload["queue_depth"]["ready"] == 1
     assert len(payload["circuits"]) == 1
     assert payload["circuits"][0]["engine_id"] == "claudeloop"

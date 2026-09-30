@@ -93,6 +93,31 @@ class GateAlreadyAnswered(VibeyError):
         )
 
 
+class ForeignBranchRefused(VibeyError):
+    """BUILD found a branch it meant to create, reuse or merge, and cannot prove this
+    project created it, so it refused to touch it.
+
+    Branches used to be named by cycle alone (`vibey/<cycle>/<item>`), so every project
+    in one repository shared them: a delivery in cycle 1 checked out another project's
+    months-old `vibey/1/ws` and built on that history. Names now carry the project, and
+    every branch BUILD creates records the project and the commit it was cut from. A
+    branch without that record, with another project's, or whose recorded base is no
+    longer in its history is not adopted -- the handler parks for a person instead
+    (`FOREIGN_BRANCH_GATE_KIND`), because no retry changes whose branch it is.
+    """
+
+    def __init__(self, branch: str, project_id: object, reason: str) -> None:
+        self.branch = branch
+        self.project_id = project_id
+        self.reason = reason
+        super().__init__(
+            f"refusing branch {branch!r} for project {project_id}: {reason}. Vibey never "
+            "builds on a branch it cannot prove this project created. Check whose branch "
+            f"it is, move it aside (`git branch -m {branch} <another name>`), then answer "
+            "to retry: BUILD cuts a fresh branch from the project's base."
+        )
+
+
 class UnknownProject(VibeyError):
     """No project exists with the given id."""
 

@@ -22,6 +22,7 @@ from vibey.domain.job import JobState, idempotency_key
 from vibey.domain.phase import Phase
 from vibey.domain.plan import VerificationSpec, WorkItem
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
+from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.db.build_ledger import PostgresBuildLedger
 from vibey.infrastructure.db.design_spec_repository import FileDesignSpecRepository
@@ -75,10 +76,24 @@ async def test_decompose_implement_verify_integrate_run_end_to_end_through_the_q
     (repo_path / "README.md").write_text("hello\n")
     await _run("git", "-C", str(repo_path), "add", "README.md")
     await _run("git", "-C", str(repo_path), "commit", "-q", "-m", "initial")
+    # The live collision (project 893c4fc1, issue #963): an earlier, unrelated project
+    # left its cycle-1 branches in this repository, on history of its own. Under
+    # cycle-keyed names this delivery checked them out and built on them.
+    await _run("git", "-C", str(repo_path), "checkout", "-q", "--orphan", "august")
+    (repo_path / "README.md").write_text("an unrelated August project\n")
+    await _run("git", "-C", str(repo_path), "add", "README.md")
+    await _run("git", "-C", str(repo_path), "commit", "-q", "-m", "august project")
+    await _run("git", "-C", str(repo_path), "branch", "vibey/1/skeleton")
+    await _run("git", "-C", str(repo_path), "branch", "vibey/1/integration")
+    await _run("git", "-C", str(repo_path), "checkout", "-q", "main")
+    stale = await CleanGitEnvSubprocessExecutor().execute(
+        ("git", "-C", str(repo_path), "rev-parse", "vibey/1/skeleton", "vibey/1/integration")
+    )
 
     projects = PostgresProjectRepository(migrated_pool)
     project = await projects.create("scripted-build", repo_path, max_cycles=10, config={})
     project_id = project.project_id
+    naming = WorktreeNaming(project_id, 1)
     jobs = PostgresJobRepository(migrated_pool)
     gates = PostgresHumanGateRepository(migrated_pool)
     ledger_repo = PostgresLedgerRepository(migrated_pool)
@@ -110,7 +125,7 @@ async def test_decompose_implement_verify_integrate_run_end_to_end_through_the_q
                 specs=specs, decomposer=Decomposer(), jobs=jobs
             ),
             "build.implement": BuildImplementHandler(
-                worktrees=GitWorktreeManager(repo_path, cycle=1),
+                worktrees=GitWorktreeManager(repo_path, naming=naming),
                 provisioner=AgentSurfaceProvisioner(),
                 engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
                 ledger=PostgresBuildLedger(ledger_repo),
@@ -118,7 +133,7 @@ async def test_decompose_implement_verify_integrate_run_end_to_end_through_the_q
                 clock=FixedClock(),
             ),
             "build.verify": BuildVerifyHandler(
-                worktrees=GitWorktreeManager(repo_path, cycle=1),
+                worktrees=GitWorktreeManager(repo_path, naming=naming),
                 gates=SubprocessGateRunner(),
                 reviewer=ScriptedEngine(descriptor=CODEXLOOP, base_dir=tmp_path / "engine"),
                 ledger=PostgresBuildLedger(ledger_repo),
@@ -126,7 +141,7 @@ async def test_decompose_implement_verify_integrate_run_end_to_end_through_the_q
                 clock=FixedClock(),
             ),
             "build.integrate": BuildIntegrateHandler(
-                integration=IntegrationBranch(repo_path, cycle=1),
+                integration=IntegrationBranch(repo_path, naming=naming),
                 gates=SubprocessGateRunner(),
                 ledger=PostgresBuildLedger(ledger_repo),
                 jobs=jobs,
@@ -151,13 +166,25 @@ async def test_decompose_implement_verify_integrate_run_end_to_end_through_the_q
         "build.integrate": JobState.SUCCEEDED.value,
     }
 
-    integration_path = repo_path / ".vibey" / "worktrees" / "1" / "integration"
+    integration_path = repo_path / naming.worktree_subpath("integration")
     assert integration_path.exists()
 
-    worktree = repo_path / ".vibey" / "worktrees" / "1" / "skeleton"
+    worktree = repo_path / naming.worktree_subpath("skeleton")
     assert worktree.exists()
     assert (worktree / "CLAUDE.md").exists()
     assert (worktree / "AGENTS.md").exists()
+
+    # The project built on its own branches, from its own base -- never the stale ones.
+    for path, item in ((worktree, "skeleton"), (integration_path, "integration")):
+        head = await CleanGitEnvSubprocessExecutor().execute(
+            ("git", "-C", str(path), "rev-parse", "--abbrev-ref", "HEAD")
+        )
+        assert head.stdout.strip() == naming.branch(item) == f"vibey/{project_id.hex[:8]}/1/{item}"
+        assert (path / "README.md").read_text() == "hello\n"
+    untouched = await CleanGitEnvSubprocessExecutor().execute(
+        ("git", "-C", str(repo_path), "rev-parse", "vibey/1/skeleton", "vibey/1/integration")
+    )
+    assert untouched.stdout == stale.stdout
 
     ledger_events = await ledger_repo.all_for_project(project_id)
     build_events = [e for e in ledger_events if e.phase is Phase.BUILD]

@@ -322,6 +322,7 @@ anywhere in `src/vibey` without an entry there.
 | `defect` | `vibey answer ID --choice requeue`, or `--choice abandon` | A job out of attempts whose last [`[queue.defect]`](configuration.md#queuedefect) failures were all one failure: no more attempts are offered. `requeue` runs it again once a fix has landed (a same-failure run parks here again at once); `abandon` cancels it. |
 | `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
 | `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
+| `foreign_branch` | `vibey answer ID --raw '{}'` | BUILD found a branch it cannot prove this project created and touched nothing. Check whose it is, move it aside (`git branch -m`), then answer: the retry cuts a fresh branch ([ADR-0008](../architecture/decisions/0008-worktree-isolation.md)). |
 | `handoff_gate_failed`, `too_many_wind_downs`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
 
 A verdict or choice uses the gate's declared default, else its first option;
@@ -511,7 +512,7 @@ created project.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--json` | off | Emit JSON instead: `project_id`, `name`, `phase`, `cycle`, `max_cycles`, `repo_path`, `visual_decision`, `deployment_decision`, `queue_depth`, `circuits` (each with `engine_id`, `installed`, `version`, `conformance_ok`, `circuit`, `capacity_state`, `consecutive_fail`, `cost_usd_cycle`, `selected_count`), and `active_worktrees`. |
+| `--json` | off | Emit JSON instead: `project_id`, `name`, `phase`, `cycle`, `max_cycles`, `repo_path`, `visual_decision`, `deployment_decision`, `queue_depth`, `circuits` (each with `engine_id`, `installed`, `version`, `conformance_ok`, `circuit`, `capacity_state`, `consecutive_fail`, `cost_usd_cycle`, `selected_count`), `active_worktrees`, and `integration_branch` (the project's own integration branch for the cycle, `vibey/<project8>/<cycle>/integration`). |
 
 ## `vibey engines [PROJECT_ID]`
 

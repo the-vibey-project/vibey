@@ -151,8 +151,11 @@ While a `build.implement` session is running on claudeloop, ask it to wind
 down from another terminal:
 
 ```bash
-claudeloop wind-down --cwd <repo>/.vibey/worktrees/<cycle>/<item-id> --reason demo
+claudeloop wind-down --cwd <repo>/.vibey/worktrees/<project8>/<cycle>/<item-id> --reason demo
 ```
+
+(`<project8>` is the first eight hex digits of the project id `vibey status` prints:
+each project's worktrees live under their own root.)
 
 (or wait for a real window exhaustion). claudeloop honors the request at
 its next natural break, after the turn in flight finishes, so a short

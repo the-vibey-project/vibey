@@ -5,6 +5,11 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `[unattended_approval] live_switch_required` (default `true`, unchanged
+  behaviour). Set to `false`, the declared `enabled = true` is the grant and the repository
+  variable becomes withdrawal only: unset or `switch_value` leaves the grant standing, any
+  other value withdraws it at once, unreadable or malformed refuses. A non-bool is rejected
+  at load.
 - **Feature:** review verdicts at scale (G2). `local-review` reviews a diff too large for one
   request in at most `[pr_automation.fallback] max_chunks` parts (default 6), split by file
   and hunk and composed conservatively; retries a model that was unreachable or timed out

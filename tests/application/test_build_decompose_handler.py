@@ -312,7 +312,7 @@ async def test_fan_out_stamps_the_integration_base_ref_on_every_item() -> None:
     """Item branches stack on integrated code when any exists -- every
     item branching from the empty base rewrote the same module in
     parallel and guaranteed add/add merge conflicts, live."""
-    from vibey.domain.worktree import branch_name
+    from vibey.domain.worktree import WorktreeNaming
 
     job = replace(make_job(uuid4()), kind="build.decompose")
     items = (
@@ -328,7 +328,10 @@ async def test_fan_out_stamps_the_integration_base_ref_on_every_item() -> None:
     records = list(jobs._jobs.values())
     assert len(records) == 2
     for record in records:
-        assert record.payload["base_ref"] == branch_name(record.cycle, "integration")
+        # The project's own integration branch -- never a cycle-keyed name another
+        # project in the same repository shares.
+        assert record.payload["base_ref"] == WorktreeNaming(job.project_id, 1).integration_branch
+        assert record.payload["base_ref"] == f"vibey/{job.project_id.hex[:8]}/1/integration"
 
 
 class Checkout:

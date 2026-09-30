@@ -65,12 +65,13 @@ from vibey.domain.effort import (
     forces_rotation,
 )
 from vibey.domain.engine import EXIT_CODE_WIND_DOWN, IsolationLevel
-from vibey.domain.errors import EscalationExhausted
+from vibey.domain.errors import EscalationExhausted, ForeignBranchRefused
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.interfaces.ultra_interface import UltraPassInterface, UltraPolicyInterface
 from vibey.domain.job import (
     DEFECT_GATE_KIND,
     ESCALATION_EXHAUSTED_GATE_KIND,
+    FOREIGN_BRANCH_GATE_KIND,
     FailureClass,
     idempotency_key,
 )
@@ -328,7 +329,13 @@ class BuildImplementHandler:
                     )
 
         base_ref = str(job.payload.get("base_ref", "HEAD"))
-        worktree_path = await self._worktrees.create(item, base_ref=base_ref)
+        try:
+            worktree_path = await self._worktrees.create(item, base_ref=base_ref)
+        except ForeignBranchRefused as refused:
+            # The item's branch, or the base it would be cut from, cannot be proved this
+            # project's. Building on it is how one delivery shipped another project's
+            # history; no retry changes whose it is, so a person decides, now (ADR-0008).
+            return Park(HumanGateRequest(kind=FOREIGN_BRANCH_GATE_KIND, prompt=str(refused)))
         await self._provisioner.provision(worktree_path, self._provision_spec)
 
         prompt = _render_prompt(item, job.payload)

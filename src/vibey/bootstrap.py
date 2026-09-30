@@ -120,6 +120,7 @@ from vibey.domain.interfaces.config_interface import (
     QueueReapConfigInterface,
 )
 from vibey.domain.phase import Phase
+from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
@@ -593,7 +594,9 @@ def build_full_worker(
         adapter = await engine_provider.select_for(job)
         meter = SpendMeteringLedger(resources.build_ledger, metrics=metrics)
         handler = BuildImplementHandler(
-            worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
+            worktrees=GitWorktreeManager(
+                repo_root, naming=WorktreeNaming(job.project_id, job.cycle)
+            ),
             provisioner=AgentSurfaceProvisioner(),
             engine=adapter,
             ledger=meter,
@@ -613,7 +616,9 @@ def build_full_worker(
         adapter = await engine_provider.select_for(job)
         meter = SpendMeteringLedger(resources.build_ledger, metrics=metrics)
         handler = BuildVerifyHandler(
-            worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
+            worktrees=GitWorktreeManager(
+                repo_root, naming=WorktreeNaming(job.project_id, job.cycle)
+            ),
             gates=gate_runner,
             reviewer=adapter,
             ledger=meter,
@@ -629,7 +634,9 @@ def build_full_worker(
 
     async def _integrate(job: JobRecord) -> JobHandler:
         return BuildIntegrateHandler(
-            integration=IntegrationBranch(repo_root, cycle=job.cycle),
+            integration=IntegrationBranch(
+                repo_root, naming=WorktreeNaming(job.project_id, job.cycle)
+            ),
             gates=gate_runner,
             ledger=resources.build_ledger,
             jobs=resources.jobs,

@@ -547,6 +547,113 @@ def test_publish_refuses_a_project_that_is_not_done(
     assert evidence(tmp_path, project_id)["outcome"] == "not_done"
 
 
+# -- project-scoped branches: publish only the project's own integration branch ---------
+
+
+def test_publish_pushes_the_branch_the_status_names_never_a_cycle_keyed_one(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    world, _ = scratch
+    delivery, project_id = done_project(world, tmp_path)
+
+    delivery.publish(project_id, 11, "t")
+
+    own = f"vibey/{project_id[:8]}/1/integration"
+    assert world.pushes == [f"{own}:delivery/11-{project_id[:8]}"]
+    assert not any("vibey/1/integration" in push for push in world.pushes)
+
+
+def test_publish_refuses_a_branch_another_project_created(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    """The live defect: a delivery's integration branch was an unrelated project's. A
+    branch whose ownership record names another project is never pushed as this one's."""
+    world, _ = scratch
+    delivery, project_id = done_project(world, tmp_path)
+    world.branch_owners[project_id] = "00000000-0000-0000-0000-00000000aaaa"
+
+    with pytest.raises(RuntimeError, match="does not record project"):
+        delivery.publish(project_id, 11, "t")
+    assert world.pushes == []
+    assert world.pull_requests == {}
+
+
+def test_publish_refuses_a_branch_with_no_ownership_record(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    world, _ = scratch
+    delivery, project_id = done_project(world, tmp_path)
+    world.branch_owners[project_id] = ""  # `git config --get` finds nothing
+
+    with pytest.raises(RuntimeError, match="does not record project"):
+        delivery.publish(project_id, 11, "t")
+    assert world.pushes == []
+
+
+def test_publish_refuses_a_status_that_names_no_integration_branch(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    world, _ = scratch
+    delivery, project_id = done_project(world, tmp_path)
+    world.integration_branches[project_id] = ""
+
+    with pytest.raises(RuntimeError, match="names no integration branch"):
+        delivery.publish(project_id, 11, "t")
+    assert world.pushes == []
+
+
+def test_a_fresh_dispatch_moves_a_leftover_checkout_to_the_current_base(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    """A checkout left by an earlier failed dispatch may be far behind `base`; BUILD cuts
+    every new branch from its HEAD, so a fresh project must never start from it as found."""
+    world, _ = scratch
+    world.open_issue(11, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, _ = bridge(world, tmp_path, store=False)
+    target = tmp_path / "storm" / "triaged-11"
+    target.mkdir(parents=True)
+    (target / ".git").write_text("gitdir: fake\n")
+    world.heads[str(target)] = "5a1e5a1e"  # behind: the base has moved on to 0123abcd
+
+    delivery.dispatch(Issue(11, "t", "", bumped=False, priority="high", created_at=""))
+
+    assert world.checkouts == [str(target)]
+    assert world.heads[str(target)] == "0123abcd"
+
+
+def test_a_fresh_dispatch_reuses_a_leftover_checkout_already_at_the_base(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    world, _ = scratch
+    world.open_issue(11, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, _ = bridge(world, tmp_path, store=False)
+    target = tmp_path / "storm" / "triaged-11"
+    target.mkdir(parents=True)
+    (target / ".git").write_text("gitdir: fake\n")
+
+    delivery.dispatch(Issue(11, "t", "", bumped=False, priority="high", created_at=""))
+
+    assert world.checkouts == []
+
+
+def test_a_fresh_dispatch_refuses_a_stale_leftover_checkout_with_changes(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    world, _ = scratch
+    world.open_issue(11, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, _ = bridge(world, tmp_path, store=False)
+    target = tmp_path / "storm" / "triaged-11"
+    target.mkdir(parents=True)
+    (target / ".git").write_text("gitdir: fake\n")
+    world.heads[str(target)] = "5a1e5a1e"
+    world.dirty[str(target)] = " M README.md\n"
+
+    with pytest.raises(RuntimeError, match="not clean"):
+        delivery.dispatch(Issue(11, "t", "", bumped=False, priority="high", created_at=""))
+    assert world.checkouts == []
+    assert world.projects == {}
+
+
 # -- gap 6: a timed-out worker's lease is reaped, as the message says --------------------
 
 

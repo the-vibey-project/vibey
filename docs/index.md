@@ -64,6 +64,11 @@ target. Every database-backed command reads the connection string from
 `VIBEY_PG_URL`; vibey never guesses a database and exits with
 `VIBEY_PG_URL is not set` when it is missing.
 
+Memory, disk, GPU, network and each Krypton client's needs are on the
+[system requirements](reference/system-requirements.md) page. Those figures are
+re-measured every week, and any figure that could not be re-measured is marked stale.
+For the sovereign default (a local model), memory is the binding constraint.
+
 One install is the whole family: `vibey`, all five `*loop` engines, and the
 tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey`
 distribution and land on `PATH` together
@@ -304,6 +309,7 @@ things those runners deliberately do not do:
 | [The book](https://the-vibey-project.github.io/vibey/main/book.pdf) · [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) · [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html) | Every page of the documentation site, in reading order, as one downloadable book |
 | [CLI reference](reference/cli.md) | Every command, subcommand, flag, and default |
 | [Configuration reference](reference/configuration.md) | The full `vibey.toml` schema, with defaults and an example file |
+| [System requirements](reference/system-requirements.md) | Hardware, software, network and per-client requirements, re-measured weekly, with what is measured, derived or stale |
 | [Convergence-Driven Development](guides/convergence-driven-development.md) | The CDD loop above SDD and TDD, convergence/divergence checks at four scopes, the atom model, and delivery evidence |
 | [Kubernetes guide](guides/kubernetes.md) | Container, Helm chart, KEDA autoscaling, and its own troubleshooting section |
 | [Greeter live-demo runbook](guides/greeter-live-demo.md) | A full paid run, end to end, with the zero-touch contracts |
