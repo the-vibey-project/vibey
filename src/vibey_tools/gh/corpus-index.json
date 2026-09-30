@@ -52,7 +52,7 @@
   {
    "anchor": "7 — The never-lost reader",
    "document": "docs/doctrines.md",
-   "sha256": "fe64e5d49bcb9da9e6bdc92cdc0ff4c511251647ed5a1d45c4a8fcbd7e30792f",
+   "sha256": "a6de883d3e22bc9fcf381c94e92f1935a8a792617b52f8011df9a1944be6306e",
    "start_line": 65,
    "text_lines": 67
   },
@@ -232,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "6aa9b530b4160b57c3fad9b422952ea805d34fff7021a2de00abb44f45e1b4ac",
+ "corpus_sha256": "8d3f68fcf1c71183073786e0fc38cbbe658b99322173ac0230e519e05a255d62",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",
