@@ -5,6 +5,12 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `[rulesets.integration]` and `[rulesets.release]` `minimum_coverage` and
+  `max_coverage_drop` (numbers 0-100, absent by default: no rule, unchanged behaviour).
+  Declaring either renders GitHub's `code_coverage` rule as
+  `{"minimum_coverage": ..., "max_coverage_drop": ...}`, the unset one as null, and
+  `vibey-gh rulesets --check` reports it missing live, differing, or live but undeclared.
+  A non-number is a `TypeError` at load; outside 0-100, NaN or infinity a `ValueError`.
 - **Feature:** `[unattended_approval] live_switch_required` (default `true`, unchanged
   behaviour). Set to `false`, the declared `enabled = true` is the grant and the repository
   variable becomes withdrawal only: unset or `switch_value` leaves the grant standing, any

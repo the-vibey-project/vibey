@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import json
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -124,6 +125,68 @@ def test_bypass_actors_withheld_from_the_token_are_unverified_never_clean(tmp_pa
     problems = RulesetDrift().compare(cfg(tmp_path), live)
     assert problems[0].startswith("vibey-gh: develop: bypass actors were withheld")
     assert problems[1] == "vibey-gh: main: bypass actors are none, declared RepositoryRole:5"
+
+
+def covered(tmp_path: Path) -> GhConfig:
+    """Both branches declare the 100% floor the hand-made rulesets carried."""
+    return GhConfig(
+        root=tmp_path,
+        rulesets=RulesetsConfig(
+            integration=replace(INTEGRATION, minimum_coverage=100),
+            release=replace(RELEASE, minimum_coverage=100),
+        ),
+    )
+
+
+def covered_live(config: GhConfig) -> list[dict[str, Any]]:
+    return [
+        as_live(rs.build_ruleset("develop", config.rulesets.integration), 1),
+        as_live(rs.build_ruleset("main", config.rulesets.release), 2),
+    ]
+
+
+def test_a_declared_coverage_floor_the_forge_holds_is_not_drift(tmp_path):
+    config = covered(tmp_path)
+    live = covered_live(config)
+    # The shape the operator's read-only audit found on the hand-made rulesets.
+    assert {
+        "type": "code_coverage",
+        "parameters": {"minimum_coverage": 100, "max_coverage_drop": None},
+    } in live[0]["rules"]
+    assert RulesetDrift().compare(config, live) == ()
+
+
+def test_a_declared_coverage_floor_missing_live_is_drift(tmp_path):
+    config = covered(tmp_path)
+    live = covered_live(config)
+    live[1]["rules"] = [rule for rule in live[1]["rules"] if rule["type"] != rs.CODE_COVERAGE]
+    assert RulesetDrift().compare(config, live) == (
+        "vibey-gh: main: rule code_coverage is missing",
+    )
+
+
+def test_a_live_coverage_floor_that_differs_is_drift(tmp_path):
+    config = covered(tmp_path)
+    live = covered_live(config)
+    for rule in live[0]["rules"]:
+        if rule["type"] == rs.CODE_COVERAGE:
+            rule["parameters"] = {"minimum_coverage": 90, "max_coverage_drop": 1}
+    assert RulesetDrift().compare(config, live) == (
+        "vibey-gh: develop: rule code_coverage differs",
+    )
+
+
+def test_a_live_coverage_floor_nobody_declared_is_drift(tmp_path):
+    live = matching()
+    live[0]["rules"].append(
+        {
+            "type": "code_coverage",
+            "parameters": {"minimum_coverage": 100, "max_coverage_drop": None},
+        }
+    )
+    assert RulesetDrift().compare(cfg(tmp_path), live) == (
+        "vibey-gh: develop: rule code_coverage is live but not declared",
+    )
 
 
 def test_a_repository_that_declares_no_rulesets_has_nothing_to_compare(tmp_path):

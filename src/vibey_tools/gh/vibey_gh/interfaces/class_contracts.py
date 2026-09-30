@@ -536,6 +536,15 @@ class RulesetConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def merge_queue(self) -> MergeQueueConfigInterface: ...
 
+    @property
+    def minimum_coverage(self) -> int | float | None: ...
+
+    @property
+    def max_coverage_drop(self) -> int | float | None: ...
+
+    @property
+    def declares_code_coverage(self) -> bool: ...
+
 
 @runtime_checkable
 class RulesetsConfigInterface(_ConfigRecordInterface, Protocol):

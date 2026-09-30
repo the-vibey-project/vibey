@@ -1136,6 +1136,8 @@ def _ruleset(
         allow_deletions=section.get("allow_deletions", False),
         bypass_actors=tuple(section.get("bypass_actors", DEFAULT_RULESET_BYPASS_ACTORS)),
         allowed_merge_methods=tuple(section.get("allowed_merge_methods", ())),
+        minimum_coverage=section.get("minimum_coverage"),
+        max_coverage_drop=section.get("max_coverage_drop"),
     )
 
 
@@ -1743,8 +1745,38 @@ class RulesetConfig:
     # a promotion concatenated 221 commit messages into one body, a quoted skip-ci marker
     # among them, and GitHub then ran no push workflow on the release branch at all.
     allowed_merge_methods: tuple[str, ...] = ()
+    # GitHub's `code_coverage` rule: the line-coverage percentage a pull request must reach
+    # (`minimum_coverage`) and the most it may drop against the default branch
+    # (`max_coverage_drop`), both 0-100. Absent is "not declared" and sends no rule, so an
+    # upgrade never starts blocking anybody's merges on coverage data they never uploaded.
+    # Declaring either one declares the rule; the other is then sent as null, which is how
+    # the forge itself spells a threshold nobody set.
+    minimum_coverage: int | float | None = None
+    max_coverage_drop: int | float | None = None
+
+    @staticmethod
+    def _coverage_percent(name: str, value: object) -> None:
+        """Refuse a coverage threshold the forge would reject, naming the key.
+
+        A method, not a module function, because only this class reads these two keys.
+        `bool` is refused first: it is an `int` to Python, and `true` read as 1% would be
+        a floor nobody meant.
+        """
+        if value is None:
+            return
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise TypeError(f"rulesets.{name} must be a number from 0 to 100, got {value!r}")
+        if not math.isfinite(value) or not 0 <= value <= 100:
+            raise ValueError(f"rulesets.{name} must be a number from 0 to 100, got {value!r}")
+
+    @property
+    def declares_code_coverage(self) -> bool:
+        """Whether this branch declares GitHub's `code_coverage` rule at all."""
+        return self.minimum_coverage is not None or self.max_coverage_drop is not None
 
     def __post_init__(self) -> None:
+        self._coverage_percent("minimum_coverage", self.minimum_coverage)
+        self._coverage_percent("max_coverage_drop", self.max_coverage_drop)
         _unique_nonempty("rulesets.allowed_merge_methods", self.allowed_merge_methods)
         unknown = sorted(set(self.allowed_merge_methods) - set(RULESET_MERGE_METHODS))
         if unknown:
