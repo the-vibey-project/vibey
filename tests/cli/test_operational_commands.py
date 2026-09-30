@@ -1851,22 +1851,31 @@ def test_worker_provider_qwenloop_picks_up_evidence_dir(tmp_path: Path) -> None:
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_parallelism_spawns_gathered_loops(tmp_path: Path) -> None:
-    """-j 2 continuous takes the gather branch; the mocked notifier's
-    KeyboardInterrupt ends the run once both loops go idle."""
+    """-j 2 continuous takes the gathered branch and ends the way a pod does: SIGTERM
+    while idle, both loops drain, exit 0. Not a KeyboardInterrupt from the mock --
+    raised inside one of two tasks, it escapes the event loop mid-flight and left
+    asyncio.run's shutdown waiting on the other loop past CI's timeout (#1255)."""
+    import signal
+    from unittest.mock import AsyncMock, patch
 
     async def seed() -> None:
         async with build_app() as resources:
             await resources.projects.create("par-proj", tmp_path, max_cycles=1, config={})
 
     asyncio.run(seed())
-    from unittest.mock import AsyncMock, patch
+
+    async def sigterm(*_args: object, **_kwargs: object) -> None:
+        os.kill(os.getpid(), signal.SIGTERM)
+        await asyncio.sleep(0.1)
 
     with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
         mock_notifier = AsyncMock()
-        mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
+        mock_notifier.wait_for_job_ready = AsyncMock(side_effect=sigterm)
         mock_notifier_cls.return_value = mock_notifier
         res = runner.invoke(app, ["worker", "-j", "2"])
+    assert res.exit_code == 0, res.output
     assert "parallelism=2" in res.output
+    assert "draining on SIGTERM" in res.output
 
 
 # ── watch state_fetcher coverage ──────────────────────────────────────────────
