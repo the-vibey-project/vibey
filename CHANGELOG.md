@@ -17,6 +17,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **specs:** rolling minimum system requirements, re-measured weekly.
+  `scripts/minimum_specs.py` (configured in `scripts/minimum_specs.toml`) has four
+  subcommands. `measure` probes the host: the Python floor on each candidate interpreter;
+  cold installs of this checkout's `vibey-engine`, `[hub]` and `krypton-app` wheels, with
+  their downloads and sizes; PostgreSQL against the declared floor, on a scratch database
+  it creates and drops; model sizes from the registry; `gpt-oss:20b` memory against context
+  from llama-server's own accounting, with GPU and CPU-only throughput, only when an idle
+  gate says the host is quiet; and CLI, hub and launcher memory. `derive` computes the
+  requirements from those inputs, recording the formula and every input. `render` writes
+  them into GENERATED blocks in the new `docs/reference/system-requirements.md` and in a
+  table in the paper. `check` fails when either the derivations or the tables disagree with
+  the committed record (`docs/architecture/evidence/minimum-specs.json`); CI runs it. Each
+  figure is measured, declared, derived, stale or skipped. A figure that could not be
+  re-measured keeps its last value and is shown as stale since its date, with the reason;
+  it is never reused silently. The record is seeded from the 2026-09-29/30 software,
+  network and hardware passes on an Apple M5 with 24 GiB: 24 GB minimum and 32 GB
+  recommended memory (derived from measured model memory against context); a 16 GB Mac is
+  insufficient (derived); CPU only is enough for DESIGN, not for BUILD; 20 GB minimum and
+  50 GB recommended free disk; no internet at runtime on the sovereign path. The weekly
+  workflow `minimum-specs.yml` measures on the self-hosted runner, with no write token
+  there, and opens a `chore(specs)` pull request from a hosted runner.
 * **cli:** `vibey abandon PROJECT_ID --reason TEXT [--by NAME] [--json] [--dry-run]` --
   the operator's clean exit for a project that is not going to finish. Found live on
   2026-09-29: project 9692abab sat in BUILD on a foreign spec with no way to stop it, and
