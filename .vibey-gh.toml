@@ -140,11 +140,17 @@ workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "releas
 # than invented. Reconciling them is therefore a no-op; the point is that from here a
 # change to them is a pull request.
 [repository_profile]
-description = "A queue-based, six-phase conductor for autonomous software delivery on top of the *loop runners — spec interview → design → build → review → deploy. PostgreSQL-backed."
+# What GitHub shows under the repository name and in search results, and the topics people
+# browse by: the words a stranger would search for, each true of the project (sub-doctrine
+# 7.d, ADR-0076). GitHub allows twenty topics. Reconciled by repository-profile.yml after a
+# release, never set by hand.
+description = "Open-source orchestrator for AI coding agents: a spec interview, unattended builds on local (Ollama) or paid agents, human-gated review, and an append-only PostgreSQL ledger so a crashed agent's work is picked up, not lost."
 topics = [
-  "agents", "ai-agents", "autonomous-agents", "claude", "claude-code", "cli",
-  "delivery-automation", "devtools", "gemini", "gpt", "llm", "mit-license",
-  "orchestration", "postgresql", "python",
+  "ai-agents", "coding-agents", "agent-orchestration", "autonomous-agents",
+  "autonomous-software-delivery", "llm", "local-llm", "ollama", "sovereign-ai",
+  "human-in-the-loop", "event-sourcing", "audit-log", "postgresql", "job-queue",
+  "workload-identity", "supply-chain-security", "devsecops", "claude-code",
+  "developer-tools", "cli",
 ]
 # What a squash merge proposes as its commit. GitHub's default concatenates every commit
 # message in the pull request into the body, and that is how the hand-squashed 3.0.0

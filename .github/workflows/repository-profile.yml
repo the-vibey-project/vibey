@@ -62,8 +62,8 @@ jobs:
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
-          CONFIG_DESCRIPTION: "A queue-based, six-phase conductor for autonomous software delivery on top of the *loop runners \u2014 spec interview \u2192 design \u2192 build \u2192 review \u2192 deploy. PostgreSQL-backed."
-          CONFIG_TOPICS: '{"names":["agents","ai-agents","autonomous-agents","claude","claude-code","cli","delivery-automation","devtools","gemini","gpt","llm","mit-license","orchestration","postgresql","python"]}'
+          CONFIG_DESCRIPTION: "Open-source orchestrator for AI coding agents: a spec interview, unattended builds on local (Ollama) or paid agents, human-gated review, and an append-only PostgreSQL ledger so a crashed agent's work is picked up, not lost."
+          CONFIG_TOPICS: '{"names":["ai-agents","coding-agents","agent-orchestration","autonomous-agents","autonomous-software-delivery","llm","local-llm","ollama","sovereign-ai","human-in-the-loop","event-sourcing","audit-log","postgresql","job-queue","workload-identity","supply-chain-security","devsecops","claude-code","developer-tools","cli"]}'
           CONFIG_SETTINGS: '{"has_issues":true,"has_projects":true,"has_wiki":false,"has_discussions":true,"allow_squash_merge":true,"allow_merge_commit":false,"allow_rebase_merge":true,"allow_auto_merge":true,"delete_branch_on_merge":false,"web_commit_signoff_required":true,"vulnerability_alerts":true,"automated_security_fixes":true,"squash_merge_commit_title":"PR_TITLE","squash_merge_commit_message":"PR_BODY"}'
         run: |
           set -euo pipefail
@@ -127,8 +127,8 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
           GHCR_TOKEN: ${{ github.token }}
-          CONFIG_DESCRIPTION: "A queue-based, six-phase conductor for autonomous software delivery on top of the *loop runners \u2014 spec interview \u2192 design \u2192 build \u2192 review \u2192 deploy. PostgreSQL-backed."
-          CONFIG_TOPICS: '{"names":["agents","ai-agents","autonomous-agents","claude","claude-code","cli","delivery-automation","devtools","gemini","gpt","llm","mit-license","orchestration","postgresql","python"]}'
+          CONFIG_DESCRIPTION: "Open-source orchestrator for AI coding agents: a spec interview, unattended builds on local (Ollama) or paid agents, human-gated review, and an append-only PostgreSQL ledger so a crashed agent's work is picked up, not lost."
+          CONFIG_TOPICS: '{"names":["ai-agents","coding-agents","agent-orchestration","autonomous-agents","autonomous-software-delivery","llm","local-llm","ollama","sovereign-ai","human-in-the-loop","event-sourcing","audit-log","postgresql","job-queue","workload-identity","supply-chain-security","devsecops","claude-code","developer-tools","cli"]}'
           CONFIG_SETTINGS: '{"has_issues":true,"has_projects":true,"has_wiki":false,"has_discussions":true,"allow_squash_merge":true,"allow_merge_commit":false,"allow_rebase_merge":true,"allow_auto_merge":true,"delete_branch_on_merge":false,"web_commit_signoff_required":true,"vulnerability_alerts":true,"automated_security_fixes":true,"squash_merge_commit_title":"PR_TITLE","squash_merge_commit_message":"PR_BODY"}'
           INTEGRATION_BRANCH: develop
           RELEASE_BRANCH: main
