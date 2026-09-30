@@ -58,6 +58,7 @@ from qwenloop.infrastructure.github import (
     list_open_pull_requests,
     list_repo_names,
 )
+from qwenloop.infrastructure.host_platform import HostPlatform
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
 from qwenloop.infrastructure.model_cache import ModelCache
 from qwenloop.infrastructure.ollama_probe import OllamaProbe
@@ -351,6 +352,7 @@ async def _run_plan(
         DesktopNotifier(enabled=desktop_notifications),
         clock=SystemClock(),
         dispatcher=dispatcher,  # type: ignore[arg-type]
+        host=HostPlatform(),
     )
     return await runner.run(
         run_id=run_id,

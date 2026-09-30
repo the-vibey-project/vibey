@@ -134,6 +134,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   every producer's plan against the same checkout and fails the job naming the files. Both
   decompose prompts now state the rule, and that verification commands check the work,
   never perform it, and run unchanged on macOS and Linux.
+* **gptossloop:** a run now tells the model the host its shell commands run on and keeps
+  file edits out of the shell. Live on #963 gpt-oss:20b ran GNU `sed -i '34i ...' README.md`
+  twice on macOS (`sed: 1: "README.md\n": invalid command code R`) although `edit_file`
+  existed: the plan it was handed spelled the edit as a `sed -i` command, the `shell` tool's
+  description said only "Run a bounded command", and nothing named the platform. The system
+  prompt now names the host (`uname`, with the BSD-versus-GNU difference that matters, via a
+  configurable `HostPlatform`) and says a plan command that edits a file describes the
+  change, to be made with `edit_file`; the `shell` and `edit_file` descriptions say the same,
+  including how to insert lines with `edit_file`, and that `argv` runs without a shell. The
+  host is recorded in the run's `meta.json`.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

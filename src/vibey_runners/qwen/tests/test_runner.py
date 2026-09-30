@@ -1,5 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import json
+import platform
 from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -31,6 +32,8 @@ from qwenloop.domain.model import (
     ServerInfo,
     ToolCallParseError,
 )
+from qwenloop.infrastructure.host_platform import HostPlatform
+from qwenloop.infrastructure.inference import _CODING_TOOLS
 from qwenloop.infrastructure.profiles import PORTABLE
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.tools import SandboxTools
@@ -1497,3 +1500,43 @@ async def test_meta_records_the_recording_caps(tmp_path: Path) -> None:
         64,
         32,
     )
+
+
+def test_the_system_prompt_names_the_host_and_keeps_edits_out_of_the_shell(
+    tmp_path: Path,
+) -> None:
+    prompt = _system_prompt(tmp_path, "Darwin 25.6.0 arm64 (macOS, BSD userland)")
+    assert "Shell commands run on Darwin 25.6.0 arm64 (macOS, BSD userland)" in prompt
+    assert "Never change a file through shell (sed -i" in prompt
+    assert "a command in the plan that edits a file is a description of the change" in prompt
+    assert "Shell commands run on" not in _system_prompt(tmp_path)
+
+
+def test_the_tool_descriptions_steer_edits_to_edit_file() -> None:
+    described = {
+        tool["function"]["name"]: tool["function"]["description"] for tool in _CODING_TOOLS
+    }  # type: ignore[index]
+    assert "Never use it to change a file (sed -i" in described["shell"]
+    assert "not through a shell" in described["shell"]
+    assert "never sed -i" in described["edit_file"]
+    assert "To insert lines" in described["edit_file"]
+
+
+@pytest.mark.asyncio
+async def test_a_run_tells_the_model_its_host_and_records_it(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [[ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")]]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server,
+        FileRunStore(tmp_path),
+        SandboxTools(tmp_path),
+        clock=FakeClock(),
+        host=HostPlatform(lambda: platform.uname_result("Darwin", "h", "25.6.0", "#1", "arm64")),
+    ).run(
+        run_id="host", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=1
+    )
+    assert "Shell commands run on Darwin 25.6.0 arm64" in server.seen[0][0].content
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "host" / "meta.json").read_text())
+    assert meta["host"].startswith("Darwin 25.6.0 arm64")
