@@ -149,6 +149,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **db:** abandoning a project now lets its checkout go. `project_repo_uniq` made
+  `repo_path` unique across every project, so an abandoned project held its checkout for
+  ever: live on #963 the approved retry's `vibey new --repo .../triaged-963` failed twice
+  with a raw `UniqueViolationError`. Migration `0021_project_repo_live_uniq` replaces it
+  with a partial unique index on every phase but `abandoned` (terminal, so it never
+  becomes live again); `done` still holds its checkout. `vibey new` on a checkout a live
+  project holds is refused as `CheckoutHeld` -- one `Error:` line naming the holder's id
+  and phase, a hint naming `vibey abandon`, exit 3 -- never a traceback. Abandoned rows
+  stay, readable by id; `get_latest` now breaks a `created_at` tie by id, as `list_all`
+  does ([#963](https://github.com/the-vibey-project/vibey/issues/963)).
+
 * **worker:** with `-j 2` or more, a drive loop that raises now stops its sibling loops
   before the worker closes the job notifier and the database pool. A bare `asyncio.gather`
   left them claiming work under a closing pool, with `asyncio.run`'s shutdown left to cancel

@@ -1,5 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from typing import TYPE_CHECKING, ClassVar
+from uuid import UUID
 
 from vibey.domain.job import FailureClass
 
@@ -129,6 +130,36 @@ class UnknownLane(VibeyError, LookupError):
 
 class WrongPhase(VibeyError):
     """The project is not in a phase the requested command applies to."""
+
+
+class CheckoutHeld(VibeyError):
+    """A project was asked to start in a checkout a live project already holds.
+
+    Two live projects never share a checkout (migration 0021's `project_repo_live_uniq`):
+    every phase but `abandoned` holds one, `done` included. Nothing was created. The
+    holder is named so the operator can decide: abandon it (`vibey abandon`), which lets
+    the checkout go, or start the new project somewhere else.
+
+    `holder_id` and `holder_phase` are None only when the holder left the checkout
+    between the refused insert and the read that names it -- abandoned in that instant --
+    in which case the checkout is free now and running the same command again succeeds.
+    """
+
+    def __init__(self, repo_path: str, *, holder_id: UUID | None, holder_phase: str | None) -> None:
+        self.repo_path = repo_path
+        self.holder_id = holder_id
+        self.holder_phase = holder_phase
+        if holder_id is None:
+            held = (
+                "was held by a live project when this one was refused, and that project "
+                "has since let it go; run the same command again"
+            )
+        else:
+            held = f"is held by live project {holder_id} (phase {holder_phase})"
+        super().__init__(
+            f"checkout {repo_path} {held}; two live projects never share a checkout, "
+            "so no project was created"
+        )
 
 
 class InvalidAbandonment(VibeyError):

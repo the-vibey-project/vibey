@@ -13,6 +13,7 @@ import asyncpg
 from vibey.application.dto import ProjectRecord
 from vibey.application.interfaces import NotificationSink
 from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.errors import CheckoutHeld
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
 from vibey.domain.ledger import EventKind, Provenance, digest_event
@@ -26,6 +27,14 @@ from vibey.infrastructure.db.ledger_repository import DEFAULT_EVENT_APPENDER
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 logger = logging.getLogger(__name__)
+
+LIVE_CHECKOUT_INDEX: Final = "project_repo_live_uniq"
+"""The partial unique index (migration 0021) that lets one live project hold a checkout.
+Its name is how a refused insert is told apart from any other unique violation."""
+
+_LIVE_AT_PATH: Final = "SELECT * FROM project WHERE repo_path = $1 AND phase <> 'abandoned'"
+"""The live project holding a checkout, if any: the index's own predicate, as a literal
+(`Phase.ABANDONED`'s value) so the planner can prove the partial index serves it."""
 
 
 class ProjectRowMapper:
@@ -188,18 +197,41 @@ class PostgresProjectRepository:
         max_cycles: int,
         config: Mapping[str, object],
     ) -> ProjectRecord:
+        """Insert a project in `intake` at `repo_path`, resolved to an absolute path.
+
+        A checkout held by a live project -- any phase but `abandoned`, `done` included --
+        refuses the insert (`project_repo_live_uniq`, migration 0021), and the refusal is
+        raised as `CheckoutHeld` naming the holder's id and phase, never as the driver's
+        unique violation. A checkout whose every earlier project was abandoned is free: the
+        abandoned rows stay, readable by id, and the new project is simply created beside
+        them. Any other unique violation is not this rule's and is raised unchanged.
+        """
+        path = str(repo_path.resolve())
         async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """
-                INSERT INTO project (name, repo_path, max_cycles, config)
-                VALUES ($1, $2, $3, $4::jsonb)
-                RETURNING *
-                """,
-                name,
-                str(repo_path.resolve()),
-                max_cycles,
-                json.dumps(dict(config)),
-            )
+            try:
+                row = await conn.fetchrow(
+                    """
+                    INSERT INTO project (name, repo_path, max_cycles, config)
+                    VALUES ($1, $2, $3, $4::jsonb)
+                    RETURNING *
+                    """,
+                    name,
+                    path,
+                    max_cycles,
+                    json.dumps(dict(config)),
+                )
+            except asyncpg.exceptions.UniqueViolationError as refused:
+                if refused.constraint_name != LIVE_CHECKOUT_INDEX:
+                    raise
+                # Autocommit, so the failed insert left no transaction to abort: the
+                # read that names the holder runs on the same connection. At most one
+                # row can match -- the index this lookup mirrors guarantees it.
+                holder = await conn.fetchrow(_LIVE_AT_PATH, path)
+                raise CheckoutHeld(
+                    path,
+                    holder_id=holder["id"] if holder is not None else None,
+                    holder_phase=holder["phase"] if holder is not None else None,
+                ) from refused
             if row is None:
                 raise LookupError("project insert returned no row")
             return self._rows.to_record(row)
@@ -210,8 +242,19 @@ class PostgresProjectRepository:
             return self._rows.to_record(row) if row is not None else None
 
     async def get_latest(self) -> ProjectRecord | None:
+        """The newest project, what a command given no `PROJECT_ID` acts on: `created_at`
+        descending, then id, the order `list_all` lists in, so a tie has one answer.
+
+        Not a lookup by checkout, and deliberately not filtered by phase: an abandoned
+        project is still the latest when it is the newest. Where an abandoned and a live
+        project share a checkout the live one is always the newer -- a checkout is only
+        free to take once every project before it there was abandoned -- so of the two it
+        is the live one this returns.
+        """
         async with self._pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT * FROM project ORDER BY created_at DESC LIMIT 1")
+            row = await conn.fetchrow(
+                "SELECT * FROM project ORDER BY created_at DESC, id DESC LIMIT 1"
+            )
             return self._rows.to_record(row) if row is not None else None
 
     async def list_all(self) -> tuple[ProjectRecord, ...]:

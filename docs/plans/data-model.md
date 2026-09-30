@@ -107,7 +107,7 @@ CREATE TABLE project (
     CONSTRAINT project_cycle_bounded CHECK (cycle >= 1 AND cycle <= max_cycles + 1)
 );
 
-CREATE UNIQUE INDEX project_repo_uniq ON project (repo_path);
+CREATE UNIQUE INDEX project_repo_uniq ON project (repo_path);   -- replaced by 0021 (below)
 
 -- 0010_visual_design_phase.sql
 ALTER TYPE phase ADD VALUE IF NOT EXISTS 'visual_design' AFTER 'design';
@@ -119,7 +119,22 @@ ALTER TYPE phase ADD VALUE IF NOT EXISTS 'deploy_review' BEFORE 'deploy';
 
 -- resulting enum order: intake, design, visual_design, build, review,
 --   deploy_design, deploy_execute, deploy_review, deploy, done, abandoned
+
+-- 0021_project_repo_live_uniq.sql
+DROP INDEX project_repo_uniq;
+CREATE UNIQUE INDEX project_repo_live_uniq ON project (repo_path) WHERE phase <> 'abandoned';
 ```
+
+**One live project per checkout.** `project_repo_live_uniq` keeps two live projects out
+of one checkout: every phase but `abandoned` holds its `repo_path`, `done` included. 0001's
+index covered every row, so an abandoned project held its checkout for ever and nothing
+could start there again (live on #963); 0021 narrows it to the live rows. `abandoned` is
+terminal, so an abandoned row can never become live and collide. Any number of abandoned
+projects may share a path with at most one live one, and every reader goes by project id,
+so the abandoned rows stay readable. `PostgresProjectRepository.create` stores the
+resolved path and turns a refusal by this index -- and only this one -- into
+`CheckoutHeld`, naming the live holder's id and phase; `vibey new` prints it as one
+`Error:` line and exits 3. The ORM declares the same partial index (`ProjectOrm`).
 
 Migrations 0010 (M5) and 0011 (M10) only widen the enum. The legacy `deploy` value
 is never removed (PostgreSQL cannot drop an enum value) and no project rows are
