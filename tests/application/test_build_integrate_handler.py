@@ -8,8 +8,9 @@ from tests.application.fakes import FakeJobRepository, make_job
 from vibey.application.build_integrate_handler import BuildIntegrateHandler, MergeOutcome
 from vibey.application.build_verify_handler import GateResult
 from vibey.application.dto import EngineEvent
-from vibey.application.worker import Failure, Success
-from vibey.domain.job import FailureClass
+from vibey.application.worker import Failure, Park, Success
+from vibey.domain.errors import ForeignBranchRefused
+from vibey.domain.job import FOREIGN_BRANCH_GATE_KIND, FailureClass
 
 
 class FixedClock:
@@ -85,6 +86,42 @@ async def test_successful_integrate_merges_and_runs_gates(tmp_path: Path) -> Non
     assert gates.calls == [("true",)]
 
 
+class ForeignIntegration(FakeIntegration):
+    """An integration whose item branch another project created."""
+
+    async def merge_item(self, item_id: str) -> MergeOutcome:
+        raise ForeignBranchRefused(f"vibey/x/1/{item_id}", "p", "it records project q")
+
+
+async def test_a_foreign_branch_parks_for_a_person_at_once_and_merges_nothing(
+    tmp_path: Path,
+) -> None:
+    """No retry changes whose a branch is: the job parks with the precise reason instead of
+    burning its attempts, and nothing is merged, gated, or recorded as a finding."""
+    gates = FakeGateRunner()
+    ledger = FakeLedger()
+    jobs = FakeJobRepository()
+    handler = BuildIntegrateHandler(
+        integration=ForeignIntegration(
+            merge_outcome=MergeOutcome(ok=True, detail=""), path=tmp_path
+        ),
+        gates=gates,
+        ledger=ledger,
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == FOREIGN_BRANCH_GATE_KIND
+    assert "refusing branch 'vibey/x/1/item-1'" in outcome.request.prompt
+    assert "it records project q" in outcome.request.prompt
+    assert gates.calls == []
+    assert ledger.recorded == []
+    assert jobs._jobs == {}
+
+
 async def test_rejects_wrong_kind_and_missing_work_item_id(tmp_path: Path) -> None:
     integration = FakeIntegration(merge_outcome=MergeOutcome(ok=True, detail=""), path=tmp_path)
     handler = BuildIntegrateHandler(
@@ -139,7 +176,7 @@ async def test_merge_conflict_raises_a_finding_and_repairs_without_failing_other
     assert repair is not None
     assert repair.kind == "build.implement"
     assert repair.work_item_id == "item-1"
-    assert repair.payload["base_ref"] == "vibey/1/integration"
+    assert repair.payload["base_ref"] == f"vibey/{job.project_id.hex[:8]}/1/integration"
 
 
 async def test_gate_failure_after_merge_raises_a_finding_and_repairs(tmp_path: Path) -> None:
@@ -453,7 +490,8 @@ async def test_merge_conflict_spawns_one_instructed_repair_and_defers(tmp_path: 
     jobs = FakeJobRepository()
     handler = _repairing_handler(tmp_path, merge_ok=False, events=[], jobs=jobs, ledger=ledger)
 
-    outcome = await handler.handle(_job())
+    job = _job()
+    outcome = await handler.handle(job)
 
     assert isinstance(outcome, Defer)
     assert "repair enqueued" in outcome.detail
@@ -463,7 +501,7 @@ async def test_merge_conflict_spawns_one_instructed_repair_and_defers(tmp_path: 
     assert repair.kind == "build.implement"
     assert repair.payload["repair_finding_id"] == finding_id
     detail = str(repair.payload["repair_detail"])
-    assert "git merge vibey/1/integration" in detail
+    assert f"git merge vibey/{job.project_id.hex[:8]}/1/integration" in detail
     assert "conflict in greet.py" in detail
 
 

@@ -35,12 +35,13 @@ from vibey.application.ports import Clock, HumanGateRepository, JobRepository
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import Effort
+from vibey.domain.errors import ForeignBranchRefused
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
-from vibey.domain.job import FailureClass, idempotency_key
+from vibey.domain.job import FOREIGN_BRANCH_GATE_KIND, FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
 from vibey.domain.review import Severity
-from vibey.domain.worktree import branch_name
+from vibey.domain.worktree import WorktreeNaming
 
 
 class BuildIntegrateHandler:
@@ -94,6 +95,14 @@ class BuildIntegrateHandler:
             await self._lock.release(job.project_id, job.cycle)
 
     async def _integrate(self, job: JobRecord, work_item_id: str) -> Outcome:
+        try:
+            return await self._integrate_owned(job, work_item_id)
+        except ForeignBranchRefused as refused:
+            # Neither the integration branch nor the item's can be proved this project's.
+            # No retry changes whose a branch is, so a person decides, now (ADR-0008).
+            return Park(HumanGateRequest(kind=FOREIGN_BRANCH_GATE_KIND, prompt=str(refused)))
+
+    async def _integrate_owned(self, job: JobRecord, work_item_id: str) -> Outcome:
         merge = await self._integration.merge_item(work_item_id)
         if not merge.ok:
             detail = f"merge conflict integrating {job.work_item_id!r}: {merge.detail}"
@@ -241,7 +250,7 @@ class BuildIntegrateHandler:
                 )
             )
 
-        integration_branch = branch_name(job.cycle, "integration")
+        integration_branch = WorktreeNaming(job.project_id, job.cycle).integration_branch
         if merge_conflict:
             instructions = (
                 f"This branch could not be merged into the shared integration branch "
@@ -288,7 +297,7 @@ class BuildIntegrateHandler:
         )
         payload: dict[str, object] = {
             **dict(job.payload),
-            "base_ref": branch_name(job.cycle, "integration"),
+            "base_ref": WorktreeNaming(job.project_id, job.cycle).integration_branch,
         }
         if repair_instructions is not None:
             payload["repair_finding_id"] = finding_id

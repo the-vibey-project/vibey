@@ -3,13 +3,17 @@
 infrastructure/git/'s tests."""
 
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 
 from vibey.domain.provision import ProvisionSpec, RouterFile
+from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.git.clean_env import CleanGitEnvSubprocessExecutor
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
+
+NAMING = WorktreeNaming(UUID("893c4fc1-542e-411e-a10a-3aef784b1540"), 1)
 
 
 async def _run(*argv: str) -> None:
@@ -35,7 +39,7 @@ def spec() -> ProvisionSpec:
 
 
 async def test_provision_writes_all_four_router_files(repo: Path) -> None:
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
 
     written = await AgentSurfaceProvisioner().provision(worktree, spec())
 
@@ -47,7 +51,7 @@ async def test_provision_writes_all_four_router_files(repo: Path) -> None:
 
 
 async def test_provision_registers_generated_files_in_git_info_exclude(repo: Path) -> None:
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
 
     await AgentSurfaceProvisioner().provision(worktree, spec())
 
@@ -61,7 +65,7 @@ async def test_provision_registers_generated_files_in_git_info_exclude(repo: Pat
 
 
 async def test_reprovisioning_an_unchanged_worktree_writes_nothing(repo: Path) -> None:
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
     provisioner = AgentSurfaceProvisioner()
     first = await provisioner.provision(worktree, spec())
     assert first
@@ -74,7 +78,7 @@ async def test_reprovisioning_an_unchanged_worktree_writes_nothing(repo: Path) -
 async def test_reprovisioning_with_a_changed_spec_rewrites_only_the_vibey_block(
     repo: Path,
 ) -> None:
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
     provisioner = AgentSurfaceProvisioner()
     await provisioner.provision(worktree, spec())
 
@@ -96,7 +100,7 @@ async def test_provision_error_raised_when_git_common_dir_fails(repo: Path) -> N
         async def execute(self, argv: tuple[str, ...]) -> CommandResult:
             return CommandResult(128, "", "fatal: not a git repo\n")
 
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
     provisioner = AgentSurfaceProvisioner(executor=FailingExecutor())
 
     with pytest.raises(ProvisionError) as exc_info:
@@ -109,7 +113,7 @@ async def test_provision_error_raised_when_git_common_dir_fails(repo: Path) -> N
 async def test_provision_handles_relative_git_common_dir(repo: Path) -> None:
     from vibey.infrastructure.engines.claudeloop_process import CommandResult
 
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
     real_executor = CleanGitEnvSubprocessExecutor()
 
     class RelativePathExecutor:
@@ -132,7 +136,7 @@ async def test_provision_handles_relative_git_common_dir(repo: Path) -> None:
 async def test_provision_preserves_hand_written_content_outside_the_vibey_block(
     repo: Path,
 ) -> None:
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
     (worktree / RouterFile.CLAUDE.value).write_text("# My project\n\nHand-written notes.\n")
 
     await AgentSurfaceProvisioner().provision(worktree, spec())
@@ -147,7 +151,7 @@ async def test_provision_excludes_generated_artifacts_from_every_worktree(repo: 
     """Engine sessions commit with broad adds; the shared exclude file must
     keep compiled caches, coverage data, and machinery dirs out of item
     branches -- their binary add/add conflicts caused real repair storms."""
-    worktree = await GitWorktreeManager(repo, cycle=1).create("item-1")
+    worktree = await GitWorktreeManager(repo, naming=NAMING).create("item-1")
 
     await AgentSurfaceProvisioner().provision(worktree, spec())
 

@@ -19,14 +19,17 @@ import os
 import shutil
 import stat
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 
-from vibey.domain.worktree import branch_name
+from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.git.clean_env import CleanGitEnvSubprocessExecutor
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.repository_config_guard import RepositoryExecutionRefused
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
+
+NAMING = WorktreeNaming(UUID("893c4fc1-542e-411e-a10a-3aef784b1540"), 1)
 
 # What a worker's environment really carries beside what git needs.
 _WORKER_SECRETS = {
@@ -100,7 +103,7 @@ async def repo(tmp_path: Path) -> Path:
 
 async def _item(repo: Path, item_id: str, filename: str) -> Path:
     """An engine's linked worktree with one commit on its branch."""
-    path = await GitWorktreeManager(repo, cycle=1).create(item_id)
+    path = await GitWorktreeManager(repo, naming=NAMING).create(item_id)
     (path / filename).write_text(f"from {item_id}\n")
     await _git("-C", str(path), "add", filename)
     await _git("-C", str(path), "commit", "-q", "-m", f"add {filename}")
@@ -147,10 +150,10 @@ async def test_a_planted_hook_never_runs_in_worktree_add_or_the_integration_merg
     watched.unlink(missing_ok=True)
 
     # post-checkout, on the next item's worktree.
-    await GitWorktreeManager(repo, cycle=1).create("item-3")
+    await GitWorktreeManager(repo, naming=NAMING).create("item-3")
     # item-1 fast-forwards (post-merge); item-2 then needs a real merge commit
     # (pre-merge-commit, prepare-commit-msg, commit-msg, post-merge).
-    integration = IntegrationBranch(repo, cycle=1)
+    integration = IntegrationBranch(repo, naming=NAMING)
     first = await integration.merge_item("item-1")
     second = await integration.merge_item("item-2")
 
@@ -166,7 +169,7 @@ async def test_the_merge_really_created_a_merge_commit_so_the_commit_hooks_were_
 ) -> None:
     await _item(repo, "item-1", "a.txt")
     await _item(repo, "item-2", "b.txt")
-    integration = IntegrationBranch(repo, cycle=1)
+    integration = IntegrationBranch(repo, naming=NAMING)
     await integration.merge_item("item-1")
     await integration.merge_item("item-2")
 
@@ -182,8 +185,8 @@ async def test_a_planted_fsmonitor_never_runs(repo: Path, watched: Path, tmp_pat
     await _git("-C", str(engine_worktree), "config", "core.fsmonitor", str(monitor))
     watched.unlink(missing_ok=True)
 
-    await GitWorktreeManager(repo, cycle=1).create("item-2")
-    outcome = await IntegrationBranch(repo, cycle=1).merge_item("item-1")
+    await GitWorktreeManager(repo, naming=NAMING).create("item-2")
+    outcome = await IntegrationBranch(repo, naming=NAMING).merge_item("item-1")
 
     assert outcome.ok, outcome.detail
     assert not marker.exists(), marker.read_text()
@@ -204,9 +207,9 @@ async def test_a_filter_driver_in_the_shared_config_is_refused_before_checkout(
 
     with pytest.raises(RepositoryExecutionRefused, match=r"filter\.planted\.smudge"):
         # Checking the item's branch out again would run the smudge filter.
-        await GitWorktreeManager(repo, cycle=1).create("item-1")
+        await GitWorktreeManager(repo, naming=NAMING).create("item-1")
     with pytest.raises(RepositoryExecutionRefused, match=r"filter\.planted\.smudge"):
-        await IntegrationBranch(repo, cycle=1).merge_item("item-1")
+        await IntegrationBranch(repo, naming=NAMING).merge_item("item-1")
 
     assert not marker.exists(), marker.read_text()
     _assert_no_secret_reached_a_child(watched)
@@ -216,7 +219,7 @@ async def test_a_merge_driver_in_the_shared_config_is_refused_before_the_merge(
     repo: Path, watched: Path, tmp_path: Path
 ) -> None:
     marker = tmp_path / "driver-ran.log"
-    integration = IntegrationBranch(repo, cycle=1)
+    integration = IntegrationBranch(repo, naming=NAMING)
     await integration.ensure()
     engine_worktree = await _item(repo, "item-1", "a.txt")
     (engine_worktree / ".gitattributes").write_text("* merge=planted\n")
@@ -248,7 +251,7 @@ async def test_a_filter_the_operator_declares_in_their_own_global_config_is_not_
     monkeypatch.setenv("HOME", str(home))
 
     await _item(repo, "item-1", "a.txt")
-    outcome = await IntegrationBranch(repo, cycle=1).merge_item("item-1")
+    outcome = await IntegrationBranch(repo, naming=NAMING).merge_item("item-1")
 
     assert outcome.ok, outcome.detail
     _assert_no_secret_reached_a_child(watched)
@@ -256,4 +259,4 @@ async def test_a_filter_the_operator_declares_in_their_own_global_config_is_not_
 
 async def test_the_item_branch_names_are_the_ones_the_domain_mints(repo: Path) -> None:
     await _item(repo, "item-1", "a.txt")
-    assert await _git("-C", str(repo), "rev-parse", "--verify", branch_name(1, "item-1"))
+    assert await _git("-C", str(repo), "rev-parse", "--verify", NAMING.branch("item-1"))

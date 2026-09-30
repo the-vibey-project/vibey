@@ -122,6 +122,25 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **build:** BUILD's worktrees and branches are scoped per project, and a branch is used only
+  when it proves it is the project's own. Found live on 2026-09-30: project 893c4fc1,
+  delivering issue #963 in a triaged-bridge checkout that shares the main repository's refs,
+  reached BUILD cycle 1 and checked out `vibey/1/ws` -- an unrelated August project's branch,
+  on a README of 160 lines where develop has 472 -- edited that codebase, and would have
+  published `vibey/1/integration`'s foreign history as #963's pull request. Names were keyed
+  by cycle alone (`vibey/<cycle>/<item>`); they are now `vibey/<project8>/<cycle>/<item>` on
+  `.vibey/worktrees/<project8>/<cycle>/<item>` (`WorktreeNaming`). Every branch BUILD creates
+  records its project and base commit in the repository's config
+  (`branch.<name>.vibey-project`, `branch.<name>.vibey-base`) before it exists, and a branch
+  is reused, based on or merged only when that record names the project and its base is
+  still in its history; otherwise nothing is touched and the job parks on the new
+  `foreign_branch` gate (answer `--raw '{}'` after moving the branch aside). A job enqueued
+  before the change reads its recorded `vibey/<cycle>/integration` base as the project's own
+  scoped branch; no cycle-keyed branch is ever adopted. `vibey status --json` gains
+  `integration_branch`, which the delivery bridge now publishes, after checking the same
+  ownership record, instead of rebuilding a cycle-keyed name; and a fresh dispatch moves a
+  leftover `triaged-<issue>` checkout to the current `--base` (refusing one with changes)
+  rather than starting from it as found.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

@@ -40,7 +40,7 @@ from vibey.domain.interfaces.plan_interface import DecompositionPlannerInterface
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.phase import Phase
 from vibey.domain.plan import DECOMPOSITION_PLANNER, WorkItem
-from vibey.domain.worktree import branch_name
+from vibey.domain.worktree import WorktreeNaming
 
 
 class BuildDecomposeHandler:
@@ -124,7 +124,9 @@ class BuildDecomposeHandler:
                 # before the first integrate): every item branching
                 # from the empty base rewrote the same module in
                 # parallel and guaranteed add/add merge conflicts.
-                "base_ref": branch_name(job.cycle, "integration"),
+                # The project's own integration branch: names carry the project, so
+                # no other delivery in the same repository shares it.
+                "base_ref": WorktreeNaming(job.project_id, job.cycle).integration_branch,
             },
             requirement={"effort": item.est_effort.name.lower()},
             # By key, not job id: the dependencies are earlier requests of
