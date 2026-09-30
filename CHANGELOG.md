@@ -224,6 +224,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   added, unguarded like every other move into abandoned, so every phase short of done can
   now be abandoned: its jobs are cancelled, its gates withdrawn, and one
   `PhaseTransitioned` from intake to abandoned is recorded.
+* **chart:** the KEDA scaler no longer counts ready jobs of an abandoned project. `vibey
+  abandon` made them unclaimable, but the ScaledObject's claimable-work query still counted
+  them, so a follow-up job a still-running handler enqueued after the abandonment could scale
+  a worker up for work that will never run. The query now carries the claim's own
+  abandoned-project exclusion, and `tests/infrastructure/db/test_keda_scaler_query.py` pins
+  every `NOT EXISTS` of `JobRepository`'s claim condition word for word into both KEDA
+  goldens, and checks that a scaler bound to an abandoned project counts nothing.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit
