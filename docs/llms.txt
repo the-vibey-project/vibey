@@ -23,6 +23,16 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [The Sabbath](https://the-vibey-project.github.io/vibey/main/guides/sabbath/): From sundown on Friday to sundown on Saturday, vibey rests.
 - [Sovereign review runner](https://the-vibey-project.github.io/vibey/main/runbooks/sovereign-review-runner/): How to stand up, verify and remove the self-hosted runner that runs pr-review.yml's review-sovereign job on [self-hosted, vibey-local-vibey] (sub-doctrine 8.a).
 
+## What do you want to do?
+
+- [Overview](https://the-vibey-project.github.io/vibey/main/guides/outcomes/): Six short guides, each answering one question people bring to AI coding agents, with the commands, the evidence behind every claim, and the limits.
+- [Run agents on your own hardware](https://the-vibey-project.github.io/vibey/main/guides/outcomes/run-agents-on-your-own-hardware/): Run vibey on its default engine, GPT-OSS 20B on Ollama, and allow only that engine; the queue, the ledger and the model then stay on one machine, and the measured sovereign path needs no internet at runtime.
+- [Cap and trace agent spending](https://the-vibey-project.github.io/vibey/main/guides/outcomes/cap-agent-spending/): Set a per-cycle dollar or turn cap with vibey budget set; the brake reads it before every BUILD session and parks a gate when it trips, and vibey cost shows each engine's spend from the ledger.
+- [Keep a tamper-evident record](https://the-vibey-project.github.io/vibey/main/guides/outcomes/keep-a-tamper-evident-record/): vibey appends every decision, question, answer, handoff and cost to a PostgreSQL ledger that its application role cannot rewrite, and each export walks a SHA-256 chain over every event to show an edit.
+- [Review AI changes before merge](https://the-vibey-project.github.io/vibey/main/guides/outcomes/review-ai-changes-before-merge/): vibey stops at a REVIEW gate that waits for your verdict, and vibey-gh binds every check and review on a GitHub pull request to its exact head commit, so the merge train merges only what passed on that commit.
+- [Deploy without holding cloud secrets](https://the-vibey-project.github.io/vibey/main/guides/outcomes/deploy-without-storing-secrets/): Partly, and not yet for production; vibey's opt-in Azure stages keep no cloud credential, act as the az CLI identity you signed in with, and change nothing until you consent, but no real-Azure run is proven yet.
+- [Use vibey in a regulated environment](https://the-vibey-project.github.io/vibey/main/guides/outcomes/take-vibey-into-a-regulated-environment/): vibey holds no certification, but it gives an assessor concrete mechanisms to examine, each linked to its evidence, and it says plainly which controls stay with you.
+
 ## Case studies
 
 - [How vibey survives a crashed agent](https://the-vibey-project.github.io/vibey/main/case-studies/how-vibey-survives-a-crashed-agent/): When an AI coding agent crashes mid-task, vibey loses no job and commits no job twice — leases, an append-only ledger and parked human gates, with the chaos test that proves it and the costs it pays.
@@ -119,6 +129,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0074 — Measured dispatch for every service-bus surface](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0074-measured-service-bus-dispatch/)
 - [0075 — Context-bearing surfaces are linked microslice graphs](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0075-context-microslices-and-linked-surfaces/)
 - [0076 — Discoverability and the first hour are deliverables](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0076-discoverability-and-the-first-hour-are-deliverables/)
+- [0077 — Outcome guides: the project answers the questions its users search for](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0077-outcome-guides-answer-the-questions-users-search-for/)
 
 ## Governance
 

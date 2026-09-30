@@ -15,6 +15,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Documentation
+
+* **docs:** outcome guides — six pages under `docs/guides/outcomes/`, each titled as the
+  question a practitioner searches for, with a one-sentence answer that is also its meta
+  description, the commands, the evidence and the limits: running agents entirely on your
+  own hardware, capping and tracing spend, a tamper-evident record, review before merge,
+  deployment without holding cloud secrets ("partly, and not yet for production"), and a
+  regulated-environment checklist that claims no certification. An index, *What do you want
+  to do?*, sits in the nav after the guides and is linked from both first screens.
+  ADR-0077 records the shape and `tests/meta/test_outcome_guides.py` checks it, every link
+  included.
+
 ## [3.2.0] (2026-09-30)
 
 ### Features

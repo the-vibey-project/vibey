@@ -60,6 +60,14 @@ nav:
       - Self-hosted sovereign surfaces: guides/self-hosted-surfaces.md
       - The Sabbath: guides/sabbath.md
       - Sovereign review runner: runbooks/sovereign-review-runner.md
+  - "What do you want to do?":
+      - Overview: guides/outcomes/index.md
+      - Run agents on your own hardware: guides/outcomes/run-agents-on-your-own-hardware.md
+      - Cap and trace agent spending: guides/outcomes/cap-agent-spending.md
+      - Keep a tamper-evident record: guides/outcomes/keep-a-tamper-evident-record.md
+      - Review AI changes before merge: guides/outcomes/review-ai-changes-before-merge.md
+      - Deploy without holding cloud secrets: guides/outcomes/deploy-without-storing-secrets.md
+      - Use vibey in a regulated environment: guides/outcomes/take-vibey-into-a-regulated-environment.md
   - Case studies:
       - How vibey survives a crashed agent: case-studies/how-vibey-survives-a-crashed-agent.md
   - Current estimate: estimate.md
@@ -151,4 +159,5 @@ nav:
           - "0074 — Measured dispatch for every service-bus surface": architecture/decisions/0074-measured-service-bus-dispatch.md
           - "0075 — Context-bearing surfaces are linked microslice graphs": architecture/decisions/0075-context-microslices-and-linked-surfaces.md
           - "0076 — Discoverability and the first hour are deliverables": architecture/decisions/0076-discoverability-and-the-first-hour-are-deliverables.md
+          - "0077 — Outcome guides: the project answers the questions its users search for": architecture/decisions/0077-outcome-guides-answer-the-questions-users-search-for.md
   - Research paper: paper.md
