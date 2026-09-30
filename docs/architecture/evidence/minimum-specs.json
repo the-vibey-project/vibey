@@ -1,0 +1,2135 @@
+{
+  "schema": "vibey-minimum-specs/1",
+  "generated_at": "2026-09-30T02:37:27.631Z",
+  "generated_by": "scripts/minimum_specs.py",
+  "hosts": {
+    "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)": {
+      "system": "Darwin",
+      "arch": "arm64",
+      "model": "Mac17,2",
+      "chip": "Apple M5",
+      "cores_total": 10,
+      "cores_performance": 4,
+      "cores_efficiency": 6,
+      "gpu_cores": 10,
+      "ram_bytes": 25769803776,
+      "os": "macOS 26.6.2 (25G83)"
+    }
+  },
+  "sources": {
+    "hardware-pass": "vibey-storm specs-research/hardware.md, hardware.json and hardware-evidence/ (2026-09-29T23:29Z to 2026-09-30T02:05Z, tree a835f35e); kept in the storm home, not tracked here",
+    "network-pass": "vibey-storm specs-research/network.md and network-evidence/ (2026-09-29 22:25-23:09Z, tree 83f871d5); kept in the storm home, not tracked here",
+    "software-pass": "vibey-storm specs-research/software.md and software-evidence/ (2026-09-29 22:25-22:57Z, tree 83f871d5); kept in the storm home, not tracked here"
+  },
+  "not_verified": [
+    "Linux (Ubuntu, Arch) and Windows hosts: every figure here comes from one Apple M5 Mac; Linux install sizes are pip resolution plus HEAD sizes, not an install.",
+    "Other hardware: 16 GB and 32/64 GB Macs, other Apple chips, x86 CPUs, NVIDIA/AMD discrete GPUs. The 16 GB verdict and the discrete-GPU size are arithmetic.",
+    "The macOS GPU working-set fraction on a 16 GB Mac: taken as this host's ratio (widely reported as about 2/3 there).",
+    "CPU only with the weights held in memory: the measured CPU rates ran under memory pressure (weights paged in), so they are a lower bound.",
+    "The minimum CPU core count: nothing below this 10-core M5 was tested.",
+    "OS headroom on a headless or server install: 3.5 GiB is an assumption from this desktop Mac.",
+    "A real gptossloop BUILD session end to end: runner turns are bounded by arithmetic from the depth test.",
+    "Concurrent lanes: one request at a time was measured (ADR-0058 measured two slots on this host).",
+    "PostgreSQL 14-17 and git older than 2.54: only PostgreSQL 18.4 and git 2.54 ran; the floors are declared.",
+    "Python 3.12.0-3.12.12: only 3.12.13 ran. Python 3.15 does not install yet (no pydantic-core wheel).",
+    "pip and pipx install paths: only uv was used.",
+    "The Krypton desktop GUI, the VS Code extension inside VS Code, and the React Native app at runtime; iOS and Android native builds.",
+    "The desktop client's minimum library versions: only the installed versions were built.",
+    "Paid engines end to end, the RabbitMQ bus, and the opt-in integrations (Azure, the operator, webhooks, SMTP).",
+    "The LAN hub on a real network interface (mDNS multicast was not observed)."
+  ],
+  "figures": [
+    {
+      "id": "bench.gpt-oss:20b.cpu.ctx8192.gen_tok_s",
+      "label": "gpt-oss:20b CPU only at 8192: generation",
+      "value": 4.2,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T01:00:24.061Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.81,
+          3.0
+        ],
+        "memory_free_pct_range": [
+          37,
+          37
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 2,
+        "runs_total": 6
+      },
+      "source": "hardware-pass raw/13-gptoss-cpu-only.jsonl",
+      "cadence": "weekly",
+      "note": "range 4.12-4.37"
+    },
+    {
+      "id": "bench.gpt-oss:20b.cpu.ctx8192.prompt_tok_s",
+      "label": "gpt-oss:20b CPU only at 8192: prompt",
+      "value": 55.8,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T01:00:24.061Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.81,
+          3.0
+        ],
+        "memory_free_pct_range": [
+          37,
+          37
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 2,
+        "runs_total": 6
+      },
+      "source": "hardware-pass raw/13-gptoss-cpu-only.jsonl",
+      "cadence": "weekly",
+      "note": "range 53.92-57.67"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx131072.device_mib",
+      "label": "gpt-oss:20b at 131072: on the device (weights + KV + compute)",
+      "value": 15566,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:14:42.714Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx131072.host_compute_mib",
+      "label": "gpt-oss:20b at 131072: host compute buffer",
+      "value": 140.02,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:14:42.714Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx131072.host_model_mib",
+      "label": "gpt-oss:20b at 131072: host model buffer",
+      "value": 1104.61,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:14:42.714Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx131072.kv_mib",
+      "label": "gpt-oss:20b at 131072: KV cache",
+      "value": 3090,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:14:42.714Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx32768.device_mib",
+      "label": "gpt-oss:20b at 32768: on the device (weights + KV + compute)",
+      "value": 12974,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:08:27.859Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx32768.host_compute_mib",
+      "label": "gpt-oss:20b at 32768: host compute buffer",
+      "value": 44.02,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:08:27.859Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx32768.host_model_mib",
+      "label": "gpt-oss:20b at 32768: host model buffer",
+      "value": 1104.61,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:08:27.859Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx32768.kv_mib",
+      "label": "gpt-oss:20b at 32768: KV cache",
+      "value": 786,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:08:27.859Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx4096.device_mib",
+      "label": "gpt-oss:20b at 4096: on the device (weights + KV + compute)",
+      "value": 12239,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:02:32.628Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx4096.host_compute_mib",
+      "label": "gpt-oss:20b at 4096: host compute buffer",
+      "value": 16.02,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:02:32.628Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx4096.host_model_mib",
+      "label": "gpt-oss:20b at 4096: host model buffer",
+      "value": 1104.61,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:02:32.628Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx4096.kv_mib",
+      "label": "gpt-oss:20b at 4096: KV cache",
+      "value": 114,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:02:32.628Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx8192.device_mib",
+      "label": "gpt-oss:20b at 8192: on the device (weights + KV + compute)",
+      "value": 12339,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:03:24.200Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx8192.host_compute_mib",
+      "label": "gpt-oss:20b at 8192: host compute buffer",
+      "value": 20.02,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:03:24.200Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx8192.host_model_mib",
+      "label": "gpt-oss:20b at 8192: host model buffer",
+      "value": 1104.61,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:03:24.200Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.ctx8192.kv_mib",
+      "label": "gpt-oss:20b at 8192: KV cache",
+      "value": 210,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server common_memory_breakdown_print and buffer lines in the Ollama log",
+      "measured_at": "2026-09-30T00:03:24.200Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "dated by the sweep load that logged it (raw/11)"
+    },
+    {
+      "id": "bench.gpt-oss:20b.depth.ctx32768.gen_tok_s",
+      "label": "gpt-oss:20b GPU, prompt at depth, 32768: generation",
+      "value": 26.6,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T01:08:06.670Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.46,
+          2.74
+        ],
+        "memory_free_pct_range": [
+          16,
+          17
+        ],
+        "prompt_tokens": [
+          23965,
+          24097
+        ],
+        "runs_clean": 2,
+        "runs_total": 2
+      },
+      "source": "hardware-pass raw/14-gptoss-fill.jsonl",
+      "cadence": "weekly",
+      "note": "range 26.52-26.77"
+    },
+    {
+      "id": "bench.gpt-oss:20b.depth.ctx32768.prompt_tok_s",
+      "label": "gpt-oss:20b GPU, prompt at depth, 32768: prompt",
+      "value": 504.9,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T01:08:06.670Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.46,
+          2.74
+        ],
+        "memory_free_pct_range": [
+          16,
+          17
+        ],
+        "prompt_tokens": [
+          23965,
+          24097
+        ],
+        "runs_clean": 2,
+        "runs_total": 2
+      },
+      "source": "hardware-pass raw/14-gptoss-fill.jsonl",
+      "cadence": "weekly",
+      "note": "range 503.97-505.77"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx131072.gen_tok_s",
+      "label": "gpt-oss:20b GPU 131072: generation",
+      "value": 29.6,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:15:27.855Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.38,
+          2.83
+        ],
+        "memory_free_pct_range": [
+          6,
+          8
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 3,
+        "runs_total": 3
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 29.41-31.47"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx131072.prompt_tok_s",
+      "label": "gpt-oss:20b GPU 131072: prompt",
+      "value": 814.7,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:15:27.855Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.38,
+          2.83
+        ],
+        "memory_free_pct_range": [
+          6,
+          8
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 3,
+        "runs_total": 3
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 782.57-830.56"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx32768.gen_tok_s",
+      "label": "gpt-oss:20b GPU 32768: generation",
+      "value": 31.9,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:10:10.758Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.46,
+          2.86
+        ],
+        "memory_free_pct_range": [
+          12,
+          15
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 3,
+        "runs_total": 3
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 31.72-31.97"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx32768.prompt_tok_s",
+      "label": "gpt-oss:20b GPU 32768: prompt",
+      "value": 837.6,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:10:10.758Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.46,
+          2.86
+        ],
+        "memory_free_pct_range": [
+          12,
+          15
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 3,
+        "runs_total": 3
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 827.69-840.17"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx4096.gen_tok_s",
+      "label": "gpt-oss:20b GPU 4096: generation",
+      "value": 32.5,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:03:17.009Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.58,
+          2.78
+        ],
+        "memory_free_pct_range": [
+          20,
+          23
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 3,
+        "runs_total": 3
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 26.86-32.6"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx4096.prompt_tok_s",
+      "label": "gpt-oss:20b GPU 4096: prompt",
+      "value": 826.6,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:03:17.009Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.58,
+          2.78
+        ],
+        "memory_free_pct_range": [
+          20,
+          23
+        ],
+        "prompt_tokens": [
+          2087
+        ],
+        "runs_clean": 3,
+        "runs_total": 3
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 793.01-842.71"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx8192.gen_tok_s",
+      "label": "gpt-oss:20b GPU 8192: generation",
+      "value": 26.1,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:07:43.553Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.76,
+          2.89
+        ],
+        "memory_free_pct_range": [
+          11,
+          13
+        ],
+        "prompt_tokens": [
+          2087,
+          2088
+        ],
+        "runs_clean": 3,
+        "runs_total": 4
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 25.8-30.37"
+    },
+    {
+      "id": "bench.gpt-oss:20b.gpu.ctx8192.prompt_tok_s",
+      "label": "gpt-oss:20b GPU 8192: prompt",
+      "value": 725.5,
+      "unit": "tokens/s",
+      "status": "measured",
+      "method": "POST /api/chat stream=false temperature=0 seed=42 num_predict=256; Ollama prompt_eval_count/prompt_eval_duration and eval_count/eval_duration",
+      "measured_at": "2026-09-30T00:07:43.553Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "gen_tokens": [
+          256
+        ],
+        "load1_range": [
+          2.76,
+          2.89
+        ],
+        "memory_free_pct_range": [
+          11,
+          13
+        ],
+        "prompt_tokens": [
+          2087,
+          2088
+        ],
+        "runs_clean": 3,
+        "runs_total": 4
+      },
+      "source": "hardware-pass raw/11-gptoss-ctx-sweep.jsonl",
+      "cadence": "weekly",
+      "note": "range 711.08-773.03"
+    },
+    {
+      "id": "cpu_only.build_fits",
+      "label": "A worst BUILD turn and the conductor's retry fit the timeout CPU only",
+      "value": false,
+      "unit": "verdict",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "cadence": "weekly",
+      "formula": "max(worst BUILD turn, conductor retry) CPU only <= per-request timeout",
+      "inputs": {
+        "time.runner_turn_worst.cpu_s": 1038.2,
+        "time.conductor_worst.cpu_s": 1085.3,
+        "declared.ollama_timeout_s": 900
+      }
+    },
+    {
+      "id": "cpu_only.design_fits",
+      "label": "A DESIGN call fits the timeout CPU only",
+      "value": true,
+      "unit": "verdict",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.629Z",
+      "cadence": "weekly",
+      "formula": "DESIGN call CPU only <= per-request timeout",
+      "inputs": {
+        "time.design_call.cpu_s": 309.3,
+        "declared.ollama_timeout_s": 900
+      }
+    },
+    {
+      "id": "declared.app_node",
+      "label": "Node for the React Native app",
+      "value": ">=20.19.4",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `\"node\":\\s*\"([^\"]+)\"` from clients/app/package.json",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/app/package.json",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.conductor_context_max",
+      "label": "Conductor context ceiling (DESIGN, DECOMPOSE)",
+      "value": 8192,
+      "unit": "tokens",
+      "status": "declared",
+      "method": "read `^DEFAULT_OLLAMA_CONTEXT\\s*=\\s*(\\d+)` from src/vibey/infrastructure/engines/ollama_chat.py",
+      "measured_at": "2026-09-30T02:37:27.629Z",
+      "source": "src/vibey/infrastructure/engines/ollama_chat.py",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.conductor_output_tokens",
+      "label": "Conductor output budget (doubled on its one retry)",
+      "value": 2048,
+      "unit": "tokens",
+      "status": "declared",
+      "method": "read `^DEFAULT_OLLAMA_OUTPUT\\s*=\\s*(\\d+)` from src/vibey/infrastructure/engines/ollama_chat.py",
+      "measured_at": "2026-09-30T02:37:27.629Z",
+      "source": "src/vibey/infrastructure/engines/ollama_chat.py",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.desktop_glib",
+      "label": "glib-2.0 for the desktop client",
+      "value": ">= 2.74",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `dependency\\('glib-2\\.0',\\s*version:\\s*'([^']+)'` from clients/desktop/meson.build",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/desktop/meson.build",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.desktop_gtk4",
+      "label": "GTK 4 for the desktop GUI",
+      "value": ">= 4.12",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `dependency\\('gtk4',\\s*version:\\s*'([^']+)'` from clients/desktop/meson.build",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/desktop/meson.build",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.desktop_json_glib",
+      "label": "json-glib-1.0 for the desktop client",
+      "value": ">= 1.6",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `'json-glib-1\\.0',\\s*\\n\\s*version:\\s*'([^']+)'` from clients/desktop/meson.build",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/desktop/meson.build",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.desktop_libadwaita",
+      "label": "libadwaita for the desktop GUI",
+      "value": ">= 1.4",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `dependency\\('libadwaita-1',\\s*version:\\s*'([^']+)'` from clients/desktop/meson.build",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/desktop/meson.build",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.desktop_meson",
+      "label": "meson for the desktop client",
+      "value": ">= 1.1.0",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `meson_version:\\s*'([^']+)'` from clients/desktop/meson.build",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/desktop/meson.build",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.git_floor",
+      "label": "git",
+      "value": "2.26",
+      "unit": "version",
+      "status": "declared",
+      "method": "read from the code: `git config --list --show-scope -z` and `git worktree add/remove` need git 2.26; not tested on an older git",
+      "measured_at": "2026-09-29T22:57:00Z",
+      "source": "software-pass 09-tools.txt; repository_config_guard.py",
+      "cadence": "once"
+    },
+    {
+      "id": "declared.node_recommended",
+      "label": "Node the repository pins for development",
+      "value": "24",
+      "unit": "version",
+      "status": "declared",
+      "method": "read `^\\s*(\\S+)\\s*$` from .node-version",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": ".node-version",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.ollama_timeout_s",
+      "label": "Per-request model timeout",
+      "value": 900,
+      "unit": "s",
+      "status": "declared",
+      "method": "read `^DEFAULT_OLLAMA_TIMEOUT\\s*=\\s*(\\d+)` from src/vibey/infrastructure/engines/ollama_chat.py",
+      "measured_at": "2026-09-30T02:37:27.629Z",
+      "source": "src/vibey/infrastructure/engines/ollama_chat.py",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.postgres_min_major",
+      "label": "PostgreSQL floor vibey checks on connect",
+      "value": 14,
+      "unit": "major",
+      "status": "declared",
+      "method": "read `^POSTGRES_MIN_MAJOR\\b[^=]*=\\s*(\\d+)` from src/vibey/infrastructure/postgres.py",
+      "measured_at": "2026-09-30T02:37:27.629Z",
+      "source": "src/vibey/infrastructure/postgres.py",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.python_requires",
+      "label": "Python required by vibey-engine",
+      "value": ">=3.12",
+      "unit": "specifier",
+      "status": "declared",
+      "method": "read `^requires-python\\s*=\\s*\"([^\"]+)\"` from pyproject.toml",
+      "measured_at": "2026-09-30T02:37:27.629Z",
+      "source": "pyproject.toml",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.runner_context_window",
+      "label": "gptossloop BUILD context window",
+      "value": 32768,
+      "unit": "tokens",
+      "status": "declared",
+      "method": "read `^\\s+context_window:\\s*int\\s*=\\s*([\\d_]+)` from src/vibey_runners/qwen/src/qwenloop/domain/config.py",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "src/vibey_runners/qwen/src/qwenloop/domain/config.py",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.vscode_engine",
+      "label": "VS Code the extension declares",
+      "value": "^1.90.0",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `\"vscode\":\\s*\"([^\"]+)\"` from clients/vscode/package.json",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/vscode/package.json",
+      "cadence": "weekly"
+    },
+    {
+      "id": "declared.vscode_node",
+      "label": "Node to build the VS Code extension",
+      "value": ">=20",
+      "unit": "semver",
+      "status": "declared",
+      "method": "read `\"node\":\\s*\"([^\"]+)\"` from clients/vscode/package.json",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "source": "clients/vscode/package.json",
+      "cadence": "weekly"
+    },
+    {
+      "id": "design_call.output_tokens_max",
+      "label": "Output of one sovereign DESIGN call (reasoning + JSON)",
+      "value": 1260,
+      "unit": "tokens",
+      "status": "measured",
+      "method": "vibey work <project> --provider gptossloop; llama-server eval tokens",
+      "measured_at": "2026-09-30T01:57:05.071Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "runs": 4,
+        "range": [
+          809,
+          1260
+        ]
+      },
+      "source": "hardware-pass raw/40-design-call.jsonl",
+      "cadence": "once",
+      "note": "809-1,260 tokens over four runs; the largest is used"
+    },
+    {
+      "id": "design_call.prompt_tokens",
+      "label": "Prompt of one sovereign DESIGN call",
+      "value": 518,
+      "unit": "tokens",
+      "status": "measured",
+      "method": "vibey work <project> --provider gptossloop on a one-line intake; llama-server task.n_tokens",
+      "measured_at": "2026-09-30T01:57:05.071Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "runs": 4
+      },
+      "source": "hardware-pass raw/40-design-call.jsonl",
+      "cadence": "once",
+      "note": "513-518 tokens over four runs; the largest is used"
+    },
+    {
+      "id": "disk.dev_venv_bytes",
+      "label": "Contributor venv (uv sync --extra dev)",
+      "value": 834072576,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sk delivery-run/.venv (uv sync --extra dev)",
+      "measured_at": "2026-09-29T23:52:35Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/20-disk.txt",
+      "cadence": "once"
+    },
+    {
+      "id": "disk.git_pack_mib",
+      "label": "git objects (shared by every worktree)",
+      "value": 92.32,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "git count-objects -vH (size-pack, shared by all worktrees)",
+      "measured_at": "2026-09-29T23:52:47Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/21-worktree-disk.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "disk.minimum_gb",
+      "label": "Minimum free disk",
+      "value": 20,
+      "unit": "GB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:00:14Z",
+      "cadence": "weekly",
+      "formula": "the need rounded up to the next 10 GB",
+      "inputs": {
+        "disk.minimum_need_gb": 17.8
+      }
+    },
+    {
+      "id": "disk.minimum_need_gb",
+      "label": "Free disk needed",
+      "value": 17.8,
+      "unit": "GB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:00:14Z",
+      "cadence": "weekly",
+      "formula": "model + Ollama app + base venv + uv cache + Postgres install + Postgres data allowance + git objects + minimum worktrees x one worktree",
+      "inputs": {
+        "model.gpt-oss:20b.download_bytes": 13793441244,
+        "disk.ollama_app_bytes": 628854784,
+        "install.vibey-engine.venv_bytes": 659554304,
+        "install.vibey-engine.uv_cache_bytes": 678182912,
+        "disk.postgres_install_bytes": 86781952,
+        "assumption.postgres_data_allowance_gb": 1.0,
+        "disk.git_pack_mib": 92.32,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080
+      }
+    },
+    {
+      "id": "disk.ollama_app_bytes",
+      "label": "Ollama application",
+      "value": 628854784,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sk /Applications/Ollama.app",
+      "measured_at": "2026-09-30T02:00:14Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/23-disk-apps-logs.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "disk.postgres_install_bytes",
+      "label": "PostgreSQL 18 Homebrew install",
+      "value": 86781952,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sk /opt/homebrew/Cellar/postgresql@18",
+      "measured_at": "2026-09-30T02:00:14Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/23-disk-apps-logs.txt",
+      "cadence": "once"
+    },
+    {
+      "id": "disk.recommended_gb",
+      "label": "Recommended free disk",
+      "value": 50,
+      "unit": "GB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:00:14Z",
+      "cadence": "weekly",
+      "formula": "the recommended need rounded up to the next 10 GB",
+      "inputs": {
+        "disk.recommended_need_gb": 45.2
+      }
+    },
+    {
+      "id": "disk.recommended_need_gb",
+      "label": "Free disk recommended",
+      "value": 45.2,
+      "unit": "GB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:00:14Z",
+      "cadence": "weekly",
+      "formula": "minimum need + optional models + dev venv + further worktrees + room to re-pull the sovereign model",
+      "inputs": {
+        "disk.minimum_need_gb": 17.8,
+        "model.qwen3:14b.download_bytes": 9276198565,
+        "disk.dev_venv_bytes": 834072576,
+        "assumption.recommended_worktrees": 50,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "model.gpt-oss:20b.download_bytes": 13793441244
+      }
+    },
+    {
+      "id": "disk.worktree_bytes",
+      "label": "One delivery worktree",
+      "value": 86958080,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sk ~/git/vibey-storm/triaged-998 (git worktree; objects shared with the main clone)",
+      "measured_at": "2026-09-29T23:52:47Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/21-worktree-disk.txt",
+      "cadence": "once",
+      "note": "git objects are shared with the main clone"
+    },
+    {
+      "id": "download.first_install_bytes",
+      "label": "First install on the wire: Krypton + hub + the sovereign model",
+      "value": 14004463411,
+      "unit": "bytes",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-29T22:39:50Z",
+      "cadence": "weekly",
+      "formula": "krypton-app download + sovereign model download",
+      "inputs": {
+        "install.krypton-app.download_bytes": 211022167,
+        "model.gpt-oss:20b.download_bytes": 13793441244
+      }
+    },
+    {
+      "id": "gpu.discrete_vram_gb",
+      "label": "Discrete GPU memory (derived only; not verified on CUDA)",
+      "value": 16.0,
+      "unit": "GB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:08:27.859Z",
+      "cadence": "weekly",
+      "formula": "the smallest declared VRAM size >= device@32768 / 1024",
+      "inputs": {
+        "bench.gpt-oss:20b.ctx32768.device_mib": 12974
+      }
+    },
+    {
+      "id": "gpu.metal_limit_16gb_mib",
+      "label": "GPU working-set limit a 16 GB Mac would have at this host's ratio",
+      "value": 12123,
+      "unit": "MiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:02:32.628Z",
+      "cadence": "weekly",
+      "formula": "16384 x working-set limit / (RAM in MiB)",
+      "inputs": {
+        "gpu.working_set_limit_mib": 18185,
+        "host.ram_bytes": 25769803776
+      },
+      "note": "assumes macOS keeps the same fraction on 16 GB (widely reported as about 2/3 there; not verified)"
+    },
+    {
+      "id": "gpu.over_16gb.ctx32768_mib",
+      "label": "GPU need over a 16 GB Mac's limit at 32,768",
+      "value": 851,
+      "unit": "MiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:08:27.859Z",
+      "cadence": "weekly",
+      "formula": "device@32768 - 16 GB limit",
+      "inputs": {
+        "bench.gpt-oss:20b.ctx32768.device_mib": 12974,
+        "gpu.metal_limit_16gb_mib": 12123
+      }
+    },
+    {
+      "id": "gpu.over_16gb.ctx8192_mib",
+      "label": "GPU need over a 16 GB Mac's limit at 8,192",
+      "value": 216,
+      "unit": "MiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:03:24.200Z",
+      "cadence": "weekly",
+      "formula": "device@8192 - 16 GB limit (positive: cannot run fully on the GPU)",
+      "inputs": {
+        "bench.gpt-oss:20b.ctx8192.device_mib": 12339,
+        "gpu.metal_limit_16gb_mib": 12123
+      }
+    },
+    {
+      "id": "gpu.working_set_limit_mib",
+      "label": "GPU working-set limit",
+      "value": 18185,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "llama-server 'free device memory' (Metal recommendedMaxWorkingSetSize)",
+      "measured_at": "2026-09-30T00:02:32.628Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/12-gptoss-llama-server-memory-lines.txt",
+      "cadence": "weekly",
+      "note": "Metal recommendedMaxWorkingSetSize as llama-server reports it; dated by the sweep load that logged it"
+    },
+    {
+      "id": "host.ram_bytes",
+      "label": "Host memory",
+      "value": 25769803776,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "sysctl hw.memsize",
+      "measured_at": "2026-09-29T23:29:49Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/01-machine.txt",
+      "cadence": "weekly",
+      "note": "unified memory shared by CPU and GPU"
+    },
+    {
+      "id": "install.krypton-app.cold_s",
+      "label": "krypton-app cold install",
+      "value": 21.79,
+      "unit": "s",
+      "status": "measured",
+      "method": "UV_CACHE_DIR=<empty> uv pip install krypton-app==0.1.0 'vibey-engine[hub]==3.0.0'",
+      "measured_at": "2026-09-29T22:38:16Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.14.7",
+        "cache": "empty"
+      },
+      "source": "network-pass 15-install-krypton-hub-uv.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.krypton-app.download_bytes",
+      "label": "krypton-app download",
+      "value": 211022167,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "pip resolution of krypton-app + vibey-engine[hub] plus HEAD Content-Length (macOS arm64, py3.14)",
+      "measured_at": "2026-09-29T22:36:36Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "files": 81,
+        "python": "3.14",
+        "platform": "macOS arm64"
+      },
+      "source": "network-pass 12-install-sizes-by-config.txt",
+      "cadence": "weekly",
+      "note": "krypton-app 0.1.0 with vibey-engine[hub] named beside it; krypton-app now depends on [hub] itself"
+    },
+    {
+      "id": "install.krypton-app.packages",
+      "label": "krypton-app packages",
+      "value": 81,
+      "unit": "count",
+      "status": "measured",
+      "method": "uv: Installed 81 packages",
+      "measured_at": "2026-09-29T22:38:16Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.14.7"
+      },
+      "source": "network-pass 15-install-krypton-hub-uv.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.krypton-app.uv_cache_bytes",
+      "label": "krypton-app uv cache",
+      "value": 686014464,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sk of UV_CACHE_DIR after the install above",
+      "measured_at": "2026-09-29T22:38:16Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.14.7",
+        "cache": "empty"
+      },
+      "source": "network-pass 15-install-krypton-hub-uv.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.krypton-app.venv_bytes",
+      "label": "krypton-app installed size",
+      "value": 681992192,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sk of a venv with krypton-app + vibey-engine[hub] (py3.12)",
+      "measured_at": "2026-09-30T02:00:14Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.12"
+      },
+      "source": "hardware-pass raw/23-disk-apps-logs.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.vibey-engine.cold_s",
+      "label": "vibey-engine cold install",
+      "value": 36.4,
+      "unit": "s",
+      "status": "measured",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install <engine wheel>",
+      "measured_at": "2026-09-29T22:27:04Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.12.13",
+        "cache": "empty"
+      },
+      "source": "software-pass inst-base312.txt",
+      "cadence": "weekly",
+      "note": "a second cold run took 41.3 s; network-bound"
+    },
+    {
+      "id": "install.vibey-engine.download_bytes",
+      "label": "vibey-engine download",
+      "value": 209577992,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "pip download vibey-engine==3.0.0 (macOS arm64, py3.14); sum of artifact bytes",
+      "measured_at": "2026-09-29T22:28:22Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "files": 76,
+        "python": "3.14",
+        "platform": "macOS arm64"
+      },
+      "source": "network-pass 11-download-base-pip.txt",
+      "cadence": "weekly",
+      "note": "240,611,368 B on Linux x86_64 py3.12 (resolution plus HEAD sizes, not an install)"
+    },
+    {
+      "id": "install.vibey-engine.packages",
+      "label": "vibey-engine packages",
+      "value": 76,
+      "unit": "count",
+      "status": "measured",
+      "method": "uv pip list | wc -l",
+      "measured_at": "2026-09-29T22:27:04Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.12.13"
+      },
+      "source": "software-pass inst-base312.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.vibey-engine.uv_cache_bytes",
+      "label": "vibey-engine uv cache",
+      "value": 678182912,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sk of UV_CACHE_DIR after uv pip install vibey-engine==3.0.0 with an empty cache",
+      "measured_at": "2026-09-29T22:27:25Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.14.7",
+        "cache": "empty"
+      },
+      "source": "network-pass 10-install-base-uv.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.vibey-engine.venv_bytes",
+      "label": "vibey-engine installed size",
+      "value": 659554304,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sh after the install above",
+      "measured_at": "2026-09-29T22:27:04Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.12.13"
+      },
+      "source": "software-pass inst-base312.txt",
+      "cadence": "weekly",
+      "note": "du -sh reported 629M (rounded to the MiB)"
+    },
+    {
+      "id": "install.vibey-engine[hub].cold_s",
+      "label": "vibey-engine[hub] cold install",
+      "value": 25.57,
+      "unit": "s",
+      "status": "measured",
+      "method": "uv venv -p 3.12; uv pip install <engine wheel>[hub]",
+      "measured_at": "2026-09-29T22:32:49Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.12.13"
+      },
+      "source": "software-pass inst-x-hub.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.vibey-engine[hub].download_bytes",
+      "label": "vibey-engine[hub] download",
+      "value": 211015918,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "pip resolution report plus HEAD Content-Length of every artifact (macOS arm64, py3.14)",
+      "measured_at": "2026-09-29T22:36:36Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "files": 80,
+        "python": "3.14",
+        "platform": "macOS arm64"
+      },
+      "source": "network-pass 12-install-sizes-by-config.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.vibey-engine[hub].packages",
+      "label": "vibey-engine[hub] packages",
+      "value": 80,
+      "unit": "count",
+      "status": "measured",
+      "method": "uv pip list | wc -l",
+      "measured_at": "2026-09-29T22:32:49Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.12.13"
+      },
+      "source": "software-pass inst-x-hub.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "install.vibey-engine[hub].venv_bytes",
+      "label": "vibey-engine[hub] installed size",
+      "value": 665845760,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "du -sh after the install above",
+      "measured_at": "2026-09-29T22:32:49Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "python": "3.12.13"
+      },
+      "source": "software-pass inst-x-hub.txt",
+      "cadence": "weekly",
+      "note": "du -sh reported 635M (rounded to the MiB)"
+    },
+    {
+      "id": "model.gpt-oss:20b.download_bytes",
+      "label": "gpt-oss:20b download",
+      "value": 13793441244,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "registry manifest: sum of layer and config sizes (nothing pulled)",
+      "measured_at": "2026-09-29T22:39:50Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "network-pass 21-ollama-registry-manifests.txt",
+      "cadence": "weekly",
+      "note": "matches the local blob plus 19,100 B of template, license and params"
+    },
+    {
+      "id": "model.qwen3:14b.download_bytes",
+      "label": "qwen3:14b download",
+      "value": 9276198565,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "registry manifest: sum of layer and config sizes (nothing pulled)",
+      "measured_at": "2026-09-29T22:39:50Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "network-pass 21-ollama-registry-manifests.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "network.runtime_internet",
+      "label": "Internet needed at runtime on the sovereign path",
+      "value": "none",
+      "unit": "verdict",
+      "status": "measured",
+      "method": "offline harness: every proxy pointed at a dead loopback port inside the macOS sandbox; migrate, new, work --provider gptossloop (model-free stub), answer, worker --once, status and serve all ran with all egress dead",
+      "measured_at": "2026-09-29T22:57:00Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "postgres": "local 18.4",
+        "ollama": "local 0.34.4"
+      },
+      "source": "network-pass 31, 40-53, 60-63",
+      "cadence": "once"
+    },
+    {
+      "id": "ollama.version",
+      "label": "Ollama server",
+      "value": "0.34.4",
+      "unit": "version",
+      "status": "measured",
+      "method": "GET /api/version",
+      "measured_at": "2026-09-29T22:38:46Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "software-pass 11-ollama.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "postgres.empty_db_bytes",
+      "label": "Empty migrated database",
+      "value": 9025215,
+      "unit": "bytes",
+      "status": "measured",
+      "method": "pg_database_size after vibey migrate (20 migrations) on an empty database",
+      "measured_at": "2026-09-30T02:01:32Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "hardware-pass raw/42-scratch-db-growth.txt",
+      "cadence": "weekly",
+      "note": "dated by the evidence file that records it (raw/42)"
+    },
+    {
+      "id": "postgres.migrations_applied",
+      "label": "Migrations applied to an empty database",
+      "value": 20,
+      "unit": "count",
+      "status": "measured",
+      "method": "vibey migrate against a scratch PostgreSQL 18 cluster (source tree)",
+      "measured_at": "2026-09-29T22:43:20Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit": 1
+      },
+      "source": "software-pass 16-migrate-from-source.txt",
+      "cadence": "weekly",
+      "note": "exit 1 is the ledger-guard reconcile with no app role; all 20 migrations applied"
+    },
+    {
+      "id": "postgres.rss_peak_mib",
+      "label": "PostgreSQL summed RSS peak during vibey runs",
+      "value": 57.5,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "proc_rss_sampler.sh postgres (sum of RSS over all postgres processes, 1 Hz)",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "samples": 317
+      },
+      "source": "hardware-pass raw/41-postgres-rss-during-design.csv",
+      "cadence": "once",
+      "note": "56.2 MiB during the CLI runs, 57.5 MiB during the DESIGN calls; the larger is used"
+    },
+    {
+      "id": "postgres.server_version",
+      "label": "PostgreSQL server",
+      "value": "18.4",
+      "unit": "version",
+      "status": "measured",
+      "method": "SELECT version() (read-only)",
+      "measured_at": "2026-09-29T22:38:16Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "source": "software-pass 10-postgres.txt",
+      "cadence": "weekly",
+      "note": "PostgreSQL 14-17 were not available locally"
+    },
+    {
+      "id": "process.cli.new.max_rss_mib",
+      "label": "vibey new peak RSS",
+      "value": 75.2,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey new hw-cli-1-1790732597 --repo /var/folders/_8/kbndvzyd60dgqj2sq8rffpp00000gn/T/hw/proj/repo-cli-1-1790732597 --intake Add a greet() function that returns hello",
+      "measured_at": "2026-09-30T01:46:12.815Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          1.77,
+          2.92
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly",
+      "note": "largest single process in the tree (getrusage); worker/doctor include child engine doctors"
+    },
+    {
+      "id": "process.cli.new.wall_s",
+      "label": "vibey new wall",
+      "value": 0.34,
+      "unit": "s",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey new hw-cli-1-1790732597 --repo /var/folders/_8/kbndvzyd60dgqj2sq8rffpp00000gn/T/hw/proj/repo-cli-1-1790732597 --intake Add a greet() function that returns hello",
+      "measured_at": "2026-09-30T01:46:12.815Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          1.77,
+          2.92
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly"
+    },
+    {
+      "id": "process.cli.status.max_rss_mib",
+      "label": "vibey status peak RSS",
+      "value": 75.2,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey status",
+      "measured_at": "2026-09-30T01:47:16.022Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          1.24,
+          1.24
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly",
+      "note": "largest single process in the tree (getrusage); worker/doctor include child engine doctors"
+    },
+    {
+      "id": "process.cli.status.wall_s",
+      "label": "vibey status wall",
+      "value": 0.31,
+      "unit": "s",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey status",
+      "measured_at": "2026-09-30T01:47:16.022Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          1.24,
+          1.24
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly"
+    },
+    {
+      "id": "process.cli.version.max_rss_mib",
+      "label": "vibey version peak RSS",
+      "value": 73.4,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey --version",
+      "measured_at": "2026-09-30T01:43:14.104Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          2.92,
+          2.92
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly",
+      "note": "largest single process in the tree (getrusage); worker/doctor include child engine doctors"
+    },
+    {
+      "id": "process.cli.version.wall_s",
+      "label": "vibey version wall",
+      "value": 0.26,
+      "unit": "s",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey --version",
+      "measured_at": "2026-09-30T01:43:14.104Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          2.92,
+          2.92
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly"
+    },
+    {
+      "id": "process.cli.worker_once.max_rss_mib",
+      "label": "vibey worker once peak RSS",
+      "value": 275.8,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey worker --once --provider scripted",
+      "measured_at": "2026-09-30T01:46:13.357Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          1.95,
+          2.92
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly",
+      "note": "largest single process in the tree (getrusage); worker/doctor include child engine doctors"
+    },
+    {
+      "id": "process.cli.worker_once.wall_s",
+      "label": "vibey worker once wall",
+      "value": 61.59,
+      "unit": "s",
+      "status": "measured",
+      "method": "/usr/bin/time -l vibey worker --once --provider scripted",
+      "measured_at": "2026-09-30T01:46:13.357Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "exit_codes": [
+          "0"
+        ],
+        "load1_range": [
+          1.95,
+          2.92
+        ],
+        "n": 3
+      },
+      "source": "hardware-pass raw/33-cli-baseline.jsonl",
+      "cadence": "weekly"
+    },
+    {
+      "id": "process.krypton.idle_rss_mib",
+      "label": "krypton --no-browser (launcher + hub) idle RSS",
+      "value": 138.0,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "sum of RSS over the process tree, 1 Hz for 20 s idle",
+      "measured_at": "2026-09-30T01:51:37.504Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "load1": 2.48,
+        "load5": 2.33,
+        "memory_free_pct": 81,
+        "swap": "total = 17408.00M  used = 16138.75M  free = 1269.25M  (encrypted)",
+        "top3_cpu": [
+          "com.docker.sailor 84.7%",
+          "spotlightknowledged.updater 9.2%",
+          "claude 3.7%"
+        ],
+        "wired_gib": 2.83
+      },
+      "source": "hardware-pass raw/34-hub-krypton-idle.jsonl",
+      "cadence": "weekly",
+      "note": "largest of three runs [138.0, 125.3, 125.2]"
+    },
+    {
+      "id": "process.krypton.startup_s",
+      "label": "krypton --no-browser (launcher + hub) start-up",
+      "value": 0.77,
+      "unit": "s",
+      "status": "measured",
+      "method": "--no-browser --port 18776 (until /health/live 200)",
+      "measured_at": "2026-09-30T01:51:16.113Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "load1": 2.87,
+        "load5": 2.42,
+        "memory_free_pct": 81,
+        "swap": "total = 17408.00M  used = 16122.75M  free = 1285.25M  (encrypted)",
+        "top3_cpu": [
+          "com.docker.sailor 87.5%",
+          "syspolicyd 5.3%",
+          "trustd 4.8%"
+        ],
+        "wired_gib": 2.832
+      },
+      "source": "hardware-pass raw/34-hub-krypton-idle.jsonl",
+      "cadence": "weekly",
+      "note": "median of three runs (0.74-4.08 s; 4.08 s was the cold first start)"
+    },
+    {
+      "id": "process.serve.idle_rss_mib",
+      "label": "vibey serve (hub) idle RSS",
+      "value": 101.9,
+      "unit": "MiB",
+      "status": "measured",
+      "method": "sum of RSS over the process tree, 1 Hz for 20 s idle",
+      "measured_at": "2026-09-30T01:50:30.343Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "load1": 2.6,
+        "load5": 2.35,
+        "memory_free_pct": 81,
+        "swap": "total = 17408.00M  used = 16146.75M  free = 1261.25M  (encrypted)",
+        "top3_cpu": [
+          "com.docker.sailor 116.6%",
+          "com.docker.backend 14.3%",
+          "claude 13.2%"
+        ],
+        "wired_gib": 2.823
+      },
+      "source": "hardware-pass raw/34-hub-krypton-idle.jsonl",
+      "cadence": "weekly",
+      "note": "largest of three runs [101.9, 93.8, 94.0]"
+    },
+    {
+      "id": "process.serve.startup_s",
+      "label": "vibey serve (hub) start-up",
+      "value": 0.44,
+      "unit": "s",
+      "status": "measured",
+      "method": "/Users/adam/git/vibey-storm/delivery-run/.venv/bin/vibey serve (until /health/live 200)",
+      "measured_at": "2026-09-30T01:50:09.410Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "external_busy": false,
+        "load1": 2.12,
+        "load5": 2.26,
+        "memory_free_pct": 81,
+        "swap": "total = 17408.00M  used = 16146.75M  free = 1261.25M  (encrypted)",
+        "top3_cpu": [
+          "com.docker.sailor 95.0%",
+          "claude 4.3%",
+          "Spotify Helper (Renderer) 2.0%"
+        ],
+        "wired_gib": 2.836
+      },
+      "source": "hardware-pass raw/34-hub-krypton-idle.jsonl",
+      "cadence": "weekly",
+      "note": "median of three runs (0.42-0.46 s)"
+    },
+    {
+      "id": "python.3.11.install",
+      "label": "vibey-engine on Python 3.11",
+      "value": "refused",
+      "unit": "verdict",
+      "status": "measured",
+      "method": "uv venv -p {v}; uv pip install <engine wheel> <krypton wheel>; vibey --version",
+      "measured_at": "2026-09-29T22:27:50Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "interpreter": "3.11.15"
+      },
+      "source": "software-pass inst-py3.11.txt",
+      "cadence": "weekly",
+      "note": "the resolver refuses it: vibey-engine requires Python>=3.12"
+    },
+    {
+      "id": "python.3.12.install",
+      "label": "vibey-engine on Python 3.12",
+      "value": "works",
+      "unit": "verdict",
+      "status": "measured",
+      "method": "uv venv -p {v}; uv pip install <engine wheel> <krypton wheel>; vibey --version",
+      "measured_at": "2026-09-29T22:29:22Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "interpreter": "3.12.13"
+      },
+      "source": "software-pass inst-py3.12.txt, smoke-py3.12.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "python.3.13.install",
+      "label": "vibey-engine on Python 3.13",
+      "value": "works",
+      "unit": "verdict",
+      "status": "measured",
+      "method": "uv venv -p {v}; uv pip install <engine wheel> <krypton wheel>; vibey --version",
+      "measured_at": "2026-09-29T22:29:32Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "interpreter": "3.13.15"
+      },
+      "source": "software-pass inst-py3.13.txt, smoke-py3.13.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "python.3.14.install",
+      "label": "vibey-engine on Python 3.14",
+      "value": "works",
+      "unit": "verdict",
+      "status": "measured",
+      "method": "uv venv -p {v}; uv pip install <engine wheel> <krypton wheel>; vibey --version",
+      "measured_at": "2026-09-29T22:29:43Z",
+      "host": "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)",
+      "conditions": {
+        "interpreter": "3.14.7"
+      },
+      "source": "software-pass inst-py3.14.txt, smoke-py3.14.txt",
+      "cadence": "weekly"
+    },
+    {
+      "id": "python.floor",
+      "label": "Oldest Python vibey-engine installs and runs on",
+      "value": "3.12",
+      "unit": "version",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-29T22:29:43Z",
+      "cadence": "weekly",
+      "formula": "the oldest candidate whose verdict is `works`",
+      "inputs": {
+        "python.3.11.install": "refused",
+        "python.3.12.install": "works",
+        "python.3.13.install": "works",
+        "python.3.14.install": "works"
+      }
+    },
+    {
+      "id": "ram.16gb_verdict",
+      "label": "Can a 16 GB Mac run the sovereign model at vibey's contexts?",
+      "value": "insufficient",
+      "unit": "verdict",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "cadence": "weekly",
+      "formula": "insufficient when the DESIGN-only need exceeds 16 GiB",
+      "inputs": {
+        "ram.design_only_need_gib": 17.15
+      }
+    },
+    {
+      "id": "ram.design_only_need_gib",
+      "label": "Memory needed for DESIGN alone (conductor ceiling)",
+      "value": 17.15,
+      "unit": "GiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "cadence": "weekly",
+      "formula": "model@8192 + vibey side + OS headroom",
+      "inputs": {
+        "ram.model_process.ctx8192": 13.15,
+        "ram.vibey_side_gib": 0.5,
+        "assumption.os_headroom_gib": 3.5
+      }
+    },
+    {
+      "id": "ram.kv_per_token_kib",
+      "label": "KV cache growth per token",
+      "value": 24.0,
+      "unit": "KiB/token",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:14:42.714Z",
+      "cadence": "weekly",
+      "formula": "(KV@131072 - KV@4096) x 1024 / (131072 - 4096)",
+      "inputs": {
+        "bench.gpt-oss:20b.ctx131072.kv_mib": 3090,
+        "bench.gpt-oss:20b.ctx4096.kv_mib": 114
+      }
+    },
+    {
+      "id": "ram.minimum_gb",
+      "label": "Minimum memory (unified, as sold)",
+      "value": 24.0,
+      "unit": "GB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "cadence": "weekly",
+      "formula": "the smallest declared memory size >= the need",
+      "inputs": {
+        "ram.minimum_need_gib": 17.79
+      }
+    },
+    {
+      "id": "ram.minimum_need_gib",
+      "label": "Memory needed: model at the runner's window + vibey + OS",
+      "value": 17.79,
+      "unit": "GiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "cadence": "weekly",
+      "formula": "model@32768 + vibey side + OS headroom",
+      "inputs": {
+        "ram.model_process.ctx32768": 13.79,
+        "ram.vibey_side_gib": 0.5,
+        "assumption.os_headroom_gib": 3.5
+      }
+    },
+    {
+      "id": "ram.model_process.ctx131072",
+      "label": "gpt-oss:20b process memory at 131,072 tokens",
+      "value": 16.42,
+      "unit": "GiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:14:42.714Z",
+      "cadence": "weekly",
+      "formula": "(device + host model buffer + host compute buffer) / 1024",
+      "inputs": {
+        "bench.gpt-oss:20b.ctx131072.device_mib": 15566,
+        "bench.gpt-oss:20b.ctx131072.host_model_mib": 1104.61,
+        "bench.gpt-oss:20b.ctx131072.host_compute_mib": 140.02
+      }
+    },
+    {
+      "id": "ram.model_process.ctx32768",
+      "label": "gpt-oss:20b process memory at 32,768 tokens",
+      "value": 13.79,
+      "unit": "GiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:08:27.859Z",
+      "cadence": "weekly",
+      "formula": "(device + host model buffer + host compute buffer) / 1024",
+      "inputs": {
+        "bench.gpt-oss:20b.ctx32768.device_mib": 12974,
+        "bench.gpt-oss:20b.ctx32768.host_model_mib": 1104.61,
+        "bench.gpt-oss:20b.ctx32768.host_compute_mib": 44.02
+      }
+    },
+    {
+      "id": "ram.model_process.ctx8192",
+      "label": "gpt-oss:20b process memory at 8,192 tokens",
+      "value": 13.15,
+      "unit": "GiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T00:03:24.200Z",
+      "cadence": "weekly",
+      "formula": "(device + host model buffer + host compute buffer) / 1024",
+      "inputs": {
+        "bench.gpt-oss:20b.ctx8192.device_mib": 12339,
+        "bench.gpt-oss:20b.ctx8192.host_model_mib": 1104.61,
+        "bench.gpt-oss:20b.ctx8192.host_compute_mib": 20.02
+      }
+    },
+    {
+      "id": "ram.recommended_gb",
+      "label": "Recommended memory (unified, as sold)",
+      "value": 32.0,
+      "unit": "GB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "cadence": "weekly",
+      "formula": "the smallest declared memory size >= the recommended need",
+      "inputs": {
+        "ram.recommended_need_gib": 24.42
+      }
+    },
+    {
+      "id": "ram.recommended_need_gib",
+      "label": "Memory needed at the model's maximum window, with room for other apps",
+      "value": 24.42,
+      "unit": "GiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "cadence": "weekly",
+      "formula": "model@131072 + vibey side + OS headroom + apps headroom",
+      "inputs": {
+        "ram.model_process.ctx131072": 16.42,
+        "ram.vibey_side_gib": 0.5,
+        "assumption.os_headroom_gib": 3.5,
+        "assumption.apps_headroom_gib": 4.0
+      }
+    },
+    {
+      "id": "ram.vibey_side_gib",
+      "label": "vibey, the hub and Postgres beside the model",
+      "value": 0.5,
+      "unit": "GiB",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:44Z",
+      "cadence": "weekly",
+      "formula": "ceil((worker peak RSS + hub idle RSS + Postgres RSS peak) / 1024 / step) x step",
+      "inputs": {
+        "process.cli.worker_once.max_rss_mib": 275.8,
+        "process.serve.idle_rss_mib": 101.9,
+        "postgres.rss_peak_mib": 57.5,
+        "assumption.vibey_side_step_gib": 0.5
+      }
+    },
+    {
+      "id": "throughput.host_meets_recommended",
+      "label": "The measured host meets the recommended rates at depth",
+      "value": true,
+      "unit": "verdict",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:08:06.670Z",
+      "cadence": "weekly",
+      "formula": "measured prompt and generation rates at depth >= the recommended rates",
+      "inputs": {
+        "bench.gpt-oss:20b.depth.ctx32768.prompt_tok_s": 504.9,
+        "bench.gpt-oss:20b.depth.ctx32768.gen_tok_s": 26.6,
+        "assumption.recommended_prompt_tok_s": 500,
+        "assumption.recommended_gen_tok_s": 25
+      }
+    },
+    {
+      "id": "throughput.minimum.fits",
+      "label": "The minimum rates keep the worst BUILD turn within the timeout",
+      "value": true,
+      "unit": "verdict",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "cadence": "weekly",
+      "formula": "worst turn at the minimum rates <= per-request timeout",
+      "inputs": {
+        "throughput.minimum.turn_s": 512.0,
+        "declared.ollama_timeout_s": 900
+      }
+    },
+    {
+      "id": "throughput.minimum.turn_s",
+      "label": "Worst BUILD turn at the minimum rates",
+      "value": 512.0,
+      "unit": "s",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "cadence": "weekly",
+      "formula": "(window - reply) / minimum prompt rate + reply / minimum generation rate (must be <= timeout)",
+      "inputs": {
+        "declared.runner_context_window": 32768,
+        "declared.conductor_output_tokens": 2048,
+        "assumption.minimum_prompt_tok_s": 100,
+        "assumption.minimum_gen_tok_s": 10,
+        "declared.ollama_timeout_s": 900
+      }
+    },
+    {
+      "id": "throughput.recommended.turn_s",
+      "label": "Worst BUILD turn at the recommended rates",
+      "value": 143.4,
+      "unit": "s",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "cadence": "weekly",
+      "formula": "(window - reply) / recommended prompt rate + reply / recommended generation rate",
+      "inputs": {
+        "declared.runner_context_window": 32768,
+        "declared.conductor_output_tokens": 2048,
+        "assumption.recommended_prompt_tok_s": 500,
+        "assumption.recommended_gen_tok_s": 25
+      }
+    },
+    {
+      "id": "time.conductor_worst.cpu_s",
+      "label": "Conductor's worst call with its retry, CPU only",
+      "value": 1085.3,
+      "unit": "s",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.629Z",
+      "cadence": "weekly",
+      "formula": "(ceiling - reply) / CPU prompt rate + 2 x reply / CPU generation rate",
+      "inputs": {
+        "declared.conductor_context_max": 8192,
+        "declared.conductor_output_tokens": 2048,
+        "bench.gpt-oss:20b.cpu.ctx8192.prompt_tok_s": 55.8,
+        "bench.gpt-oss:20b.cpu.ctx8192.gen_tok_s": 4.2
+      }
+    },
+    {
+      "id": "time.design_call.cpu_s",
+      "label": "One DESIGN call, CPU only",
+      "value": 309.3,
+      "unit": "s",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:05.071Z",
+      "cadence": "weekly",
+      "formula": "DESIGN prompt / CPU prompt rate + DESIGN output / CPU generation rate",
+      "inputs": {
+        "design_call.prompt_tokens": 518,
+        "design_call.output_tokens_max": 1260,
+        "bench.gpt-oss:20b.cpu.ctx8192.prompt_tok_s": 55.8,
+        "bench.gpt-oss:20b.cpu.ctx8192.gen_tok_s": 4.2
+      }
+    },
+    {
+      "id": "time.design_call.gpu_s",
+      "label": "One DESIGN call on the GPU",
+      "value": 39.4,
+      "unit": "s",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T01:57:05.071Z",
+      "cadence": "weekly",
+      "formula": "DESIGN prompt / GPU prompt rate + DESIGN output / GPU generation rate",
+      "inputs": {
+        "design_call.prompt_tokens": 518,
+        "design_call.output_tokens_max": 1260,
+        "bench.gpt-oss:20b.gpu.ctx4096.prompt_tok_s": 826.6,
+        "bench.gpt-oss:20b.gpu.ctx4096.gen_tok_s": 32.5
+      }
+    },
+    {
+      "id": "time.runner_turn_worst.cpu_s",
+      "label": "Worst BUILD turn, CPU only (rates at 2k depth: optimistic)",
+      "value": 1038.2,
+      "unit": "s",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "cadence": "weekly",
+      "formula": "(window - reply) / CPU prompt rate + reply / CPU generation rate",
+      "inputs": {
+        "declared.runner_context_window": 32768,
+        "declared.conductor_output_tokens": 2048,
+        "bench.gpt-oss:20b.cpu.ctx8192.prompt_tok_s": 55.8,
+        "bench.gpt-oss:20b.cpu.ctx8192.gen_tok_s": 4.2
+      }
+    },
+    {
+      "id": "time.runner_turn_worst.gpu_s",
+      "label": "Worst BUILD turn on the GPU",
+      "value": 137.8,
+      "unit": "s",
+      "status": "derived",
+      "method": "derived",
+      "measured_at": "2026-09-30T02:37:27.630Z",
+      "cadence": "weekly",
+      "formula": "(window - reply) / prompt rate at depth + reply / generation rate at depth",
+      "inputs": {
+        "declared.runner_context_window": 32768,
+        "declared.conductor_output_tokens": 2048,
+        "bench.gpt-oss:20b.depth.ctx32768.prompt_tok_s": 504.9,
+        "bench.gpt-oss:20b.depth.ctx32768.gen_tok_s": 26.6
+      }
+    }
+  ]
+}

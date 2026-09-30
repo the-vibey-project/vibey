@@ -1,0 +1,123 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/minimum_specs.py (ADR-0051: configuration is declared
+# in TOML, never written into a source file). Every path, threshold, context size, model,
+# assumption and idle rule the weekly measurement uses is here, with the reason beside it.
+# Change a value here and run `python scripts/minimum_specs.py derive` then `render`: the
+# derived figures and every generated table follow, and `check` fails until they do.
+
+[minimum_specs]
+# The committed evidence record, and the two documents whose GENERATED blocks it feeds.
+record = "docs/architecture/evidence/minimum-specs.json"
+docs_page = "docs/reference/system-requirements.md"
+paper = "docs/paper.md"
+
+[minimum_specs.install]
+# Interpreters the Python floor probe tries, oldest first. A version below the declared
+# floor is expected to be refused; the probe records that as a measurement, not an error.
+python_candidates = ["3.11", "3.12", "3.13", "3.14"]
+# May uv download a CPython the host lacks (about 25 MB each)? "automatic" lets it, so
+# every candidate is tried; "never" keeps the probe to the interpreters the host has, and
+# a missing one is then recorded as skipped with that reason, never guessed.
+python_downloads = "automatic"
+# The interpreter the footprint installs run on (the CI gates run 3.12).
+footprint_python = "3.12"
+# The distributions built from this checkout and measured cold (fresh uv cache).
+engine_project = "."
+krypton_project = "clients/krypton-app"
+# Extras measured as their own install targets beside the base engine.
+engine_extras = ["hub"]
+install_timeout_s = 900
+
+[minimum_specs.postgres]
+# The environment variable holding a DSN that may CREATE and DROP a scratch database.
+# The probe creates `scratch_database`, migrates it, measures it and drops it. It never
+# drops a database it did not create, and it never touches any other database.
+admin_url_env = "VIBEY_SPECS_PG_ADMIN_URL"
+scratch_database = "vibey_specs_scratch"
+# Where the floor is declared in code; read, never duplicated here.
+floor_source = "src/vibey/infrastructure/postgres.py"
+floor_constant = "POSTGRES_MIN_MAJOR"
+
+[minimum_specs.ollama]
+url_env = "VIBEY_OLLAMA_URL"
+default_url = "http://127.0.0.1:11434"
+server_log = "~/.ollama/logs/server.log"
+registry = "https://registry.ollama.ai"
+sovereign_model = "gpt-oss:20b"
+optional_models = ["qwen3:14b"]
+# The Ollama.app bundle whose size the disk estimate counts (macOS); absent elsewhere.
+app_path = "/Applications/Ollama.app"
+
+[minimum_specs.bench]
+# Contexts the memory sweep loads the model at: the conductor's floor and ceiling, the
+# runner's default window, and the model's maximum (what `/v1` gets from a default-maxed
+# Ollama). The derivations read 8192, 32768 and 131072, so keep those three.
+contexts = [4096, 8192, 32768, 131072]
+# Throughput with the prompt filled to `fill` of the window (the runner's worst turn).
+depth_contexts = [32768]
+fill = 0.75
+# CPU only (`num_gpu` 0): the conductor's ceiling.
+cpu_contexts = [8192]
+prompt_tokens = 2000
+num_predict = 256
+runs = 3
+seed = 42
+chars_per_token = 4.83
+request_timeout_s = 3600
+
+[minimum_specs.idle]
+# The model measurements run only on an idle host: load1 at or below `max_load1`, no
+# inference request in the Ollama log for `quiet_window_s`, and `busy_command` (a shell
+# command; any output means busy) silent. Waits at most `max_wait_s`, then records the
+# model figures as skipped with the reason, and the previous values are kept as stale.
+max_load1 = 3.0
+quiet_window_s = 120
+max_wait_s = 1800
+poll_s = 30
+busy_command = ""
+
+[minimum_specs.processes]
+# The hub and launcher are started on these loopback ports, idle for `idle_s`, and sampled.
+serve_port = 18775
+krypton_port = 18776
+idle_s = 20
+startup_timeout_s = 90
+command_timeout_s = 300
+
+[minimum_specs.declared]
+# Where the client floors are declared; the probe reads them, it never restates them.
+vscode_manifest = "clients/vscode/package.json"
+app_manifest = "clients/app/package.json"
+desktop_meson = "clients/desktop/meson.build"
+engine_pyproject = "pyproject.toml"
+# The Node version the repository pins for development: the clients' recommended Node.
+node_version_file = ".node-version"
+# vibey's own limits the throughput thresholds are held against, read from the code.
+conductor_source = "src/vibey/infrastructure/engines/ollama_chat.py"
+runner_config_source = "src/vibey_runners/qwen/src/qwenloop/domain/config.py"
+
+[minimum_specs.assumptions]
+# Assumptions, not measurements. Each derived figure that uses one names it as an input.
+# macOS wired floor seen with no model loaded was 2.84-4.28 GiB on the measured host; a
+# headless Linux box probably needs less (not verified).
+os_headroom_gib = 3.5
+# An IDE, a browser or containers beside vibey, for the recommended size only.
+apps_headroom_gib = 4.0
+# The vibey side (worker + hub + Postgres) is rounded up to this step.
+vibey_side_step_gib = 0.5
+# Memory configurations a need is rounded up to (unified memory, GB as sold).
+memory_sizes_gb = [16, 24, 32, 48, 64, 96, 128]
+# Discrete-GPU memory sizes a device need is rounded up to (not verified on CUDA).
+vram_sizes_gb = [8, 12, 16, 24, 32, 48, 80]
+# The throughput thresholds held against vibey's per-request timeout. The derivation
+# computes the worst-case turn time at each and fails loudly if it no longer fits.
+minimum_gen_tok_s = 10
+minimum_prompt_tok_s = 100
+recommended_gen_tok_s = 25
+recommended_prompt_tok_s = 500
+# Disk: worktrees counted into the minimum and the recommended free space, and the
+# Postgres data allowance (max_wal_size's default is 1 GB).
+minimum_worktrees = 10
+recommended_worktrees = 50
+postgres_data_allowance_gb = 1.0
