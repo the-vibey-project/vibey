@@ -209,6 +209,25 @@ def test_abandon_stops_everything_and_says_what_it_stopped(tmp_path: Path) -> No
     assert kinds[-2:] == [EventKind.PHASE_TRANSITIONED, EventKind.GATE_WITHDRAWN]
 
 
+def test_a_project_still_in_intake_is_abandoned_cleanly(tmp_path: Path) -> None:
+    """A dispatch that never reached DESIGN leaves a project in intake; it ends like any
+    other: jobs cancelled, gates withdrawn, one move from intake to abandoned."""
+    pid, ready, gate = _project(tmp_path, Phase.INTAKE)
+    _, _, kinds_before = asyncio.run(_state(pid))
+
+    code, out = _run(str(pid), "--reason", "dispatch never reached design")
+
+    assert code == 0, out
+    lines = out.splitlines()
+    assert lines[0] == f"Abandoned greeter ({pid}): intake -> abandoned, cycle 1."
+    assert f"    {ready} build.implement (was ready)" in lines
+    assert lines[-1] == f"    {gate} defect"
+    phase, states, kinds = asyncio.run(_state(pid))
+    assert (phase, states) == ("abandoned", ["cancelled", "cancelled"])
+    appended = kinds[len(kinds_before) :]
+    assert appended == [EventKind.PHASE_TRANSITIONED, EventKind.GATE_WITHDRAWN]
+
+
 def test_the_json_is_a_fixed_contract(tmp_path: Path) -> None:
     pid, ready, gate = _project(tmp_path)
 

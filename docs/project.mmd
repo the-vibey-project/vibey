@@ -179,7 +179,7 @@ flowchart TB
         PDeployReview -.->|deployment details changed| PDeployDesign
         PDeployReview -.->|unambiguous deploy retry| PDeployExecute
         Abandoned(["ABANDONED"])
-        PDesign & PVisual & PBuild & PReview & PDeployDesign & PDeployExecute & PDeployReview -.-> Abandoned
+        Intake & PDesign & PVisual & PBuild & PReview & PDeployDesign & PDeployExecute & PDeployReview -.->|"vibey abandon"| Abandoned
     end
 
     ADesign --> PDesign

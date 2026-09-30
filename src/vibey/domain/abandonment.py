@@ -1,8 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Abandoning a project (`vibey abandon`): the operator's clean exit.
 
-Abandoned is a terminal phase the machine allows from every phase past intake and short
-of done (`phase.py`), and nothing in vibey reaches it on its own -- a person decides a
+Abandoned is a terminal phase the machine allows from every phase short of done, intake
+included (`phase.py`), and nothing in vibey reaches it on its own -- a person decides a
 project is not going to finish. This decides whether it may, through the one guard every
 phase move takes (`evaluate_transition`), and names what the decision records:
 

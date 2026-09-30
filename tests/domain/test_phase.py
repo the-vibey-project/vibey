@@ -561,3 +561,25 @@ def test_terminal_phases_have_no_outgoing_edges_except_done_deploy_loop() -> Non
     from vibey.domain.phase import _EDGES  # noqa: PLC0415
 
     assert _EDGES[Phase.ABANDONED] == frozenset()
+
+
+def test_intake_may_move_to_abandoned_unguarded() -> None:
+    """A project stuck before DESIGN (a dispatch whose interview never began) is ended the
+    way every other non-terminal project is: the operator abandons it."""
+    request = TransitionRequest(
+        to=Phase.ABANDONED, reason="never reached design", evidence=TransitionEvidence()
+    )
+
+    assert evaluate_transition(_state(Phase.INTAKE), request) == ALLOWED
+    assert evaluate_transition(_state(Phase.INTAKE, cycle=11, max_cycles=10), request) == ALLOWED
+
+
+def test_every_non_terminal_phase_has_an_edge_to_abandoned() -> None:
+    from vibey.domain.phase import _EDGES  # noqa: PLC0415 - internal test of the edge table
+
+    missing = [
+        phase for phase in Phase if phase not in TERMINAL and Phase.ABANDONED not in _EDGES[phase]
+    ]
+
+    assert missing == []
+    assert Phase.ABANDONED not in _EDGES[Phase.DONE]

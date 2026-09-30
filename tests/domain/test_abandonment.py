@@ -18,7 +18,7 @@ from vibey.domain.abandonment import (
 from vibey.domain.errors import AbandonmentRefused, InvalidAbandonment
 from vibey.domain.interfaces import AbandonmentPolicyInterface
 from vibey.domain.job import JobState
-from vibey.domain.phase import Phase, PhaseState, UnrecognizedPhase
+from vibey.domain.phase import TERMINAL, Phase, PhaseState, UnrecognizedPhase
 
 AT = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
 PROJECT = UUID("9692abab-0000-4000-8000-000000000001")
@@ -47,21 +47,15 @@ def test_the_guard_and_the_unsettled_states_are_the_documented_ones() -> None:
     assert settled == {JobState.SUCCEEDED, JobState.FAILED, JobState.CANCELLED}
 
 
-@pytest.mark.parametrize(
-    "phase",
-    [
-        Phase.DESIGN,
-        Phase.VISUAL_DESIGN,
-        Phase.BUILD,
-        Phase.REVIEW,
-        Phase.DEPLOY,
-        Phase.DEPLOY_DESIGN,
-        Phase.DEPLOY_EXECUTE,
-        Phase.DEPLOY_REVIEW,
-    ],
-)
-def test_every_phase_with_an_edge_to_abandoned_may_be_abandoned(phase: Phase) -> None:
+@pytest.mark.parametrize("phase", sorted(set(Phase) - TERMINAL))
+def test_every_phase_short_of_an_ending_may_be_abandoned(phase: Phase) -> None:
+    """Derived from the enum, so a phase added later is covered without being listed --
+    intake included: a project whose dispatch never reached DESIGN ends like any other."""
     assert ABANDONMENT_POLICY.decide(_state(phase)) is AbandonmentVerdict.ABANDON
+
+
+def test_a_project_still_in_intake_may_be_abandoned() -> None:
+    assert ABANDONMENT_POLICY.decide(_state(Phase.INTAKE)) is AbandonmentVerdict.ABANDON
 
 
 def test_a_project_past_its_cycle_cap_may_still_be_abandoned() -> None:
@@ -81,11 +75,6 @@ def test_an_abandoned_project_is_already_abandoned_not_refused() -> None:
 def test_a_done_project_is_refused_as_a_different_ending() -> None:
     with pytest.raises(AbandonmentRefused, match="the project is done"):
         ABANDONMENT_POLICY.decide(_state(Phase.DONE))
-
-
-def test_a_phase_with_no_edge_to_abandoned_is_refused_by_the_phase_machine() -> None:
-    with pytest.raises(AbandonmentRefused, match="'intake': intake -> abandoned is not a legal"):
-        ABANDONMENT_POLICY.decide(_state(Phase.INTAKE))
 
 
 def test_a_phase_this_vibey_does_not_know_is_refused() -> None:

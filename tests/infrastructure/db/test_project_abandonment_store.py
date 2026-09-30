@@ -306,13 +306,49 @@ async def test_two_abandonments_racing_serialise_and_exactly_one_writes(
     assert len(moves) == 1 and moves[0].provenance is Provenance.TRUSTED
 
 
-@pytest.mark.parametrize(
-    ("phase", "why"),
-    [("done", "the project is done"), ("intake", "intake -> abandoned is not a legal edge")],
-)
-async def test_a_project_that_cannot_be_abandoned_is_refused_and_nothing_is_written(
-    migrated_pool: asyncpg.Pool, project_id: UUID, phase: str, why: str
+async def test_a_project_still_in_intake_is_abandoned_like_any_other(
+    migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
+    """A dispatch that never reached DESIGN leaves a project in intake: it stops cleanly."""
+    ready = await _job(migrated_pool, project_id, "ready")
+    gate = await _gate(migrated_pool, project_id, None, "approval")
+    await _set_phase(migrated_pool, project_id, "intake")
+    before = await _events(migrated_pool, project_id)
+
+    report = await _store(migrated_pool).abandon(
+        project_id, reason="dispatch never reached design", by="adam", account="adam"
+    )
+
+    assert (report.left, report.project.phase, report.written) == (
+        Phase.INTAKE,
+        Phase.ABANDONED,
+        True,
+    )
+    assert [job.id for job in report.jobs] == [ready]
+    assert [g.gate_id for g in report.gates] == [gate]
+    job = await _row(migrated_pool, "SELECT state::text AS s FROM job WHERE id = $1", ready)
+    assert job["s"] == "cancelled"
+    assert await PostgresHumanGateRepository(migrated_pool).open_for_project(project_id) == ()
+    after = await _events(migrated_pool, project_id)
+    assert after[: len(before)] == before
+    appended = after[len(before) :]
+    assert [event["kind"] for event in appended] == [
+        EventKind.PHASE_TRANSITIONED.value,
+        EventKind.GATE_WITHDRAWN.value,
+    ]
+    move = json.loads(appended[0]["payload"])
+    assert (move["from"], move["to"], move["guard"]) == (
+        "intake",
+        "abandoned",
+        "operator abandoned",
+    )
+    assert (move["cancelled_jobs"], move["withdrawn_gates"]) == ([str(ready)], [str(gate)])
+
+
+async def test_a_done_project_is_refused_and_nothing_is_written(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    phase, why = "done", "the project is done"
     await _a_project_mid_build(migrated_pool, project_id)
     await _set_phase(migrated_pool, project_id, phase)
     before = await _counts(migrated_pool, project_id)

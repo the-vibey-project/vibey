@@ -83,7 +83,10 @@ INTERACTIVE: frozenset[Phase] = frozenset(
 
 # The legal edges of the phase machine, independent of guard evaluation.
 _EDGES: dict[Phase, frozenset[Phase]] = {
-    Phase.INTAKE: frozenset({Phase.DESIGN}),
+    # A project can stall before DESIGN (a dispatch whose interview never started), and
+    # the operator must be able to end it like any other: every non-terminal phase has
+    # an edge to ABANDONED.
+    Phase.INTAKE: frozenset({Phase.DESIGN, Phase.ABANDONED}),
     Phase.DESIGN: frozenset({Phase.BUILD, Phase.VISUAL_DESIGN, Phase.ABANDONED}),
     Phase.VISUAL_DESIGN: frozenset({Phase.BUILD, Phase.ABANDONED}),
     Phase.BUILD: frozenset({Phase.REVIEW, Phase.DESIGN, Phase.ABANDONED}),

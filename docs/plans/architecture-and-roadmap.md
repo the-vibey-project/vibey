@@ -359,6 +359,7 @@ deployment execution. §9.3 covers escalation ladders.
 stateDiagram-v2
     [*] --> INTAKE
     INTAKE --> DESIGN: project created
+    INTAKE --> ABANDONED: user cancels<br/>(stalled before DESIGN)
 
     DESIGN --> VISUAL_DESIGN: user opts into visual design
     DESIGN --> BUILD: user declines visual design
