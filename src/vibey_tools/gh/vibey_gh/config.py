@@ -570,6 +570,13 @@ class PrAutomationFallbackConfig:
     # reason; 1 never splits. Bounds the time a review may take: at most this many requests,
     # each up to `timeout_seconds`, each retried as below.
     max_chunks: int = 6
+    # Whether a hunk that only adds lines -- a new file's `@@ -0,0 +1,N @@`, or an insertion
+    # -- and is too large for one part is split between lines into labelled pieces, each a
+    # part held to every guard above, rather than refused. The 3.1.0 promotion gave no
+    # verdict because a new 136,308-character file was one hunk, so any pull request adding
+    # a large file went to a human. A hunk with context or removed lines is never split, and
+    # one line too long for a part alone is still refused. false restores the refusal.
+    split_added_hunks: bool = True
     # Further attempts after the model could not be reached or did not answer in time --
     # never after a refusal or an answer that could not be read. #1241 went to a human on
     # one "timed out". 0 never retries.
@@ -651,6 +658,8 @@ class PrAutomationFallbackConfig:
             raise ValueError(
                 "pr_automation.fallback.max_chunks must be a whole number from 1 to 64"
             )
+        if type(self.split_added_hunks) is not bool:
+            raise ValueError("pr_automation.fallback.split_added_hunks must be true or false")
         if type(self.retries) is not int or not 0 <= self.retries <= 5:
             raise ValueError("pr_automation.fallback.retries must be a whole number from 0 to 5")
         if (
@@ -2776,6 +2785,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             chars_per_token=fallback.get("chars_per_token", 3),
             think=fallback.get("think", ""),
             max_chunks=fallback.get("max_chunks", 6),
+            split_added_hunks=fallback.get("split_added_hunks", True),
             retries=fallback.get("retries", 1),
             retry_backoff_seconds=fallback.get("retry_backoff_seconds", 30),
         ),

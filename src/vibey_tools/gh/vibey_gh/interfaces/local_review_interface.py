@@ -147,10 +147,42 @@ class DiffPartInterface(Protocol):
     @property
     def paths(self) -> tuple[str, ...]: ...
 
+    @property
+    def split(self) -> tuple[str, ...]:
+        """The files whose added hunk was split at line boundaries and has a piece in this
+        part; empty when every hunk this part carries is whole."""
+        ...
+
+
+@runtime_checkable
+class AddedHunkSplitterInterface(Protocol):
+    """Splits a hunk that only adds lines -- a new file's, or an insertion -- at line
+    boundaries, so a hunk larger than one part can still be reviewed whole across parts."""
+
+    def added_only(self, hunk: str) -> bool:
+        """Whether `hunk` (its `@@` header and its body) only adds lines, and its header
+        agrees: no old lines, and exactly as many new lines as the body adds. A hunk with a
+        context or removed line is never split -- the model must see a changed region whole."""
+        ...
+
+    def pieces(self, header: str, hunk: str, budget: int, where: str) -> list[str] | None:
+        """`hunk` as consecutive pieces, each a hunk of its own with a synthesized `@@`
+        header that numbers its new-side lines truly and says which piece of how many it
+        is, and each at most `budget` characters with the file's `header` before it. None
+        when `hunk` is not `added_only`, so the caller refuses it as before. Raises
+        `ReviewRefused` when one line cannot fit a part alone: a line is never cut."""
+        ...
+
 
 @runtime_checkable
 class DiffChunkerInterface(Protocol):
     """Splits a unified diff into parts a model can review whole: by file, then by hunk."""
+
+    @property
+    def split_added_hunks(self) -> bool:
+        """Whether a hunk that only adds lines and is too large for one part is split at
+        line boundaries (`AddedHunkSplitterInterface`) rather than refused."""
+        ...
 
     def sections(self, diff: str) -> list[tuple[str, str]]:
         """`(path, text)` for each file in `diff`, in order. Text before the first file
@@ -161,7 +193,9 @@ class DiffChunkerInterface(Protocol):
     def parts(self, diff: str, budget: int) -> Sequence[DiffPartInterface]:
         """Each file whole when it fits `budget` characters, else split between its hunks
         with its header repeated before each run. A file with no hunk boundary, or one hunk
-        with its header, larger than `budget` is refused (`ReviewRefused`) -- never cut."""
+        with its header, larger than `budget` is refused (`ReviewRefused`) -- never cut --
+        except, with `split_added_hunks`, a hunk that only adds lines, which is split at
+        line boundaries into labelled pieces; one line too large alone is still refused."""
         ...
 
     def chunks(self, diff: str, budget: int) -> Sequence[DiffPartInterface]:

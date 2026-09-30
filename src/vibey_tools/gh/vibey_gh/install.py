@@ -321,6 +321,11 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     # How a diff too large for one request is reviewed in parts, and how a transport
     # failure is retried: bounds the lane declares rather than numbers the step compiles in.
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MAX_CHUNKS__", str(fallback.max_chunks))
+    # A switch, rendered as whichever of its two spellings the repository declares.
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_SPLIT_ADDED_HUNKS__",
+        "--split-added-hunks" if fallback.split_added_hunks else "--no-split-added-hunks",
+    )
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_RETRIES__", str(fallback.retries))
     wanted = wanted.replace(
         "__VIBEY_GH_FALLBACK_RETRY_BACKOFF_SECONDS__", str(fallback.retry_backoff_seconds)

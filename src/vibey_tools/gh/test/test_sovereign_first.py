@@ -2290,9 +2290,18 @@ def test_the_review_is_bounded_by_what_the_repository_declares(tmp_path):
     cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(fallback=fallback))
     text = render_workflow(WORKFLOWS / "pr-review.yml", cfg)
 
-    assert "--max-chunks 3 \\\n                --retries 2 \\\n" in text
+    assert (
+        "--max-chunks 3 \\\n                --split-added-hunks \\\n                --retries 2 \\\n"
+        in text
+    )
     assert "--retry-backoff-seconds 5 \\\n" in text
     assert '--head-sha "$HEAD_SHA"' in text
+    # The switch renders as whichever spelling the repository declares, never a bare value.
+    off = PrAutomationFallbackConfig(split_added_hunks=False)
+    cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(fallback=off))
+    rendered = render_workflow(WORKFLOWS / "pr-review.yml", cfg)
+    assert "                --no-split-added-hunks \\\n" in rendered
+    assert "__VIBEY_GH_FALLBACK_SPLIT_ADDED_HUNKS__" not in rendered
 
 
 def test_the_diff_reviewed_is_the_evaluated_heads(tmp_path):

@@ -1537,6 +1537,12 @@ def _local_review(args) -> int:
     ):
         if value is not None:
             forwarded += [flag, str(value)]
+    # A switch, not a value: forwarded only when given, so the configuration decides
+    # otherwise.
+    if args.split_added_hunks is not None:
+        forwarded.append(
+            "--split-added-hunks" if args.split_added_hunks else "--no-split-added-hunks"
+        )
     return local_review.review(forwarded)
 
 
@@ -2087,6 +2093,15 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "override [pr_automation.fallback] max_chunks: the most parts a diff too large"
             " for one request is reviewed in"
+        ),
+    )
+    local.add_argument(
+        "--split-added-hunks",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "override [pr_automation.fallback] split_added_hunks: split a hunk that only adds"
+            " lines and is too large for one part between lines, rather than refuse it"
         ),
     )
     local.add_argument(

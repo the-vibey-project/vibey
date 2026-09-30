@@ -149,6 +149,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **gh:** the sovereign review no longer gives up on a pull request that adds a large file.
+  On the 3.1.0 promotion (head fa3b391703ff) `vibey-gh local-review` gave no verdict: the
+  new `scripts/minimum_specs.py` was one `@@ -0,0 +1,N @@` hunk of 136,308 characters with
+  its header, larger than the 100,852 one part could carry, and a hunk is never cut, so the
+  gate asked a human. A hunk that only adds lines is now split between lines into pieces,
+  each with the file header, a synthesized `@@` header numbering its own new-side lines,
+  and a label saying it is piece k of m of one added hunk. Each piece is a part held to
+  every existing guard, pieces past `max_chunks` are refused naming the split file, and a
+  pass still needs every part to pass at the one head reviewed. A hunk with context or
+  removed lines is never split, and a line too long for a part alone is still refused.
+  `[pr_automation.fallback] split_added_hunks` (default `true`) declares it, and
+  `pr-review.yml` passes it as `--split-added-hunks`.
+
 * **worker:** with `-j 2` or more, a drive loop that raises now stops its sibling loops
   before the worker closes the job notifier and the database pool. A bare `asyncio.gather`
   left them claiming work under a closing pool, with `asyncio.run`'s shutdown left to cancel

@@ -560,6 +560,8 @@ jobs:
           #
           # A diff too large for one request is reviewed in at most `max_chunks` parts, each
           # held to the same guards, and a pass needs every part to pass at this exact head.
+          # With `split_added_hunks`, a hunk that only adds lines (a new file's) and is too
+          # large for one part is split between lines into labelled pieces, each a part.
           # A model that could not be reached or timed out is retried `retries` times after
           # a doubling backoff. Whatever happens is also written as a code to the outcome
           # record, so why a review gave no verdict can be counted, not only read.
@@ -576,6 +578,7 @@ jobs:
                 --chars-per-token 3 \
                 --think '' \
                 --max-chunks 6 \
+                --split-added-hunks \
                 --retries 1 \
                 --retry-backoff-seconds 30 \
                 --head-sha "$HEAD_SHA" \

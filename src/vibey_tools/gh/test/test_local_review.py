@@ -1619,6 +1619,279 @@ def test_a_file_with_no_hunk_to_split_at_is_refused_naming_it():
     assert alone.value.whole is True and "the diff (900 characters)" in str(alone.value)
 
 
+def _new_file(path: str, lines: list[str], *, tail: str = "") -> str:
+    """A unified diff adding `path` whole: one `@@ -0,0 +1,N @@` hunk, as git writes it."""
+    header = (
+        f"diff --git a/{path} b/{path}\nnew file mode 100644\nindex 0000000..1234567\n"
+        f"--- /dev/null\n+++ b/{path}\n"
+    )
+    return header + f"@@ -0,0 +1,{len(lines)} @@\n" + "".join(f"+{line}\n" for line in lines) + tail
+
+
+_PIECE_HEADER = re.compile(
+    r"^@@ -(\d+),0 \+(\d+),(\d+) @@(.*?) \[piece (\d+) of (\d+) of one added hunk: new lines"
+    r" (\d+)-(\d+) of (\d+)-(\d+)\."
+)
+
+
+def _pieces_of(part_text: str) -> list[re.Match]:
+    return [
+        match for line in part_text.split("\n") if (match := _PIECE_HEADER.match(line)) is not None
+    ]
+
+
+def test_a_new_file_larger_than_a_part_is_split_between_lines_into_labelled_pieces():
+    """The 3.1.0 promotion gave no verdict: `scripts/minimum_specs.py` was new, so its
+    136,308 characters were one `@@ -0,0 +1,N @@` hunk, larger than the 100,852 a part could
+    carry. A hunk that only adds lines is now split between lines, each piece a hunk of its
+    own whose header numbers its lines truly and says which piece of how many it is."""
+    path = "scripts/minimum_specs.py"
+    lines = [f"line {n:05d} " + "x" * 60 for n in range(1, 1866)]
+    diff = _new_file(path, lines)
+    assert 136_000 < len(diff) < 137_000
+    budget = 100_852
+
+    parts = local_review.DiffChunker().chunks(diff, budget)
+
+    assert len(parts) == 2
+    header = diff[: diff.index("@@")]
+    covered: list[int] = []
+    for index, part in enumerate(parts, 1):
+        assert len(part.text) <= budget
+        assert part.text.startswith(header), "every piece carries the file header"
+        assert part.paths == (path,) and part.split == (path,)
+        (piece,) = _pieces_of(part.text)
+        old, first, size, section, number, count, low, high, start, end = piece.groups()
+        assert (old, section, int(number), int(count)) == ("0", "", index, 2)
+        assert (int(low), int(high)) == (int(first), int(first) + int(size) - 1)
+        assert (int(start), int(end)) == (1, len(lines))
+        body = [
+            row[1:]
+            for row in part.text.split("\n")
+            if row.startswith("+") and row != "+++ b/" + path
+        ]
+        assert len(body) == int(size)
+        # A line number the model cites is the real one.
+        for offset, row in enumerate(body):
+            assert row.startswith(f"line {int(first) + offset:05d} ")
+        covered += range(int(first), int(first) + int(size))
+    assert covered == list(range(1, len(lines) + 1)), "consecutive, nothing lost or repeated"
+    assert "the other pieces are reviewed in other parts" in parts[0].text
+
+
+def test_an_insertion_keeps_its_old_position_and_section_heading_in_every_piece():
+    splitter = local_review.AddedHunkSplitter()
+    hunk = "@@ -10,0 +11,6 @@ def f():\n" + "".join(f"+    x{n} = {n}\n" for n in range(6))
+    header = "diff --git a/m.py b/m.py\n--- a/m.py\n+++ b/m.py\n"
+    # Room for two of the six 12-character lines beside the widest header a piece can have.
+    widest = "@@ -10,0 +17,17 @@ def f():" + local_review.PIECE_LABEL.format(
+        index=17, count=17, first=17, last=17, start=17, end=17
+    )
+    budget = len(header) + len(widest) + 1 + 30
+
+    pieces = splitter.pieces(header, hunk, budget, "m.py")
+
+    assert pieces is not None and len(pieces) == 3
+    assert [piece.split("\n")[0].split(" [")[0] for piece in pieces] == [
+        "@@ -10,0 +11,2 @@ def f():",
+        "@@ -10,0 +13,2 @@ def f():",
+        "@@ -10,0 +15,2 @@ def f():",
+    ]
+    assert "[piece 3 of 3 of one added hunk: new lines 15-16 of 11-16." in pieces[2]
+    assert all(len(header) + len(piece) <= budget for piece in pieces)
+    assert "".join(row for piece in pieces for row in piece.splitlines(True)[1:]) == "".join(
+        hunk.splitlines(True)[1:]
+    )
+
+
+def test_a_missing_newline_marker_travels_with_its_line():
+    splitter = local_review.AddedHunkSplitter()
+    hunk = "@@ -0,0 +1,3 @@\n+a\n+b\n+c\n\\ No newline at end of file\n"
+
+    assert splitter.added_only(hunk)
+    pieces = splitter.pieces("", hunk, len(splitter.pieces("", hunk, 10**6, "x")[0]) - 1, "x")
+    assert pieces is not None and len(pieces) == 2
+    assert pieces[-1].endswith("+c\n\\ No newline at end of file\n")
+    # A diff that ends without a newline keeps its last line as it was.
+    assert splitter.pieces("", "@@ -0,0 +1,2 @@\n+a\n+b", 10**6, "x")[0].endswith("\n+a\n+b")
+
+
+@pytest.mark.parametrize(
+    "hunk",
+    [
+        pytest.param("@@ -1,2 +1,3 @@\n context\n+a\n+b\n", id="context"),
+        pytest.param("@@ -1,1 +1,2 @@\n-old\n+a\n+b\n", id="removal"),
+        pytest.param("@@ -0,0 +1,3 @@\n+a\n+b\n", id="header-disagrees"),
+        pytest.param("@@ -4 +5,2 @@\n+a\n+b\n", id="old-count-left-out-is-one"),
+        pytest.param("@@ -0,0 +1,0 @@\n", id="adds-nothing"),
+        pytest.param("@@ -0,0 +1 @@", id="no-body"),
+        pytest.param("@@ not a range @@\n+a\n", id="unreadable-header"),
+        pytest.param("@@ -0,0 +1,1 @@\n\\ No newline at end of file\n+a\n", id="marker-first"),
+        pytest.param("@@ -0,0 +1,2 @@\n+a\n\n+b\n", id="blank-row"),
+    ],
+)
+def test_a_hunk_that_does_more_than_add_lines_is_never_split(hunk):
+    splitter = local_review.AddedHunkSplitter()
+
+    assert splitter.added_only(hunk) is False
+    assert splitter.pieces("", hunk, 1, "x.py") is None
+
+
+def test_a_count_left_out_is_one_line():
+    assert local_review.AddedHunkSplitter().added_only("@@ -0,0 +1 @@\n+only\n")
+
+
+def test_a_mixed_hunk_too_large_for_one_part_is_still_refused_never_cut():
+    """A hunk with context or removed lines is judged whole or not at all: its context says
+    where a change sits, and a removal is judged beside what replaces it."""
+    hunk = "@@ -1,3 +1,500 @@\n context\n-old\n" + "+new\n" * 499 + " tail\n"
+    diff = "diff --git a/big.py b/big.py\n--- a/big.py\n+++ b/big.py\n" + hunk
+    chunker = local_review.DiffChunker()
+    assert chunker.split_added_hunks is True
+
+    with pytest.raises(local_review.ReviewRefused) as refused:
+        chunker.parts(diff, 400)
+    assert refused.value.code == "diff_exceeds_window"
+    assert str(refused.value).startswith("one hunk of big.py (")
+    assert str(refused.value).endswith(
+        "is larger than one part may carry (400 characters), and a hunk is never cut"
+    )
+    assert refused.value.whole is False
+
+
+def test_one_line_too_long_for_a_part_is_refused_never_cut_inside():
+    diff = _new_file("big.py", ["short", "y" * 5000, "short"])
+
+    with pytest.raises(local_review.ReviewRefused) as refused:
+        local_review.DiffChunker().parts(diff, 1000)
+    assert refused.value.code == "diff_exceeds_window"
+    assert str(refused.value) == (
+        "one line of big.py (5002 characters) does not fit in one part beside its file and"
+        " hunk headers (1000 characters in all), and a line is never cut"
+    )
+    assert refused.value.whole is False
+
+
+def test_with_splitting_off_an_added_hunk_is_refused_as_it_always_was():
+    diff = _new_file("big.py", [f"line {n}" for n in range(500)])
+    chunker = local_review.DiffChunker(split_added_hunks=False)
+    assert chunker.split_added_hunks is False
+
+    with pytest.raises(local_review.ReviewRefused) as refused:
+        chunker.parts(diff, 400)
+    assert "one hunk of big.py" in str(refused.value)
+    assert str(refused.value).endswith("and a hunk is never cut")
+
+
+def test_the_last_piece_packs_with_what_follows_and_keeps_its_label():
+    """Pieces are parts like any other: the short last piece shares a part with the next
+    file, and that part still says it carries a piece of big.py."""
+    big = _new_file("big.py", [f"line {n:03d} " + "z" * 30 for n in range(41)])
+    small = _file_diff("small.py", ["+s\n"])
+    budget = 1000
+
+    parts = local_review.DiffChunker().chunks(big + small, budget)
+
+    assert len(parts) >= 2 and all(len(part.text) <= budget for part in parts)
+    assert [part.paths for part in parts[:-1]] == [("big.py",)] * (len(parts) - 1)
+    assert parts[-1].paths == ("big.py", "small.py")
+    assert all(part.split == ("big.py",) for part in parts)
+    assert [part.text.count("[piece ") for part in parts] == [1] * len(parts)
+    assert parts[-1].text.endswith(small)
+
+
+def test_a_hunk_beside_a_split_one_shares_a_part_only_when_it_fits():
+    """Within one file a whole hunk after the pieces travels in the last piece's part, and
+    a whole hunk before them in its own; only the parts with a piece are marked split."""
+    header = "diff --git a/f.py b/f.py\n--- a/f.py\n+++ b/f.py\n"
+    before = "@@ -1,1 +1,1 @@\n-a\n+b\n"
+    added = "@@ -5,0 +6,31 @@\n" + "".join(f"+row {n:02d} " + "q" * 20 + "\n" for n in range(31))
+    after = "@@ -9,1 +40,1 @@\n-c\n+d\n"
+    budget = len(header) + 700
+
+    parts = local_review.DiffChunker().parts(header + before + added + after, budget)
+
+    assert all(len(part.text) <= budget for part in parts)
+    assert parts[0].split == () and "+b\n" in parts[0].text
+    assert all(part.split == ("f.py",) for part in parts[1:])
+    assert parts[-1].text.endswith(after)
+
+
+def _new_file_on_disk(tmp_path, rows: int) -> tuple[pathlib.Path, str]:
+    diff = _new_file("big.py", [f"value_{n:04d} = {n}" + " " * 40 for n in range(rows)])
+    target = tmp_path / "new-file.diff"
+    target.write_text(diff, encoding="utf-8")
+    return target, diff
+
+
+def test_a_new_file_is_reviewed_in_its_pieces_and_every_piece_must_pass(
+    monkeypatch, capsys, tmp_path
+):
+    """Each piece is a part: sealed, sized, told which part it is and which piece it
+    carries; a finding in any piece fails the whole, and the verdict names its head."""
+    target, diff = _new_file_on_disk(tmp_path, 300)
+    finding = {
+        "severity": "blocking",
+        "path": "big.py",
+        "explanation": "a defect",
+        "recommended_fix": "fix it",
+    }
+    sent = _parts_answering(
+        monkeypatch,
+        lambda index, _: (
+            _verdict(**{"pass": False, "findings": [finding]}) if index == 2 else _verdict()
+        ),
+    )
+    record = tmp_path / "outcome.json"
+    argv = ["--diff", str(target), "--max-chars", str(len(diff) // 3), "--head-sha", "cafe"]
+
+    assert local_review.review([*argv, "--outcome", str(record)]) == 0
+
+    count = len(sent)
+    assert count >= 3
+    for index, payload in enumerate(sent, 1):
+        user = payload["messages"][1]["content"]
+        assert f"This is part {index} of {count}." in user
+        assert f"[piece {index} of {count} of one added hunk: new lines" in user
+        assert payload["truncate"] is False and payload["shift"] is False
+    out = json.loads(capsys.readouterr().out)
+    assert out["pass"] is False and out["findings"] == [finding]
+    assert out["reviewed_head_sha"] == "cafe"
+    assert [part["split"] for part in out["review_parts"]] == [["big.py"]] * count
+    assert [part["passed"] for part in out["review_parts"]] == [
+        index != 2 for index in range(1, count + 1)
+    ]
+    assert _outcome(record)["parts"] == count
+
+
+def test_pieces_past_max_chunks_are_refused_naming_the_split(monkeypatch, tmp_path):
+    target, diff = _new_file_on_disk(tmp_path, 300)
+    sent = _model_returns(monkeypatch, _verdict())
+    record = tmp_path / "outcome.json"
+    argv = ["--diff", str(target), "--max-chars", str(len(diff) // 3), "--max-chunks", "2"]
+
+    assert local_review.review([*argv, "--outcome", str(record)]) == 1
+
+    assert sent == [], "nothing is sent for a review that cannot be whole"
+    reason = _outcome(record)["reason"]
+    assert _outcome(record)["code"] == "chunk_budget_exceeded"
+    assert "and max_chunks allows 2 (" in reason
+    assert "of those parts carry pieces of an added hunk of big.py, split between lines" in reason
+
+
+def test_the_switch_off_on_the_command_line_refuses_as_before(monkeypatch, tmp_path):
+    target, diff = _new_file_on_disk(tmp_path, 300)
+    sent = _model_returns(monkeypatch, _verdict())
+    record = tmp_path / "outcome.json"
+    argv = ["--diff", str(target), "--max-chars", str(len(diff) // 3), "--no-split-added-hunks"]
+
+    assert local_review.review([*argv, "--outcome", str(record)]) == 1
+
+    assert sent == []
+    assert _outcome(record)["code"] == "diff_exceeds_window"
+    assert _outcome(record)["reason"].endswith("and a hunk is never cut")
+
+
 def test_a_diff_too_large_for_one_request_is_reviewed_in_parts(monkeypatch, capsys, tmp_path):
     """#1238: the diff exceeded the window, so every such pull request went to a human.
     Now each part is its own request -- sized, sealed, both codes echoed -- told which part
@@ -2040,8 +2313,42 @@ def test_the_bounds_are_configuration_with_documented_defaults(tmp_path):
     PrAutomationFallbackConfig(enabled=False, max_chunks=0)
 
 
+def test_splitting_added_hunks_is_on_by_default_and_declared_in_configuration(tmp_path):
+    from vibey_gh.config import PrAutomationFallbackConfig, load_config
+
+    assert PrAutomationFallbackConfig().split_added_hunks is True
+    assert load_config(tmp_path).pr_automation.fallback.split_added_hunks is True
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[pr_automation.fallback]\nsplit_added_hunks = false\n", "utf-8"
+    )
+    assert load_config(tmp_path).pr_automation.fallback.split_added_hunks is False
+    for bad in ("true", 1, None):
+        with pytest.raises(ValueError, match="split_added_hunks must be true or false"):
+            PrAutomationFallbackConfig(split_added_hunks=bad)  # type: ignore[arg-type]
+    PrAutomationFallbackConfig(enabled=False, split_added_hunks="off")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("given", "forwarded"),
+    [
+        (["--split-added-hunks"], ["--split-added-hunks"]),
+        (["--no-split-added-hunks"], ["--no-split-added-hunks"]),
+        ([], []),
+    ],
+)
+def test_the_cli_forwards_the_split_switch_only_when_given(monkeypatch, given, forwarded):
+    from vibey_gh import cli
+
+    seen: list[list[str]] = []
+    monkeypatch.setattr(local_review, "review", lambda argv: seen.append(argv) or 0)
+
+    assert cli.main(["local-review", "--head-sha", "abc", *given]) == 0
+    assert seen == [["--head-sha", "abc", *forwarded]]
+
+
 def test_the_new_seams_are_satisfied():
     from vibey_gh.interfaces import (
+        AddedHunkSplitterInterface,
         DiffChunkerInterface,
         DiffPartInterface,
         SizedChatInterface,
@@ -2051,6 +2358,7 @@ def test_the_new_seams_are_satisfied():
 
     sizer = ContextSizer()
     assert isinstance(local_review.DIFF_CHUNKER, DiffChunkerInterface)
+    assert isinstance(local_review.ADDED_HUNK_SPLITTER, AddedHunkSplitterInterface)
     assert isinstance(local_review.DiffPart("x", ()), DiffPartInterface)
     assert isinstance(local_review.TransportRetry(), TransportRetryInterface)
     assert isinstance(local_review.SIZED_CHAT, SizedChatInterface)

@@ -248,8 +248,10 @@ check run `PR review: review incomplete` for an operator to resolve. A red scan 
 its failing checks directly, so a failure pinpoints its task without digging through logs.
 
 A diff too large for one request to the local model is reviewed in bounded parts
-(`[pr_automation.fallback] max_chunks`), and a model that was unreachable or timed out is
-retried (`retries`) before a human is asked. Whatever happens, `pr-review.yml` records it
+(`[pr_automation.fallback] max_chunks`), a hunk that only adds lines -- a new file's --
+and is too large for one part is split between lines into labelled pieces
+(`split_added_hunks`), and a model that was unreachable or timed out is retried
+(`retries`) before a human is asked. Whatever happens, `pr-review.yml` records it
 in a closed vocabulary (`vibey_gh.review_outcome`): the evaluation leaves a `pr-review-lane`
 artifact on every run, and the gate a `pr-review-outcome` artifact and the same record in
 its check run's `output.text` -- the lane decision, the verdict, and a code saying why there

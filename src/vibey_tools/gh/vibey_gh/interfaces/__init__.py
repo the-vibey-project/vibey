@@ -120,6 +120,7 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     ForgeReadInterface,
 )
 from vibey_gh.interfaces.local_review_interface import (
+    AddedHunkSplitterInterface,
     DiffChunkerInterface,
     DiffPartInterface,
     SizedChatInterface,
@@ -150,6 +151,7 @@ from vibey_gh.interfaces.review_outcome_interface import (
 )
 
 __all__ = [
+    "AddedHunkSplitterInterface",
     "AppendOutcomeInterface",
     "ApprovalCheckInterface",
     "ApprovalVerdictInterface",

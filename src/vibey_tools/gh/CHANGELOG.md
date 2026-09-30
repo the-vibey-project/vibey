@@ -5,6 +5,20 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Fix:** the sovereign review no longer gives up on a pull request that adds a large file.
+  The 3.1.0 promotion (head fa3b391703ff) got no verdict: `scripts/minimum_specs.py` was
+  new, so its 136,308 characters were one `@@ -0,0 +1,N @@` hunk, larger than the 100,852 a
+  part could carry, and a hunk is never cut. A hunk that only adds lines is now split
+  between lines into consecutive pieces (`AddedHunkSplitter`), each carrying the file header,
+  a synthesized `@@ -old,0 +start,count @@` whose new-side range is its own, and a label
+  saying it is piece k of m of one added hunk and that the file continues in other parts.
+  Every piece is a part held to every existing guard -- the per-part size, the token budget,
+  `max_chunks` (pieces past it are refused naming the split file) -- and a pass still needs
+  every part to pass at the one head reviewed; `review_parts` records the split files. A
+  hunk with a context or removed line is never split, and a line too long for a part alone
+  is refused, never cut inside. Declared as `[pr_automation.fallback] split_added_hunks`
+  (default `true`; `false` restores the refusal), `local-review --[no-]split-added-hunks`,
+  and rendered into `pr-review.yml`.
 - **Feature:** `[unattended_approval] live_switch_required` (default `true`, unchanged
   behaviour). Set to `false`, the declared `enabled = true` is the grant and the repository
   variable becomes withdrawal only: unset or `switch_value` leaves the grant standing, any

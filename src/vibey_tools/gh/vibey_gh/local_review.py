@@ -35,6 +35,7 @@ import http.client
 import itertools
 import json
 import pathlib
+import re
 import secrets
 import sys
 import time
@@ -49,6 +50,7 @@ from vibey_gh import review_outcome as outcome
 from vibey_gh.fit import ContextSizer
 from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
 from vibey_gh.interfaces.local_review_interface import (
+    AddedHunkSplitterInterface,
     DiffChunkerInterface,
     DiffPartInterface,
     SizedChatInterface,
@@ -787,16 +789,19 @@ class TransportRetry:
 @dataclass(frozen=True)
 class DiffPart:
     """A run of a unified diff that is reviewed whole: `text` is exact lines of the diff,
-    with a file's header repeated before each run of its hunks after the first."""
+    with a file's header repeated before each run of its hunks after the first. `split`
+    names the files whose added hunk was split at line boundaries and has a piece here."""
 
     text: str
     paths: tuple[str, ...]
+    split: tuple[str, ...] = ()
 
 
 class ChunkTooLarge(ReviewRefused):
-    """One indivisible part of a diff -- a file with no hunk boundary, or one hunk with its
-    file's header -- is larger than a chunk may carry. `whole` says the diff had no boundary
-    to split at at all, so it is the diff itself that is too large."""
+    """One indivisible part of a diff -- a file with no hunk boundary, one hunk with its
+    file's header, or one line of an added hunk with its headers -- is larger than a chunk
+    may carry. `whole` says the diff had no boundary to split at at all, so it is the diff
+    itself that is too large."""
 
     def __init__(self, reason: str, *, whole: bool) -> None:
         super().__init__(reason, code=outcome.DIFF_EXCEEDS_WINDOW)
@@ -806,15 +811,154 @@ class ChunkTooLarge(ReviewRefused):
 _FILE_HEADER = "diff --git "
 _HUNK_HEADER = "@@"
 
+# A hunk's header: `@@ -old[,count] +new[,count] @@` and then, free text, its section
+# heading. A count left out is 1.
+_HUNK_RANGE = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)")
+
+# What each piece of a split added hunk says about itself. Written into its synthesized
+# header after the range, where a unified diff carries free text, so every piece is still a
+# well-formed hunk, the model reads the label beside the lines it describes, and the label
+# is counted in the part it is sent in -- no part is sized without it.
+PIECE_LABEL = (
+    " [piece {index} of {count} of one added hunk: new lines {first}-{last} of {start}-{end}."
+    " The hunk is larger than one part, so it was split between lines, never inside one;"
+    " the other pieces are reviewed in other parts, and this file continues beyond what is"
+    " shown here]"
+)
+
+
+class AddedHunkSplitter(AddedHunkSplitterInterface):
+    """Splits a hunk that only adds lines at line boundaries into consecutive pieces.
+
+    The 3.1.0 promotion (head fa3b391703ff) gave no verdict: `scripts/minimum_specs.py` is a
+    new file, so its whole content is one `@@ -0,0 +1,N @@` hunk of 136,308 characters with
+    its header, larger than one part may carry, and a hunk is never cut -- so any pull
+    request that adds a large file went to a human. A hunk with a context or a removed line
+    is still never cut: its context says where a change sits, and a removal and the lines
+    that replace it are judged together. A hunk of added lines only has neither. No line's
+    meaning rests on a line of the hunk that a split could separate from it any more than
+    it rests on the rest of the file, so it can be read in consecutive pieces.
+
+    Each piece is a hunk of its own: the file's header before it, a synthesized header
+    whose new-side range is the piece's own -- so a line number the model cites is the real
+    one -- and a label saying which piece of how many it is, so the reviewer knows the file
+    continues. A line too long for a part alone is refused, never cut inside.
+    """
+
+    def added_only(self, hunk: str) -> bool:
+        return self._read(hunk) is not None
+
+    def pieces(self, header: str, hunk: str, budget: int, where: str) -> list[str] | None:
+        read = self._read(hunk)
+        if read is None:
+            return None
+        old, start, section, units = read
+        end = start + len(units) - 1
+        # Every number a header can carry is at most `widest`, so a header written with it
+        # everywhere is at least as long as any real one: the room left beside it is safe
+        # for every piece, whichever piece and however many there turn out to be.
+        widest = start + len(units)
+        bound = self._header(
+            old, (widest, widest, widest), section, (widest, widest), (widest,) * 2
+        )
+        room = budget - len(header) - len(bound)
+        groups: list[list[str]] = [[]]
+        used = 0
+        for unit in units:
+            if len(unit) > room:
+                raise ChunkTooLarge(
+                    f"one line of {where} ({len(unit)} characters) does not fit in one part"
+                    f" beside its file and hunk headers ({budget} characters in all), and a"
+                    " line is never cut",
+                    whole=False,
+                )
+            if groups[-1] and used + len(unit) > room:
+                groups.append([])
+                used = 0
+            groups[-1].append(unit)
+            used += len(unit)
+        built: list[str] = []
+        first = start
+        for index, group in enumerate(groups, 1):
+            last = first + len(group) - 1
+            lines = (first, len(group), last)
+            head = self._header(old, lines, section, (index, len(groups)), (start, end))
+            built.append(head + "".join(group))
+            first = last + 1
+        return built
+
+    @staticmethod
+    def _header(
+        old: int,
+        lines: tuple[int, int, int],
+        section: str,
+        piece: tuple[int, int],
+        span: tuple[int, int],
+    ) -> str:
+        """One piece's hunk header: its own new-side range -- `lines` is its first line,
+        how many, and its last -- after the hunk's old position, then the hunk's section
+        heading, then the label: `piece` is which of how many, `span` the whole hunk's."""
+        first, size, last = lines
+        label = PIECE_LABEL.format(
+            index=piece[0], count=piece[1], first=first, last=last, start=span[0], end=span[1]
+        )
+        return f"@@ -{old},0 +{first},{size} @@{section}{label}\n"
+
+    @staticmethod
+    def _read(hunk: str) -> tuple[int, int, str, list[str]] | None:
+        """`(old start, new start, section heading, lines)` for a hunk that only adds
+        lines -- each added line with the `\\ No newline at end of file` marker after it,
+        if any -- or None: a context or removed line, or a header that disagrees with the
+        body, and the hunk is not split. Split on newlines only, never `splitlines`, which
+        also breaks at a form feed inside a line and would miscount."""
+        head, newline, body = hunk.partition("\n")
+        match = _HUNK_RANGE.fullmatch(head.rstrip("\r"))
+        if match is None or not newline:
+            return None
+        old, old_count, new, new_count, section = match.groups()
+        rows = body.split("\n")
+        units: list[str] = []
+        for row in [line + "\n" for line in rows[:-1]] + ([rows[-1]] if rows[-1] else []):
+            if row.startswith("+"):
+                units.append(row)
+            elif row.startswith("\\") and units:
+                units[-1] += row
+            else:
+                return None
+        added = int(new_count) if new_count is not None else 1
+        old_lines = int(old_count) if old_count is not None else 1
+        if old_lines != 0 or not units or len(units) != added:
+            return None
+        return int(old), int(new), section, units
+
+
+# The splitter every chunker uses unless it is handed another.
+ADDED_HUNK_SPLITTER: AddedHunkSplitterInterface = AddedHunkSplitter()
+
 
 class DiffChunker(DiffChunkerInterface):
     """Splits a unified diff into parts a model can review whole, by file and then by hunk.
 
-    Never by line: a hunk is the smallest unit a reviewer can judge, because its context
-    lines are what say where a change sits. A file too large for one chunk is split between
-    its hunks, its header repeated before each run so every part still names the file it is
-    about. A single hunk too large for a chunk is refused, never cut.
+    Never by line inside a hunk a reviewer judges as a whole: its context lines are what
+    say where a change sits. A file too large for one chunk is split between its hunks, its
+    header repeated before each run so every part still names the file it is about. A single
+    hunk too large for a chunk is refused, never cut -- unless it only adds lines and
+    `split_added_hunks` is on (the default), when `AddedHunkSplitter` splits it between
+    lines into labelled pieces, each a part of the review like any other.
     """
+
+    def __init__(
+        self,
+        *,
+        split_added_hunks: bool = True,
+        splitter: AddedHunkSplitterInterface | None = None,
+    ) -> None:
+        self._split_added_hunks = split_added_hunks
+        self._splitter = splitter or ADDED_HUNK_SPLITTER
+
+    @property
+    def split_added_hunks(self) -> bool:
+        return self._split_added_hunks
 
     def sections(self, diff: str) -> list[tuple[str, str]]:
         lines = diff.splitlines(keepends=True)
@@ -853,21 +997,36 @@ class DiffChunker(DiffChunkerInterface):
             header = "".join(lines[: hunks[0]])
             bounds = [*hunks, len(lines)]
             run = ""
+            split: tuple[str, ...] = ()
             for begin, end in itertools.pairwise(bounds):
                 hunk = "".join(lines[begin:end])
-                if len(header) + len(hunk) > budget:
-                    raise ChunkTooLarge(
-                        f"one hunk of {where} ({len(header) + len(hunk)} characters with its"
-                        f" file header) is larger than one part may carry ({budget}"
-                        " characters), and a hunk is never cut",
-                        whole=False,
-                    )
-                if run and len(header) + len(run) + len(hunk) > budget:
-                    found.append(DiffPart(header + run, paths))
-                    run = ""
-                run += hunk
-            found.append(DiffPart(header + run, paths))
+                pieces, cut = [hunk], len(header) + len(hunk) > budget
+                if cut:
+                    pieces = self._pieces(header, hunk, budget, where)
+                for piece in pieces:
+                    if run and len(header) + len(run) + len(piece) > budget:
+                        found.append(DiffPart(header + run, paths, split))
+                        run, split = "", ()
+                    run += piece
+                    if cut:
+                        split = (where,)
+            found.append(DiffPart(header + run, paths, split))
         return found
+
+    def _pieces(self, header: str, hunk: str, budget: int, where: str) -> list[str]:
+        """A hunk too large for one part as the pieces it can be reviewed in, each fitting
+        beside `header`; refused -- never cut -- unless it only adds lines and splitting is on."""
+        pieces = (
+            self._splitter.pieces(header, hunk, budget, where) if self._split_added_hunks else None
+        )
+        if pieces is None:
+            raise ChunkTooLarge(
+                f"one hunk of {where} ({len(header) + len(hunk)} characters with its"
+                f" file header) is larger than one part may carry ({budget}"
+                " characters), and a hunk is never cut",
+                whole=False,
+            )
+        return pieces
 
     def chunks(self, diff: str, budget: int) -> list[DiffPart]:
         packed: list[DiffPart] = []
@@ -875,7 +1034,8 @@ class DiffChunker(DiffChunkerInterface):
             if packed and len(packed[-1].text) + len(part.text) <= budget:
                 last = packed[-1]
                 paths = last.paths + tuple(path for path in part.paths if path not in last.paths)
-                packed[-1] = DiffPart(last.text + part.text, paths)
+                split = last.split + tuple(path for path in part.split if path not in last.split)
+                packed[-1] = DiffPart(last.text + part.text, paths, split)
             else:
                 packed.append(part)
         return packed
@@ -902,7 +1062,8 @@ class SovereignReview:
     (`DiffChunker`), each sent through the same `SizedChat` -- the server told to refuse
     rather than cut, both check codes echoed per part, a part too large alone refused -- and
     composed conservatively (`compose`): any finding or failed judgment in any part fails
-    the whole, and a pass needs every part to pass.
+    the whole, and a pass needs every part to pass. A piece of an added hunk split between
+    lines (`AddedHunkSplitter`) is a part like any other, held to all of that.
 
     Bounded: at most `max_chunks` parts. With `max_chunks` 1 nothing is chunked and the
     review is exactly the single request it always was. A whole review (`whole`) chunks only
@@ -995,7 +1156,7 @@ class SovereignReview:
                 raise ReviewRefused(
                     f"the diff ({len(diff)} characters) needs {len(parts)} parts of at most"
                     f" {budget} characters to be reviewed whole, and max_chunks allows"
-                    f" {self.max_chunks}",
+                    f" {self.max_chunks}{self._split_note(parts)}",
                     code=outcome.CHUNK_BUDGET_EXCEEDED,
                 )
         except ReviewRefused as refused:
@@ -1006,6 +1167,19 @@ class SovereignReview:
                 return None
             raise
         return parts
+
+    @staticmethod
+    def _split_note(parts: Sequence[DiffPartInterface]) -> str:
+        """Why there are that many parts, when added hunks split between lines are part of
+        the reason: how many parts carry a piece of one, and of which files."""
+        split = list(dict.fromkeys(path for part in parts for path in part.split))
+        if not split:
+            return ""
+        carrying = sum(1 for part in parts if part.split)
+        return (
+            f" ({carrying} of those parts carry pieces of an added hunk of {', '.join(split)},"
+            " split between lines because it is larger than one part)"
+        )
 
     def _fits_alone(self, diff: str) -> bool:
         return self.whole is not None and len(diff) <= self.room({}, part=False)
@@ -1076,6 +1250,7 @@ class SovereignReview:
                 "part": index,
                 "of": count,
                 "paths": list(part.paths),
+                "split": list(part.split),
                 "chars": len(part.text),
                 "passed": answer.get("pass") is True,
                 "findings": len(answer.get("findings") or []),
@@ -1180,6 +1355,16 @@ def review(argv: list[str] | None = None) -> int:
         help="the most parts a diff too large for one request is reviewed in; 1 never splits",
     )
     parser.add_argument(
+        "--split-added-hunks",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.split_added_hunks,
+        help=(
+            "split a hunk that only adds lines (a new file's) and is too large for one part"
+            " between lines into labelled pieces, rather than refuse it; a hunk with context"
+            " or removed lines is never split"
+        ),
+    )
+    parser.add_argument(
         "--retries",
         type=int,
         default=defaults.retries,
@@ -1271,6 +1456,7 @@ def review(argv: list[str] | None = None) -> int:
         documents=documents,
         max_document_chars=args.max_document_chars,
         think=args.think,
+        chunker=DiffChunker(split_added_hunks=args.split_added_hunks),
     )
     try:
         verdict, shown, report = sovereign.run(diff)
