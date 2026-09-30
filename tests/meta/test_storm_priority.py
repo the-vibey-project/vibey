@@ -813,6 +813,44 @@ def test_the_evidence_counts_starts_and_ends_only_from_progress_log(tmp_path: Pa
     assert "lane starts logged: 1" in report and "lane ends logged: 1" in report
 
 
+def test_a_lane_line_that_ends_at_its_issue_number_is_counted() -> None:
+    # The storm's first start line, verbatim from the tracked ledger: written before
+    # `on integration@<sha>` was appended, it ends at the issue number. A pattern that
+    # required a space after the number counted 48 starts where the log holds 49.
+    evidence = _load("storm_evidence_bare", "storm-evidence.py")
+    rows = [
+        {"kind": "stream", "source": "progress.log", "line": line}
+        for line in (
+            "2026-09-22T12:03:11Z start engines-provider #322",
+            "2026-09-22T13:48:39Z start qwenloop-edit-tool #346 on integration@4e57f56b",
+            "2026-09-22T14:00:00Z end   engines-provider #322",
+            "2026-09-22T14:00:01Z start glued #346x",
+            "2026-09-22T14:00:02Z start no-issue",
+        )
+    ]
+    summary = evidence.summarise(rows)
+    assert (summary["starts"], summary["ends"]) == (2, 1)
+
+
+def test_the_paper_block_is_written_between_its_own_markers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The lane-end pattern once shared the name of the paper's END marker and replaced it,
+    # so `--paper` compared a compiled pattern with the paper's text and wrote the pattern's
+    # repr where the closing marker belongs.
+    evidence = _load("storm_evidence_block", "storm-evidence.py")
+    paper = tmp_path / "paper.md"
+    paper.write_text(f"before\n{evidence.BEGIN}\nold\n{evidence.END}\nafter\n", encoding="utf-8")
+    monkeypatch.setattr(evidence, "PAPER", paper)
+    text = evidence.block(evidence.summarise([]), [])
+    assert isinstance(evidence.END, str) and text.endswith(evidence.END)
+    assert evidence.write_paper(text) == "paper block regenerated"
+    body = paper.read_text(encoding="utf-8")
+    assert body.startswith("before\n") and body.endswith("\nafter\n")
+    assert body.count(evidence.BEGIN) == body.count(evidence.END) == 1
+    assert "old" not in body and "re.compile" not in body
+
+
 def test_the_forged_bump_leaves_the_evidence_counts_unchanged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

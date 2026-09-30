@@ -110,7 +110,7 @@ have to read worse to rank better stays as it is and ranks on its merits.
 Optimization means the same truth made findable, never different words made hollow.
 Work nobody can find is indistinguishable from work nobody did.
 
-**7.e — the open door** *(proposed; ratification requires the operator's merge)*: every
+**7.e — the open door** *(ratified by the merge that carried this entry)*: every
 public surface of this project — its README, its documentation's landing page, its
 package and repository listings — is written for the newcomer first, and it is a door,
 never a wall. Its first screen states the problem before any of the project's own
