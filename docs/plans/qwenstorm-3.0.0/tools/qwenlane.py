@@ -128,6 +128,7 @@ def run_attempt(spec_path: Path) -> int:
                 max_empty_reply_retries=config.max_empty_reply_retries,
                 max_recorded_argument_chars=config.max_recorded_argument_chars,
                 empty_reply_reasoning_excerpt_chars=config.empty_reply_reasoning_excerpt_chars,
+                max_tool_result_chars=config.max_tool_result_chars,
             )
         )
     except (OSError, RuntimeError) as exc:

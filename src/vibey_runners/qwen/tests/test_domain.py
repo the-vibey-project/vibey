@@ -309,12 +309,20 @@ def test_recording_caps_are_declared_configuration() -> None:
     )
 
 
+def test_the_tool_result_cap_is_declared_configuration_and_never_zero() -> None:
+    assert parser.parse({}).max_tool_result_chars == 24_000
+    assert parser.parse({"max_tool_result_chars": 64_000}).max_tool_result_chars == 64_000
+    with pytest.raises(ValueError, match="max_tool_result_chars must be positive"):
+        parser.parse({"max_tool_result_chars": 0})
+
+
 @pytest.mark.parametrize(
     "key",
     [
         "max_empty_reply_retries",
         "max_recorded_argument_chars",
         "empty_reply_reasoning_excerpt_chars",
+        "max_tool_result_chars",
     ],
 )
 @pytest.mark.parametrize("value", [-1, float("inf"), float("nan"), 1.5, True, "many"])

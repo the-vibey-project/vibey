@@ -144,6 +144,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   change, to be made with `edit_file`; the `shell` and `edit_file` descriptions say the same,
   including how to insert lines with `edit_file`, and that `argv` runs without a shell. The
   host is recorded in the run's `meta.json`.
+* **gptossloop:** a tool result is no longer cut at a fixed 8,000 characters. Live on #963 the
+  model opened README.md 19 times over four attempts. In the one run whose record survives
+  history was never trimmed (prompts at most 6,022 of 65,536 tokens), but each of the six
+  whole-file reads (8,730 characters of content) lost its tail and its line count to the
+  cap, with only "...[truncated N characters]" to show for it.
+  The cap is now the config key `max_tool_result_chars` (default 24,000, under a fifth of the
+  default context window; recorded in `meta.json`), and a cut result says how to read the
+  rest (`read_file` with `line_start`/`line_end`, or `search`). The storm turn pool replays
+  each run at the cap it recorded, and at the old 8,000 when it recorded none.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

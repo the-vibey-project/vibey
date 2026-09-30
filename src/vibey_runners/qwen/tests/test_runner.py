@@ -20,7 +20,7 @@ from qwenloop.application.runner import (
     _trim_transcript,
     _truncate_tool_result,
 )
-from qwenloop.domain.config import QwenConfig
+from qwenloop.domain.config import DEFAULT_MAX_TOOL_RESULT_CHARS, QwenConfig
 from qwenloop.domain.interfaces import FollowUpInterface
 from qwenloop.domain.model import (
     CODING_TOOL_NAMES,
@@ -97,11 +97,50 @@ def test_truncate_tool_result_leaves_short_text_untouched() -> None:
     assert _truncate_tool_result("short") == "short"
 
 
-def test_truncate_tool_result_truncates_long_text() -> None:
+def test_truncate_tool_result_truncates_long_text_and_says_how_to_read_the_rest() -> None:
     text = "x" * 8_010
     result = _truncate_tool_result(text, limit=8_000)
-    assert result.startswith("x" * 8_000)
-    assert result.endswith("...[truncated 10 characters]")
+    assert result.startswith(
+        "x" * 8_000 + "\n...[truncated 10 characters: this result was cut at 8000"
+    )
+    assert "call read_file with line_start and line_end" in result
+
+
+def test_the_default_cap_shows_a_whole_readme_read() -> None:
+    """vibey #963: the whole-file read of a 435-line README (8,730 characters of content)
+    was cut by the old fixed 8,000-character cap on every read, losing the tail and the
+    line count, and gpt-oss:20b opened it 19 times over four attempts."""
+    read = {"content": "x" * 8_730, "line_start": 1, "line_end": 435, "total_lines": 435}
+    assert _truncate_tool_result(str(read)) == str(read)
+    assert DEFAULT_MAX_TOOL_RESULT_CHARS == QwenConfig().max_tool_result_chars == 24_000
+
+
+@pytest.mark.asyncio
+async def test_the_declared_tool_result_cap_bounds_what_the_model_sees(tmp_path: Path) -> None:
+    (tmp_path / "big.md").write_text("y" * 500)
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "big.md"}})],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="cap",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+        max_tool_result_chars=100,
+    )
+    tool = server.seen[1][-1]
+    assert tool.role == "tool"
+    assert tool.content.startswith(str({"content": "y" * 500})[:100] + "\n...[truncated ")
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "cap" / "meta.json").read_text())
+    assert meta["max_tool_result_chars"] == 100
 
 
 def test_trim_transcript_noop_within_budget() -> None:

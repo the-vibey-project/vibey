@@ -10,6 +10,7 @@ from qwenloop.domain.config import (
     DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    DEFAULT_MAX_TOOL_RESULT_CHARS,
 )
 from qwenloop.domain.model import ModelProfile, RunState, ServerInfo
 
@@ -28,4 +29,5 @@ class AutonomousRunnerInterface(Protocol):
         max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
         max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
         empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
+        max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
     ) -> RunState: ...

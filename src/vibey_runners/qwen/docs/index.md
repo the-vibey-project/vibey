@@ -109,6 +109,7 @@ Each engine reads its own environment variables: `GPTOSSLOOP_*` for `gptossloop`
 | Consecutive empty replies retried before a run fails | — | — | `max_empty_reply_retries` | `2` |
 | Characters of each tool-call argument value recorded in `events.jsonl` | — | — | `max_recorded_argument_chars` | `200` |
 | Characters of an empty reply's reasoning recorded as an excerpt | — | — | `empty_reply_reasoning_excerpt_chars` | `400` |
+| Characters of one tool result shown to the model (the rest is cut, and the cut named) | — | — | `max_tool_result_chars` | `24000` |
 | Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
 | Context window (tokens) | — | — | `context_window` | `32768` |
 

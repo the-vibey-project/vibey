@@ -20,6 +20,7 @@ from qwenloop.domain.config import (
     DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    DEFAULT_MAX_TOOL_RESULT_CHARS,
 )
 from qwenloop.domain.interfaces import ChatChunkInterface
 from qwenloop.domain.model import (
@@ -35,7 +36,6 @@ from qwenloop.domain.model import (
 
 _CHARS_PER_TOKEN = 4
 _RESPONSE_TOKEN_RESERVE = 2048
-_MAX_TOOL_RESULT_CHARS = 8_000
 _VERDICT_TOOL_NAME = "qwenloop-verdict"
 _MAX_INVALID_COMPLETION_CLAIMS = 3
 #: Consecutive unparseable tool calls one turn may retry before the run fails (#386).
@@ -88,11 +88,18 @@ def _estimate_tokens(text: str) -> int:
     return max(1, len(text) // _CHARS_PER_TOKEN)
 
 
-def _truncate_tool_result(text: str, limit: int = _MAX_TOOL_RESULT_CHARS) -> str:
+def _truncate_tool_result(text: str, limit: int = DEFAULT_MAX_TOOL_RESULT_CHARS) -> str:
+    # Module-level, not a method: a pure string function with no state and no seam.
     if len(text) <= limit:
         return text
     omitted = len(text) - limit
-    return f"{text[:limit]}\n...[truncated {omitted} characters]"
+    # Say what was cut and how to get it: a bare "truncated" left gpt-oss re-opening the
+    # same whole file (vibey #963), since nothing told it a ranged read would show the rest.
+    return (
+        f"{text[:limit]}\n...[truncated {omitted} characters: this result was cut at "
+        f"{limit} characters. To see the rest of a file, call read_file with line_start "
+        "and line_end for a smaller range, or search for the text you need.]"
+    )
 
 
 def _render_native_verdict(arguments: dict[str, object]) -> str:
@@ -268,6 +275,7 @@ class AutonomousRunner:
         max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
         max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
         empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
+        max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
     ) -> RunState:
         state = RunState(run_id=run_id, status=RunStatus.RUNNING)
         # Consecutive turns with no tool call and no text. Each retry is its own model call
@@ -307,6 +315,7 @@ class AutonomousRunner:
                 "max_empty_reply_retries": max_empty_reply_retries,
                 "max_recorded_argument_chars": max_recorded_argument_chars,
                 "empty_reply_reasoning_excerpt_chars": empty_reply_reasoning_excerpt_chars,
+                "max_tool_result_chars": max_tool_result_chars,
             },
         )
         await self._notify("Qwen run started", f"Run {run_id} started.")
@@ -412,7 +421,7 @@ class AutonomousRunner:
                     tool_results.append(
                         ChatMessage(
                             "tool",
-                            _truncate_tool_result(str(result)),
+                            _truncate_tool_result(str(result), max_tool_result_chars),
                             tool_call_id=call_id,
                         )
                     )

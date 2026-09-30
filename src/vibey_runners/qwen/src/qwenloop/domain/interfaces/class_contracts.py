@@ -101,6 +101,9 @@ class QwenConfigInterface(Protocol):
     def empty_reply_reasoning_excerpt_chars(self) -> int: ...
 
     @property
+    def max_tool_result_chars(self) -> int: ...
+
+    @property
     def base_url(self) -> str: ...
 
     @property

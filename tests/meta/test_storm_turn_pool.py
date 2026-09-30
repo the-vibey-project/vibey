@@ -104,7 +104,8 @@ def test_the_lanes_pool_rebuilds_each_payload_in_the_runners_own_order(tmp_path:
     assistant, tool = one["after"]
     assert assistant["tool_calls"] == [{"function": {"name": "read_file", "arguments": {}}}]
     assert tool["role"] == "tool" and tool["tool_name"] == "read_file"
-    assert tool["content"].endswith("characters]") and len(tool["content"]) < 9100
+    # A run without a recorded cap is replayed at the fixed 8,000 it ran with.
+    assert "\n...[truncated " in tool["content"] and len(tool["content"]) < 8400
     assert "not a valid tool call" in two["before"][0]["content"]
     assert [m["role"] for m in two["after"]] == ["assistant", "user"]
     assert "Continue the plan" in two["after"][1]["content"]
@@ -128,6 +129,20 @@ def test_a_trimmed_turn_carries_its_whole_payload(tmp_path: Path) -> None:
     assert marker["role"] == "system" and "omitted to fit" in marker["content"]
 
 
+def test_a_run_is_replayed_at_the_tool_result_cap_it_recorded(tmp_path: Path) -> None:
+    events = [
+        event(type="tool_result", name="read_file", result={"content": "x" * 9000}),
+        turn(1, "2026-09-23T01:00:00Z", 5000),
+    ]
+    root = lane(tmp_path, "capped", [events])
+    meta = root / ".qwenloop" / "runs" / "run0" / "meta.json"
+    meta.write_text(json.dumps({**json.loads(meta.read_text()), "max_tool_result_chars": 20000}))
+    pool = storm_turn_pool.QwenloopTurnPool(QWENLOOP)
+    (line,) = list(pool.build(pool.runs(tmp_path / "lanes")))
+    _assistant, tool = line["turns"][0]["after"]
+    assert tool["content"] == str({"content": "x" * 9000})
+
+
 def test_the_repair_text_is_read_not_imported(tmp_path: Path) -> None:
     text = storm_turn_pool.QwenloopTurnPool.repair_text(TOOLS / "qwenlane.py")
     assert "{attempt}" in text and "{max_attempts}" in text
@@ -138,7 +153,9 @@ def test_the_repair_text_is_read_not_imported(tmp_path: Path) -> None:
 
 def test_the_specs_pool_reads_real_files_and_never_overflows_the_window() -> None:
     specs = sorted((REPO / "docs/plans/qwenstorm-3.0.0/specs").glob("*.md"))[:2]
-    pool = storm_turn_pool.SpecTurnPool(QWENLOOP, REPO, seed=3, context_window=16384)
+    pool = storm_turn_pool.SpecTurnPool(
+        QWENLOOP, REPO, seed=3, context_window=16384, max_tool_result_chars=8_000
+    )
     lines = list(pool.build(specs))
     assert len(lines) == 2
     for line in lines:
