@@ -81,6 +81,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Documentation
 
+* **paper:** the research paper brought current for 3.2.0 after a claim-by-claim audit against
+  the code (about 560 claims confirmed current, about 90 corrected). The history figures are
+  pinned at d4c4e1f8, held by tag `paper-figures/3.2.0` so the rebase promotion cannot orphan
+  them, with the fall in commit counts explained (the 3.0.0 cycle was squash-merged, #1244).
+  The convergence theorem is restated as *bounded repair*: the budget refill is the automatic
+  `self-heal`, bounded by `branch_sync.max_self_heals` (default 2), and the one case the bound
+  does not cover — a lineage whose findings are all from the sovereign lane — is stated as a
+  limitation. The trust-separation account names the token the merge train and repair share,
+  and the delegated approver (12.f) as the fourth principal. The six-phase machine gains INTAKE
+  and ABANDONED; the atlas gains the 3.1.0 and 3.2.0 changes; stale counts, a wrong
+  sub-doctrine citation and a citation to an evidence file that never existed are corrected.
+  `storm-evidence.py` counts a lane line that ends at its issue number (49 starts, not 48), and
+  its end pattern no longer shares a name with the paper's closing marker.
+
 * **readme:** a first screen written for the newcomer: the problem, a one-sentence definition,
   five proof points each linked to the test or record behind it, a two-line try-it, a
   first-hour path from clone to pull request, an architecture view with its text equivalent,
