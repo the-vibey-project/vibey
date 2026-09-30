@@ -15,7 +15,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [3.2.0] (2026-09-30)
+
 ### Features
+
+* **skills:** two reference packs rendered from research documents, verbatim by line range with
+  every source line and figure accounted for: `biblical-languages-texts-archaeology-and-history`
+  (nine skills) and `physical-security-self-defense-and-firearms` (eight). vibey-skills 2.22.0;
+  138 plugins, 745 skills ([#1281](https://github.com/the-vibey-project/vibey/pull/1281)).
 
 * **gh:** declared coverage floors. `[rulesets.integration]` and `[rulesets.release]` take
   `minimum_coverage` and `max_coverage_drop` (numbers 0-100, absent by default, which sends
@@ -25,6 +32,67 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   now declares `minimum_coverage = 100` on both branches, moving the floor out of the
   hand-made `develop` and `main` rulesets so the operator can delete them without losing
   it.
+
+### Bug Fixes
+
+* **gh:** the sovereign review no longer gives up on a pull request that adds a large file.
+  On the 3.1.0 promotion (head fa3b391703ff) `vibey-gh local-review` gave no verdict: the
+  new `scripts/minimum_specs.py` was one `@@ -0,0 +1,N @@` hunk of 136,308 characters with
+  its header, larger than the 100,852 one part could carry, and a hunk is never cut, so the
+  gate asked a human. A hunk that only adds lines is now split between lines into pieces,
+  each with the file header, a synthesized `@@` header numbering its own new-side lines,
+  and a label saying it is piece k of m of one added hunk. Each piece is a part held to
+  every existing guard, pieces past `max_chunks` are refused naming the split file, and a
+  pass still needs every part to pass at the one head reviewed. A hunk with context or
+  removed lines is never split, and a line too long for a part alone is still refused.
+  `[pr_automation.fallback] split_added_hunks` (default `true`) declares it, and
+  `pr-review.yml` passes it as `--split-added-hunks`.
+
+* **db:** abandoning a project now lets its checkout go. `project_repo_uniq` made
+  `repo_path` unique across every project, so an abandoned project held its checkout for
+  ever: live on #963 the approved retry's `vibey new --repo .../triaged-963` failed twice
+  with a raw `UniqueViolationError`. Migration `0021_project_repo_live_uniq` replaces it
+  with a partial unique index on every phase but `abandoned` (terminal, so it never
+  becomes live again); `done` still holds its checkout. `vibey new` on a checkout a live
+  project holds is refused as `CheckoutHeld` -- one `Error:` line naming the holder's id
+  and phase, a hint naming `vibey abandon`, exit 3 -- never a traceback. Abandoned rows
+  stay, readable by id; `get_latest` now breaks a `created_at` tie by id, as `list_all`
+  does ([#963](https://github.com/the-vibey-project/vibey/issues/963)).
+
+* **phase:** a project still in `intake` can be abandoned. The phase machine had no
+  `INTAKE -> ABANDONED` edge, so `vibey abandon` refused (exit 3) a project whose dispatch
+  never reached DESIGN, and it held the triaged-delivery slot with no way out. The edge is
+  added, unguarded like every other move into abandoned, so every phase short of done can
+  now be abandoned: its jobs are cancelled, its gates withdrawn, and one
+  `PhaseTransitioned` from intake to abandoned is recorded.
+
+* **chart:** the KEDA scaler no longer counts ready jobs of an abandoned project. `vibey
+  abandon` made them unclaimable, but the ScaledObject's claimable-work query still counted
+  them, so a follow-up job a still-running handler enqueued after the abandonment could scale
+  a worker up for work that will never run. The query now carries the claim's own
+  abandoned-project exclusion, and `tests/infrastructure/db/test_keda_scaler_query.py` pins
+  every `NOT EXISTS` of `JobRepository`'s claim condition word for word into both KEDA
+  goldens, and checks that a scaler bound to an abandoned project counts nothing.
+
+### Documentation
+
+* **readme:** a first screen written for the newcomer: the problem, a one-sentence definition,
+  five proof points each linked to the test or record behind it, a two-line try-it, a
+  first-hour path from clone to pull request, an architecture view with its text equivalent,
+  and questions people ask. A case study, *How vibey survives a crashed agent*. A generated
+  `llms.txt` held to the nav by `--check`; per-page descriptions; package, citation and
+  repository metadata as code. `tests/meta/test_first_screen.py` and
+  `test_published_figures.py` keep the first screen's links landing and its figures equal to
+  the tests they quote. ADR-0076 ([#1282](https://github.com/the-vibey-project/vibey/pull/1282)).
+* **canon:** sub-doctrine 7.e, *the open door*, ratified by merge: every public surface is
+  written for the newcomer first, one step from a first contribution, and evidenced. Under
+  constitution Article V.4 this ratification supersedes every earlier release of the code,
+  which is to be yanked ([#1283](https://github.com/the-vibey-project/vibey/pull/1283)).
+
+## [3.1.0] (2026-09-30)
+
+### Features
+
 * **specs:** rolling minimum system requirements, re-measured weekly.
   `scripts/minimum_specs.py` (configured in `scripts/minimum_specs.toml`) has four
   subcommands. `measure` probes the host: the Python floor on each candidate interpreter;
@@ -46,6 +114,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   50 GB recommended free disk; no internet at runtime on the sovereign path. The weekly
   workflow `minimum-specs.yml` measures on the self-hosted runner, with no write token
   there, and opens a `chore(specs)` pull request from a hosted runner.
+
 * **cli:** `vibey abandon PROJECT_ID --reason TEXT [--by NAME] [--json] [--dry-run]` --
   the operator's clean exit for a project that is not going to finish. Found live on
   2026-09-29: project 9692abab sat in BUILD on a foreign spec with no way to stop it, and
@@ -60,6 +129,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   project is refused; `--dry-run` lists what would stop and writes nothing. The claim no
   longer hands out a job of an abandoned project, so a follow-up a still-running handler
   enqueues afterwards never runs.
+
 * **design:** DESIGN research can proceed without a person when no evidence can be had --
   never by fabricating. Observed live on 2026-09-29 (project 9692abab, issue #998): every
   delivery on the sovereign provider parked at a `research_evidence` gate in DESIGN,
@@ -74,6 +144,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   be attributed still parks for a person under either policy. A malformed value is refused
   at load. The triaged-delivery bridge opts its worker in only with `--record-research-gaps`
   (`VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`), off by default, and records that it did.
+
 * **gh:** `[unattended_approval] live_switch_required` (default `true`, unchanged). Set to
   `false`, the declared `enabled = true` is the delegated approver's grant and the repository
   variable `VIBEY_UNATTENDED_APPROVAL` becomes withdrawal only: unset or `on` leaves the grant
@@ -91,6 +162,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   (`vibey_gh.review_outcome`) in the gate's check run and a `pr-review-outcome` artifact,
   and the evaluation leaves a `pr-review-lane` record on every run; the new read-only
   `vibey-gh review-outcomes` tabulates them over the last runs.
+
 * **gates:** "a person was told" is evidence, never assumed. Every notice about a human
   gate -- notice 0 when it is raised, reminder 1, 2, ... while it waits -- now ends in one
   ledger event: `GateNotified` when a channel took it, or `GateNoticeUndeliverable` with the
@@ -100,6 +172,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   worker has no desktop) -- a gate used to leave no trace at all; now it is said once per
   gate, loudly, and not reminded about. One event per gate and notice number, fleet-wide,
   so a replayed sweep records nothing (`PostgresGateNoticeStore`).
+
 * **gates:** stale-gate reminders. An idle worker sweeps its project's open gates every
   `[notifications] sweep_interval_seconds` (default 300): a gate with no raise notice on
   record gets one, and a gate open `remind_after_seconds` (default a day) gets a reminder
@@ -108,6 +181,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   a supervisor to schedule where no worker idles; it exits 1 when a project's notices could
   not be read. `vibey doctor` gains a `gate-notices` line: `WARN ... N gates waiting,
   nobody will be told`, by project and reason -- a report, never a failure.
+
 * **queue:** a job whose last failures were all one failure parks on a `defect` gate, not a
   grant. Every failed handler run is recorded as a `JobFailed` event with its signature --
   the failure class and detail with ids, timestamps, durations, addresses, temporary paths
@@ -127,14 +201,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `merge_group`, with every place named. `[skip_markers] exempt_authors` (empty) is the only
   exemption, and it never covers a title, a body or a pull request into the release branch.
   The check is "No skip markers", required on both branches and in `scan_workflows`.
+
 * **gh:** `vibey-gh branch-health` and the managed `branch-health.yml` keep one tracking issue
   per permanent branch while a CI push run fails any of that branch's required checks, and
   close it when the tip is green again; `[branch_health]` configures it.
+
 * **gh:** `vibey-gh rulesets --check` and the managed `ruleset-drift.yml` compare every live
   repository ruleset with the declaration, read-only, and fail on drift: a declared ruleset
   that differs, a rule nobody declared, and any undeclared ruleset with its bypass actors.
   Ruleset comparison now reads only the declared parameters, so the defaults the forge echoes
   back are no longer reported as drift on every reconcile.
+
 * **gh:** `vibey-gh tracking-issue raise|resolve` opens, updates and closes the one issue that
   tracks a named condition, found by a marker in its body.
 
@@ -146,6 +223,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   statement, so budgets, the Sabbath, capacity circuits, the priority lane, phase gates and
   engine selection hold as for a single-project worker. A project that cannot be served is
   refused and its jobs stay queued; with nothing queued the worker waits instead of exiting.
+
 * **supervisor:** `vibey supervisor install` renders a launchd agent (macOS) or a systemd
   user service (Linux) for `vibey worker --all-projects` and for the triaged-delivery bridge,
   from `[supervisor]` in `vibey.toml`: restarted after a failed exit, logging to a durable
@@ -156,29 +234,6 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   when one is missing or stopped, `FAIL` with `[supervisor] required = true`.
 
 ### Bug Fixes
-
-* **gh:** the sovereign review no longer gives up on a pull request that adds a large file.
-  On the 3.1.0 promotion (head fa3b391703ff) `vibey-gh local-review` gave no verdict: the
-  new `scripts/minimum_specs.py` was one `@@ -0,0 +1,N @@` hunk of 136,308 characters with
-  its header, larger than the 100,852 one part could carry, and a hunk is never cut, so the
-  gate asked a human. A hunk that only adds lines is now split between lines into pieces,
-  each with the file header, a synthesized `@@` header numbering its own new-side lines,
-  and a label saying it is piece k of m of one added hunk. Each piece is a part held to
-  every existing guard, pieces past `max_chunks` are refused naming the split file, and a
-  pass still needs every part to pass at the one head reviewed. A hunk with context or
-  removed lines is never split, and a line too long for a part alone is still refused.
-  `[pr_automation.fallback] split_added_hunks` (default `true`) declares it, and
-  `pr-review.yml` passes it as `--split-added-hunks`.
-* **db:** abandoning a project now lets its checkout go. `project_repo_uniq` made
-  `repo_path` unique across every project, so an abandoned project held its checkout for
-  ever: live on #963 the approved retry's `vibey new --repo .../triaged-963` failed twice
-  with a raw `UniqueViolationError`. Migration `0021_project_repo_live_uniq` replaces it
-  with a partial unique index on every phase but `abandoned` (terminal, so it never
-  becomes live again); `done` still holds its checkout. `vibey new` on a checkout a live
-  project holds is refused as `CheckoutHeld` -- one `Error:` line naming the holder's id
-  and phase, a hint naming `vibey abandon`, exit 3 -- never a traceback. Abandoned rows
-  stay, readable by id; `get_latest` now breaks a `created_at` tie by id, as `list_all`
-  does ([#963](https://github.com/the-vibey-project/vibey/issues/963)).
 
 * **worker:** with `-j 2` or more, a drive loop that raises now stops its sibling loops
   before the worker closes the job notifier and the database pool. A bare `asyncio.gather`
@@ -199,6 +254,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   every producer's plan against the same checkout and fails the job naming the files. Both
   decompose prompts now state the rule, and that verification commands check the work,
   never perform it, and run unchanged on macOS and Linux.
+
 * **gptossloop:** a run now tells the model the host its shell commands run on and keeps
   file edits out of the shell. Live on #963 gpt-oss:20b ran GNU `sed -i '34i ...' README.md`
   twice on macOS (`sed: 1: "README.md\n": invalid command code R`) although `edit_file`
@@ -209,6 +265,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   change, to be made with `edit_file`; the `shell` and `edit_file` descriptions say the same,
   including how to insert lines with `edit_file`, and that `argv` runs without a shell. The
   host is recorded in the run's `meta.json`.
+
 * **gptossloop:** a tool result is no longer cut at a fixed 8,000 characters. Live on #963 the
   model opened README.md 19 times over four attempts. In the one run whose record survives
   history was never trimmed (prompts at most 6,022 of 65,536 tokens), but each of the six
@@ -218,6 +275,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   default context window; recorded in `meta.json`), and a cut result says how to read the
   rest (`read_file` with `line_start`/`line_end`, or `search`). The storm turn pool replays
   each run at the cap it recorded, and at the old 8,000 when it recorded none.
+
 * **design:** narrowest scope never narrows away the deliverable. Live on #963 (a README
   insertion) "Should the lane commit the change to README.md?" and "Should the lane generate
   the table of contents using the provided Python script or hardcode the list?" were both
@@ -230,6 +288,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   delivery verb whose object is the change (commit, deliver, apply, push, land, merge the
   change/edit/fix/update ...), and "use the provided X" where X is named in the intake. The
   #998 questions it narrowed are still narrowed; it still never rewrites a default to "Yes".
+
 * **build:** BUILD's worktrees and branches are scoped per project, and a branch is used only
   when it proves it is the project's own. Found live on 2026-09-30: project 893c4fc1,
   delivering issue #963 in a triaged-bridge checkout that shares the main repository's refs,
@@ -249,19 +308,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   ownership record, instead of rebuilding a cycle-keyed name; and a fresh dispatch moves a
   leftover `triaged-<issue>` checkout to the current `--base` (refusing one with changes)
   rather than starting from it as found.
-* **phase:** a project still in `intake` can be abandoned. The phase machine had no
-  `INTAKE -> ABANDONED` edge, so `vibey abandon` refused (exit 3) a project whose dispatch
-  never reached DESIGN, and it held the triaged-delivery slot with no way out. The edge is
-  added, unguarded like every other move into abandoned, so every phase short of done can
-  now be abandoned: its jobs are cancelled, its gates withdrawn, and one
-  `PhaseTransitioned` from intake to abandoned is recorded.
-* **chart:** the KEDA scaler no longer counts ready jobs of an abandoned project. `vibey
-  abandon` made them unclaimable, but the ScaledObject's claimable-work query still counted
-  them, so a follow-up job a still-running handler enqueued after the abandonment could scale
-  a worker up for work that will never run. The query now carries the claim's own
-  abandoned-project exclusion, and `tests/infrastructure/db/test_keda_scaler_query.py` pins
-  every `NOT EXISTS` of `JobRepository`'s claim condition word for word into both KEDA
-  goldens, and checks that a scaler bound to an abandoned project counts nothing.
+
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit
@@ -275,6 +322,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   default_scope` (`narrowest`, the default, or `model`), overridable by
   `vibey new --design-default-scope`; the triaged-delivery bridge always creates projects
   with `narrowest`.
+
 * **design:** `vibey design accept` accepts the finished spec, never the interview. The
   DESIGN -> BUILD / VISUAL_DESIGN guard now refuses while any DESIGN job of the cycle --
   research, synthesis, spec -- is unsettled ("N design job(s) still unsettled"). The
@@ -285,6 +333,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   research, synthesis and spec were still ready. The bridge now also waits: with the
   `answer_design_defaults` opt-in it works the queued design jobs on later passes and runs
   `design accept` only once the project's queue has settled.
+
 * **deps:** `oauthlib` 3.3.1 -> 4.0.0 (CVE-2026-49265) and `pyjwt` 2.13.0 -> 2.15.1
   (CVE-2026-102274) in `uv.lock`. Both arrive only transitively (`requests-oauthlib` under
   `kubernetes` and the Azure exporter; `mcp[crypto]` and `msal`), and the new advisories
@@ -297,6 +346,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `openvsx.yml`, run after a successful Release on `main`: with no `OVSX_PAT` it warns and
   keeps one tracking issue open instead of failing the Release run that the tag, the GitHub
   Release and the documentation all wait on; with a token, a failed upload still fails loudly.
+
 * **gh:** `.vibey-gh.toml` declares that a squash commit proposes the pull request's own title
   and body (`[repository_profile] squash_merge_commit_title = "PR_TITLE"`,
   `squash_merge_commit_message = "PR_BODY"`) instead of every commit message concatenated, and
@@ -329,6 +379,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   control that holds (see the runbook). The storm's
   `storm_trust.py` gains `LABELED_QUERY`, `IssueGate.judge_labels`, `Grant.curators` and a
   `query` argument to `GhForge`; its own lanes still ask `QUERY`.
+
 * **packaging:** the `vibey-engine` wheel now carries the SQL migrations, so a `pip install`
   or `uv tool install` can create its schema. Measured on 2026-09-29: neither a locally
   built wheel nor PyPI's 3.0.0 contained any `.sql`, so on an empty database `vibey migrate`
@@ -343,12 +394,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   over an empty schema. `tests/meta/test_wheel_ships_migrations.py` builds the real wheel
   and asserts every migration is in it, byte for byte, and that code imported from the
   unpacked wheel finds them there.
+
 * **krypton-app:** `pip install krypton-app` now brings `vibey-engine[hub]`, not bare
   `vibey-engine`. The launcher's one job is `vibey serve`, whose web stack (fastapi,
   uvicorn) is the engine's `hub` extra, so on its own the package installed a `krypton`
   that crashed on `No module named 'fastapi'`. Still unpinned; the launcher's install hint
   names the extra too, and `clients/krypton-app/tests/test_packaging.py` holds the
   requirement to an extra the engine actually declares.
+
 * **bootstrap:** a base install no longer prints `WARNING:root:Azure Monitor OpenTelemetry
   not available` on every `vibey` command. The notice was a root-logger warning at import
   time, so it fired whether or not anyone had asked for Azure telemetry -- and, as a side
@@ -357,6 +410,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   notice. The warning is kept for the case it is for: an Application Insights connection
   string is configured but the `vibey-engine[azure]` extra is missing -- said once per
   process.
+
 * **clients:** every Node package now declares the Node it needs in `engines.node`, so npm
   says so up front instead of a build failing on an older Node. Measured on 2026-09-29: the
   Expo app (`clients/app`) exports for the web on Node 20.20.2, 22 and 24 and fails on
