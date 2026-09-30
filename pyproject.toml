@@ -144,7 +144,7 @@ azure = [
     # from vibey-bootstrap's own `dependencies`; see that file for the advisory ids.
     "azure-core>=1.38.0",
     "filelock>=3.20.3",
-    "urllib3>=2.7.0",
+    "urllib3>=2.8.0",
     "cryptography>=50.0.0,<51",
     "pyjwt>=2.13.0",
 ]
@@ -167,7 +167,7 @@ bootstrap-all = [
     "opentelemetry-api>=1.22.0",
     "azure-core>=1.38.0",
     "filelock>=3.20.3",
-    "urllib3>=2.7.0",
+    "urllib3>=2.8.0",
     "cryptography>=50.0.0,<51",
     "pyjwt>=2.13.0",
     "fastapi>=0.110",
