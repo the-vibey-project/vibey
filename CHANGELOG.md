@@ -218,6 +218,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   ownership record, instead of rebuilding a cycle-keyed name; and a fresh dispatch moves a
   leftover `triaged-<issue>` checkout to the current `--base` (refusing one with changes)
   rather than starting from it as found.
+
+* **repo:** `.vibey/runs/1/design/spec.json` is no longer tracked. #68 checked it in by accident
+  from an unrelated cost-performance run, so every cycle-1 project created on a checkout of
+  this repository started with that foreign spec on disk -- and `design accept` passed on it
+  until #1258 made accept wait for the design chain (found live on #998, project 9692abab).
+
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit
