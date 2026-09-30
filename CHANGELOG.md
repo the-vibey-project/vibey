@@ -35,6 +35,11 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **deps:** virtualenv 21.14.1 for PYSEC-2026-4011, -4012, -4013 and -4014 (21.7.4 is affected;
+  the last fix is 21.7.13). virtualenv reaches the lock only through `pre-commit` in the `dev`
+  extras, so no shipped package carried it; the lock is upgraded for that one package and
+  `pip-audit` reports no known vulnerabilities.
+
 * **gh:** the research paper's tables and its theorem-with-proof fence render on the
   documentation site instead of printing as LaTeX. `math.js` reads a fence as its run of
   environments and converts it only when every one is understood, turns a `table`/`table*`
