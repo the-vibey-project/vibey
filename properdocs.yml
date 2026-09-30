@@ -75,7 +75,7 @@ nav:
       - The Beauty Bar: design/beauty-bar.md
   - Architecture:
       - Decision records:
-          - "0001 — Orchestrate the `*loop` runners; do not reimplement them": architecture/decisions/0001-orchestrate-do-not-reimplement.md
+          - "0001 — Orchestrate the *loop runners; do not reimplement them": architecture/decisions/0001-orchestrate-do-not-reimplement.md
           - "0002 — PostgreSQL, not SQLite, for the queue and ledger": architecture/decisions/0002-postgres-not-sqlite.md
           - "0003 — An event-sourced ledger is the conversation's source of truth": architecture/decisions/0003-event-sourced-ledger.md
           - "0004 — Handoffs are gated by a deterministic no-loss predicate": architecture/decisions/0004-no-loss-gate-on-handoff.md
@@ -86,7 +86,7 @@ nav:
           - "0009 — Human gates park jobs; they never block workers": architecture/decisions/0009-human-gates-are-parked-jobs.md
           - "0010 — Review loops back to design by default, to build on the fast path": architecture/decisions/0010-review-loopback-routing.md
           - "0011 — One source of truth, materialized into every engine's guidance files": architecture/decisions/0011-agent-surface-provisioning.md
-          - "0012 — Deployment is a separate CLI built on `azure-bootstrap`": architecture/decisions/0012-deploy-is-a-separate-cli.md
+          - "0012 — Deployment is a separate CLI built on azure-bootstrap": architecture/decisions/0012-deploy-is-a-separate-cli.md
           - "0013 — Deployment is a three-phase stage set in the core lifecycle": architecture/decisions/0013-deployment-is-a-three-phase-stage-set.md
           - "0014 — Optional visual design and deployment opt-in gates": architecture/decisions/0014-optional-visual-design-and-deployment-opt-in.md
           - "0015 — qwenloop is an opt-in local engine — a standby tier for BUILD, the sovereign provider for DESIGN": architecture/decisions/0015-qwenloop-standby.md
@@ -150,4 +150,5 @@ nav:
           - "0073 — Krypton desktop in C, on GTK 4 and libadwaita": architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md
           - "0074 — Measured dispatch for every service-bus surface": architecture/decisions/0074-measured-service-bus-dispatch.md
           - "0075 — Context-bearing surfaces are linked microslice graphs": architecture/decisions/0075-context-microslices-and-linked-surfaces.md
+          - "0076 — Discoverability and the first hour are deliverables": architecture/decisions/0076-discoverability-and-the-first-hour-are-deliverables.md
   - Research paper: paper.md
