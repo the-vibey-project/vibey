@@ -8,8 +8,11 @@
 // 2. ```latex fences, which the research paper uses for theorem-like environments that a
 //    TeX engine renders natively. A browser cannot, so they are turned into styled blocks
 //    here — `\begin{invariant}[Name] ... \end{invariant}` becomes "Invariant (Name). ..."
-//    with its math typeset — and a `verbatim` environment becomes a code block. Anything
-//    else is left as the LaTeX source it is, never guessed at.
+//    with its math typeset — a `verbatim` environment becomes a code block, and a `table`
+//    or `table*` with a `tabular` becomes an HTML table with its caption. A fence may hold
+//    several environments in a row (a theorem and its proof); each is converted in turn,
+//    and only when every one of them is understood. Anything else is left as the LaTeX
+//    source it is, never guessed at.
 (() => {
   "use strict";
 
@@ -52,30 +55,141 @@
       )
       .join("");
 
+  // One level of braces inside a command's argument: `\textbf{a {[}b{]}}` is read whole.
+  const ARG = "((?:[^{}]|\\{[^{}]*\\})*)";
+
+  // Text-mode TeX in a table cell or caption: font commands become their HTML, `{[}`/`{]}`
+  // (brackets shielded from an optional-argument parse) become brackets, escaped specials
+  // become themselves, and `$...$` is handed to MathJax. Applied after HTML escaping of
+  // everything that is not math, so no cell can inject markup.
+  const texText = (text) =>
+    text
+      .split(/(\$[^$]+\$)/)
+      .map((part, i) => {
+        if (i % 2 === 1) {
+          return `<span class="arithmatex">\\(${escapeHtml(part.slice(1, -1))}\\)</span>`;
+        }
+        let html = texProse(
+          part.replace(/\{\[\}/g, "[").replace(/\{\]\}/g, "]").replace(/\\([%&_#$])/g, "$1"),
+        );
+        const wrap = (command, open, close) => {
+          html = html.replace(new RegExp(`\\\\${command}\\{${ARG}\\}`, "g"), `${open}$1${close}`);
+        };
+        wrap("textbf", "<strong>", "</strong>");
+        wrap("texttt", "<code>", "</code>");
+        wrap("emph", "<em>", "</em>");
+        wrap("textit", "<em>", "</em>");
+        return html;
+      })
+      .join("");
+
+  // Column alignment from a tabular spec: `@{}` inserts are dropped, `l`/`c`/`r` align,
+  // and a `p{width}` column is a left-aligned paragraph column.
+  const columnAlignments = (spec) =>
+    spec
+      .replace(/@\{[^}]*\}/g, "")
+      .replace(/[pmb]\{[^}]*\}/g, "l")
+      .replace(/[^lcr]/g, "")
+      .split("")
+      .map((c) => ({ l: "left", c: "center", r: "right" })[c]);
+
+  const RULES = /\\(?:hline|toprule|midrule|bottomrule)\b/g;
+
+  const convertTable = (name, source) => {
+    const tabular = source.match(/\\begin\{tabular\}\{((?:[^{}]|\{[^{}]*\})*)\}([\s\S]*?)\\end\{tabular\}/);
+    if (!tabular) {
+      return null;
+    }
+    const align = columnAlignments(tabular[1]);
+    const rows = tabular[2]
+      .split(/\\\\/)
+      .map((row) => row.replace(RULES, "").trim())
+      .filter((row) => row.length > 0)
+      .map((row) => row.split(/(?<!\\)&/).map((cell) => cell.trim()));
+    if (rows.length === 0) {
+      return null;
+    }
+    // A first row whose every cell is bold is the header, as the paper writes its tables.
+    const header = rows[0].every((cell) => /^\\textbf\{[\s\S]*\}$/.test(cell));
+    const cellHtml = (tag, cell, index) => {
+      const style = align[index] && align[index] !== "left" ? ` style="text-align:${align[index]}"` : "";
+      const body = tag === "th" ? cell.replace(/^\\textbf\{([\s\S]*)\}$/, "$1") : cell;
+      return `<${tag}${style}>${texText(body)}</${tag}>`;
+    };
+    const rowHtml = (tag, row) => `<tr>${row.map((cell, i) => cellHtml(tag, cell, i)).join("")}</tr>`;
+    const captionMatch = source.match(new RegExp(`\\\\caption\\{${ARG}\\}`));
+    counters.table = (counters.table || 0) + 1;
+    const block = document.createElement("div");
+    block.className = `latex-env latex-table${name === "table*" ? " latex-table-wide" : ""}`;
+    const caption = captionMatch ? ` ${texText(captionMatch[1].replace(/\s+/g, " "))}` : "";
+    block.innerHTML =
+      `<table><caption><strong>Table ${counters.table}.</strong>${caption}</caption>` +
+      (header ? `<thead>${rowHtml("th", rows[0])}</thead>` : "") +
+      `<tbody>${rows.slice(header ? 1 : 0).map((row) => rowHtml("td", row)).join("")}</tbody></table>`;
+    return block;
+  };
+
+  // The top-level environments of a fence, in order: `\begin{name}[title]...\end{name}`
+  // runs, with nothing but whitespace between them. Null when anything else is there.
+  const environments = (source) => {
+    const found = [];
+    const pattern = /\\begin\{([\w*]+)\}(?:\[([^\]]*)\])?([\s\S]*?)\\end\{\1\}/g;
+    let end = 0;
+    for (let match = pattern.exec(source); match; match = pattern.exec(source)) {
+      if (source.slice(end, match.index).trim() !== "") {
+        return null;
+      }
+      found.push({ name: match[1], title: match[2], body: match[3], source: match[0] });
+      end = pattern.lastIndex;
+    }
+    return found.length > 0 && source.slice(end).trim() === "" ? found : null;
+  };
+
   const counters = {};
 
   const convert = (code) => {
     const source = code.textContent.trim();
-    const verbatim = source.match(/^\\begin\{verbatim\}([\s\S]*?)\\end\{verbatim\}$/);
-    if (verbatim) {
+    const parts = environments(source);
+    if (!parts) {
+      return null;
+    }
+    const blocks = parts.map(convertOne);
+    if (blocks.some((block) => block === null)) {
+      return null;
+    }
+    if (blocks.length === 1) {
+      return blocks[0];
+    }
+    const group = document.createElement("div");
+    group.className = "latex-group";
+    group.append(...blocks);
+    return group;
+  };
+
+  const convertOne = ({ name, title, body, source }) => {
+    if (name === "verbatim") {
       const pre = document.createElement("pre");
       const inner = document.createElement("code");
-      inner.textContent = verbatim[1].trim();
+      inner.textContent = body.trim();
       pre.append(inner);
       return pre;
     }
-    const env = source.match(/^\\begin\{([\w*]+)\}(?:\[([^\]]*)\])?([\s\S]*?)\\end\{\1\}$/);
-    if (!env) {
-      return null;
+    if (name === "table" || name === "table*") {
+      return convertTable(name, source);
     }
-    const name = env[1];
     if (name in ENVIRONMENTS) {
-      const [, , title, body] = env;
       counters[name] = (counters[name] || 0) + 1;
       const block = document.createElement("div");
       block.className = `latex-env latex-${name}`;
-      const label = name === "proof" ? ENVIRONMENTS[name] : `${ENVIRONMENTS[name]} ${counters[name]}`;
-      const heading = `<strong>${label}${title ? ` (${inlineMath(title)})` : ""}.</strong> `;
+      // A proof's optional argument replaces its label ("Proof sketch."), as in LaTeX;
+      // every other environment is numbered and shows its argument as a title.
+      let heading;
+      if (name === "proof") {
+        heading = `<strong>${title ? inlineMath(title) : ENVIRONMENTS[name]}.</strong> `;
+      } else {
+        const label = `${ENVIRONMENTS[name]} ${counters[name]}`;
+        heading = `<strong>${label}${title ? ` (${inlineMath(title)})` : ""}.</strong> `;
+      }
       const paragraphs = body.trim().split(/\n\s*\n/).map((p) => inlineMath(p.replace(/\s+/g, " ")));
       block.innerHTML = `<p>${heading}${paragraphs.join("</p><p>")}</p>`;
       return block;
@@ -83,7 +197,9 @@
     if (MATH_ENVIRONMENTS.includes(name)) {
       const block = document.createElement("div");
       block.className = "arithmatex";
-      block.innerHTML = `\\[ ${source} \\]`;
+      // Escaped: the browser decodes `&amp;` back to `&` before MathJax reads the text,
+      // so alignment still works, and nothing in the source can become markup.
+      block.innerHTML = `\\[ ${escapeHtml(source)} \\]`;
       return block;
     }
     if (name === "figure" || name === "figure*") {

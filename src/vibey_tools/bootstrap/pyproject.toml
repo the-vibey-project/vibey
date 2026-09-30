@@ -58,7 +58,7 @@ dependencies = [
     # Security: pin minimum versions for transitive dependencies with known CVEs
     "azure-core>=1.38.0",  # CVE-2026-21226: code execution via deserialization
     "filelock>=3.20.3",  # CVE-2025-68146, CVE-2026-22701: symlink TOCTOU attacks
-    "urllib3>=2.7.0",  # CVE-2026-21441 + CVE-2026-44431/44432
+    "urllib3>=2.8.0",  # CVE-2026-21441 + CVE-2026-44431/44432 + CVE-2026-97687/97688/97689
     "cryptography>=50.0.0,<51",  # PYSEC-2026-3552/3553/3554 (via azure-identity/msal); msal caps <51
     "pyjwt>=2.13.0",  # PYSEC-2026-175..179 (via msal); msal caps <3
 ]
