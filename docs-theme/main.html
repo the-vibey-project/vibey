@@ -1,0 +1,16 @@
+{#- Made with ❤️ by Vibey (https://the-vibey-project.github.io/vibey/), Developed by Adam Matthew Steinberger (https://vibewithadam.matthewsteinberger.com/).
+
+The one addition this site makes to the stock ProperDocs theme: a page that declares
+`description:` in its front matter gets that sentence as its meta description, so a search
+result says what the page holds rather than repeating the whole site's summary (sub-doctrine
+7.d, ADR-0076). The home page keeps the theme's own, which is the site description, and a
+page that declares nothing is described by the publishing workflow as before.
+-#}
+{% extends "base.html" %}
+
+{%- block site_meta %}
+{{ super() }}
+{%- if page and not page.is_homepage and page.meta and page.meta.description %}
+        <meta name="description" content="{{ page.meta.description|e }}">
+{%- endif %}
+{%- endblock %}

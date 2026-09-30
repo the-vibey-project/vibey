@@ -78,7 +78,9 @@ PostgreSQL 14, 15, 16, 17, and 18.
 `tests/meta/test_adr_counts.py` fails when an ADR is added without updating the
 "(N ADRs" count in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `README.md` and
 `docs/index.md`, when ADR numbering has a gap, or when an ADR is missing from the
-`properdocs.yml` nav. `tests/meta/test_container_context.py` fails when
+`properdocs.yml` nav. `tests/meta/test_llms_txt.py` fails when `docs/llms.txt` no
+longer matches what `python scripts/llms_txt.py` produces from that nav.
+`tests/meta/test_container_context.py` fails when
 `.dockerignore` excludes a tracked file the Dockerfile copies.
 
 ## Tenant suites

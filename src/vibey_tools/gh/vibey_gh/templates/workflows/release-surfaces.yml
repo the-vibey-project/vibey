@@ -648,6 +648,35 @@ jobs:
           ) if ga_id and consent else ""
 
           title_of = re.compile(r"<title>(.*?)</title>", re.S)
+          # A page that already describes itself keeps its own words. The theme writes a
+          # description on the home page, and a site that renders a page's `description:`
+          # front matter writes one on that page; adding the site-wide one beside it would
+          # give search engines two descriptions to choose between, and they would often
+          # choose the vaguer. Its own description also becomes its social card's.
+          own_description = re.compile(r'<meta name="description" content="([^"]*)"\s*/?>')
+          # The language and the licence, where the repository declares them in the
+          # standard place: a Python project's [project] table. Nothing is guessed -- a
+          # repository without one publishes neither field -- and a licence that is a
+          # single SPDX identifier is published as its SPDX page, which is what the
+          # structured-data readers resolve.
+          software = {}
+          try:
+              import tomllib
+
+              project = tomllib.loads(pathlib.Path("pyproject.toml").read_text()).get("project", {})
+          except (OSError, ValueError):
+              project = {}
+          if isinstance(project, dict) and project.get("name"):
+              software["programmingLanguage"] = "Python"
+              declared = project.get("license")
+              licence = declared.get("text") if isinstance(declared, dict) else declared
+              if isinstance(licence, str) and licence.strip():
+                  licence = licence.strip()
+                  software["license"] = (
+                      f"https://spdx.org/licenses/{licence}.html"
+                      if re.fullmatch(r"[A-Za-z0-9.+-]+", licence)
+                      else licence
+                  )
           # Bottom previous/next navigation. The theme already renders rel="prev"/rel="next"
           # anchors in the page header with the correct targets and labels; on a phone that
           # header is a full page-scroll away from a reader who has just FINISHED the page.
@@ -698,12 +727,13 @@ jobs:
               url = canonical + ("" if relative == "index.html" else relative.removesuffix("index.html"))
               found = title_of.search(text)
               page_title = html.escape(found.group(1).strip() if found else name, quote=True)
-              esc_desc = html.escape(description, quote=True)
+              own = own_description.search(text)
+              esc_desc = html.escape(html.unescape(own.group(1)) if own else description, quote=True)
               metadata = (
                   f'<link rel="canonical" href="{url}">\n'
                   f'<meta name="robots" content="{"index,follow" if indexable else "noindex,nofollow"}">\n'
-                  f'<meta name="description" content="{esc_desc}">\n'
-                  f'<meta name="keywords" content="{html.escape(", ".join(keywords), quote=True)}">\n'
+                  + ("" if own else f'<meta name="description" content="{esc_desc}">\n')
+                  + f'<meta name="keywords" content="{html.escape(", ".join(keywords), quote=True)}">\n'
                   f'<meta name="author" content="{html.escape(author, quote=True)}">\n'
                   f'<meta name="generator" content="vibey-gh release-surfaces">\n'
                   + (f'<meta name="theme-color" content="{theme_color}">\n' if theme_color else "")
@@ -736,6 +766,7 @@ jobs:
                       "author": {"@type": "Person", "name": author},
                       "keywords": ", ".join(keywords),
                       "inLanguage": locale.replace("_", "-"),
+                      **software,
                   }
                   metadata += '<script type="application/ld+json">' + json.dumps(record) + '</script>\n'
               if bottom_nav and "</body>" in text:
@@ -1417,6 +1448,10 @@ jobs:
           [ -f pages/main/book-print.html ] && SURFACE_LINES="${SURFACE_LINES}- [The book (print HTML)](${PAGES_ROOT}main/book-print.html)"$'\n'
           [ -f pages/main/governance/constitution/index.html ] && SURFACE_LINES="${SURFACE_LINES}- [Governance: the Constitution, the doctrines, the commandments, the bill of rights](${PAGES_ROOT}main/governance/constitution/)"$'\n'
           [ -f pages/main/corpus-index.json ] && SURFACE_LINES="${SURFACE_LINES}- [Governance corpus index](${PAGES_ROOT}main/corpus-index.json)"$'\n'
+          # A repository that ships its own llms.txt in its docs -- a page-by-page index,
+          # generated from its navigation -- gets it linked from this root index, which
+          # otherwise knows the site only by its channels.
+          [ -f pages/main/llms.txt ] && SURFACE_LINES="${SURFACE_LINES}- [Page-by-page index of the production documentation](${PAGES_ROOT}main/llms.txt)"$'\n'
           if __VIBEY_GH_DOC_LLMS__; then
             cat > pages/llms.txt <<EOF
           # ${NAME}

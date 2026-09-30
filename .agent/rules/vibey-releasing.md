@@ -213,6 +213,13 @@ content:
   added to the `properdocs.yml` nav, and the "(N ADRs" count in `CLAUDE.md`,
   `AGENTS.md`, `GEMINI.md`, `README.md` and `docs/index.md` must match the files on
   disk. `tests/meta/test_adr_counts.py` enforces all three.
+- **The AI-reader index:** `docs/llms.txt` is generated from the `properdocs.yml` nav by
+  `python scripts/llms_txt.py` (configuration in `scripts/llms_txt.toml`), so every nav
+  edit -- a new page, a new ADR -- is followed by that command in the same change.
+  `tests/meta/test_llms_txt.py` runs `--check` and fails until it is (ADR-0076).
+- **Per-page descriptions:** a page's `description:` front matter becomes its meta
+  description through `docs-theme/main.html`; a page without one is described by the
+  publishing workflow's site-wide sentence.
 - **Paper:** `docs/paper.md` is the source for both the HTML page (`/paper/`) and
   `paper.pdf`.
 - **Book:** generated from the built channel site by `vibey-gh book`; there is no

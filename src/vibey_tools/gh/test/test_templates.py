@@ -3256,6 +3256,36 @@ def test_seo_metadata_is_rendered_configurably(tmp_path):
     assert _favicon_links("/img/fav.ico") == '<link rel="icon" href="/img/fav.ico">'
 
 
+def test_a_page_keeps_its_own_description_and_the_root_index_links_the_channel_index(tmp_path):
+    """Three things the metadata step owes a findable site (sub-doctrine 7.d, ADR-0076).
+
+    A page that already carries a description -- the theme's home page, or a page whose
+    `description:` front matter the site renders -- keeps it, instead of gaining the
+    site-wide one beside it. The structured data names the language and the licence where
+    the repository's `[project]` table declares them, and invents neither. And the root
+    llms.txt links a repository's own page-by-page llms.txt when the channel ships one.
+    The injector is also compiled, so an edit that breaks its Python fails here rather than
+    on the first deploy.
+    """
+    import textwrap
+
+    from vibey_gh.config import GhConfig
+    from vibey_gh.install import render_workflow
+
+    text = render_workflow(WORKFLOWS / "release-surfaces.yml", GhConfig(root=tmp_path))
+    assert "own_description = re.compile(" in text
+    assert '("" if own else f\'<meta name="description" content="{esc_desc}">\\n\')' in text
+    assert 'software["programmingLanguage"] = "Python"' in text
+    assert "https://spdx.org/licenses/{licence}.html" in text
+    assert "**software," in text
+    assert "[ -f pages/main/llms.txt ]" in text
+
+    marker = text.index("own_description = re.compile(")
+    start = text.rindex("<<'PY'\n", 0, marker) + len("<<'PY'\n")
+    end = text.index("\n          PY\n", marker)
+    compile(textwrap.dedent(text[start:end]), "release-surfaces metadata step", "exec")
+
+
 def test_seo_fields_refuse_html_injection():
     """These strings land verbatim in rendered pages and workflow YAML; the cheap
     injections are refused at load time rather than discovered on a published site."""

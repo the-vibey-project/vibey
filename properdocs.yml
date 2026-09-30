@@ -1,15 +1,24 @@
 site_name: vibey
+# The sentence search engines and AI readers quote for the whole site, so it says what vibey
+# is in words a stranger would use (sub-doctrine 7.d, ADR-0076). It is also the summary line
+# of docs/llms.txt, which scripts/llms_txt.py regenerates from this file.
 site_description: >-
-  A queue-based, six-phase conductor for autonomous software delivery on top of the *loop
-  runners — spec interview, design, build, review, deploy. PostgreSQL-backed.
+  vibey is a free, open-source orchestrator for AI coding agents: it interviews you until
+  the spec is sharp, builds unattended on local or paid agents, stops only for the
+  decisions that are yours, and records every step in an append-only PostgreSQL ledger,
+  so a crashed or out-of-credit agent's work is picked up again rather than lost.
 site_url: https://the-vibey-project.github.io/vibey/
 repo_url: https://github.com/the-vibey-project/vibey
 repo_name: the-vibey-project/vibey
 edit_uri: edit/main/docs/
 
-# ProperDocs, matching the rest of the family. `theme: mkdocs` because ProperDocs ships
-# its own theme package; the styling lives in stylesheets/vibey.css.
-theme: mkdocs
+# ProperDocs, matching the rest of the family. `name: mkdocs` because ProperDocs ships
+# its own theme package; the styling lives in stylesheets/vibey.css. `custom_dir` adds one
+# thing to it: a page's `description:` front matter becomes its meta description
+# (docs-theme/main.html).
+theme:
+  name: mkdocs
+  custom_dir: docs-theme
 
 extra_css:
   - stylesheets/vibey.css

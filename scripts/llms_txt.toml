@@ -1,0 +1,32 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/llms_txt.py (ADR-0051: configuration is declared in
+# TOML, never written into a source file). Everything else the index needs is derived from
+# the files named here: the site's name, description, address and navigation from the site
+# configuration; the production channel, the governance source and which offline forms the
+# site ships from the vibey-gh configuration. Change the navigation and run
+# `python scripts/llms_txt.py`; `--check` (run by tests/meta/test_llms_txt.py) fails until
+# the committed index matches what the navigation now produces.
+
+[llms_txt]
+# The ProperDocs configuration whose `nav:` is the index's table of contents.
+site_config = "properdocs.yml"
+# The vibey-gh configuration: `[branches] release` names the production channel, and
+# `[documentation]` says where the governance corpus lives and whether the paper and the
+# book are published beside the site.
+gh_config = ".vibey-gh.toml"
+# Where the index is written. Inside the docs directory, so ProperDocs copies it to the
+# root of every channel site, where a reader or a crawler looks for it.
+output = "docs/llms.txt"
+# The heading for navigation entries that sit under no section of their own.
+unsectioned_heading = "Start here"
+# One sentence per entry, cut at a word boundary beyond this many characters.
+description_limit = 220
+# The governance documents the site publishes, in the order it publishes them (the
+# Constitution first, as the order of authority), then every standing subdoctrine that
+# matches `governance_glob`. Mirrors release-surfaces.yml's Governance section.
+governance_heading = "Governance"
+governance_order = ["constitution.md", "doctrines.md", "commandments.md", "bill-of-rights.md"]
+governance_glob = "sd-*.md"
+# The heading for the downloadable forms of the documentation.
+downloads_heading = "Offline forms"

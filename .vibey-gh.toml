@@ -410,6 +410,14 @@ cookie_consent = true
 # every release-surfaces deploy, so verification survives the rebuild that wipes a
 # hand-uploaded file. The committed file is the one Search Console issued.
 site_root_files = ["googleebf918639d02415d.html"]
+# The words a stranger would search for this project by, not its own vocabulary (sub-doctrine
+# 7.d, ADR-0076). They reach every page's keywords and the structured data. Ten, each true of
+# the project, and no more: a longer list is keyword stuffing, which 7.d forbids.
+keywords = [
+  "vibey", "AI coding agents", "agent orchestration", "autonomous software delivery",
+  "local LLM", "Ollama", "human in the loop", "append-only ledger", "PostgreSQL job queue",
+  "open source",
+]
 
 # ---------------------------------------------------------------------------------------
 # The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049).
