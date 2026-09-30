@@ -1372,6 +1372,42 @@ def test_a_citation_file_is_bumped_without_touching_the_format_version(repo):
     assert "  version: 9.9.9\n" in text
 
 
+def test_a_citation_file_gets_its_release_date_beside_its_version(repo):
+    """`date-released:` moves with `version:`, keeping its quoting; the nested ones do not.
+
+    It sat three releases stale in vibey's own CITATION.cff because nothing wrote it, and
+    GitHub prints it in "Cite this repository" beside the version that did move.
+    """
+    from datetime import UTC, date, datetime
+
+    from vibey_gh.versioning import apply_version
+
+    (repo / "CITATION.cff").write_text(
+        CITATION + "references:\n  - date-released: 2001-01-01\n", encoding="utf-8"
+    )
+    cfg = GhConfig(root=repo, version_files=("CITATION.cff",))
+
+    apply_version(cfg, "1.0.0", released=date(2026, 9, 30))
+    text = (repo / "CITATION.cff").read_text(encoding="utf-8")
+    assert '\ndate-released: "2026-09-30"\n' in text
+    assert "  - date-released: 2001-01-01\n" in text
+
+    apply_version(cfg, "1.0.1")
+    today = datetime.now(UTC).date().isoformat()
+    assert f'\ndate-released: "{today}"\n' in (repo / "CITATION.cff").read_text(encoding="utf-8")
+
+
+def test_a_citation_file_without_a_release_date_gains_none(repo):
+    from vibey_gh.versioning import apply_version
+
+    (repo / "CITATION.cff").write_text("cff-version: 1.2.0\nversion: 0.1.0\n", encoding="utf-8")
+    cfg = GhConfig(root=repo, version_files=("CITATION.cff",))
+    apply_version(cfg, "0.2.0")
+    assert (repo / "CITATION.cff").read_text(
+        encoding="utf-8"
+    ) == "cff-version: 1.2.0\nversion: 0.2.0\n"
+
+
 def test_a_citation_file_is_read_at_a_ref(repo):
     import subprocess
 

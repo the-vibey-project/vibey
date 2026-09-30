@@ -27,6 +27,7 @@ import json
 import re
 import subprocess
 import tomllib
+from datetime import UTC, date, datetime
 
 from vibey_gh.config import GhConfig
 from vibey_gh.flatten import Flattener
@@ -44,6 +45,13 @@ TOML_VERSION_RE = re.compile(r'^(version\s*=\s*")([^"]+)(")', re.MULTILINE)
 # GitHub renders it as "Cite this repository" and citation managers read it directly --
 # vibey's said 0.6.0 through two releases before anything noticed.
 CFF_VERSION_RE = re.compile(r"^(version:[ \t]*)(\S+)([ \t]*)$", re.MULTILINE)
+# The citation's release date, beside its version and just as visible: GitHub prints it in
+# "Cite this repository" and citation managers copy it. It sat at the date of an older
+# release for three releases because nothing managed it, so the bump that writes the
+# version writes it too. Column zero, like the version, and quoting kept as found.
+CFF_DATE_RE = re.compile(
+    r"^(date-released:[ \t]*)(\"?)(\d{4}-\d{2}-\d{2})(\"?)([ \t]*)$", re.MULTILINE
+)
 
 
 def _toml_version(text: str) -> str | None:
@@ -317,9 +325,13 @@ def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str |
     return bump(working, level), why
 
 
-def apply_version(cfg: GhConfig, new: str) -> list[str]:
+def apply_version(cfg: GhConfig, new: str, *, released: date | None = None) -> list[str]:
     """Write `new` into every configured version file. All of them, or the tree is
-    inconsistent and its own validator will reject it."""
+    inconsistent and its own validator will reject it.
+
+    A citation file that states a `date-released:` gets `released` beside the new version
+    -- today in UTC unless a caller names the day -- so the two never disagree."""
+    released = released or datetime.now(UTC).date()
     written = []
     for rel in cfg.version_files:
         path = cfg.root / rel
@@ -342,6 +354,9 @@ def apply_version(cfg: GhConfig, new: str) -> list[str]:
             patched, n = CFF_VERSION_RE.subn(rf"\g<1>{new}\g<3>", text, count=1)
             if n != 1:
                 raise RuntimeError(f"{rel}: expected one top-level version:, found {n}")
+            patched = CFF_DATE_RE.sub(
+                rf"\g<1>\g<2>{released.isoformat()}\g<4>\g<5>", patched, count=1
+            )
             path.write_text(patched, encoding="utf-8")
         else:
             text = path.read_text(encoding="utf-8")
