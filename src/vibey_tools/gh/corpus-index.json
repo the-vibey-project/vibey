@@ -52,43 +52,43 @@
   {
    "anchor": "7 — The never-lost reader",
    "document": "docs/doctrines.md",
-   "sha256": "13158b9e2874eff5a676bbf193861805a7d27f6fc9f6e703223a6e597c430934",
+   "sha256": "fe64e5d49bcb9da9e6bdc92cdc0ff4c511251647ed5a1d45c4a8fcbd7e30792f",
    "start_line": 65,
-   "text_lines": 48
+   "text_lines": 67
   },
   {
    "anchor": "8 — Local authority",
    "document": "docs/doctrines.md",
    "sha256": "a8e1147504963bd2cb7effa18a8e095e218aab6e32efbb18448585dd767fb297",
-   "start_line": 113,
+   "start_line": 132,
    "text_lines": 320
   },
   {
    "anchor": "9 — The vibe",
    "document": "docs/doctrines.md",
    "sha256": "20d42fe4aeb1afd24b9ce5c0dbd94db28500266f0c8e4a222890ecb918360f5f",
-   "start_line": 433,
+   "start_line": 452,
    "text_lines": 33
   },
   {
    "anchor": "10 — No guarantees",
    "document": "docs/doctrines.md",
    "sha256": "f903ce775a9148b4fcb66978357be967564cc50f625615f232a3db1e6a5c8992",
-   "start_line": 466,
+   "start_line": 485,
    "text_lines": 73
   },
   {
    "anchor": "11 — The living roadmap",
    "document": "docs/doctrines.md",
    "sha256": "2b7af17bfc318721c526df138ff45715828a18d9f4892ca8a80d194c4328548d",
-   "start_line": 539,
+   "start_line": 558,
    "text_lines": 7
   },
   {
    "anchor": "12 — Humans first",
    "document": "docs/doctrines.md",
    "sha256": "691a84d44bfb7b3d1f988ffbc25108eb2e8fea9ceab65778fdf42fd1198be0e5",
-   "start_line": 546,
+   "start_line": 565,
    "text_lines": 250
   },
   {
@@ -232,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "baf31b08066804746d5cc7f81febda02cd83320a11b348331204ba556563eea0",
+ "corpus_sha256": "6aa9b530b4160b57c3fad9b422952ea805d34fff7021a2de00abb44f45e1b4ac",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",

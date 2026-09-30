@@ -110,6 +110,25 @@ have to read worse to rank better stays as it is and ranks on its merits.
 Optimization means the same truth made findable, never different words made hollow.
 Work nobody can find is indistinguishable from work nobody did.
 
+**7.e — the open door** *(proposed; ratification requires the operator's merge)*: every
+public surface of this project — its README, its documentation's landing page, its
+package and repository listings — is written for the newcomer first, and it is a door,
+never a wall. Its first screen states the problem before any of the project's own
+vocabulary (1), then says in one sentence what the project is, in the words a stranger
+would search for and in a form a person or a machine can quote whole (7.d), and it reads
+without a dictionary to someone who has never written a line of code (5, 7). From that
+screen a person is one step from a first contribution: a written path leads, command by
+command, from a fresh clone to a pull request, and it is kept runnable, because a path
+that no longer runs turns away exactly the reader it was written for. Every claim a first
+screen makes is evidenced — it links to the test, record or file that proves it, and a
+figure it quotes from a test is the figure that test runs, held there by the machinery
+rather than by anyone's memory (10.f, 12.e). Nothing on a public surface is invented to
+look popular: no testimonial, adopter, count or endorsement that is not real (4.a), and
+no page written for a crawler instead of a person (7.d). A newcomer turned away by a
+stale command, a dead link or a claim that does not hold is a person this project failed,
+and that failure is a defect, repaired like any other. Work nobody can find is work
+nobody did (7.d); work nobody can join ends with the people who began it.
+
 ## 8 — Local authority
 
 When paid credits run out, local is the source of truth: green local work reaches
