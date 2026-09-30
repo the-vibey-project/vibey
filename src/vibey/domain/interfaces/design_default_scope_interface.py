@@ -23,7 +23,8 @@ class DesignDefaultScopeGuardInterface(Protocol):
     """Decides the default a DESIGN question is recorded with."""
 
     def classify(self, question: str, *, intake: str) -> ScopeClassification:
-        """The evidence: is it yes/no, does it extend, which artefacts beyond the intake."""
+        """The evidence: is it yes/no, does it extend, which artefacts beyond the intake,
+        and does it ask about delivering the change the intake asks for."""
         ...
 
     def declines(self, default: str) -> bool:

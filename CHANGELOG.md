@@ -153,6 +153,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   default context window; recorded in `meta.json`), and a cut result says how to read the
   rest (`read_file` with `line_start`/`line_end`, or `search`). The storm turn pool replays
   each run at the cap it recorded, and at the old 8,000 when it recorded none.
+* **design:** narrowest scope never narrows away the deliverable. Live on #963 (a README
+  insertion) "Should the lane commit the change to README.md?" and "Should the lane generate
+  the table of contents using the provided Python script or hardcode the list?" were both
+  declared "No" -- by the model itself, not the guard (no `model_default` in the ledger), with
+  the narrowest-scope contract in its prompt. `QUESTION_DEFAULT_CONTRACT` now says the
+  deliverable itself is never optional: narrowest means nothing beyond the intake, never
+  less, and a question about making, committing or applying the requested change, or using
+  something the intake provides, defaults to "Yes" unless the intake says otherwise. The
+  guard's classifier exempts both shapes from narrowing (`ScopeClassification.delivers`): a
+  delivery verb whose object is the change (commit, deliver, apply, push, land, merge the
+  change/edit/fix/update ...), and "use the provided X" where X is named in the intake. The
+  #998 questions it narrowed are still narrowed; it still never rewrites a default to "Yes".
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

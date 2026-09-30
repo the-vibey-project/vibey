@@ -52,7 +52,11 @@ QUESTION_DEFAULT_CONTRACT = (
     "extend, include, enforce or automate something -- a test, a script, a CI or "
     'pipeline step, a hook, a comment, a tool -- the default is "No" unless the intake '
     "explicitly requires it. Do not propose scope beyond the intake: ask how to do what "
-    "it asks, not what else could be done."
+    "it asks, not what else could be done. The deliverable itself is never optional: "
+    "narrowest means nothing beyond the intake, never less than it. A question about "
+    "making, committing or applying the change the intake asks for, or about using "
+    "something the intake itself provides (a script, a command, a check), defaults to "
+    '"Yes" unless the intake itself says otherwise -- or, better, is not asked at all.'
 )
 """The rule both DESIGN providers state to their model, in one place so they cannot
 drift. It is prose, and a model can ignore prose, so `DesignInterviewHandler` also

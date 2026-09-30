@@ -16,7 +16,13 @@ import pytest
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
 from tests.application.test_design_handler import FakeDesignLedger, FixedClock
-from vibey.application.design import DesignEvent, DesignQuestion, DesignStage, QuestionBatch
+from vibey.application.design import (
+    QUESTION_DEFAULT_CONTRACT,
+    DesignEvent,
+    DesignQuestion,
+    DesignStage,
+    QuestionBatch,
+)
 from vibey.application.design_handler import DesignInterviewHandler
 from vibey.application.dto import JobRecord, ProjectRecord
 from vibey.application.worker import Park
@@ -193,3 +199,12 @@ async def test_a_malformed_stored_scope_fails_the_job_rather_than_reading_as_nar
     with pytest.raises(ConfigError):
         await _handler(ledger, gates, projects=projects).handle(job)
     assert _asked(ledger) == {}
+
+
+def test_the_contract_says_the_deliverable_itself_is_never_optional() -> None:
+    """#963: the model itself defaulted "Should the lane commit the change to README.md?"
+    to "No" (no `model_default` in the ledger -- the guard had not touched it). The
+    contract both providers state now says narrowest is never less than the intake."""
+    assert "The deliverable itself is never optional" in QUESTION_DEFAULT_CONTRACT
+    assert "never less than it" in QUESTION_DEFAULT_CONTRACT
+    assert "committing or applying the change the intake asks for" in QUESTION_DEFAULT_CONTRACT
