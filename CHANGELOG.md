@@ -122,6 +122,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **phase:** a project still in `intake` can be abandoned. The phase machine had no
+  `INTAKE -> ABANDONED` edge, so `vibey abandon` refused (exit 3) a project whose dispatch
+  never reached DESIGN, and it held the triaged-delivery slot with no way out. The edge is
+  added, unguarded like every other move into abandoned, so every phase short of done can
+  now be abandoned: its jobs are cancelled, its gates withdrawn, and one
+  `PhaseTransitioned` from intake to abandoned is recorded.
 * **design:** a DESIGN question's declared default is now the narrowest-scope answer, not
   the model's appetite. Live on #998 (a README insertion) the model asked 22 "Should we also
   add X?" questions defaulting to "Yes"; accepting defaults grew a generator script, unit

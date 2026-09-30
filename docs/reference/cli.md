@@ -369,9 +369,10 @@ that would rather listen than poll.
 ## `vibey abandon PROJECT_ID --reason TEXT`
 
 Abandon a project that is not going to finish -- built on the wrong spec, superseded,
-no longer wanted. Nothing in vibey abandons a project on its own; until a person does,
-anything waiting on it waits (the triaged-delivery bridge holds its one delivery slot
-for a dispatched project until it is done or abandoned).
+no longer wanted, or stuck in `intake` because its dispatch never reached DESIGN. Any
+phase short of `done` can be abandoned. Nothing in vibey abandons a project on its own;
+until a person does, anything waiting on it waits (the triaged-delivery bridge holds its
+one delivery slot for a dispatched project until it is done or abandoned).
 
 | Option | Default | What it does |
 |---|---|---|
@@ -419,8 +420,7 @@ was) and `withdrawn_gates` (`gate_id`, `kind`, `job_id`).
 Abandoning a project that is already abandoned changes nothing, prints
 `<name> (<id>) is already abandoned; nothing was changed.` and exits 0. A project that
 is `done` is refused (exit 3, `Error: the project is done ...`): it finished, which is a
-different ending. So is a project still in `intake`, which the phase machine gives no
-edge to `abandoned`, and one in a phase this vibey does not know. An unknown
+different ending. So is one in a phase this vibey does not know. An unknown
 `PROJECT_ID` exits 1; a missing, empty or control-bearing `--reason`, or an unusable
 `--by`, exits 2 before the database is opened.
 
