@@ -850,7 +850,8 @@ class UnattendedApprovalConfig:
     and cannot alter. This dataclass is that standard as the repository declares it -- the
     DECLARED half of the grant (12.c). The live half is the repository variable
     `switch_variable` names (`VIBEY_UNATTENDED_APPROVAL` by default), whose value is
-    deliberately not here: withdrawal must need no merge. `vibey-gh approve-check`
+    deliberately not here: withdrawal must need no merge. `live_switch_required` decides
+    whether that variable must also say "on", or only has the power to withdraw. `vibey-gh approve-check`
     (`vibey_gh.approval_check`) is what reads both halves.
 
     Defaults refuse. `enabled` is False and `branches` and `authors` are empty, so a
@@ -884,6 +885,13 @@ class UnattendedApprovalConfig:
     # refusal.
     switch_variable: str = "VIBEY_UNATTENDED_APPROVAL"
     switch_value: str = "on"
+    # Which half turns the grant on. True (the default, refusing): the variable must read
+    # exactly `switch_value`, so granting takes both a reviewed merge and a variable. False:
+    # `enabled = true` here grants, reviewed in the pull request that set it (12.f: "granting
+    # is deliberate, declared and reviewed"), and the variable becomes withdrawal only --
+    # unset or `switch_value` leaves the grant standing, anything else withdraws it at once,
+    # with no merge (12.f: "withdrawal is immediate and unilateral"). Unreadable still refuses.
+    live_switch_required: bool = True
 
     def __post_init__(self) -> None:
         # The switch is validated whether or not the grant is on: a switch that could never
@@ -900,6 +908,13 @@ class UnattendedApprovalConfig:
                 "unattended_approval.switch_value must be non-empty with no surrounding "
                 "whitespace -- it is compared exactly, and whitespace nobody can see is a "
                 "value nobody can match"
+            )
+        # Exactly a bool: this key decides whether a second, live consent is needed, and a
+        # value that merely reads false (0, "", an empty list) must not quietly drop it.
+        if not isinstance(self.live_switch_required, bool):
+            raise TypeError(
+                "unattended_approval.live_switch_required must be true or false -- it decides "
+                "whether the repository variable must also say the grant is on"
             )
         if not self.enabled:
             return
@@ -2803,6 +2818,9 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
                 "switch_variable", UnattendedApprovalConfig.switch_variable
             ),
             switch_value=approval.get("switch_value", UnattendedApprovalConfig.switch_value),
+            live_switch_required=approval.get(
+                "live_switch_required", UnattendedApprovalConfig.live_switch_required
+            ),
         ),
         issue_automation=IssueAutomationConfig(
             enabled=issues.get("enabled", True),

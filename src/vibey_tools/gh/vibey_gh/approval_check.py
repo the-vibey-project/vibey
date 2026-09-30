@@ -19,7 +19,10 @@ The conditions, each a refusal when it does not hold or cannot be read:
 
 1. **the grant is in force** -- `enabled = true` in the declared half, AND the live half, the
    repository variable `switch_variable` names, reads exactly `switch_value`. Absent, off,
-   empty, malformed and unreadable are one answer: "I cannot tell" is refusal (12.f).
+   empty, malformed and unreadable are one answer: "I cannot tell" is refusal (12.f). With
+   `live_switch_required = false` the declared half alone grants and the variable can only
+   withdraw: unset (a clean 404) or exactly `switch_value` leaves the grant standing, any
+   other value withdraws it, and a variable that cannot be read or is malformed refuses.
 2. **the author is admitted** -- the pull request's author is in `authors`, expanded by
    `config.expand_authors` exactly as the grant documents (`@codeowners` becomes the logins
    `.github/CODEOWNERS` names; no CODEOWNERS is nobody). Bot logins compare the way the merge
@@ -62,6 +65,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import itertools
+import re
 import sys
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -101,6 +105,11 @@ _PASSING_CONCLUSIONS = ("SUCCESS", "NEUTRAL", "SKIPPED")
 _RUNNING_STATUSES = ("QUEUED", "IN_PROGRESS", "WAITING", "PENDING", "REQUESTED")
 # The review body `--approve` submits when the approver supplies none.
 DEFAULT_BODY = "Approved under [unattended_approval] after `vibey-gh approve-check` passed."
+
+
+# How the gh transport reports a variable that does not exist. A constant rather than a
+# method because it is data both modes of `_switch` read.
+_NOT_FOUND = re.compile(r"HTTP 404\b")
 
 
 @dataclass(frozen=True)
@@ -312,10 +321,17 @@ class ApprovalCheck(ApprovalCheckInterface):
             ["api", f"repos/{{owner}}/{{repo}}/actions/variables/{name}"], cwd=cfg.root
         )
         if problem:
+            # With the grant declared in the configuration alone, an unset variable is a
+            # withdrawal nobody made. Only a clean 404 says that: any other failure cannot
+            # tell "not withdrawn" from "withdrawn and unreadable", and refuses (12.f).
+            if not grant.live_switch_required and _NOT_FOUND.search(problem):
+                return []
             return [
-                (
-                    f"switch: repository variable {name} could not be read ({problem}) — "
+                f"switch: repository variable {name} could not be read ({problem}) — "
+                + (
                     "absence and unreadability are both refusal"
+                    if grant.live_switch_required
+                    else "only its absence means it was not withdrawn"
                 )
             ]
         value = answer.get("value") if isinstance(answer, dict) else None
@@ -326,6 +342,7 @@ class ApprovalCheck(ApprovalCheckInterface):
                 (
                     f"switch: repository variable {name} reads {value!r}, not exactly "
                     f"{grant.switch_value!r}"
+                    + ("" if grant.live_switch_required else " — the grant is withdrawn")
                 )
             ]
         return []
