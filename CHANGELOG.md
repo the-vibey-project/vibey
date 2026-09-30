@@ -42,6 +42,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   titled proof by its title, and escapes display math before it reaches the page. All 75 of the
   paper's fences now convert (was 72); the 72 already converted are byte-identical
   ([#1286](https://github.com/the-vibey-project/vibey/pull/1286)).
+* **deps:** urllib3 2.8.0 for CVE-2026-97687, CVE-2026-97688 and CVE-2026-97689 (2.7.0 is
+  affected). The lock carries 2.8.0 and every declared floor — the root manifest's two and
+  vibey-bootstrap's, which lists the advisory ids — is raised to `>=2.8.0`, so a fresh install
+  cannot resolve an affected version; `pip-audit` reports no known vulnerabilities.
 
 * **gh:** the sovereign review no longer gives up on a pull request that adds a large file.
   On the 3.1.0 promotion (head fa3b391703ff) `vibey-gh local-review` gave no verdict: the
