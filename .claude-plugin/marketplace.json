@@ -6,12 +6,12 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 141 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 142 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
         "name": "vibey-skills",
-        "version": "2.21.0"
+        "version": "2.22.0"
       },
       {
         "path": "src/vibey_tools/gh",
@@ -1059,6 +1059,17 @@
       "name": "penetration-testing",
       "source": "./src/vibey_tools/skills/plugins/penetration-testing",
       "description": "Penetration Testing and Offensive Security: authorized offensive work as a profession — the authorization and legal foundation (CFAA, Computer Misuse Act, bug bounty and VDP scope, rules of engagement) that separates it from a crime, engagement types and scoping, the standard methodologies (PTES, OWASP WSTG, NIST SP 800-115, MITRE ATT&CK), reconnaissance and attack surface, testing per domain (web, network, Active Directory and identity, cloud, API/mobile/wireless/OT/hardware), social engineering and physical, red/purple teaming and post-exploitation, testing AI systems, and reporting, remediation, coordinated disclosure, and career and certification. A methodology, process, and professional-practice reference — not an exploit cookbook.",
+      "version": "0.1.0",
+      "category": "security",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "physical-security-self-defense-and-firearms",
+      "source": "./src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms",
+      "description": "Physical Security, Self-Defense, Firearms, and the ATF Substances -- people and buildings, force and law, and how alcohol, tobacco, cannabis and firearms actually intersect with medicine and self-defense -- with the source's limits carried into every skill: not legal advice, not medical advice, no dosing, and no substitute for hands-on training. Evidence-graded throughout (STRONG, MODERATE, WEAK, CONTESTED) and law-dated (LAW-2026: the legal state as of September 2026, to be verified). Threat modeling and what realistic risk looks like -- most violence comes from people you know, most burglaries are opportunistic, most gun deaths are suicides; the security mindset translated from information security, the fail-safe vs fail-secure egress tension, layered defense with time as the currency, and CPTED with the CCTV and lighting evidence. Home hardening in cost-effectiveness tiers from life safety first, organizations, access-control realities and authorized testing, and targeted violence with BTAM and Run-Hide-Fight. Personal security, domestic-violence and stalking safety planning, the self-defense hierarchy and de-escalation, the empowerment self-defense trial, less-lethal tools, and Stop the Bleed. Firearms treated conceptually and for safety, exactly as the source does -- the four safety rules, storage and the honest risk ledger with the contested defensive-gun-use numbers against the suicide evidence, training, carrying and the aftermath of an incident; federal law through United States v. Hemani and South Carolina's permitless-carry and self-defense statutes. Alcohol, tobacco and cannabis on mechanism, evidence-graded medical uses, harms, law and why intoxication and weapons do not mix; the self-medication problem; a personal security plan, spending priorities and the contested questions on both sides; and crisis lines, training resources, the glossary and the sources. Source defects, internal tensions and untagged legal statements are flagged in place with labelled pack notes, not silently repaired.",
       "version": "0.1.0",
       "category": "security",
       "author": {
