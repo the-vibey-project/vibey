@@ -1,4 +1,53 @@
-# vibey
+# vibey — open-source orchestration for AI coding agents
+
+AI coding agents can write the code. Getting it delivered still takes a person:
+re-prompting an agent that lost the thread, re-explaining everything after a crash,
+restarting the run when one vendor's credits give out at 2 a.m.
+
+**vibey is a free, open-source orchestrator for AI coding agents** — a program that runs
+a team of them for you. It interviews you until the specification is precise, builds
+unattended on local or paid agents, stops only for the decisions that are yours, and
+writes every step to a record that can only be added to — an append-only ledger in a
+PostgreSQL database — so a crashed or out-of-credit agent's work is picked up again
+rather than lost.
+
+**Never written code?** You can still read this. *Code* is text files of
+instructions computers run; an *AI coding agent* is a program that writes and
+edits that code from plain-English requests; *deploying* means putting the
+finished software somewhere people can use it. vibey's job is to manage a
+team of those agents from your first description to deployed software, the
+way a project manager runs a team — asking you questions up front, checking
+the work, and only interrupting you when a decision is truly yours.
+
+**Who it is for:** developers who already use Claude Code, Codex, Cursor or a local model
+and want finished, reviewed work rather than one session at a time; people who run it for
+a team on their own hardware or on Kubernetes; and anyone who wants to study or extend a
+working design for durable, auditable agent orchestration.
+
+**What makes it different** — each claim links to what proves it:
+
+- **A crash loses no job.** Jobs are held under expiring leases and reclaimed when a worker dies. A [chaos test](tests/infrastructure/db/test_chaos.py) runs 8 workers through 500 jobs, abandoning each claim with probability 0.2, and passes only if no job is lost or committed twice — [the case study](docs/case-studies/how-vibey-survives-a-crashed-agent.md) tells how.
+- **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](src/vibey/domain/ledger_chain.py)).
+- **Local first, paid by choice.** The default engine runs GPT-OSS 20B on your own machine through Ollama ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)); a paid engine runs only when no local one can ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md)).
+- **You decide what matters.** Design, review and deployment wait for your recorded answer, and a waiting question parks its job instead of blocking a worker ([ADR-0009](docs/architecture/decisions/0009-human-gates-are-parked-jobs.md)).
+- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](docs/architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](docs/architecture/decisions/) (75 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](.github/workflows/vibey-engine.yml)).
+
+**Try it** — Python 3.12+ and PostgreSQL 14+, on macOS or Linux:
+
+```bash
+uv tool install vibey-engine   # or: pipx install vibey-engine
+vibey doctor                   # checks engines, local PostgreSQL, and the ledger guard
+```
+
+The full setup is under [Install](#install), then [Quickstart](#quickstart).
+
+**Contribute in your first hour.** Clone, `uv sync --extra dev`, run one test, make one
+small change: [the first-hour guide](CONTRIBUTING.md#your-first-hour) walks it command
+by command, from a [good first issue](https://github.com/the-vibey-project/vibey/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+to your pull request. The project governs itself by written law — start with
+[the Constitution](src/vibey_tools/gh/docs/constitution.md).
+
+---
 
 [![PyPI](https://img.shields.io/pypi/v/vibey-engine)](https://pypi.org/project/vibey-engine/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/vibey-engine)](https://pypi.org/project/vibey-engine/)
@@ -9,28 +58,8 @@
 [![Research paper](https://img.shields.io/badge/paper-PDF%20%7C%20HTML-6f42c1.svg)](https://the-vibey-project.github.io/vibey/main/paper.pdf)
 [![Book](https://img.shields.io/badge/book-PDF%20%7C%20EPUB-0a7ea4.svg)](https://the-vibey-project.github.io/vibey/main/book.pdf)
 
-**Read it first:** the design is a research paper — [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) · [HTML](https://the-vibey-project.github.io/vibey/main/paper/) —
+**Prefer to read first?** The design is a research paper — [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) · [HTML](https://the-vibey-project.github.io/vibey/main/paper/) —
 and the whole documentation is a book — [PDF](https://the-vibey-project.github.io/vibey/main/book.pdf) · [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) · [print](https://the-vibey-project.github.io/vibey/main/book-print.html).
-
-**You've used an AI coding agent. Then you babysat it** — re-prompting when it
-lost the thread, re-explaining everything after a crash, copying results
-between tools, watching a run die at 2am because one vendor's credits ran out.
-The agent was autonomous; the *delivery* was you.
-
-**Vibey is the layer that does the babysitting.** It's an orchestrator that
-wraps AI coding agents so you're not managing sessions or threads by hand: you
-describe what you want, it interviews you until the spec is sharp, builds
-unattended across a pool of engines, brings you back only for the decisions
-that are genuinely yours, and survives crashes and credit exhaustion without
-losing a single open question.
-
-**Never written code?** You can still read this. *Code* is text files of
-instructions computers run; an *AI coding agent* is a program that writes and
-edits that code from plain-English requests; *deploying* means putting the
-finished software somewhere people can use it. Vibey's job is to manage a
-team of those agents from your first description to deployed software, the
-way a project manager runs a team — asking you questions up front, checking
-the work, and only interrupting you when a decision is truly yours.
 
 The project and its engine are **vibey**; every app and interface a person uses is
 **krypton** (sub-doctrine 9.e), whose emblem is the krypton atom: krypton-84, four shells.
@@ -50,7 +79,7 @@ cannot game, survive its own credit exhaustion by handing off to a different
 vendor's engine *without losing a single open question*, or know that a review
 finding should reopen design rather than vanish into a transcript.
 
-Vibey conducts all of that. You describe what you want; it interviews you until
+vibey conducts all of that. You describe what you want; it interviews you until
 the spec is sharp, builds unattended across a pool of engines with real budget
 caps, reviews the result with you, and (only if you opt in) deploys. Every
 choice, finding, and handoff lives in an append-only PostgreSQL ledger — never
@@ -69,7 +98,7 @@ in one vendor's chat session.
 ## Install
 
 Requires **Python 3.12+** and **PostgreSQL 14+**. Windows is not a supported
-target. Vibey supports every currently supported PostgreSQL major (14–18),
+target. vibey supports every currently supported PostgreSQL major (14–18),
 and CI runs the database suite against each one. Every database-backed command
 reads the connection string from `VIBEY_PG_URL`; vibey never guesses a
 database and exits with `VIBEY_PG_URL is not set` when it is missing.
@@ -298,11 +327,42 @@ Phase 6 accepts a successful deployment, requests changed deployment details in
 Phase 4, retries an unambiguous deployment in Phase 5, or routes an application
 defect back to the appropriate delivery phase.
 
+## How it fits together
+
+```
+  you ──► vibey CLI · krypton apps and the VS Code extension (through the hub)
+            │ answers to gates               ▲ questions, reviews, budget parks
+            ▼                                │
+  ┌─────────────────────── vibey conductor ───────────────────────┐
+  │  six-phase machine  ·  human gates  ·  budget brake  ·  handoff │
+  └──────────┬────────────────────────────────────┬────────────────┘
+             │ claims jobs under leases            │ appends every event first
+             ▼                                     ▼
+   PostgreSQL job queue                 append-only ledger in PostgreSQL
+   (FOR UPDATE SKIP LOCKED)             (no update, no delete; hash-chained)
+             │
+             ▼ one engine per job, local engines first
+   gptossloop · qwenloop · claudeloop-local        on your machine
+   claudeloop · codexloop · cursorloop · agyloop   paid, when you allow them
+             │
+             ▼
+   one git worktree per work item ──► your repository
+```
+
+The same picture in words: you talk to vibey through its command line or the krypton
+apps. The conductor runs the six phases, parks a job whenever it needs your answer, and
+enforces your budget. Workers claim jobs from a PostgreSQL queue under leases that expire
+if a worker dies. Every decision, question, answer and handoff is appended to a ledger
+in the same database before it takes effect, and the database refuses to change or
+delete what is written there. Each job runs on one engine — a local model first, a paid
+engine only when no local one can — inside its own git worktree, and finished work lands
+in your repository. The [architecture map](docs/project.mmd) shows every layer.
+
 ## Why it isn't just another agent framework
 
 The hard part is not calling an LLM in a loop — `claudeloop` and its siblings
 already solve that, including the distinction between a waitable rate-limit
-window and exhausted credits that no amount of waiting will fix. Vibey adds the
+window and exhausted credits that no amount of waiting will fix. vibey adds the
 things those runners deliberately do not do:
 
 1. **A phase machine with loop-backs**, so a review finding becomes a new design
@@ -319,6 +379,79 @@ things those runners deliberately do not do:
    ledger's own cost events, with parks that tell you the exact command to
    grant more.
 
+## Questions people ask
+
+### What is vibey?
+
+vibey is a free, open-source orchestrator for AI coding agents: it interviews you until
+the specification is precise, builds unattended on local or paid agents, stops only for
+the decisions that are yours, and records every step in an append-only PostgreSQL ledger.
+It is written in Python, MIT-licensed, and runs on macOS and Linux.
+
+### What happens if an AI agent crashes mid-task?
+
+Its job is not lost. A worker holds each job under a lease it must keep renewing; when
+the worker dies the lease runs out, a reaper returns the job to the queue, and another
+worker picks it up. A late commit from the dead worker is refused, so the job is not
+committed twice. Because every question and decision is in the ledger rather than in the
+dead session, the next engine starts from the same place. The
+[crash case study](docs/case-studies/how-vibey-survives-a-crashed-agent.md) walks
+through the design, the chaos test behind it, and what it costs.
+
+### Can vibey run without sending code to a cloud model?
+
+Yes. The default engine, `gptossloop`, runs GPT-OSS 20B on your own machine through
+[Ollama](docs/guides/local-models-ollama.md), and with no `--provider`, the design
+interview and the work plan run on local models too. To keep every job on your machine,
+allow only the local engine:
+
+```bash
+vibey worker --provider gptossloop --engines gptossloop
+```
+
+With that allow-list the only models vibey calls are the ones running on your machine
+([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md),
+[ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)).
+
+### How does vibey keep an audit trail?
+
+Every decision, question, answer, handoff, cost and phase change is appended to a ledger
+in PostgreSQL before it takes effect. The database refuses to update or delete a ledger
+row, and the application connects as a role that could not rewrite one anyway
+([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md));
+a SHA-256 hash chain over the events makes any edit detectable. `vibey ledger show`
+reads it, and `vibey ledger export` publishes a redacted projection
+([what gets published](docs/guides/ledger-publication.md)).
+
+### What happens when an engine runs out of credits?
+
+The work moves to another engine; it does not wait. vibey writes a handoff brief and
+checks it with a deterministic no-loss gate — no model involved — that rejects any brief
+missing an open question, decision, assumption or finding. A failing brief is retried,
+then replaced by the full transcript, then brought to you; it is never passed on with
+gaps ([ADR-0004](docs/architecture/decisions/0004-no-loss-gate-on-handoff.md)).
+
+### Does vibey replace Claude Code, Codex or Cursor?
+
+No — it drives them. Each engine is a `*loop` runner around a vendor's own tool or a
+local model ([ADR-0001](docs/architecture/decisions/0001-orchestrate-do-not-reimplement.md)).
+vibey adds what a single session cannot do: a durable queue, a shared ledger, human
+gates, budget caps, and rotation between engines.
+
+### Where does a person stay in control?
+
+At four gates: the design interview, the review, and the design and review of a
+deployment. Each one waits for your recorded answer, and `vibey gates` lists every gate
+that is open. Budgets cap the dollars and turns each cycle may spend, and a tripped cap
+parks with the exact command that grants more. Nothing is deployed unless you opt in.
+
+### How do I start contributing?
+
+Follow [your first hour](CONTRIBUTING.md#your-first-hour): clone, install with uv, run a
+first test, make one small change, and open a pull request into `develop`. Questions are
+welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
+[Discussions](https://github.com/the-vibey-project/vibey/discussions).
+
 ## Documentation
 
 | Document | What's in it |
@@ -329,6 +462,7 @@ things those runners deliberately do not do:
 | [CLI reference](docs/reference/cli.md) | Every command, subcommand, flag, and default |
 | [Configuration reference](docs/reference/configuration.md) | The full `vibey.toml` schema, with defaults and an example file |
 | [System requirements](docs/reference/system-requirements.md) | Hardware, software, network and per-client requirements, re-measured weekly, with what is measured, derived or stale |
+| [How vibey survives a crashed agent](docs/case-studies/how-vibey-survives-a-crashed-agent.md) | A case study: the problem, the fixes that fail, the lease-and-ledger design, the chaos test that checks it, and what it costs |
 | [Convergence-Driven Development](docs/guides/convergence-driven-development.md) | The CDD loop above SDD and TDD, convergence/divergence checks at four scopes, the atom model, and delivery evidence |
 | [Kubernetes guide](docs/guides/kubernetes.md) | Container, Helm chart, KEDA autoscaling, and its own troubleshooting section |
 | [Greeter live-demo runbook](docs/guides/greeter-live-demo.md) | A full paid run, end to end, with the zero-touch contracts |
@@ -464,7 +598,7 @@ PyPI projects no longer exist.
 ---
 
 **The short version, again**: agents can code, but delivery still meant
-babysitting them — Vibey is the layer that does the babysitting, from sharp
+babysitting them — vibey is the layer that does the babysitting, from sharp
 spec to deployed software, without losing a single open question.
 
 **Your next step**: install it and let it interview you —
@@ -476,3 +610,6 @@ uv tool install vibey-engine && vibey doctor
 **Prefer to read first?** The design is a [research paper](https://the-vibey-project.github.io/vibey/main/paper/)
 ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)), and the whole documentation is a [book](https://the-vibey-project.github.io/vibey/main/book.pdf)
 ([EPUB](https://the-vibey-project.github.io/vibey/main/book.epub)).
+
+**Want to build it with us?** [Your first hour](CONTRIBUTING.md#your-first-hour) takes you
+from a clone to a pull request.

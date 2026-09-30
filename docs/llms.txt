@@ -6,7 +6,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 
 ## Start here
 
-- [Home](https://the-vibey-project.github.io/vibey/main/): You've used an AI coding agent.
+- [Home](https://the-vibey-project.github.io/vibey/main/): The documentation home — what vibey is, who it is for, what makes it different, how to try it, and how to contribute in your first hour.
 - [Current estimate](https://the-vibey-project.github.io/vibey/main/estimate/): This page is a generated, append-only-ledger-backed forecast.
 - [Research paper](https://the-vibey-project.github.io/vibey/main/paper/): A single autonomous coding session is not autonomous software delivery: sessions lose context across crashes, exhaust one vendor's capacity mid-task, and carry no structure for the human decisions delivery legally and…
 

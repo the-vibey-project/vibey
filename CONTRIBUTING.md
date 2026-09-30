@@ -75,8 +75,8 @@ createdb vibey_test
 uv run pytest tests/infrastructure/db/test_chaos.py -q
 ```
 
-That is the chaos test: eight workers, five hundred jobs, and one claim in five
-abandoned mid-flight, with the build failing if any job is lost or committed twice.
+That is the chaos test: 8 workers and 500 jobs, with each claim abandoned mid-flight
+with probability 0.2, and the test failing if any job is lost or committed twice.
 [How vibey survives a crashed agent](docs/case-studies/how-vibey-survives-a-crashed-agent.md)
 explains what it proves.
 
