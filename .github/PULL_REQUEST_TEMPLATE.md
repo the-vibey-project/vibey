@@ -1,8 +1,10 @@
 ## What does this change?
 
-<!-- One or two sentences. -->
+<!-- One or two sentences: the problem first, then what this does about it. Link the issue it closes, if any. -->
 
 ## Checklist
+
+<!-- First pull request here? Welcome. Tick what you can, and say which boxes you could not tick or did not understand — a reviewer will help with the rest. The first-hour guide covers the basics: https://github.com/the-vibey-project/vibey/blob/develop/CONTRIBUTING.md#your-first-hour -->
 
 - [ ] Branched from `develop`; targets `develop` (not `main`)
 - [ ] Commits (or the squash-merge title) follow [Conventional Commits](https://www.conventionalcommits.org/)

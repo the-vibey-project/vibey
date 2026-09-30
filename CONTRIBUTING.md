@@ -5,24 +5,108 @@ command-level and specific — if something here is unclear or you hit a
 situation it doesn't cover, that's a bug in this document; please open an
 issue or a PR fixing it.
 
+New here? Start with [Your first hour](#your-first-hour): it goes from a fresh clone to
+a pull request, one command at a time. The project governs itself by written law — the
+[Constitution](src/vibey_tools/gh/docs/constitution.md) and
+[the Twelve Doctrines](src/vibey_tools/gh/docs/doctrines.md) — and every hard technical
+call is argued in a [decision record](docs/architecture/decisions/).
+
 ## Table of contents
 
-1. [Environment setup](#environment-setup)
-2. [The branch model](#the-branch-model)
-3. [Conventional Commits](#conventional-commits)
-4. [Provenance](#provenance)
-5. [Quality gates](#quality-gates)
-6. [Pushing in this repository](#pushing-in-this-repository)
-7. [The workspace tenants](#the-workspace-tenants)
-8. [The onion architecture import rule](#the-onion-architecture-import-rule)
-9. [Protected tests](#protected-tests)
-10. [Agent surfaces](#agent-surfaces)
-11. [Decisions and governing rules](#decisions-and-governing-rules)
-12. [The paper and the book](#the-paper-and-the-book)
-13. [PR checklist](#pr-checklist)
-14. [Getting help](#getting-help)
-15. [Code of Conduct](#code-of-conduct)
-16. [License of contributions](#license-of-contributions)
+1. [Your first hour](#your-first-hour)
+2. [Environment setup](#environment-setup)
+3. [The branch model](#the-branch-model)
+4. [Conventional Commits](#conventional-commits)
+5. [Provenance](#provenance)
+6. [Quality gates](#quality-gates)
+7. [Pushing in this repository](#pushing-in-this-repository)
+8. [The workspace tenants](#the-workspace-tenants)
+9. [The onion architecture import rule](#the-onion-architecture-import-rule)
+10. [Protected tests](#protected-tests)
+11. [Agent surfaces](#agent-surfaces)
+12. [Decisions and governing rules](#decisions-and-governing-rules)
+13. [The paper and the book](#the-paper-and-the-book)
+14. [PR checklist](#pr-checklist)
+15. [Getting help](#getting-help)
+16. [Code of Conduct](#code-of-conduct)
+17. [License of contributions](#license-of-contributions)
+
+## Your first hour
+
+This path takes you from nothing to a pull request. It is written to fit in about an
+hour on a macOS or Linux machine that already has Python 3.12+ and git; installing
+PostgreSQL is the step most likely to run long. Stuck anywhere? Ask on
+[Discord](https://discord.gg/Qvu8aYnVS) or in
+[Discussions](https://github.com/the-vibey-project/vibey/discussions) — a question about
+this guide is a bug report about this guide.
+
+**1. Get the code (about 10 minutes).** Fork the repository on GitHub, then clone your
+fork and install everything the gates use. [uv](https://docs.astral.sh/uv/) is the
+Python package manager this repository uses; `brew install uv` or its
+[installer](https://docs.astral.sh/uv/getting-started/installation/) puts it on your
+machine.
+
+```bash
+git clone https://github.com/<you>/vibey.git
+cd vibey
+uv sync --extra dev
+uv run vibey --version
+```
+
+**2. Run your first test, no database needed (1 minute).** These are the tests of the
+book exporter, one of the tools that ships inside vibey. `--no-cov` because one file on
+its own cannot meet that package's 100% coverage floor, which counts the whole package.
+
+```bash
+uv run pytest src/vibey_tools/gh/test/test_book.py -q --no-cov
+```
+
+**3. Run the test that matters most (about 20 minutes, most of it PostgreSQL).** The
+main suite runs against a real PostgreSQL 14+ server, never a mock. Install one
+(`brew install postgresql@17 && brew services start postgresql@17` on macOS,
+`sudo apt install postgresql` on Debian or Ubuntu), make yourself a role that can create
+databases and roles, and give it a password — the server must authenticate with
+scram-sha-256, the settings for which are in [SECURITY.md §7](SECURITY.md):
+
+```bash
+createuser --createdb --createrole --pwprompt "$USER"   # run as a PostgreSQL superuser
+echo "localhost:5432:*:$USER:<the password you chose>" >> ~/.pgpass && chmod 600 ~/.pgpass
+createdb vibey_test
+uv run pytest tests/infrastructure/db/test_chaos.py -q
+```
+
+That is the chaos test: eight workers, five hundred jobs, and one claim in five
+abandoned mid-flight, with the build failing if any job is lost or committed twice.
+[How vibey survives a crashed agent](docs/case-studies/how-vibey-survives-a-crashed-agent.md)
+explains what it proves.
+
+**4. Make one small change (about 20 minutes).** Good first changes, easiest first:
+
+- an open issue labelled
+  [good first issue](https://github.com/the-vibey-project/vibey/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+  or [help wanted](https://github.com/the-vibey-project/vibey/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22);
+- a sentence in the documentation that the code contradicts — the docs are held to the
+  code, and a reviewer checks it on every pull request;
+- a missing or broken example in the [CLI reference](docs/reference/cli.md);
+- a test for a branch a tenant's suite does not yet reach (see
+  [The workspace tenants](#the-workspace-tenants)).
+
+**5. Open the pull request (about 10 minutes).** Install the hooks, branch from
+`develop`, commit with a [Conventional Commits](#conventional-commits) subject, and push
+to your fork:
+
+```bash
+uv run pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
+uv run vibey-gh install
+git switch -c docs/fix-cli-example origin/develop
+git commit -am "docs: fix the vibey answer example in the CLI reference"
+git push -u origin docs/fix-cli-example
+```
+
+The first push runs the whole gate suite, so it takes several minutes; that is the
+pre-push hook doing its job. Then open the pull request into `develop`. The
+[PR checklist](#pr-checklist) is in the template; tick what you can and say what you
+could not — a reviewer helps with the rest.
 
 ## Environment setup
 

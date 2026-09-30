@@ -3,6 +3,9 @@ contact_links:
   - name: Documentation
     url: https://the-vibey-project.github.io/vibey/main/
     about: Install, quickstart, guides, architecture, and contributor docs.
+  - name: Contribute — your first hour
+    url: https://github.com/the-vibey-project/vibey/blob/develop/CONTRIBUTING.md#your-first-hour
+    about: From a fresh clone to your first pull request, one command at a time, with good first issues to start from.
   - name: Question / discussion
     url: https://github.com/the-vibey-project/vibey/discussions
     about: For general questions or design discussion rather than a specific bug or feature request.

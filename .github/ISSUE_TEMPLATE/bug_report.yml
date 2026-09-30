@@ -5,21 +5,24 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a report. The fields below are
-        required because a CLI bug report without them is usually
-        unreproducible.
+        Thanks for taking the time to file a report — it makes vibey better for
+        everyone who comes after you. The required fields are the ones we need to
+        reproduce the problem; a report without them usually cannot be fixed.
 
-        This project supports **macOS and Linux only**. Please run
-        `vibey doctor` before filing, and search existing issues first.
-        Usage questions belong in [Discussions](https://github.com/the-vibey-project/vibey/discussions),
-        not here.
+        This project supports **macOS and Linux**. `vibey doctor` often names the
+        cause on its own, so it is worth running first, and a quick search of
+        existing issues may find the answer. Questions about how to use vibey are
+        welcome in [Discussions](https://github.com/the-vibey-project/vibey/discussions).
+        Want to fix it yourself? The
+        [first-hour guide](https://github.com/the-vibey-project/vibey/blob/develop/CONTRIBUTING.md#your-first-hour)
+        gets you from a clone to a pull request.
 
   - type: input
     id: version
     attributes:
       label: vibey version
       description: Output of `vibey --version`
-      placeholder: "vibey 0.6.0"
+      placeholder: "paste the output of vibey --version"
     validations:
       required: true
 
