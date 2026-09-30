@@ -2239,7 +2239,18 @@ def worker(
                 if once or count == 1:
                     await drive(runs[0], idx=0)
                 else:
-                    await asyncio.gather(*(drive(run, idx=i) for i, run in enumerate(runs)))
+                    # A bare gather leaves the siblings running when one loop raises:
+                    # the worker would then close the notifier and the pool under
+                    # loops still claiming work, and asyncio.run's shutdown would be
+                    # left to cancel them with the pool already closing (#1255). The
+                    # siblings are stopped here, while everything they use is open.
+                    drivers = [asyncio.create_task(drive(run, idx=i)) for i, run in enumerate(runs)]
+                    try:
+                        await asyncio.gather(*drivers)
+                    finally:
+                        for driver in drivers:
+                            driver.cancel()
+                        await asyncio.gather(*drivers, return_exceptions=True)
             finally:
                 await notifier.close()
 

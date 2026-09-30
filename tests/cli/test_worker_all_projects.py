@@ -3,6 +3,7 @@
 
 import asyncio
 import os
+import signal
 from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -257,8 +258,64 @@ def test_a_project_gone_between_listing_and_lookup_is_passed_over(tmp_path: Path
 
 
 def test_all_projects_parallel_loops_share_one_worker(tmp_path: Path, notifier: AsyncMock) -> None:
+    """Two loops end by draining on SIGTERM, not by the fixture's KeyboardInterrupt:
+    raised inside one of two tasks, that escapes the event loop mid-flight, and on
+    main it left asyncio.run's shutdown waiting on the other loop for 300s (#1255)."""
     _seed(tmp_path, ("eta", "theta"))
+
+    async def sigterm(*_args: object, **_kwargs: object) -> None:
+        os.kill(os.getpid(), signal.SIGTERM)
+        await asyncio.sleep(0.1)
+
+    notifier.wait_for_job_ready.side_effect = sigterm
     with patch("os.cpu_count", return_value=4):
         res = runner.invoke(app, ["worker", "--all-projects", "-j", "2"])
+    assert res.exit_code == 0, res.output
     assert "worker started: all projects" in res.output
     assert "parallelism=2" in res.output
+    assert "draining on SIGTERM" in res.output
+
+
+def test_a_failing_loop_stops_its_siblings_before_the_worker_closes_anything(
+    tmp_path: Path, notifier: AsyncMock
+) -> None:
+    """One loop raising must not leave the other running under a closing notifier
+    and pool (#1255). The sibling is cancelled while the notifier is still open."""
+    _seed(tmp_path, ("eta", "theta"), jobs=False)
+    order: list[str] = []
+    calls = {"run": 0}
+    sibling_waiting: list[asyncio.Event] = []
+
+    async def run_once(self: object, *_args: object) -> bool:
+        calls["run"] += 1
+        if calls["run"] == 1:
+            # Fail only once the other loop is parked in its idle wait.
+            while not sibling_waiting:
+                await asyncio.sleep(0)
+            await sibling_waiting[0].wait()
+            raise RuntimeError("loop 0 broke")
+        return False
+
+    async def idle(*_args: object, **_kwargs: object) -> None:
+        if not sibling_waiting:
+            sibling_waiting.append(asyncio.Event())
+        sibling_waiting[0].set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            order.append("sibling cancelled")
+            raise
+
+    async def close() -> None:
+        order.append("notifier closed")
+
+    notifier.wait_for_job_ready.side_effect = idle
+    notifier.close.side_effect = close
+    with (
+        patch("os.cpu_count", return_value=4),
+        patch("vibey.application.multi_project_worker.MultiProjectWorker.run_once", new=run_once),
+    ):
+        res = runner.invoke(app, ["worker", "--all-projects", "-j", "2"])
+
+    assert isinstance(res.exception, RuntimeError), res.output
+    assert order == ["sibling cancelled", "notifier closed"]

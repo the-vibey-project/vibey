@@ -149,6 +149,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **worker:** with `-j 2` or more, a drive loop that raises now stops its sibling loops
+  before the worker closes the job notifier and the database pool. A bare `asyncio.gather`
+  left them claiming work under a closing pool, with `asyncio.run`'s shutdown left to cancel
+  them. The two parallel-loop CLI tests now end by draining on SIGTERM, not by a
+  `KeyboardInterrupt` raised inside one of two tasks, which hung `main`'s gates for 300 s
+  ([#1255](https://github.com/the-vibey-project/vibey/issues/1255)).
+
 * **build:** a work plan whose verification runs or reads a file nothing provides is refused
   before BUILD starts. Live on #963 (a README insertion) DECOMPOSE verified its one item with
   `python generate_toc.py` and `python anchor_verify.py`, scripts that never existed, and the
