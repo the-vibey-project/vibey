@@ -361,6 +361,37 @@ def test_an_abandoned_project_frees_the_slot_and_blocks_its_ticket(
     assert rows[2]["state"] == "dispatched"
 
 
+def test_a_ticket_the_operator_readies_after_an_abandon_is_dispatched_afresh(
+    scratch: tuple[FakeWorld, ScratchTickets], tmp_path: Path
+) -> None:
+    """Live on #963: the project was abandoned, the operator re-readied the ticket, and
+    the claim read the issue's dispatch marker, re-adopted the abandoned project and
+    blocked the ticket again -- an abandoned issue could never be retried. A re-readied
+    ticket now gets a fresh project, and the pass after resumes that one, not the first."""
+    world, tickets = scratch
+    world.open_issue(1, "high", created_at="2026-09-01T00:00:00Z")
+    delivery, _ = bridge(world, tmp_path)
+    delivery.run_once()
+    (first,) = world.projects.values()
+    first.phase = "abandoned"
+    delivery.run_once()
+    assert tickets.rows()[1]["state"] == "blocked"
+
+    TriageQueue(os.environ["VIBEY_TEST_DATABASE_URL"], REPOSITORY).set_state(1, "ready")
+    assert delivery.run_once() == 0
+
+    fresh = [p for p in world.projects.values() if p.project_id != first.project_id]
+    assert [p.issue_number for p in fresh] == [1]
+    assert tickets.rows()[1]["state"] == "dispatched"
+    assert tickets.rows()[1]["project_id"] == fresh[0].project_id
+    assert evidence(tmp_path, "ticket-1")["abandoned"] == first.project_id
+    assert delivery.dispatched_project(1) == fresh[0].project_id
+
+    delivery.run_once()
+    assert len(world.projects) == 2
+    assert tickets.rows()[1]["state"] == "dispatched"
+
+
 # -- gap 3: leases are reaped, released, and carry their project -------------------------
 
 

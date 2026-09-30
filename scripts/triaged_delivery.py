@@ -474,6 +474,18 @@ class DeliveryBridge:
                 created_at="",
             )
             existing = self.dispatched_project(issue.number)
+            if existing is not None and self._status(existing).get("phase") == "abandoned":
+                # An abandoned project blocks its ticket (`_settle`), and nothing but an
+                # operator moves a blocked ticket back to ready -- `reconcile` never
+                # touches state. A ready ticket whose latest project was abandoned is
+                # therefore a retry the operator asked for: dispatch a fresh project,
+                # never re-adopt the dead one. An unreadable status is not "abandoned",
+                # so it still adopts rather than risk dispatching the issue twice.
+                self._evidence.ticket(
+                    issue.number, outcome="redispatch_after_abandon", abandoned=existing
+                )
+                print(f"#{issue.number}: project {existing} was abandoned; dispatching afresh")
+                existing = None
             if existing is not None:
                 # Dispatched by an earlier pass whose ticket never left its lease: adopt the
                 # project instead of dispatching the issue twice.
@@ -651,12 +663,15 @@ class DeliveryBridge:
         )
 
     def dispatched_project(self, number: int) -> str | None:
-        match = re.search(
+        """The project the LATEST dispatch marker names. An issue re-dispatched after its
+        project was abandoned carries one marker per dispatch; the first names the dead
+        project, so reading it would re-adopt what the operator abandoned."""
+        found = re.findall(
             rf"{re.escape(MARKER.format(number=number))}.*?project `([0-9a-f-]{{36}})`",
             self._comments(number),
             re.DOTALL,
         )
-        return match.group(1) if match else None
+        return str(found[-1]) if found else None
 
     def _published(self, number: int) -> bool:
         return PUBLISHED_MARKER.format(number=number) in self._comments(number)

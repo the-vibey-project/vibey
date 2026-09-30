@@ -149,6 +149,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **delivery:** an issue whose project was abandoned can be retried. The operator re-readies
+  its ticket (`triage_queue.py --state ready --issue-number N`) and the bridge dispatches a fresh
+  project instead of re-adopting the abandoned one from the issue's first dispatch marker, which
+  blocked the ticket again and made the retry impossible. The latest marker is the one read.
+  An unreadable status still adopts, so an issue is never dispatched twice on a guess.
+
 * **worker:** with `-j 2` or more, a drive loop that raises now stops its sibling loops
   before the worker closes the job notifier and the database pool. A bare `asyncio.gather`
   left them claiming work under a closing pool, with `asyncio.run`'s shutdown left to cancel
