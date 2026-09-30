@@ -1334,18 +1334,42 @@ def validate_item_id(item_id: str) -> None:
     """Raises ValueError unless item_id is 1-64 chars, lowercase
     alphanumeric and hyphens, starting with alphanumeric."""
 
-def worktree_subpath(cycle: int, item_id: str) -> str:
-    validate_item_id(item_id)
-    return f".vibey/worktrees/{cycle}/{item_id}"
+@dataclass(frozen=True, slots=True)
+class WorktreeNaming:
+    project_id: UUID
+    cycle: int                      # >= 1
+    namespace: str = "vibey"        # the first segment of every branch
 
-def branch_name(cycle: int, item_id: str) -> str:
-    validate_item_id(item_id)
-    return f"vibey/{cycle}/{item_id}"
+    scope -> str                    # project_id.hex[:8]
+    managed_root -> str             # ".vibey/worktrees/<scope>/<cycle>"
+    integration_branch -> str       # branch("integration")
+    def worktree_subpath(self, item_id: str) -> str:  # "<managed_root>/<item_id>"
+    def branch(self, item_id: str) -> str:            # "<namespace>/<scope>/<cycle>/<item_id>"
+    def legacy_branch(self, item_id: str) -> str:     # "<namespace>/<cycle>/<item_id>"
+    def resolve_base(self, ref: str) -> str:          # legacy integration -> own
+    def is_managed(self, ref: str) -> bool:           # ref in "<namespace>/"
+
+@dataclass(frozen=True, slots=True)
+class BranchOwnership:
+    branch: str
+    project_id: str | None          # as recorded; None when nothing was
+    base: str | None                # the commit the branch was cut from
+    def verify(self, project_id: UUID) -> str:        # the base, or ForeignBranchRefused
 ```
 
-Both raise `ValueError` (via `validate_item_id`) before producing a name, so no
-path or branch is ever built from an unvalidated id. The integration branch
-uses the reserved item id `integration` (`vibey/<cycle>/integration`).
+Every name raises `ValueError` (via `validate_item_id`) before it is produced, so no
+path or branch is ever built from an unvalidated id. The integration branch uses the
+reserved item id `integration` (`vibey/<scope>/<cycle>/integration`).
+
+**Names carry the project.** They were keyed by cycle alone (`vibey/<cycle>/<item>`), and
+every project in a repository shares its refs, so a delivery in cycle 1 built on an
+unrelated project's `vibey/1/ws`. `scope` makes two projects' names differ; eight hex
+digits make a collision unlikely, not impossible, so `BranchOwnership` is the proof: the
+infrastructure records it beside every branch it creates (in the branch's config section)
+and `verify` refuses any branch whose record does not name this project
+(`ForeignBranchRefused`, parked on the `foreign_branch` gate). `legacy_branch` is only
+recognised, never created: an old job's cycle-keyed integration base is read, by
+`resolve_base`, as the project's own ([ADR-0008](../architecture/decisions/0008-worktree-isolation.md)).
 
 Returns a relative path string rather than a `pathlib.Path`: `domain/`
 forbids `pathlib` (checked by `test_domain_purity.py`), so joining this onto

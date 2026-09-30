@@ -17,18 +17,54 @@ wrong item.
 happens on a dedicated integration worktree.
 
 ```
-.vibey/worktrees/1/
-├── item-001/      branch vibey/1/item-001
-├── item-004/      branch vibey/1/item-004
-└── integration/   branch vibey/1/integration
+.vibey/worktrees/893c4fc1/1/
+├── item-001/      branch vibey/893c4fc1/1/item-001
+├── item-004/      branch vibey/893c4fc1/1/item-004
+└── integration/   branch vibey/893c4fc1/1/integration
 ```
 
-Naming lives in `domain/worktree.py` (`.vibey/worktrees/<cycle>/<item_id>`, branch
-`vibey/<cycle>/<item_id>`); the integration worktree is the reserved item id
-`integration` (`infrastructure/git/integration_branch.py`). Item branches are cut
-from the cycle's integration branch once it exists, so later items stack on
-already-integrated code. `build.integrate` merges into it one job at a time under a
-Postgres advisory lock ([ADR-0029](0029-integrate-serialized-by-advisory-lock.md)).
+Naming lives in `domain/worktree.py` (`WorktreeNaming`:
+`.vibey/worktrees/<scope>/<cycle>/<item_id>`, branch `vibey/<scope>/<cycle>/<item_id>`,
+where `<scope>` is the first eight hex digits of the project id); the integration
+worktree is the reserved item id `integration`
+(`infrastructure/git/integration_branch.py`). Item branches are cut from the project's
+integration branch once it exists, so later items stack on already-integrated code;
+before the first integrate they are cut from the project checkout's `HEAD`.
+`build.integrate` merges into it one job at a time under a Postgres advisory lock
+([ADR-0029](0029-integrate-serialized-by-advisory-lock.md)).
+
+**Amended 2026-09-30 — names carry the project, and a branch must prove whose it is.**
+The scheme was `.vibey/worktrees/<cycle>/<item_id>` on `vibey/<cycle>/<item_id>`: keyed
+by cycle alone. Every project in one repository shares that repository's refs — and the
+triaged-delivery bridge runs each delivery in a linked worktree of the main checkout, so
+all of them share one set of refs. A live delivery (project `893c4fc1`, issue #963) in
+cycle 1 found an unrelated August project's `vibey/1/ws` and `vibey/1/integration`,
+checked out `vibey/1/ws`, edited that project's codebase, and would have published its
+history as #963's pull request. Three changes close it:
+
+1. **Project-scoped names.** Paths and branches carry the project's scope, so no two
+   projects' names meet. A project's worktrees live under their own root, so one
+   project's self-healing wipe or orphan reclaim never reaches another's.
+2. **An ownership record, proved before use.** Every branch BUILD creates records, in
+   the repository's config under the branch's own section, the full project id
+   (`branch.<name>.vibey-project`) and the commit it was cut from
+   (`branch.<name>.vibey-base`) — written *before* the branch exists, so a create killed
+   half-way still proves whose it is. Before a branch is reused, used as a base, or
+   merged, the record must name this project and its base must still be in the branch's
+   history. Eight hex digits make a collision unlikely, not impossible; the record is what
+   makes one harmless. A branch that fails is refused (`ForeignBranchRefused`) before
+   anything is wiped, and the job parks on a `foreign_branch` gate at once — no retry
+   changes whose a branch is. The delivery bridge applies the same check before it
+   pushes, and reads the branch name from `vibey status --json`
+   (`integration_branch`) rather than rebuilding it.
+3. **Projects created before the change** resolve through the new scheme. Nothing
+   recorded which cycle-keyed branch was whose, so none is adopted: an in-flight job
+   whose payload names the old `vibey/<cycle>/integration` as its base reads it as the
+   project's own scoped integration branch, and any other existing branch in the
+   `vibey/` namespace without this project's record is refused. The old branches are
+   left exactly as they were. A project that had integrated items on cycle-keyed
+   branches rebuilds them on its own; a person who knows an old branch is the project's
+   can move it to the new name and record it, but vibey never does so on its own.
 
 **Additionally**, three isolation levels are designed, selectable per project as
 `[isolation] level` in `vibey.toml`:

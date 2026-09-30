@@ -449,22 +449,29 @@ the batch commits. Each key is `idempotency_key(project, cycle,
   `build.implement` of the same cycle too, but its key is derived from a
   different subject, so it is never mistaken for the fan-out.
 
-Each item's branch is based on the cycle's integration branch, so later items
-stack on already-integrated code.
+Each item's branch is based on the project's integration branch for the cycle, so
+later items stack on already-integrated code.
 
 ### 2.2 Parallel implementation
 
 ```
-.vibey/worktrees/1/
-├── item-001/     branch vibey/1/item-001   ← claudeloop, LOW
-├── item-004/     branch vibey/1/item-004   ← codexloop,  LOW
-├── item-005/     branch vibey/1/item-005   ← cursorloop, LOW
-└── integration/  branch vibey/1/integration
+.vibey/worktrees/893c4fc1/1/
+├── item-001/     branch vibey/893c4fc1/1/item-001   ← claudeloop, LOW
+├── item-004/     branch vibey/893c4fc1/1/item-004   ← codexloop,  LOW
+├── item-005/     branch vibey/893c4fc1/1/item-005   ← cursorloop, LOW
+└── integration/  branch vibey/893c4fc1/1/integration
 ```
 
-Paths and branches come from `domain/worktree.py` (`worktree_subpath`,
-`branch_name`); the integration branch is the reserved item id
-`integration`.
+Paths and branches come from `domain/worktree.py` (`WorktreeNaming`:
+`.vibey/worktrees/<scope>/<cycle>/<item>` on `vibey/<scope>/<cycle>/<item>`, `<scope>`
+being the first eight hex digits of the project id); the integration branch is the
+reserved item id `integration`. Every project sharing a repository — every delivery the
+triaged bridge runs shares the main checkout's refs — has names of its own. Each branch
+BUILD creates records the creating project and its base commit in the repository's
+config (`branch.<name>.vibey-project`, `branch.<name>.vibey-base`); a branch is reused,
+based on or merged only when that record names the project and its base is still in its
+history. Otherwise the job parks on a `foreign_branch` gate, having touched nothing
+([ADR-0008](../architecture/decisions/0008-worktree-isolation.md), amended 2026-09-30).
 
 Worker concurrency is `vibey worker --parallelism N` (`-j`, default 1),
 clamped to `min(N, configured_engines × 2, cpu_count)`. `phases.build.parallelism`

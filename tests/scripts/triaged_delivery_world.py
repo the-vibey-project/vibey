@@ -184,6 +184,14 @@ class FakeWorld:
         self.new_for_closed_issue: list[int] = []
         self.merge_train_calls: list[str] = []
         self.pushes: list[str] = []
+        # git as the bridge reads it: a project's integration branch (by project id; the
+        # status names it), the project its ownership record names ("" for none), each
+        # checkout's HEAD and uncommitted changes (by `-C` path), and every checkout move.
+        self.integration_branches: dict[str, str] = {}
+        self.branch_owners: dict[str, str] = {}
+        self.heads: dict[str, str] = {}
+        self.dirty: dict[str, str] = {}
+        self.checkouts: list[str] = []
         self.forge_down = False  # the provenance query fails, as a 502 would
         # How many DESIGN jobs the interview's completion queues (research, synthesis,
         # spec). 0 collapses the chain into the run that answers the interview.
@@ -376,6 +384,10 @@ class FakeWorld:
             return 1, "", ""
         raise RuntimeError(f"fake world: unsupported {argv}")
 
+    def _project_at(self, repo_path: str) -> str:
+        """The project whose checkout `repo_path` is; '' when none is."""
+        return next((p.project_id for p in self.projects.values() if p.repo_path == repo_path), "")
+
     def _git(self, argv: list[str]) -> tuple[int, str, str]:
         if argv[:2] == ["worktree", "add"]:
             target = Path(argv[3])
@@ -383,12 +395,31 @@ class FakeWorld:
             (target / ".git").write_text("gitdir: fake\n")
             return 0, "", ""
         if argv[0] == "-C" and argv[2:4] == ["worktree", "list"]:
+            # The project's integration worktree, on the branch its status names -- the
+            # project's own, never a cycle-keyed name another project shares.
+            project_id = self._project_at(argv[1])
+            branch = self.integration_branches.get(
+                project_id, f"vibey/{project_id[:8]}/1/integration"
+            )
             return (
                 0,
-                f"worktree {argv[1]}/integration\nHEAD 0123abcd\n"
-                "branch refs/heads/vibey/1/integration\n",
+                f"worktree {argv[1]}/integration\nHEAD 0123abcd\nbranch refs/heads/{branch}\n",
                 "",
             )
+        if argv[0] == "-C" and argv[2:5] == ["config", "--local", "--get"]:
+            # BUILD's ownership record: the branch names the project that created it,
+            # unless a test has planted a branch another project created.
+            project_id = self._project_at(argv[1])
+            owner = self.branch_owners.get(project_id, project_id)
+            return (0, owner + "\n", "") if owner else (1, "", "")
+        if argv[0] == "-C" and argv[2:4] == ["rev-parse", "--verify"]:
+            return 0, self.heads.get(argv[1], "0123abcd") + "\n", ""
+        if argv[0] == "-C" and argv[2:4] == ["status", "--porcelain"]:
+            return 0, self.dirty.get(argv[1], ""), ""
+        if argv[0] == "-C" and argv[2] == "checkout":
+            self.heads[argv[1]] = argv[-1]
+            self.checkouts.append(argv[1])
+            return 0, "", ""
         raise RuntimeError(f"fake git: unsupported {argv}")
 
     def _vibey(self, argv: list[str]) -> tuple[int, str, str]:
@@ -490,6 +521,9 @@ class FakeWorld:
             "cycle": 1,
             "max_cycles": 10,
             "repo_path": project.repo_path,
+            "integration_branch": self.integration_branches.get(
+                project.project_id, f"vibey/{project.project_id[:8]}/1/integration"
+            ),
             "queue_depth": {"ready": project.design_jobs_left, "awaiting_capacity": 0},
             "circuits": [],
         }

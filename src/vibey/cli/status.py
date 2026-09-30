@@ -9,6 +9,7 @@ whichever way it asks (doctrine 7).
 from typing import Final
 
 from vibey.cli.interfaces.status_interface import StatusPresenterInterface
+from vibey.domain.worktree import WorktreeNaming
 from vibey.tui.dashboard import DashboardState
 
 
@@ -41,6 +42,10 @@ class StatusPresenter:
                 for c in state.circuits
             ],
             "active_worktrees": list(state.active_worktrees),
+            # Named by the domain, not rebuilt by each reader: the delivery bridge
+            # publishes exactly this branch, and a second copy of the naming rule is how
+            # a reader ends up pushing some other project's `vibey/<cycle>/integration`.
+            "integration_branch": WorktreeNaming(state.project_id, state.cycle).integration_branch,
         }
 
 

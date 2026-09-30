@@ -42,6 +42,7 @@ from vibey.domain.job import (
     DEFECT_GATE_KIND,
     DELIVERY_EXHAUSTED_GATE_KIND,
     ESCALATION_EXHAUSTED_GATE_KIND,
+    FOREIGN_BRANCH_GATE_KIND,
 )
 
 GRANT_PLACEHOLDER: Final = "N"
@@ -167,6 +168,8 @@ ANSWER_RULES: Final[Mapping[str, AnswerRuleInterface]] = MappingProxyType(
         RESEARCH_EVIDENCE_GATE_KIND: ANY_ANSWER,  # design_research_handler
         "engine_misconfigured": ANY_ANSWER,  # build_engine_run
         "ultra_needs_cap": ANY_ANSWER,  # build_implement_handler, after a cap or no-cap
+        # build_implement_handler and build_integrate_handler, after the branch is moved aside
+        FOREIGN_BRANCH_GATE_KIND: ANY_ANSWER,
         # Nothing reads these answers (wind_down): answering re-queues a job that parks
         # again unless something outside vibey changed, so the person writes the answer.
         "handoff_gate_failed": FREE_FORM,

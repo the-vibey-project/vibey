@@ -716,6 +716,13 @@ class DeliveryBridge:
         return project_id
 
     def _worktree(self, issue: Issue) -> Path:
+        """The checkout a fresh delivery starts from: detached at `base` as it is now.
+
+        Only `dispatch` calls this, and only for an issue with no project yet, so a
+        checkout already there is the leftover of an earlier dispatch that failed before
+        vibey recorded a project. It may be far behind `base`, and BUILD cuts every new
+        branch from this checkout's HEAD -- so it is moved to the current base when it is
+        clean, and refused when it is not, never used as found."""
         target = self._settings.storm_home / f"triaged-{issue.number}"
         target.parent.mkdir(parents=True, exist_ok=True)
         if not (target / ".git").exists():
@@ -725,7 +732,32 @@ class DeliveryBridge:
             )
             if added.returncode:
                 raise RuntimeError(added.stderr.strip() or "git worktree add failed")
+            return target
+        base = self._git_line(
+            ["git", "-C", str(self._settings.repo), "rev-parse", "--verify"]
+            + [f"{self._settings.base}^{{commit}}"]
+        )
+        if self._git_line(["git", "-C", str(target), "rev-parse", "--verify", "HEAD"]) == base:
+            return target
+        dirty = self._runner.run(["git", "-C", str(target), "status", "--porcelain"])
+        if dirty.returncode or dirty.stdout.strip():
+            raise RuntimeError(
+                f"{target} is not at {self._settings.base} ({base}) and is not clean; "
+                "refusing to start a fresh delivery on it"
+            )
+        moved = self._runner.run(
+            ["git", "-C", str(target), "checkout", "--quiet", "--detach", base]
+        )
+        if moved.returncode:
+            raise RuntimeError(moved.stderr.strip() or f"could not move {target} to {base}")
         return target
+
+    def _git_line(self, argv: list[str]) -> str:
+        """One line of a git command's output; a failure raises rather than reads as ''."""
+        result = self._runner.run(argv)
+        if result.returncode:
+            raise RuntimeError(result.stderr.strip() or "failed: " + " ".join(argv))
+        return result.stdout.strip()
 
     # -- Vibey ---------------------------------------------------------------------------
 
@@ -938,7 +970,15 @@ class DeliveryBridge:
         if status.get("phase") != "done":
             self._evidence.project(project_id, outcome="not_done", status=status)
             return None
-        branch = f"vibey/{int(str(status['cycle']))}/integration"
+        # The branch is the one vibey names for this project, read from its status rather
+        # than rebuilt here: a cycle-keyed `vibey/<cycle>/integration` is shared by every
+        # project in the repository, and this bridge's worktrees share the main checkout's
+        # refs, so rebuilding the name is how one delivery would publish another's history.
+        branch = status.get("integration_branch")
+        if not isinstance(branch, str) or not branch:
+            raise RuntimeError(
+                f"project {project_id} status names no integration branch; refusing to guess one"
+            )
         worktree = Path(str(status["repo_path"]))
         listed = self._runner.run(["git", "-C", str(worktree), "worktree", "list", "--porcelain"])
         if listed.returncode:
@@ -950,10 +990,28 @@ class DeliveryBridge:
         if match is None:
             raise RuntimeError(f"project {project_id} has no integration worktree for {branch}")
         integration_path = Path(match.group(1))
-        # Every project names its integration branch `vibey/<cycle>/integration`, so two
-        # deliveries pushed under that name to one remote collide: the second push is
-        # refused, or the second project finds the first one's pull request and would be
-        # marked complete with it. The remote branch names the issue and the project.
+        # The name alone is not the proof: BUILD records, beside every branch it creates,
+        # the project that created it. A branch that does not name this project is not
+        # this project's delivery, whatever it is called, and is never pushed as one.
+        owner = self._runner.run(
+            [
+                "git",
+                "-C",
+                str(worktree),
+                "config",
+                "--local",
+                "--get",
+                f"branch.{branch}.vibey-project",
+            ]
+        )
+        if owner.returncode or owner.stdout.strip() != project_id:
+            raise RuntimeError(
+                f"refusing to publish {branch}: it does not record project {project_id} "
+                "as its creator"
+            )
+        # The remote branch names the issue and the project, so two deliveries never
+        # collide on one remote name, and a second project never finds the first one's
+        # pull request and is marked complete with it.
         head = f"{self._settings.branch_prefix}/{issue_number}-{project_id[:8]}"
         gate = Path(self._settings.push_gate)
         if gate.name != "push_gate.py":

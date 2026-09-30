@@ -213,7 +213,7 @@ graph TB
     end
 
     subgraph Work["Filesystem"]
-        WT["git worktrees<br/><code>.vibey/worktrees/&lt;cycle&gt;/&lt;item&gt;</code>"]
+        WT["git worktrees<br/><code>.vibey/worktrees/&lt;project8&gt;/&lt;cycle&gt;/&lt;item&gt;</code>"]
         Art["artifacts + briefs<br/><code>.vibey/runs/</code>"]
     end
 

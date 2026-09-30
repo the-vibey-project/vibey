@@ -226,9 +226,22 @@ narrow it, or name an account the repository has not. Prefer changing `.vibey-gh
 reviewed pull request; the flags are for a person's own run. `VIBEY_PUSH_GATE` also says where
 the storm tools are: the bridge loads `storm_trust.py` from the directory `push_gate.py` is in.
 
-A finished project is pushed through the push gate as `<prefix>/<issue>-<project>`: every
-project's local integration branch is `vibey/<cycle>/integration`, so that name alone would
-collide on the remote between two deliveries.
+A finished project is pushed through the push gate as `<prefix>/<issue>-<project>`, so two
+deliveries never collide on one remote name. The local branch pushed is the project's own
+integration branch, `vibey/<project8>/<cycle>/integration`, read from `vibey status --json`
+(`integration_branch`) and never rebuilt here, and it is pushed only when its ownership record
+(`git config branch.<name>.vibey-project`) names the project: every delivery's checkout is a
+linked worktree of the main repository, so all of them share its refs, and a name alone does
+not prove whose a branch is. Before the names carried the project (`vibey/<cycle>/…`), a
+delivery in cycle 1 built on an unrelated project's `vibey/1/ws` and would have published it
+([ADR-0008](../architecture/decisions/0008-worktree-isolation.md), amended 2026-09-30).
+
+Every fresh delivery starts from `--base` as it is at dispatch: the checkout
+`$VIBEY_STORM_HOME/triaged-<issue>` is created detached at `--base`, and one left behind by
+an earlier dispatch that failed before a project was recorded is moved to the current base
+when it is clean, and refused when it is not. `--base` names the local ref as the main
+repository has it; the bridge does not fetch, so a local `develop` that is behind the remote
+is what a delivery starts from.
 
 ## Evidence
 

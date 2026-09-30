@@ -19,6 +19,7 @@ from vibey.application.ports import EngineHealthRepository, JobRepository
 from vibey.domain.job import JobState, StoredJobState
 from vibey.domain.ledger import EventKind, LedgerEvent
 from vibey.domain.phase import Phase, StoredPhase
+from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 
@@ -122,8 +123,11 @@ async def fetch_dashboard_state(
         elif ev.kind == EventKind.DEPLOYMENT_DECLINED:
             deploy_dec = "DECLINED"
 
-    # Scan active worktrees
-    managed_root = project.repo_path / ".vibey" / "worktrees" / str(project.cycle)
+    # Scan active worktrees: this project's own, for its current cycle -- another
+    # project in the same repository keeps its worktrees under another root.
+    managed_root = (
+        project.repo_path / WorktreeNaming(project.project_id, project.cycle).managed_root
+    )
     worktrees: list[str] = []
     if managed_root.exists():
         worktrees = sorted([p.name for p in managed_root.iterdir() if p.is_dir()])
