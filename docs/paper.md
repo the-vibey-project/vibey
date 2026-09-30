@@ -4036,6 +4036,27 @@ Put the notebook, not the robot, at the centre. Then any robot can be swapped ou
 - PostgreSQL Global Development Group, *The Rule System* and *CREATE TRIGGER* (rules and row-level triggers on partitioned tables; `TRUNCATE` triggers). PostgreSQL documentation, `https://www.postgresql.org/docs/current/`.
 - The vibey repository: the sovereignty stress record, `src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`; the evidence script, `scripts/paper_evidence.py`; the architecture decision records, `docs/architecture/decisions/`; `https://github.com/the-vibey-project/vibey`, 2026.
 
+## Citing this work
+
+To cite this paper, use the entry below; the repository's `CITATION.cff` carries the
+same record for citation managers and for GitHub's *Cite this repository* button. No
+DOI or preprint identifier has been assigned yet, so the entry points at the published
+PDF.
+
+```bibtex
+@misc{steinberger2026ledger,
+  author = {Steinberger, Adam Matthew},
+  title  = {Ledger-Mediated Orchestration:
+            Vendor-Independent Autonomous
+            Software Delivery over a Pool
+            of Coding Agents},
+  year   = {2026},
+  url    = {https://the-vibey-project.github.io/vibey/main/paper.pdf},
+  note   = {Source: docs/paper.md in
+            github.com/the-vibey-project/vibey}
+}
+```
+
 ## A call to FOSS developers
 
 Everything in this paper is free and open-source software, built in the open, and it

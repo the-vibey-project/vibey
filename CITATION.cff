@@ -18,18 +18,25 @@ authors:
     website: https://vibewithadam.matthewsteinberger.com/
 license: MIT
 version: 3.2.0
-date-released: "2026-09-18"
+date-released: "2026-09-30"
 repository-code: https://github.com/the-vibey-project/vibey
 url: https://the-vibey-project.github.io/vibey/main/
 keywords:
   - autonomous software delivery
+  - AI coding agents
   - coding agents
+  - agent orchestration
   - orchestration
+  - local LLM
+  - human in the loop
   - event-sourced ledger
   - PostgreSQL
   - engine rotation
 preferred-citation:
-  type: article
+  # Not yet in a journal or on a preprint server, so a generic work -- which is what
+  # GitHub and citation managers turn into a BibTeX @misc, matching the entry the paper
+  # itself prints under "Citing this work".
+  type: generic
   title: >-
     Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over
     a Pool of Coding Agents
