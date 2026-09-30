@@ -8,10 +8,23 @@ build-backend = "hatchling.build"
 [project]
 name = "krypton-app"
 version = "0.1.0"
-description = "krypton, the apps of vibey: launches the local vibey hub and opens it."
+description = "krypton, the apps of vibey, the open-source orchestrator for AI coding agents: launches the local vibey hub and opens it."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+keywords = ["vibey", "krypton", "ai-agents", "coding-agents", "agent-orchestration", "launcher"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+    "Typing :: Typed",
+]
 # The launcher starts `vibey serve`, so the engine is what makes it useful -- and the
 # engine's `hub` extra is what makes `vibey serve` run: the hub's web stack (fastapi,
 # uvicorn) is an extra of vibey-engine, not a base dependency (ADR-0067). Bare
@@ -25,6 +38,8 @@ dependencies = ["vibey-engine[hub]"]
 Homepage = "https://the-vibey-project.github.io/vibey/"
 Source = "https://github.com/the-vibey-project/vibey/tree/main/clients/krypton-app"
 Issues = "https://github.com/the-vibey-project/vibey/issues"
+Documentation = "https://the-vibey-project.github.io/vibey/main/"
+Changelog = "https://github.com/the-vibey-project/vibey/blob/main/CHANGELOG.md"
 
 [project.scripts]
 krypton = "krypton_app.cli:main"
