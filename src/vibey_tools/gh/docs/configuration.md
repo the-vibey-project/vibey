@@ -106,6 +106,13 @@ gh variable set VIBEY_UNATTENDED_APPROVAL --body off   # binds from that moment
 Absence, `off`, empty, malformed or **unreadable** are all refusal. An approver that cannot
 read its own authorization has already lost it.
 
+With `live_switch_required = false` the declared half alone turns the grant on -- reviewed in
+the pull request that sets it, which is what 12.f asks of granting -- and the variable keeps
+only the power to **withdraw**, which 12.f says must never need a merge. Then an unset
+variable (a clean `HTTP 404`) or one reading exactly `switch_value` leaves the grant standing,
+any other value withdraws it at once, and a variable that cannot be read, or reads as
+malformed, still refuses: "not withdrawn" has to be seen, never assumed.
+
 | Field | Type / default | Meaning |
 |---|---|---|
 | `enabled` | boolean / `false` | Whether any delegated approval may be given. Off by default: upgrading vibey-gh is not an act of granting. |
@@ -115,6 +122,7 @@ read its own authorization has already lost it.
 | `require_all_gates` | boolean / `true` | Every deterministic gate must already be green. A delegated approval is added to the gates and never substituted for one. |
 | `switch_variable` | string / `"VIBEY_UNATTENDED_APPROVAL"` | The repository variable holding the live switch. Declared rather than compiled in (12.h); it must be a valid variable name — a switch nobody can set is a grant nobody can withdraw. |
 | `switch_value` | string / `"on"` | The exact value the switch must read. Compared byte for byte, so `On`, `on ` and an empty variable all refuse; surrounding whitespace is rejected when the configuration loads. |
+| `live_switch_required` | boolean / `true` | Whether the variable must also read `switch_value` for the grant to be on. `false`: `enabled` grants, and the variable only withdraws (unset or `switch_value` = in force, anything else = withdrawn, unreadable = refusal). Must be exactly `true` or `false`. |
 
 `vibey-gh approve-check PR` is what reads both halves: it exits `0` only when every condition
 above holds for that pull request, and prints each one that does not

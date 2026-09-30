@@ -412,16 +412,18 @@ site_root_files = ["googleebf918639d02415d.html"]
 # is why `.vibey-gh.toml` appears in its own forbidden list -- the grant may never approve a
 # change to the grant.
 #
-# This is the DECLARED half (12.c: declared in the repository, reviewed in a pull request).
-# The live half is the repository variable VIBEY_UNATTENDED_APPROVAL, which must read
-# exactly "on". Absence, "off", empty, malformed or UNREADABLE are all refusal -- an
-# approver that cannot read its own authorization has already lost it. Withdrawal needs no
-# merge and no reason:
+# This table IS the grant (12.c: declared in the repository, reviewed in a pull request):
+# `enabled = true` with `live_switch_required = false` turns delegated approval on, as the
+# operator asked on 2026-09-29. The repository variable VIBEY_UNATTENDED_APPROVAL keeps the
+# one power 12.f says must never need a merge: withdrawal. Unset, or "on", leaves the grant
+# standing; any other value withdraws it from that moment, with no merge and no reason:
 #
 #     gh variable set VIBEY_UNATTENDED_APPROVAL --body off
 #
+# A variable that cannot be read still refuses -- "not withdrawn" has to be seen.
 [unattended_approval]
 enabled = true
+live_switch_required = false
 
 # The operator chose the widest branch scope, so the two lists below carry the whole bound
 # between an approver and any change in the repository. Every forbidden path answers one

@@ -220,6 +220,47 @@ def test_the_switch_is_read_by_its_declared_name_and_value(tmp_path: Path) -> No
     assert f"api {VARIABLE}" not in transport.asked
 
 
+# With `live_switch_required = false` the declared grant alone turns approval on, and the
+# variable keeps only the power 12.f says must never need a merge: withdrawal.
+@pytest.mark.parametrize(
+    "answer",
+    ["HTTP 404: Not Found", {"name": "VIBEY_UNATTENDED_APPROVAL", "value": "on"}],
+    ids=["unset", "on"],
+)
+def test_a_declared_grant_stands_while_nobody_has_withdrawn_it(tmp_path: Path, answer: Any) -> None:
+    transport = forge(**{f"api {VARIABLE}": answer})
+    assert refusals(tmp_path, transport=transport, live_switch_required=False) == ()
+
+
+@pytest.mark.parametrize(
+    "answer, why",
+    [
+        ({"name": "VIBEY_UNATTENDED_APPROVAL", "value": "off"}, "withdrawn"),
+        ({"name": "VIBEY_UNATTENDED_APPROVAL", "value": ""}, "withdrawn"),
+        ({"name": "VIBEY_UNATTENDED_APPROVAL", "value": "ON"}, "withdrawn"),
+        ("HTTP 403: Resource not accessible by integration", "only its absence"),
+        ("connection reset by peer", "only its absence"),
+        ({"name": "VIBEY_UNATTENDED_APPROVAL"}, "malformed"),
+    ],
+    ids=["off", "empty", "case", "forbidden", "network", "no-value"],
+)
+def test_a_declared_grant_is_withdrawn_or_refused_by_anything_else(
+    tmp_path: Path, answer: Any, why: str
+) -> None:
+    """Any value but the documented one withdraws at once, and a variable that cannot be
+    read cannot show nobody withdrew -- only a clean 404 says the variable is unset."""
+    found = refusals(
+        tmp_path, transport=forge(**{f"api {VARIABLE}": answer}), live_switch_required=False
+    )
+    assert len(found) == 1
+    assert "VIBEY_UNATTENDED_APPROVAL" in found[0] and why in found[0]
+
+
+def test_the_default_still_needs_the_variable_to_say_on(tmp_path: Path) -> None:
+    found = refusals(tmp_path, transport=forge(**{f"api {VARIABLE}": "HTTP 404: Not Found"}))
+    assert len(found) == 1 and "absence and unreadability are both refusal" in found[0]
+
+
 # -------------------------------------------------------------------- 2. whose change it is
 
 
@@ -567,6 +608,25 @@ def test_the_switch_keys_load_from_the_table(tmp_path: Path) -> None:
 def test_the_switch_defaults_to_the_documented_variable() -> None:
     default = UnattendedApprovalConfig()
     assert (default.switch_variable, default.switch_value) == ("VIBEY_UNATTENDED_APPROVAL", "on")
+    assert default.live_switch_required is True
+
+
+def test_live_switch_required_loads_from_the_table(tmp_path: Path) -> None:
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[unattended_approval]\n"
+        "enabled = true\n"
+        'branches = ["develop"]\n'
+        f'authors = ["{OPERATOR}"]\n'
+        "live_switch_required = false\n",
+        encoding="utf-8",
+    )
+    assert load_config(tmp_path).unattended_approval.live_switch_required is False
+
+
+@pytest.mark.parametrize("value", [0, "", "false", None])
+def test_live_switch_required_must_be_exactly_a_bool(value: Any) -> None:
+    with pytest.raises(TypeError, match="live_switch_required"):
+        UnattendedApprovalConfig(live_switch_required=value)
 
 
 # ------------------------------------------------------- this repository's own grant, read

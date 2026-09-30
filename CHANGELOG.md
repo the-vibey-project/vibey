@@ -45,6 +45,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   be attributed still parks for a person under either policy. A malformed value is refused
   at load. The triaged-delivery bridge opts its worker in only with `--record-research-gaps`
   (`VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`), off by default, and records that it did.
+* **gh:** `[unattended_approval] live_switch_required` (default `true`, unchanged). Set to
+  `false`, the declared `enabled = true` is the delegated approver's grant and the repository
+  variable `VIBEY_UNATTENDED_APPROVAL` becomes withdrawal only: unset or `on` leaves the grant
+  standing, any other value withdraws it at once, and an unreadable or malformed variable
+  still refuses (12.f: granting declared and reviewed, withdrawal immediate).
+
 * **review:** the PR review gate now reaches a verdict at scale. A diff too large for one
   request to the sovereign model is reviewed whole in bounded parts (`[pr_automation.fallback]
   max_chunks`, default 6) -- split by file and then by hunk, each part held to the same
