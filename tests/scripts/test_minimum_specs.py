@@ -12,6 +12,7 @@ pytest collects `test_*` functions, and the rule is about production code.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -81,6 +82,10 @@ def test_every_seam_implements_its_declared_interface() -> None:
     assert contracts.ClockInterface in ms.SystemClock.__mro__
     assert contracts.IdleGateInterface in ms.IdleGate.__mro__
     assert contracts.DerivationsInterface in ms.Derivations.__mro__
+    for source in (ms.ModelFits, ms.LinuxDerivations):
+        assert contracts.DerivationSourceInterface in source.__mro__
+    assert contracts.PackageManagerInterface in ms.PackageManager.__mro__
+    assert contracts.CellRunnerInterface in ms.CellRunner.__mro__
     assert contracts.StalenessPolicyInterface in ms.StalenessPolicy.__mro__
     for renderer in (ms.DocsRenderer, ms.PaperRenderer):
         assert contracts.RequirementsRendererInterface in renderer.__mro__
@@ -93,6 +98,7 @@ def test_every_seam_implements_its_declared_interface() -> None:
         ms.ModelBench,
         ms.ProcessFootprintProbe,
         ms.DiskProbe,
+        ms.LinuxCellProbe,
     ):
         assert contracts.ProbeInterface in probe.__mro__
 
@@ -459,7 +465,7 @@ def test_a_stale_figure_shows_in_the_tables_and_the_status_list() -> None:
 def test_every_generated_table_names_its_host_and_dates() -> None:
     record = committed()
     docs = ms.DocsRenderer(SETTINGS).blocks(record)
-    host = next(iter(record.hosts))
+    host = next(h for h in record.hosts if "macOS" in h)  # the Linux cells are hosts too
     for name in ("hardware", "software", "network", "clients"):
         assert f"*Measured on {host}; figures dated 2026-09-29" in docs[name], name
     paper = ms.PaperRenderer(SETTINGS).blocks(record)["minimum-requirements"]
@@ -926,8 +932,20 @@ class QuietGate:
         return ms.LlamaServerLog.inference_posts(self._log.since(offset)) + self.foreign
 
 
+#: A sweep every test host can run (the declared one goes to ten threads).
+SMALL_SWEEP = {
+    "threads": [1, 2],
+    "context": 8192,
+    "prompt_tokens": 256,
+    "num_predict": 64,
+    "runs": 2,
+}
+
+
 def bench_settings(**bench: Any) -> ms.SpecsSettings:
-    return replace(SETTINGS, bench={**SETTINGS.bench, "runs": 2, **bench})
+    return replace(
+        SETTINGS, bench={**SETTINGS.bench, "runs": 2, "cpu_scaling": SMALL_SWEEP, **bench}
+    )
 
 
 def empty_log(tmp_path: Path) -> tuple[Path, ms.LlamaServerLog]:
@@ -1085,3 +1103,599 @@ def test_volatile_temp_paths_never_reach_the_committed_record() -> None:
     )
     assert "/var/folders" not in figure.method and "$TMPDIR" in figure.method
     assert figure.note == "scratch under $TMPDIR/x"
+
+
+# ------------------------------------------------------------------ the fitted models
+
+MATH = ms.RequirementsMath()
+
+
+def test_the_memory_line_is_fitted_to_the_measured_sweep() -> None:
+    d = derived()
+    contexts = [4096, 8192, 32768, 131072]
+    totals = [12239 + 1104.61 + 16.02, 12339 + 1104.61 + 20.02, 12974 + 1104.61 + 44.02]
+    totals.append(15566 + 1104.61 + 140.02)
+    line = MATH.least_squares([float(c) for c in contexts], totals)
+    assert d["fit.memory.m0_mib"].value == round(line.intercept, 1)
+    assert d["fit.memory.k_kib_per_token"].value == round(line.slope * 1024, 3)
+    assert d["fit.memory.r2"].value == round(line.r2, 6)
+    assert d["fit.memory.r2"].value > 0.999  # the mechanism (weights + linear KV) holds
+    assert d["fit.memory.max_residual_mib"].value == round(line.max_abs_residual, 1)
+    assert d["fit.memory.m0_mib"].inputs is not None
+    assert len(d["fit.memory.m0_mib"].inputs) == 12  # three buffers at each of four contexts
+
+
+def test_linux_memory_is_the_fitted_model_with_headroom_plus_vibey_and_the_os() -> None:
+    d = derived()
+    m0, k = d["fit.memory.m0_mib"].value, d["fit.memory.k_kib_per_token"].value
+    h = SETTINGS.linux["memory_headroom_factor"]
+    need = round(h * (m0 + k / 1024 * 32768) / 1024 + 0.5 + 3.5, 2)
+    assert d["linux.ram.minimum_need_gib"].value == need
+    assert d["linux.ram.minimum_gb"].value == next(
+        s for s in SETTINGS.assumptions["memory_sizes_gb"] if s >= need
+    )
+    rec = round(h * (m0 + k / 1024 * 131072) / 1024 + 0.5 + 3.5 + 4.0, 2)
+    assert d["linux.ram.recommended_need_gib"].value == rec
+    # The largest context 16 GB holds: solve h*(M0 + k*c)/1024 + 4 = 16e9 / 2^30 for c.
+    c_max = ((16e9 / ms.MIB - 4.0 * 1024) / h - m0) / (k / 1024)
+    assert d["linux.ram.max_context_at_probe"].value == max(0, math.floor(c_max))
+    assert d["linux.ram.probe_fits_runner"].value is False
+    assert d["linux.ram.minimum_need_gib"].inputs["config.linux.memory_headroom_factor"] == h
+
+
+def sweep(arch: str, t1: float, p: float, threads: Sequence[int]) -> dict[str, ms.Figure]:
+    return {
+        f"bench.{M}.cpu.{arch}.threads{n}.gen_tok_s": measured(
+            f"bench.{M}.cpu.{arch}.threads{n}.gen_tok_s", t1 / ((1 - p) + p / n), "tokens/s"
+        )
+        for n in threads
+    }
+
+
+def test_cores_come_from_amdahls_law_fitted_to_the_thread_sweep() -> None:
+    figures = {**inputs(), **sweep("aarch64", 0.9, 0.95, [1, 2, 4, 6, 8, 10])}
+    d = derived(figures)
+    assert d["fit.cpu.aarch64.t1_tok_s"].value == pytest.approx(0.9)
+    assert d["fit.cpu.aarch64.p"].value == pytest.approx(0.95)
+    assert d["fit.cpu.aarch64.r2"].value == pytest.approx(1.0)
+    assert d["fit.cpu.aarch64.asymptote_tok_s"].value == pytest.approx(18.0)
+    theta = SETTINGS.linux["cpu_knee_tok_s_per_core"]
+    knee = (math.sqrt(0.9 * 0.95 / theta) - 0.95) / 0.05
+    assert d["fit.cpu.aarch64.knee_cores"].value == math.ceil(knee)
+    floor = SETTINGS.assumptions["minimum_gen_tok_s"]  # 10 tok/s
+    assert d["fit.cpu.aarch64.minimum_cores"].value == math.ceil(0.95 / (0.9 / floor - 0.05))
+    # No x86_64 sweep was measured: nothing is invented for it.
+    assert d["fit.cpu.x86_64.knee_cores"].status == "skipped"
+    assert "threads1.gen_tok_s" in (d["fit.cpu.x86_64.knee_cores"].reason or "")
+
+
+def test_a_floor_above_the_asymptote_is_unreachable_and_a_partial_sweep_still_fits() -> None:
+    slow = {**inputs(), **sweep("aarch64", 0.4, 0.9, [1, 2, 4])}  # asymptote 4 < 10 tok/s
+    d = derived(slow)
+    assert d["fit.cpu.aarch64.minimum_cores"].value == "unreachable"
+    assert d["fit.cpu.aarch64.p"].value == pytest.approx(0.9)  # three of six counts suffice
+    two = {**inputs(), **sweep("aarch64", 0.4, 0.9, [1, 2])}
+    assert derived(two)["fit.cpu.aarch64.p"].status == "skipped"
+
+
+def test_ledger_growth_is_the_integral_of_the_job_rate_over_the_horizon() -> None:
+    figures = {
+        **inputs(),
+        "postgres.empty_db_bytes": measured("postgres.empty_db_bytes", 9_025_215, "bytes"),
+        "postgres.after_one_job_bytes": measured(
+            "postgres.after_one_job_bytes", 9_197_247, "bytes"
+        ),
+    }
+    d = derived(figures)
+    assert d["postgres.bytes_per_job"].value == 172_032
+    g = SETTINGS.growth
+    expected = 172_032 * (
+        g["jobs_per_day"] * g["horizon_days"]
+        + g["jobs_per_day_growth"] * g["horizon_days"] ** 2 / 2
+    )
+    assert d["disk.ledger_growth_gb"].value == round(expected / 1e9, 2)
+    assert derived()["disk.ledger_growth_gb"].status == "skipped"  # never measured: no number
+
+
+# ------------------------------------------------------------------ the Linux matrix
+
+UBUNTU = "linux.ubuntu-24.04.aarch64"
+BUNDLE = "linux.ollama.aarch64"
+
+
+def cell_inputs() -> dict[str, ms.Figure]:
+    figs = [
+        measured(f"{UBUNTU}.pkg.base.bytes", 115_960_832, "bytes"),
+        measured(f"{UBUNTU}.pkg.postgres.bytes", 233_686_016, "bytes"),
+        measured(f"{UBUNTU}.pkg.desktop.bytes", 134_172_672, "bytes"),
+        measured(f"{UBUNTU}.install.vibey-engine.venv_bytes", 701_739_008, "bytes"),
+        measured(f"{UBUNTU}.install.vibey-engine.uv_cache_bytes", 723_202_048, "bytes"),
+        measured(f"{UBUNTU}.install.krypton-app.venv_bytes", 709_271_552, "bytes"),
+        measured(f"{BUNDLE}.unpacked_bytes", 2_238_464_000, "bytes"),
+        measured(f"{UBUNTU}.glibc", "2.39", "version"),
+        measured(f"{UBUNTU}.install.glibc_floor", "2.34", "version"),
+        measured(f"{UBUNTU}.packaged.postgres", "16+257build1.1", "version"),
+        measured(f"{UBUNTU}.packaged.python", "3.12.3-0ubuntu2.1", "version"),
+        measured(f"{UBUNTU}.packaged.glib", "2.80.0-6ubuntu3.9", "version"),
+        measured(f"{UBUNTU}.packaged.json_glib", "1.8.0-2build2", "version"),
+        measured(f"{UBUNTU}.packaged.gtk4", "4.14.5+ds-0ubuntu0.10", "version"),
+        measured(f"{UBUNTU}.packaged.libadwaita", "1.5.0-1ubuntu2", "version"),
+    ]
+    floors = [
+        ms.Figure(f"declared.{k}", k, v, "semver", "declared", "read")
+        for k, v in (
+            ("postgres_min_major", 14),
+            ("desktop_glib", ">= 2.74"),
+            ("desktop_json_glib", ">= 1.6"),
+            ("desktop_gtk4", ">= 4.12"),
+            ("desktop_libadwaita", ">= 1.4"),
+        )
+    ]
+    return {**inputs(), **{f.id: f for f in [*figs, *floors]}}
+
+
+def test_a_cells_disk_is_the_sum_of_its_own_closures_and_installs() -> None:
+    d = derived(cell_inputs())
+    need = (
+        115_960_832
+        + 233_686_016
+        + 701_739_008
+        + 723_202_048
+        + 2_238_464_000
+        + 13_793_441_244
+        + 92.32 * ms.MIB
+        + 10 * 86_958_080
+    ) / 1e9 + 1.0
+    assert d[f"{UBUNTU}.disk.minimum_need_gb"].value == round(need, 1)
+    assert d[f"{UBUNTU}.disk.minimum_gb"].value == math.ceil(round(need, 1) / 10) * 10
+    rec = (
+        round(need, 1)
+        + (
+            134_172_672
+            + 709_271_552
+            + 9_276_198_565
+            + 834_072_576
+            + 40 * 86_958_080
+            + 13_793_441_244
+        )
+        / 1e9
+    )
+    assert d[f"{UBUNTU}.disk.recommended_need_gb"].value == round(rec, 1)
+    # The ledger term waits for its per-job measurement; the rest of the disk does not.
+    assert d[f"{UBUNTU}.disk.with_ledger_gb"].status == "skipped"
+
+
+def test_a_cells_floors_compare_its_packaged_versions_with_vibeys() -> None:
+    d = derived(cell_inputs())
+    for floor in ("postgres", "python", "glibc", "desktop"):
+        assert d[f"{UBUNTU}.floor.{floor}"].value is True, floor
+    old = cell_inputs()
+    old[f"{UBUNTU}.packaged.postgres"] = measured(
+        f"{UBUNTU}.packaged.postgres", "13.9-1", "version"
+    )
+    old[f"{UBUNTU}.install.glibc_floor"] = measured(
+        f"{UBUNTU}.install.glibc_floor", "2.40", "version"
+    )
+    old[f"{UBUNTU}.packaged.gtk4"] = measured(f"{UBUNTU}.packaged.gtk4", "1:4.10.1-1", "version")
+    d = derived(old)
+    assert d[f"{UBUNTU}.floor.postgres"].value is False
+    assert d[f"{UBUNTU}.floor.glibc"].value is False
+    assert d[f"{UBUNTU}.floor.desktop"].value is False
+
+
+@pytest.mark.parametrize(
+    ("have", "floor", "ok_"),
+    [
+        ("1:4.22.5-1", ">= 4.12", True),
+        ("16+257build1.1", "14", True),
+        ("6.8.0-146.146", "6.8", True),
+        ("2.39", "2.40", False),
+        ("3.12.3-0ubuntu2.1", "3.12", True),
+        ("3.11.9", "3.12", False),
+    ],
+)
+def test_versions_compare_by_their_leading_number(have: str, floor: str, ok_: bool) -> None:
+    assert ms.Versions.at_least(have, floor) is ok_
+
+
+def test_a_version_with_no_number_is_refused() -> None:
+    with pytest.raises(ValueError, match="no version number"):
+        ms.Versions.key("unknown")
+    assert ms.Versions.major("18+290ubuntu1") == 18
+
+
+def test_the_matrix_is_every_declared_distribution_on_every_architecture() -> None:
+    matrix = ms.LinuxMatrix(SETTINGS)
+    cells = matrix.cells()
+    assert {(c.distro, c.arch) for c in cells} == {
+        (d, a) for d in SETTINGS.linux["distros"] for a in SETTINGS.linux["arches"]
+    }
+    arm_arch = matrix.cell("arch", "aarch64")
+    assert arm_arch.image == "" and "amd64 only" in arm_arch.reason
+    assert matrix.cell("fedora", "aarch64").platform == "linux/arm64"
+    ids = [fid for fid, _, _ in matrix.expected(matrix.cell("ubuntu-24.04", "aarch64"))]
+    assert f"{BUNDLE}.unpacked_bytes" in ids  # the declared distribution measures the bundle
+    assert f"{UBUNTU}.install.krypton-app.venv_bytes" in ids
+    assert not any(i.startswith("linux.ollama.") for i, _, _ in matrix.expected(arm_arch))
+    with pytest.raises(KeyError, match="no cell"):
+        matrix.cell("gentoo", "aarch64")
+
+
+def test_package_sizes_are_read_in_each_managers_own_format() -> None:
+    parse = ms.PackageManager.parse_sizes
+    assert parse("git\t20480\nlibc6\t13000\n", "name-tab-kib") == {
+        "git": 20480 * 1024,
+        "libc6": 13000 * 1024,
+    }
+    assert parse("git-core\t1234\n", "name-tab-bytes") == {"git-core": 1234}
+    qi = "Name            : bash\nInstalled Size  : 9.59 MiB\n\nName            : zlib\nInstalled Size  : 172.00 KiB\n"
+    assert parse(qi, "pacman-qi") == {"bash": round(9.59 * ms.MIB), "zlib": 172 * 1024}
+    with pytest.raises(ValueError, match="unknown size_format"):
+        parse("", "dnf-magic")
+
+
+def test_the_package_manager_asks_the_repositories_and_takes_the_newest() -> None:
+    config = SETTINGS.linux["package_managers"]["dnf"]
+    info = "Installed packages\nVersion        : 2.88.0\n\nAvailable packages\nVersion        : 2.88.3\n"
+    runner = FakeRunner({("dnf", "-q", "info"): ok(info), ("/bin/sh",): ok()})
+    pm = ms.PackageManager(config, runner)
+    assert pm.version("glib2") == "2.88.3"
+    pm.install(["gtk4", "evil; rm -rf /"])
+    command = runner.calls[-1][2]
+    assert "gtk4 evilrm-rf" in command and ";" not in command  # names, never shell
+    nothing = ms.PackageManager(config, FakeRunner({("dnf",): ok("")}))
+    assert nothing.version("absent") is None
+    with pytest.raises(OSError, match="listing installed packages failed"):
+        nothing.installed()
+
+
+class FakeManager:
+    """A package manager over an in-memory system: install adds each package's closure."""
+
+    def __init__(
+        self, installed: set[str], closures: Mapping[str, set[str]], fail: str = ""
+    ) -> None:
+        self.current = set(installed)
+        self._closures = closures
+        self._fail = fail
+
+    def installed(self) -> set[str]:
+        return set(self.current)
+
+    def sizes(self) -> dict[str, int]:
+        return {name: 1000 * len(name) for name in self.current}
+
+    def install(self, packages: Sequence[str]) -> ms.CommandResult:
+        if self._fail and self._fail in packages:
+            return ms.CommandResult(100, "", "E: Unable to locate package", 1)
+        for package in packages:
+            self.current |= self._closures.get(package, {package})
+        return ok()
+
+    def version(self, package: str) -> str | None:
+        return None if package == "linux-image-generic" else "16+257build1.1"
+
+
+class FakeInstall:
+    name = "install"
+
+    def run(self) -> list[ms.Figure]:
+        return [measured(f"{UBUNTU}.install.vibey-engine.venv_bytes", 1, "bytes")]
+
+
+def cell_probe(tmp_path: Path, manager: FakeManager, before: set[str] | None) -> ms.LinuxCellProbe:
+    release = tmp_path / "os-release"
+    release.write_text('PRETTY_NAME="Ubuntu 24.04.5 LTS"\n', encoding="utf-8")
+    cell = ms.LinuxMatrix(SETTINGS).cell("ubuntu-24.04", "aarch64")
+    return ms.LinuxCellProbe(
+        SETTINGS,
+        cell,
+        manager,
+        FakeInstall(),
+        factory(),
+        before,
+        os_release=release,  # type: ignore[arg-type]
+    )
+
+
+def test_a_cell_measures_each_package_sets_closure_from_the_package_managers_sizes(
+    tmp_path: Path,
+) -> None:
+    base = {"libc6", "bash"}
+    after_bootstrap = base | {"python3", "git", "libpython3.12", "curl"}
+    manager = FakeManager(
+        after_bootstrap,
+        {
+            "postgresql": {"postgresql", "postgresql-16", "libpq5"},
+            "libgtk-4-1": {"libgtk-4-1", "libcairo2"},
+        },
+    )
+    by = {f.id: f for f in cell_probe(tmp_path, manager, base).run()}
+    assert by[f"{UBUNTU}.os_release"].value == "Ubuntu 24.04.5 LTS"
+    assert by[f"{UBUNTU}.pkg.base.count"].value == 4
+    assert by[f"{UBUNTU}.pkg.base.bytes"].value == 1000 * sum(map(len, after_bootstrap - base))
+    assert by[f"{UBUNTU}.pkg.postgres.count"].value == 3
+    assert by[f"{UBUNTU}.pkg.postgres.bytes"].conditions["packages"] == [
+        "libpq5",
+        "postgresql",
+        "postgresql-16",
+    ]
+    assert by[f"{UBUNTU}.packaged.postgres"].value == "16+257build1.1"
+    kernel = by[f"{UBUNTU}.packaged.kernel"]
+    assert kernel.status == "skipped" and "linux-image-generic" in (kernel.reason or "")
+    assert by[f"{UBUNTU}.install.vibey-engine.venv_bytes"].value == 1  # the install probe's own
+
+
+def test_a_cell_without_its_snapshot_or_with_a_failed_install_says_why(tmp_path: Path) -> None:
+    manager = FakeManager({"bash"}, {}, fail="postgresql")
+    by = {f.id: f for f in cell_probe(tmp_path, manager, None).run()}
+    assert by[f"{UBUNTU}.pkg.base.bytes"].status == "skipped"
+    assert "before the bootstrap" in (by[f"{UBUNTU}.pkg.base.bytes"].reason or "")
+    failed = by[f"{UBUNTU}.pkg.postgres.bytes"]
+    assert failed.status == "skipped" and "Unable to locate" in (failed.reason or "")
+    assert by[f"{UBUNTU}.pkg.desktop.count"].status == "measured"
+
+
+def test_the_installed_wheels_glibc_floor_is_their_newest_manylinux_tag(tmp_path: Path) -> None:
+    site = tmp_path / "venv" / "lib" / "python3.12" / "site-packages"
+    for name, tags in (
+        (
+            "pydantic_core-2.41",
+            ["cp312-cp312-manylinux_2_17_aarch64", "cp312-cp312-manylinux2014_aarch64"],
+        ),
+        ("zstandard-0.25", ["cp312-cp312-manylinux_2_34_aarch64"]),
+        ("httpx-0.28", ["py3-none-any"]),
+        ("legacy-1.0", ["cp312-cp312-manylinux1_x86_64"]),
+    ):
+        info = site / f"{name}.dist-info"
+        info.mkdir(parents=True)
+        (info / "WHEEL").write_text("".join(f"Tag: {t}\n" for t in tags), encoding="utf-8")
+    assert ms.InstallFootprintProbe.glibc_floor(tmp_path / "venv") == ("2.34", 3)
+    assert ms.InstallFootprintProbe.glibc_floor(tmp_path / "nothing") is None
+
+
+def test_an_emulated_cell_keeps_its_sizes_and_refuses_its_timings(tmp_path: Path) -> None:
+    ws = ms.Workspace(tmp_path)
+    ws.wheel_paths = {"vibey-engine": tmp_path / "e.whl", "krypton-app": tmp_path / "k.whl"}
+    runner = FakeRunner(
+        {
+            ("uv", "venv"): ok(),
+            ("uv", "pip", "list"): ok("[]"),
+            ("uv", "pip", "install"): ok(seconds=300.0),
+            ("du", "-sk"): ok("1000\t/x\n"),
+        }
+    )
+    builder = ms.PackageBuilder(tmp_path, SETTINGS, runner, ws)
+    probe = ms.InstallFootprintProbe(
+        SETTINGS,
+        runner,
+        builder,
+        ws,
+        ms.DirectorySize(runner),
+        factory(),
+        prefix=f"{UBUNTU}.install",
+        only=["vibey-engine"],
+        emulated="linux/amd64 on aarch64",
+    )
+    (tmp_path / "venv-vibey-engine").mkdir()
+    (tmp_path / "cache-venv-vibey-engine").mkdir()
+    by = {f.id: f for f in probe.run()}
+    assert set(probe.targets(ws.wheel_paths)) == {"vibey-engine"}
+    cold = by[f"{UBUNTU}.install.vibey-engine.cold_s"]
+    assert cold.status == "skipped" and "emulated" in (cold.reason or "")
+    assert by[f"{UBUNTU}.install.vibey-engine.venv_bytes"].value == 1000 * 1024
+
+
+def test_prebuilt_wheels_are_taken_from_the_hosts_directory(tmp_path: Path) -> None:
+    (tmp_path / "vibey_engine-3.2.0-py3-none-any.whl").write_bytes(b"")
+    environ = {ms.PackageBuilder.WHEELS_ENV: str(tmp_path)}
+    builder = ms.PackageBuilder(
+        tmp_path, SETTINGS, FakeRunner(), ms.Workspace(tmp_path / "ws"), environ
+    )
+    wheels, why = builder.build()
+    assert wheels == {} and "krypton-app" in why
+    (tmp_path / "krypton_app-3.2.0-py3-none-any.whl").write_bytes(b"")
+    builder = ms.PackageBuilder(
+        tmp_path, SETTINGS, FakeRunner(), ms.Workspace(tmp_path / "ws2"), environ
+    )
+    wheels, why = builder.build()
+    assert not why and set(wheels) == {"vibey-engine", "krypton-app"}
+
+
+class DockerFake(FakeRunner):
+    """Builds no wheels (the host hands them over), runs the container by writing the record
+    the cell's `measure` would, and streams the bundle."""
+
+    def __init__(self, partial: ms.SpecsRecord | None, exit_code: int = 0) -> None:
+        super().__init__({("/bin/sh",): ok("2238464000\n")})
+        self._partial = partial
+        self._exit = exit_code
+        self.docker: list[str] = []
+
+    def run(self, argv: Sequence[str], **kwargs: Any) -> ms.CommandResult:
+        if argv and argv[0] == SETTINGS.linux["docker"]:
+            self.docker = list(argv)
+            out = next(v.split(":")[0] for v in argv if v.endswith(":/out"))
+            if self._partial is not None:
+                self._partial.save(Path(out) / "partial.json")
+            return ms.CommandResult(self._exit, "", "docker: image pull failed", 1)
+        return super().run(argv, **kwargs)
+
+
+def wheel_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    wheels = tmp_path / "wheels"
+    wheels.mkdir()
+    for name in ("vibey_engine-3.2.0-py3-none-any.whl", "krypton_app-3.2.0-py3-none-any.whl"):
+        (wheels / name).write_bytes(b"")
+    monkeypatch.setenv(ms.PackageBuilder.WHEELS_ENV, str(wheels))
+
+
+def test_a_cell_runs_its_image_bootstraps_it_and_keeps_only_its_own_figures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    wheel_dir(tmp_path, monkeypatch)
+    label = "ubuntu:24.04 (linux/arm64, native) on a test host"
+    inside = ms.SpecsRecord(
+        "2026-10-05T07:30:00.000Z",
+        {label: {"system": "Linux"}},
+        (
+            replace(measured(f"{UBUNTU}.glibc", "2.39", "version"), host=label),
+            measured("host.ram_bytes", 1, "bytes"),
+        ),
+    )
+    fake = DockerFake(inside)
+    runner = ms.CellRunner(
+        REPO, SETTINGS, fake, FixedClock(), "a test host", "arm64", head=lambda url: 1_550_231_393
+    )
+    partial = runner.run("ubuntu-24.04", "aarch64")
+    by = partial.by_id()
+    assert set(by) == {f"{UBUNTU}.glibc", f"{BUNDLE}.download_bytes", f"{BUNDLE}.unpacked_bytes"}
+    assert by[f"{BUNDLE}.unpacked_bytes"].value == 2_238_464_000
+    assert partial.hosts[label]["emulated"] is False
+    assert fake.docker[fake.docker.index("--platform") + 1] == "linux/arm64"
+    script = fake.docker[-1]
+    snapshot, refresh = script.index("packages-before.txt"), script.index("apt-get update")
+    assert snapshot < refresh  # the base closure is measured from the pristine image
+    assert "measure --out /out/partial.json" in script
+    assert any(v.endswith(":/src:ro") for v in fake.docker)
+
+
+def test_a_cell_on_the_other_architecture_is_emulated_and_a_failed_one_is_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    wheel_dir(tmp_path, monkeypatch)
+    fake = DockerFake(None, exit_code=125)
+    runner = ms.CellRunner(REPO, SETTINGS, fake, FixedClock(), "a test host", "arm64")
+    partial = runner.run("fedora", "x86_64")
+    assert "emulated" in next(iter(partial.hosts))
+    assert f"{ms.LinuxMatrix.EMULATED_ENV}=linux/amd64 on aarch64" in fake.docker
+    figures = partial.figures
+    assert figures and all(f.status == "skipped" for f in figures)
+    assert "image pull failed" in (figures[0].reason or "")
+
+
+def test_a_cell_with_no_image_is_every_figure_skipped_with_the_reason() -> None:
+    runner = ms.CellRunner(REPO, SETTINGS, FakeRunner(), FixedClock(), "a test host", "arm64")
+    partial = runner.run("arch", "aarch64")
+    expected = ms.LinuxMatrix(SETTINGS).expected(ms.LinuxMatrix(SETTINGS).cell("arch", "aarch64"))
+    assert {f.id for f in partial.figures} == {fid for fid, _, _ in expected}
+    assert all(f.status == "skipped" and "amd64 only" in (f.reason or "") for f in partial.figures)
+
+
+def test_merging_a_cell_touches_only_that_cell_and_every_cell_is_named() -> None:
+    record = committed()
+    other = "linux.fedora.aarch64.glibc"
+    seeded = replace(record, figures=(*record.figures, measured(other, "2.42", "version")))
+    seeded = replace(seeded, figures=tuple(f for f in seeded.figures if f.id != f"{UBUNTU}.glibc"))
+    partial = ms.SpecsRecord(
+        "2026-10-05T07:30:00.000Z",
+        {"cell host": {}},
+        (measured(f"{UBUNTU}.glibc", "2.39", "version"),),
+    )
+    merger = ms.CellMerger(SETTINGS, FixedClock())
+    merged = merger.merge(seeded, [partial]).by_id()
+    assert merged[f"{UBUNTU}.glibc"].value == "2.39"
+    assert merged[other].status == "measured"  # another cell's figure is left alone
+    assert merged["ram.minimum_gb"] == record.by_id()["ram.minimum_gb"]
+    arm_arch = merged["linux.arch.aarch64.os_release"]
+    assert arm_arch.status == "skipped" and "amd64 only" in (arm_arch.reason or "")
+    # The workflow's merge: a cell that handed nothing over goes stale, and says so.
+    complete = merger.merge(seeded, [partial], complete=True).by_id()
+    assert complete[other].status == "stale"
+    assert "handed over no record" in (complete[other].reason or "")
+    assert complete[f"{UBUNTU}.glibc"].status == "measured"
+
+
+def test_the_host_run_leaves_the_linux_matrix_as_it_was() -> None:
+    record = committed()
+    seeded = replace(
+        record, figures=(*record.figures, measured("linux.fedora.aarch64.glibc", "2.42", "version"))
+    )
+    session = ms.MeasurementSession(
+        REPO, SETTINGS, runner=FakeRunner(), clock=FixedClock(), environ={}, only=("declared",)
+    )
+    by = session.run(seeded).by_id()
+    assert by["linux.fedora.aarch64.glibc"].status == "measured"  # not this run's to mark stale
+    assert by["ollama.version"].status == "stale"  # a host figure it did not re-measure
+
+
+def test_inside_a_cell_only_the_linux_probe_runs_and_only_its_cell_is_in_scope() -> None:
+    environ = {
+        ms.LinuxMatrix.CELL_ENV: "ubuntu-24.04/aarch64",
+        ms.LinuxMatrix.HOST_ENV: "the cell's container",
+    }
+    session = ms.MeasurementSession(
+        REPO, SETTINGS, runner=FakeRunner(), clock=FixedClock(), environ=environ
+    )
+    probes = list(session._probes(factory(), ms.Workspace(), []))
+    assert [p.name for p in probes] == ["linux"]
+
+    class OneFigure(ms.MeasurementSession):
+        def _probes(self, figures: Any, ws: Any, holder: Any) -> Any:
+            class Probe:
+                name = "linux"
+
+                def run(self) -> list[ms.Figure]:
+                    return [
+                        figures.measured(f"{UBUNTU}.glibc", "glibc", "2.39", "version", "confstr"),
+                        figures.measured("disk.git_pack_mib", "git", 1.0, "MiB", "out of scope"),
+                    ]
+
+            yield Probe()
+
+    record = OneFigure(
+        REPO, SETTINGS, runner=FakeRunner(), clock=FixedClock(), environ=environ
+    ).run(committed())
+    by = record.by_id()
+    assert by[f"{UBUNTU}.glibc"].host == "the cell's container"
+    assert by["disk.git_pack_mib"] == committed().by_id()["disk.git_pack_mib"]  # dropped
+    assert by["host.ram_bytes"] == committed().by_id()["host.ram_bytes"]  # the VM's is not recorded
+
+
+class ScalingOllama(FakeOllama):
+    """CPU-only generation that follows Amdahl's law in the thread count."""
+
+    def call(self, path: str, payload: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        reply = super().call(path, payload)
+        threads = dict((payload or {}).get("options", {})).get("num_thread")
+        if path == "/api/chat" and threads:
+            rate = 0.9 / (0.05 + 0.95 / threads)
+            reply["eval_count"] = 64
+            reply["eval_duration"] = int(64 / rate * 1e9)
+        return reply
+
+
+def test_the_bench_sweeps_cpu_threads_and_skips_counts_above_the_hosts_cores(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path, log = empty_log(tmp_path)
+    monkeypatch.setattr(ms.os, "cpu_count", lambda: 4)
+    monkeypatch.setattr(ms.platform, "machine", lambda: "arm64")
+    sweep_ = {**SMALL_SWEEP, "threads": [1, 2, 4, 8]}
+    settings = bench_settings(
+        contexts=[8192], depth_contexts=[], cpu_contexts=[], cpu_scaling=sweep_
+    )
+    by = {
+        f.id: f
+        for f in ms.ModelBench(settings, ScalingOllama(path), QuietGate(log), log, factory()).run()
+    }  # type: ignore[arg-type]
+    rates = {n: by[f"bench.{M}.cpu.aarch64.threads{n}.gen_tok_s"] for n in (1, 2, 4, 8)}
+    assert rates[1].value == pytest.approx(0.9, abs=0.01)
+    assert rates[4].value == pytest.approx(0.9 / (0.05 + 0.95 / 4), abs=0.01)
+    assert rates[4].conditions["options"] == {"num_gpu": 0, "num_thread": 4}
+    assert rates[8].status == "skipped" and "4 cores" in (rates[8].reason or "")
+
+
+def test_the_linux_blocks_render_the_matrix_and_the_models() -> None:
+    record = ms.RecordBuilder(SETTINGS, FixedClock()).rederive(
+        replace(committed(), figures=tuple({**committed().by_id(), **cell_inputs()}.values()))
+    )
+    blocks = ms.DocsRenderer(SETTINGS).blocks(record)
+    assert {"linux-floors", "linux-requirements", "linux-models"} <= set(blocks)
+    assert "| Ubuntu 24.04 LTS | aarch64 |" in blocks["linux-requirements"]
+    assert "not run: no official Arch Linux image" in blocks["linux-floors"]
+    assert "M(c) = M₀ + k·c" in blocks["linux-models"] and "∫₀ᴴ" in blocks["linux-models"]
+    assert "n* = (√(T₁·p/θ) − p)/(1 − p)" in blocks["linux-models"]
+    paper = ms.PaperRenderer(SETTINGS).blocks(record)["linux-requirements"]
+    assert paper.count(r"\label{tab:linux-requirements}") == 1
+    assert "$M(c) = M_0 + kc$" in paper
