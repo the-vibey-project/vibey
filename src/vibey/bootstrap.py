@@ -689,7 +689,6 @@ def build_full_worker(
             artifacts=FileReviewArtifactWriter(resources.projects),
             jobs=resources.jobs,
             clock=clock,
-            human_gates=resources.gates,
             # REVIEW's automated checks are the project's own, not vibey's
             # guess: `review.security_commands` / `review.code_review_commands`
             # in the stored config JSON, read the same way the spend caps above

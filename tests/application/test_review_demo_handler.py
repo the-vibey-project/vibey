@@ -385,3 +385,50 @@ async def test_a_payload_can_no_longer_supply_its_own_evidence() -> None:
 
     assert "<xml>passed</xml>" not in artifacts.written["evidence/test-report.xml"]
     assert '"coverage": 100' not in artifacts.written["evidence/coverage.json"]
+
+
+async def test_a_cycle_with_no_record_reaches_the_reviewer_marked_unmeasured() -> None:
+    """No integrate record is not a pass: every artifact says nothing was measured."""
+    job = _make_job()
+    artifacts = FakeReviewArtifactWriter()
+    handler = ReviewDemoHandler(
+        specs=FakeSpecRepository(spec=_notes_spec()),
+        ledger=FakeReviewLedger(),
+        artifacts=artifacts,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    assert outcome.result["evidence_measured"] is False
+    report = artifacts.written["evidence/test-report.xml"]
+    assert 'tests="0" failures="0"' in report
+    assert "no integration gate evidence was recorded" in report
+    assert "Unmeasured" in artifacts.written["DEMO.md"]
+    assert "Verified by gate suite" not in artifacts.written["DEMO.md"]
+
+
+async def test_an_item_that_ran_no_command_is_named_unmeasured() -> None:
+    job = _make_job()
+    artifacts = FakeReviewArtifactWriter()
+    handler = ReviewDemoHandler(
+        specs=FakeSpecRepository(spec=_notes_spec()),
+        ledger=FakeReviewLedger(
+            events=(
+                _gate_results_event(job, "wi-1", ("pytest", 0, "ok")),
+                _gate_results_event(job, "wi-2"),
+            )
+        ),
+        artifacts=artifacts,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    assert outcome.result["evidence_measured"] is False
+    assert 'skipped="1"' in artifacts.written["evidence/test-report.xml"]
+    assert "no verification commands ran for: wi-2" in artifacts.written["DEMO.md"]

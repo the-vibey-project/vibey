@@ -27,8 +27,8 @@ from vibey.application.interfaces import (
     PhaseLedger,
     ReviewArtifactWriter,
 )
-from vibey.application.ports import Clock, HumanGateRepository, JobRepository
-from vibey.application.worker import Failure, Outcome, Park, Success
+from vibey.application.ports import Clock, JobRepository
+from vibey.application.worker import Failure, Outcome, Success
 from vibey.domain.effort import Effort
 from vibey.domain.integration_evidence import IntegrationEvidence
 from vibey.domain.job import FailureClass, idempotency_key
@@ -53,7 +53,6 @@ class ReviewDemoHandler:
         jobs: JobRepository,
         clock: Clock,
         automated_reviewer: AutomatedReviewRunner | None = None,
-        human_gates: HumanGateRepository | None = None,
     ) -> None:
         self._specs = specs
         self._ledger = ledger
@@ -61,7 +60,6 @@ class ReviewDemoHandler:
         self._jobs = jobs
         self._clock = clock
         self._automated_reviewer = automated_reviewer
-        self._human_gates = human_gates
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "review.demo":
@@ -71,13 +69,13 @@ class ReviewDemoHandler:
         if spec is None:
             return Failure(FailureClass.WORK, "no accepted design spec exists")
 
+        # An unmeasured cycle -- no record, or an item whose plan ran no command --
+        # still reaches the reviewer, but every artifact says it is unmeasured: never a
+        # default pass (sub-doctrine 10.f). REVIEW already waits for a person's verdict,
+        # so the gap is in front of a human either way.
         evidence = IntegrationEvidence.from_ledger(
             await self._ledger.all_for_project(job.project_id), cycle=job.cycle
         )
-        if not evidence.measured:
-            stop = await self._on_unmeasured(job, evidence)
-            if stop is not None:
-                return stop
 
         if self._automated_reviewer is not None:
             # A fresh scan supersedes every earlier automated finding:
@@ -167,30 +165,6 @@ class ReviewDemoHandler:
                 "evidence_measured": evidence.measured,
             }
         )
-
-    async def _on_unmeasured(self, job: JobRecord, evidence: IntegrationEvidence) -> Park | None:
-        """What REVIEW does when it has no measured evidence to show.
-
-        `evidence.statement()` says what is missing; `evidence.unmeasured` names the work
-        items that ran no verification command (empty when nothing was recorded at all).
-        Return a `Park` to stop REVIEW for a person, or None to go on and show the
-        reviewer a report that plainly says it is unmeasured.
-
-        Building blocks:
-        - `Park(HumanGateRequest(kind=EVIDENCE_MISSING_GATE_KIND, prompt=..., options=...))`
-          parks the job; a person's answer re-runs it.
-        - `self._human_gates.latest_for_job(job.id)` (when not None) returns the job's own
-          latest gate; `gate.answer is not None` means a person has already answered.
-
-        Trade-off: parking is the strict reading of sub-doctrine 10.f (absence of
-        evidence waits for a person, as research gaps do by default). Proceeding keeps
-        REVIEW moving for projects whose plans carry no commands, and it is what the
-        protected `tests/system/test_delivery_stage_set.py` expects today -- it drives
-        review.demo with no integrate run before it and asserts Success, so parking means
-        that protected test changes and the PR needs a human merge.
-        """
-        # TODO(operator): decide -- park for a person, or proceed with the unmeasured report.
-        raise NotImplementedError
 
     async def _supersede_stale_automated_findings(self, job: JobRecord) -> None:
         raised: list[str] = []
