@@ -50,6 +50,7 @@ validation:
 nav:
   - Home: index.md
   - Guides:
+      - Downloads: guides/downloads.md
       - VS Code extension: guides/vscode-extension.md
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md

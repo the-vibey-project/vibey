@@ -110,6 +110,12 @@ Memory, disk, GPU, network and each krypton client's needs are on the
 re-measured every week, and any figure that could not be re-measured is marked stale.
 For the sovereign default (a local model), memory is the binding constraint.
 
+Prefer a ready-built file? Every release on GitHub also carries the user interfaces built
+for each supported platform: krypton desktop for Linux (a Flatpak bundle and an Ubuntu
+build, x86_64 and arm64), the krypton app for Android and the web, krypton for VS Code,
+and the Python wheels below, with checksums and build provenance. The
+[downloads page](docs/guides/downloads.md) lists each file, what it runs on and whether it is signed.
+
 One install is the whole family: `vibey`, all five `*loop` engines, and the
 tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey`
 distribution and land on `PATH` together (ADR-0037). What each engine still
