@@ -428,6 +428,21 @@ included, with nothing red to say so. `[skip_markers] exempt_authors` is the onl
 A pull request whose HEAD commit carries the marker gets no run from GitHub at all, so a
 required `No skip markers` check blocks it until the commit is reworded.
 
+## Changelog
+
+`Changelog` runs on every pull request into the integration branch (opened, reopened,
+synchronized, labelled, unlabelled, ready for review) with `contents: read` only -- not into the
+release branch, whose promotion carries the release commit that empties the unreleased
+section on purpose, and not on a merge-queue group, which has no labels to read. Its job,
+`Changelog fragment`, installs `vibey-gh` from a checkout of the default branch -- so which
+paths need a fragment, and the skip label, are never the pull request's own to declare --
+checks the change out as data beside it, and runs `vibey-gh changelog check` with the pull
+request's labels passed through the environment. It refuses a `[changelog] require_for` change
+with no fragment and no skip label, a malformed fragment, and a hand edit to an unreleased
+section. Until the default branch's tooling carries the command, its configuration declares
+no `[changelog]` either, and the job says so and passes. It gates through the PR automation:
+list `Changelog` in `scan_workflows`.
+
 ## Branch health
 
 `Branch health` runs on completion of `CI` on the integration or release branch, only for a

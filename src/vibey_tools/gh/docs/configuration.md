@@ -30,7 +30,7 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `merge_train.restack_conflicts` | boolean / `true` | Let the train merge the integration branch into a conflicting or behind head itself, locally, before reporting it as stuck. GitHub computes mergeability without this repository's `.gitattributes`, so a path declared `merge=union` (see `install.union_merge_paths`) is called a conflict there and resolves here. The restacked pull request merges on the NEXT train run, once its checks have re-run against the tree that now exists. Forks are never written to, whatever this is set to. `false` reports the conflict and leaves it to a person. |
 | `merge_train.protected_paths` | string list / empty | Paths the train never merges unattended. A pull request that touches one — or whose changed files it cannot list completely — is reported `needs a human merge` instead of merged, because the train's fallback to `gh pr merge --admin` would bypass the code-owner review a ruleset asks for (see `require_code_owner_review`). Shell-style globs matched case-sensitively against the whole repository-root path, where `*` also crosses `/`: `tests/live/*` protects that whole tree. A rename counts as a change to its old path too. The list comes from the paginated REST files endpoint and is checked against GitHub's own `changedFiles` count, so a truncated listing refuses rather than passes. A promotion from the integration branch is exempt: everything it carries already merged there under this check. Entries must be unique and non-empty, and a leading `/` (the CODEOWNERS habit) is refused at load because no listed path starts with one. Empty protects nothing — the behaviour before this key existed. |
 | `install.workflows` | string list / all managed workflows | Exact managed subset; `[]` installs hooks and CLI assets only. |
-| `install.union_merge_paths` | string list / `["CHANGELOG.md"]` | Files declared `merge=union` in `.gitattributes`, so two branches appending to the same section merge instead of conflicting. Appended to an existing `.gitattributes`, never rewriting it. `[]` declares none. |
+| `install.union_merge_paths` | string list / `["CHANGELOG.md"]` | Files declared `merge=union` in `.gitattributes`, so two branches appending to the same section merge instead of conflicting. Appended to an existing `.gitattributes`, never rewriting it. `[]` declares none. GitHub's mergeability never runs the driver, so a pull request still shows CONFLICTING there while a local merge is clean, and where it does run it can keep both sides of a heading and duplicate it: a changelog is better written as fragments (`[changelog]`), with this set to `[]`. |
 | `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. It also anchors `automation-bootstrap.yml`'s change scope: `gh pr diff` reports repository-root paths, so a vendored copy's automation-core files are admitted under this prefix and nowhere else. |
 | `install.fallback_package` | string / `"vibey"` | The distribution the managed workflows install when `self_source` does not hold the tooling — the branch every adopter takes, since their `self_source` default `"."` never matches. A key rather than a constant so a fork, or an internal index publishing under another name, can point it at their own distribution instead of one they cannot publish to. It is the package `pin_version` pins. |
 | `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey-engine` — the distribution that carries `vibey-gh` — to the exact version that rendered it (`vibey==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. That version is knowable in two places: in the repository that IS `fallback_package`, its own `[project] version`; everywhere else, the installed `fallback_package` release the running `vibey-gh` came from, so `uvx --from vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree install names no release — its templates may be ahead of the number it carries — so there the fallback stays floating and `install` and `check` print a `notice:` saying why. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
@@ -1105,6 +1105,7 @@ the silence is the whole danger.
 | `github_release` | `GitHub Release` |
 | `repository_profile` | `Repository profile` |
 | `skip_markers` | `Skip markers` |
+| `changelog` | `Changelog` |
 | `branch_health` | `Branch health` |
 | `ruleset_drift` | `Ruleset drift` |
 
@@ -1147,6 +1148,66 @@ gate.
 GitHub does not start a `pull_request` run at all when the pull request's HEAD commit carries
 the marker, so in that one case the check never reports; as a required check, that blocks the
 merge until the commit is reworded.
+
+## `[changelog]`
+
+The changelog written as fragments: one new file per change, `<slug>.<type>.md`, in a
+fragments directory beside the changelog it belongs to, holding the entry exactly as it should
+read there (the bullet included, in the file's own style). Every pull request used to add its
+entry under the same unreleased heading, so any two open pull requests touched the same lines
+and the second to merge conflicted -- and `merge=union` does not help on GitHub, whose
+mergeability never runs a custom driver. A new file cannot conflict.
+
+`vibey-gh changelog assemble` files every fragment under its type's `### ` heading in the
+unreleased section -- creating the section, above the newest version's, or the heading, in
+`types` order, where absent, and never a second heading of the same name -- and deletes it, so
+a second run changes nothing. Entries already in the section stay where they are; one
+without a heading stays first. `vibey-gh promote` runs the release form in the release commit:
+the fold, then each `versioned` changelog's unreleased section becomes `## <release_heading>`
+with a fresh, empty one above it, so a release needs no hand step. `vibey-gh version --apply`
+(a deliberate bump) does the same. A malformed fragment stops the fold before anything is
+written.
+
+`vibey-gh changelog check`, run by `changelog.yml` (check name `Changelog fragment`) on every
+pull request into the integration branch, refuses a pull request that changes a `require_for`
+path without adding a well-formed fragment, unless it carries `skip_label`; one that adds or
+changes a malformed fragment, whatever its labels; and one that edits an unreleased section by
+hand -- the conflict this exists to end. A release cut, which empties the section into a new
+version's, is not an edit. List the workflow in `scan_workflows` for it to gate.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `false` | Check pull requests, and fold fragments in at release. Off by default, so a repository's pull requests and releases are unchanged until it declares the table; `false` renders a job that never runs. |
+| `require_for` | string list / `[]` | Shell-style globs (`fnmatch`, `*` crossing `/`) over repository-root paths: a pull request changing a path one matches must add a fragment. Fragments and the changelogs themselves never count. Empty requires none, and the check still refuses malformed fragments and hand edits. |
+| `skip_label` | string / `no-changelog` | The pull-request label that waives the fragment requirement, for a change no reader of the changelog would miss. It never waives a malformed fragment or a hand edit. Empty means nothing is waived. The label must exist on the forge to be applied. |
+| `types` | table / see below | Each type a fragment name may carry, mapped to the `### ` heading its entries are filed under. Declaration order is heading order. Keys are lowercase words joined by hyphens; headings are unique, compared without case. Declaring the table replaces the default whole. |
+| `release_heading` | string / `[{version}] ({date})` | The heading a versioned changelog's unreleased section becomes at release, after `## `. Must carry `{version}`; `{date}` is the release day, `YYYY-MM-DD`, in UTC. A version that already has its heading, on any date, is not cut again. |
+| `files` | array of tables / one, `CHANGELOG.md` | The changelogs, each `{changelog, fragments, unreleased, versioned}`, below. |
+
+The default `types`, in order: `breaking` = `BREAKING CHANGES`, `feature` = `Features`, `fix` =
+`Bug Fixes`, `perf` = `Performance Improvements`, `refactor` = `Code Refactoring`, `removed` =
+`Removed`, `docs` = `Documentation`, `chore` = `Miscellaneous Chores`.
+
+Each `[[changelog.files]]` entry:
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `changelog` | string / required | The changelog, repository-relative. Created as `# Changelog` when a fragment is first folded into one that does not exist. |
+| `fragments` | string / `changelog.d` beside `changelog` | The directory its fragments wait in. Fragments are files directly in it; a dotfile is ignored, anything else is a malformed fragment. Emptied by `assemble`, it is removed. |
+| `unreleased` | string / `[Unreleased]` | The heading text, after `## `, of the section fragments are folded into. Matched without regard to case. |
+| `versioned` | boolean / `true` | Whether a release cuts the section into the version's own. `false` for a changelog whose unreleased section is all it keeps. |
+
+A fragment's slug is letters, digits, `-` and `_` (the pull request's number or a short
+name); its content may not carry a heading. Two fragments of one type are filed in name order.
+
+```toml
+[changelog]
+enabled = true
+require_for = ["src/*", "pyproject.toml"]
+
+[[changelog.files]]
+changelog = "CHANGELOG.md"
+```
 
 ## `[branch_health]`
 

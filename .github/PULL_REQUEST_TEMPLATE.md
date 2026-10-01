@@ -16,5 +16,6 @@
 - [ ] Protected tests untouched (or maintainer sign-off noted here)
 - [ ] Agent-surface trees (`.claude/skills/`, `.cursor/rules/`, `.agents/skills/`, `.agent/rules/`) updated if a procedure changed
 - [ ] Docs updated if behavior changed; a new ADR bumps the count and the nav
+- [ ] A user-visible change adds a changelog fragment (`changelog.d/<slug>.<type>.md`), never an edit to `CHANGELOG.md` (CONTRIBUTING → The changelog)
 - [ ] Any new governing rule is proposed as a sub-doctrine with the corpus index regenerated (ADR-0020)
 - [ ] I agree to the [Code of Conduct](https://github.com/the-vibey-project/vibey/blob/develop/CODE_OF_CONDUCT.md) and to license this contribution under the MIT License

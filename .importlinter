@@ -161,6 +161,7 @@ forbidden_modules =
     vibey_gh.review_composition
     vibey_gh.conversation
     vibey_gh.skip_markers
+    vibey_gh.changelog
     vibey_gh.tracking_issue
     vibey_gh.branch_health
     vibey_gh.ruleset_drift

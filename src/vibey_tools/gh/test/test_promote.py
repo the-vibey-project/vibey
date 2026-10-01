@@ -183,6 +183,34 @@ def test_a_content_change_bumps_opens_waits_and_merges(project, fake_gh):
     assert "pr checks 42 --watch" in joined  # it waited
 
 
+def test_the_release_commit_folds_the_fragments_and_cuts_the_version(project, fake_gh):
+    """A release needs no hand step: the changelog is part of the commit `promote` makes."""
+    import dataclasses
+
+    from vibey_gh.config import ChangelogConfig
+
+    git(project, "checkout", "-qB", "develop", "origin/develop")
+    (project / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n")
+    (project / "changelog.d").mkdir()
+    (project / "changelog.d" / "b.feature.md").write_text("* **content:** b arrives.\n")
+    git(project, "add", "-A")
+    git(project, "commit", "-qm", "feat: b")
+    git(project, "push", "-q", "origin", "develop")
+    advance_develop(project)
+    script(fake_gh, {"pr list": {"out": "\n"}, "pr create": {"out": "https://x/pull/7\n"}})
+    cfg = dataclasses.replace(cfg_for(project), changelog=ChangelogConfig(enabled=True))
+
+    result = promote_mod.promote(cfg)
+
+    assert result.bumped == "1.1.0"
+    log = git(project, "show", "origin/develop:CHANGELOG.md")
+    assert "## [Unreleased]\n\n## [1.1.0] (" in log
+    assert log.index("## [1.1.0] (") < log.index("### Features\n\n* **content:** b arrives.")
+    tree = git(project, "ls-tree", "-r", "--name-only", "origin/develop")
+    assert "changelog.d/b.feature.md" not in tree.splitlines()
+    assert git(project, "status", "--porcelain") == ""
+
+
 def test_an_existing_pull_request_is_reused(project, fake_gh):
     advance_develop(project)
     script(

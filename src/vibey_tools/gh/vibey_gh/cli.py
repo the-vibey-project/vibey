@@ -34,6 +34,7 @@ from vibey_gh import (
 from vibey_gh.announce import Announcer
 from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
+from vibey_gh.changelog import Changelog
 from vibey_gh.config import load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
@@ -232,6 +233,9 @@ def _version(args) -> int:
         return 0
     if args.apply:
         versioning.apply_version(cfg, new)
+        # A deliberate bump is a release like the one `promote` cuts, so its changelog is
+        # folded and cut the same way: the commit it is made into needs no hand edit.
+        Changelog().release(cfg, new, datetime.now(UTC).date())
     print(new)
     return 0
 
@@ -2716,6 +2720,12 @@ def main(argv: list[str] | None = None) -> int:
         help="refuse a GitHub skip marker in a pull request's commits, title or body",
     )
     SkipMarkerGuard.declare(sm).set_defaults(func=SkipMarkerGuard.dispatch)
+
+    cl = sub.add_parser(
+        "changelog",
+        help="fold changelog fragments in (assemble), or check a pull request's (check)",
+    )
+    Changelog.declare(cl).set_defaults(func=Changelog.dispatch)
 
     bh = sub.add_parser(
         "branch-health",
