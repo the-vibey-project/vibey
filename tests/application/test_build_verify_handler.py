@@ -810,3 +810,26 @@ async def test_the_capacity_backoff_is_configurable(tmp_path: Path) -> None:
 
     assert isinstance(outcome, Defer)
     assert outcome.retry_at == FixedClock().now() + timedelta(minutes=17)
+
+
+async def test_a_review_past_its_wall_clock_limit_fails_as_the_reviewers(tmp_path: Path) -> None:
+    from datetime import timedelta
+
+    from tests.application.test_build_implement_handler import _HangingEngine
+
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=_HangingEngine(descriptor=CODEXLOOP, base_dir=tmp_path / "engine"),
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        run_deadline=timedelta(milliseconds=50),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.ENGINE
+    assert "codexloop" in outcome.detail
+    assert "wall-clock limit" in outcome.detail

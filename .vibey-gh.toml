@@ -336,6 +336,12 @@ size_weights = { xs = 0.5, s = 1.0, m = 3.0, l = 6.0, xl = 12.0 }
 enabled = true
 runner_label = "vibey-local-vibey"
 trusted_only = true
+# Hand the sovereign review the full head text of the files the diff changes, as reference
+# only. Measured 2026-10-01: 5 of 5 "blocking" findings checked were false positives about
+# unchanged code just outside the diff -- an import a few lines above a hunk, a log line the
+# worker already prints -- that the model could not see. The bounds keep their defaults
+# (vibey-gh docs/configuration.md, `source_context`).
+source_context = true
 
 [runners]
 # The machine that serves the sovereign lane above, declared (12.c): `vibey-gh runner install`
@@ -565,6 +571,42 @@ forbidden_paths = [
   "CODEOWNERS",
   ".github/CODEOWNERS",
   "docs/CODEOWNERS",
+
+  # What the REVIEW GATE MEASURES (added 2026-10-01, before the approver runs unattended):
+  # the sovereign lane's reviewer, how its verdict is composed and recorded, and the
+  # heartbeat that decides whether the lane is offered at all. A change here changes the
+  # verdict every later approval rests on, so it is a gate by another name.
+  "src/vibey_tools/gh/vibey_gh/local_review.py",
+  "src/vibey_tools/gh/vibey_gh/review_composition.py",
+  "src/vibey_tools/gh/vibey_gh/review_outcome.py",
+  "src/vibey_tools/gh/vibey_gh/sovereign_runner.py",
+  "src/vibey_tools/gh/vibey_gh/heartbeat_clone.py",
+  "src/vibey_tools/gh/vibey_gh/heartbeat_timer.py",
+
+  # WHAT AN AGENT MAY DO: what an engine session or a gate command sees of the worker's
+  # environment and credentials (the 2026-09-30 safety scan's top gap), and claudeloop's
+  # own permission defaults.
+  "src/vibey/infrastructure/process/child_environment.py",
+  "src/vibey/infrastructure/engines/engine_environment.py",
+  "src/vibey_runners/claude/src/claudeloop/infrastructure/config.py",
+
+  # The non-negotiables the code holds, and the tests that prove them: the ledger's
+  # append-only triggers and the credits CHECK live in the migrations; the ledger guard;
+  # credits-never-have-a-deadline; the no-loss gate and the brief that must pass it; the
+  # spend caps. A green pull request that weakened one of these together with its test is
+  # exactly what an unattended approver must never land.
+  "src/vibey/infrastructure/db/migrations/**",
+  "src/vibey/infrastructure/db/ledger_guard.py",
+  "src/vibey/domain/capacity.py",
+  "src/vibey/domain/noloss.py",
+  "src/vibey/domain/briefing.py",
+  "src/vibey/application/budget_source.py",
+  "tests/domain/test_capacity.py",
+  "tests/domain/test_circuit.py",
+  "tests/domain/test_noloss*.py",
+  "tests/domain/test_briefing.py",
+  "tests/infrastructure/db/test_chaos.py",
+  "tests/infrastructure/engines/test_engine_environment.py",
 ]
 
 # The operator's standing grant, given 2026-09-30 and ratified by the operator's merge of the

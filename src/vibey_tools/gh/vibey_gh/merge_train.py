@@ -418,12 +418,36 @@ def merge(
         base += ["--body", squash_body]
     first = subprocess.run(base, capture_output=True, text=True, check=False)
     if first.returncode == 0:
-        return True, False, ""
+        merged, error = _confirm_merged(number)
+        return merged, False, error
     if not admin_fallback:
         detail = (first.stderr or first.stdout).strip() or "GitHub refused the merge"
         return False, False, " ".join(detail.split())[:300]
     second = subprocess.run(base + ["--admin"], capture_output=True, text=True, check=False)
     if second.returncode == 0:
-        return True, True, ""
+        merged, error = _confirm_merged(number)
+        return merged, True, error
     detail = (second.stderr or second.stdout or first.stderr or first.stdout).strip()
     return False, True, " ".join(detail.split())[:300]
+
+
+def _confirm_merged(number: int) -> tuple[bool, str]:
+    """(merged, error) as GitHub reports the pull request now, never as an exit code says.
+
+    `gh pr merge` exits 0 when it only ENABLED AUTO-MERGE, which it does when auto-merge is
+    allowed and a requirement -- the approving review -- is still unmet. Read as merged, the
+    train then deleted the head branch, and GitHub closed the pull request: #1295 and #1298
+    on 2026-10-01, both while the run printed "merged 1" (12.e). Only MERGED is a merge; an
+    OPEN pull request is queued and left exactly as it is, branch included, so GitHub can
+    merge it itself once the requirement is met.
+    """
+    ok, out = _gh("pr", "view", str(number), "--json", "state", "--jq", ".state")
+    state = out.strip()
+    if not ok or not state:
+        return False, f"could not confirm #{number} merged: {' '.join(out.split())[:200]}"
+    if state == "MERGED":
+        return True, ""
+    return False, (
+        f"GitHub did not merge #{number}: it is {state}, so the merge was only queued "
+        "(auto-merge enabled) and waits on the base branch's requirements"
+    )
