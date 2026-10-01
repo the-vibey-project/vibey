@@ -814,7 +814,11 @@ def test_the_subprocess_runner_reports_a_missing_tool_and_a_timeout() -> None:
 # ------------------------------------------------------------------ probes: the happy paths
 
 
-def test_install_probe_measures_each_target_from_a_cold_cache(tmp_path: Path) -> None:
+def test_install_probe_measures_each_target_from_a_cold_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The host path; on Linux the probe also reads the wheels' glibc floor, tested apart.
+    monkeypatch.setattr(ms.platform, "system", lambda: "Darwin")
     ws = ms.Workspace(tmp_path)
     ws.wheel_paths = {"vibey-engine": tmp_path / "e.whl", "krypton-app": tmp_path / "k.whl"}
     runner = FakeRunner(
