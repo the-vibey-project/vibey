@@ -33,6 +33,7 @@ from vibey_gh.config import (
     CONFIG_NAME,
     AiConfig,
     AnnounceConfig,
+    AutonomyConfig,
     BranchHealthConfig,
     BranchSyncConfig,
     ChangelogConfig,
@@ -92,6 +93,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "conversation": _fields(ConversationConfig),
     "branch_sync": _fields(BranchSyncConfig),
     "sabbath": _fields(SabbathConfig),
+    "autonomy": _fields(AutonomyConfig),
     "realign": _fields(RealignConfig),
     "github_release": _fields(GithubReleaseConfig),
     # `groups` and `type_words` are sub-tables, and fields of the dataclass.
@@ -115,6 +117,18 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
 _NESTED_KEYS: dict[str, set[str]] = {
     "pr_automation.observability": _fields(PrAutomationObservabilityConfig),
     "pr_automation.fallback": _fields(PrAutomationFallbackConfig),
+    # The forecast's own table, read by `EstimateConfig` under these names (its dataclass
+    # fields carry a `forecast_` prefix, so `_fields(EstimateConfig)` cannot name them).
+    "estimate.forecast": {
+        "ledger",
+        "report",
+        "billing_ledger",
+        "phi_floor",
+        "phi_epsilon",
+        "phi_exponent",
+        "unknown_factor",
+        "size_weights",
+    },
 }
 
 
