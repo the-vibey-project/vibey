@@ -566,3 +566,31 @@ forbidden_paths = [
   ".github/CODEOWNERS",
   "docs/CODEOWNERS",
 ]
+
+# The operator's standing grant, given 2026-09-30 and ratified by the operator's merge of the
+# pull request that carries it (this file is on the approver's forbidden list above, so no
+# automation can land or widen it). In the operator's words: "do all of it fully
+# autonomously ... moving forward I am only here to keep pushing things along ... if it would
+# naturally require human intervention add a toml gate so that the human gate is overridden
+# for the sake of science so we can prove that it is possible to fully automate software
+# engineering forever."
+#
+# Agents read this table as the operator's standing instruction; CLAUDE.md, AGENTS.md and
+# GEMINI.md point here. It widens what an agent does without checking in. It does not move
+# the floor: SD-01 section 6 (no harm, no lawbreaking, no irreversible act without explicit
+# human approval) is above every rule below it, and `never` restates where that floor and
+# 12.d meet this work. Withdrawing the grant is a one-line change to `standing_grant`.
+[autonomy]
+standing_grant = true
+operator_role = "pushes things along; does not hand-hold"
+scope = [
+  "build, test, open pull requests and land them through the merge train",
+  "replace a step that needs a person with a declared TOML gate, recorded on the ledger",
+  "run studies and keep the queue moving without checking in",
+]
+never = [
+  "--admin, --no-verify, force-push, or direct writes to develop/main",
+  "approving its own pull request (approval comes from independent gates, 12.f)",
+  "an irreversible real-world act without a person (real cloud deploys, paid spend, deleting data)",
+  "ratifying a change to the governance corpus (that is the operator's merge, Article II.3)",
+]
