@@ -1525,6 +1525,8 @@ def _local_review(args) -> int:
         ("--context-dir", args.context_dir),
         ("--max-document-chars", args.max_document_chars),
         ("--context-paths", args.context_paths),
+        ("--source-dir", args.source_dir),
+        ("--max-source-chars", args.max_source_chars),
         ("--context-window", args.context_window),
         ("--reasoning-reserve", args.reasoning_reserve),
         ("--chars-per-token", args.chars_per_token),
@@ -2069,6 +2071,21 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "override [pr_automation.fallback] context_paths, space-separated: the order the"
             " documents give way in, the last first"
+        ),
+    )
+    local.add_argument(
+        "--source-dir",
+        help=(
+            "the full text at this head of the files the diff changes: shown beside the diff"
+            " as reference only, never judged"
+        ),
+    )
+    local.add_argument(
+        "--max-source-chars",
+        type=int,
+        help=(
+            "override [pr_automation.fallback] max_source_chars: the most characters of"
+            " sources one request is shown"
         ),
     )
     local.add_argument(

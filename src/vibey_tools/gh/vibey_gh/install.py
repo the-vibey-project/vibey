@@ -327,6 +327,25 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         "--split-added-hunks" if fallback.split_added_hunks else "--no-split-added-hunks",
     )
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_RETRIES__", str(fallback.retries))
+    # The reference channel: whether the changed files' head text is fetched and shown, and
+    # its bounds. A literal `true`/`false` for the fetch step's `if:` and the review step's
+    # test; the patterns one quoted scalar the step word-splits, already held by config to
+    # characters a shell `case` pattern reads as nothing else.
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_SOURCE_CONTEXT__", "true" if fallback.source_context else "false"
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_MAX_SOURCE_CHARS__", str(fallback.max_source_chars)
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_MAX_SOURCE_FILES__", str(fallback.max_source_files)
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_MAX_SOURCE_FILE_BYTES__", str(fallback.max_source_file_bytes)
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_SOURCE_EXCLUDE__", json.dumps(" ".join(fallback.source_exclude))
+    )
     wanted = wanted.replace(
         "__VIBEY_GH_FALLBACK_RETRY_BACKOFF_SECONDS__", str(fallback.retry_backoff_seconds)
     )
