@@ -69,6 +69,14 @@ class BuildWorktrees(Protocol):
 
 
 @runtime_checkable
+class RetiredWorktrees(Protocol):
+    """Removes a work item's worktree once its branch is integrated. The branch is
+    kept; only the checkout goes. Idempotent: an item with no worktree is a no-op."""
+
+    async def remove(self, item_id: str) -> None: ...
+
+
+@runtime_checkable
 class BuildCheckpoint(Protocol):
     """Commits a worktree's work at an ULTRA checkpoint (ADR-0063)."""
 

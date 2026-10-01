@@ -714,3 +714,75 @@ async def test_a_failing_gate_records_no_evidence(tmp_path: Path) -> None:
     await handler.handle(_job())
 
     assert [e for e in ledger.recorded if e.kind == "ArtifactProduced"] == []
+
+
+# ── retiring an integrated item's worktree (disk grew without bound) ────────
+
+
+class _Worktrees:
+    def __init__(self, *, fails: bool = False) -> None:
+        self.removed: list[str] = []
+        self._fails = fails
+
+    async def remove(self, item_id: str) -> None:
+        if self._fails:
+            raise RuntimeError("worktree is locked")
+        self.removed.append(item_id)
+
+
+async def test_a_cleanly_integrated_items_worktree_is_retired(tmp_path: Path) -> None:
+    """Every work item kept a full checkout forever; nothing ever removed one."""
+    worktrees = _Worktrees()
+    handler = BuildIntegrateHandler(
+        integration=FakeIntegration(merge_outcome=MergeOutcome(ok=True, detail=""), path=tmp_path),
+        gates=FakeGateRunner(),
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        worktrees=worktrees,
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Success)
+    assert worktrees.removed == ["item-1"]
+    assert outcome.result == {"work_item_id": "item-1", "worktree_removed": True}
+
+
+async def test_a_failed_integration_keeps_the_worktree_for_its_repair(tmp_path: Path) -> None:
+    worktrees = _Worktrees()
+    handler = BuildIntegrateHandler(
+        integration=FakeIntegration(
+            merge_outcome=MergeOutcome(ok=False, detail="x"), path=tmp_path
+        ),
+        gates=FakeGateRunner(),
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        worktrees=worktrees,
+    )
+
+    await handler.handle(_job())
+
+    assert worktrees.removed == []
+
+
+async def test_a_worktree_that_cannot_be_removed_never_fails_the_integration(
+    tmp_path: Path,
+) -> None:
+    """Housekeeping must not send a clean integration round the retry ladder -- and
+    must not fail silently either: the job's result says what happened."""
+    handler = BuildIntegrateHandler(
+        integration=FakeIntegration(merge_outcome=MergeOutcome(ok=True, detail=""), path=tmp_path),
+        gates=FakeGateRunner(),
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        worktrees=_Worktrees(fails=True),
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Success)
+    assert outcome.result["worktree_removed"] is False
+    assert "worktree is locked" in str(outcome.result["worktree_error"])
