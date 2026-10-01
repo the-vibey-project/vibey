@@ -281,14 +281,33 @@ class HostBench(FigureSourceInterface):
 
 
 class DeliveryForecast(FigureSourceInterface):
-    """The append-only delivery-estimate ledger, one forecast per record."""
+    """The append-only delivery-estimate ledger, one forecast per record, at a revision.
 
-    def __init__(self, path: Path) -> None:
-        self._path = path
+    Read at the pinned revision, never from the checkout: the estimate job appends a record
+    on every refresh, so a figure drawn from the working tree drifts from the paper the moment
+    a refresh lands, and `--check` then fails every refresh pull request until someone
+    regenerates the paper by hand. At the pin the figure moves only when the paper is re-pinned.
+    """
+
+    def __init__(self, repo: Path, revision: str, ledger: str) -> None:
+        self._repo = repo
+        self._revision = revision
+        self._ledger = ledger
 
     def load(self) -> dict[str, Any]:
+        shown = subprocess.run(
+            ["git", "show", f"{self._revision}:{self._ledger}"],
+            cwd=self._repo,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if shown.returncode != 0:
+            raise ValueError(
+                f"{self._ledger} is not readable at {self._revision}: {shown.stderr.strip()}"
+            )
         records = []
-        for line in self._path.read_text(encoding="utf-8").splitlines():
+        for line in shown.stdout.splitlines():
             if not line.strip():
                 continue
             payload = json.loads(line)["payload"]
@@ -779,6 +798,13 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         total_attempts = sum(len(lane["attempts"]) for lane in lanes)
         total_turns = sum(a["turns"] for lane in lanes for a in lane["attempts"])
         claimed = sum(1 for lane in lanes if lane["completed"])
+        # The reviewer's lists reach beyond the ledger's lanes (#396's wave-1 lanes were
+        # integrated before the ledger's first record), so the figure says how many of each
+        # list are among the lanes it draws, and how many are not settled at all.
+        names = {lane["lane"] for lane in lanes}
+        integrated_here = len(names & set(data["integrated"]))
+        abandoned_here = len(names & set(data["abandoned"]))
+        unsettled_here = len(names - set(data["integrated"]) - set(data["abandoned"]))
         body = f"""\\begin{{tikzpicture}}[x=1cm,y=1cm]
 \\begin{{scope}}[on background layer]
 {axis}
@@ -789,15 +815,17 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 {chr(10).join(lines)}
 \\node[vibeynote,anchor=north west,align=left] at (-4.0,{height - 0.5:.2f})
   {{\\textcolor{{vibeygreen!80}}{{$\\blacksquare$}} attempt completed \\quad \\textcolor{{vibeyred!55}}{{$\\blacksquare$}} attempt failed \\quad
-   {len(lanes)} lanes, {total_attempts} attempts, {_thousands(total_turns)} turns; {claimed} lanes claimed completion,
-   {len(data["integrated"])} were integrated and {len(data["abandoned"])} abandoned by the reviewer}};
+   {len(lanes)} lanes, {total_attempts} attempts, {_thousands(total_turns)} turns; {claimed} lanes claimed completion;
+   of these lanes the reviewer integrated {integrated_here} and abandoned {abandoned_here}, and {unsettled_here} were unsettled}};
 \\end{{tikzpicture}}"""
         caption = (
             f"Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one "
             f"attempt, its length the turns the local model spent, green where the attempt ended in a completion "
             f"claim and red where it failed; a lane gets at most three. Of {len(lanes)} lanes, {claimed} claimed "
-            f"completion, and a claim is not delivery: the reviewer integrated {len(data['integrated'])} and abandoned "
-            f"{len(data['abandoned'])} over the same span. Read from the ledger between "
+            f"completion, and a claim is not delivery: over the same span the reviewer integrated "
+            f"{len(data['integrated'])} lanes and abandoned {len(data['abandoned'])} in all, of which "
+            f"{integrated_here} and {abandoned_here} are among these {len(lanes)}, and {unsettled_here} of these were "
+            f"settled neither way. Read from the ledger between "
             f"{data['consumed_from']} and {data['consumed_to']} with no gaps."
         )
         return self._fence("figure*", "fig:storm-lanes", caption, body)
@@ -1262,11 +1290,13 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             else f"{len(tags)} tags on the repository"
         )
         caption = (
-            f"Every release tag reachable at revision {data['head'][:8]}, {lanes_text}. "
+            f"Every release tag created by the time of revision {data['head'][:8]}, {lanes_text}; a tag is "
+            f"selected by its date, not by whether the revision's history reaches it. "
             f"The {len(vibey_tags)} \\texttt{{vibey}} releases run from {vibey_tags[0]['name']} on "
             f"{vibey_tags[0]['date'].isoformat()} to {vibey_tags[-1]['name']} on {vibey_tags[-1]['date'].isoformat()}; "
             f"since the packages were absorbed into one tree, one version number ships the whole family, "
-            f"and the packages' earlier tags remain in their pre-absorption repositories."
+            f"and the packages' earlier tags were never carried into this repository, whose pre-absorption "
+            f"repositories have since been removed."
         )
         return self._fence("figure*", "fig:release-cadence", caption, body)
 
@@ -1387,7 +1417,9 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             f"The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker "
             f"held them: {self._largest_rise(records)}. (b) The zero-shortfall time to completion the forecast derives from the "
             f"observed merge rate, {last['days_low']:.0f}--{last['days_high']:.0f} active days at the last record, "
-            f"with every material coordinate unmeasured and so at $\\phi_i = 1$."
+            f"with every material coordinate unmeasured and so at $\\phi_i = 1$. Read from the ledger at the "
+            f"pinned revision, {n} records through {stamps[-1].strftime('%Y-%m-%d %H:%MZ')}; records appended after "
+            f"the pin appear when the paper is re-pinned."
         )
         return self._fence("figure*", "fig:forecast", caption, body)
 
@@ -1604,7 +1636,7 @@ def build_atlas(
         qwen=QwenRuns(repo / DEFAULT_QWEN_STORM_RECORD),
         storm=StormLedger(storm_dir),
         bench=HostBench(storm_dir),
-        forecast=DeliveryForecast(repo / DEFAULT_FORECAST_LEDGER),
+        forecast=DeliveryForecast(repo, revision, DEFAULT_FORECAST_LEDGER),
         test_time=TestTimeEvidence(repo / DEFAULT_TEST_TIME_RECORD),
         commits=CommitSeries(repo, revision, label=label),
         shape=CodebaseShape(repo, revision),
