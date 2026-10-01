@@ -16,7 +16,11 @@ from cases import Case
 from client import RESULTS, Model, host_fingerprint
 from review import DecoupledArm, DecoupledConfig, ProductionArm, score
 
-FORCE_MODE = "prefill"  # set from Stage 0's verdict on the mechanism (LOG.md)
+FORCE_FILE = RESULTS / "force_mode.txt"  # Stage 0's verdict on the mechanism (LOG.md)
+
+
+def force_mode() -> str:
+    return FORCE_FILE.read_text().strip() if FORCE_FILE.is_file() else "prefill"
 
 
 def make_arm(name: str, model: Model, offline: bool = False):
@@ -24,7 +28,7 @@ def make_arm(name: str, model: Model, offline: bool = False):
     if name == "A0":
         return ProductionArm("A0", model, offline=offline)
     if name == "A1":
-        return ProductionArm("A1", model, force=FORCE_MODE, budget=4096, offline=offline)
+        return ProductionArm("A1", model, force=force_mode(), budget=4096, offline=offline)
     if name == "A2":
         return ProductionArm(
             "A2", model, options={"temperature": 1.0, "top_p": 1.0, "seed": 42}, offline=offline
@@ -37,7 +41,7 @@ def make_arm(name: str, model: Model, offline: bool = False):
     cfg = DecoupledConfig(name, k_tokens=int(bits[0][1:]) * 1024)
     for bit in bits[1:]:
         if bit.startswith("BF"):
-            cfg.force, cfg.budget = FORCE_MODE, int(bit[2:])
+            cfg.force, cfg.budget = force_mode(), int(bit[2:])
         elif bit in ("low", "medium", "high"):
             cfg.think = bit
         elif bit == "T1":

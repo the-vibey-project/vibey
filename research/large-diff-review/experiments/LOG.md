@@ -104,3 +104,22 @@ what was seen, and what it changed.
      once, on round 1's cases, labelled as the negative control.
   5. Per-request slot wait is logged (`slot_wait_s`) and excluded from wall time; a fixed
      `num_ctx` per arm (already so) removes reload noise.
+- **19:13** The canary lane's run ended (41/41). Stage 0 ran at once (synthetic toy diff,
+  no corpus case, no quality outcome read; `results/stage0.json`):
+  1. **Rendering:** `/api/chat` and `/api/generate` raw with `review.render_harmony` read
+     the same conversation as 687 = 687 prompt tokens — the harmony rendering is exact.
+  2. **Forcing:** reasoning cut at 160 tokens (`done_reason=length`, 703 reasoning chars, 0
+     answer chars), then phase 2 three ways — all three gave a complete verdict echoing
+     both check codes, `done_reason=stop`:
+     - chat prefill, content prefix `{"integrity_check": "`, no format: 33 tokens, 1.2 s,
+       prompt read 0.21 s for 884 tokens (prefix reused); the model left out `summary`.
+     - **chat prefill, format kept, content " "**: 61 tokens, 1.9 s, prompt read 0.08 s for
+       879 tokens (prefix reused); full schema. The grammar still constrains a prefilled
+       final channel.
+     - raw generate: 61 tokens, 7.9 s, prompt read 1.05 s for 878 tokens (prefix not reused).
+     **Chosen: chat prefill with format** (`results/force_mode.txt` = `prefill-format`):
+     schema-guaranteed, and phase 2 costs seconds because the KV of prompt + reasoning is
+     still in the slot.
+  3. **Determinism and cache:** the same request twice at T=0 gave byte-identical reasoning
+     (2,574 chars) and answer; the second read its 687-token prompt in 0.087 s vs 0.86 s
+     — the prompt cache serves an identical prefix.

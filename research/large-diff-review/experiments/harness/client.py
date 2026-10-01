@@ -53,7 +53,7 @@ class Etiquette:
                 continue
             # A shell that merely waits on a client (a `zsh -c 'until ...'` loop) is not one.
             first = command.split(" ", 1)[0].rsplit("/", 1)[-1]
-            if first in SHELLS or "grep" in command:
+            if first in SHELLS or "grep" in command or "pytest" in command:
                 continue
             if OTHERS.search(command):
                 found.append(command[:160])
