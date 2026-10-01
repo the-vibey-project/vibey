@@ -30,6 +30,7 @@ from vibey.application.interfaces import (
     LedgerReader,
     MergeOutcome,
     ProjectTransitioner,
+    RetiredWorktrees,
 )
 from vibey.application.ports import Clock, HumanGateRepository, JobRepository
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
@@ -61,6 +62,7 @@ class BuildIntegrateHandler:
         repair_backoff: timedelta = timedelta(minutes=10),
         human_gates: HumanGateRepository | None = None,
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
+        worktrees: RetiredWorktrees | None = None,
     ) -> None:
         self._correlation = correlation
         self._integration = integration
@@ -75,6 +77,7 @@ class BuildIntegrateHandler:
         self._max_repair_rounds = max_repair_rounds
         self._repair_backoff = repair_backoff
         self._human_gates = human_gates
+        self._worktrees = worktrees
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "build.integrate":
@@ -129,7 +132,23 @@ class BuildIntegrateHandler:
             await self._resolve_own_findings(job, work_item_id, self._ledger_reader)
 
         await self._maybe_enter_review(job)
-        return Success({"work_item_id": job.work_item_id})
+        return Success(
+            {"work_item_id": job.work_item_id, **await self._retire_worktree(work_item_id)}
+        )
+
+    async def _retire_worktree(self, work_item_id: str) -> dict[str, object]:
+        """Remove the item's checkout now that its branch is integrated: every work item
+        used to keep a full checkout for good, and disk grew without bound. The branch
+        stays. A removal that fails never fails the integration -- that would send clean
+        work round the retry ladder over housekeeping -- but it is not silent either: the
+        job's result says so, and a later integrate or a person can retry it."""
+        if self._worktrees is None:
+            return {}
+        try:
+            await self._worktrees.remove(work_item_id)
+        except Exception as exc:  # noqa: BLE001 - reported in the result, never swallowed
+            return {"worktree_removed": False, "worktree_error": str(exc)[:500]}
+        return {"worktree_removed": True}
 
     async def _resolve_own_findings(
         self, job: JobRecord, work_item_id: str, reader: LedgerReader

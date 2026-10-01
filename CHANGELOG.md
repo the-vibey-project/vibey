@@ -15,6 +15,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **build:** a work item's worktree is removed once its branch integrates cleanly. Every work
+  item kept a full checkout under the project for good -- `GitWorktreeManager.remove` existed
+  and nothing called it -- so a long-running worker's disk grew without bound. The branch is
+  kept; only the checkout goes. A removal that fails never fails the integration (that would
+  send clean work round the retry ladder over housekeeping) and is not silent: the job's
+  result carries `worktree_removed: false` and the error.
+
 ### Documentation
 
 * **docs:** outcome guides — six pages under `docs/guides/outcomes/`, each titled as the
