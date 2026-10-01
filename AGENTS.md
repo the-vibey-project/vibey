@@ -86,6 +86,13 @@ small identified slices, explicit links, measured budgets, and no silent truncat
   and where a lane's output is net-negative the answer is revert and re-queue.
   Silence is not consent, and declining is a reportable outcome — the refusals
   are the most useful part of the report. ADR-0046; sub-doctrine 12.d.
+- **The operator's standing grant is declared in `[autonomy]` in `.vibey-gh.toml`.**
+  While `standing_grant = true`, work fully autonomously: build, test, open pull
+  requests and land them through the merge train, run studies, and keep the
+  queue moving without checking in. Where a step would need a person, replace it
+  with a declared TOML gate, recorded on the ledger. The table's `never` list
+  holds, and so does the floor above it (SD-01 §6): no bypass, no self-approval,
+  no irreversible real-world act without a person, no self-ratified doctrine.
 - **Toil that can be fully automated is.** Anything a human would otherwise do
   *again* — the remembering, the ordering, the repetition, the transcription,
   the checking of a thing that could check itself — is automated, no exceptions.
