@@ -869,10 +869,16 @@ class _Flaky(_OldServer):
     `pg_parameter_acl` is one cluster-wide row, so two reconciles on different databases
     of one cluster race on it, and a per-database advisory lock cannot serialize them."""
 
-    def __init__(self, failures: int, error: type[Exception] = asyncpg.InternalServerError) -> None:
+    def __init__(
+        self,
+        failures: int,
+        error: type[Exception] = asyncpg.InternalServerError,
+        message: str = "tuple concurrently updated",
+    ) -> None:
         super().__init__()
         self._failures = failures
         self._error = error
+        self._message = message
 
     async def fetchval(self, sql: str, *args: object) -> str:
         return "170000"
@@ -890,15 +896,19 @@ class _Flaky(_OldServer):
     async def execute(self, sql: str, *args: object) -> str:
         if self._failures:
             self._failures -= 1
-            raise self._error("tuple concurrently updated")
+            raise self._error(self._message)
         self.executed.append(sql)
         return "REVOKE"
 
 
-async def test_a_revoke_that_races_another_reconcile_is_retried_until_it_lands() -> None:
+@pytest.mark.parametrize("message", ["tuple concurrently updated", "tuple concurrently deleted"])
+async def test_a_revoke_that_races_another_reconcile_is_retried_until_it_lands(
+    message: str,
+) -> None:
     """CI 2026-10-01, PostgreSQL 16: the race made the REVOKE fail, every PostgresError was
-    swallowed, and the trigger-silencing grant stayed -- silently."""
-    owner = _Flaky(failures=2)
+    swallowed, and the trigger-silencing grant stayed -- silently. The loser sees `deleted`
+    when the winner's REVOKE emptied the ACL and removed the row."""
+    owner = _Flaky(failures=2, message=message)
 
     await DatabaseRoleReconciler._revoke_replication_role(owner, '"app"')  # type: ignore[arg-type]
 
