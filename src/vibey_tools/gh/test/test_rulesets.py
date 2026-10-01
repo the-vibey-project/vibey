@@ -745,23 +745,55 @@ def test_no_code_coverage_rule_is_declared_until_a_repository_asks_for_one():
     assert all(rule["type"] != rs.CODE_COVERAGE for rule in rs.desired_rules(policy()))
 
 
-def test_a_declared_minimum_renders_the_exact_shape_the_forge_holds():
-    """The shape the hand-made rulesets carry, byte for byte: an unset drop is sent as
-    null, the way the forge spells a threshold nobody set."""
+def test_a_declared_minimum_renders_the_shape_the_rulesets_api_accepts():
+    """An unset drop is left out, never sent as null.
+
+    The forge *echoes* an unset threshold as null (the hand-made rulesets read back
+    `"max_coverage_drop": null`), but its rule input types each threshold as a plain
+    number (OpenAPI `repository-rule-code-coverage`). Sending the echo back is what made
+    every reconcile fail: `Invalid property /rules/6: data matches no possible input`.
+    """
     rules = rs.desired_rules(policy(minimum_coverage=100))
-    assert rules[-1] == {
-        "type": "code_coverage",
-        "parameters": {"minimum_coverage": 100, "max_coverage_drop": None},
-    }
+    assert rules[-1] == {"type": "code_coverage", "parameters": {"minimum_coverage": 100}}
     assert json.dumps(rules[-1]) == (
-        '{"type": "code_coverage", "parameters": '
-        '{"minimum_coverage": 100, "max_coverage_drop": null}}'
+        '{"type": "code_coverage", "parameters": {"minimum_coverage": 100}}'
     )
 
 
 def test_a_declared_drop_alone_still_declares_the_rule():
     coverage = coverage_rule({"rules": rs.desired_rules(policy(max_coverage_drop=2.5))})
-    assert coverage["parameters"] == {"minimum_coverage": None, "max_coverage_drop": 2.5}
+    assert coverage["parameters"] == {"max_coverage_drop": 2.5}
+
+
+def test_both_declared_thresholds_are_sent():
+    coverage = coverage_rule(
+        {"rules": rs.desired_rules(policy(minimum_coverage=90, max_coverage_drop=0))}
+    )
+    # Zero is a real threshold ("may not drop at all"), not an unset one.
+    assert coverage["parameters"] == {"minimum_coverage": 90, "max_coverage_drop": 0}
+
+
+def test_no_rule_in_a_fully_declared_ruleset_sends_a_null_parameter():
+    """The rulesets API takes no null inside a rule; one makes the whole PUT a 422."""
+    full = policy(
+        required_checks=("gates",),
+        require_signed_commits=True,
+        allowed_merge_methods=("squash",),
+        merge_queue=MergeQueueConfig(enabled=True, merge_method="SQUASH"),
+        minimum_coverage=100,
+    )
+
+    def nulls(value: object, path: str) -> list[str]:
+        if value is None:
+            return [path]
+        if isinstance(value, dict):
+            return [p for k, v in value.items() for p in nulls(v, f"{path}.{k}")]
+        if isinstance(value, list):
+            return [p for i, v in enumerate(value) for p in nulls(v, f"{path}[{i}]")]
+        return []
+
+    payload = rs.build_ruleset("develop", full)
+    assert [p for i, rule in enumerate(payload["rules"]) for p in nulls(rule, f"rules[{i}]")] == []
 
 
 @pytest.mark.parametrize("field", ["minimum_coverage", "max_coverage_drop"])
@@ -808,8 +840,8 @@ def test_a_matching_live_coverage_rule_is_not_drift_and_a_differing_one_is():
     existing = json.loads(json.dumps({**desired, "id": 1}))
     assert not rs.diff_ruleset(desired, existing).changed
 
-    # The forge may omit a null it was sent; that is still the declared "unset".
-    del coverage_rule(existing)["parameters"]["max_coverage_drop"]
+    # The forge echoes the unset drop it was never sent as null; that is still "unset".
+    coverage_rule(existing)["parameters"]["max_coverage_drop"] = None
     assert not rs.diff_ruleset(desired, existing).changed
 
     coverage_rule(existing)["parameters"] = {"minimum_coverage": 80, "max_coverage_drop": None}
@@ -830,7 +862,14 @@ def test_a_declared_coverage_rule_missing_live_is_drift():
         "id": 1,
         "rules": [r for r in desired["rules"] if r["type"] != rs.CODE_COVERAGE],
     }
-    assert rs.diff_ruleset(desired, existing).changed
+    result = rs.diff_ruleset(desired, existing)
+    assert result.changed
+    # The PUT that repairs it -- the one GitHub refused for every run after #1277 -- now
+    # carries the floor and no null threshold.
+    assert coverage_rule(result.payload) == {
+        "type": "code_coverage",
+        "parameters": {"minimum_coverage": 100},
+    }
 
 
 def test_ruleset_policy_honours_its_interface():
