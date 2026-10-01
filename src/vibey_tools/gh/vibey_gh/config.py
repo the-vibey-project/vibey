@@ -783,6 +783,101 @@ class PrAutomationFallbackConfig:
             )
 
 
+@dataclass(frozen=True)
+class ReviewCanaryConfig:
+    """The offline canary that measures whether the sovereign review catches real defects.
+
+    `vibey-gh review-canary run` hands every case of `corpus` -- a diff against this
+    repository's own code with one planted defect, or a clean control -- to the same
+    `local-review` the pull-request review runs, with every `[pr_automation.fallback]`
+    setting, and records recall and the false-positive rate in `ledger`. A 2026-09-30 audit
+    found the cheap `think = "low"` review passing every pull request the gate had blocked;
+    nobody had measured whether any setting blocks a real defect. These keys say where the
+    measurement lives and what a measurement must show before anything may rely on it.
+
+    Nothing reads the floor to approve anything yet: `vibey-gh review-canary status` only
+    reports whether the latest measurement meets it, for the approver that will.
+    """
+
+    # The corpus, the append-only ledger of measurements, and the page whose generated block
+    # shows the latest one -- repository-relative. An empty `report` renders nowhere.
+    corpus: str = "docs/architecture/evidence/review-canary/corpus.toml"
+    ledger: str = "docs/architecture/evidence/review-canary/ledger.jsonl"
+    report: str = ""
+    # How far, in lines, a finding's `line` may sit from the planted lines and still be about
+    # them. A model counts lines in a diff it read as text; three is a hunk's own context.
+    line_tolerance: int = 3
+    # The normal quantile of the Wilson intervals: 1.96 is 95% two-sided.
+    confidence_z: float = 1.96
+    # The floor a measurement must clear before an approver may lean on the review: the
+    # Wilson LOWER bound of recall at least this, and the Wilson UPPER bound of the
+    # false-positive rate at most that -- both bounds taken in the direction that is harder
+    # to meet, so a small corpus cannot clear the floor on luck. 0.5 asks for confidence
+    # that the review blocks more than half of planted defects for the right reason, which
+    # a rubber stamp cannot show and which 27 defects can (19 caught clears it). The
+    # false-positive ceiling is a cost, not a safety bound -- a blocked correct change goes
+    # to a human -- so it is there to refuse a gate that earns its recall by blocking
+    # everything: at 0.5, three false positives in 14 controls still clear it, all 14 do not.
+    min_recall_lower_bound: float = 0.5
+    max_false_positive_upper_bound: float = 0.5
+    # How old the latest measurement may be, in days, before `status` stops vouching for it:
+    # a weekly run, and one missed week.
+    max_age_days: int = 14
+    # The smallest corpus that is called a measurement at all: `run` refuses a corpus under
+    # these, so recall is never reported off three cases.
+    min_defects: int = 24
+    min_classes: int = 8
+    min_controls: int = 8
+
+    def __post_init__(self) -> None:
+        for name in ("corpus", "ledger"):
+            if not str(getattr(self, name)).strip():
+                raise ValueError(f"pr_automation.review_canary.{name} must be a path")
+        for name in ("corpus", "ledger", "report"):
+            value = getattr(self, name)
+            if (
+                not isinstance(value, str)
+                or value.startswith(("/", "~"))
+                or ".." in PurePosixPath(value).parts
+            ):
+                raise ValueError(
+                    f"pr_automation.review_canary.{name} must be a repository-relative path"
+                )
+        if type(self.line_tolerance) is not int or not 0 <= self.line_tolerance <= 50:
+            raise ValueError(
+                "pr_automation.review_canary.line_tolerance must be a whole number from 0 to 50"
+            )
+        if not _real(self.confidence_z) or not 0 < self.confidence_z <= 5:
+            raise ValueError("pr_automation.review_canary.confidence_z must be above 0, at most 5")
+        for name in ("min_recall_lower_bound", "max_false_positive_upper_bound"):
+            value = getattr(self, name)
+            if not _real(value) or not 0 <= value <= 1:
+                raise ValueError(f"pr_automation.review_canary.{name} must be from 0 to 1")
+        for name in ("max_age_days", "min_defects", "min_classes", "min_controls"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 1:
+                raise ValueError(f"pr_automation.review_canary.{name} must be a whole number >= 1")
+
+    @classmethod
+    def from_table(cls, table: Mapping[str, object]) -> ReviewCanaryConfig:
+        """The configuration `[pr_automation.review_canary]` declares, every key it leaves
+        out at its default. A key this table does not know is refused, never ignored: a
+        misspelt floor read as the default would loosen it in silence."""
+        known = {field.name for field in dataclasses.fields(cls)}
+        unknown = sorted(set(table) - known)
+        if unknown:
+            raise ValueError(f"pr_automation.review_canary does not know {', '.join(unknown)}")
+        return cls(**table)  # type: ignore[arg-type]
+
+
+def _real(value: object) -> bool:
+    """A finite int or float, never a bool -- TOML hands each through unchanged.
+
+    Module-level because two configuration classes' validations share it and it holds no
+    state; it is a predicate, not a behaviour of either."""
+    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value)
+
+
 # A `source_exclude` pattern: the characters a path glob needs, and nothing a shell or a
 # YAML scalar would read as anything else.
 _SOURCE_PATTERN_RE = re.compile(r"[A-Za-z0-9._/*?\[\]-]+")
@@ -1170,6 +1265,7 @@ class PrAutomationConfig:
     paid_conflict_resolution: bool = False
     observability: PrAutomationObservabilityConfig = PrAutomationObservabilityConfig()
     fallback: PrAutomationFallbackConfig = PrAutomationFallbackConfig()
+    review_canary: ReviewCanaryConfig = ReviewCanaryConfig()
 
     def __post_init__(self) -> None:
         for key in ("paid_review", "paid_repair", "paid_conflict_resolution"):
@@ -3162,6 +3258,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
                 fallback.get("source_exclude", PrAutomationFallbackConfig.source_exclude)
             ),
         ),
+        review_canary=ReviewCanaryConfig.from_table(auto.get("review_canary", {})),
     )
     return GhConfig(
         root=root,

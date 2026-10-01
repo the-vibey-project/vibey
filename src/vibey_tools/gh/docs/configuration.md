@@ -340,6 +340,55 @@ never be used for public repositories" because any user can open a pull request 
 them; excluding forks is what removes that. Leave it on, register the runner as ephemeral
 so it takes one job and exits, and run it in a container rather than on the host.
 
+### `[pr_automation.review_canary]`
+
+Whether the sovereign review catches real defects, measured: `vibey-gh review-canary run`
+reviews a corpus of diffs against the repository's own code -- each carrying one planted
+defect of a declared class, or none -- through `local-review` with every
+`[pr_automation.fallback]` setting above, and appends what it found to an append-only ledger.
+Every study before it measured agreement with the gate on pull requests that carried no
+known-true defect, so recall was never measured; an approver that trusts a passing review is
+only as safe as that recall.
+
+The corpus is a TOML file (`schema = "vibey-gh/review-canary-corpus/1"`): a `pin` commit,
+`[classes.<name>]` tables with a `summary` and the `keywords` a finding about such a defect
+would use, and `[[cases]]` -- each an `id`, a `kind` (`defect` or `control`), a `path`, `how`
+it was built, and `[[cases.edits]]` (`find`, which must occur exactly once in the file at the
+pin, and `replace`). A defect also names its `class`, its `anchors` (exact strings a finding
+about it would quote), and, on exactly one edit, `planted` (the text that marks its lines).
+The diff is generated, three lines of context, under a `diff --git` header, and the
+post-change file is the review's reference source.
+
+**The matching rule.** A defect is *caught* only when the verdict blocks (anything but an
+explicit `pass: true`) and one finding is on the planted file (its `path` equal once `a/`,
+`b/` or `./` is dropped, or either ending with the other at a `/`), either with a `line`
+within `line_tolerance` of the planted lines or quoting one of the anchors, and uses one of
+the class's keywords (case-insensitive). A blocked verdict with a finding on the planted
+lines that names no keyword is reported as the lenient "location only" recall, never as
+caught. A control is a *false positive* when the verdict blocks or any finding is
+`blocking`. A review that gave no verdict is *no verdict*, counted apart by its outcome code
+and in neither denominator: in the pull-request review, no verdict is never a pass.
+
+| Key | Type / default | Meaning |
+|---|---|---|
+| `corpus` | path / `docs/architecture/evidence/review-canary/corpus.toml` | The corpus, repository-relative. |
+| `ledger` | path / `docs/architecture/evidence/review-canary/ledger.jsonl` | The append-only ledger: one digest-chained line per measurement, holding recall, the false-positive rate and each interval, the no-verdict count by code, recall per class, every case's outcome with its findings' words (so a match can be re-adjudicated by hand), and the model, settings, commit, host, runner, Ollama version, model digest and times it ran under. |
+| `report` | path / empty | A page with a `<!-- BEGIN GENERATED review-canary ... -->` / `<!-- END GENERATED review-canary -->` block that `run` and `render` rewrite with the latest measurement. Empty renders nowhere. |
+| `line_tolerance` | integer / `3` (0–50) | How far a finding's `line` may sit from the planted lines and still be about them. |
+| `confidence_z` | number / `1.96` (0–5] | The normal quantile of every Wilson interval; 1.96 is 95%. |
+| `min_recall_lower_bound` | number / `0.5` (0–1) | The floor: recall's Wilson **lower** bound must be at least this. |
+| `max_false_positive_upper_bound` | number / `0.5` (0–1) | The floor: the false-positive rate's Wilson **upper** bound must be at most this. A false positive costs a human review, not safety, so this bound is there to refuse a gate that earns its recall by blocking everything. |
+| `max_age_days` | integer / `14` (>= 1) | How old the latest measurement may be before `status` stops vouching for it. |
+| `min_defects`, `min_classes`, `min_controls` | integers / `24`, `8`, `8` | The smallest corpus `run` calls a measurement; a smaller one is refused. |
+
+A key this table does not know is refused when the configuration loads, so a misspelt floor
+is never read as its default. `vibey-gh review-canary status` holds the latest measurement to
+the floor *now*: both bounds, the whole corpus (never a `--case` subset), the corpus file
+unchanged, the settings that change what the review judges unchanged (model, `think`,
+window, reserve, characters per token, the diff, document, chunk and source limits,
+`split_added_hunks`, `source_context`, `context_paths`, the scope and the role), and an age
+within `max_age_days`. Nothing approves on it yet.
+
 ## `[runners]`
 
 The machine that serves the sovereign lane, declared rather than hand-made (sub-doctrine

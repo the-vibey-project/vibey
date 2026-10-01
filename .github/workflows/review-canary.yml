@@ -1,0 +1,146 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Review canary
+
+# Whether the sovereign review catches real defects is a measurement, repeated weekly, never
+# a belief. Once a week, at a quiet hour, and by hand, the self-hosted sovereign runner hands
+# every case of the review canary's corpus -- diffs against this repository's own code, each
+# with one planted defect or none at all -- to the same `vibey-gh local-review`
+# the pull-request review runs, with every `[pr_automation.fallback]` setting
+# (`vibey-gh review-canary run`). Each request waits for a free model slot first (the
+# review's own `slot_wait_seconds`), so another client's work is queued behind, never
+# preempted. The measurement is appended to the ledger, the runbook's generated block is
+# re-rendered, and both land as a pull request through the normal merge train; nothing here
+# pushes to develop.
+on:
+  schedule:
+    # Wednesday 06:41 UTC: before dawn in the operator's zone, clear of minimum-specs.yml
+    # (Monday) and of the Sabbath window.
+    - cron: "41 6 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One measurement at a time: two would contend for the one model slot and each would record
+# the other as load. A queued run waits rather than cancels a long measurement in flight.
+concurrency:
+  group: review-canary-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Measure on the sovereign runner
+    runs-on: [self-hosted, vibey-local-vibey]
+    # Dozens of reviews of several minutes each, any of which may first wait up to
+    # `slot_wait_seconds` for the model to come free.
+    timeout-minutes: 600
+    # No write token on the self-hosted runner: it measures and hands the files over as an
+    # artifact. Committing and opening the pull request happen on a hosted runner below.
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          # The corpus's cases are edits to files at its pinned commit, read with `git show`.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Review the corpus and record the measurement
+        run: |
+          set -euo pipefail
+          # The tree's own vibey-gh, so the review is exactly the one this commit's pull
+          # requests get. `VIBEY_OLLAMA_URL` comes from the runner's environment, as it does
+          # for the pull-request review.
+          canary() {
+            uv run --no-project --python 3.12 --with ./src/vibey_tools/gh \
+              vibey-gh review-canary "$@"
+          }
+          canary check
+          canary run --work "${RUNNER_TEMP}/review-canary.work.jsonl"
+          canary render --check
+          {
+            echo "## Review canary"
+            sed -n '/BEGIN GENERATED review-canary/,/END GENERATED review-canary/p' \
+              docs/runbooks/sovereign-review-runner.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Hand the measurement over
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-canary
+          path: |
+            docs/architecture/evidence/review-canary/ledger.jsonl
+            docs/runbooks/sovereign-review-runner.md
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Open the measurement pull request
+    needs: measure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Take the measurement
+        uses: actions/download-artifact@v4
+        with:
+          name: review-canary
+          path: .
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      # The same check CI runs: the ledger's digest chain holds and the runbook's block shows
+      # its latest entry. A handed-over file that disagrees stops here, before a pull request.
+      - name: Check the ledger against the runbook
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet -e src/vibey_tools/gh
+          vibey-gh review-canary render --check
+
+      - name: Commit and open the pull request
+        # The Actions token may not open pull requests here, so the pull request is opened
+        # with the token every other workflow uses for that, falling back to the Actions
+        # token where the secret is not set (a fork) so the push still lands.
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="chore/review-canary-$(date -u +%Y-%m-%d)"
+          git switch --force-create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture/evidence/review-canary/ledger.jsonl \
+            docs/runbooks/sovereign-review-runner.md
+          if git diff --cached --quiet; then
+            echo "the review-canary ledger is unchanged"
+            exit 0
+          fi
+          git commit -m "chore(canary): record the weekly review-canary measurement" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
+          pr_number="$(gh pr list --repo "$GH_REPO" --head "$branch" --base develop --state open --json number --jq '.[0].number')"
+          if [ -n "$pr_number" ]; then
+            echo "updated the existing review-canary pull request #$pr_number"
+          else
+            gh pr create \
+              --repo "$GH_REPO" \
+              --base develop \
+              --head "$branch" \
+              --title "chore(canary): record the weekly review-canary measurement" \
+              --body "Weekly measurement of the sovereign review's recall and false-positive rate against the review canary's corpus of planted defects and controls (\`vibey-gh review-canary run\` on the self-hosted runner, with every \`[pr_automation.fallback]\` setting). One line is appended to the append-only ledger and the runbook's generated block is re-rendered from it. Merge through the repository's normal train after the checks pass."
+          fi
