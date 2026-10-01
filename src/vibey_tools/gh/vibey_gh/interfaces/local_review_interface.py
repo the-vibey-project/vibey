@@ -128,11 +128,26 @@ class SourceContextInterface(Protocol):
         """Every character sources add to a request beyond their own frames: the rules, the
         block's opening and closing, and the cut note at its longest for `names`."""
 
+    def changed(self, diff: str) -> dict[str, list[tuple[int, int]]]:
+        """Each file's changed new-side line ranges in `diff`, first and last line, by the
+        path its `diff --git` header names."""
+
+    def excerpt(self, text: str, changed: Sequence[tuple[int, int]], room: int) -> str:
+        """`text` in at most `room` characters: its first lines and the lines around each
+        `changed` range, with the widest margin that fits, every run of lines left out
+        marked with its numbers. When not even the changed lines fit, the start of them,
+        cut at a line boundary."""
+
     def trim(
-        self, sources: Mapping[str, str], budget: int
+        self,
+        sources: Mapping[str, str],
+        budget: int,
+        changed: Mapping[str, Sequence[tuple[int, int]]] | None = None,
     ) -> tuple[dict[str, str], list[str], list[str]]:
-        """The sources that fit `budget` characters, framed: `(kept, cut, dropped)`, in
-        order, so the last gives way first. A source is cut at a line boundary."""
+        """The sources that fit `budget` characters, framed: `(kept, cut, dropped)`, in the
+        order given. The budget is shared, never first come first served: the smallest are
+        kept whole and what is left is split evenly among the rest, each cut to its
+        `excerpt` around its `changed` lines; one with no room at all is dropped."""
 
     def evidence(
         self,

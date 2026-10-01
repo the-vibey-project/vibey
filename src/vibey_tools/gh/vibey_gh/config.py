@@ -591,14 +591,15 @@ class PrAutomationFallbackConfig:
     # so an adopter's review is unchanged until it declares this.
     source_context: bool = False
     # The most characters of those files one request is shown, whatever the window would
-    # allow. Sources take only what is left after the diff and the declared documents: they
-    # give way first, the last changed file first, and a source cut or left out is named in
+    # allow. Sources take only what is left after the diff and the declared documents --
+    # the smallest kept whole, the rest sharing what is left, each cut to its head and the
+    # lines around its changes -- and a source cut or left out is named in
     # the prompt but never makes a verdict partial -- they are reference, not the contract.
     max_source_chars: int = 60000
     # The most changed files fetched, and the largest one, in bytes, that is kept. A
     # sweep's hundreds of files, or a generated file, is not worth a runner's bandwidth.
     max_source_files: int = 30
-    max_source_file_bytes: int = 200000
+    max_source_file_bytes: int = 1000000
     # Changed files never fetched as sources, as shell glob patterns matched against the
     # path and against its last component: lockfiles, minified and generated text, and
     # the binary formats a review can never read. A binary file that slips past is still
@@ -2891,7 +2892,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             source_context=fallback.get("source_context", False),
             max_source_chars=fallback.get("max_source_chars", 60000),
             max_source_files=fallback.get("max_source_files", 30),
-            max_source_file_bytes=fallback.get("max_source_file_bytes", 200000),
+            max_source_file_bytes=fallback.get("max_source_file_bytes", 1000000),
             source_exclude=tuple(
                 fallback.get("source_exclude", PrAutomationFallbackConfig.source_exclude)
             ),

@@ -193,9 +193,13 @@ SOURCES_OPEN = (
 SOURCES_CLOSE = "\n</sources>"
 SOURCES_CUT_NOTE = (
     "\n\n[NOTE: to fit the model's window, the reference sources were not all shown in full"
-    " ({what}). A source cut short shows only the start of its file, so something absent from"
-    " what you were shown of a source is not evidence that it is missing.]"
+    " ({what}). A source cut short shows the start of its file and the lines around each"
+    " change, with every run of lines left out marked, so something absent from what you were"
+    " shown of a source is not evidence that it is missing.]"
 )
+# Where a source cut short leaves lines out: said in place, with their numbers, so the
+# model knows the file continues and where the lines it was shown sit.
+SOURCE_GAP = "[... lines {first}-{last} not shown ...]"
 # Said in a verdict's summary when sources were shown, cut or left out: what the review
 # could read beside the diff. Never a claim about the documentation contract.
 SOURCES_NOTICE = (
@@ -346,28 +350,97 @@ class SourceContext(SourceContextInterface):
             + len(self.cut_note(names, names))
         )
 
-    def trim(
-        self, sources: Mapping[str, str], budget: int
-    ) -> tuple[dict[str, str], list[str], list[str]]:
-        kept: dict[str, str] = {}
-        cut: list[str] = []
-        dropped: list[str] = []
-        for name, text in sources.items():
-            # Each source costs its frame and the newline joining it to the next.
-            room = budget - len(SOURCE_FRAME.format(name=name, text="")) - 1
-            if room <= 0:
-                dropped.append(name)
+    def changed(self, diff: str) -> dict[str, list[tuple[int, int]]]:
+        found: dict[str, list[tuple[int, int]]] = {}
+        path = ""
+        for line in diff.split("\n"):
+            if line.startswith(_FILE_HEADER):
+                path = DiffChunker._path(line)
                 continue
-            if len(text) > room:
-                # Cut at the last whole line that fits, so the model never reads half a line
-                # as if it were the code.
-                head = text[:room]
-                line = head.rfind("\n")
-                text = head[:line] if line > 0 else head
+            match = _HUNK_RANGE.match(line.rstrip("\r")) if path else None
+            if match is not None:
+                start = int(match.group(3))
+                count = int(match.group(4)) if match.group(4) is not None else 1
+                found.setdefault(path, []).append((start, start + max(count, 1) - 1))
+        return found
+
+    def excerpt(self, text: str, changed: Sequence[tuple[int, int]], room: int) -> str:
+        lines = text.split("\n")
+
+        def render(pad: int) -> str:
+            # The first `pad` lines -- where the imports are -- and `pad` lines either side
+            # of every changed range, each run of lines left out marked with its numbers.
+            keep = set(range(min(pad, len(lines))))
+            for start, end in changed:
+                keep.update(range(max(start - 1 - pad, 0), min(end + pad, len(lines))))
+            out: list[str] = []
+            gap: int | None = None
+            for index, line in enumerate(lines):
+                if index in keep:
+                    if gap is not None:
+                        out.append(SOURCE_GAP.format(first=gap + 1, last=index))
+                        gap = None
+                    out.append(line)
+                elif gap is None:
+                    gap = index
+            if gap is not None:
+                out.append(SOURCE_GAP.format(first=gap + 1, last=len(lines)))
+            return "\n".join(out)
+
+        shown = render(0)
+        if len(shown) > room:
+            # Not even the changed lines fit: the start of that, cut at a line boundary so
+            # the model never reads half a line as if it were the code.
+            head = shown[:room]
+            line = head.rfind("\n")
+            return head[:line] if line > 0 else head
+        # The widest margin that fits. Near-monotonic -- a marker can outweigh the short
+        # line it replaces -- so every margin taken is one that was measured to fit.
+        low, high = 0, len(lines)
+        while low < high:
+            middle = (low + high + 1) // 2
+            wider = render(middle)
+            if len(wider) <= room:
+                low, shown = middle, wider
+            else:
+                high = middle - 1
+        return shown
+
+    def trim(
+        self,
+        sources: Mapping[str, str],
+        budget: int,
+        changed: Mapping[str, Sequence[tuple[int, int]]] | None = None,
+    ) -> tuple[dict[str, str], list[str], list[str]]:
+        # Shared, never first come first served: a long CHANGELOG listed first once took the
+        # whole budget and left out the code the diff changed. The smallest are kept whole,
+        # and what is left is split evenly among the rest, each shown as its head and the
+        # lines around its changes.
+        def cost(name: str, text: str) -> int:
+            # Each source costs its frame and the newline joining it to the next.
+            return len(SOURCE_FRAME.format(name=name, text=text)) + 1
+
+        fitted: dict[str, str] = {}
+        cut: list[str] = []
+        order = sorted(sources, key=lambda name: cost(name, sources[name]))
+        for left, name in zip(range(len(order), 0, -1), order, strict=True):
+            share = budget // left
+            text = sources[name]
+            if cost(name, text) > share:
+                room = share - cost(name, "")
+                text = self.excerpt(text, (changed or {}).get(name, ()), room) if room > 0 else ""
+                if not text:
+                    continue
                 cut.append(name)
-            kept[name] = text
-            budget = room - len(text)
-        return kept, cut, dropped
+            fitted[name] = text
+            budget -= cost(name, text)
+        # Shown, and named, in the order they were given: the diff's.
+        kept = {name: fitted[name] for name in sources if name in fitted}
+        return (
+            kept,
+            [name for name in sources if name in cut],
+            [name for name in sources if name not in fitted],
+        )
 
     def evidence(
         self,
@@ -1272,8 +1345,9 @@ class SovereignReview:
     ) -> tuple[dict[str, str], list[str], list[str]]:
         """`sources` trimmed to what one request leaves once everything else it sends is
         counted -- `diff`, `documents` (already fitted, with `cut` and `dropped`), the part
-        note -- and never past `max_source_chars`: `(kept, cut, dropped)`, the last given
-        way first. Counted as sent, check codes included, so a request with its sources
+        note -- and never past `max_source_chars`: `(kept, cut, dropped)`, the smallest
+        kept whole and the rest sharing what is left, each cut to its head and the lines
+        around the changes `diff` makes to it. Counted as sent, check codes included, so a request with its sources
         fitted is never then refused for not fitting.
 
         When the request has no room even for the rules and the note, it is sent with no
@@ -1297,7 +1371,7 @@ class SovereignReview:
         if self.sizer.room_chars(size) < overhead:
             return {}, [], []
         budget = min(self.max_source_chars, self.sizer.room_chars(size + overhead))
-        return SOURCE_CONTEXT.trim(sources, budget)
+        return SOURCE_CONTEXT.trim(sources, budget, SOURCE_CONTEXT.changed(diff))
 
     @staticmethod
     def seen(

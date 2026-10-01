@@ -18,8 +18,10 @@ This file follows Keep a Changelog and semantic versioning conventions.
   only**, in their own `<sources>` block apart from the `<document>`s, with rules saying they
   show what the diff's lines refer to, that no finding may be reported on a line the diff did
   not change, and that the documentation contract is never judged against them. Sources take
-  only what the diff and the documents leave (the diff is never cut, the documents keep
-  priority, the last changed file gives way first, cut at a line boundary); a source cut or
+  only what the diff and the documents leave (the diff is never cut and the documents keep
+  priority); what is left is shared rather than taken first come first served -- the smallest
+  shown whole, the rest each cut to the start of the file and the lines around each change,
+  every run of lines left out marked with its numbers; a source cut or
   left out is named to the model and in the verdict's summary but never makes a verdict
   partial. A review split into parts shows each part only the sources of its own files and
   records them under `review_parts`. Off by default, so an adopter's review is unchanged

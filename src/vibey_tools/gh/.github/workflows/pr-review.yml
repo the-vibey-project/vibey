@@ -552,7 +552,7 @@ jobs:
           PR: ${{ needs.evaluate.outputs.pr }}
           HEAD_SHA: ${{ needs.evaluate.outputs.head_sha }}
           MAX_FILES: 30
-          MAX_BYTES: 200000
+          MAX_BYTES: 1000000
           EXCLUDE: "*.lock *-lock.json *-lock.yaml go.sum *.min.js *.min.css *.map *.svg *.png *.jpg *.jpeg *.gif *.ico *.pdf *.woff *.woff2 *.ttf *.zip *.gz"
         run: |
           set -euo pipefail

@@ -169,10 +169,18 @@ def test_documents_keep_priority_and_a_cut_source_never_makes_the_verdict_partia
     sent = _model_returns(monkeypatch, _whole_verdict())
     page = "# Tool\n" * 1500  # 10,500 characters
     documents = _documents(tmp_path, **{"README.md": page})
-    code = "".join(f"line_{n} = {n}\n" for n in range(4000))  # ~50,000 characters
+    code = "".join(f"line_{n} = {n}\n" for n in range(1, 4001))  # ~55,000 characters
     sources = _sources(tmp_path, **{"a.py": code})
+    diff = tmp_path / "pr.diff"
+    # One hunk deep in the file, as the SIGTERM false positive's was: 2,000 lines past the
+    # imports, which the start of the file alone would never have reached.
+    diff.write_text(
+        "diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n"
+        "@@ -2000,1 +2000,2 @@ def drain():\n line_2000 = 2000\n+line_2001 = 2001\n",
+        encoding="utf-8",
+    )
 
-    argv = ["--diff", str(_diff_of(tmp_path, "a.py")), *WHOLE, "--context-dir", str(documents)]
+    argv = ["--diff", str(diff), *WHOLE, "--context-dir", str(documents)]
     argv += ["--source-dir", str(sources), "--context-window", "16384"]
     assert local_review.review([*argv, "--reasoning-reserve", "4096"]) == 0
 
@@ -183,8 +191,17 @@ def test_documents_keep_priority_and_a_cut_source_never_makes_the_verdict_partia
     shown = user[user.index('<source path="a.py">\n') + len('<source path="a.py">\n') :]
     shown = shown[: shown.index("\n</source>")]
     assert 0 < len(shown) < len(code)
-    assert code.startswith(shown) and shown.endswith("\n") is False
-    assert shown + "\n" == code[: len(shown) + 1], "cut at a line boundary, never inside one"
+    # The start of the file, the lines around the change, and each gap marked in place.
+    rows = shown.split("\n")
+    assert rows[0] == "line_1 = 1"
+    gaps = [row for row in rows if row.startswith("[... lines ")]
+    assert len(gaps) == 2 and gaps[-1].endswith("-4001 not shown ...]")
+    head, middle = rows.index(gaps[0]), rows.index(gaps[1])
+    margin = int(rows[head - 1].split()[-1])
+    assert gaps[0] == f"[... lines {margin + 1}-{2000 - margin - 1} not shown ...]"
+    assert rows[head + 1 : middle] == [
+        f"line_{n} = {n}" for n in range(2000 - margin, 2001 + margin + 1)
+    ]
     out = json.loads(capsys.readouterr().out)
     assert out[REVIEW_CONTRACT.scope_field] == [DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT]
     assert "a.py (cut to fit)" in out["summary"]
@@ -234,7 +251,9 @@ def test_max_source_chars_bounds_the_sources_whatever_the_window(monkeypatch, tm
     user = _user(sent[0])
     blocks = user[user.index("<sources>") : user.index("</sources>")]
     assert len(blocks) <= 4000 + len("<sources>")
-    assert "(cut short: a.py; left out entirely: b.py)" in user
+    # Shared, not first come first served: both are cut, neither takes it all.
+    assert "(cut short: a.py, b.py)" in user
+    assert '<source path="a.py">' in user and '<source path="b.py">' in user
 
 
 def test_a_request_with_its_sources_fitted_is_never_refused_for_not_fitting(tmp_path):
@@ -258,7 +277,7 @@ def test_a_request_with_its_sources_fitted_is_never_refused_for_not_fitting(tmp_
         sources_dropped=dropped,
     )
     assert sizer.fits(local_review.SIZED_CHAT.size(payload))
-    assert cut == ["a.py"] and dropped == ["b.py"]
+    assert cut == ["a.py", "b.py"] and dropped == []
 
 
 def test_a_diff_half_too_long_is_refused_the_same_way_with_sources(monkeypatch, capsys, tmp_path):
@@ -392,16 +411,62 @@ def test_sources_never_follow_a_symlink_and_never_carry_a_binary(tmp_path):
     assert local_review.SOURCE_CONTEXT.files(tmp_path / "absent") == {}
 
 
-def test_trimming_cuts_at_a_line_and_the_last_gives_way_first():
-    context = local_review.SOURCE_CONTEXT
-    frame = len(local_review.SOURCE_FRAME.format(name="a.py", text="")) + 1
+def _cost(name: str, text: str) -> int:
+    return len(local_review.SOURCE_FRAME.format(name=name, text=text)) + 1
 
-    kept, cut, dropped = context.trim({"a.py": "one\ntwo\nthree\n", "b.py": "B"}, frame + 9)
-    assert kept == {"a.py": "one\ntwo"} and cut == ["a.py"] and dropped == ["b.py"]
-    # A first line longer than the room is cut inside it: there is no line to keep whole.
-    kept, cut, _ = context.trim({"a.py": "abcdefghij\nk\n"}, frame + 4)
-    assert kept == {"a.py": "abcd"} and cut == ["a.py"]
-    assert context.trim({"a.py": "A"}, frame + 5) == ({"a.py": "A"}, [], [])
+
+def test_the_budget_is_shared_the_smallest_whole_never_first_come_first_served():
+    """A long CHANGELOG listed first once took the whole budget and left out the code the
+    diff changed. Now the smallest are kept whole, the rest share what is left, each cut to
+    its start and the lines around its changes, and all are shown in the order given."""
+    context = local_review.SOURCE_CONTEXT
+    big = "".join(f"row {n}\n" for n in range(1, 301))
+    small = "S = 1\n"
+    budget = _cost("s.py", small) + _cost("big.py", "") + 600
+
+    kept, cut, dropped = context.trim(
+        {"big.py": big, "s.py": small}, budget, {"big.py": [(150, 150)]}
+    )
+
+    assert list(kept) == ["big.py", "s.py"]
+    assert kept["s.py"] == small and cut == ["big.py"] and dropped == []
+    assert kept["big.py"].startswith("row 1\n") and "\nrow 150\n" in kept["big.py"]
+    assert sum(_cost(name, text) for name, text in kept.items()) <= budget
+    assert context.trim({"a.py": "x" * 100}, 5) == ({}, [], ["a.py"])
+    assert context.trim({"a.py": "A"}, _cost("a.py", "A")) == ({"a.py": "A"}, [], [])
+
+
+def test_an_excerpt_shows_the_start_and_the_changes_with_every_gap_marked():
+    context = local_review.SOURCE_CONTEXT
+    text = "\n".join(f"line {n}" for n in range(1, 41))
+
+    assert context.excerpt(text, [(20, 20)], 10_000) == text
+    shown = context.excerpt(text, [(20, 21)], 150)
+    rows = shown.split("\n")
+    assert len(shown) <= 150 and rows[0] == "line 1"
+    margin = rows.index(next(row for row in rows if row.startswith("[... lines ")))
+    assert rows[margin] == f"[... lines {margin + 1}-{19 - margin} not shown ...]"
+    assert rows[margin + 1 : margin + 1 + 2 * margin + 2] == [
+        f"line {n}" for n in range(20 - margin, 22 + margin)
+    ]
+    assert rows[-1] == f"[... lines {22 + margin}-40 not shown ...]"
+    # Not even the changed lines fit: their start, cut at a line boundary -- or, with no
+    # line boundary to cut at, inside the one line there is.
+    assert context.excerpt("aaaa\nbbbb\ncccc", [(1, 3)], 7) == "aaaa"
+    assert context.excerpt("abcdefghij", [(1, 1)], 4) == "abcd"
+
+
+def test_the_changed_lines_are_read_from_the_diff_by_file():
+    diff = (
+        "preamble\n@@ -1 +1 @@\n"
+        "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n"
+        "@@ -3,2 +3,4 @@ def f():\n ctx\n@@ -0,0 +1 @@\n+new\n"
+        "diff --git a/y.py b/y.py\n@@ -5,1 +5,0 @@\n-gone\n"
+    )
+    assert local_review.SOURCE_CONTEXT.changed(diff) == {
+        "x.py": [(3, 6), (1, 1)],
+        "y.py": [(5, 5)],
+    }
 
 
 def test_the_notes_and_the_evidence_say_exactly_what_was_shown():
@@ -465,7 +530,7 @@ def test_source_context_is_off_by_default_and_declared_in_configuration(tmp_path
     default = PrAutomationFallbackConfig()
     assert default.source_context is False
     assert (default.max_source_chars, default.max_source_files) == (60000, 30)
-    assert default.max_source_file_bytes == 200000
+    assert default.max_source_file_bytes == 1000000
     assert "*.lock" in default.source_exclude and "*.png" in default.source_exclude
     assert load_config(tmp_path).pr_automation.fallback == default
 
