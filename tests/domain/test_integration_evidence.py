@@ -236,3 +236,21 @@ def test_the_statement_names_what_is_missing() -> None:
         "wi-2"
         in IntegrationEvidence(items=(ran, ItemEvidence(work_item_id="wi-2", runs=()))).statement()
     )
+
+
+def test_awkward_commands_and_output_stay_well_formed_xml() -> None:
+    evidence = IntegrationEvidence(
+        items=(
+            ItemEvidence(
+                work_item_id='wi-"1"',
+                runs=(GateRun(command="test \"a\" & 'b' < c", returncode=2, output_tail="<&>"),),
+            ),
+        )
+    )
+    case = ElementTree.fromstring(evidence.junit_xml()).find(".//testcase")
+    assert case is not None
+    assert case.get("classname") == 'wi-"1"'
+    assert case.get("name") == "test \"a\" & 'b' < c"
+    failure = case.find("failure")
+    assert failure is not None
+    assert failure.text == "<&>"

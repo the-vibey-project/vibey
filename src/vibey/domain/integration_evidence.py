@@ -20,7 +20,7 @@ report nobody had measured. Now:
 import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from xml.sax.saxutils import escape, quoteattr
+from html import escape
 
 from vibey.domain.ledger import EventKind, LedgerEvent
 
@@ -31,6 +31,16 @@ EVIDENCE_MISSING_GATE_KIND = "review_evidence_missing"
 """The human gate REVIEW parks on when it has no measured evidence to show."""
 
 _NO_EVIDENCE = "no integration gate evidence was recorded for this cycle"
+
+
+def quoteattr(value: str) -> str:
+    """An XML attribute value, quoted. `html.escape` covers every character XML needs
+    escaped (`&`, `<`, `>`, both quotes) without importing an XML library at all.
+
+    Module-level because it is a pure two-line helper private to this module's
+    renderer; a class would add nothing but ceremony (ADR-0016's last resort, stated).
+    """
+    return f'"{escape(value, quote=True)}"'
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,7 +197,7 @@ class IntegrationEvidence:
                 else:
                     cases.append(
                         f"    <testcase classname={classname} name={name}>"
-                        f'<failure message="exit {run.returncode}">{escape(run.output_tail)}'
+                        f'<failure message="exit {run.returncode}">{escape(run.output_tail, quote=False)}'
                         "</failure></testcase>"
                     )
         if not cases:
