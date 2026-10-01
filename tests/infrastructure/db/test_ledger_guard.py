@@ -862,3 +862,58 @@ async def test_an_owner_that_may_not_revoke_the_parameter_leaves_it_to_the_inspe
             raise asyncpg.InsufficientPrivilegeError("permission denied to revoke")
 
     await DatabaseRoleReconciler._revoke_replication_role(_Refusing(), '"app"')  # type: ignore[arg-type]
+
+
+class _Flaky(_OldServer):
+    """A PostgreSQL 17 owner whose REVOKE meets `tuple concurrently updated` first:
+    `pg_parameter_acl` is one cluster-wide row, so two reconciles on different databases
+    of one cluster race on it, and a per-database advisory lock cannot serialize them."""
+
+    def __init__(self, failures: int, error: type[Exception] = asyncpg.InternalServerError) -> None:
+        super().__init__()
+        self._failures = failures
+        self._error = error
+
+    async def fetchval(self, sql: str, *args: object) -> str:
+        return "170000"
+
+    def transaction(self) -> object:
+        class _Tx:
+            async def __aenter__(self) -> None:
+                return None
+
+            async def __aexit__(self, *exc: object) -> bool:
+                return False
+
+        return _Tx()
+
+    async def execute(self, sql: str, *args: object) -> str:
+        if self._failures:
+            self._failures -= 1
+            raise self._error("tuple concurrently updated")
+        self.executed.append(sql)
+        return "REVOKE"
+
+
+async def test_a_revoke_that_races_another_reconcile_is_retried_until_it_lands() -> None:
+    """CI 2026-10-01, PostgreSQL 16: the race made the REVOKE fail, every PostgresError was
+    swallowed, and the trigger-silencing grant stayed -- silently."""
+    owner = _Flaky(failures=2)
+
+    await DatabaseRoleReconciler._revoke_replication_role(owner, '"app"')  # type: ignore[arg-type]
+
+    assert owner.executed == ['REVOKE SET ON PARAMETER session_replication_role FROM PUBLIC, "app"']
+
+
+async def test_a_revoke_that_keeps_racing_is_raised_never_swallowed() -> None:
+    with pytest.raises(asyncpg.InternalServerError, match="concurrently"):
+        await DatabaseRoleReconciler._revoke_replication_role(  # type: ignore[arg-type]
+            _Flaky(failures=99), '"app"'
+        )
+
+
+async def test_any_other_database_error_in_the_revoke_is_raised() -> None:
+    with pytest.raises(asyncpg.DataError):
+        await DatabaseRoleReconciler._revoke_replication_role(  # type: ignore[arg-type]
+            _Flaky(failures=1, error=asyncpg.DataError), '"app"'
+        )
