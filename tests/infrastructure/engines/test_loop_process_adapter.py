@@ -2301,7 +2301,21 @@ async def test_shutdown_ends_a_session_from_another_event_loop_without_crashing(
 
     assert ended == 1
     assert run_id not in _active_processes
-    assert await _gone(process.pid)  # type: ignore[attr-defined]
+    # Its loop is closed, so nothing reaps it (on Linux the child watcher went with the
+    # loop): it may linger as a zombie, which `kill(pid, 0)` still finds. This test process
+    # is its parent, so reap it here; being reapable at all proves the group was killed.
+    pid = process.pid  # type: ignore[attr-defined]
+    deadline = asyncio.get_running_loop().time() + 5.0
+    while True:
+        try:
+            reaped, status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            break  # already reaped
+        if reaped == pid:
+            assert os.WIFSIGNALED(status)
+            break
+        assert asyncio.get_running_loop().time() < deadline, "the group was not killed"
+        await asyncio.sleep(0.05)
 
 
 async def test_shutdown_skips_an_entry_with_no_process_and_reports_it() -> None:
