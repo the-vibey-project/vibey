@@ -223,7 +223,8 @@ The `Changelog fragment` check (`changelog.yml`) refuses a PR into `develop` tha
 changes a shipped path (`[changelog] require_for`) without adding a fragment, adds
 a malformed one, or edits an unreleased section directly. Label the PR
 `no-changelog` when no reader of the changelog would miss the change; the label
-never excuses a malformed fragment or a hand edit.
+never excuses a malformed fragment or a hand edit. The check creates the label
+itself (`vibey-gh changelog ensure-label`), so it always exists.
 
 Entries 0.2.0 through 0.6.0 were reconstructed from the release commits on
 2026-09-15; a released version without an entry is a documentation bug.

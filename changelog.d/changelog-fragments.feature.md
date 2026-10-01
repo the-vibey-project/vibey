@@ -8,6 +8,7 @@
   no hand step; `vibey-gh changelog assemble` runs the fold alone and is idempotent. The new
   `Changelog fragment` check (`changelog.yml`, `vibey-gh changelog check`) refuses a pull
   request into `develop` that changes shipped code without a fragment (unless labelled
-  `no-changelog`), adds a malformed one, or edits an unreleased section by hand. Declared by
+  `no-changelog`, a label the check creates itself), adds a malformed one, or edits an
+  unreleased section by hand. Declared by
   `[changelog]`, off by default for adopters; on here, for both this changelog and
   vibey-gh's, and the `merge=union` attribute is gone.

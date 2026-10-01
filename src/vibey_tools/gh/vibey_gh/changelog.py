@@ -53,6 +53,10 @@ _FENCE = re.compile(r"^[ \t]{0,3}(?:```|~~~)")
 NEW_CHANGELOG = "# Changelog\n"
 # How many changed paths a refusal names before summarising the rest.
 _SHOWN = 3
+# The skip label as `changelog ensure-label` creates it: a pale grey, because it marks an
+# exemption rather than a state anyone has to act on.
+SKIP_LABEL_COLOUR = "EDEDED"
+SKIP_LABEL_DESCRIPTION = "This pull request needs no changelog fragment"
 
 
 class Changelog(ChangelogInterface):
@@ -63,9 +67,11 @@ class Changelog(ChangelogInterface):
         *,
         config: Callable[[], GhConfig] = load_config,
         git: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        gh: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
     ) -> None:
         self._config = config
         self._git = git
+        self._gh = gh
 
     # ------------------------------------------------------------------ fragments
 
@@ -324,6 +330,32 @@ class Changelog(ChangelogInterface):
             )
         return tuple(found)
 
+    def ensure_label(self, cfg: GhConfig) -> bool:
+        settings = cfg.changelog
+        if not settings.enabled or not settings.skip_label:
+            return False
+        # `--force` makes it idempotent: an existing label is brought to this colour and
+        # description rather than refused, so every run converges on the same label.
+        run = self._gh(
+            [
+                "gh",
+                "label",
+                "create",
+                settings.skip_label,
+                "--color",
+                SKIP_LABEL_COLOUR,
+                "--description",
+                SKIP_LABEL_DESCRIPTION,
+                "--force",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if run.returncode:
+            raise RuntimeError(run.stderr.strip() or "gh label create failed")
+        return True
+
     # ------------------------------------------------------------------ the command
 
     @staticmethod
@@ -332,6 +364,10 @@ class Changelog(ChangelogInterface):
         actions.add_parser(
             "assemble",
             help="fold every fragment into its changelog's unreleased section and delete it",
+        )
+        actions.add_parser(
+            "ensure-label",
+            help="create or update the [changelog] skip label, so it can be applied",
         )
         check = actions.add_parser(
             "check",
@@ -368,6 +404,8 @@ class Changelog(ChangelogInterface):
         tool = cls()
         if args.changelog_action == "assemble":
             return tool.run_assemble()
+        if args.changelog_action == "ensure-label":
+            return tool.run_ensure_label()
         return tool.run_check(args.base, args.head, args.labels, args.labels_json, args.checkout)
 
     def run_assemble(self) -> int:
@@ -387,6 +425,20 @@ class Changelog(ChangelogInterface):
         for path in touched:
             print(f"  {path}")
         print(f"vibey-gh: assembled {len(touched)} path(s)")
+        return 0
+
+    def run_ensure_label(self) -> int:
+        """Make the skip label exist: 0 done or nothing to do, 1 refused by the forge."""
+        cfg = self._config()
+        try:
+            created = self.ensure_label(cfg)
+        except RuntimeError as exc:
+            print(f"::error::vibey-gh: the changelog skip label could not be ensured: {exc}")
+            return 1
+        if not created:
+            print("vibey-gh: [changelog] declares no skip label in use; nothing to ensure")
+            return 0
+        print(f"vibey-gh: the changelog skip label {cfg.changelog.skip_label!r} exists")
         return 0
 
     def run_check(

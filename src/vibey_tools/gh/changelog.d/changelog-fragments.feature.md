@@ -8,4 +8,5 @@
   release commit and cut each `versioned` changelog's section into the version's own. `vibey-gh
   changelog check`, rendered as `changelog.yml` ("Changelog fragment"), refuses a pull request
   that changes a `require_for` path without a fragment unless it carries `skip_label`, one with
-  a malformed fragment, and one that edits an unreleased section directly. Off by default.
+  a malformed fragment, and one that edits an unreleased section directly; `vibey-gh changelog
+  ensure-label` creates the skip label first, so it never has to be made by hand. Off by default.

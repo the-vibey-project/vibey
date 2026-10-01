@@ -32,6 +32,11 @@ jobs:
     name: Changelog fragment
     if: __VIBEY_GH_CHANGELOG_ENABLED__
     runs-on: ubuntu-latest
+    # `issues: write` is what `gh label create` needs, to make sure the skip label exists
+    # (labels belong to the issues API); nothing here writes code or comments.
+    permissions:
+      contents: read
+      issues: write
     steps:
       # The configuration read -- which paths need a fragment, the skip label, where the
       # fragments live -- comes from the trusted default branch, never from the pull
@@ -79,6 +84,9 @@ jobs:
       - name: Refuse a change with no fragment, a malformed one, or a hand-edited section
         working-directory: automation
         env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SAME_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
@@ -93,6 +101,14 @@ jobs:
           if ! vibey-gh changelog check --help >/dev/null 2>&1; then
             echo "::notice::the default branch's vibey-gh predates changelog fragments, and so does its [changelog] declaration; nothing to check yet"
             exit 0
+          fi
+          # The skip label is ensured, never assumed: a label nobody created cannot be
+          # applied, and the refusal below tells people to apply it. Idempotent (`--force`).
+          # A fork's pull request runs with a read-only token, so there the label is left
+          # to the next pull request from this repository rather than failing a check the
+          # contributor cannot fix.
+          if [ "${SAME_REPOSITORY}" = "true" ]; then
+            vibey-gh changelog ensure-label
           fi
           vibey-gh changelog check \
             --checkout ../target \

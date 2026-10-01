@@ -19,7 +19,12 @@ import pytest
 import yaml
 
 from vibey_gh import cli
-from vibey_gh.changelog import NEW_CHANGELOG, Changelog
+from vibey_gh.changelog import (
+    NEW_CHANGELOG,
+    SKIP_LABEL_COLOUR,
+    SKIP_LABEL_DESCRIPTION,
+    Changelog,
+)
 from vibey_gh.config import (
     DEFAULT_CHANGELOG_TYPES,
     ChangelogConfig,
@@ -657,6 +662,63 @@ def test_a_refused_assemble_exits_nonzero(repo, monkeypatch, capsys):
     assert "::error::vibey-gh: nothing assembled: changelog.d/bad.md" in capsys.readouterr().out
 
 
+class FakeGh:
+    """Records each `gh` argv and answers with one scripted result."""
+
+    def __init__(self, code: int = 0, stderr: str = "") -> None:
+        self.calls: list[list[str]] = []
+        self.code, self.stderr = code, stderr
+
+    def __call__(self, argv, **_kwargs):
+        self.calls.append(list(argv))
+        return subprocess.CompletedProcess(argv, self.code, "", self.stderr)
+
+
+def test_the_skip_label_is_ensured_idempotently(tmp_path):
+    gh = FakeGh()
+    assert Changelog(gh=gh).ensure_label(configured(tmp_path)) is True
+    assert gh.calls == [
+        [
+            "gh",
+            "label",
+            "create",
+            "no-changelog",
+            "--color",
+            SKIP_LABEL_COLOUR,
+            "--description",
+            SKIP_LABEL_DESCRIPTION,
+            "--force",
+        ]
+    ]
+    assert SKIP_LABEL_DESCRIPTION == "This pull request needs no changelog fragment"
+
+
+def test_no_label_is_made_when_none_is_in_use(tmp_path):
+    gh = FakeGh()
+    assert Changelog(gh=gh).ensure_label(GhConfig(root=tmp_path)) is False
+    assert Changelog(gh=gh).ensure_label(configured(tmp_path, skip_label="")) is False
+    assert gh.calls == []
+
+
+def test_a_refused_label_is_an_error_not_a_silence(tmp_path):
+    with pytest.raises(RuntimeError, match="HTTP 403"):
+        Changelog(gh=FakeGh(1, "HTTP 403\n")).ensure_label(configured(tmp_path))
+    with pytest.raises(RuntimeError, match="gh label create failed"):
+        Changelog(gh=FakeGh(1)).ensure_label(configured(tmp_path))
+
+
+def test_the_ensure_label_command_reports_each_outcome(tmp_path, capsys):
+    on, off = configured(tmp_path), GhConfig(root=tmp_path)
+    assert Changelog(config=lambda: on, gh=FakeGh()).run_ensure_label() == 0
+    assert "the changelog skip label 'no-changelog' exists" in capsys.readouterr().out
+    assert Changelog(config=lambda: off, gh=FakeGh()).run_ensure_label() == 0
+    assert "nothing to ensure" in capsys.readouterr().out
+    assert Changelog(config=lambda: on, gh=FakeGh(1, "denied")).run_ensure_label() == 1
+    assert "::error::vibey-gh: the changelog skip label could not be ensured: denied" in (
+        capsys.readouterr().out
+    )
+
+
 def test_dispatch_routes_each_action():
     calls = []
 
@@ -665,15 +727,20 @@ def test_dispatch_routes_each_action():
             calls.append("assemble")
             return 0
 
+        def run_ensure_label(self):
+            calls.append("ensure-label")
+            return 0
+
         def run_check(self, base, head, labels, labels_json="", checkout=None):
             calls.append((base, head, labels, labels_json, checkout))
             return 1
 
     parser = Changelog.declare(argparse.ArgumentParser())
     assert Recording.dispatch(parser.parse_args(["assemble"])) == 0
+    assert Recording.dispatch(parser.parse_args(["ensure-label"])) == 0
     args = parser.parse_args(["check", "--base", "b", "--label", "l", "--checkout", "c"])
     assert Recording.dispatch(args) == 1
-    assert calls == ["assemble", ("b", "HEAD", ["l"], "", Path("c"))]
+    assert calls == ["assemble", "ensure-label", ("b", "HEAD", ["l"], "", Path("c"))]
 
 
 # ------------------------------------------------------------------------- the workflow
@@ -709,6 +776,24 @@ def test_the_workflow_reads_its_rule_from_the_trusted_branch_and_labels_as_data(
     assert last["working-directory"] == "automation" and "--checkout ../target" in last["run"]
     assert last["env"]["LABELS"] == "${{ toJSON(github.event.pull_request.labels.*.name) }}"
     assert "${{" not in last["run"]
+
+
+def test_the_workflow_ensures_its_skip_label_with_the_one_permission_that_needs(tmp_path):
+    _, spec = rendered(GhConfig(root=tmp_path, changelog=settings()))
+    assert spec["permissions"] == {"contents": "read"}
+    job = spec["jobs"]["check"]
+    assert job["permissions"] == {"contents": "read", "issues": "write"}
+    last = job["steps"][-1]
+    assert last["env"]["GH_TOKEN"] == "${{ github.token }}"
+    assert last["env"]["SAME_REPOSITORY"] == (
+        "${{ github.event.pull_request.head.repo.full_name == github.repository }}"
+    )
+    run = last["run"]
+    # Probed first, so the older tooling's bootstrap path never calls a missing command,
+    # and ensured before the check that tells people to apply it.
+    assert run.index("changelog check --help") < run.index("vibey-gh changelog ensure-label")
+    assert run.index("vibey-gh changelog ensure-label") < run.index("vibey-gh changelog check \\")
+    assert 'if [ "${SAME_REPOSITORY}" = "true" ]' in run
 
 
 def test_a_disabled_table_renders_a_job_that_never_runs(tmp_path):

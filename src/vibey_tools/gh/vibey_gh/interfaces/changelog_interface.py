@@ -82,6 +82,12 @@ class ChangelogInterface(Protocol):
         path written or removed, for the release commit to stage."""
         ...
 
+    def ensure_label(self, cfg: GhConfig) -> bool:
+        """Create the skip label, or bring an existing one up to date, so a person can apply
+        it. False when the table is off or declares no label; raises RuntimeError when the
+        forge refuses."""
+        ...
+
     def check(
         self,
         cfg: GhConfig,
