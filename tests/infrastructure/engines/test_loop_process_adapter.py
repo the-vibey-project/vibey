@@ -6,6 +6,7 @@ stop, classify, attribute) without spawning real subprocesses.
 """
 
 import json
+import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -699,77 +700,124 @@ async def test_communicate_reaps_an_already_exited_process_on_error() -> None:
     assert logs == []
 
 
-async def test_stop_reaps_an_exited_registered_process(tmp_path: Path) -> None:
-    import asyncio
-    from unittest.mock import MagicMock
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:  # pragma: no cover - a reused pid owned by someone else
+        return True
+    return True
 
-    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+
+async def _gone(pid: int, *, within: float = 5.0) -> bool:
+    """An orphaned descendant is reaped by init/launchd, not by us, so poll."""
+    import asyncio
+
+    deadline = asyncio.get_running_loop().time() + within
+    while _alive(pid):
+        if asyncio.get_running_loop().time() > deadline:
+            return False
+        await asyncio.sleep(0.05)
+    return True
+
+
+async def _session(adapter: LoopProcessAdapter, tmp_path: Path, script: str):  # type: ignore[no-untyped-def]
+    """A real session in its own group, as `start` spawns one, whose shell leaves a
+    background child behind; returns the process and that child's pid."""
+    import asyncio
+    import subprocess
+
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    pidfile = tmp_path / "child.pid"
+    process = await adapter._spawn(
+        "/bin/sh",
+        "-c",
+        f"sleep 60 & echo $! > {pidfile}; {script}",
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    for _ in range(100):
+        if pidfile.exists() and pidfile.read_text().strip():
+            break
+        await asyncio.sleep(0.02)
+    return process, int(pidfile.read_text())
+
+
+def _stopped_handle(tmp_path: Path) -> RunHandle:
     run_dir = tmp_path / "test-run"
     run_dir.mkdir(parents=True)
     (run_dir / "stop-summary.md").write_text("Stopped.")
-    handle = _make_handle(run_dir)
-    process = MagicMock()
-    process.returncode = 0
-    process.wait.return_value = asyncio.get_running_loop().create_future()
-    process.wait.return_value.set_result(0)
+    return _make_handle(run_dir)
+
+
+async def test_stop_ends_a_session_that_ignores_the_stop_file_and_its_whole_group(
+    tmp_path: Path,
+) -> None:
+    """stop() used to terminate only the runner itself: anything the runner started
+    -- a test server, a background shell -- kept running, and a paid one kept spending."""
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP, stop_grace_seconds=0.2)
+    handle = _stopped_handle(tmp_path)
+    process, child = await _session(adapter, tmp_path, "wait")
     _active_processes[handle.run_id] = process
 
     await adapter.stop(handle)
 
-    process.wait.assert_called_once_with()
+    assert process.returncode is not None
+    assert await _gone(child)
+    assert handle.run_id not in _active_processes
 
 
-async def test_stop_waits_for_a_running_registered_process(tmp_path: Path) -> None:
-    import asyncio
-    from unittest.mock import AsyncMock, MagicMock, patch
-
-    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
-    run_dir = tmp_path / "test-run"
-    run_dir.mkdir(parents=True)
-    (run_dir / "stop-summary.md").write_text("Stopped.")
-    handle = _make_handle(run_dir)
-    process = MagicMock()
-    process.returncode = None
-    process.wait.return_value = asyncio.get_running_loop().create_future()
-    process.wait.return_value.set_result(0)
+async def test_stop_ends_what_a_runner_that_exited_left_behind(tmp_path: Path) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP, stop_grace_seconds=0.2)
+    handle = _stopped_handle(tmp_path)
+    process, child = await _session(adapter, tmp_path, "exit 0")
+    await process.wait()
+    assert _alive(child)  # the runner is gone; its background child is not
     _active_processes[handle.run_id] = process
 
-    with patch("asyncio.wait_for", new=AsyncMock(return_value=0)) as wait_for:
-        await adapter.stop(handle)
+    await adapter.stop(handle)
 
-    wait_for.assert_awaited_once()
-    assert wait_for.await_args.kwargs == {"timeout": 2.0}
-    process.wait.assert_called_once_with()
-    process.terminate.assert_not_called()
+    assert await _gone(child)
 
 
-@pytest.mark.parametrize("second_wait_fails", [False, True])
-async def test_stop_terminates_a_process_that_does_not_exit(
-    tmp_path: Path, second_wait_fails: bool
+async def test_stop_waits_out_the_grace_for_a_runner_that_exits_on_its_own(
+    tmp_path: Path,
 ) -> None:
-    import asyncio
-    from unittest.mock import AsyncMock, MagicMock, patch
-
-    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
-    run_dir = tmp_path / "test-run"
-    run_dir.mkdir(parents=True)
-    (run_dir / "stop-summary.md").write_text("Stopped.")
-    handle = _make_handle(run_dir)
-    process = MagicMock()
-    process.returncode = None
-    process.wait.return_value = asyncio.get_running_loop().create_future()
-    process.wait.return_value.set_result(0)
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP, stop_grace_seconds=5.0)
+    handle = _stopped_handle(tmp_path)
+    process, child = await _session(adapter, tmp_path, "sleep 0.1; exit 3")
     _active_processes[handle.run_id] = process
-    side_effect = [TimeoutError("still running")]
-    if second_wait_fails:
-        side_effect.append(RuntimeError("terminate failed"))
-    else:
-        side_effect.append(0)
 
-    with patch("asyncio.wait_for", new=AsyncMock(side_effect=side_effect)):
-        await adapter.stop(handle)
+    await adapter.stop(handle)
 
-    process.terminate.assert_called_once_with()
+    assert process.returncode == 3  # it exited on its own, not by our signal
+    assert await _gone(child)
+
+
+async def test_worker_shutdown_ends_every_session_still_running(tmp_path: Path) -> None:
+    """A session runs in its own group, so a Ctrl-C of the worker no longer reaches it;
+    the worker ends every live session on its way out instead."""
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    first, first_child = await _session(adapter, tmp_path / "a", "wait")
+    second, second_child = await _session(adapter, tmp_path / "b", "wait")
+    first_id, second_id = uuid4(), uuid4()
+    _active_processes[first_id] = first
+    _active_processes[second_id] = second
+
+    ended = await LoopProcessAdapter.end_active_sessions()
+
+    assert ended == 2
+    assert first.returncode is not None and second.returncode is not None
+    assert await _gone(first_child) and await _gone(second_child)
+    assert first_id not in _active_processes and second_id not in _active_processes
+
+
+def test_stop_grace_must_be_a_real_bound() -> None:
+    for bad in (0.0, -1.0, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="stop grace"):
+            LoopProcessAdapter(descriptor=CLAUDELOOP, stop_grace_seconds=bad)
 
 
 async def test_start_raises_process_error_on_spawn_failure(tmp_path: Path) -> None:
@@ -2004,8 +2052,9 @@ async def test_start_on_a_system_python_keeps_usr_bin_on_the_engines_path(
     env = captured["env"]
     assert isinstance(env, dict)
     assert env["PATH"] == _SYSTEM_PATH
-    # The engine run stays in the worker's session; only the probes get their own.
-    assert captured["start_new_session"] is False
+    # The engine run leads its own group, so stop() and a worker shutting down can end
+    # everything it started (the probes always did).
+    assert captured["start_new_session"] is True
 
 
 async def test_start_from_a_venv_interpreter_strips_that_venv(
