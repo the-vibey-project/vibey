@@ -611,8 +611,13 @@ if argv[:1] == ["local-review"]:
     import re
 
     def _open(request, timeout=None):
-        # A model that read the whole prompt: it echoes both of the request's check codes.
+        # The slot wait asks the server's version and then one token: a model free at once.
+        if request.data is None:
+            return _Response(json.dumps({{"version": "0.34.2"}}).encode())
         sent = json.loads(request.data)
+        if "format" not in sent:
+            return _Response(json.dumps({{"done_reason": "length"}}).encode())
+        # A model that read the whole prompt: it echoes both of the request's check codes.
         text = "".join(message["content"] for message in sent["messages"])
         codes = re.findall(r"(?:The first is|the second check code is) ([0-9a-f]+)", text)
         answer = json.loads(verdict)
@@ -1965,7 +1970,7 @@ def test_the_sovereign_models_window_is_declared_not_compiled_in(tmp_path):
 
     default = PrAutomationFallbackConfig()
     assert default.context_window == fit.DEFAULT_CONTEXT_CEILING_TOKENS == 65536
-    assert default.reasoning_reserve_tokens == fit.DEFAULT_CONTEXT_RESERVE_TOKENS == 8192
+    assert default.reasoning_reserve_tokens == fit.DEFAULT_CONTEXT_RESERVE_TOKENS == 16384
     assert default.chars_per_token == fit.DEFAULT_CHARS_PER_TOKEN == 3
     # The configuration's bound on it is the sizer's own.
     PrAutomationFallbackConfig(chars_per_token=fit.MAX_CHARS_PER_TOKEN)

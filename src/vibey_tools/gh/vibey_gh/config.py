@@ -553,8 +553,13 @@ class PrAutomationFallbackConfig:
     # Room kept free for the model's reasoning AND its answer. #1090's whole review read its
     # whole 31,765-token prompt and then ran out of room to answer in the 1,004 tokens a
     # 32,768 window left it; re-run with room, it spent 3,676 tokens on both at default
-    # reasoning (471 with `think = "low"`).
-    reasoning_reserve_tokens: int = 8192
+    # reasoning (471 with `think = "low"`). Sent as the request's `num_predict`, so the room
+    # promised is the room taken: before, nothing capped the answer, and PR #1312's first part
+    # reasoned ~9,950 tokens past an 8,192 reserve until a fixed timeout cut it off, twice.
+    # Measured on the operator's host's Ollama log (2026-09-30/10-01, gpt-oss:20b reviews):
+    # answers finished at up to 11,832 tokens and cut-off ones had reached 15,578, so the
+    # default is 16,384 -- and one that needs more is refused as `done_reason=length`, named.
+    reasoning_reserve_tokens: int = 16384
     # Characters per token when estimating a prompt: pessimistic for prose and code
     # (measured: 3.95), optimistic for dense text such as a lockfile (about 2.1). The
     # estimate only decides what to trim; truncation is refused by the request itself.
@@ -569,7 +574,8 @@ class PrAutomationFallbackConfig:
     # hunk, each part is its own request held to the same guards, and a pass needs every
     # part to pass. Past this many parts the lane refuses and a human is asked, with the
     # reason; 1 never splits. Bounds the time a review may take: at most this many requests,
-    # each up to `timeout_seconds`, each retried as below.
+    # each up to its deadline (below) after up to `slot_wait_seconds` for the slot, each
+    # retried as below.
     max_chunks: int = 6
     # Whether a hunk that only adds lines -- a new file's `@@ -0,0 +1,N @@`, or an insertion
     # -- and is too large for one part is split between lines into labelled pieces, each a
@@ -578,12 +584,35 @@ class PrAutomationFallbackConfig:
     # a large file went to a human. A hunk with context or removed lines is never split, and
     # one line too long for a part alone is still refused. false restores the refusal.
     split_added_hunks: bool = True
-    # Further attempts after the model could not be reached or did not answer in time --
-    # never after a refusal or an answer that could not be read. #1241 went to a human on
-    # one "timed out". 0 never retries.
+    # Further attempts after the model could not be reached, or was serving other work past
+    # `slot_wait_seconds` -- never after a refusal or an answer that could not be read, and
+    # never after a request that started on a free slot and then ran past its deadline: at
+    # temperature 0 the same request reads and reasons the same way again (PR #1312's two
+    # attempts generated 9,943 and 10,017 tokens before the same cut-off). #1241 went to a
+    # human on one "timed out". 0 never retries.
     retries: int = 1
     # The wait before the first retry, doubled before each one after it.
     retry_backoff_seconds: int = 30
+    # A request's deadline, scaled with what it sends and what it may generate rather than
+    # one fixed number: `prompt tokens / prompt_tokens_per_second + reasoning_reserve_tokens /
+    # output_tokens_per_second`, never under `timeout_seconds`. Measured 2026-10-01 on the
+    # operator's host (Apple M5, 24 GB, gpt-oss:20b, Ollama's llama-server log): a
+    # 46,222-token prompt took 145s to read (319 tokens/s) and a 57,227-token one 241s (237/s)
+    # -- the rate falls as the prompt grows -- and answers came at 22.3-22.6 tokens/s. A
+    # fixed 600s could not hold PR #1312's first part: 145s to read, then 455s of reasoning,
+    # cut off unfinished. Both rounded down from what was measured; re-measure on another
+    # host. 0 for both keeps the fixed `timeout_seconds`.
+    prompt_tokens_per_second: int = 200
+    output_tokens_per_second: int = 20
+    # How long a request may wait for the model to come free before it is sent: a one-token
+    # request at the same window goes first, and the review is sent only once it answers, so
+    # a review queued behind another client's request is told apart from one the model is
+    # slow on. The host's model serves one request at a time (its log: `n_slots = 1`), and on
+    # 2026-09-30 a review sat ~10 minutes behind another client's and was then cut off 13
+    # seconds into its own work, reported as a timeout. Past this wait the request is coded
+    # `model_busy` and retried as above. 900 is the longest request any client of that host
+    # was seen to hold the model (15m0s). 0 sends at once, without waiting.
+    slot_wait_seconds: int = 900
     # Whether the review is also handed the full text, at the exact head, of the files the
     # diff changes -- as REFERENCE ONLY, never as something to judge. Measured 2026-10-01:
     # every one of five "blocking" findings checked was a false positive about unchanged
@@ -720,6 +749,23 @@ class PrAutomationFallbackConfig:
         ):
             raise ValueError(
                 "pr_automation.fallback.retry_backoff_seconds must be a whole number from 0 to 600"
+            )
+        for name in ("prompt_tokens_per_second", "output_tokens_per_second"):
+            rate = getattr(self, name)
+            if type(rate) is not int or not 0 <= rate <= 1_000_000:
+                raise ValueError(
+                    f"pr_automation.fallback.{name} must be a whole number from 0 to 1000000"
+                )
+        # One without the other is half a deadline: a request whose reading is scaled but
+        # whose answer is not would be cut off mid-reasoning exactly as before.
+        if (self.prompt_tokens_per_second == 0) != (self.output_tokens_per_second == 0):
+            raise ValueError(
+                "pr_automation.fallback.prompt_tokens_per_second and output_tokens_per_second"
+                " must both be set, or both be 0 for the fixed timeout_seconds"
+            )
+        if type(self.slot_wait_seconds) is not int or not 0 <= self.slot_wait_seconds <= 3600:
+            raise ValueError(
+                "pr_automation.fallback.slot_wait_seconds must be a whole number from 0 to 3600"
             )
         if type(self.source_context) is not bool:
             raise ValueError("pr_automation.fallback.source_context must be true or false")
@@ -3090,13 +3136,24 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             heartbeat_max_age_minutes=fallback.get("heartbeat_max_age_minutes", 15),
             context_paths=tuple(fallback.get("context_paths", ("README.md", "docs/index.md"))),
             context_window=fallback.get("context_window", 65536),
-            reasoning_reserve_tokens=fallback.get("reasoning_reserve_tokens", 8192),
+            reasoning_reserve_tokens=fallback.get(
+                "reasoning_reserve_tokens", PrAutomationFallbackConfig.reasoning_reserve_tokens
+            ),
             chars_per_token=fallback.get("chars_per_token", 3),
             think=fallback.get("think", ""),
             max_chunks=fallback.get("max_chunks", 6),
             split_added_hunks=fallback.get("split_added_hunks", True),
             retries=fallback.get("retries", 1),
             retry_backoff_seconds=fallback.get("retry_backoff_seconds", 30),
+            prompt_tokens_per_second=fallback.get(
+                "prompt_tokens_per_second", PrAutomationFallbackConfig.prompt_tokens_per_second
+            ),
+            output_tokens_per_second=fallback.get(
+                "output_tokens_per_second", PrAutomationFallbackConfig.output_tokens_per_second
+            ),
+            slot_wait_seconds=fallback.get(
+                "slot_wait_seconds", PrAutomationFallbackConfig.slot_wait_seconds
+            ),
             source_context=fallback.get("source_context", False),
             max_source_chars=fallback.get("max_source_chars", 60000),
             max_source_files=fallback.get("max_source_files", 30),

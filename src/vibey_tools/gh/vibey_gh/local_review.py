@@ -34,6 +34,7 @@ import functools
 import http.client
 import itertools
 import json
+import math
 import pathlib
 import re
 import secrets
@@ -53,12 +54,15 @@ from vibey_gh.interfaces.local_review_interface import (
     AddedHunkSplitterInterface,
     DiffChunkerInterface,
     DiffPartInterface,
+    RequestDeadlineInterface,
     SizedChatInterface,
+    SlotWaitInterface,
     SourceContextInterface,
     TransportRetryInterface,
     WholeReviewInterface,
 )
 from vibey_gh.interfaces.review_contract_interface import ReviewContractPort
+from vibey_gh.interfaces.slots_interface import OllamaClientInterface
 from vibey_gh.review_contract import (
     DIFF_GROUNDABLE,
     REQUIRES_WIDER_CONTEXT,
@@ -258,6 +262,28 @@ class ReviewRefused(Exception):
         self.code = code
         self.parts = parts
         self.attempts = attempts
+
+
+class ModelBusy(ReviewRefused):
+    """The model answered, but was serving other work and did not come free in time.
+
+    A queue, not a verdict on the request: the request was never started, so waiting and
+    asking again (`TransportRetry`) can succeed where asking again after a slow answer
+    cannot."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason, code=outcome.MODEL_BUSY)
+
+
+class ModelTooSlow(ReviewRefused):
+    """The model was free when the request started, and it still did not finish in time.
+
+    Slow on this input, not unreachable and not busy: at temperature 0 the same request
+    reads and reasons the same way again -- PR #1312's two attempts wrote 9,943 and 10,017
+    tokens before the same cut-off -- so it is never retried."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason, code=outcome.MODEL_TIMEOUT)
 
 
 def build_prompt(diff: str, max_chars: int) -> str:
@@ -628,6 +654,154 @@ WHOLE_REVIEW: WholeReviewInterface = WholeReview()
 
 
 @dataclass(frozen=True)
+class RequestDeadline:
+    """How long one request may take: the time to read its prompt and write its answer.
+
+    PR #1312's review gave no verdict on a fixed 600s. The model was free -- nothing else
+    asked it anything in those twenty minutes -- and its first part, a 46,222-token prompt,
+    took 145s to read; then it reasoned for the remaining 455s at 22.5 tokens/s, ~9,950
+    tokens, and was cut off unfinished (the operator's host's Ollama log, 2026-10-01). A
+    request's work grows with what it sends and what it may write, so its deadline does
+    too: `prompt_tokens / prompt_tokens_per_second + output_tokens /
+    output_tokens_per_second`, never under `floor_seconds` -- the fixed timeout it had
+    before. With both rates 0 it IS that fixed timeout. The rates are declared
+    (`[pr_automation.fallback]`), measured on the host that serves the model, never assumed.
+    (`RequestDeadlineInterface`, by shape: a frozen dataclass cannot inherit a protocol's
+    read-only properties.)
+    """
+
+    floor_seconds: int = 600
+    prompt_tokens_per_second: int = 0
+    output_tokens_per_second: int = 0
+
+    def __post_init__(self) -> None:
+        for name in ("floor_seconds", "prompt_tokens_per_second", "output_tokens_per_second"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"{name} must be a whole number, never negative")
+        if (self.prompt_tokens_per_second == 0) != (self.output_tokens_per_second == 0):
+            raise ValueError(
+                "prompt_tokens_per_second and output_tokens_per_second are both set, or both 0"
+            )
+
+    @property
+    def scaled(self) -> bool:
+        return self.prompt_tokens_per_second > 0
+
+    def _work(self, prompt_tokens: int, output_tokens: int) -> tuple[float, float]:
+        return (
+            prompt_tokens / self.prompt_tokens_per_second,
+            output_tokens / self.output_tokens_per_second,
+        )
+
+    def seconds(self, prompt_tokens: int, output_tokens: int) -> int:
+        if not self.scaled:
+            return self.floor_seconds
+        read, write = self._work(prompt_tokens, output_tokens)
+        return max(self.floor_seconds, math.ceil(read + write))
+
+    def explain(self, prompt_tokens: int, output_tokens: int) -> str:
+        if not self.scaled:
+            return f"the fixed timeout_seconds ({self.floor_seconds}s)"
+        read, write = self._work(prompt_tokens, output_tokens)
+        return (
+            f"~{prompt_tokens} prompt tokens read at {self.prompt_tokens_per_second}/s"
+            f" ({read:.0f}s) and up to {output_tokens} tokens of reasoning and answer written"
+            f" at {self.output_tokens_per_second}/s ({write:.0f}s), never under"
+            f" timeout_seconds ({self.floor_seconds}s)"
+        )
+
+
+# What the slot probe asks: one token of anything. Its answer is never read -- only that,
+# and when, the model answered at all.
+SLOT_PROBE_PROMPT = "Reply with OK."
+
+
+class SlotWait(SlotWaitInterface):
+    """Waits, bounded, for the model to come free before a review request is sent to it.
+
+    The host serves one request at a time (`n_slots = 1` in every load its Ollama logged)
+    and other clients use it too. A request sent while another is running queues inside the
+    runner, and its timeout runs while it waits: on 2026-09-30 a review sat ~10 minutes
+    behind another client's 14m45s request, was cut off seconds into reading its own prompt,
+    and was reported as `model_timeout` -- the same words as a model too slow for its input.
+
+    So a one-token request goes first, for the same model at the same `num_ctx` the review
+    will ask for -- a different window would make the runner reload the model, so asking
+    for the same one also leaves it loaded the way the review needs it. The review is sent
+    once that answers. A runner that does not answer `/api/version` is unreachable (a
+    transport failure, retried as one); one that answers it but not the probe within
+    `seconds` is busy (`ModelBusy`, retried); one that refuses the probe is refused. The
+    probe speaks through the family's `vibey_gh.slots.OllamaClient`, injectable for tests.
+    """
+
+    def __init__(
+        self,
+        seconds: int = 0,
+        *,
+        client: Callable[[str], OllamaClientInterface] | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if type(seconds) is not int or seconds < 0:
+            raise ValueError("slot_wait_seconds must be a whole number, never negative")
+        self._seconds = seconds
+        self._client = client
+        self._clock = clock
+
+    @property
+    def seconds(self) -> int:
+        return self._seconds
+
+    def _connect(self, base_url: str) -> OllamaClientInterface:
+        if self._client is not None:
+            return self._client(base_url)
+        from vibey_gh.slots import OllamaClient
+
+        return OllamaClient(base_url)
+
+    def wait(self, base_url: str, model: str, num_ctx: int) -> float:
+        if self._seconds <= 0:
+            return 0.0
+        # The same refusal `_post` makes, for the same reason: a base URL is operator
+        # configuration, and a typo must not read a local file as if it were a model.
+        if urllib.parse.urlsplit(base_url).scheme not in ("http", "https"):
+            raise ValueError(f"refusing a non-HTTP model endpoint: {base_url!r}")
+        client = self._connect(base_url)
+        if not client.version():
+            raise urllib.error.URLError(f"the model server at {base_url} did not answer")
+        probe = {
+            "model": model,
+            "messages": [{"role": "user", "content": SLOT_PROBE_PROMPT}],
+            "stream": False,
+            "options": {"num_ctx": num_ctx, "num_predict": 1, "temperature": 0},
+        }
+        started = self._clock()
+        status, body = client.chat(probe, timeout_s=self._seconds)
+        waited = self._clock() - started
+        if status == 200:
+            return waited
+        if status == 0:
+            # Nothing answered. After the whole wait, the runner was there (it answered
+            # /api/version) and was serving something else; before it, the connection
+            # failed, which is the runner going away -- a transport failure. The second
+            # of grace is the clock's, not a judgement.
+            if waited + 1 >= self._seconds:
+                raise ModelBusy(
+                    f"the local model did not come free within slot_wait_seconds"
+                    f" ({self._seconds}s): its server answered, but a one-token request"
+                    " queued behind other work the whole time, so the review was never sent"
+                )
+            raise urllib.error.URLError(
+                f"the model server stopped answering {waited:.0f}s into a one-token request"
+            )
+        said = str(body.get("error") or "no reason given")[:500]
+        raise ReviewRefused(
+            f"the model server refused a one-token request for {model} (HTTP {status}): {said}",
+            code=outcome.MODEL_REFUSED,
+        )
+
+
+@dataclass(frozen=True)
 class SizedChat:
     """One `/api/chat` request sized, sent and read so a verdict is never about a partial prompt.
 
@@ -703,6 +877,8 @@ class SizedChat:
         timeout: int,
         what: str,
         shown_chars: int,
+        deadline: RequestDeadlineInterface | None = None,
+        slot: SlotWaitInterface | None = None,
     ) -> dict[str, Any]:
         head, tail = secrets.token_hex(self.code_bytes), secrets.token_hex(self.code_bytes)
         sealed = self.seal(payload, head, tail)
@@ -718,13 +894,27 @@ class SizedChat:
             )
         num_ctx = sizer.num_ctx(total)
         sealed["options"]["num_ctx"] = num_ctx
+        if sizer.reserve > 0:
+            # The reserve, enforced: the most the model may write. Without it nothing capped
+            # the answer but the window, and a 46,222-token part sized beside an 8,192-token
+            # reserve went on writing ~9,950 tokens until a timeout cut it off (PR #1312).
+            # Past it the reply says `done_reason=length`, which `answer` names.
+            sealed["options"]["num_predict"] = sizer.reserve
+        prompt_tokens = sizer.tokens(total)
+        seconds = timeout if deadline is None else deadline.seconds(prompt_tokens, sizer.reserve)
+        # After sizing, so the model is asked to come free for the window this request needs.
+        waited = (
+            None
+            if slot is None or slot.seconds <= 0
+            else slot.wait(base_url, str(payload.get("model", "")), num_ctx)
+        )
         request = urllib.request.Request(
             f"{base_url.rstrip('/')}/api/chat",
             data=json.dumps(sealed).encode(),
             headers={"Content-Type": "application/json"},
         )
         try:
-            with _post(request, timeout) as response:
+            with _post(request, seconds) as response:
                 body = json.loads(response.read())
         except urllib.error.HTTPError as error:
             # Caught here, before anything reads it as a `URLError` (its base class): the
@@ -733,6 +923,20 @@ class SizedChat:
             raise ReviewRefused(
                 f"the model server refused the request (HTTP {error.code}): {self.said(error)}",
                 code=outcome.MODEL_REFUSED,
+            ) from error
+        except TRANSPORT_ERRORS as error:
+            # Without a slot wait nothing says the model was free when the clock started, so
+            # a timeout may have been a queue: it stays a transport failure and is retried.
+            if waited is None or TransportRetry.code(error) != outcome.MODEL_TIMEOUT:
+                raise
+            how = (deadline or RequestDeadline(floor_seconds=seconds)).explain(
+                prompt_tokens, sizer.reserve
+            )
+            raise ModelTooSlow(
+                f"the model came free {waited:.0f}s after asking and then did not finish this"
+                f" request within its {seconds}s deadline ({how}): slow on this input, not"
+                " unreachable or busy, and at temperature 0 the same request would run the"
+                " same way again, so it is not retried"
             ) from error
         return self.answer(body, num_ctx=num_ctx, reserve=sizer.reserve, codes=(head, tail))
 
@@ -798,7 +1002,8 @@ class SizedChat:
         if stopped == "length":
             raise ReviewRefused(
                 f"the model ran out of room (done_reason=length, {len(thinking)} reasoning"
-                f" chars, {len(content)} answer chars)"
+                f" chars, {len(content)} answer chars): it did not finish within its"
+                f" {reserve}-token reasoning reserve, the most a request lets it write"
             )
         if stopped != "stop":
             raise ReviewRefused(
@@ -926,6 +1131,8 @@ def call_ollama(
     sources: Mapping[str, str] | None = None,
     sources_cut: Sequence[str] = (),
     sources_dropped: Sequence[str] = (),
+    deadline: RequestDeadlineInterface | None = None,
+    slot: SlotWaitInterface | None = None,
 ) -> dict:
     """One review request. `sizer` sizes it and says whether it fits; the default is
     `vibey_gh.fit`'s `ContextSizer`, the same rule the triage call uses. `whole` asks the
@@ -933,6 +1140,8 @@ def call_ollama(
     fit; `cut` and `dropped` name the ones that were cut short or left out). `think` is
     Ollama's reasoning effort, sent only when set; `part` marks one part of a chunked review;
     `sources` are the reference files, trimmed and named as `review_payload` says.
+    `deadline` scales the request's timeout with its size (`timeout` without one), and
+    `slot` waits for the model to come free before it is sent (`SizedChat.ask`).
     Raises `ReviewRefused` for a diff past `max_chars` on the diff half, a request that does
     not fit, or a reply that is not a whole answer to all of it."""
     payload = review_payload(
@@ -956,6 +1165,8 @@ def call_ollama(
         timeout=timeout,
         what="diff",
         shown_chars=len(diff),
+        deadline=deadline,
+        slot=slot,
     )
 
 
@@ -968,18 +1179,24 @@ type Parts = Sequence[DiffPartInterface]
 # `urllib.error.HTTPError` is a `URLError` too, but it never reaches here: `SizedChat.ask`
 # turns a server's answer into `ReviewRefused`, because a server that answered is reachable.
 TRANSPORT_ERRORS: tuple[type[Exception], ...] = (urllib.error.URLError, TimeoutError, OSError)
+# What `TransportRetry` asks again after: a transport failure, and a model that was serving
+# other work -- never a refusal, and never a request too slow for its own input.
+RETRIED_ERRORS: tuple[type[Exception], ...] = (*TRANSPORT_ERRORS, ModelBusy)
 
 
 @dataclass(frozen=True)
 class TransportRetry:
-    """One bounded retry, with backoff, for a model that could not be reached or timed out.
+    """One bounded retry, with backoff, for a model that could not be reached, timed out, or
+    stayed busy.
 
     PR #1241's review gave no verdict because the local model "timed out" once, and a
     human was asked to review a change the lane would have reviewed a minute later. Only
-    the transport is retried -- never a refusal, a truncated prompt or an unusable answer,
-    which would only say the same thing again. `retries` further attempts, each after
-    `backoff_seconds` doubled per attempt already made, and then the failure stands, named,
-    with the number of attempts it took.
+    the transport is retried, and a model that was serving other work (`ModelBusy`) --
+    never a refusal, a truncated prompt or an unusable answer, which would only say the
+    same thing again, and never a request that started on a free slot and ran past its
+    deadline (`ModelTooSlow`), which at temperature 0 would run the same way again.
+    `retries` further attempts, each after `backoff_seconds` doubled per attempt already
+    made, and then the failure stands, named, with the number of attempts it took.
 
     Not `vibey_bootstrap`'s retry, which ADR-0017 would otherwise prefer: vibey-gh declares
     no dependencies and `vibey_bootstrap` itself depends on vibey-gh, so it cannot be
@@ -1014,11 +1231,19 @@ class TransportRetry:
             attempt += 1
             try:
                 return call(), attempt
-            except TRANSPORT_ERRORS as error:
+            except ModelTooSlow as slow:
+                # Never retried, but counted: this attempt was made.
+                slow.attempts = attempt
+                raise
+            except RETRIED_ERRORS as error:
                 if attempt > self.retries:
+                    attempts = f"{attempt} attempt{'s' if attempt > 1 else ''}"
+                    if isinstance(error, ModelBusy):
+                        raise ReviewRefused(
+                            f"{error} ({attempts})", code=error.code, attempts=attempt
+                        ) from error
                     raise ReviewRefused(
-                        f"local model unreachable or timed out: {error}"
-                        f" ({attempt} attempt{'s' if attempt > 1 else ''})",
+                        f"local model unreachable or timed out: {error} ({attempts})",
                         code=self.code(error),
                         attempts=attempt,
                     ) from error
@@ -1332,6 +1557,11 @@ class SovereignReview:
     chunker: DiffChunkerInterface = field(default_factory=lambda: DIFF_CHUNKER)
     sources: Mapping[str, str] = field(default_factory=dict)
     max_source_chars: int = 60000
+    # Each request's deadline scaled with its size, and the wait for the model to come free
+    # before it is sent. None for either keeps how a request was sent before they existed:
+    # at once, on the fixed `timeout`.
+    deadline: RequestDeadlineInterface | None = None
+    slot: SlotWaitInterface | None = None
 
     def fit_sources(
         self,
@@ -1448,6 +1678,8 @@ class SovereignReview:
                 sources=shown,
                 sources_cut=shown_cut,
                 sources_dropped=shown_dropped,
+                deadline=self.deadline,
+                slot=self.slot,
             )
         )
         return (
@@ -1534,6 +1766,8 @@ class SovereignReview:
                 sources=shown,
                 sources_cut=shown_cut,
                 sources_dropped=shown_dropped,
+                deadline=self.deadline,
+                slot=self.slot,
             )
             try:
                 answer, took = self.retry.run(ask)
@@ -1747,6 +1981,31 @@ def review(argv: list[str] | None = None) -> int:
         help="the wait before the first retry, doubled before each one after it",
     )
     parser.add_argument(
+        "--prompt-tokens-per-second",
+        type=int,
+        default=defaults.prompt_tokens_per_second,
+        help=(
+            "how fast the model reads a prompt, as measured on its host: with"
+            " --output-tokens-per-second, scales each request's deadline with its size"
+            " (0 for both keeps the fixed --timeout)"
+        ),
+    )
+    parser.add_argument(
+        "--output-tokens-per-second",
+        type=int,
+        default=defaults.output_tokens_per_second,
+        help="how fast the model writes its reasoning and answer, as measured on its host",
+    )
+    parser.add_argument(
+        "--slot-wait-seconds",
+        type=int,
+        default=defaults.slot_wait_seconds,
+        help=(
+            "the longest a request waits for the model to come free before it is sent;"
+            " 0 sends at once"
+        ),
+    )
+    parser.add_argument(
         "--head-sha",
         default="",
         help="the exact head the diff is of, stamped into the verdict as reviewed_head_sha",
@@ -1771,10 +2030,15 @@ def review(argv: list[str] | None = None) -> int:
             retries=args.retries,
             retry_backoff_seconds=args.retry_backoff_seconds,
             max_source_chars=args.max_source_chars,
+            prompt_tokens_per_second=args.prompt_tokens_per_second,
+            output_tokens_per_second=args.output_tokens_per_second,
+            slot_wait_seconds=args.slot_wait_seconds,
         )
     except ValueError as error:
         parser.error(
-            f"--max-chunks, --retries, --retry-backoff-seconds or --max-source-chars: {error}"
+            "--max-chunks, --retries, --retry-backoff-seconds, --max-source-chars,"
+            " --prompt-tokens-per-second, --output-tokens-per-second or --slot-wait-seconds:"
+            f" {error}"
         )
 
     def said(code: str, reason: str, report: ReviewReport, *, status: int) -> int:
@@ -1834,6 +2098,14 @@ def review(argv: list[str] | None = None) -> int:
         chunker=DiffChunker(split_added_hunks=args.split_added_hunks),
         sources=sources,
         max_source_chars=args.max_source_chars,
+        deadline=RequestDeadline(
+            floor_seconds=args.timeout,
+            prompt_tokens_per_second=args.prompt_tokens_per_second,
+            output_tokens_per_second=args.output_tokens_per_second,
+        ),
+        # 0 sends at once, exactly as before the wait existed -- and then a timeout stays a
+        # transport failure, retried, since nothing says the model was free when it began.
+        slot=SlotWait(args.slot_wait_seconds) if args.slot_wait_seconds > 0 else None,
     )
     try:
         verdict, shown, report = sovereign.run(diff)

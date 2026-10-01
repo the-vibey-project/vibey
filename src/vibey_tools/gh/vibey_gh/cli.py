@@ -1538,6 +1538,9 @@ def _local_review(args) -> int:
         ("--max-chunks", args.max_chunks),
         ("--retries", args.retries),
         ("--retry-backoff-seconds", args.retry_backoff_seconds),
+        ("--prompt-tokens-per-second", args.prompt_tokens_per_second),
+        ("--output-tokens-per-second", args.output_tokens_per_second),
+        ("--slot-wait-seconds", args.slot_wait_seconds),
         ("--head-sha", args.head_sha),
         ("--outcome", args.outcome),
     ):
@@ -2134,6 +2137,27 @@ def main(argv: list[str] | None = None) -> int:
         "--retry-backoff-seconds",
         type=int,
         help="override retry_backoff_seconds: the wait before the first retry, then doubled",
+    )
+    local.add_argument(
+        "--prompt-tokens-per-second",
+        type=int,
+        help=(
+            "override prompt_tokens_per_second: how fast the model reads a prompt, which"
+            " with output_tokens_per_second scales each request's deadline with its size"
+        ),
+    )
+    local.add_argument(
+        "--output-tokens-per-second",
+        type=int,
+        help="override output_tokens_per_second: how fast the model writes its answer",
+    )
+    local.add_argument(
+        "--slot-wait-seconds",
+        type=int,
+        help=(
+            "override slot_wait_seconds: the longest a request waits for the model to come"
+            " free before it is sent; 0 sends at once"
+        ),
     )
     local.add_argument(
         "--head-sha",

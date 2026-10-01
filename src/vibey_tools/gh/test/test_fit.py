@@ -740,12 +740,12 @@ def test_a_model_that_is_not_loaded_says_its_size_is_a_lower_bound():
 
 
 @pytest.mark.parametrize(
-    "chars", [0, 1, 6143, 6144, 6147, 60_000, 92_159, 92_160, 92_163, 10_000_000]
+    "chars", [0, 1, 6143, 6144, 6147, 60_000, 147_453, 147_456, 147_459, 10_000_000]
 )
 def test_the_default_sizer_keeps_its_rule_on_the_measured_window(chars):
     """The rule is the one `local_review._num_ctx` shipped with -- floor, tokens plus a
-    reserve, ceiling -- on the window and reserve #1090 measured (65,536 and 8,192)."""
-    expected = min(65536, max(4096, -(-chars // 3) + 8192))
+    reserve, ceiling -- on the measured window and reserve (65,536 and 16,384)."""
+    expected = min(65536, max(4096, -(-chars // 3) + 16384))
     assert ContextSizer().num_ctx(chars) == expected
 
 
@@ -801,14 +801,15 @@ def test_a_sizer_counts_tokens_pessimistically_and_says_what_fits():
 
 def test_the_default_window_and_reserve_are_the_measured_ones():
     """65,536 is the window this host's tuning chose for gpt-oss:20b
-    (docs/plans/qwenstorm-3.0.0/bench/host-tuning.toml). 8,192 reserves more than twice
-    the 3,676 reasoning-and-answer tokens the #1090 whole review measured at default
-    reasoning, where 2,048 ran out of room mid-answer."""
+    (docs/plans/qwenstorm-3.0.0/bench/host-tuning.toml). The reserve is also the most a
+    review may write (`num_predict`), so it covers what the host's Ollama log measured for
+    gpt-oss:20b reviews -- finished at up to 11,832 tokens, cut off by a timeout at up to
+    15,578 -- rather than #1090's one sample of 3,676, which 8,192 had been sized from."""
     from vibey_gh.fit import DEFAULT_CONTEXT_CEILING_TOKENS, DEFAULT_CONTEXT_RESERVE_TOKENS
 
     assert DEFAULT_CONTEXT_CEILING_TOKENS == 65_536
-    assert DEFAULT_CONTEXT_RESERVE_TOKENS == 8_192
-    assert ContextSizer().window == 65_536 and ContextSizer().reserve == 8_192
+    assert DEFAULT_CONTEXT_RESERVE_TOKENS == 16_384
+    assert ContextSizer().window == 65_536 and ContextSizer().reserve == 16_384
 
 
 def test_a_reserve_that_leaves_no_room_is_refused():

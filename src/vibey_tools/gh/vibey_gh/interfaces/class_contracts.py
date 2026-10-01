@@ -381,6 +381,15 @@ class PrAutomationFallbackConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def retry_backoff_seconds(self) -> int: ...
 
+    @property
+    def prompt_tokens_per_second(self) -> int: ...
+
+    @property
+    def output_tokens_per_second(self) -> int: ...
+
+    @property
+    def slot_wait_seconds(self) -> int: ...
+
 
 @runtime_checkable
 class RunnersConfigInterface(_ConfigRecordInterface, Protocol):
