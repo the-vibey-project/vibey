@@ -2262,12 +2262,13 @@ def test_a_review_with_no_outcome_path_writes_no_record(monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     "flags",
     [["--max-chunks", "0"], ["--max-chunks", "65"], ["--retries", "6"], ["--retries", "-1"]]
-    + [["--retry-backoff-seconds", "601"]],
+    + [["--retry-backoff-seconds", "601"], ["--max-source-chars", "999"]],
 )
 def test_a_bound_the_configuration_would_refuse_is_refused(capsys, tmp_path, flags):
     with pytest.raises(SystemExit):
         local_review.review(["--diff", str(_diff(tmp_path)), *flags])
-    assert "--max-chunks, --retries or --retry-backoff-seconds" in capsys.readouterr().err
+    said = "--max-chunks, --retries, --retry-backoff-seconds or --max-source-chars"
+    assert said in capsys.readouterr().err
 
 
 def test_the_cli_forwards_the_bounds_the_head_and_the_outcome(monkeypatch, tmp_path):

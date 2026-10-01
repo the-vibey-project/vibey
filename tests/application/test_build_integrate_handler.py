@@ -640,6 +640,82 @@ async def test_an_answered_gate_grants_integrate_repair_rounds_too(tmp_path: Pat
     assert isinstance(still_parked, Park)
 
 
+# ── the evidence REVIEW shows (sub-doctrine 10.f) ───────────────────────────
+
+
+class _OutputGateRunner:
+    async def run(self, argv: tuple[str, ...], *, cwd: Path) -> GateResult:
+        return GateResult(0, f"{' '.join(argv)}: 3 passed", "")
+
+
+async def test_a_successful_integrate_records_exactly_what_its_gates_did(tmp_path: Path) -> None:
+    from vibey.domain.integration_evidence import GATE_RESULTS_ARTIFACT_TYPE, ItemEvidence
+
+    ledger = FakeLedger()
+    handler = BuildIntegrateHandler(
+        integration=FakeIntegration(merge_outcome=MergeOutcome(ok=True, detail=""), path=tmp_path),
+        gates=_OutputGateRunner(),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+    job = _job(payload={"verification": {"commands": ("pytest tests/", "ruff check .")}})
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    (artifact,) = [e for e in ledger.recorded if e.kind == "ArtifactProduced"]
+    assert artifact.payload["artifact_type"] == GATE_RESULTS_ARTIFACT_TYPE
+    item = ItemEvidence.from_payload(artifact.payload)
+    assert item is not None
+    assert item.work_item_id == "item-1"
+    assert [(r.command, r.returncode) for r in item.runs] == [
+        ("pytest tests/", 0),
+        ("ruff check .", 0),
+    ]
+    assert "pytest tests/: 3 passed" in item.runs[0].output_tail
+
+
+async def test_an_integrate_with_no_commands_records_the_item_unmeasured(tmp_path: Path) -> None:
+    """No verification command is not a pass: REVIEW must be able to see the gap."""
+    from vibey.domain.integration_evidence import ItemEvidence
+
+    ledger = FakeLedger()
+    gates = FakeGateRunner()
+    handler = BuildIntegrateHandler(
+        integration=FakeIntegration(merge_outcome=MergeOutcome(ok=True, detail=""), path=tmp_path),
+        gates=gates,
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job(payload={}))
+
+    assert isinstance(outcome, Success)
+    assert gates.calls == []
+    (artifact,) = [e for e in ledger.recorded if e.kind == "ArtifactProduced"]
+    item = ItemEvidence.from_payload(artifact.payload)
+    assert item is not None
+    assert not item.measured
+
+
+async def test_a_failing_gate_records_no_evidence(tmp_path: Path) -> None:
+    """Only a clean integration is evidence; a failure is a finding and a repair."""
+    ledger = FakeLedger()
+    handler = BuildIntegrateHandler(
+        integration=FakeIntegration(merge_outcome=MergeOutcome(ok=True, detail=""), path=tmp_path),
+        gates=FakeGateRunner(returncode=1, stderr="boom"),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    await handler.handle(_job())
+
+    assert [e for e in ledger.recorded if e.kind == "ArtifactProduced"] == []
+
+
 # ── retiring an integrated item's worktree (disk grew without bound) ────────
 
 

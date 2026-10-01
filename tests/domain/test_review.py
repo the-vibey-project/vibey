@@ -165,6 +165,31 @@ def test_render_demo_markdown() -> None:
     assert "PASSED: test_create_note" in md
 
 
+def test_render_demo_markdown_never_claims_a_criterion_it_did_not_measure() -> None:
+    """Every criterion used to read "Verified by gate suite." whatever ran."""
+    spec = DesignSpec(
+        objective="Deliver notes app",
+        constraints=(),
+        non_goals=(),
+        criteria=(
+            AcceptanceCriterion(
+                criterion_id="AC-1",
+                given="a blank notebook",
+                when="create note is clicked",
+                then="a new note is opened",
+                fit="created within 100ms",
+            ),
+        ),
+        nfrs=(),
+        walking_skeleton="walking skeleton",
+    )
+    md = render_demo_markdown(spec, gate_summary="2 integration gate run(s); 0 failed.")
+    assert "Verified by gate suite" not in md
+    assert "Not individually evidenced" in md
+    assert "## Integration Gate Evidence" in md
+    assert "2 integration gate run(s); 0 failed." in md
+
+
 def test_render_run_it_script() -> None:
     script = render_run_it_script(["pytest", "python -m myapp"])
     assert "#!/usr/bin/env bash" in script

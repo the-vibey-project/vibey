@@ -14,6 +14,7 @@ from vibey import bootstrap
 from vibey.application.design import DesignEvent
 from vibey.application.dto import ProjectRecord
 from vibey.bootstrap import (
+    _engine_run_deadline,
     _independence_policy,
     _independent_review_required,
     build_design_worker,
@@ -472,3 +473,35 @@ def test_every_worker_composes_its_gate_seams_from_the_resources() -> None:
     _, default = WORKER_GATE_SEAMS.compose(SimpleNamespace(job_failures=object()), logger)
     assert isinstance(default, DefectTriage)
     assert default._threshold == 3  # noqa: SLF001
+
+
+def test_the_engine_run_deadline_defaults_to_four_hours() -> None:
+    from datetime import timedelta
+
+    assert _engine_run_deadline({}, environ={}) == timedelta(minutes=240)
+    assert _engine_run_deadline({"engines": ["claudeloop"]}, environ={}) == timedelta(minutes=240)
+
+
+def test_the_project_can_set_the_engine_run_deadline() -> None:
+    from datetime import timedelta
+
+    config = {"engines": {"max_run_minutes": 90}}
+    assert _engine_run_deadline(config, environ={}) == timedelta(minutes=90)
+
+
+def test_the_environment_overrides_the_project() -> None:
+    from datetime import timedelta
+
+    config = {"engines": {"max_run_minutes": 90}}
+    environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": " 30 "}
+    assert _engine_run_deadline(config, environ=environ) == timedelta(minutes=30)
+
+
+def test_an_unusable_deadline_never_switches_the_limit_off() -> None:
+    from datetime import timedelta
+
+    for raw in (0, -5, True, "never", "", 1.5):
+        config = {"engines": {"max_run_minutes": raw}}
+        assert _engine_run_deadline(config, environ={}) == timedelta(minutes=240)
+    environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": "0"}
+    assert _engine_run_deadline({}, environ=environ) == timedelta(minutes=240)
