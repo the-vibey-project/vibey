@@ -187,13 +187,21 @@ class SizedChatInterface(Protocol):
         timeout: int,
         what: str,
         shown_chars: int,
+        deadline: RequestDeadlineInterface | None = None,
+        slot: SlotWaitInterface | None = None,
     ) -> dict[str, Any]:
         """Size `payload` from everything it sends, refuse it (`ReviewRefused`) when it
         does not fit the window beside the reserve, send it, and return `answer`'s reading
         of the reply. `what` names the part the caller cannot shrink -- "diff", "issue" --
         and `shown_chars` its length, for the refusal. A server's refusal (an HTTP error,
         such as the 400 for a prompt over the window) is a `ReviewRefused` carrying its
-        message, never "unreachable"."""
+        message, never "unreachable".
+
+        The model may write at most the sizer's reserve (`num_predict`). The request is sent
+        with `deadline`'s seconds for its size, or `timeout` without one; with `slot`, only
+        once the model has come free, and a request that started on a free slot and still
+        ran past its deadline is a `ReviewRefused` coded `model_timeout` -- slow on this
+        input, which a retry would not change -- rather than a transport failure."""
 
     def answer(
         self,
@@ -277,8 +285,52 @@ class DiffChunkerInterface(Protocol):
 
 
 @runtime_checkable
+class RequestDeadlineInterface(Protocol):
+    """How long one request to a local model may take, from what it sends and what it may
+    write: reading the prompt and writing the answer each at a declared, measured rate."""
+
+    @property
+    def floor_seconds(self) -> int:
+        """The least any request is given: the fixed timeout it had before it was scaled."""
+        ...
+
+    @property
+    def scaled(self) -> bool:
+        """Whether the deadline scales with the request; without rates it is the floor."""
+        ...
+
+    def seconds(self, prompt_tokens: int, output_tokens: int) -> int:
+        """Whole seconds for a request of `prompt_tokens` that may write `output_tokens`:
+        the time to read the one and write the other at the declared rates, never under
+        `floor_seconds`."""
+        ...
+
+    def explain(self, prompt_tokens: int, output_tokens: int) -> str:
+        """The arithmetic behind `seconds`, in words a refusal can carry."""
+        ...
+
+
+@runtime_checkable
+class SlotWaitInterface(Protocol):
+    """Waits, bounded, for a local model to come free before a request is sent to it."""
+
+    @property
+    def seconds(self) -> int:
+        """The longest it waits; 0 never waits, and a request is sent at once."""
+        ...
+
+    def wait(self, base_url: str, model: str, num_ctx: int) -> float:
+        """Seconds it took the model at `base_url` to answer a one-token request for `model`
+        at `num_ctx` -- the window the request will ask for, so the model is loaded as it
+        will be used. A runner that does not answer at all is a transport failure
+        (`urllib.error.URLError`); one that answers but did not come free within `seconds`
+        is `ReviewRefused` coded `model_busy`; one that refuses is coded `model_refused`."""
+        ...
+
+
+@runtime_checkable
 class TransportRetryInterface(Protocol):
-    """A bounded retry of a model call whose transport failed: unreachable or timed out."""
+    """A bounded retry of a model call whose transport failed or whose model stayed busy."""
 
     @property
     def retries(self) -> int: ...
@@ -287,9 +339,11 @@ class TransportRetryInterface(Protocol):
     def backoff_seconds(self) -> float: ...
 
     def run(self, call: Callable[[], T]) -> tuple[T, int]:
-        """`call()`'s result and the attempts it took. A transport failure is retried up to
-        `retries` times after a doubling backoff and then raised as `ReviewRefused` coded
-        `model_timeout` or `model_unreachable`; anything else is raised as it came."""
+        """`call()`'s result and the attempts it took. A transport failure, or a model that
+        stayed busy (`model_busy`), is retried up to `retries` times after a doubling backoff
+        and then raised as `ReviewRefused` coded `model_timeout`, `model_unreachable` or
+        `model_busy`; anything else -- a request slow on its own input included -- is raised
+        as it came."""
         ...
 
 

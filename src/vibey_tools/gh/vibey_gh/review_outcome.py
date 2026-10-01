@@ -122,6 +122,7 @@ CHUNK_BUDGET_EXCEEDED = "chunk_budget_exceeded"
 # Asking the model, and reading its answer.
 MODEL_UNREACHABLE = "model_unreachable"
 MODEL_TIMEOUT = "model_timeout"
+MODEL_BUSY = "model_busy"
 MODEL_REFUSED = "model_refused"
 PROMPT_TRUNCATED = "prompt_truncated"
 ANSWER_INCOMPLETE = "answer_incomplete"
@@ -158,6 +159,7 @@ CODES: dict[str, str] = {
     CHUNK_BUDGET_EXCEEDED: "the diff needs more chunks than max_chunks allows",
     MODEL_UNREACHABLE: "the local model could not be reached, retries included",
     MODEL_TIMEOUT: "the local model did not answer in time, retries included",
+    MODEL_BUSY: "the local model was serving other work and did not come free in time",
     MODEL_REFUSED: "the model server refused the request",
     PROMPT_TRUNCATED: "the model may not have read the whole prompt",
     ANSWER_INCOMPLETE: "the model's answer was not a complete verdict",

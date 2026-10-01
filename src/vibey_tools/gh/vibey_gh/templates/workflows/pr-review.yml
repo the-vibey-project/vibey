@@ -639,9 +639,15 @@ jobs:
           # held to the same guards, and a pass needs every part to pass at this exact head.
           # With `split_added_hunks`, a hunk that only adds lines (a new file's) and is too
           # large for one part is split between lines into labelled pieces, each a part.
-          # A model that could not be reached or timed out is retried `retries` times after
-          # a doubling backoff. Whatever happens is also written as a code to the outcome
-          # record, so why a review gave no verdict can be counted, not only read.
+          # Each request waits up to `slot_wait_seconds` for the model to come free (a
+          # one-token request at the same window goes first), may write no more than the
+          # reasoning reserve, and gets a deadline scaled with its size at the host's
+          # measured `prompt_tokens_per_second` and `output_tokens_per_second`, never under
+          # `timeout_seconds`. A model that could not be reached, or stayed busy, is retried
+          # `retries` times after a doubling backoff; a request that started on a free
+          # model and still ran past its deadline is not, since it would run the same way
+          # again. Whatever happens is also written as a code to the outcome record, so why
+          # a review gave no verdict can be counted, not only read.
           rm -f "${RUNNER_TEMP}/outcome.json"
           if ! vibey-gh local-review \
                 --diff "${RUNNER_TEMP}/pr.diff" \
@@ -658,6 +664,9 @@ jobs:
                 __VIBEY_GH_FALLBACK_SPLIT_ADDED_HUNKS__ \
                 --retries __VIBEY_GH_FALLBACK_RETRIES__ \
                 --retry-backoff-seconds __VIBEY_GH_FALLBACK_RETRY_BACKOFF_SECONDS__ \
+                --prompt-tokens-per-second __VIBEY_GH_FALLBACK_PROMPT_TOKENS_PER_SECOND__ \
+                --output-tokens-per-second __VIBEY_GH_FALLBACK_OUTPUT_TOKENS_PER_SECOND__ \
+                --slot-wait-seconds __VIBEY_GH_FALLBACK_SLOT_WAIT_SECONDS__ \
                 --head-sha "$HEAD_SHA" \
                 --outcome "${RUNNER_TEMP}/outcome.json" \
                 --role "$ROLE" \

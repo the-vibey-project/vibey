@@ -23,6 +23,14 @@ from vibey_gh import local_review
 from vibey_gh.fit import ContextSizer
 
 
+@pytest.fixture(autouse=True)
+def _model_free_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test here speaks to a fake model that is free the moment it is asked, so the
+    slot wait answers at once and no one-token probe reaches the fake. What a busy model,
+    and a model slow on its input, do to a review is pinned in test_local_review_budget.py."""
+    monkeypatch.setattr(local_review.SlotWait, "wait", lambda self, *_: 0.0)
+
+
 class _Response:
     def __init__(self, payload: dict) -> None:
         self._body = json.dumps(payload).encode()
@@ -201,7 +209,8 @@ def test_stdin_is_the_default_source(monkeypatch, capsys):
 )
 def test_an_unreachable_model_fails_closed(monkeypatch, capsys, tmp_path, no_sleep, error):
     """No model must never resolve to a default pass — the gate stays red for a human, once
-    the one bounded retry has been spent."""
+    the one bounded retry has been spent. Sent at once (`--slot-wait-seconds 0`), nothing
+    says the model was free when a timeout began, so a timeout is a transport failure too."""
     diff = tmp_path / "d.diff"
     diff.write_text("+ a line\n", encoding="utf-8")
     calls: list[object] = []
@@ -212,7 +221,7 @@ def test_an_unreachable_model_fails_closed(monkeypatch, capsys, tmp_path, no_sle
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", boom)
 
-    assert local_review.review(["--diff", str(diff)]) == 1
+    assert local_review.review(["--diff", str(diff), "--slot-wait-seconds", "0"]) == 1
     assert "unreachable or timed out" in capsys.readouterr().err
     assert len(calls) == 2 and no_sleep == [30]
 
@@ -607,7 +616,8 @@ def test_review_and_triage_size_their_window_through_one_seam(monkeypatch):
 
     class _Fixed(ContextSizer):
         def __init__(self) -> None:
-            super().__init__()
+            # A reserve the fixed window below has room for beside a prompt.
+            super().__init__(reserve_tokens=1024)
             self.asked: list[int] = []
 
         def num_ctx(self, prompt_chars: int) -> int:
@@ -2145,7 +2155,9 @@ def test_a_transport_failure_is_retried_once_and_then_named(
     monkeypatch, capsys, tmp_path, no_sleep, error, code
 ):
     """#1241: one "timed out" sent a pull request to a human. The transport is retried,
-    after a backoff, and only then is the failure the answer -- coded, with its attempts."""
+    after a backoff, and only then is the failure the answer -- coded, with its attempts.
+    Sent at once (`--slot-wait-seconds 0`), so a timeout may have been a queue and is
+    retried like any transport failure; after a slot wait it is not (test_local_review_budget)."""
     calls: list[object] = []
 
     def boom(request, timeout=None):
@@ -2155,7 +2167,7 @@ def test_a_transport_failure_is_retried_once_and_then_named(
     monkeypatch.setattr(local_review.urllib.request, "urlopen", boom)
     record = tmp_path / "outcome.json"
 
-    argv = ["--diff", str(_diff(tmp_path)), "--outcome", str(record)]
+    argv = ["--diff", str(_diff(tmp_path)), "--outcome", str(record), "--slot-wait-seconds", "0"]
     assert local_review.review([*argv, "--retry-backoff-seconds", "7"]) == 1
 
     assert len(calls) == 2 and no_sleep == [7]
@@ -2179,7 +2191,8 @@ def test_a_model_that_answers_on_the_retry_gives_its_verdict(
     monkeypatch.setattr(local_review.urllib.request, "urlopen", flaky)
     record = tmp_path / "outcome.json"
 
-    assert local_review.review(["--diff", str(_diff(tmp_path)), "--outcome", str(record)]) == 0
+    argv = ["--diff", str(_diff(tmp_path)), "--outcome", str(record), "--slot-wait-seconds", "0"]
+    assert local_review.review(argv) == 0
 
     assert json.loads(capsys.readouterr().out)["pass"] is True
     assert no_sleep == [30]
@@ -2262,12 +2275,17 @@ def test_a_review_with_no_outcome_path_writes_no_record(monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     "flags",
     [["--max-chunks", "0"], ["--max-chunks", "65"], ["--retries", "6"], ["--retries", "-1"]]
-    + [["--retry-backoff-seconds", "601"], ["--max-source-chars", "999"]],
+    + [["--retry-backoff-seconds", "601"], ["--max-source-chars", "999"]]
+    + [["--prompt-tokens-per-second", "-1"], ["--output-tokens-per-second", "0"]]
+    + [["--prompt-tokens-per-second", "0"], ["--slot-wait-seconds", "3601"]],
 )
 def test_a_bound_the_configuration_would_refuse_is_refused(capsys, tmp_path, flags):
     with pytest.raises(SystemExit):
         local_review.review(["--diff", str(_diff(tmp_path)), *flags])
-    said = "--max-chunks, --retries, --retry-backoff-seconds or --max-source-chars"
+    said = (
+        "--max-chunks, --retries, --retry-backoff-seconds, --max-source-chars,"
+        " --prompt-tokens-per-second, --output-tokens-per-second or --slot-wait-seconds"
+    )
     assert said in capsys.readouterr().err
 
 
@@ -2372,7 +2390,8 @@ def test_a_part_that_timed_out_on_every_attempt_keeps_the_count_of_what_was_trie
     monkeypatch, tmp_path, no_sleep
 ):
     """Seen live on #1238's diff: part 1 answered, part 2 timed out on both attempts. The
-    record of no verdict still says the review was planned in 2 parts and made 3 requests."""
+    record of no verdict still says the review was planned in 2 parts and made 3 requests.
+    Sent at once (`--slot-wait-seconds 0`), so each timeout is a transport failure, retried."""
     files = [_file_diff(f"f{n}.py", ["+ changed\n" * 100]) for n in range(2)]
     diff = tmp_path / "big.diff"
     diff.write_text("".join(files), encoding="utf-8")
@@ -2387,8 +2406,8 @@ def test_a_part_that_timed_out_on_every_attempt_keeps_the_count_of_what_was_trie
     monkeypatch.setattr(local_review.urllib.request, "urlopen", second_part_times_out)
     record = tmp_path / "outcome.json"
 
-    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10)]
-    assert local_review.review([*argv, "--outcome", str(record)]) == 1
+    argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10), "--slot-wait-seconds"]
+    assert local_review.review([*argv, "0", "--outcome", str(record)]) == 1
 
     assert _outcome(record) | {"reason": ""} == {
         "schema": "vibey-gh.local-review/1",

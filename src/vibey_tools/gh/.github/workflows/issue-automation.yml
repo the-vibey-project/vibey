@@ -613,7 +613,7 @@ jobs:
                 --max-chars 60000 \
                 --timeout 1800 \
                 --context-window 65536 \
-                --reasoning-reserve 8192 \
+                --reasoning-reserve 16384 \
                 --chars-per-token 3 \
                 --think '' \
                 > "${RUNNER_TEMP}/triage.json"; then

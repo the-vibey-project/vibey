@@ -349,6 +349,17 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace(
         "__VIBEY_GH_FALLBACK_RETRY_BACKOFF_SECONDS__", str(fallback.retry_backoff_seconds)
     )
+    # Each request's deadline scaled with its size at the host's measured rates, and the
+    # wait for the model to come free before it is sent: declared, never compiled in.
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_PROMPT_TOKENS_PER_SECOND__", str(fallback.prompt_tokens_per_second)
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_OUTPUT_TOKENS_PER_SECOND__", str(fallback.output_tokens_per_second)
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_SLOT_WAIT_SECONDS__", str(fallback.slot_wait_seconds)
+    )
     wanted = wanted.replace(
         "__VIBEY_GH_SANITIZED_PROGRESS__",
         "true" if cfg.pr_automation.observability.sanitized_progress else "false",

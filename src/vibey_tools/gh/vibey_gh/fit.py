@@ -146,8 +146,11 @@ DEFAULT_CHARS_PER_TOKEN = 3
 MAX_CHARS_PER_TOKEN = 8
 # Room left for the model's reasoning AND its answer. gpt-oss reasons before it answers:
 # the #1090 whole review spent 3,676 tokens doing both at default reasoning, and ran out of
-# room mid-answer under the old 2048. More than twice the measurement.
-DEFAULT_CONTEXT_RESERVE_TOKENS = 8192
+# room mid-answer under the old 2048. Since the local review sends it as `num_predict`, it
+# is also the most a model may write, so it covers what was measured rather than one sample:
+# on the operator's host (2026-09-30/10-01) gpt-oss:20b reviews finished at up to 11,832
+# tokens, and ones cut off by a timeout had reached 15,578 (PR #1312's, 9,943, past 8,192).
+DEFAULT_CONTEXT_RESERVE_TOKENS = 16384
 
 
 def _with_nested(paths: tuple[str, ...], relative: str) -> tuple[str, ...]:

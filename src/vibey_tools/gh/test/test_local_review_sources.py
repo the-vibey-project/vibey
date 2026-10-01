@@ -40,6 +40,13 @@ from vibey_gh.review_contract import DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT, RE
 WHOLE = ["--role", "sovereign", "--scope", "full"]
 
 
+@pytest.fixture(autouse=True)
+def _model_free_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """As in test_local_review: the fake model is free the moment it is asked, so no
+    one-token probe reaches it (the slot wait is pinned in test_local_review_budget.py)."""
+    monkeypatch.setattr(local_review.SlotWait, "wait", lambda self, *_: 0.0)
+
+
 def _sources(tmp_path: pathlib.Path, **files: str) -> pathlib.Path:
     """A sources directory as the workflow fetches it: each file at its repository path."""
     root = tmp_path / "sources"
