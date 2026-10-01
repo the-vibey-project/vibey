@@ -15,6 +15,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **engines:** a worker no longer stops using every paid engine after a day. The selector
+  trusts a paid engine's login for `AUTH_TTL` (24 hours), but the login was checked only at
+  worker startup or by `vibey doctor`, so a worker left running for a day silently deferred
+  all paid-engine work every five minutes, forever. Selection now rechecks a paid engine's
+  login once it is past half that life, through `record_preflight`, which refreshes the
+  login and never grants or revokes conformance. An engine whose check keeps failing is
+  asked at most once every 15 minutes per project. Both intervals are constructor
+  parameters of `SelectingEngineProvider`.
+
 ### Documentation
 
 * **docs:** outcome guides — six pages under `docs/guides/outcomes/`, each titled as the

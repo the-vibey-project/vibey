@@ -1075,3 +1075,126 @@ async def test_a_real_implement_run_charges_its_engine_through_the_meter(
     assert any(event.kind == "TurnCompleted" for event in ledger.recorded)
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)
     assert record.cost_usd_cycle == pytest.approx(0.01)
+
+
+# ── paid-engine auth refresh (the 24h dropout) ───────────────────────────────
+
+
+class _WallClock:
+    """The selector judges AUTH_TTL against the wall clock; so must these tests."""
+
+    def now(self) -> datetime:
+        return datetime.now(UTC)
+
+
+class _PaidAdapter(_Adapter):
+    """A paid engine whose login check passes (or not), counting how often it is asked."""
+
+    def __init__(self, engine_id: EngineId, *, auth_ok: bool = True) -> None:
+        super().__init__(engine_id)
+        self.auth_ok = auth_ok
+        self.preflights = 0
+
+    async def preflight(self):  # type: ignore[no-untyped-def]
+        from vibey.application.dto import PreflightResult
+
+        self.preflights += 1
+        return PreflightResult(installed=True, version="1.0.0", auth_ok=self.auth_ok)
+
+
+async def _paid_provider(
+    adapter: _PaidAdapter, *, auth_age: timedelta, local: _LocalAdapter | None = None
+) -> tuple[SelectingEngineProvider, EngineHealthService, object]:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    engine_id = adapter.descriptor.engine_id
+    await repo.upsert(
+        _healthy_record(project_id, engine_id, auth_ok_at=datetime.now(UTC) - auth_age)
+    )
+    health = EngineHealthService(repo)
+    adapters: dict[EngineId, _Adapter] = {engine_id: adapter}
+    if local is not None:
+        adapters[local.descriptor.engine_id] = local
+    provider = SelectingEngineProvider(
+        selector=EngineSelector(
+            health_service=health,
+            cursor_repository=FakeRotationCursorRepository(),
+            descriptors=BY_ENGINE_ID,
+        ),
+        health=health,
+        adapters=adapters,
+        jobs=FakeJobRepository(),
+        clock=_WallClock(),
+        owner="w1",
+        local_engines=() if local is None else (local.descriptor.engine_id,),
+    )
+    return provider, health, project_id
+
+
+def _job_for(project_id: object) -> JobRecord:
+    return replace(make_job(project_id, attempts=1), project_id=project_id)  # type: ignore[arg-type]
+
+
+async def test_a_paid_engine_whose_login_aged_out_is_rechecked_and_selected() -> None:
+    """Paid engines' login was refreshed only at worker startup, so a worker up for 24h
+    stopped selecting them and deferred engine work every five minutes, forever."""
+    paid = _PaidAdapter(EngineId.CLAUDELOOP)
+    provider, health, project_id = await _paid_provider(paid, auth_age=timedelta(hours=25))
+
+    selected = await provider.select_for(_job_for(project_id))
+
+    assert selected is paid
+    assert paid.preflights == 1
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)
+    assert record.auth_ok_at is not None
+    assert datetime.now(UTC) - record.auth_ok_at < timedelta(minutes=1)
+    assert record.conformance_ok  # a login check never grants or revokes conformance
+
+
+async def test_a_login_past_half_its_life_is_refreshed_before_it_lapses() -> None:
+    paid = _PaidAdapter(EngineId.CLAUDELOOP)
+    provider, _health, project_id = await _paid_provider(paid, auth_age=timedelta(hours=13))
+
+    await provider.select_for(_job_for(project_id))
+
+    assert paid.preflights == 1
+
+
+async def test_a_fresh_login_is_not_rechecked() -> None:
+    paid = _PaidAdapter(EngineId.CLAUDELOOP)
+    provider, _health, project_id = await _paid_provider(paid, auth_age=timedelta(hours=1))
+
+    await provider.select_for(_job_for(project_id))
+
+    assert paid.preflights == 0
+
+
+async def test_a_failing_login_is_rechecked_at_most_once_per_interval() -> None:
+    """An engine whose login keeps failing must not be probed on every claim."""
+    paid = _PaidAdapter(EngineId.CLAUDELOOP, auth_ok=False)
+    provider, _health, project_id = await _paid_provider(paid, auth_age=timedelta(hours=25))
+
+    for _ in range(3):
+        with pytest.raises(CapacityDeferred):
+            await provider.select_for(_job_for(project_id))
+
+    assert paid.preflights == 1
+
+
+async def test_local_engines_are_not_rechecked_twice() -> None:
+    """Local engines already get a fresh doctor on every selection."""
+    local = _LocalAdapter(EngineId.QWENLOOP, ready=False)
+    paid = _PaidAdapter(EngineId.CLAUDELOOP)
+    provider, health, project_id = await _paid_provider(
+        paid, auth_age=timedelta(hours=1), local=local
+    )
+    await health.record_preflight(
+        project_id,
+        EngineId.QWENLOOP,
+        await local.preflight(),
+    )
+    local.preflights = 0
+
+    await provider.select_for(_job_for(project_id))
+
+    assert local.preflights == 1

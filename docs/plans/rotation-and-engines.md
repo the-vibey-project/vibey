@@ -410,7 +410,10 @@ def eligible(
 
 `EngineSelector` precomputes `EngineRuntime.auth_valid` from the
 `engine_health` row: `auth_ok_at` must be set and younger than `AUTH_TTL`
-(24 hours). Before filtering, the selector also turns an `OPEN` circuit whose
+(24 hours). Startup preflight sets it, and `SelectingEngineProvider` rechecks a paid
+engine's login before selection once it is past half that life -- at most once every
+15 minutes per engine while the check keeps failing -- so a long-running worker never ages
+its paid engines out. Before filtering, the selector also turns an `OPEN` circuit whose
 `resets_at` has passed into `HALF_OPEN` (§6.2).
 
 Note `requirement.capabilities <= descriptor.capabilities`: a job that needs
