@@ -52,23 +52,35 @@ from typing import Any
 
 try:
     from scripts.interfaces.minimum_specs_interface import (
+        CellRunnerInterface,
         ClockInterface,
         CommandRunnerInterface,
         DerivationsInterface,
+        DerivationSourceInterface,
         IdleGateInterface,
+        PackageManagerInterface,
         ProbeInterface,
         RequirementsRendererInterface,
         StalenessPolicyInterface,
     )
+    from scripts.requirements_math import AmdahlFit, LinearFit, RequirementsMath
 except ModuleNotFoundError:  # Direct execution keeps the script directory on sys.path.
     from interfaces.minimum_specs_interface import (  # type: ignore[import-not-found,no-redef]
+        CellRunnerInterface,
         ClockInterface,
         CommandRunnerInterface,
         DerivationsInterface,
+        DerivationSourceInterface,
         IdleGateInterface,
+        PackageManagerInterface,
         ProbeInterface,
         RequirementsRendererInterface,
         StalenessPolicyInterface,
+    )
+    from requirements_math import (  # type: ignore[import-not-found,no-redef]
+        AmdahlFit,
+        LinearFit,
+        RequirementsMath,
     )
 
 SCRIPT = "scripts/minimum_specs.py"
@@ -103,6 +115,8 @@ class SpecsSettings:
     processes: Mapping[str, Any]
     declared: Mapping[str, Any]
     assumptions: Mapping[str, Any]
+    growth: Mapping[str, Any]
+    linux: Mapping[str, Any]
 
     @classmethod
     def load(cls, path: Path) -> SpecsSettings:
@@ -119,6 +133,8 @@ class SpecsSettings:
             processes=table["processes"],
             declared=table["declared"],
             assumptions=table["assumptions"],
+            growth=table["growth"],
+            linux=table["linux"],
         )
 
     @property
@@ -354,6 +370,21 @@ class Units:
         return value * cls.FACTORS[unit] / cls.FACTORS[to]
 
 
+class Arch:
+    """One spelling per architecture: the kernel's (`uname -m` on Linux)."""
+
+    _ALIASES: Mapping[str, str] = {
+        "x86_64": "x86_64",
+        "amd64": "x86_64",
+        "aarch64": "aarch64",
+        "arm64": "aarch64",
+    }
+
+    @classmethod
+    def normalize(cls, machine: str) -> str:
+        return cls._ALIASES.get(machine.lower(), machine.lower())
+
+
 # ------------------------------------------------------------------------ the host
 
 
@@ -396,6 +427,10 @@ class HostDescriber:
             info["chip"] = self._linux_field("/proc/cpuinfo", r"model name\s*:\s*(.+)")
             mem = self._linux_field("/proc/meminfo", r"MemTotal:\s*(\d+)")
             info["ram_bytes"] = int(mem) * 1024 if mem else None
+            # In a container these are the runner's: its idle memory and its kernel.
+            available = self._linux_field("/proc/meminfo", r"MemAvailable:\s*(\d+)")
+            info["mem_available_bytes"] = int(available) * 1024 if available else None
+            info["kernel"] = platform.release()
             info["cores_total"] = os.cpu_count()
             pretty = self._linux_field("/etc/os-release", r'PRETTY_NAME="?([^"\n]+)')
             info["os"] = pretty
@@ -895,18 +930,41 @@ class DirectorySize:
 
 
 class PackageBuilder:
-    """Builds the engine and launcher wheels from this checkout, once per session."""
+    """Builds the engine and launcher wheels from this checkout, once per session.
+
+    A Linux cell's container is handed wheels built once on its host (`$VIBEY_SPECS_WHEELS`),
+    so every cell installs the same artifacts and the checkout is mounted read-only.
+    """
+
+    WHEELS_ENV = "VIBEY_SPECS_WHEELS"
 
     def __init__(
-        self, repo: Path, settings: SpecsSettings, runner: CommandRunnerInterface, ws: Workspace
+        self,
+        repo: Path,
+        settings: SpecsSettings,
+        runner: CommandRunnerInterface,
+        ws: Workspace,
+        environ: Mapping[str, str] = os.environ,
     ):
         self._repo = repo
         self._settings = settings
         self._runner = runner
         self._ws = ws
+        self._environ = environ
+
+    def _key(self, wheel: Path) -> str:
+        return "vibey-engine" if wheel.name.startswith("vibey_engine-") else "krypton-app"
 
     def build(self) -> tuple[dict[str, Path], str]:
         if self._ws.wheel_paths:
+            return self._ws.wheel_paths, ""
+        prebuilt = self._environ.get(self.WHEELS_ENV, "")
+        if prebuilt:
+            for wheel in sorted(Path(prebuilt).glob("*.whl")):
+                self._ws.wheel_paths[self._key(wheel)] = wheel
+            missing = {"vibey-engine", "krypton-app"} - set(self._ws.wheel_paths)
+            if missing:
+                return {}, f"no prebuilt wheel for {', '.join(sorted(missing))} in {prebuilt}"
             return self._ws.wheel_paths, ""
         timeout = float(self._settings.install["install_timeout_s"])
         for name, project in (
@@ -927,8 +985,7 @@ class PackageBuilder:
             if not result.ok:
                 return {}, f"`uv build` of {name} failed: {result.tail()}"
         for wheel in sorted(self._ws.wheels.glob("*.whl")):
-            key = "vibey-engine" if wheel.name.startswith("vibey_engine-") else "krypton-app"
-            self._ws.wheel_paths[key] = wheel
+            self._ws.wheel_paths[self._key(wheel)] = wheel
         missing = {"vibey-engine", "krypton-app"} - set(self._ws.wheel_paths)
         if missing:
             return {}, f"no wheel produced for {', '.join(sorted(missing))}"
@@ -1019,7 +1076,13 @@ class PythonFloorProbe(ProbeInterface):
 
 
 class InstallFootprintProbe(ProbeInterface):
-    """Cold install time, venv and cache size, package count and download bytes per target."""
+    """Cold install time, venv and cache size, package count and download bytes per target.
+
+    `prefix` namespaces the figures (a Linux cell measures under `linux.<distro>.<arch>.install`),
+    `only` narrows the targets, and an `emulated` run refuses its timings: under QEMU a cold
+    install measures the emulator, not the architecture. On Linux the newest glibc any
+    installed wheel's manylinux tag requires is read from the engine's venv as well.
+    """
 
     name = "install"
 
@@ -1031,6 +1094,9 @@ class InstallFootprintProbe(ProbeInterface):
         ws: Workspace,
         sizes: DirectorySize,
         figures: FigureFactory,
+        prefix: str = "install",
+        only: Sequence[str] = (),
+        emulated: str = "",
     ) -> None:
         self._settings = settings
         self._runner = runner
@@ -1038,6 +1104,9 @@ class InstallFootprintProbe(ProbeInterface):
         self._ws = ws
         self._sizes = sizes
         self._figures = figures
+        self._prefix = prefix
+        self._only = tuple(only)
+        self._emulated = emulated
 
     def targets(self, wheels: Mapping[str, Path]) -> dict[str, list[str]]:
         engine = str(wheels.get("vibey-engine", "vibey-engine"))
@@ -1047,17 +1116,41 @@ class InstallFootprintProbe(ProbeInterface):
         # krypton-app resolves vibey-engine[hub] from its own metadata; the local engine
         # wheel is named beside it so the resolver takes this checkout's engine, not PyPI's.
         out["krypton-app"] = [str(wheels.get("krypton-app", "krypton-app")), f"{engine}[hub]"]
+        if self._only:
+            out = {k: v for k, v in out.items() if k in self._only}
         return out
 
-    @staticmethod
-    def ids(target: str) -> dict[str, tuple[str, str]]:
+    def ids(self, target: str) -> dict[str, tuple[str, str]]:
+        p = f"{self._prefix}.{target}"
         return {
-            "cold_s": (f"install.{target}.cold_s", "s"),
-            "venv": (f"install.{target}.venv_bytes", "bytes"),
-            "cache": (f"install.{target}.uv_cache_bytes", "bytes"),
-            "packages": (f"install.{target}.packages", "count"),
-            "download": (f"install.{target}.download_bytes", "bytes"),
+            "cold_s": (f"{p}.cold_s", "s"),
+            "venv": (f"{p}.venv_bytes", "bytes"),
+            "cache": (f"{p}.uv_cache_bytes", "bytes"),
+            "packages": (f"{p}.packages", "count"),
+            "download": (f"{p}.download_bytes", "bytes"),
         }
+
+    _MANYLINUX = re.compile(r"manylinux_(\d+)_(\d+)_|manylinux(2014|2010|1)_")
+    _LEGACY = {"2014": (2, 17), "2010": (2, 12), "1": (2, 5)}
+
+    @classmethod
+    def glibc_floor(cls, venv: Path) -> tuple[str, int] | None:
+        """The newest glibc any installed wheel requires, from its WHEEL `Tag:` lines, and
+        how many wheels carried a manylinux tag. None when none did (all pure Python)."""
+        newest: tuple[int, int] | None = None
+        tagged = 0
+        for wheel in venv.glob("lib/python*/site-packages/*.dist-info/WHEEL"):
+            with contextlib.suppress(OSError):
+                found = [
+                    (int(m[0]), int(m[1])) if m[0] else cls._LEGACY[m[2]]
+                    for m in cls._MANYLINUX.findall(wheel.read_text(encoding="utf-8"))
+                ]
+                if found:
+                    tagged += 1
+                    # A wheel tagged for several policies runs on the oldest of them.
+                    floor = min(found)
+                    newest = floor if newest is None else max(newest, floor)
+        return (f"{newest[0]}.{newest[1]}", tagged) if newest else None
 
     def run(self) -> list[Figure]:
         wheels, why = self._builder.build()
@@ -1072,6 +1165,7 @@ class InstallFootprintProbe(ProbeInterface):
                     self._figures.skipped(i, f"{target} {k}", u, method, why)
                     for k, (i, u) in ids.items()
                 ]
+                out += self._glibc_skipped(target, why)
                 continue
             venv = self._ws.root / f"venv-{re.sub(r'[^a-z0-9]+', '-', target)}"
             cache = self._ws.root / f"cache-{venv.name}"
@@ -1097,6 +1191,7 @@ class InstallFootprintProbe(ProbeInterface):
                     self._figures.skipped(i, f"{target} {k}", u, method, reason)
                     for k, (i, u) in ids.items()
                 ]
+                out += self._glibc_skipped(target, reason)
                 continue
             self._ws.venvs[target] = venv
             conditions = {"python": python, "cache": "empty"}
@@ -1111,16 +1206,27 @@ class InstallFootprintProbe(ProbeInterface):
                         ids["packages"][0], f"{target} packages", count, "count", method, conditions
                     )
                 )
-            out.append(
-                self._figures.measured(
-                    ids["cold_s"][0],
-                    f"{target} cold install",
-                    round(installed.seconds, 1),
-                    "s",
-                    method,
-                    conditions,
+            if self._emulated:
+                out.append(
+                    self._figures.skipped(
+                        ids["cold_s"][0],
+                        f"{target} cold install",
+                        "s",
+                        method,
+                        f"emulated ({self._emulated}): a timing here measures the emulator, not the architecture",
+                    )
                 )
-            )
+            else:
+                out.append(
+                    self._figures.measured(
+                        ids["cold_s"][0],
+                        f"{target} cold install",
+                        round(installed.seconds, 1),
+                        "s",
+                        method,
+                        conditions,
+                    )
+                )
             for key, path in (("venv", venv), ("cache", cache)):
                 size = self._sizes.bytes(path)
                 fid, unit = ids[key]
@@ -1138,7 +1244,35 @@ class InstallFootprintProbe(ProbeInterface):
                         )
                     )
             out.append(self._download(target, specs, venv, ids["download"][0]))
+            if target == "vibey-engine" and platform.system() == "Linux":
+                out.append(self._glibc(venv, conditions))
         return out
+
+    def _glibc_skipped(self, target: str, reason: str) -> list[Figure]:
+        if target != "vibey-engine" or platform.system() != "Linux":
+            return []
+        return [
+            self._figures.skipped(
+                f"{self._prefix}.glibc_floor",
+                "Newest glibc the installed wheels require",
+                "version",
+                "the engine venv's WHEEL tags",
+                f"no engine venv to read: {reason}",
+            )
+        ]
+
+    def _glibc(self, venv: Path, conditions: Mapping[str, Any]) -> Figure:
+        fid, label = f"{self._prefix}.glibc_floor", "Newest glibc the installed wheels require"
+        method = "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag"
+        found = self.glibc_floor(venv)
+        if found is None:
+            return self._figures.skipped(
+                fid, label, "version", method, "no installed wheel carries a manylinux tag"
+            )
+        floor, tagged = found
+        return self._figures.measured(
+            fid, label, floor, "version", method, {**conditions, "manylinux_wheels": tagged}
+        )
 
     def _download(self, target: str, specs: Sequence[str], venv: Path, fid: str) -> Figure:
         """Bytes on the wire: every artifact pip downloads for the target, summed."""
@@ -1467,6 +1601,79 @@ class ModelBench(ProbeInterface):
                 out.append(
                     (f"bench.{m}.cpu.ctx{ctx}.{key}", f"{m} CPU only at {ctx}: {label}", "tokens/s")
                 )
+        return out + self.scaling_expected()
+
+    def scaling_expected(self) -> list[tuple[str, str, str]]:
+        """The CPU scaling sweep's figures on this host's architecture."""
+        m, arch = self._settings.sovereign_model, Arch.normalize(platform.machine())
+        return [
+            (
+                f"bench.{m}.cpu.{arch}.threads{n}.{key}",
+                f"{m} CPU only ({arch}) on {n} thread(s): {label}",
+                "tokens/s",
+            )
+            for n in self._settings.bench["cpu_scaling"]["threads"]
+            for key, label in (("prompt_tok_s", "prompt"), ("gen_tok_s", "generation"))
+        ]
+
+    def _scaling(self, conditions: dict[str, Any]) -> list[Figure]:
+        """Generation and prompt rates on the CPU alone at each declared thread count."""
+        m, cs = self._settings.sovereign_model, self._settings.bench["cpu_scaling"]
+        arch, cores = Arch.normalize(platform.machine()), os.cpu_count() or 0
+        method = "POST /api/chat num_gpu=0 num_thread=n temperature=0 seed fixed; Ollama counters; median of clean runs"
+        out: list[Figure] = []
+        ctx = int(cs["context"])
+        target = min(int(cs["prompt_tokens"]), ctx - int(cs["num_predict"]) - 256)
+        self._load(ctx, {"num_gpu": 0})
+        for n in cs["threads"]:
+            ids = [
+                (f"bench.{m}.cpu.{arch}.threads{n}.{name}", key)
+                for key, name in (("prompt", "prompt_tok_s"), ("gen", "gen_tok_s"))
+            ]
+            label = f"{m} CPU only ({arch}) on {n} thread(s)"
+            if int(n) > cores:
+                out += [
+                    self._figures.skipped(
+                        fid, f"{label}: {key}", "tokens/s", method, f"the host has {cores} cores"
+                    )
+                    for fid, key in ids
+                ]
+                continue
+            options = {"num_gpu": 0, "num_thread": int(n)}
+            runs, discarded = self._rates(
+                ctx, target, options, f"threads{n}", int(cs["runs"]), int(cs["num_predict"])
+            )
+            for fid, key in ids:
+                if not runs:
+                    out.append(
+                        self._figures.skipped(
+                            fid,
+                            f"{label}: {key}",
+                            "tokens/s",
+                            method,
+                            f"every run overlapped another client ({discarded})",
+                        )
+                    )
+                    continue
+                values = [r[key] for r in runs]
+                cond = {
+                    **conditions,
+                    "runs_clean": len(runs),
+                    "runs_discarded": discarded,
+                    "range": [round(min(values), 2), round(max(values), 2)],
+                    "options": options,
+                    "host_cores": cores,
+                }
+                out.append(
+                    self._figures.measured(
+                        fid,
+                        f"{label}: {key}",
+                        round(self._median(values), 2),
+                        "tokens/s",
+                        method,
+                        cond,
+                    )
+                )
         return out
 
     def _skip_all(self, reason: str) -> list[Figure]:
@@ -1484,12 +1691,18 @@ class ModelBench(ProbeInterface):
         return LlamaServerLog.accounting(self._log.since(offset))
 
     def _rates(
-        self, ctx: int, target: int, options: Mapping[str, Any], tag: str
+        self,
+        ctx: int,
+        target: int,
+        options: Mapping[str, Any],
+        tag: str,
+        runs: int | None = None,
+        num_predict: int | None = None,
     ) -> tuple[list[dict[str, float]], int]:
         b = self._settings.bench
         clean: list[dict[str, float]] = []
         discarded = 0
-        for run in range(int(b["runs"])):
+        for run in range(int(b["runs"]) if runs is None else runs):
             offset = self._gate.log_offset()
             reply = self._client.call(
                 "/api/chat",
@@ -1509,7 +1722,9 @@ class ModelBench(ProbeInterface):
                         "num_ctx": ctx,
                         "temperature": 0,
                         "seed": int(b["seed"]),
-                        "num_predict": int(b["num_predict"]),
+                        "num_predict": int(
+                            b["num_predict"] if num_predict is None else num_predict
+                        ),
                         **options,
                     },
                 },
@@ -1640,6 +1855,7 @@ class ModelBench(ProbeInterface):
                 self._load(int(ctx), {"num_gpu": 0})
                 target = min(int(b["prompt_tokens"]), int(ctx) - int(b["num_predict"]) - 256)
                 out += self._rate_figures("cpu", int(ctx), target, {"num_gpu": 0}, conditions)
+            out += self._scaling(conditions)
         except (OSError, ValueError) as exc:
             done = {f.id for f in out}
             out += [f for f in self._skip_all(f"Ollama failed mid-run: {exc}") if f.id not in done]
@@ -1751,6 +1967,8 @@ class ProcessFootprintProbe(ProbeInterface):
             out.append(
                 self._figures.measured(ids[1], f"{label} wall", parsed["wall_s"], "s", method)
             )
+        worker = "process.cli.worker_once.max_rss_mib"
+        out.append(self._after_one_job(any(f.id == worker and f.has_value for f in out)))
         out += self._server(
             "serve",
             self._ws.venvs.get("vibey-engine[hub]"),
@@ -1763,6 +1981,28 @@ class ProcessFootprintProbe(ProbeInterface):
             "krypton", krypton, ["--no-browser", "--port", str(port)], port, binary="krypton"
         )
         return out
+
+    def _after_one_job(self, ran: bool) -> Figure:
+        """The scratch database after `vibey new` and one `worker --once`: the ledger's
+        growth for one project and one job, against the empty migrated database."""
+        fid, label = "postgres.after_one_job_bytes", "Database after one project and one job"
+        method = "pg_database_size after the commands above (new, worker --once)"
+        database = self._postgres.database
+        if not ran or database is None:
+            return self._figures.skipped(
+                fid, label, "bytes", method, "`worker --once` did not run on a scratch database"
+            )
+        size = database.sql(f"SELECT pg_database_size('{database.name}')")
+        if size.ok and size.stdout.strip().isdigit():
+            return self._figures.measured(
+                fid,
+                label,
+                int(size.stdout.strip()),
+                "bytes",
+                method,
+                note="page-granular: one job's rows can fill new 8 KiB pages, so an upper bound",
+            )
+        return self._figures.skipped(fid, label, "bytes", method, size.tail())
 
     def _server(
         self, name: str, venv: Path | None, args: list[str], port: int, binary: str = "vibey"
@@ -1927,6 +2167,658 @@ class DiskProbe(ProbeInterface):
         return out
 
 
+# ------------------------------------------------------------------------ Linux
+
+
+class Versions:
+    """Distribution version strings, compared by their leading numeric part.
+
+    `1:4.22.5-1` (an epoch), `16+257build1.1`, `6.8.0-146.146` and a floor like `>= 2.74`
+    all reduce to a tuple of integers; anything after the dotted number is packaging.
+    """
+
+    _NUMBER = re.compile(r"\d+(?:\.\d+)*")
+
+    @classmethod
+    def key(cls, text: str) -> tuple[int, ...]:
+        body = str(text).split(":", 1)[1] if re.match(r"^\d+:", str(text)) else str(text)
+        found = cls._NUMBER.search(body)
+        if not found:
+            raise ValueError(f"no version number in {text!r}")
+        return tuple(int(part) for part in found.group(0).split("."))
+
+    @classmethod
+    def at_least(cls, have: str, floor: str) -> bool:
+        a, b = cls.key(have), cls.key(floor)
+        width = max(len(a), len(b))
+        return a + (0,) * (width - len(a)) >= b + (0,) * (width - len(b))
+
+    @classmethod
+    def major(cls, text: str) -> int:
+        return cls.key(text)[0]
+
+
+class PackageManager(PackageManagerInterface):
+    """apt, pacman or dnf, as `[minimum_specs.linux.package_managers.*]` declares them."""
+
+    _PACMAN_UNITS: Mapping[str, int] = {"B": 1, "KiB": 1024, "MiB": MIB, "GiB": GIB}
+
+    def __init__(
+        self, config: Mapping[str, Any], runner: CommandRunnerInterface, timeout: float
+    ) -> None:
+        self._config = config
+        self._runner = runner
+        self._timeout = timeout
+
+    def _env(self) -> dict[str, str]:
+        return {str(k): str(v) for k, v in dict(self._config.get("env", {})).items()}
+
+    def installed(self) -> set[str]:
+        result = self._runner.run(list(self._config["installed"]), timeout=120)
+        if not result.ok:
+            raise OSError(f"listing installed packages failed: {result.tail()}")
+        return {line.strip() for line in str(result.stdout).splitlines() if line.strip()}
+
+    def sizes(self) -> dict[str, int]:
+        result = self._runner.run(list(self._config["sizes"]), timeout=300)
+        if not result.ok:
+            raise OSError(f"reading installed sizes failed: {result.tail()}")
+        return self.parse_sizes(str(result.stdout), str(self._config["size_format"]))
+
+    @classmethod
+    def parse_sizes(cls, text: str, size_format: str) -> dict[str, int]:
+        out: dict[str, int] = {}
+        if size_format in ("name-tab-kib", "name-tab-bytes"):
+            scale = 1024 if size_format == "name-tab-kib" else 1
+            for line in text.splitlines():
+                name, _, size = line.partition("\t")
+                if name.strip() and size.strip().isdigit():
+                    out[name.strip()] = out.get(name.strip(), 0) + int(size) * scale
+            return out
+        if size_format == "pacman-qi":
+            current: str | None = None
+            for line in text.splitlines():
+                key, _, value = line.partition(":")
+                if key.strip() == "Name":
+                    current = value.strip()
+                elif key.strip() == "Installed Size" and current:
+                    number, _, unit = value.strip().partition(" ")
+                    out[current] = round(float(number) * cls._PACMAN_UNITS[unit.strip()])
+            return out
+        raise ValueError(f"unknown size_format {size_format!r}")
+
+    def install(self, packages: Sequence[str]) -> CommandResult:
+        command = str(self._config["install"]).replace(
+            "{packages}", " ".join(re.sub(r"[^A-Za-z0-9.+_:-]", "", p) for p in packages)
+        )
+        result: CommandResult = self._runner.run(
+            ["/bin/sh", "-c", command], timeout=self._timeout, env=self._env()
+        )
+        return result
+
+    def version(self, package: str) -> str | None:
+        argv = [str(a).replace("{package}", package) for a in self._config["version"]]
+        result = self._runner.run(argv, timeout=120, env=self._env())
+        found = [
+            v
+            for v in re.findall(str(self._config["version_pattern"]), str(result.stdout))
+            if v != "(none)"
+        ]
+        candidates = []
+        for value in found:
+            with contextlib.suppress(ValueError):
+                candidates.append((Versions.key(value), value))
+        return max(candidates)[1] if candidates else None
+
+
+@dataclass(frozen=True)
+class LinuxCell:
+    """One (distribution x architecture) cell of the matrix, as the configuration declares it."""
+
+    distro: str
+    arch: str
+    name: str
+    image: str
+    reason: str
+    goarch: str
+    runner: str
+
+    @property
+    def prefix(self) -> str:
+        return f"linux.{self.distro}.{self.arch}"
+
+    @property
+    def platform(self) -> str:
+        return f"linux/{self.goarch}"
+
+
+class LinuxMatrix:
+    """The declared matrix: every distribution on every architecture, in declared order."""
+
+    CELL_ENV = "VIBEY_SPECS_CELL"
+    EMULATED_ENV = "VIBEY_SPECS_EMULATED"
+    HOST_ENV = "VIBEY_SPECS_HOST_LABEL"
+    BEFORE_ENV = "VIBEY_SPECS_PACKAGES_BEFORE"
+
+    def __init__(self, settings: SpecsSettings) -> None:
+        self._settings = settings
+        self._linux = settings.linux
+
+    def arches(self) -> list[str]:
+        return list(self._linux["arches"])
+
+    def distros(self) -> list[str]:
+        return list(self._linux["distros"])
+
+    def distro(self, key: str) -> Mapping[str, Any]:
+        return self._linux["distros"][key]  # type: ignore[no-any-return]
+
+    def package_manager(self, distro: str) -> Mapping[str, Any]:
+        return self._linux["package_managers"][self.distro(distro)["package_manager"]]  # type: ignore[no-any-return]
+
+    def cell(self, distro: str, arch: str) -> LinuxCell:
+        if distro not in self._linux["distros"] or arch not in self._linux["arches"]:
+            raise KeyError(f"no cell {distro}/{arch} in the declared matrix")
+        d, a = self.distro(distro), self._linux["arches"][arch]
+        image = str(d["images"].get(arch, ""))
+        reason = str(dict(d.get("unavailable", {})).get(arch, ""))
+        if not image and not reason:
+            reason = f"no image declared for {arch}"
+        return LinuxCell(
+            distro, arch, str(d["name"]), image, reason, str(a["goarch"]), str(a["runner"])
+        )
+
+    def cells(self) -> list[LinuxCell]:
+        return [self.cell(d, a) for d in self.distros() for a in self.arches()]
+
+    def bundle_prefix(self, arch: str) -> str:
+        return f"linux.ollama.{arch}"
+
+    def prefixes(self, cell: LinuxCell) -> tuple[str, ...]:
+        """The figure prefixes a cell's run is responsible for."""
+        own: tuple[str, ...] = (f"{cell.prefix}.",)
+        if cell.distro == self._linux["ollama_bundle_distro"]:
+            own += (f"{self.bundle_prefix(cell.arch)}.",)
+        return own
+
+    def expected(self, cell: LinuxCell) -> list[tuple[str, str, str]]:
+        """Every figure a cell's run reports, so a cell that cannot run can name each one."""
+        p, d = cell.prefix, self.distro(cell.distro)
+        out = [
+            (f"{p}.os_release", f"{cell.name} ({cell.arch}): OS release", "text"),
+            (f"{p}.glibc", f"{cell.name} ({cell.arch}): glibc", "version"),
+        ]
+        out += [
+            (f"{p}.packaged.{role}", f"{cell.name} ({cell.arch}): packaged {role}", "version")
+            for role in d["versions"]
+        ]
+        for name in ("base", *d["sets"]):
+            out += [
+                (f"{p}.pkg.{name}.bytes", f"{cell.name} ({cell.arch}): {name} closure", "bytes"),
+                (f"{p}.pkg.{name}.count", f"{cell.name} ({cell.arch}): {name} packages", "count"),
+            ]
+        for target in self._linux["install_targets"]:
+            for key, unit in (
+                ("cold_s", "s"),
+                ("venv_bytes", "bytes"),
+                ("uv_cache_bytes", "bytes"),
+                ("packages", "count"),
+                ("download_bytes", "bytes"),
+            ):
+                out.append((f"{p}.install.{target}.{key}", f"{target} {key}", unit))
+        out.append(
+            (f"{p}.install.glibc_floor", "Newest glibc the installed wheels require", "version")
+        )
+        if cell.distro == self._linux["ollama_bundle_distro"]:
+            b = self.bundle_prefix(cell.arch)
+            out += [
+                (f"{b}.download_bytes", f"Ollama Linux bundle ({cell.arch}) download", "bytes"),
+                (f"{b}.unpacked_bytes", f"Ollama Linux bundle ({cell.arch}) unpacked", "bytes"),
+            ]
+        return out
+
+
+class LinuxCellProbe(ProbeInterface):
+    """Inside one distribution's container: what that distribution offers and what vibey
+    costs on it. The OS release and glibc; the repository version of each floor's package
+    (kernel, Python, PostgreSQL, the desktop libraries), read from metadata, not installed;
+    the closure each package set adds (the bootstrap's base, PostgreSQL, the desktop
+    libraries), as the package manager's own installed sizes; and a cold install of the
+    declared targets with uv. The container's kernel, cores and memory are its runner's, so
+    they describe the host, not the distribution, and are recorded with the host instead.
+    """
+
+    name = "linux"
+
+    def __init__(
+        self,
+        settings: SpecsSettings,
+        cell: LinuxCell,
+        manager: PackageManagerInterface,
+        install: ProbeInterface,
+        figures: FigureFactory,
+        before: set[str] | None,
+        emulated: str = "",
+        os_release: Path = Path("/etc/os-release"),
+    ) -> None:
+        self._settings = settings
+        self._cell = cell
+        self._matrix = LinuxMatrix(settings)
+        self._pm = manager
+        self._install = install
+        self._figures = figures
+        self._before = before
+        self._emulated = emulated
+        self._os_release = os_release
+
+    def _conditions(self) -> dict[str, Any]:
+        return {"image": self._cell.image, "emulated": bool(self._emulated), "container": True}
+
+    def _closure(self, name: str, before: set[str], method: str) -> list[Figure]:
+        p, label = f"{self._cell.prefix}.pkg.{name}", f"{self._cell.name} ({self._cell.arch})"
+        after = self._pm.installed()
+        added = sorted(after - before)
+        sizes = self._pm.sizes()
+        unsized = [n for n in added if n not in sizes]
+        cond = {**self._conditions(), "packages": added[:200]}
+        if unsized:
+            reason = f"no installed size for {', '.join(unsized[:5])}"
+            return [
+                self._figures.skipped(
+                    f"{p}.bytes", f"{label}: {name} closure", "bytes", method, reason
+                ),
+                self._figures.measured(
+                    f"{p}.count", f"{label}: {name} packages", len(added), "count", method, cond
+                ),
+            ]
+        return [
+            self._figures.measured(
+                f"{p}.bytes",
+                f"{label}: {name} closure",
+                sum(sizes[n] for n in added),
+                "bytes",
+                method,
+                cond,
+            ),
+            self._figures.measured(
+                f"{p}.count", f"{label}: {name} packages", len(added), "count", method, cond
+            ),
+        ]
+
+    def run(self) -> list[Figure]:
+        cell, d = self._cell, self._matrix.distro(self._cell.distro)
+        p, label = cell.prefix, f"{cell.name} ({cell.arch})"
+        pm_name = str(d["package_manager"])
+        out: list[Figure] = []
+        release = HostDescriber._linux_field(str(self._os_release), r'PRETTY_NAME="?([^"\n]+)')
+        if release:
+            out.append(
+                self._figures.measured(
+                    f"{p}.os_release",
+                    f"{label}: OS release",
+                    release,
+                    "text",
+                    f"PRETTY_NAME in {self._os_release}",
+                    self._conditions(),
+                )
+            )
+        else:
+            out.append(
+                self._figures.skipped(
+                    f"{p}.os_release",
+                    f"{label}: OS release",
+                    "text",
+                    "os-release",
+                    "no PRETTY_NAME",
+                )
+            )
+        glibc = ""
+        with contextlib.suppress(ValueError, OSError, AttributeError):
+            glibc = (os.confstr("CS_GNU_LIBC_VERSION") or "").replace("glibc", "").strip()
+        if glibc:
+            out.append(
+                self._figures.measured(
+                    f"{p}.glibc",
+                    f"{label}: glibc",
+                    glibc,
+                    "version",
+                    "os.confstr('CS_GNU_LIBC_VERSION')",
+                    self._conditions(),
+                )
+            )
+        else:
+            out.append(
+                self._figures.skipped(
+                    f"{p}.glibc", f"{label}: glibc", "version", "os.confstr", "not a glibc system"
+                )
+            )
+        for role, package in d["versions"].items():
+            method = f"{pm_name}: the repositories' version of {package} (metadata, not installed)"
+            version = self._pm.version(str(package))
+            fid = f"{p}.packaged.{role}"
+            if version is None:
+                out.append(
+                    self._figures.skipped(
+                        fid,
+                        f"{label}: packaged {role}",
+                        "version",
+                        method,
+                        f"{package} not in the repositories",
+                    )
+                )
+            else:
+                out.append(
+                    self._figures.measured(
+                        fid,
+                        f"{label}: packaged {role}",
+                        version,
+                        "version",
+                        method,
+                        {**self._conditions(), "package": package},
+                    )
+                )
+        base_method = f"{pm_name}: packages the bootstrap added ({', '.join(d['base'])} and their dependencies), installed sizes summed"
+        if self._before is None:
+            out += [
+                self._figures.skipped(
+                    f"{p}.pkg.base.{k}",
+                    f"{label}: base {k}",
+                    u,
+                    base_method,
+                    "no package list from before the bootstrap",
+                )
+                for k, u in (("bytes", "bytes"), ("count", "count"))
+            ]
+        else:
+            out += self._closure("base", self._before, base_method)
+        for name, packages in d["sets"].items():
+            method = f"{pm_name}: install {' '.join(packages)} (no recommends / weak deps); packages it added, installed sizes summed"
+            before = self._pm.installed()
+            result = self._pm.install([str(x) for x in packages])
+            if not result.ok:
+                out += [
+                    self._figures.skipped(
+                        f"{p}.pkg.{name}.{k}",
+                        f"{label}: {name} {k}",
+                        u,
+                        method,
+                        f"install failed: {result.tail()}",
+                    )
+                    for k, u in (("bytes", "bytes"), ("count", "count"))
+                ]
+                continue
+            out += self._closure(name, before, method)
+        out += self._install.run()
+        return out
+
+
+class CellRunner(CellRunnerInterface):
+    """Runs one cell from its host: builds the wheels once, runs the distribution's image
+    (`docker run --platform`), bootstraps it from the declared package manager, and runs this
+    script's `measure` inside it with the checkout mounted read-only. A run on the other
+    architecture is emulated and says so. A cell with no image, or whose container fails, is
+    returned with every figure skipped and the reason -- never left out. The Ollama bundle
+    for the architecture is measured here, on the host, by the declared distribution's cell.
+    """
+
+    def __init__(
+        self,
+        repo: Path,
+        settings: SpecsSettings,
+        runner: CommandRunnerInterface,
+        clock: ClockInterface,
+        runner_label: str,
+        host_arch: str | None = None,
+        head: Callable[[str], int] | None = None,
+    ) -> None:
+        self._repo = repo
+        self._settings = settings
+        self._runner = runner
+        self._clock = clock
+        self._label = runner_label
+        self._host_arch = Arch.normalize(host_arch or platform.machine())
+        self._matrix = LinuxMatrix(settings)
+        self._head = head or self.content_length
+
+    @staticmethod
+    def content_length(url: str) -> int:
+        request = urllib.request.Request(url, method="HEAD")  # noqa: S310 - the declared URL
+        with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
+            return int(response.headers["Content-Length"])
+
+    def host_label(self, cell: LinuxCell) -> str:
+        mode = "not run" if not cell.image else ("emulated" if self.emulated(cell) else "native")
+        return f"{cell.image or cell.name} ({cell.platform}, {mode}) on {self._label}"
+
+    def emulated(self, cell: LinuxCell) -> str:
+        return "" if cell.arch == self._host_arch else f"{cell.platform} on {self._host_arch}"
+
+    def bootstrap(self, cell: LinuxCell) -> str:
+        """The container's shell: snapshot the packages, refresh, install the base, fetch uv,
+        then run this script's measurement on the distribution's own python3."""
+        pm = self._matrix.package_manager(cell.distro)
+        base = " ".join(self._matrix.distro(cell.distro)["base"])
+        env = " ".join(f"{k}={v}" for k, v in dict(pm.get("env", {})).items())
+        listing = " ".join(f"'{a}'" for a in pm["installed"])
+        steps = [
+            "set -eu",
+            f"export {env}" if env else ":",
+            f"{listing} > /out/packages-before.txt",
+            str(pm["refresh"]),
+            str(pm["install"]).replace("{packages}", base),
+            str(self._settings.linux["uv_install"]),
+            "python3 /src/scripts/minimum_specs.py --repo /src measure --out /out/partial.json",
+        ]
+        return "\n".join(steps)
+
+    def _skipped(self, cell: LinuxCell, reason: str, factory: FigureFactory) -> list[Figure]:
+        return [
+            factory.skipped(
+                fid, label, unit, f"minimum_specs.py cell {cell.distro} {cell.arch}", reason
+            )
+            for fid, label, unit in self._matrix.expected(cell)
+        ]
+
+    def _bundle(self, cell: LinuxCell, factory: FigureFactory) -> list[Figure]:
+        if cell.distro != self._settings.linux["ollama_bundle_distro"]:
+            return []
+        b = self._matrix.bundle_prefix(cell.arch)
+        url = str(self._settings.linux["ollama_bundle_url"]).replace("{goarch}", cell.goarch)
+        out: list[Figure] = []
+        try:
+            out.append(
+                factory.measured(
+                    f"{b}.download_bytes",
+                    f"Ollama Linux bundle ({cell.arch}) download",
+                    self._head(url),
+                    "bytes",
+                    f"HTTP HEAD {url}: Content-Length",
+                )
+            )
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            out.append(
+                factory.skipped(
+                    f"{b}.download_bytes",
+                    f"Ollama Linux bundle ({cell.arch}) download",
+                    "bytes",
+                    f"HTTP HEAD {url}",
+                    f"unreachable: {exc}",
+                )
+            )
+        command = str(self._settings.linux["ollama_bundle_unpacked"]).replace("{url}", url)
+        result = self._runner.run(["/bin/sh", "-c", command], timeout=3600)
+        size = str(result.stdout).strip()
+        if result.ok and size.isdigit():
+            out.append(
+                factory.measured(
+                    f"{b}.unpacked_bytes",
+                    f"Ollama Linux bundle ({cell.arch}) unpacked",
+                    int(size),
+                    "bytes",
+                    command,
+                    note="the tar stream's bytes: file contents plus tar headers and padding",
+                )
+            )
+        else:
+            out.append(
+                factory.skipped(
+                    f"{b}.unpacked_bytes",
+                    f"Ollama Linux bundle ({cell.arch}) unpacked",
+                    "bytes",
+                    command,
+                    f"exit {result.returncode}: {result.tail()}",
+                )
+            )
+        return out
+
+    def run(self, distro: str, arch: str) -> SpecsRecord:
+        cell = self._matrix.cell(distro, arch)
+        label = self.host_label(cell)
+        factory = FigureFactory(self._clock, label)
+        host = {
+            "image": cell.image,
+            "platform": cell.platform,
+            "runner": self._label,
+            "emulated": bool(self.emulated(cell)) if cell.image else None,
+        }
+        if not cell.image:
+            figures = self._skipped(cell, cell.reason, factory)
+            return SpecsRecord(self._clock.now(), {label: host}, tuple(figures))
+        bundle = self._bundle(cell, factory)
+        ws = Workspace()
+        try:
+            wheels, why = PackageBuilder(self._repo, self._settings, self._runner, ws).build()
+            if why:
+                figures = self._skipped(cell, f"the wheels could not be built: {why}", factory)
+                return SpecsRecord(
+                    self._clock.now(), {label: host}, tuple(self._keep(figures, bundle))
+                )
+            out = ws.path("out")
+            argv = [
+                str(self._settings.linux["docker"]),
+                "run",
+                "--rm",
+                "--platform",
+                cell.platform,
+                "-v",
+                f"{self._repo.resolve()}:/src:ro",
+                "-v",
+                f"{ws.wheels}:/wheels:ro",
+                "-v",
+                f"{out}:/out",
+                "-e",
+                f"{LinuxMatrix.CELL_ENV}={cell.distro}/{cell.arch}",
+                "-e",
+                f"{LinuxMatrix.EMULATED_ENV}={self.emulated(cell)}",
+                "-e",
+                f"{LinuxMatrix.HOST_ENV}={label}",
+                "-e",
+                f"{LinuxMatrix.BEFORE_ENV}=/out/packages-before.txt",
+                "-e",
+                f"{PackageBuilder.WHEELS_ENV}=/wheels",
+                cell.image,
+                "/bin/sh",
+                "-c",
+                self.bootstrap(cell),
+            ]
+            result = self._runner.run(
+                argv, timeout=float(self._settings.linux["container_timeout_s"])
+            )
+            partial = out / "partial.json"
+            if not partial.exists():
+                reason = f"the container run failed (exit {result.returncode}): {result.tail()}"
+                figures = self._skipped(cell, reason, factory)
+                return SpecsRecord(
+                    self._clock.now(), {label: host}, tuple(self._keep(figures, bundle))
+                )
+            measured = SpecsRecord.load(partial)
+        finally:
+            ws.cleanup()
+        own = [f for f in measured.figures if f.id.startswith(f"{cell.prefix}.")]
+        hosts = {k: {**dict(v), **host} for k, v in measured.hosts.items() if k == label} or {
+            label: host
+        }
+        return SpecsRecord(self._clock.now(), hosts, tuple(self._keep(own, bundle)))
+
+    @staticmethod
+    def _keep(figures: Sequence[Figure], bundle: Sequence[Figure]) -> list[Figure]:
+        ids = {f.id for f in bundle}
+        return [f for f in figures if f.id not in ids] + list(bundle)
+
+
+class CellMerger:
+    """Folds cell records into the main record, each under its own prefixes, so one cell's
+    run never marks another's figures stale. With `complete` (the workflow's merge, after
+    every cell's job), a cell that handed nothing over has its figures marked stale with
+    that reason. Every declared cell's figures are present afterwards: one never measured
+    is skipped, naming why."""
+
+    def __init__(self, settings: SpecsSettings, clock: ClockInterface) -> None:
+        self._settings = settings
+        self._clock = clock
+        self._matrix = LinuxMatrix(settings)
+
+    def _cell_of(self, record: SpecsRecord) -> list[LinuxCell]:
+        ids = [f.id for f in record.figures]
+        return [c for c in self._matrix.cells() if any(i.startswith(f"{c.prefix}.") for i in ids)]
+
+    def merge(
+        self, record: SpecsRecord, partials: Sequence[SpecsRecord], complete: bool = False
+    ) -> SpecsRecord:
+        derived = Derivations(self._settings).ids()
+        figures = list(record.figures)
+        hosts = dict(record.hosts)
+        covered: set[str] = set()
+        for partial in partials:
+            for cell in self._cell_of(partial):
+                prefixes = self._matrix.prefixes(cell)
+                covered.add(cell.prefix)
+                policy = StalenessPolicy(
+                    derived,
+                    f"the {cell.distro}/{cell.arch} cell's run did not report it",
+                    lambda fid, p=prefixes: fid.startswith(p),
+                )
+                figures = [
+                    *policy.merge(figures, partial.figures),
+                    *[f for f in figures if f.id in derived],
+                ]
+            hosts.update(partial.hosts)
+        present = {f.id for f in figures}
+        for cell in self._matrix.cells():
+            if complete and cell.prefix not in covered and cell.image:
+                prefixes = self._matrix.prefixes(cell)
+                policy = StalenessPolicy(
+                    derived,
+                    f"the {cell.distro}/{cell.arch} cell handed over no record this run",
+                    lambda fid, p=prefixes: fid.startswith(p),
+                )
+                figures = [*policy.merge(figures, []), *[f for f in figures if f.id in derived]]
+            reason = (
+                cell.reason or "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+            )
+            for fid, label, unit in self._matrix.expected(cell):
+                if fid not in present:
+                    figures.append(
+                        Figure(
+                            fid,
+                            label,
+                            None,
+                            unit,
+                            "skipped",
+                            f"minimum_specs.py cell {cell.distro} {cell.arch}",
+                            reason=reason,
+                        )
+                    )
+                    present.add(fid)
+        merged = replace(
+            record,
+            generated_at=self._clock.now(),
+            hosts=hosts,
+            figures=tuple(sorted({f.id: f for f in figures}.values(), key=lambda f: f.id)),
+        )
+        return RecordBuilder(self._settings, self._clock).rederive(merged)
+
+
 # ------------------------------------------------------------------------ derivations
 
 
@@ -1941,6 +2833,9 @@ class Derivation:
     inputs: tuple[str, ...]
     compute: Callable[[Mapping[str, float]], Any]
     note: str | None = None
+    #: A fit over a sweep may run on part of it: when set, missing inputs are tolerated as
+    #: long as at least this many figure inputs are present (the formula names the rest).
+    at_least: int = 0
 
 
 class Derivations(DerivationsInterface):
@@ -2404,7 +3299,16 @@ class Derivations(DerivationsInterface):
                 ),
             ),
         ]
-        return specs
+        return specs + ModelFits(self._settings).specs() + LinuxDerivations(self._settings).specs()
+
+    def _config(self, name: str) -> Any:
+        """`config.<table>.<key>`: a value from `[minimum_specs.<table>]`, or KeyError."""
+        _, table, key = name.split(".", 2)
+        tables: Mapping[str, Mapping[str, Any]] = {
+            "growth": self._settings.growth,
+            "linux": self._settings.linux,
+        }
+        return tables[table][key]
 
     def _inputs(
         self, spec: Derivation, figures: Mapping[str, Figure]
@@ -2418,6 +3322,12 @@ class Derivations(DerivationsInterface):
                 if key in self._settings.assumptions:
                     values[name] = self._settings.assumptions[key]
                 else:
+                    missing.append(name)
+                continue
+            if name.startswith("config."):
+                try:
+                    values[name] = self._config(name)
+                except (KeyError, ValueError):
                     missing.append(name)
                 continue
             figure = figures.get(name)
@@ -2434,6 +3344,9 @@ class Derivations(DerivationsInterface):
         out: list[Figure] = []
         for spec in self.specs():
             values, missing, stale = self._inputs(spec, known)
+            present = sum(1 for k in values if not k.startswith(("assumption.", "config.")))
+            if spec.at_least and present >= spec.at_least:
+                missing = [m for m in missing if m.startswith(("assumption.", "config."))]
             previous = figures.get(spec.id)
             computed: Any = None
             failure = ""
@@ -2444,7 +3357,7 @@ class Derivations(DerivationsInterface):
                     # e.g. a configuration with one context has no KV slope to take
                     failure = f"cannot compute from these inputs: {exc!r}"
             if missing or failure:
-                reason = failure or "missing input(s): " + ", ".join(missing)
+                reason = failure or self._missing(spec, missing, present)
                 last_good = (
                     previous.stale_since or previous.measured_at if previous is not None else None
                 )
@@ -2501,26 +3414,493 @@ class Derivations(DerivationsInterface):
     def ids(self) -> set[str]:
         return {spec.id for spec in self.specs()}
 
+    @staticmethod
+    def _missing(spec: Derivation, missing: Sequence[str], present: int) -> str:
+        """Why a derivation could not run: its missing inputs, or, for a fit over a sweep,
+        how many points it has against how many it needs and the first one missing."""
+        figures = [m for m in missing if not m.startswith(("assumption.", "config."))]
+        if spec.at_least and figures and len(figures) == len(missing):
+            return (
+                f"a fit needing {spec.at_least} of its {present + len(figures)} measured "
+                f"points has {present}; missing {figures[0]} and {len(figures) - 1} more"
+            )
+        return "missing input(s): " + ", ".join(missing)
+
+
+class ModelFits(DerivationSourceInterface):
+    """The fitted models (scripts/requirements_math.py) as derived figures.
+
+    Each parameter is its own figure, so the record keeps the formula and every point the
+    fit used, and `check` refits from the committed record: the memory line over the
+    measured context sweep, Amdahl's law over each architecture's CPU thread sweep, the
+    database's bytes per job, and the ledger's growth integrated over the declared horizon.
+    """
+
+    def __init__(self, settings: SpecsSettings, math_: RequirementsMath | None = None) -> None:
+        self._settings = settings
+        self._math = math_ or RequirementsMath()
+
+    def memory_points(self) -> list[tuple[int, tuple[str, str, str]]]:
+        m = self._settings.sovereign_model
+        return [
+            (
+                int(c),
+                (
+                    f"bench.{m}.ctx{c}.device_mib",
+                    f"bench.{m}.ctx{c}.host_model_mib",
+                    f"bench.{m}.ctx{c}.host_compute_mib",
+                ),
+            )
+            for c in sorted(int(c) for c in self._settings.bench["contexts"])
+        ]
+
+    def memory_fit(self, v: Mapping[str, Any]) -> LinearFit:
+        xs, ys = [], []
+        for ctx, ids in self.memory_points():
+            if all(i in v for i in ids):
+                xs.append(float(ctx))
+                ys.append(sum(float(v[i]) for i in ids))
+        return self._math.least_squares(xs, ys)
+
+    def thread_ids(self, arch: str) -> list[tuple[int, str]]:
+        m = self._settings.sovereign_model
+        return [
+            (int(n), f"bench.{m}.cpu.{arch}.threads{n}.gen_tok_s")
+            for n in self._settings.bench["cpu_scaling"]["threads"]
+        ]
+
+    def cpu_fit(self, arch: str, v: Mapping[str, Any]) -> AmdahlFit:
+        points = [(n, float(v[i])) for n, i in self.thread_ids(arch) if i in v]
+        return self._math.amdahl([n for n, _ in points], [t for _, t in points])
+
+    def specs(self) -> list[Derivation]:
+        contexts = [c for c, _ in self.memory_points()]
+        memory_inputs = tuple(i for _, ids in self.memory_points() for i in ids)
+        line = (
+            "least squares over (c, device + host model buffer + host compute buffer) at "
+            f"c = {', '.join(f'{c:,}' for c in contexts)}: M(c) = M0 + k*c"
+        )
+        specs = [
+            Derivation(
+                "fit.memory.m0_mib",
+                "Model memory at zero context, M0 (the weights)",
+                "MiB",
+                f"{line}; M0 = mean(M) - k*mean(c)",
+                memory_inputs,
+                lambda v: round(self.memory_fit(v).intercept, 1),
+            ),
+            Derivation(
+                "fit.memory.k_kib_per_token",
+                "Model memory per context token, k (KV cache and compute buffers)",
+                "KiB/token",
+                f"{line}; k = sum((c - mean c)(M - mean M)) / sum((c - mean c)^2), x 1024",
+                memory_inputs,
+                lambda v: round(self.memory_fit(v).slope * 1024, 3),
+            ),
+            Derivation(
+                "fit.memory.r2",
+                "Memory line's coefficient of determination, R^2",
+                "ratio",
+                f"{line}; R^2 = 1 - SS_res / SS_tot",
+                memory_inputs,
+                lambda v: round(self.memory_fit(v).r2, 6),
+            ),
+            Derivation(
+                "fit.memory.max_residual_mib",
+                "Memory line's largest residual, |M - M(c)|",
+                "MiB",
+                f"{line}; max over the points of |M - (M0 + k*c)|",
+                memory_inputs,
+                lambda v: round(self.memory_fit(v).max_abs_residual, 1),
+            ),
+            Derivation(
+                "postgres.bytes_per_job",
+                "Database growth for one project and one job",
+                "bytes",
+                "database after `new` + one `worker --once` - the empty migrated database",
+                ("postgres.after_one_job_bytes", "postgres.empty_db_bytes"),
+                lambda v: int(v["postgres.after_one_job_bytes"] - v["postgres.empty_db_bytes"]),
+                note="page-granular, so an upper bound for one job",
+            ),
+            Derivation(
+                "disk.ledger_growth_gb",
+                "Ledger growth over the declared horizon",
+                "GB",
+                "integral from 0 to H of b*(r0 + r1*t) dt = b*(r0*H + r1*H^2/2), / 1e9",
+                (
+                    "postgres.bytes_per_job",
+                    "config.growth.jobs_per_day",
+                    "config.growth.jobs_per_day_growth",
+                    "config.growth.horizon_days",
+                ),
+                lambda v: round(
+                    self._math.integral_of_linear_rate(
+                        v["postgres.bytes_per_job"],
+                        v["config.growth.jobs_per_day"],
+                        v["config.growth.jobs_per_day_growth"],
+                        v["config.growth.horizon_days"],
+                    )
+                    / 1e9,
+                    2,
+                ),
+            ),
+        ]
+        threads = [int(n) for n in self._settings.bench["cpu_scaling"]["threads"]]
+        sweep = f"over generation rates at n = {', '.join(map(str, threads))} threads"
+        amdahl = (
+            "1/T = (1-p)/T1 + (p/T1)(1/n) by least squares on (1/n, 1/T); T1 = 1/(a+b), p = b/(a+b)"
+        )
+        knee = "config.linux.cpu_knee_tok_s_per_core"
+        for arch in LinuxMatrix(self._settings).arches():
+            ids = tuple(i for _, i in self.thread_ids(arch))
+            f = f"fit.cpu.{arch}"
+
+            def fit(v: Mapping[str, Any], a: str = arch) -> AmdahlFit:
+                return self.cpu_fit(a, v)
+
+            specs += [
+                Derivation(
+                    f"{f}.t1_tok_s",
+                    f"CPU generation on one core, T1 ({arch})",
+                    "tokens/s",
+                    f"Amdahl T(n) = T1 / ((1-p) + p/n) {sweep}: {amdahl}",
+                    ids,
+                    lambda v, g=fit: round(g(v).t1, 3),
+                    at_least=3,
+                ),
+                Derivation(
+                    f"{f}.p",
+                    f"Parallel fraction of CPU generation, p ({arch})",
+                    "ratio",
+                    f"Amdahl {sweep}: p = b/(a+b)",
+                    ids,
+                    lambda v, g=fit: round(g(v).p, 4),
+                    at_least=3,
+                ),
+                Derivation(
+                    f"{f}.r2",
+                    f"Amdahl fit's R^2 on the measured rates ({arch})",
+                    "ratio",
+                    f"Amdahl {sweep}; R^2 of T(n) against the measured T",
+                    ids,
+                    lambda v, g=fit: round(g(v).r2, 4),
+                    at_least=3,
+                ),
+                Derivation(
+                    f"{f}.asymptote_tok_s",
+                    f"CPU generation with unlimited cores, T1/(1-p) ({arch})",
+                    "tokens/s",
+                    "lim n->inf T(n) = T1 / (1-p)",
+                    ids,
+                    lambda v, g=fit: round(g(v).asymptote, 2) if g(v).p < 1 else "unbounded",
+                    at_least=3,
+                ),
+                Derivation(
+                    f"{f}.knee_cores",
+                    f"Recommended cores: the knee where dT/dn falls to the threshold ({arch})",
+                    "cores",
+                    "dT/dn = T1*p / ((1-p)n + p)^2 = theta  =>  n* = (sqrt(T1*p/theta) - p)/(1-p); ceil",
+                    (*ids, knee),
+                    lambda v, g=fit: (
+                        math.ceil(self._math.knee(g(v), v[knee]))
+                        if math.isfinite(self._math.knee(g(v), v[knee]))
+                        else "unbounded"
+                    ),
+                    at_least=3,
+                ),
+                Derivation(
+                    f"{f}.minimum_cores",
+                    f"Minimum cores: the fewest that reach the minimum generation rate ({arch})",
+                    "cores",
+                    "T(n) >= F  <=>  n >= p / (T1/F - (1-p)), solvable only when F < T1/(1-p); ceil",
+                    (*ids, "assumption.minimum_gen_tok_s"),
+                    lambda v, g=fit: (
+                        self._math.cores_for_rate(g(v), v["assumption.minimum_gen_tok_s"])
+                        or "unreachable"
+                    ),
+                    at_least=3,
+                ),
+            ]
+        return specs
+
+
+class LinuxDerivations(DerivationSourceInterface):
+    """The Linux matrix's requirements, per (distribution x architecture) cell.
+
+    Memory is the same for every cell: the model dominates, and its weights and KV cache are
+    the same bytes on any Linux (the fit's compute buffers come from the measured host's
+    backend). Cores come from the architecture's Amdahl fit. Disk and the floors are each
+    cell's own: its package closures, its install, its packaged versions against the floors
+    vibey declares.
+    """
+
+    def __init__(self, settings: SpecsSettings, math_: RequirementsMath | None = None) -> None:
+        self._settings = settings
+        self._math = math_ or RequirementsMath()
+        self._matrix = LinuxMatrix(settings)
+
+    def _round_up(self, value: float) -> float | None:
+        sizes = sorted(float(s) for s in self._settings.assumptions["memory_sizes_gb"])
+        return next((s for s in sizes if s >= value), None)
+
+    def specs(self) -> list[Derivation]:
+        m = self._settings.sovereign_model
+        hi = max(int(c) for c in self._settings.bench["contexts"])
+        h, probe = "config.linux.memory_headroom_factor", "config.linux.probe_memory_gb"
+        m0, k = "fit.memory.m0_mib", "fit.memory.k_kib_per_token"
+        window = "declared.runner_context_window"
+        side, osh, apps = (
+            "ram.vibey_side_gib",
+            "assumption.os_headroom_gib",
+            "assumption.apps_headroom_gib",
+        )
+
+        def model_mib(v: Mapping[str, Any], ctx: float) -> float:
+            return float(v[m0]) + float(v[k]) / 1024 * ctx
+
+        specs = [
+            Derivation(
+                "linux.ram.minimum_need_gib",
+                "Linux memory needed: the model at the runner's window, with headroom, + vibey + OS",
+                "GiB",
+                "h * (M0 + k*c_runner) / 1024 + vibey side + OS headroom",
+                (m0, k, window, h, side, osh),
+                lambda v: round(v[h] * model_mib(v, v[window]) / 1024 + v[side] + v[osh], 2),
+            ),
+            Derivation(
+                "linux.ram.minimum_gb",
+                "Linux minimum memory (system RAM, as sold)",
+                "GB",
+                "the smallest declared memory size >= the need",
+                ("linux.ram.minimum_need_gib",),
+                lambda v: self._round_up(v["linux.ram.minimum_need_gib"]),
+            ),
+            Derivation(
+                "linux.ram.recommended_need_gib",
+                "Linux memory recommended: the model at its maximum window, + apps",
+                "GiB",
+                f"h * (M0 + k*{hi:,}) / 1024 + vibey side + OS headroom + apps headroom",
+                (m0, k, h, side, osh, apps),
+                lambda v: round(v[h] * model_mib(v, hi) / 1024 + v[side] + v[osh] + v[apps], 2),
+            ),
+            Derivation(
+                "linux.ram.recommended_gb",
+                "Linux recommended memory (system RAM, as sold)",
+                "GB",
+                "the smallest declared memory size >= the recommended need",
+                ("linux.ram.recommended_need_gib",),
+                lambda v: self._round_up(v["linux.ram.recommended_need_gib"]),
+            ),
+            Derivation(
+                "linux.ram.max_context_at_probe",
+                "The largest context whose model fits the probed memory size",
+                "tokens",
+                "c_max = ((S*1e9/2^20 - (vibey side + OS headroom)*1024) / h - M0) / (k/1024), floored at 0",
+                (m0, k, h, probe, side, osh),
+                lambda v: max(
+                    0,
+                    math.floor(
+                        ((v[probe] * 1e9 / MIB - (v[side] + v[osh]) * 1024) / v[h] - v[m0])
+                        / (v[k] / 1024)
+                    ),
+                ),
+            ),
+            Derivation(
+                "linux.ram.probe_fits_runner",
+                "The probed memory size holds the runner's window",
+                "verdict",
+                "c_max >= the runner's context window",
+                ("linux.ram.max_context_at_probe", window),
+                lambda v: v["linux.ram.max_context_at_probe"] >= v[window],
+            ),
+        ]
+        optional = list(self._settings.ollama["optional_models"])
+        for cell in self._matrix.cells():
+            p = cell.prefix
+            b = self._matrix.bundle_prefix(cell.arch)
+            engine, krypton = f"{p}.install.vibey-engine", f"{p}.install.krypton-app"
+            specs += [
+                Derivation(
+                    f"{p}.disk.minimum_need_gb",
+                    f"{cell.name} ({cell.arch}): free disk needed",
+                    "GB",
+                    "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
+                    (
+                        f"{p}.pkg.base.bytes",
+                        f"{p}.pkg.postgres.bytes",
+                        f"{engine}.venv_bytes",
+                        f"{engine}.uv_cache_bytes",
+                        f"{b}.unpacked_bytes",
+                        f"model.{m}.download_bytes",
+                        "disk.git_pack_mib",
+                        "assumption.minimum_worktrees",
+                        "disk.worktree_bytes",
+                        "assumption.postgres_data_allowance_gb",
+                    ),
+                    lambda v, p=p, b=b, e=engine: round(
+                        (
+                            v[f"{p}.pkg.base.bytes"]
+                            + v[f"{p}.pkg.postgres.bytes"]
+                            + v[f"{e}.venv_bytes"]
+                            + v[f"{e}.uv_cache_bytes"]
+                            + v[f"{b}.unpacked_bytes"]
+                            + v[f"model.{m}.download_bytes"]
+                            + v["disk.git_pack_mib"] * MIB
+                            + v["assumption.minimum_worktrees"] * v["disk.worktree_bytes"]
+                        )
+                        / 1e9
+                        + v["assumption.postgres_data_allowance_gb"],
+                        1,
+                    ),
+                ),
+                Derivation(
+                    f"{p}.disk.minimum_gb",
+                    f"{cell.name} ({cell.arch}): minimum free disk",
+                    "GB",
+                    "the need rounded up to the next 10 GB",
+                    (f"{p}.disk.minimum_need_gb",),
+                    lambda v, p=p: math.ceil(v[f"{p}.disk.minimum_need_gb"] / 10) * 10,
+                ),
+                Derivation(
+                    f"{p}.disk.with_ledger_gb",
+                    f"{cell.name} ({cell.arch}): free disk with the ledger's growth",
+                    "GB",
+                    "minimum need + ledger growth over the horizon",
+                    (f"{p}.disk.minimum_need_gb", "disk.ledger_growth_gb"),
+                    lambda v, p=p: round(
+                        v[f"{p}.disk.minimum_need_gb"] + v["disk.ledger_growth_gb"], 1
+                    ),
+                ),
+                Derivation(
+                    f"{p}.disk.recommended_need_gb",
+                    f"{cell.name} ({cell.arch}): free disk recommended",
+                    "GB",
+                    "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
+                    (
+                        f"{p}.disk.minimum_need_gb",
+                        f"{p}.pkg.desktop.bytes",
+                        f"{krypton}.venv_bytes",
+                        *[f"model.{o}.download_bytes" for o in optional],
+                        "disk.dev_venv_bytes",
+                        "assumption.recommended_worktrees",
+                        "assumption.minimum_worktrees",
+                        "disk.worktree_bytes",
+                        f"model.{m}.download_bytes",
+                    ),
+                    lambda v, p=p, kr=krypton: round(
+                        v[f"{p}.disk.minimum_need_gb"]
+                        + (
+                            v[f"{p}.pkg.desktop.bytes"]
+                            + v[f"{kr}.venv_bytes"]
+                            + sum(v[f"model.{o}.download_bytes"] for o in optional)
+                            + v["disk.dev_venv_bytes"]
+                            + (
+                                v["assumption.recommended_worktrees"]
+                                - v["assumption.minimum_worktrees"]
+                            )
+                            * v["disk.worktree_bytes"]
+                            + v[f"model.{m}.download_bytes"]
+                        )
+                        / 1e9,
+                        1,
+                    ),
+                ),
+                Derivation(
+                    f"{p}.disk.recommended_gb",
+                    f"{cell.name} ({cell.arch}): recommended free disk",
+                    "GB",
+                    "the recommended need rounded up to the next 10 GB",
+                    (f"{p}.disk.recommended_need_gb",),
+                    lambda v, p=p: math.ceil(v[f"{p}.disk.recommended_need_gb"] / 10) * 10,
+                ),
+                Derivation(
+                    f"{p}.floor.postgres",
+                    f"{cell.name} ({cell.arch}): packaged PostgreSQL meets vibey's floor",
+                    "verdict",
+                    "major(packaged PostgreSQL) >= the floor vibey checks on connect",
+                    (f"{p}.packaged.postgres", "declared.postgres_min_major"),
+                    lambda v, p=p: (
+                        Versions.major(v[f"{p}.packaged.postgres"])
+                        >= int(v["declared.postgres_min_major"])
+                    ),
+                ),
+                Derivation(
+                    f"{p}.floor.python",
+                    f"{cell.name} ({cell.arch}): packaged Python meets the floor (else uv fetches one)",
+                    "verdict",
+                    "packaged python3 >= the oldest Python vibey-engine runs on",
+                    (f"{p}.packaged.python", "python.floor"),
+                    lambda v, p=p: Versions.at_least(v[f"{p}.packaged.python"], v["python.floor"]),
+                ),
+                Derivation(
+                    f"{p}.floor.glibc",
+                    f"{cell.name} ({cell.arch}): glibc meets the installed wheels' manylinux floor",
+                    "verdict",
+                    "glibc >= the newest glibc any installed wheel requires",
+                    (f"{p}.glibc", f"{p}.install.glibc_floor"),
+                    lambda v, p=p: Versions.at_least(
+                        v[f"{p}.glibc"], v[f"{p}.install.glibc_floor"]
+                    ),
+                ),
+                Derivation(
+                    f"{p}.floor.desktop",
+                    f"{cell.name} ({cell.arch}): packaged desktop libraries meet the client's floors",
+                    "verdict",
+                    "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
+                    (
+                        f"{p}.packaged.glib",
+                        "declared.desktop_glib",
+                        f"{p}.packaged.json_glib",
+                        "declared.desktop_json_glib",
+                        f"{p}.packaged.gtk4",
+                        "declared.desktop_gtk4",
+                        f"{p}.packaged.libadwaita",
+                        "declared.desktop_libadwaita",
+                    ),
+                    lambda v, p=p: all(
+                        Versions.at_least(v[f"{p}.packaged.{role}"], v[f"declared.desktop_{role}"])
+                        for role in ("glib", "json_glib", "gtk4", "libadwaita")
+                    ),
+                ),
+            ]
+        return specs
+
 
 # ------------------------------------------------------------------------ staleness
 
 
 class StalenessPolicy(StalenessPolicyInterface):
     """A measurement that could not run keeps its last value, marked stale -- never reused
-    silently. A `once` figure the weekly probes never re-measure keeps its own date."""
+    silently. A `once` figure the weekly probes never re-measure keeps its own date.
+
+    `scope` says which figures this run was responsible for. One outside it (a Linux cell's
+    figure during the macOS run, or a probe left out by `--only`) is kept exactly as it was:
+    not re-measured, but not this run's to mark stale either. A fresh figure outside the
+    scope is dropped. With no scope, every figure is in it.
+    """
 
     def __init__(
-        self, derived_ids: set[str], unreported: str = "not reported by this run's probes"
+        self,
+        derived_ids: set[str],
+        unreported: str = "not reported by this run's probes",
+        scope: Callable[[str], bool] | None = None,
     ) -> None:
         self._derived = derived_ids
         self._unreported = unreported
+        self._scope = scope
+
+    def in_scope(self, fid: str) -> bool:
+        return self._scope is None or self._scope(fid)
 
     def merge(self, previous: Sequence[Figure], fresh: Sequence[Figure]) -> list[Figure]:
-        now = {f.id: f for f in fresh}
+        now = {f.id: f for f in fresh if self.in_scope(f.id)}
         out: dict[str, Figure] = {}
         for old in previous:
             if old.id in self._derived:
                 continue  # recomputed by the derivations from the merged inputs
+            if not self.in_scope(old.id):
+                out[old.id] = old
+                continue
             new = now.pop(old.id, None)
             if new is not None and new.status != "skipped":
                 out[old.id] = new  # re-measured this week, so it is weekly from now on
@@ -2837,8 +4217,12 @@ class RequirementTables:
 
     def provenance(self, rows: Sequence[Row]) -> tuple[str, str]:
         """The hosts and the date range of every dated figure behind `rows`, inputs included."""
+        return self.provenance_of([fid for row in rows for fid in row.figures])
+
+    def provenance_of(self, roots: Sequence[str]) -> tuple[str, str]:
+        """The hosts and the date range of every dated figure behind `roots`, inputs included."""
         ids: set[str] = set()
-        frontier = [fid for row in rows for fid in row.figures]
+        frontier = list(roots)
         while frontier:
             fid = frontier.pop()
             if fid in ids:
@@ -2846,7 +4230,9 @@ class RequirementTables:
             ids.add(fid)
             figure = self._f.get(fid)
             if figure is not None and figure.inputs:
-                frontier += [k for k in figure.inputs if not k.startswith("assumption.")]
+                frontier += [
+                    k for k in figure.inputs if not k.startswith(("assumption.", "config."))
+                ]
         dates = sorted(
             Formatter.day(f.measured_at)
             for fid in ids
@@ -2859,6 +4245,175 @@ class RequirementTables:
             else (dates[0] if dates else "no measured figure")
         )
         return ", ".join(hosts) or "no host recorded", span
+
+
+class LinuxTables:
+    """The Linux matrix's tables and the fitted models, composed from the record.
+
+    A cell's run mode (native, emulated, not run) comes from its OS-release figure. Cells in
+    these tables are short -- the value, `not measured`, or the value marked stale -- and the
+    reasons are listed once, in the status block, rather than repeated across the matrix.
+    """
+
+    def __init__(self, record: SpecsRecord, settings: SpecsSettings) -> None:
+        self._f = record.by_id()
+        self._settings = settings
+        self._matrix = LinuxMatrix(settings)
+        self.tables = RequirementTables(record, settings)
+
+    def short(self, fid: str) -> str:
+        figure = self._f.get(fid)
+        if figure is None or not figure.has_value:
+            return "not measured"
+        text = Formatter.value(figure)
+        return f"{text} (stale)" if figure.status == "stale" else text
+
+    def version(self, fid: str) -> str:
+        figure = self._f.get(fid)
+        if figure is None or not figure.has_value:
+            return "not measured"
+        try:
+            text = ".".join(str(part) for part in Versions.key(str(figure.value)))
+        except ValueError:
+            text = str(figure.value)
+        return f"{text} (stale)" if figure.status == "stale" else text
+
+    def glibc(self, p: str) -> str:
+        """The image's glibc, against the newest glibc its installed wheels require."""
+        have, need = self.version(f"{p}.glibc"), self._f.get(f"{p}.install.glibc_floor")
+        if need is None or not need.has_value:
+            return f"{have} (the wheels' floor not measured)"
+        return f"{have} (wheels need {self.version(need.id)}: {self.short(f'{p}.floor.glibc')})"
+
+    def mode(self, cell: LinuxCell) -> str:
+        figure = self._f.get(f"{cell.prefix}.os_release")
+        if figure is None or not figure.has_value:
+            return "not run" if not cell.image else "not measured"
+        emulated = bool(dict(figure.conditions).get("emulated"))
+        return "emulated" if emulated else "native"
+
+    def floors(self) -> tuple[list[list[str]], list[str]]:
+        rows, ids = [], []
+        for cell in self._matrix.cells():
+            p, mode = cell.prefix, self.mode(cell)
+            if mode == "not run":
+                rows.append([cell.name, cell.arch, f"not run: {cell.reason}", *["-"] * 6])
+                continue
+            fids = [
+                f"{p}.os_release",
+                f"{p}.glibc",
+                f"{p}.install.glibc_floor",
+                f"{p}.floor.glibc",
+                f"{p}.packaged.kernel",
+                f"{p}.packaged.python",
+                f"{p}.floor.python",
+                f"{p}.packaged.postgres",
+                f"{p}.floor.postgres",
+                f"{p}.packaged.gtk4",
+                f"{p}.packaged.libadwaita",
+                f"{p}.floor.desktop",
+            ]
+            ids += fids
+            rows.append(
+                [
+                    cell.name,
+                    cell.arch,
+                    mode,
+                    self.short(f"{p}.os_release"),
+                    self.glibc(p),
+                    self.version(f"{p}.packaged.kernel"),
+                    f"{self.version(f'{p}.packaged.python')} (>= {self.short('python.floor')}: {self.short(f'{p}.floor.python')})",
+                    f"{self.version(f'{p}.packaged.postgres')} (>= {self.short('declared.postgres_min_major')}: {self.short(f'{p}.floor.postgres')})",
+                    f"gtk4 {self.version(f'{p}.packaged.gtk4')}, libadwaita {self.version(f'{p}.packaged.libadwaita')} (meet floors: {self.short(f'{p}.floor.desktop')})",
+                ]
+            )
+        return rows, ids
+
+    def requirements(self) -> tuple[list[list[str]], list[str]]:
+        rows, ids = [], []
+        memory = f"{self.short('linux.ram.minimum_gb')} / {self.short('linux.ram.recommended_gb')}"
+        for cell in self._matrix.cells():
+            p, f = cell.prefix, f"fit.cpu.{cell.arch}"
+            fids = [
+                "linux.ram.minimum_gb",
+                "linux.ram.recommended_gb",
+                f"{f}.minimum_cores",
+                f"{f}.knee_cores",
+                f"{p}.disk.minimum_gb",
+                f"{p}.disk.recommended_gb",
+            ]
+            ids += fids
+            disk = (
+                "-"
+                if self.mode(cell) == "not run"
+                else f"{self.short(f'{p}.disk.minimum_gb')} / {self.short(f'{p}.disk.recommended_gb')}"
+            )
+            rows.append(
+                [
+                    cell.name,
+                    cell.arch,
+                    memory,
+                    f"{self.short(f'{f}.minimum_cores')} / {self.short(f'{f}.knee_cores')}",
+                    disk,
+                    self.tables.basis(*fids),
+                ]
+            )
+        return rows, ids
+
+    def models(self) -> tuple[str, list[str]]:
+        """The fitted models in math notation, with their parameters and fit quality."""
+        s, lin = self._settings, self._settings.linux
+        window = self.short("declared.runner_context_window")
+        hi = max(int(c) for c in s.bench["contexts"])
+        a = s.assumptions
+        m0, k = self.short("fit.memory.m0_mib"), self.short("fit.memory.k_kib_per_token")
+        lines = [
+            "Memory against context: least squares over the measured sweep",
+            "",
+            "    M(c) = M₀ + k·c",
+            f"    M₀ = {m0}   k = {k} KiB/token   R² = {self.short('fit.memory.r2')}   max |residual| = {self.short('fit.memory.max_residual_mib')}",
+            "",
+            f"Linux memory: h = {lin['memory_headroom_factor']:g} (declared headroom), the model held in system RAM",
+            "",
+            "    RAM(c) = h·M(c)/1024 + vibey side + OS headroom",
+            f"    minimum     = RAM({window}) = {self.short('linux.ram.minimum_need_gib')} → {self.short('linux.ram.minimum_gb')}",
+            f"    recommended = RAM({hi:,}) + apps headroom ({a['apps_headroom_gib']:g} GiB) = {self.short('linux.ram.recommended_need_gib')} → {self.short('linux.ram.recommended_gb')}",
+            f"    c_max({lin['probe_memory_gb']:g} GB) = ((S·10⁹/2²⁰ − (side + OS)·1024)/h − M₀)/(k/1024) = {self.short('linux.ram.max_context_at_probe')} tokens; holds {window}: {self.short('linux.ram.probe_fits_runner')}",
+            "",
+            "CPU throughput against cores: Amdahl's law, per architecture",
+            "",
+            "    T(n) = T₁ / ((1 − p) + p/n)       fitted as 1/T = (1 − p)/T₁ + (p/T₁)·(1/n)",
+            "    dT/dn = T₁·p / ((1 − p)·n + p)²",
+            f"    knee:  dT/dn = θ  ⇒  n* = (√(T₁·p/θ) − p)/(1 − p),  θ = {lin['cpu_knee_tok_s_per_core']:g} tok/s per core",
+            f"    floor: T(n) ≥ F  ⇔  n ≥ p/(T₁/F − (1 − p)),  F = {a['minimum_gen_tok_s']:g} tok/s; none if F ≥ T₁/(1 − p)",
+        ]
+        ids = [
+            "fit.memory.m0_mib",
+            "fit.memory.k_kib_per_token",
+            "fit.memory.r2",
+            "fit.memory.max_residual_mib",
+            "linux.ram.minimum_gb",
+            "linux.ram.recommended_gb",
+            "linux.ram.max_context_at_probe",
+        ]
+        for arch in self._matrix.arches():
+            f = f"fit.cpu.{arch}"
+            ids += [f"{f}.t1_tok_s", f"{f}.p", f"{f}.knee_cores", f"{f}.minimum_cores"]
+            lines.append(
+                f"    {arch}: T₁ = {self.short(f'{f}.t1_tok_s')}, p = {self.short(f'{f}.p')}, R² = {self.short(f'{f}.r2')}, "
+                f"T∞ = {self.short(f'{f}.asymptote_tok_s')}; knee {self.short(f'{f}.knee_cores')}, minimum {self.short(f'{f}.minimum_cores')}"
+            )
+        g = s.growth
+        ids += ["postgres.bytes_per_job", "disk.ledger_growth_gb"]
+        lines += [
+            "",
+            "Ledger growth: append-only, so the disk it needs is the integral of its rate",
+            "",
+            "    D(H) = ∫₀ᴴ b·(r₀ + r₁·t) dt = b·(r₀·H + r₁·H²/2)",
+            f"    b = {self.short('postgres.bytes_per_job')} per job, r₀ = {g['jobs_per_day']:g} jobs/day, "
+            f"r₁ = {g['jobs_per_day_growth']:g} jobs/day², H = {g['horizon_days']:g} days  ⇒  D = {self.short('disk.ledger_growth_gb')}",
+        ]
+        return "```text\n" + "\n".join(lines) + "\n```\n", ids
 
 
 class GeneratedBlocks:
@@ -2923,6 +4478,28 @@ class DocsRenderer(RequirementsRendererInterface):
         )
         return head + body
 
+    def _provenance(self, tables: RequirementTables, ids: Sequence[str]) -> str:
+        host, span = tables.provenance_of(ids)
+        return (
+            f"*Measured on {host}; figures dated {span} (UTC). Source: "
+            f"[`{self._settings.record}`](https://github.com/the-vibey-project/vibey/blob/develop/{self._settings.record}), "
+            f"regenerated by `{SCRIPT}`; do not edit inside these markers.*\n\n"
+        )
+
+    def _matrix(
+        self,
+        tables: RequirementTables,
+        rows: Sequence[Sequence[str]],
+        ids: Sequence[str],
+        header: Sequence[str],
+    ) -> str:
+        head = "| " + " | ".join(header) + " |\n|" + "---|" * len(header) + "\n"
+        body = "".join("| " + " | ".join(self._cell(c) for c in row) + " |\n" for row in rows)
+        return self._provenance(tables, ids) + head + body
+
+    def _models(self, tables: RequirementTables, text: str, ids: Sequence[str]) -> str:
+        return self._provenance(tables, ids) + text
+
     def blocks(self, record: SpecsRecord) -> dict[str, str]:
         t = RequirementTables(record, self._settings)
         stale = [
@@ -2942,11 +4519,40 @@ class DocsRenderer(RequirementsRendererInterface):
         unverified = (
             "".join(f"- {item}\n" for item in record.not_verified) or "- nothing recorded\n"
         )
+        linux = LinuxTables(record, self._settings)
         return {
             "hardware": self._table(t, t.hardware()),
             "software": self._table(t, t.software()),
             "network": self._table(t, t.network()),
             "clients": self._table(t, t.clients()),
+            "linux-floors": self._matrix(
+                t,
+                *linux.floors(),
+                [
+                    "Distribution",
+                    "Arch",
+                    "Run",
+                    "OS release",
+                    "glibc",
+                    "Kernel (packaged)",
+                    "Python (packaged)",
+                    "PostgreSQL (packaged)",
+                    "Desktop libraries (packaged)",
+                ],
+            ),
+            "linux-requirements": self._matrix(
+                t,
+                *linux.requirements(),
+                [
+                    "Distribution",
+                    "Arch",
+                    "Memory min / rec",
+                    "Cores min / rec",
+                    "Disk min / rec",
+                    "Basis",
+                ],
+            ),
+            "linux-models": self._models(t, *linux.models()),
             "status": f"*Record generated {record.generated_at}.*\n\n{status}",
             "not-verified": unverified,
         }
@@ -3023,7 +4629,53 @@ class PaperRenderer(RequirementsRendererInterface):
             r"\end{table*}",
             "```",
         ]
-        return {"minimum-requirements": "\n".join(lines)}
+        return {"minimum-requirements": "\n".join(lines), "linux-requirements": self.linux(record)}
+
+    LINUX_LABEL = "tab:linux-requirements"
+
+    def linux(self, record: SpecsRecord) -> str:
+        """The Linux matrix, one row per cell, and the fitted models in its caption."""
+        linux = LinuxTables(record, self._settings)
+        rows, ids = linux.requirements()
+        floors, floor_ids = linux.floors()
+        host, span = linux.tables.provenance_of([*ids, *floor_ids])
+        lines = [
+            "```latex",
+            r"\begin{table*}[t]",
+            r"\centering\footnotesize",
+            r"\begin{tabular}{@{}p{1.2in}p{0.55in}p{0.65in}p{0.8in}p{0.8in}p{0.9in}p{1.5in}@{}}",
+            r"\textbf{Distribution} & \textbf{Arch} & \textbf{Run} & \textbf{Cores min / rec} & "
+            r"\textbf{Disk min / rec} & \textbf{PostgreSQL} & \textbf{glibc}\\",
+            r"\hline",
+        ]
+        for row, floor in zip(rows, floors, strict=True):
+            run = "not run" if floor[2].startswith("not run") else floor[2]
+            cells = (row[0], row[1], run, row[3], row[4], floor[7], floor[4])
+            lines.append(" & ".join(self.tex(c) for c in cells) + r"\\")
+        lines += [
+            r"\end{tabular}",
+            r"\caption{The Linux matrix: each supported distribution on each architecture, measured "
+            r"in the distribution's own container image. Memory is the same for every cell, "
+            + self.tex(linux.short("linux.ram.minimum_gb"))
+            + " minimum and "
+            + self.tex(linux.short("linux.ram.recommended_gb"))
+            + r" recommended, from the least-squares line $M(c) = M_0 + kc$ fitted to the measured "
+            + "model memory ($M_0$ = "
+            + self.tex(linux.short("fit.memory.m0_mib"))
+            + ", $k$ = "
+            + self.tex(linux.short("fit.memory.k_kib_per_token"))
+            + " KiB/token, $R^2$ = "
+            + self.tex(linux.short("fit.memory.r2"))
+            + r") with a declared headroom factor. Cores come from Amdahl's law fitted per "
+            r"architecture: the minimum reaches the minimum generation rate, the recommended is "
+            r"the knee where $dT/dn$ falls to a declared threshold. An emulated cell's sizes "
+            r"and versions stand; its timings are refused. "
+            + f"Measured on {self.tex(host)}, figures dated {self.tex(span)} (UTC).}}",
+            rf"\label{{{self.LINUX_LABEL}}}",
+            r"\end{table*}",
+            "```",
+        ]
+        return "\n".join(lines)
 
     def apply(self, document: str, record: SpecsRecord) -> str:
         return GeneratedBlocks.replace_all(document, self.blocks(record))
@@ -3037,7 +4689,12 @@ class PaperRenderer(RequirementsRendererInterface):
 
 class MeasurementSession:
     """Runs every probe in order, merges with the previous record, derives, and returns the
-    new record. The scratch database and the scratch directory are always cleaned up."""
+    new record. The scratch database and the scratch directory are always cleaned up.
+
+    On a host it measures everything but the Linux matrix, whose figures are each cell's
+    own and are left as they were. Inside a cell's container (`$VIBEY_SPECS_CELL` set by
+    `cell`) it runs the Linux probe alone and is responsible for that cell's figures only.
+    """
 
     def __init__(
         self,
@@ -3055,12 +4712,54 @@ class MeasurementSession:
         self._environ = environ
         self._only = set(only)
 
+    def cell(self) -> LinuxCell | None:
+        """The matrix cell this run measures, when it runs inside one's container."""
+        named = self._environ.get(LinuxMatrix.CELL_ENV, "")
+        if not named:
+            return None
+        distro, _, arch = named.partition("/")
+        return LinuxMatrix(self._settings).cell(distro, arch)
+
+    def _cell_probes(
+        self, cell: LinuxCell, figures: FigureFactory, ws: Workspace
+    ) -> Iterator[ProbeInterface]:
+        s = self._settings
+        emulated = self._environ.get(LinuxMatrix.EMULATED_ENV, "")
+        builder = PackageBuilder(self._repo, s, self._runner, ws, self._environ)
+        install = InstallFootprintProbe(
+            s,
+            self._runner,
+            builder,
+            ws,
+            DirectorySize(self._runner),
+            figures,
+            prefix=f"{cell.prefix}.install",
+            only=list(s.linux["install_targets"]),
+            emulated=emulated,
+        )
+        listing = self._environ.get(LinuxMatrix.BEFORE_ENV, "")
+        before: set[str] | None = None
+        with contextlib.suppress(OSError):
+            if listing:
+                text = Path(listing).read_text(encoding="utf-8")
+                before = {line.strip() for line in text.splitlines() if line.strip()}
+        manager = PackageManager(
+            LinuxMatrix(s).package_manager(cell.distro),
+            self._runner,
+            float(s.linux["package_timeout_s"]),
+        )
+        yield LinuxCellProbe(s, cell, manager, install, figures, before, emulated)
+
     def _probes(
         self, figures: FigureFactory, ws: Workspace, postgres_holder: list[PostgresProbe]
     ) -> Iterator[ProbeInterface]:
+        cell = self.cell()
+        if cell is not None:
+            yield from self._cell_probes(cell, figures, ws)
+            return
         s = self._settings
         sizes = DirectorySize(self._runner)
-        builder = PackageBuilder(self._repo, s, self._runner, ws)
+        builder = PackageBuilder(self._repo, s, self._runner, ws, self._environ)
         url = self._environ.get(str(s.ollama["url_env"])) or str(s.ollama["default_url"])
         client = OllamaClient(url, str(s.ollama["registry"]), float(s.bench["request_timeout_s"]))
         log = LlamaServerLog(Path(os.path.expanduser(str(s.ollama["server_log"]))))
@@ -3077,7 +4776,8 @@ class MeasurementSession:
 
     def run(self, previous: SpecsRecord | None) -> SpecsRecord:
         info = HostDescriber(self._runner).describe()
-        host = HostDescriber.host_id(info)
+        cell = self.cell()
+        host = self._environ.get(LinuxMatrix.HOST_ENV) or HostDescriber.host_id(info)
         figures = FigureFactory(self._clock, host)
         ws = Workspace()
         holder: list[PostgresProbe] = []
@@ -3100,7 +4800,7 @@ class MeasurementSession:
                 if postgres.database is not None:
                     postgres.database.drop()
             ws.cleanup()
-        if info.get("ram_bytes"):
+        if info.get("ram_bytes") and cell is None:
             fresh.append(
                 figures.measured(
                     "host.ram_bytes",
@@ -3113,8 +4813,13 @@ class MeasurementSession:
         unreported = "not reported by this run's probes" + (
             f" (crashed: {'; '.join(crashed)})" if crashed else ""
         )
+        if cell is not None:
+            mine = f"{cell.prefix}."
+            scope: Callable[[str], bool] = lambda fid: fid.startswith(mine)  # noqa: E731
+        else:
+            scope = lambda fid: not fid.startswith("linux.")  # noqa: E731
         return RecordBuilder(self._settings, self._clock).build(
-            previous, fresh, {host: info}, unreported=unreported
+            previous, fresh, {host: info}, unreported=unreported, scope=scope
         )
 
 
@@ -3131,9 +4836,10 @@ class RecordBuilder:
         fresh: Sequence[Figure],
         hosts: Mapping[str, Mapping[str, Any]],
         unreported: str = "not reported by this run's probes",
+        scope: Callable[[str], bool] | None = None,
     ) -> SpecsRecord:
         derivations = Derivations(self._settings)
-        merged = StalenessPolicy(derivations.ids(), unreported).merge(
+        merged = StalenessPolicy(derivations.ids(), unreported, scope).merge(
             previous.figures if previous else (), fresh
         )
         base = {f.id: f for f in merged}
@@ -3180,12 +4886,49 @@ class MinimumSpecsCli:
         measure.add_argument(
             "--only", action="append", default=[], help="run only this probe (repeatable)"
         )
+        cells = sub.add_parser("cells", help="list the Linux matrix's cells")
+        cells.add_argument("--json", action="store_true", help="as a GitHub Actions matrix")
+        cell = sub.add_parser("cell", help="measure one Linux cell in its container")
+        cell.add_argument("--distro", required=True)
+        cell.add_argument("--arch", required=True)
+        cell.add_argument("--out", type=Path, required=True, help="the cell's partial record")
+        cell.add_argument(
+            "--runner-label",
+            default="",
+            help="what ran it (default: this host's description)",
+        )
+        merge = sub.add_parser("merge", help="fold Linux cell records into the record")
+        merge.add_argument("partials", type=Path, nargs="*")
+        merge.add_argument(
+            "--complete",
+            action="store_true",
+            help="every cell was expected: one with no record goes stale, with that reason",
+        )
         sub.add_parser("derive", help="recompute the derived figures in the record")
         sub.add_parser("render", help="rewrite the GENERATED blocks from the record")
         sub.add_parser(
             "check", help="exit 1 if the record's derivations or the blocks are out of step"
         )
         return parser
+
+    @staticmethod
+    def _cells(settings: SpecsSettings, as_json: bool) -> int:
+        cells = LinuxMatrix(settings).cells()
+        if as_json:
+            include = [
+                {
+                    "distro": c.distro,
+                    "arch": c.arch,
+                    "runner": c.runner,
+                    "image": c.image,
+                }
+                for c in cells
+            ]
+            print(json.dumps({"include": include}, separators=(",", ":")))
+            return 0
+        for c in cells:
+            print(f"{c.distro}\t{c.arch}\t{c.runner}\t{c.image or '-'}\t{c.reason or ''}")
+        return 0
 
     def run(self, argv: Sequence[str]) -> int:
         args = self.parser().parse_args(list(argv))
@@ -3202,7 +4945,28 @@ class MinimumSpecsCli:
             counts = {s: sum(1 for f in record.figures if f.status == s) for s in STATUSES}
             print(f"{SCRIPT}: wrote {out}: " + ", ".join(f"{n} {s}" for s, n in counts.items()))
             return 0
+        if args.command == "cells":
+            return self._cells(settings, args.json)
+        if args.command == "cell":
+            label = args.runner_label or HostDescriber.host_id(
+                HostDescriber(SubprocessRunner()).describe()
+            )
+            partial = CellRunner(repo, settings, SubprocessRunner(), self._clock, label).run(
+                args.distro, args.arch
+            )
+            out = args.out if args.out.is_absolute() else repo / args.out
+            partial.save(out)
+            counts = {s: sum(1 for f in partial.figures if f.status == s) for s in STATUSES}
+            print(f"{SCRIPT}: wrote {out}: " + ", ".join(f"{n} {s}" for s, n in counts.items()))
+            return 0
         record = SpecsRecord.load(record_path)
+        if args.command == "merge":
+            partials = [SpecsRecord.load(path) for path in args.partials]
+            CellMerger(settings, self._clock).merge(record, partials, args.complete).save(
+                record_path
+            )
+            print(f"{SCRIPT}: merged {len(partials)} cell record(s) into {record_path}")
+            return 0
         builder = RecordBuilder(settings, self._clock)
         renderers: list[tuple[Path, RequirementsRendererInterface]] = [
             (repo / settings.docs_page, DocsRenderer(settings)),

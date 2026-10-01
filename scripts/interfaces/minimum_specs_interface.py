@@ -70,6 +70,43 @@ class DerivationsInterface(Protocol):
         ...
 
 
+class DerivationSourceInterface(Protocol):
+    """Contributes derived figures: each with its id, formula, inputs and arithmetic."""
+
+    def specs(self) -> list[Any]:
+        """The derivations this source declares, in dependency order."""
+        ...
+
+
+class PackageManagerInterface(Protocol):
+    """A Linux distribution's package manager, driven from the declared configuration."""
+
+    def installed(self) -> set[str]:
+        """The names of every installed package."""
+        ...
+
+    def sizes(self) -> dict[str, int]:
+        """Installed size in bytes, by package name."""
+        ...
+
+    def install(self, packages: Sequence[str]) -> Any:
+        """Installs `packages`; the command's result."""
+        ...
+
+    def version(self, package: str) -> str | None:
+        """The highest version the repositories offer for `package`, or None."""
+        ...
+
+
+class CellRunnerInterface(Protocol):
+    """Runs one (distribution x architecture) cell of the Linux matrix and hands back a
+    partial record: measured in the distribution's container, or skipped with the reason."""
+
+    def run(self, distro: str, arch: str) -> Any:
+        """The partial record for the cell."""
+        ...
+
+
 class StalenessPolicyInterface(Protocol):
     """Merges a run's figures into the previous record."""
 

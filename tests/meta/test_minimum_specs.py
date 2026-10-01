@@ -71,8 +71,10 @@ def test_the_workflow_measures_weekly_on_the_sovereign_runner_and_lands_as_a_pul
     assert measure["permissions"] == {"contents": "read"}, (
         "no write token on the self-hosted runner"
     )
-    assert publish["runs-on"] == "ubuntu-latest" and publish["needs"] == "measure"
+    assert publish["runs-on"] == "ubuntu-latest" and publish["needs"] == ["measure", "linux"]
+    assert publish["if"] == "${{ !cancelled() }}", "lands what did report; the rest goes stale"
     script = "\n".join(step.get("run", "") for step in publish["steps"])
+    assert "minimum_specs.py merge --complete" in script
     assert 'git commit -m "chore(specs): remeasure minimum requirements"' in script
     assert "chore/minimum-specs-$(date -u +%Y-%m-%d)" in script
     assert "Made-With: " in script
@@ -84,3 +86,22 @@ def test_the_workflow_measures_weekly_on_the_sovereign_runner_and_lands_as_a_pul
         r"\[(skip ci|ci skip|no ci|skip actions|actions skip)\]", text, re.IGNORECASE
     )
     assert "skip-checks" not in text
+
+
+def test_the_linux_matrix_comes_from_the_configuration_and_runs_natively_per_architecture() -> None:
+    spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    plan, linux = spec["jobs"]["plan"], spec["jobs"]["linux"]
+    assert "minimum_specs.py cells --json" in "\n".join(s.get("run", "") for s in plan["steps"])
+    assert linux["needs"] == "plan" and linux["runs-on"] == "${{ matrix.runner }}"
+    assert linux["strategy"]["matrix"] == "${{ fromJSON(needs.plan.outputs.cells) }}"
+    assert linux["strategy"]["fail-fast"] is False, "one cell's failure never hides another's"
+    assert linux["permissions"] == {"contents": "read"}
+    run = "\n".join(step.get("run", "") for step in linux["steps"])
+    assert "minimum_specs.py cell" in run
+    # Each architecture's cells run on a runner of that architecture: no emulated timing.
+    sys.path.insert(0, str(REPO))
+    from scripts import minimum_specs as ms
+
+    settings = ms.SpecsSettings.load(REPO / ms.DEFAULT_CONFIG)
+    runners = {a: settings.linux["arches"][a]["runner"] for a in settings.linux["arches"]}
+    assert runners == {"x86_64": "ubuntu-24.04", "aarch64": "ubuntu-24.04-arm"}

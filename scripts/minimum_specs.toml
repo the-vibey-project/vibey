@@ -121,3 +121,144 @@ recommended_prompt_tok_s = 500
 minimum_worktrees = 10
 recommended_worktrees = 50
 postgres_data_allowance_gb = 1.0
+# The idle-gated CPU scaling sweep: generation on the CPU alone (`num_gpu` 0) at each thread
+# count, the data Amdahl's law is fitted to (scripts/requirements_math.py). Short runs, since
+# one thread is slow: the rate, not the reply, is what is measured. A count above the host's
+# cores is recorded as skipped with that reason.
+[minimum_specs.bench.cpu_scaling]
+threads = [1, 2, 4, 6, 8, 10]
+context = 8192
+prompt_tokens = 256
+num_predict = 64
+runs = 2
+
+[minimum_specs.growth]
+# The ledger is append-only (it is never pruned), so its disk grows with every job. The
+# per-job bytes are measured (the database after `vibey new` and one `worker --once`, minus
+# the empty migrated database); the rate and the horizon are planning figures, not
+# measurements. Bytes after H days = integral from 0 to H of b*(r0 + r1*t) dt.
+# r0: about one storm (40 lanes) a day with retries; a planning figure.
+jobs_per_day = 50
+# r1: jobs/day added per day. 0 is a steady workload; set it above 0 to model growth.
+jobs_per_day_growth = 0
+# H: a year of ledger kept on the host.
+horizon_days = 365
+
+[minimum_specs.linux]
+# The Linux side of the requirements: a matrix of every distribution below on every
+# architecture below, each cell measured in that distribution's own container image
+# (`python scripts/minimum_specs.py cell`), on a native runner of that architecture in CI
+# (.github/workflows/minimum-specs.yml). A cell run on another architecture is emulated:
+# its sizes and versions stand (bytes are bytes), its timings are refused. A cell that
+# cannot run is recorded as skipped with the reason, never left out.
+docker = "docker"
+# A whole cell, and one package set's install inside it (GTK's closure is the long one,
+# and under emulation every package's scripts run through QEMU).
+container_timeout_s = 7200
+package_timeout_s = 1800
+# Fetches uv into the container; the measurement then runs on the distribution's python3.
+uv_install = "curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh"
+# The install targets measured per cell (the hub extra adds little over the base engine).
+install_targets = ["vibey-engine", "krypton-app"]
+# Ollama's Linux bundle is the same for every distribution on an architecture, so it is
+# measured once per architecture, by this distribution's cell, on the host (not in the
+# container): its download (HTTP Content-Length) and its unpacked size (bytes out of the
+# decompressor, a tar stream, so headers and padding are included).
+ollama_bundle_distro = "ubuntu-24.04"
+ollama_bundle_url = "https://ollama.com/download/ollama-linux-{goarch}.tar.zst"
+ollama_bundle_unpacked = "curl -fsSL {url} | zstd -dc | wc -c"
+# Memory planning margin over the fitted model memory M(c): allocator slack and the page
+# cache the memory-mapped weights compete with. A planning factor, not a measurement.
+memory_headroom_factor = 1.1
+# The memory size the "largest context that fits" figure is solved for (GB, as sold).
+probe_memory_gb = 16
+# The knee of Amdahl's curve: an added core is worth having while it adds at least this
+# much generation (tokens/s). 0.25 is 1 % of the recommended generation rate (25 tok/s).
+cpu_knee_tok_s_per_core = 0.25
+
+[minimum_specs.linux.arches.x86_64]
+goarch = "amd64"
+runner = "ubuntu-24.04"
+
+[minimum_specs.linux.arches.aarch64]
+goarch = "arm64"
+runner = "ubuntu-24.04-arm"
+
+# How each package manager is driven. `installed` lists package names; `sizes` lists name
+# and installed size (`size_format` says how to read it); `version` asks the repositories
+# for a package's version without installing it, and the highest match is taken.
+[minimum_specs.linux.package_managers.apt]
+env = { DEBIAN_FRONTEND = "noninteractive" }
+refresh = "apt-get update -qq"
+install = "apt-get install -y -qq --no-install-recommends {packages}"
+installed = ["dpkg-query", "-W", "-f=${Package}\\n"]
+sizes = ["dpkg-query", "-W", "-f=${Package}\\t${Installed-Size}\\n"]
+size_format = "name-tab-kib"
+version = ["apt-cache", "policy", "{package}"]
+version_pattern = 'Candidate:\s*(\S+)'
+
+[minimum_specs.linux.package_managers.pacman]
+env = {}
+# pacman's download sandbox needs seccomp, which an emulated (QEMU) container lacks; a
+# throwaway container loses nothing without it.
+refresh = "pacman -Syu --noconfirm --disable-sandbox"
+install = "pacman -S --noconfirm --needed --disable-sandbox {packages}"
+installed = ["pacman", "-Qq"]
+sizes = ["pacman", "-Qi"]
+size_format = "pacman-qi"
+version = ["pacman", "-Si", "{package}"]
+version_pattern = '(?m)^Version\s*:\s*(\S+)'
+
+[minimum_specs.linux.package_managers.dnf]
+env = {}
+refresh = "dnf -y -q makecache"
+install = "dnf install -y -q --setopt=install_weak_deps=False {packages}"
+installed = ["rpm", "-qa", "--qf", "%{NAME}\\n"]
+sizes = ["rpm", "-qa", "--qf", "%{NAME}\\t%{SIZE}\\n"]
+size_format = "name-tab-bytes"
+version = ["dnf", "-q", "info", "{package}"]
+version_pattern = '(?m)^Version\s*:\s*(\S+)'
+
+# The supported distributions, and where each one's support is claimed. `base` is what
+# vibey needs from the distribution (python3 runs the measurement and can serve uv; git
+# makes the worktrees; curl fetches uv); `sets` are measured as the closure each adds on
+# top; `versions` names the package whose repository version is each floor's evidence.
+[minimum_specs.linux.distros."ubuntu-24.04"]
+name = "Ubuntu 24.04 LTS"
+support = "CI `desktop` job (ci.yml, ubuntu-latest); .deb planned (clients/desktop/PACKAGING.md)"
+package_manager = "apt"
+images = { x86_64 = "ubuntu:24.04", aarch64 = "ubuntu:24.04" }
+unavailable = {}
+base = ["python3", "git", "ca-certificates", "curl"]
+sets = { postgres = ["postgresql"], desktop = ["libgtk-4-1", "libadwaita-1-0", "libjson-glib-1.0-0", "libsoup-3.0-0"] }
+versions = { kernel = "linux-image-generic", python = "python3", postgres = "postgresql", glib = "libglib2.0-0t64", json_glib = "libjson-glib-1.0-0", gtk4 = "libgtk-4-1", libadwaita = "libadwaita-1-0" }
+
+[minimum_specs.linux.distros."ubuntu-26.04"]
+name = "Ubuntu 26.04 LTS"
+support = "planned (#1116; clients/desktop/PACKAGING.md builds the .deb for 24.04 and 26.04)"
+package_manager = "apt"
+images = { x86_64 = "ubuntu:26.04", aarch64 = "ubuntu:26.04" }
+unavailable = {}
+base = ["python3", "git", "ca-certificates", "curl"]
+sets = { postgres = ["postgresql"], desktop = ["libgtk-4-1", "libadwaita-1-0", "libjson-glib-1.0-0", "libsoup-3.0-0"] }
+versions = { kernel = "linux-image-generic", python = "python3", postgres = "postgresql", glib = "libglib2.0-0t64", json_glib = "libjson-glib-1.0-0", gtk4 = "libgtk-4-1", libadwaita = "libadwaita-1-0" }
+
+[minimum_specs.linux.distros.arch]
+name = "Arch Linux"
+support = "CI `desktop` job (ci.yml, archlinux:latest); PKGBUILD (clients/desktop/packaging/arch)"
+package_manager = "pacman"
+images = { x86_64 = "archlinux:latest", aarch64 = "" }
+unavailable = { aarch64 = "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch" }
+base = ["python", "git", "ca-certificates", "curl"]
+sets = { postgres = ["postgresql"], desktop = ["gtk4", "libadwaita", "json-glib", "libsoup3"] }
+versions = { kernel = "linux", python = "python", postgres = "postgresql", glib = "glib2", json_glib = "json-glib", gtk4 = "gtk4", libadwaita = "libadwaita" }
+
+[minimum_specs.linux.distros.fedora]
+name = "Fedora (current release)"
+support = "named by the operator (2026-10-01); a Fedora COPR channel is in ADR-0019; no CI job yet"
+package_manager = "dnf"
+images = { x86_64 = "fedora:latest", aarch64 = "fedora:latest" }
+unavailable = {}
+base = ["python3", "git-core", "ca-certificates", "curl"]
+sets = { postgres = ["postgresql-server"], desktop = ["gtk4", "libadwaita", "json-glib", "libsoup3"] }
+versions = { kernel = "kernel-core", python = "python3", postgres = "postgresql-server", glib = "glib2", json_glib = "json-glib", gtk4 = "gtk4", libadwaita = "libadwaita" }
