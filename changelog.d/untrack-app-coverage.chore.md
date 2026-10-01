@@ -1,0 +1,1 @@
+- **Repository hygiene:** the krypton app's generated coverage report (`clients/app/coverage/`, committed by accident with 3.0.0) is no longer tracked, and `clients/*/coverage/` is ignored like `packages/*/coverage/`.
