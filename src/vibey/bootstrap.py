@@ -50,6 +50,7 @@ from vibey.application.engine_selection import (
 from vibey.application.engine_selector import EngineSelector
 from vibey.application.gate_answer import GateAnswerService
 from vibey.application.gate_notices import GateNoticeService, GateReminder
+from vibey.application.gate_timeouts import GateTimeoutSweep
 from vibey.application.interfaces import (
     AzureClientPort,
     BlobPort,
@@ -87,6 +88,7 @@ from vibey.application.interfaces.gate_notices import (
     GateNoticeStore,
     GateReminderInterface,
 )
+from vibey.application.interfaces.gate_timeouts import GateTimeoutSweepInterface
 from vibey.application.interfaces.observability import Logger
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
@@ -256,6 +258,9 @@ class AppResources:
     gate_notice_store: GateNoticeStore
     job_failures: JobFailureHistory
     gate_reminder: GateReminderInterface
+    # Resolves a waiting gate to its default only where the project declared that kind may
+    # (`[human_gates] timeout_defaults`, 12.d); runs beside the reminder sweep.
+    gate_timeouts: GateTimeoutSweepInterface
     # `[queue.defect]` as resolved, like `[queue.reap]`: from ./vibey.toml, or the
     # environment alone in a pod with none.
     queue_defect: QueueDefectConfigInterface
@@ -1297,6 +1302,14 @@ async def build_app(
             gate_notice_store=gate_notice_store,
             job_failures=PostgresJobFailureHistory(pool),
             gate_reminder=gate_reminder,
+            gate_timeouts=GateTimeoutSweep(
+                gates=gates,
+                projects=projects,
+                answers=GateAnswerService(gates=gates, caller=ProcessCaller()),
+                clock=clock,
+                logger=StructlogAppLogger(owner="gate-timeout"),
+                interval_seconds=notice_settings.sweep_interval_seconds,
+            ),
             queue_defect=defect_settings,
             design_research=design_research_settings,
         )
