@@ -27,6 +27,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   Ctrl-C of the worker no longer reaches a session, the worker ends every session still
   running on its way out (`LoopProcessAdapter.end_active_sessions`); the job's lease
   expires and another worker replays it.
+* **engines:** a worker no longer stops using every paid engine after a day. The selector
+  trusts a paid engine's login for `AUTH_TTL` (24 hours), but the login was checked only at
+  worker startup or by `vibey doctor`, so a worker left running for a day silently deferred
+  all paid-engine work every five minutes, forever. Selection now rechecks a paid engine's
+  login once it is past half that life, through `record_preflight`, which refreshes the
+  login and never grants or revokes conformance. An engine whose check keeps failing is
+  asked at most once every 15 minutes per project. Both intervals are constructor
+  parameters of `SelectingEngineProvider`.
 * **engines:** a hung engine session no longer wedges its job forever. A BUILD session
   (`build.implement` or `build.verify`) that never ended its tail kept the job's lease alive
   through the worker's heartbeat, so the reaper never reclaimed it and nothing said so.
