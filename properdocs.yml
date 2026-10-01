@@ -155,7 +155,7 @@ nav:
           - "0070 — Failover to the sovereign engine, and handback on a recorded probe": architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md
           - "0071 — Hub pairing and trust": architecture/decisions/0071-hub-pairing-and-trust.md
           - "0072 — The Sabbath, kept where the machine stands": architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md
-          - "0073 — Krypton desktop in C, on GTK 4 and libadwaita": architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md
+          - "0073 — krypton desktop in C, on GTK 4 and libadwaita": architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md
           - "0074 — Measured dispatch for every service-bus surface": architecture/decisions/0074-measured-service-bus-dispatch.md
           - "0075 — Context-bearing surfaces are linked microslice graphs": architecture/decisions/0075-context-microslices-and-linked-surfaces.md
           - "0076 — Discoverability and the first hour are deliverables": architecture/decisions/0076-discoverability-and-the-first-hour-are-deliverables.md

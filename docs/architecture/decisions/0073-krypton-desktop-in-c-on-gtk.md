@@ -1,4 +1,4 @@
-# 0073 — Krypton desktop in C, on GTK 4 and libadwaita
+# 0073 — krypton desktop in C, on GTK 4 and libadwaita
 
 **Status:** accepted · **Date:** 2026-09-25 · **Supersedes in part:** runbook 08-clients (its Tauri desktop) · **Cites:** sub-doctrine 9.b, 12.c, SD-01 v1.0 · **Related:** ADR-0016, ADR-0062, ADR-0065, ADR-0066, ADR-0068 · **Evidence:** `develop` at `0823cdfd`, read 2026-09-25
 
@@ -10,7 +10,7 @@ carries it.
 
 The 3.0.0 client suite includes a desktop app for macOS, Ubuntu and Arch. Runbook
 08-clients had planned it in Tauri. On 2026-09-25 the operator chose C on GTK 4 and
-libadwaita instead. The app is one of the Krypton surfaces (ADR-0065). It must:
+libadwaita instead. The app is one of the krypton surfaces (ADR-0065). It must:
 
 - reach vibey only through the hub (ADR-0068), never the database;
 - wear the design tokens (ADR-0066);

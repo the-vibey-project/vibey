@@ -1657,7 +1657,7 @@ class ModelBench(ProbeInterface):
 
 class ProcessFootprintProbe(ProbeInterface):
     """Peak RSS and wall time of the everyday CLI commands, and idle RSS of the hub and the
-    Krypton launcher, on the scratch database."""
+    krypton launcher, on the scratch database."""
 
     name = "processes"
 
@@ -2380,7 +2380,7 @@ class Derivations(DerivationsInterface):
             ),
             Derivation(
                 "download.first_install_bytes",
-                "First install on the wire: Krypton + hub + the sovereign model",
+                "First install on the wire: krypton + hub + the sovereign model",
                 "bytes",
                 "krypton-app download + sovereign model download",
                 ("install.krypton-app.download_bytes", f"model.{m}.download_bytes"),
@@ -2704,7 +2704,7 @@ class RequirementTables:
                 "vibey processes",
                 f"CLI {self.c('process.cli.status.max_rss_mib')}; worker {self.c('process.cli.worker_once.max_rss_mib')}; "
                 f"hub idle {self.c('process.serve.idle_rss_mib')}",
-                f"Krypton launcher + hub idle {self.c('process.krypton.idle_rss_mib')}",
+                f"krypton launcher + hub idle {self.c('process.krypton.idle_rss_mib')}",
                 [
                     "process.cli.status.max_rss_mib",
                     "process.cli.worker_once.max_rss_mib",

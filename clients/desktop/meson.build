@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-# Krypton desktop: the vibey desktop app, in C17 on GTK 4 and libadwaita (clients/desktop).
+# krypton desktop: the vibey desktop app, in C17 on GTK 4 and libadwaita (clients/desktop).
 #
 #   libkryptondesktop  the pure-C core: models, the hub client, state, formatting,
 #                      pairing, discovery. Each module is a header (its interface) and a .c.
@@ -39,8 +39,8 @@ add_project_arguments(
 
 channel = get_option('channel')
 channel_id = channel == 'nightly' ? 'KR_CHANNEL_NIGHTLY' : 'KR_CHANNEL_STABLE'
-app_id = channel == 'nightly' ? 'io.github.the_vibey_project.Krypton.Nightly' : 'io.github.the_vibey_project.Krypton'
-app_name = channel == 'nightly' ? 'Krypton Nightly' : 'Krypton'
+app_id = channel == 'nightly' ? 'io.github.the_vibey_project.krypton.nightly' : 'io.github.the_vibey_project.krypton'
+app_name = channel == 'nightly' ? 'krypton nightly' : 'krypton'
 
 glib_dep = dependency('glib-2.0', version: '>= 2.74')
 gio_dep = dependency('gio-2.0', version: '>= 2.74')
@@ -84,7 +84,7 @@ if soup_dep.found()
   core_args += '-DKR_HAVE_HUB_CLIENT'
 endif
 
-# Discovery: Avahi on Linux, dns_sd.h (Bonjour) on macOS. Without either, Krypton still
+# Discovery: Avahi on Linux, dns_sd.h (Bonjour) on macOS. Without either, krypton still
 # pairs by typing a hub's address and 6-digit code.
 discovery_backend = 'none'
 if host_machine.system() == 'darwin'
@@ -134,5 +134,5 @@ summary(
     'discovery': discovery_backend,
     'gui': gtk_dep.found() and adw_dep.found() and soup_dep.found(),
   },
-  section: 'Krypton desktop',
+  section: 'krypton desktop',
 )

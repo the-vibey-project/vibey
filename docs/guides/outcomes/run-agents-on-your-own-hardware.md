@@ -81,7 +81,7 @@ with `vibey gates` and `vibey answer`, as in the [Quickstart](../../index.md#qui
 
 At runtime the sovereign path talks to three local ports and nothing else, as measured by a
 network pass on 2026-09-29 ([host allowlist](../../reference/system-requirements.md#host-allowlist)):
-PostgreSQL on 5432, Ollama on 11434, and the hub on 8765 when a Krypton app connects. No
+PostgreSQL on 5432, Ollama on 11434, and the hub on 8765 when a krypton app connects. No
 telemetry, analytics, update check or version check is made at runtime
 ([network](../../reference/system-requirements.md#network)); vibey's metrics recorder has
 no external exporter ([`[telemetry]`](../../reference/configuration.md#telemetry)).

@@ -30,14 +30,14 @@ desktop_conf.set('APP_ID', app_id)
 desktop_conf.set('APP_NAME', app_name)
 data_dir = meson.project_source_root() / 'data'
 configure_file(
-  input: data_dir / 'io.github.the_vibey_project.Krypton.desktop.in',
+  input: data_dir / 'io.github.the_vibey_project.krypton.desktop.in',
   output: app_id + '.desktop',
   configuration: desktop_conf,
   install: true,
   install_dir: get_option('datadir') / 'applications',
 )
 configure_file(
-  input: data_dir / 'io.github.the_vibey_project.Krypton.metainfo.xml.in',
+  input: data_dir / 'io.github.the_vibey_project.krypton.metainfo.xml.in',
   output: app_id + '.metainfo.xml',
   configuration: desktop_conf,
   install: true,

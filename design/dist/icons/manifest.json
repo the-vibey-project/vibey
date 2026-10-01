@@ -232,6 +232,14 @@
       "opaque": true,
       "scene_sha256": "eaa9a948a11b0f7b46e674a8424775538a8e79c28ee276931fdb8171af24de8e",
       "png_sha256": "16052ea57e227fdc6f5eaa46f753ad9a470aa9a1e9b870139f8d8a73c636d95f"
+    },
+    "clients/vscode/media/krypton.png": {
+      "scene": "icon",
+      "width": 256,
+      "height": 256,
+      "opaque": false,
+      "scene_sha256": "0a06de16e5a403f64277735addc485cf1471ae476ce5e9e099fa42500c2f87f2",
+      "png_sha256": "79179af8f57fd6cff706ad214a267a37fefb9afad0361ae86f82e415d9d618c1"
     }
   }
 }

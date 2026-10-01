@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """What a caller of the hub may do: scopes, the actions they cover, and the ones none does.
 
-The hub (`vibey serve`, ADR-0067) answers every Krypton client over HTTP. Each request is
+The hub (`vibey serve`, ADR-0067) answers every krypton client over HTTP. Each request is
 one `HubAction`, and each action needs exactly one `HubScope`. A caller holds a set of
 scopes; an action is permitted only when the set holds the scope it needs. The default is
 the empty set, so a caller nobody granted anything is refused everything (deny by default,

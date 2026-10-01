@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""`vibey serve`: the hub, the one HTTP surface every Krypton client reaches (ADR-0067).
+"""`vibey serve`: the hub, the one HTTP surface every krypton client reaches (ADR-0067).
 
 It listens on the loopback interface. Leaving it takes two things, both deliberate: an
 explicit `--host <address>` on the command line, and `[hub] lan = true` in `vibey.toml`;
@@ -480,7 +480,7 @@ def serve(
         typer.Option("--openapi", help="Print the OpenAPI 3.1 document and exit; no database."),
     ] = False,
 ) -> None:
-    """Serve the hub: the HTTP API every Krypton client reaches, loopback by default."""
+    """Serve the hub: the HTTP API every krypton client reaches, loopback by default."""
     # A module-level function because typer builds the command from a plain function's
     # signature. It holds no logic; the command class does.
     if openapi:

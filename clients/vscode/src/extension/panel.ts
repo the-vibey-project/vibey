@@ -97,7 +97,7 @@ export class TaskPanel implements TaskPanelInterface {
       retainContextWhenHidden: true,
       localResourceRoots: [media],
     });
-    this.panel.iconPath = vscode.Uri.joinPath(media, 'vibey.svg');
+    this.panel.iconPath = vscode.Uri.joinPath(media, 'krypton.svg');
     const html = new PanelHtml();
     const webview = this.panel.webview;
     webview.html = html.page(

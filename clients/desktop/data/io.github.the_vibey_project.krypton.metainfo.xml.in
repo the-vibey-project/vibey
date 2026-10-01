@@ -8,12 +8,12 @@
   <summary>The desktop app for krypton</summary>
   <description>
     <p>
-      Krypton shows your vibey projects, the gates waiting on you, the lanes running now,
+      krypton shows your vibey projects, the gates waiting on you, the lanes running now,
       and the loops, engines and budgets behind them. A gate can be answered where it
       appears, and a notification says when a new one is raised.
     </p>
     <p>
-      Krypton finds a vibey hub on your network and pairs with it once, by QR code or a
+      krypton finds a vibey hub on your network and pairs with it once, by QR code or a
       6-digit code. It follows your desktop's light or dark style, or keeps the one you
       choose.
     </p>
@@ -32,7 +32,7 @@
   <releases>
     <release version="0.1.0" date="2026-09-25">
       <description>
-        <p>The first Krypton desktop.</p>
+        <p>The first krypton desktop.</p>
       </description>
     </release>
   </releases>

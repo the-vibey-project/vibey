@@ -1,5 +1,5 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
-/* Krypton desktop: the application. It owns the core's state, reaches the hub through the
+/* krypton desktop: the application. It owns the core's state, reaches the hub through the
  * core's client, and hands the window its views. Every hub answer is parsed by the core
  * (kr-model.h); a refusal or silence is said in the window's banner, never swallowed. */
 #include "kr-answer.h"
@@ -147,7 +147,7 @@ on_answer(GObject *source, GAsyncResult *result, gpointer data)
         break;
     }
     if (parse_error != NULL) {
-        g_autofree char *said = g_strdup_printf("The hub sent something Krypton cannot read: %s",
+        g_autofree char *said = g_strdup_printf("The hub sent something krypton cannot read: %s",
                                                 parse_error->message);
         kr_state_set_connection(app->state, KR_CONNECTION_REFUSED, said);
     }
@@ -410,7 +410,7 @@ main(int argc, char **argv)
     app.application = adw_application_new(kr_channel_app_id(app.channel), G_APPLICATION_DEFAULT_FLAGS);
     /* Both channels read the one stylesheet pair, generated from the design tokens. */
     g_application_set_resource_base_path(G_APPLICATION(app.application),
-                                         "/io/github/the_vibey_project/Krypton");
+                                         "/io/github/the_vibey_project/krypton");
     g_signal_connect(app.application, "startup", G_CALLBACK(on_startup), &app);
     g_signal_connect(app.application, "activate", G_CALLBACK(on_activate), &app);
     g_signal_connect(app.application, "shutdown", G_CALLBACK(on_shutdown), &app);

@@ -1,5 +1,5 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
-/* kr-state: the one place Krypton desktop keeps what it knows.
+/* kr-state: the one place krypton desktop keeps what it knows.
  *
  * The views read from here and listen for changes; the hub client writes here. Each setter
  * takes ownership of what it is given and tells every listener which slice changed, so a
@@ -49,7 +49,7 @@ GPtrArray *kr_state_projects(KrState *state); /* borrowed; never NULL */
 
 /* Stores the open gates and returns the ones not seen before, in the hub's order (a new
  * array of borrowed pointers; free the array, not its elements). The first call only
- * learns what is open: it returns an empty array, so starting Krypton does not announce
+ * learns what is open: it returns an empty array, so starting krypton does not announce
  * every gate that was already waiting. */
 GPtrArray *kr_state_set_gates(KrState *state, GPtrArray *gates);
 GPtrArray *kr_state_gates(KrState *state);

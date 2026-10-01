@@ -141,7 +141,7 @@ the new project is created beside them, and they stay readable by id.
 
 ## `vibey serve`
 
-The hub (ADR-0067): the HTTP API every Krypton client reaches, built on
+The hub (ADR-0067): the HTTP API every krypton client reaches, built on
 `vibey_bootstrap`. Install it with `pip install 'vibey[hub]'`. It serves until stopped.
 
 | Option | Default | What it does |

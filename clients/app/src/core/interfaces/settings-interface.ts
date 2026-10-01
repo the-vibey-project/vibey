@@ -2,7 +2,7 @@
 /** A device's own settings: theme, sounds and which notifications it wants. Never a secret. */
 import type { ThemeMode } from '@vibey/core';
 
-/** The notification classes every Krypton client offers (Lane J's one event model). */
+/** The notification classes every krypton client offers (Lane J's one event model). */
 export type NotificationClass =
   | 'gate'
   | 'finished'

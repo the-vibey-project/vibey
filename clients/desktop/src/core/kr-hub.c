@@ -207,7 +207,7 @@ kr_hub_status_text(guint status)
     case 422:
         return "The hub could not read that request.";
     case 429:
-        return "Too many requests. Krypton will try again shortly.";
+        return "Too many requests. krypton will try again shortly.";
     case 503:
         return "The hub is up, but its database is not answering.";
     default:

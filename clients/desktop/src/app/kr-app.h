@@ -1,5 +1,5 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
-/* kr-app: the running Krypton desktop -- the core's state, the hub it talks to, the
+/* kr-app: the running krypton desktop -- the core's state, the hub it talks to, the
  * settings it keeps -- and the few things a view may ask of it. The views never talk to the
  * hub themselves; they ask the app, and redraw when the state says something changed. */
 

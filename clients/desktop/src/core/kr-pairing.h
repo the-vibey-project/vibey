@@ -9,7 +9,7 @@
  *     vibey-pair://<host>:<port>?code=<6 digits>&fp=<SHA-256 of the hub certificate, hex>
  *
  * and the code alone is six ASCII digits. The certificate fingerprint is what makes the
- * later encrypted connection trustworthy: Krypton pins it, and a hub that later shows a
+ * later encrypted connection trustworthy: krypton pins it, and a hub that later shows a
  * different certificate is refused. PROVISIONAL until the hub's pairing change ratifies it. */
 
 #ifndef KR_PAIRING_H

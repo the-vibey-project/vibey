@@ -81,11 +81,33 @@ jobs:
           set -euo pipefail
           npm ci --prefix ../..
           npm run compile
-          npx vsce package --no-dependencies --out vibey.vsix
+          npx vsce package --no-dependencies --out krypton.vsix
+      # Open VSX publishes only into a namespace that exists, and nothing ever created this
+      # one: the first publish of `the-vibey-project.krypton` would fail on that alone. The
+      # namespace is the manifest's `publisher`, never a second spelling of it. Creating it
+      # is idempotent here: "already exists" is the one refusal that means the work is done;
+      # any other failure (a bad token, a network fault) fails this step and the publish never
+      # runs. A namespace someone else already holds also reads "already exists"; the publish
+      # below then fails loudly on access rights, which is the right place to learn it.
+      - name: Make sure the publisher's namespace exists
+        if: env.OVSX_PAT != ''
+        working-directory: clients/vscode
+        run: |
+          set -euo pipefail
+          namespace=$(node -p "require('./package.json').publisher")
+          if said=$(npx ovsx create-namespace "$namespace" --pat "$OVSX_PAT" 2>&1); then
+            echo "Created the Open VSX namespace $namespace."
+          elif grep -qi 'already exists' <<<"$said"; then
+            echo "The Open VSX namespace $namespace already exists."
+          else
+            echo "$said" >&2
+            echo "::error::Could not create the Open VSX namespace $namespace."
+            exit 1
+          fi
       - name: Publish, once per version
         if: env.OVSX_PAT != ''
         working-directory: clients/vscode
-        run: npx ovsx publish vibey.vsix --pat "$OVSX_PAT" --skip-duplicate
+        run: npx ovsx publish krypton.vsix --pat "$OVSX_PAT" --skip-duplicate
       - name: Close the missing-token issue, if one is open
         if: env.OVSX_PAT != ''
         run: |

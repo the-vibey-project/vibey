@@ -83,6 +83,22 @@ def test_open_vsx_publishes_after_a_successful_release_and_says_so_without_a_tok
     assert "|| true" not in publish["run"]
 
 
+def test_open_vsx_creates_its_namespace_first_tolerating_only_already_exists() -> None:
+    """Open VSX refuses a publish into a namespace nobody created, and nothing had created
+    `the-vibey-project`. The step creates it from the manifest's own `publisher`, treats
+    "already exists" as done, and fails on every other refusal -- never a blanket `|| true`."""
+    steps = load("openvsx.yml")["jobs"]["publish"]["steps"]
+    names = [step.get("name") for step in steps]
+    create = "Make sure the publisher's namespace exists"
+    assert names.index(create) < names.index("Publish, once per version")
+    step = steps[names.index(create)]
+    assert step["if"] == "env.OVSX_PAT != ''"
+    run = step["run"]
+    assert "ovsx create-namespace" in run and "require('./package.json').publisher" in run
+    assert "already exists" in run and "exit 1" in run
+    assert "|| true" not in run
+
+
 def test_main_is_rebase_only_and_squashes_propose_the_pull_requests_own_words() -> None:
     config = tomllib.loads((REPO / ".vibey-gh.toml").read_text(encoding="utf-8"))
     assert config["rulesets"]["release"]["allowed_merge_methods"] == ["rebase"]

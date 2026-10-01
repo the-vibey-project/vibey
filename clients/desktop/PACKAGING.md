@@ -1,4 +1,4 @@
-# Packaging Krypton desktop: the plan
+# Packaging krypton desktop: the plan
 
 Nothing here is published yet. Every recipe below is **declared only**: it is written down
 and versioned, but no store, repository or signing identity is touched until the operator
@@ -11,8 +11,8 @@ waits for a human (sub-doctrine 12.d).
 | | Stable (default) | Nightly |
 |---|---|---|
 | Built from | `main` | `develop` |
-| App id | `io.github.the_vibey_project.Krypton` | `io.github.the_vibey_project.Krypton.Nightly` |
-| Name people see | Krypton | Krypton Nightly |
+| App id | `io.github.the_vibey_project.krypton` | `io.github.the_vibey_project.krypton.nightly` |
+| Name people see | krypton | krypton nightly |
 | Settings | `~/.config/krypton/` | `~/.config/krypton-nightly/` |
 | Meson | `-Dchannel=stable` | `-Dchannel=nightly` |
 
@@ -24,7 +24,7 @@ default.
 | Platform | Artefact | Recipe | Status |
 |---|---|---|---|
 | Arch | `PKGBUILD` | [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) | Declared. It goes to the AUR on the operator's word. |
-| Flatpak (any Linux) | flatpak-builder manifest | [`packaging/flatpak/io.github.the_vibey_project.Krypton.yml`](packaging/flatpak/io.github.the_vibey_project.Krypton.yml) | Declared. It goes to Flathub on the operator's word. |
+| Flatpak (any Linux) | flatpak-builder manifest | [`packaging/flatpak/io.github.the_vibey_project.krypton.yml`](packaging/flatpak/io.github.the_vibey_project.krypton.yml) | Declared. It goes to Flathub on the operator's word. |
 | Ubuntu (24.04, and 26.04 per #1116) | `.deb` | `meson install` into a `debian/` tree | Planned. |
 | macOS | signed `.app` in a `.dmg`, with the GTK runtime | gtk-mac-bundler | Planned. Signing and notarisation sit behind secrets. |
 

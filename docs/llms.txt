@@ -12,7 +12,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 
 ## Guides
 
-- [VS Code extension](https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/): The extension is called krypton, the name every app carries (sub-doctrine 9.e); its commands and settings keep their vibey.* names.
+- [VS Code extension](https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/): The extension is called krypton, the name every app carries (sub-doctrine 9.e), and its id is the-vibey-project.krypton; its commands and settings keep their vibey.* names.
 - [Kubernetes](https://the-vibey-project.github.io/vibey/main/guides/kubernetes/): This guide takes vibey from a laptop process to a long-lived deployment: a containerized worker, a Helm chart, an in-cluster PostgreSQL, and queue-depth autoscaling via KEDA.
 - [Greeter live demo](https://the-vibey-project.github.io/vibey/main/guides/greeter-live-demo/): This runbook drives one small project ("a CLI greeter") end to end on real *loop binaries: DESIGN through the interactive interview, BUILD on engine-selected sessions, REVIEW with real automated gates, and DONE(local).
 - [Local models on Ollama](https://the-vibey-project.github.io/vibey/main/guides/local-models-ollama/): Sub-doctrine 8.a makes the sovereign path the preferred way to run vibey, not the fallback.
@@ -41,8 +41,8 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 
 - [CLI](https://the-vibey-project.github.io/vibey/main/reference/cli/): Every vibey command and subcommand, written by hand against src/vibey/cli/main.py and checked against it as of 2026-09-29.
 - [Configuration](https://the-vibey-project.github.io/vibey/main/reference/configuration/): The schema below is fully implemented and unit-tested in src/vibey/domain/config.py (VibeyConfig, parse_config, parse_toml_string) and src/vibey/infrastructure/config_loader.py (load_config_from_path). vibey new reads…
-- [Hub API](https://the-vibey-project.github.io/vibey/main/reference/hub-api/): The hub is vibey serve (ADR-0068): one HTTP API that every Krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
-- [System requirements](https://the-vibey-project.github.io/vibey/main/reference/system-requirements/): What a machine needs to run vibey and its Krypton clients, and how each figure is known.
+- [Hub API](https://the-vibey-project.github.io/vibey/main/reference/hub-api/): The hub is vibey serve (ADR-0068): one HTTP API that every krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
+- [System requirements](https://the-vibey-project.github.io/vibey/main/reference/system-requirements/): What a machine needs to run vibey and its krypton clients, and how each figure is known.
 - [Context microslices](https://the-vibey-project.github.io/vibey/main/context-microslices/): This is the implementation contract for proposed doctrine 10.k and ADR-0075.
 
 ## Design
@@ -125,7 +125,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0070 — Failover to the sovereign engine, and handback on a recorded probe](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe/)
 - [0071 — Hub pairing and trust](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0071-hub-pairing-and-trust/)
 - [0072 — The Sabbath, kept where the machine stands](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands/)
-- [0073 — Krypton desktop in C, on GTK 4 and libadwaita](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0073-krypton-desktop-in-c-on-gtk/)
+- [0073 — krypton desktop in C, on GTK 4 and libadwaita](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0073-krypton-desktop-in-c-on-gtk/)
 - [0074 — Measured dispatch for every service-bus surface](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0074-measured-service-bus-dispatch/)
 - [0075 — Context-bearing surfaces are linked microslice graphs](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0075-context-microslices-and-linked-surfaces/)
 - [0076 — Discoverability and the first hour are deliverables](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0076-discoverability-and-the-first-hour-are-deliverables/)

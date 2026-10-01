@@ -1,5 +1,5 @@
 # Declared only: not submitted to Flathub (see clients/desktop/PACKAGING.md).
-app-id: io.github.the_vibey_project.Krypton
+app-id: io.github.the_vibey_project.krypton
 runtime: org.gnome.Platform
 runtime-version: "48"
 sdk: org.gnome.Sdk

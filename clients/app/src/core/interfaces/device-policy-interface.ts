@@ -5,7 +5,7 @@
  */
 import type { Effort } from '@vibey/core';
 
-/** Everything a Krypton device could be asked to do. */
+/** Everything a krypton device could be asked to do. */
 export type DeviceAction =
   | 'view'
   | 'answer'

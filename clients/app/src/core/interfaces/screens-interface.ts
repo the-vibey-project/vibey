@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** Every screen of the app, and which row of the plan's parity matrix it carries. */
 
-/** The parity matrix every Krypton client answers to. */
+/** The parity matrix every krypton client answers to. */
 export type ParityFeature =
   | 'projects-and-phases'
   | 'gates'

@@ -43,7 +43,7 @@
     "export:web": "expo export --platform web"
   },
   "private": true,
-  "description": "Krypton for iOS, Android and the web: one Expo app over the vibey hub (ADR-0068).",
+  "description": "krypton for iOS, Android and the web: one Expo app over the vibey hub (ADR-0068).",
   "license": "MIT",
   "engines": {
     "node": ">=20.19.4"

@@ -109,16 +109,16 @@ flowchart TB
     K8sCRD -->|reconciled by| IOperatorHandlers
     IOperatorHandlers --> AppResources
 
-    subgraph Clients["Krypton clients — every app and interface (sub-doctrine 9.e, ADR-0065 – ADR-0068, ADR-0073)"]
-        KryptonApp["clients/krypton-app — krypton-app package<br/>the krypton launcher for the local hub (ADR-0069)"]
+    subgraph Clients["krypton clients — every app and interface (sub-doctrine 9.e, ADR-0065 – ADR-0068, ADR-0073)"]
+        kryptonApp["clients/krypton-app — krypton-app package<br/>the krypton launcher for the local hub (ADR-0069)"]
         VibeyCore["packages/vibey-core — @vibey/core<br/>pure TypeScript shared by every client, HubTransport (ADR-0067)"]
         VSCodeExt["clients/vscode — krypton VS Code extension (ADR-0059)"]
-        MobileWeb["clients/app — Krypton for iOS, Android and the web<br/>(Expo, react-native-web)"]
-        Desktop["clients/desktop — Krypton desktop, C17 on GTK 4 + libadwaita<br/>libkryptondesktop core, _vibey._tcp discovery (ADR-0073)"]
+        MobileWeb["clients/app — krypton for iOS, Android and the web<br/>(Expo, react-native-web)"]
+        Desktop["clients/desktop — krypton desktop, C17 on GTK 4 + libadwaita<br/>libkryptondesktop core, _vibey._tcp discovery (ADR-0073)"]
     end
 
     subgraph HubLayer["The hub — vibey serve (ADR-0068, ADR-0071)"]
-        Hub["infrastructure/hub/ — HTTP API every Krypton client reaches,<br/>loopback by default; WS live feed (migration 0019 NOTIFY);<br/>pairing: QR + 6-digit code, per-device HMAC keys, deny by default;<br/>declared LAN over self-signed TLS, mDNS _vibey._tcp ·<br/>application/hub/hub_service.py"]
+        Hub["infrastructure/hub/ — HTTP API every krypton client reaches,<br/>loopback by default; WS live feed (migration 0019 NOTIFY);<br/>pairing: QR + 6-digit code, per-device HMAC keys, deny by default;<br/>declared LAN over self-signed TLS, mDNS _vibey._tcp ·<br/>application/hub/hub_service.py"]
     end
     CLI -->|"vibey serve · vibey hub pair / devices / revoke"| Hub
     Hub --> AppResources
@@ -126,7 +126,7 @@ flowchart TB
     VSCodeExt --> VibeyCore
     MobileWeb --> VibeyCore
     Desktop --> Hub
-    KryptonApp -->|starts vibey serve| Hub
+    kryptonApp -->|starts vibey serve| Hub
 
     subgraph Operations["Operator controls — effort, failover, rest and dispatch"]
         Ultra["ULTRA (ADR-0063) — cli/ultra.py · application/ultra_control.py ·<br/>db/ultra_control_store.py; budget no-cap / cap (sub-doctrine 8.b)"]
@@ -259,9 +259,9 @@ flowchart TB
         ReleaseWF --> BuildDist["build wheel + sdist<br/>one package: vibey-engine + every tenant package<br/>and every console script (ADR-0037)"]
         BuildDist -->|develop| TestPyPI["TestPyPI<br/>vibey-engine, dev-versioned<br/>(+ verify-testpypi)"]
         BuildDist -->|main| PyPI["PyPI<br/>vibey-engine, OIDC trusted publishing (ADR-0069)"]
-        KryptonPush(["git push: develop or main,<br/>touching clients/krypton-app/"]) --> KryptonWF["krypton-app.yml<br/>build + tests, then TestPyPI + verify on develop,<br/>PyPI on main — the krypton-app package (ADR-0069)"]
-        KryptonWF -->|develop| TestPyPI
-        KryptonWF -->|main| PyPI
+        kryptonPush(["git push: develop or main,<br/>touching clients/krypton-app/"]) --> kryptonWF["krypton-app.yml<br/>build + tests, then TestPyPI + verify on develop,<br/>PyPI on main — the krypton-app package (ADR-0069)"]
+        kryptonWF -->|develop| TestPyPI
+        kryptonWF -->|main| PyPI
         ReleaseWF -->|main only| Realign["realign job<br/>vibey-gh realign: develop := main"]
         ReleaseWF -.->|"workflow_run: completed, success, main only"| GhRelease["GitHub Release (github-release.yml)<br/>vibey-gh github-release: immutable tag + release"]
         ReleaseWF -.->|"workflow_run: completed, success"| ReleaseSurfaces["Release surfaces workflow<br/>(release-surfaces.yml)<br/>re-downloads the dist artifact by run id"]
@@ -280,7 +280,7 @@ flowchart TB
     CIWF -->|"tools matrix: the six runner suites and every runner's static gates"| Runners
     CIWF -->|image + cluster-smoke| DockerImg
     CIWF -->|"krypton-app · vibey-core · app · vscode-extension · desktop"| Clients
-    KryptonWF -.->|packages| KryptonApp
+    kryptonWF -.->|packages| kryptonApp
     Provenance -->|vibey-gh check --ci| ToolGh
     ReleaseSurfaces -->|"vibey-gh book · paper"| ToolGh
     Bootstrap0 -.-> MergeTrain

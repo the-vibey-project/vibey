@@ -1,9 +1,11 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The vibey mark, wordmark and app icons: one geometry, drawn as SVG and rasterised as PNG.
 
-The mark is the extension's "V" glyph (`clients/vscode/media/vibey.svg`) refined: the V is two
-converging strokes, the bar above it is the queue it drains, and the dot where they meet is the
-nucleus (sub-doctrine 9.c) with an orbit around it. Every colour comes from the token set.
+The mark is the krypton atom, Kr-84: a nucleus of 36 protons and 48 neutrons (sub-doctrine
+9.c's nucleus) inside four electron shells. The VS Code extension wears it twice, both drawn
+here: `clients/vscode/media/krypton.svg`, its activity-bar glyph in the theme's own colour, and
+`clients/vscode/media/krypton.png`, its marketplace icon (a raster, because `vsce` refuses an
+SVG there). Every colour comes from the token set.
 
 Rasterising needs no imaging library. Each shape is a signed distance field, so coverage at a
 pixel is `clamp(0.5 - distance)`: exact anti-aliasing for strokes, circles and rounded tiles,
@@ -883,17 +885,24 @@ class IdentityEmitter(EmitterInterface):
         "krypton-logo-light",
     )
 
+    #: The VS Code extension's two marks, inside its own folder because `vsce` packages only
+    #: that: the activity-bar glyph, and the marketplace icon `package.json` names (a PNG of at
+    #: least 128 px; 256 px here, the full-detail app icon).
+    VSCODE_GLYPH = "clients/vscode/media/krypton.svg"
+    VSCODE_ICON = "clients/vscode/media/krypton.png"
+
     def outputs(self) -> dict[Path, bytes]:
         scenes = self.scenes()
         out = {self._root / f"{name}.svg": scene.svg().encode() for name, scene in scenes.items()}
         # The editor's activity-bar glyph: 24 units, one colour, and that colour is the theme's.
         glyph = Scene(
-            24, 24, self._identity.atom((12, 12), 10.6, detail="small", mono=(0, 0, 0, 1))
+            24,
+            24,
+            self._identity.atom((12, 12), 10.6, detail="small", mono=(0, 0, 0, 1)),
+            title="krypton",
         )
-        glyph.key = "vibey-glyph"
-        out[Path("clients/vscode/media/vibey.svg")] = (
-            glyph.svg().replace("#000000", "currentColor").encode()
-        )
+        glyph.key = "krypton-glyph"
+        out[Path(self.VSCODE_GLYPH)] = glyph.svg().replace("#000000", "currentColor").encode()
         for name in self.ANIMATED:
             svg = scenes[name].svg(orbit_seconds=self._orbit_seconds)
             out[self._root / f"{name}-animated.svg"] = svg.encode()
@@ -925,4 +934,5 @@ class IdentityEmitter(EmitterInterface):
         out[base / "web/icon-192.png"] = ("icon", 192, 192, False)
         out[base / "web/icon-512.png"] = ("icon", 512, 512, False)
         out[base / "web/social-preview.png"] = ("social", 1200, 630, True)
+        out[Path(self.VSCODE_ICON)] = ("icon", 256, 256, False)
         return out

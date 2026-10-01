@@ -802,7 +802,7 @@ kr_window_new(KrApp *app)
         "Start one with: vibey new NAME --repo PATH",
         "When krypton needs a decision, it appears here and krypton tells you.",
         "Lanes started on this computer appear here as they run.",
-        "Krypton asks the hub which loops, engines and efforts there are.",
+        "krypton asks the hub which loops, engines and efforts there are.",
         "Pick a project to see what it has spent this cycle.",
         "Refresh to run the checks the hub can run itself.",
         "",

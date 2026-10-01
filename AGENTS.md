@@ -277,8 +277,8 @@ uv run pip-audit --skip-editable
 
 CI (`.github/workflows/ci.yml`) also runs `noloss` (the no-loss property suite
 at 10,000 examples), `postgres-compatibility` (the database suite on PostgreSQL
-14–18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (Krypton mobile and
-web), `vscode-extension` (Ubuntu and macOS), `desktop` (Krypton desktop on
+14–18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (krypton mobile and
+web), `vscode-extension` (Ubuntu and macOS), `desktop` (krypton desktop on
 Ubuntu and Arch), `image` (amd64 and arm64 builds; each `Image contract - …`
 step asserts one claim the Dockerfile makes), `chart` (Helm lint and golden
 render of every profile) and `cluster-smoke` (Helm install on minikube; each

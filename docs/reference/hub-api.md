@@ -1,7 +1,7 @@
 # Hub API reference
 
 The hub is `vibey serve` ([ADR-0068](../architecture/decisions/0068-the-hub.md)): one HTTP
-API that every Krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
+API that every krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
 Version 1. The machine-readable contract is the OpenAPI 3.1 document, committed at
 [`docs/reference/hub-api.json`](https://github.com/the-vibey-project/vibey/blob/main/docs/reference/hub-api.json)
 and served by a running hub at `/api/v1/openapi.json`. A test fails when the two differ, so

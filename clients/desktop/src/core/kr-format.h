@@ -1,5 +1,5 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
-/* kr-format: how Krypton desktop says numbers, times and phases to a person.
+/* kr-format: how krypton desktop says numbers, times and phases to a person.
  *
  * The interface of the formatting module (ADR-0016 in C: the header declares, the .c
  * implements). Pure: no I/O, no clock -- "now" is always passed in. Every function that

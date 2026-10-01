@@ -122,7 +122,8 @@ python3 scripts/design/generate.py --rasters  # ...and every PNG, in about a min
 | `design/dist/tex/vibey-colours.tex`, `vibey_gh/paper_palette.py` | The research paper |
 | `design/identity/*.svg` | Mark, atom, both wordmarks and lockups, in dark and light, with animated versions; the app-icon tiers; Android adaptive layers; the social image |
 | `design/dist/icons/` | PNGs: freedesktop hicolor, a macOS `vibey.iconset` (`iconutil -c icns` makes the `.icns`), iOS 1024 opaque, Android, favicons, a 1200×630 social preview |
-| `clients/vscode/media/vibey.svg` | The editor's activity-bar glyph, in the theme's own colour |
+| `clients/vscode/media/krypton.svg` | The editor's activity-bar glyph: the krypton atom, in the theme's own colour |
+| `clients/vscode/media/krypton.png` | The extension's marketplace icon, 256×256 (a PNG: `vsce` refuses an SVG there), drawn with `--rasters` |
 
 The PNGs are drawn by a signed-distance renderer written in the standard library, so no
 imaging dependency is needed and the output is the same to the byte on every machine.

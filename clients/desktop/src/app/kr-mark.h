@@ -1,5 +1,5 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
-/* kr-mark: the Krypton emblem, the krypton atom Kr-84, drawn live.
+/* kr-mark: the krypton emblem, the krypton atom Kr-84, drawn live.
  *
  * 36 protons and 48 neutrons in the nucleus; 36 electrons on four shells of 2, 8, 18 and 8
  * (design/identity/krypton.svg is the still version). The electrons orbit slowly, and stand

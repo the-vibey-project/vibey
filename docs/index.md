@@ -98,7 +98,7 @@ target. Every database-backed command reads the connection string from
 `VIBEY_PG_URL`; vibey never guesses a database and exits with
 `VIBEY_PG_URL is not set` when it is missing.
 
-Memory, disk, GPU, network and each Krypton client's needs are on the
+Memory, disk, GPU, network and each krypton client's needs are on the
 [system requirements](reference/system-requirements.md) page. Those figures are
 re-measured every week, and any figure that could not be re-measured is marked stale.
 For the sovereign default (a local model), memory is the binding constraint.

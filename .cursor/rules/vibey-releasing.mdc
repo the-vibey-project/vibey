@@ -337,7 +337,10 @@ markers") refuses a marker in any commit, title or body on its way into `develop
 run, so any failing job of `vibey-engine.yml` withholds all three. Optional channels
 therefore live in workflows of their own: the Open VSX publish is `openvsx.yml`, run
 after a successful Release on `main`; without `OVSX_PAT` it warns and keeps one
-tracking issue open rather than failing anything.
+tracking issue open rather than failing anything. With the token it first creates the
+publisher's Open VSX namespace (`the-vibey-project`) when it is missing, treating only
+"already exists" as success, so the first publish of `the-vibey-project.krypton` needs no
+hand step.
 
 **`develop` is red:** `branch-health.yml` keeps one issue per permanent branch open
 while a CI push run fails one of its required checks, and closes it when the tip is
