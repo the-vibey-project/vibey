@@ -14,7 +14,7 @@ from arms import DiffLedger, run_case
 from cases import CaseBook
 from client import Model
 
-ARMS = ["D16", "D8", "D32", "D16-BF4096", "A0", "A1", "A2", "D4"]
+ARMS = ["D8", "D16", "D4", "D16-BF4096", "D32", "A0", "A1", "A2"]
 
 
 def main(argv: list[str]) -> int:

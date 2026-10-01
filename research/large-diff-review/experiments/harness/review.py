@@ -45,7 +45,7 @@ def seeded_codes(payload: dict[str, Any], code_bytes: int = 8) -> tuple[str, str
     return digest[: 2 * code_bytes], digest[2 * code_bytes : 4 * code_bytes]
 
 
-def deadline(prompt_tokens: int, output_tokens: int, floor: int = 600) -> int:
+def deadline(prompt_tokens: int, output_tokens: int, floor: int = 1080) -> int:
     """Production's formula: prompt/200 + output/20 seconds, never under the floor."""
     return max(floor, math.ceil(prompt_tokens / 200 + output_tokens / 20))
 
@@ -976,3 +976,19 @@ class Verifier:
 
 
 VERIFIER = Verifier()
+
+
+def needle_part(arm: DecoupledArm, case: Case) -> tuple[str, dict[str, Any], tuple[str, ...]]:
+    """The one defect part of a needle case that carries the needle."""
+    for label, payload, paths in arm.part_requests(case):
+        if case.meta["path"] in paths:
+            return label, payload, paths
+    raise ValueError(f"{case.case_id}: no part carries the needle")
+
+
+def review_part(arm: DecoupledArm, case: Case, label: str, payload, paths) -> Result:
+    tag = {"arm": arm.cfg.name, "case": case.case_id, "part": label}
+    res = arm._ask(payload, tag)
+    if arm.cfg.verify and res.verdict is not None and res.verdict.get("findings"):
+        res = VERIFIER.verify(arm, res, payload, case, tag)
+    return res

@@ -89,3 +89,18 @@ what was seen, and what it changed.
   ±2 lines of a changed range. ruff `--select ALL` + bandit flag **5/27** defects (all
   three `sql_injection` via S608/B608, two of three `swallowed_exception` via S112/B112)
   and **0/14** controls. Rule-to-class map fixed in `static_only.py` before the run.
+- **18:40** EVIDENCE's findings arrived (`../evidence/findings.md`), before any
+  experimental request. Pre-data amendments:
+  1. Stage 1 runs the arms in the 5–20k-token region first (D8, D16, D4, then D16-BF4096,
+     D32, A0, A1, A2): EVIDENCE's P(finish within 16,384) is 0.92 at 20k, 0.73 at 30k,
+     0.53 at 40k, 0.36 at 50k, and only 6 past requests were under 20k.
+  2. Every result is stratified by content type (code / tests / docs share of the part),
+     since reasoning length depends on content independently of size (both p < 1e-6).
+  3. The D arms' per-request deadline floor is raised from production's 600 s to 1,080 s
+     (EVIDENCE: give each request ≥ 18 min; the #1316 formula barely covers a full-cap
+     write past ~40k). Production arms keep production's own deadline.
+  4. think=low is a documented negative control only (EVIDENCE: 213–330 tokens, passed all 8
+     PRs, 4 of which default effort blocked) — D_k-low leaves Stage 2's halving and is run
+     once, on round 1's cases, labelled as the negative control.
+  5. Per-request slot wait is logged (`slot_wait_s`) and excluded from wall time; a fixed
+     `num_ctx` per arm (already so) removes reload noise.
