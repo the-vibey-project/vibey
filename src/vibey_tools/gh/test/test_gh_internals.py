@@ -350,25 +350,40 @@ def test_a_failing_gh_call_raises_with_its_stderr(fake_gh):
 
 
 def test_merge_prefers_a_plain_merge(fake_gh):
-    fake_gh.script({"pr merge 5 --squash": {"code": 0}})
+    fake_gh.script(
+        {
+            "pr merge 5 --squash": {"code": 0},
+            "pr view 5 --json state --jq .state": {"out": "MERGED"},
+        }
+    )
     assert merge_train.merge(5) == (True, False, "")
-    assert fake_gh.calls() == ["pr merge 5 --squash"]
+    assert fake_gh.calls() == ["pr merge 5 --squash", "pr view 5 --json state --jq .state"]
 
 
 def test_merge_injects_a_squash_body_when_given_one(fake_gh):
     """The trailer rides in the squash body. A bot's pull request body never carries it,
     and without this the train manufactures the exact trailer-less commit the provenance
     check exists to refuse — five of which once blocked a promotion outright."""
-    fake_gh.script({"pr merge 5 --squash --body deps\n\nMade-With: x": {"code": 0}})
+    fake_gh.script(
+        {
+            "pr merge 5 --squash --body deps\n\nMade-With: x": {"code": 0},
+            "pr view 5 --json state --jq .state": {"out": "MERGED"},
+        }
+    )
     assert merge_train.merge(5, "squash", "deps\n\nMade-With: x") == (True, False, "")
     assert fake_gh.calls()[0].startswith("pr merge 5 --squash --body")
 
 
 def test_merge_never_injects_a_body_into_a_rebase(fake_gh):
     """A rebase preserves the branch's own commits; --body would be rejected by gh."""
-    fake_gh.script({"pr merge 5 --rebase": {"code": 0}})
+    fake_gh.script(
+        {
+            "pr merge 5 --rebase": {"code": 0},
+            "pr view 5 --json state --jq .state": {"out": "MERGED"},
+        }
+    )
     assert merge_train.merge(5, "rebase", "ignored") == (True, False, "")
-    assert fake_gh.calls() == ["pr merge 5 --rebase"]
+    assert fake_gh.calls()[0] == "pr merge 5 --rebase"
 
 
 def test_a_refused_merge_is_never_retried_with_admin_by_default(fake_gh):
@@ -382,9 +397,47 @@ def test_a_refused_merge_is_never_retried_with_admin_by_default(fake_gh):
 
 
 def test_merge_falls_back_to_admin_only_when_a_human_asks(fake_gh):
-    fake_gh.script({"pr merge 5 --rebase --admin": {"code": 0}})
+    fake_gh.script(
+        {
+            "pr merge 5 --rebase --admin": {"code": 0},
+            "pr view 5 --json state --jq .state": {"out": "MERGED"},
+        }
+    )
     assert merge_train.merge(5, "rebase", admin_fallback=True) == (True, True, "")
-    assert fake_gh.calls()[-1].endswith("--admin")
+    assert fake_gh.calls()[-2].endswith("--admin")  # then the state read confirms it
+
+
+def test_an_exit_zero_that_only_queued_the_merge_is_not_a_merge(fake_gh):
+    """Observed 2026-10-01 on #1295 and #1298: with auto-merge allowed and the approval
+    still missing, `gh pr merge` exits 0 having only ENABLED AUTO-MERGE. The train read
+    that as merged, deleted the head branch, and GitHub closed both pull requests while
+    the run reported "merged 1". A merge is what GitHub says happened, never an exit code
+    (12.e: automation that reports success it did not observe)."""
+    fake_gh.script(
+        {"pr merge 5 --squash": {"code": 0}, "pr view 5 --json state --jq .state": {"out": "OPEN"}}
+    )
+    merged, bypassed, error = merge_train.merge(5)
+    assert (merged, bypassed) == (False, False)
+    assert "OPEN" in error
+    assert "auto-merge" in error
+
+
+def test_a_merge_whose_state_cannot_be_read_is_not_a_merge(fake_gh):
+    fake_gh.script({"pr merge 5 --squash": {"code": 0}})  # the state read fails
+    merged, _bypassed, error = merge_train.merge(5)
+    assert merged is False
+    assert "could not confirm" in error
+
+
+def test_an_admin_merge_is_confirmed_the_same_way(fake_gh):
+    fake_gh.script(
+        {
+            "pr merge 5 --squash --admin": {"code": 0},
+            "pr view 5 --json state --jq .state": {"out": "OPEN"},
+        }
+    )
+    merged, bypassed, _error = merge_train.merge(5, admin_fallback=True)
+    assert (merged, bypassed) == (False, True)
 
 
 def test_merge_reports_failure_when_even_admin_is_refused(fake_gh):

@@ -28,12 +28,12 @@ import math
 from collections.abc import Mapping
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from vibey.application.dto import EngineEvent, JobRecord
 from vibey.application.engine_health_service import EngineHealthService
-from vibey.application.engine_selector import EngineSelector
+from vibey.application.engine_selector import AUTH_TTL, EngineSelector
 from vibey.application.interfaces import (
     BuildLedger,
     Clock,
@@ -180,6 +180,8 @@ class SelectingEngineProvider:
         backoff: timedelta = timedelta(minutes=5),
         local_engines: tuple[EngineId, ...] = (),
         metrics: TelemetryMetrics | None = None,
+        auth_refresh_after: timedelta = AUTH_TTL / 2,
+        auth_recheck_every: timedelta = timedelta(minutes=15),
     ) -> None:
         self._selector = selector
         self._health = health
@@ -193,6 +195,14 @@ class SelectingEngineProvider:
         # Local engines have no cron that records their health, so each selection
         # refreshes theirs first -- only for those this worker can dispatch to.
         self._local_engines = tuple(engine for engine in local_engines if engine in self._pool)
+        # A paid engine's login is otherwise checked only at worker startup, and the
+        # selector stops trusting it after AUTH_TTL -- so a worker up for a day stopped
+        # selecting every paid engine and deferred engine work every five minutes,
+        # forever, saying nothing. Selection rechecks a login past half its life, and an
+        # engine whose check keeps failing is asked at most once per interval.
+        self._auth_refresh_after = auth_refresh_after
+        self._auth_recheck_every = auth_recheck_every
+        self._auth_checked_at: dict[tuple[UUID, EngineId], datetime] = {}
 
     @property
     def pool(self) -> frozenset[EngineId]:
@@ -218,6 +228,7 @@ class SelectingEngineProvider:
                 preflight,
                 conformance_ok=preflight.installed and preflight.auth_ok,
             )
+        await self._refresh_ageing_logins(job.project_id)
         try:
             # The pool, never None: the selector reads every health row the project
             # has, and a row outlives the switch that created it. Offered an engine
@@ -246,6 +257,27 @@ class SelectingEngineProvider:
                 self._metrics.record_engine_selection(job.project_id, engine_id)
         await self._jobs.assign_engine(job.id, owner=self._owner, engine_id=engine_id)
         return adapter
+
+    async def _refresh_ageing_logins(self, project_id: UUID) -> None:
+        now = self._clock.now()
+        for record in await self._health.list_for_project(project_id):
+            engine_id = record.engine_id
+            if (
+                not isinstance(engine_id, EngineId)
+                or engine_id not in self._pool
+                or engine_id in self._local_engines
+            ):
+                continue
+            if record.auth_ok_at is not None and now - record.auth_ok_at < self._auth_refresh_after:
+                continue
+            checked = self._auth_checked_at.get((project_id, engine_id))
+            if checked is not None and now - checked < self._auth_recheck_every:
+                continue
+            self._auth_checked_at[(project_id, engine_id)] = now
+            # record_preflight, not update_from_preflight: a login check refreshes the
+            # login and never grants or revokes conformance, which is doctor's.
+            preflight = await self._adapters[engine_id].preflight()
+            await self._health.record_preflight(project_id, engine_id, preflight)
 
 
 class SpendMeteringLedger:

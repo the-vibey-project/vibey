@@ -78,13 +78,85 @@ class WholeReviewInterface(Protocol):
         documents: Mapping[str, str],
         cut: Sequence[str] = (),
         dropped: Sequence[str] = (),
+        sources: Sequence[str] = (),
+        sources_cut: Sequence[str] = (),
+        sources_dropped: Sequence[str] = (),
     ) -> dict[str, Any]:
         """The verdict labelled as the whole review, naming the documents it judged against,
-        which of them were cut and which were left out to fit the window.
+        which of them were cut and which were left out to fit the window -- and the
+        reference `sources` it was shown, cut short or left out.
 
-        When any was cut or left out, the verdict claims the diff half alone, so it is never
-        read as the whole review. Never writes a placeholder over a judgment the model made.
+        When any document was cut or left out, the verdict claims the diff half alone, so it
+        is never read as the whole review; a source cut or left out never does, because the
+        documentation contract is never judged against a source. Never writes a placeholder
+        over a judgment the model made.
         """
+
+
+@runtime_checkable
+class SourceContextInterface(Protocol):
+    """The full post-change text of the files a diff changes, handed to a review as
+    reference only: what the diff's lines refer to, never something to judge."""
+
+    def files(self, directory: Path) -> dict[str, str]:
+        """Every regular text file under `directory` by repository-relative path, sorted.
+        Symlinks are never followed, a file holding a NUL byte is binary and left out, and a
+        missing directory is no sources at all."""
+
+    def select(self, sources: Mapping[str, str], paths: Sequence[str]) -> dict[str, str]:
+        """The `sources` of `paths` alone, in the order of `paths`: the files a diff, or one
+        part of it, changes."""
+
+    def rules(self) -> str:
+        """What the system prompt gains when sources are shown: what they are for, and that
+        no finding may be reported on a line the diff did not change."""
+
+    def cut_note(self, cut: Sequence[str], dropped: Sequence[str]) -> str:
+        """What the model is told when sources were `cut` short or `dropped`, naming each;
+        empty when nothing was."""
+
+    def block(
+        self,
+        sources: Mapping[str, str],
+        cut: Sequence[str] = (),
+        dropped: Sequence[str] = (),
+    ) -> str:
+        """The `<sources>` block for the user prompt, each source framed by its path, then
+        `cut_note`; empty when there is nothing to show or say."""
+
+    def overhead(self, names: Sequence[str]) -> int:
+        """Every character sources add to a request beyond their own frames: the rules, the
+        block's opening and closing, and the cut note at its longest for `names`."""
+
+    def changed(self, diff: str) -> dict[str, list[tuple[int, int]]]:
+        """Each file's changed new-side line ranges in `diff`, first and last line, by the
+        path its `diff --git` header names."""
+
+    def excerpt(self, text: str, changed: Sequence[tuple[int, int]], room: int) -> str:
+        """`text` in at most `room` characters: its first lines and the lines around each
+        `changed` range, with the widest margin that fits, every run of lines left out
+        marked with its numbers. When not even the changed lines fit, the start of them,
+        cut at a line boundary."""
+
+    def trim(
+        self,
+        sources: Mapping[str, str],
+        budget: int,
+        changed: Mapping[str, Sequence[tuple[int, int]]] | None = None,
+    ) -> tuple[dict[str, str], list[str], list[str]]:
+        """The sources that fit `budget` characters, framed: `(kept, cut, dropped)`, in the
+        order given. The budget is shared, never first come first served: the smallest are
+        kept whole and what is left is split evenly among the rest, each cut to its
+        `excerpt` around its `changed` lines; one with no room at all is dropped."""
+
+    def evidence(
+        self,
+        shown: Sequence[str],
+        cut: Sequence[str] = (),
+        dropped: Sequence[str] = (),
+    ) -> str:
+        """The sentence a verdict's summary carries naming the sources the review was
+        shown, which were cut to fit, and which no request showed; empty with none."""
 
 
 @runtime_checkable
@@ -228,6 +300,28 @@ class SovereignReviewInterface(Protocol):
     def room(self, documents: Mapping[str, str], *, part: bool) -> int:
         """How many characters of diff one request can carry beside everything else it
         sends, `documents` and -- for a part -- the part note included."""
+        ...
+
+    def fit_sources(
+        self,
+        diff: str,
+        sources: Mapping[str, str],
+        *,
+        documents: Mapping[str, str],
+        cut: Sequence[str] = (),
+        dropped: Sequence[str] = (),
+        part: tuple[int, int] | None = None,
+    ) -> tuple[dict[str, str], list[str], list[str]]:
+        """The reference `sources` trimmed to what one request leaves beside everything
+        else it sends, never past the declared limit: `(kept, cut, dropped)`. Empty, with
+        nothing named, when not even their rules and note would fit."""
+        ...
+
+    def seen(
+        self, sources: Mapping[str, str], kept: Mapping[str, str], cut: Sequence[str]
+    ) -> dict[str, list[str]]:
+        """What a request was shown of `sources`: `sources`, `sources_cut`, and every one
+        not shown as `sources_dropped`."""
         ...
 
     def plan(self, diff: str, documents: Mapping[str, str]) -> Sequence[DiffPartInterface] | None:

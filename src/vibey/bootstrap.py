@@ -454,6 +454,41 @@ def _independent_review_required(config: Mapping[str, object]) -> bool:
     return isinstance(verify, Mapping) and verify.get("require_independent_review") is True
 
 
+DEFAULT_ENGINE_RUN_MINUTES = 240
+"""The wall-clock limit on one BUILD engine session, in minutes, when nothing sets one."""
+
+ENGINE_RUN_MINUTES_ENV = "VIBEY_ENGINE_MAX_RUN_MINUTES"
+
+
+def _engine_run_deadline(
+    config: Mapping[str, object], environ: Mapping[str, str] = os.environ
+) -> timedelta:
+    """The wall-clock limit on one BUILD engine session (implement or verify).
+
+    A hung session never ended its tail, and the worker's heartbeat kept the job's lease
+    alive meanwhile, so the reaper never reclaimed it and nothing said so. Precedence:
+    `VIBEY_ENGINE_MAX_RUN_MINUTES`, then the project's `[engines] max_run_minutes`, then
+    240. A value that is not a positive whole number is ignored, never read as "no
+    limit": there is no way to switch the limit off, only to raise it.
+
+    Module-level, as `_independent_review_required` is, because the composition root
+    builds its handlers inside closures that only run once a real job is dispatched;
+    a named helper keeps every arm reachable from a test (ADR-0016's last resort, stated).
+    """
+    candidates: list[object] = [environ.get(ENGINE_RUN_MINUTES_ENV)]
+    engines = config.get("engines")
+    if isinstance(engines, Mapping):
+        candidates.append(engines.get("max_run_minutes"))
+    for raw in candidates:
+        if isinstance(raw, bool):
+            continue
+        if isinstance(raw, str):
+            raw = int(raw.strip()) if raw.strip().isdigit() else None
+        if isinstance(raw, int) and raw > 0:
+            return timedelta(minutes=raw)
+    return timedelta(minutes=DEFAULT_ENGINE_RUN_MINUTES)
+
+
 def _independence_policy(
     config: Mapping[str, object], pool: frozenset[EngineId], clock: Clock
 ) -> VerifyIndependencePolicy | None:
@@ -579,6 +614,7 @@ def build_full_worker(
     # project's `gates` config (per-command timeout, kill grace, Python-env
     # isolation; ADR-0018). Unset keys keep the defaults.
     gate_runner = SubprocessGateRunner.from_config(project.config)
+    run_deadline = _engine_run_deadline(project.config)
 
     def _recording(
         handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
@@ -611,6 +647,7 @@ def build_full_worker(
             human_gates=resources.gates,
             budget_source=budget_source,
             skills_context=skills_context,
+            run_deadline=run_deadline,
             tracer=tracer,
             ultra_ledger=resources.ledger,
             checkpoint=GitCheckpoint(),
@@ -633,6 +670,7 @@ def build_full_worker(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
             independence=_independence_policy(project.config, engine_provider.pool, clock),
+            run_deadline=run_deadline,
             tracer=tracer,
         )
         return _recording(handler, adapter, meter)

@@ -40,6 +40,11 @@ from vibey.domain.interfaces.gate_notice_interface import (
     ReminderScheduleInterface,
 )
 from vibey.domain.interfaces.gate_timeout_interface import GateTimeoutPolicyInterface
+from vibey.domain.interfaces.integration_evidence_interface import (
+    GateRunInterface,
+    IntegrationEvidenceInterface,
+    ItemEvidenceInterface,
+)
 from vibey.domain.interfaces.ledger_chain_interface import (
     ChainFindingInterface,
     ChainLinkInterface,
@@ -187,6 +192,9 @@ __all__ = [
     "QueuedJobInterface",
     "ResearchGapInterface",
     "GateTimeoutPolicyInterface",
+    "GateRunInterface",
+    "IntegrationEvidenceInterface",
+    "ItemEvidenceInterface",
     "UnbumpPlanInterface",
     "UnbumpPlannerInterface",
     "ActorInterface",
