@@ -1,0 +1,1105 @@
+# The review canary's corpus: pull-request diffs against THIS repository's own code, each
+# carrying exactly one planted defect of a declared class, beside clean controls.
+#
+# `vibey-gh review-canary` turns every case into a unified diff and hands it to the sovereign
+# review exactly as `pr-review.yml` would hand a pull request -- the same `local-review` entry
+# point, the same model, think level, window, documents and reference sources -- then scores
+# whether the verdict blocked the planted defect for the right reason (see the matching rule
+# in vibey-gh's docs/configuration.md, `[pr_automation.review_canary]`).
+#
+# How every case is built, so each one can be checked by hand:
+#
+#   1. Take the file at `path` exactly as it stands at `pin` (`git show <pin>:<path>`).
+#   2. Apply each `[[cases.edits]]` in order: `find` must occur exactly once in the text so
+#      far, and is replaced by `replace`. Nothing else changes.
+#   3. The diff is `difflib.unified_diff` of the two texts, three lines of context, under a
+#      `diff --git a/<path> b/<path>` header. The post-change text is what the review is
+#      shown as the file's reference source.
+#   4. A defect's location is the lines of the post-change text spanned by `planted`, which
+#      must occur within the replacement of the edit that declares it. `anchors` are exact
+#      strings a finding about that location would plausibly quote; `class` names the
+#      defect's class, whose `keywords` a finding about it would plausibly use.
+#
+# Every defect contradicts something the same file states -- a docstring, a comment, or the
+# code beside it -- so it is a defect, not a design choice a reviewer could defend. Every
+# control preserves behaviour: renames are complete, refactors are equivalent, and two of
+# them (`ctl-gate-open-all-kind-param`, `ctl-worktree-base-ternary`) are the correct forms
+# of two defects, to test that the review is not just flagging whatever changed there.
+#
+# The pin is an ancestor of origin/develop, so `git show` resolves it in any full clone.
+#
+# The class keywords are a lexical heuristic, and every finding's words are kept in the
+# ledger so a match can be re-adjudicated by hand. They were widened once, before the first
+# recorded measurement: a smoke run's finding on `obo-protected-listing-one-short` quoted the
+# planted `listed + 1 < total` and said it "allows a single missing file", which the first
+# off-by-one list did not recognise. "by one", "single", "extra" and the +/-1 spellings were
+# added to `off_by_one`, and "error" and "fail" to `wrong_error_return`; nothing since.
+
+schema = "vibey-gh/review-canary-corpus/1"
+pin = "2b17eb714016650be57342236d8d2fa467c3582b"
+
+[classes.off_by_one]
+summary = "a bound, count or starting value one away from what the code beside it requires"
+keywords = [
+  "off-by-one", "off by one", "boundary", "fencepost", "one fewer", "one more", "one less",
+  "one too", "zero", "non-negative", "negative", "inclusive", "exclusive", "starts at 0",
+  "start at 0", "short by one", "one short", "one missing", "miscount", "by one", "single",
+  "extra", "+ 1", "- 1", "+1", "-1",
+]
+
+[classes.inverted_condition]
+summary = "a condition negated, or joined with the wrong boolean operator"
+keywords = [
+  "invert", "negat", "opposite", "reverse", "backward", "flipped", "condition", "logic",
+  "boolean", "instead of and", "instead of `and`", "instead of or", "instead of `or`",
+  "wrong branch",
+]
+
+[classes.swallowed_exception]
+summary = "an error caught and dropped, so a failure the file says must be reported is not"
+keywords = [
+  "swallow", "silently", "ignore", "suppress", "hide", "hidden", "mask", "without logging",
+  "not logged", "not reported", "no longer reported", "catch-all", "catches all",
+  "broad except", "bare except", "discard", "lost",
+]
+
+[classes.missing_await]
+summary = "a coroutine called without `await`, so the work it does never happens"
+keywords = [
+  "await", "coroutine", "never awaited", "not awaited", "never runs", "never executed",
+  "never executes", "asynchronous",
+]
+
+[classes.sql_injection]
+summary = "SQL built by string formatting from a value a caller supplies"
+keywords = [
+  "sql injection", "injection", "inject", "interpolat", "f-string", "string formatting",
+  "concatenat", "unsanitized", "unsanitised", "parameteriz", "parameteris", "placeholder",
+  "bind parameter", "untrusted", "escap",
+]
+
+[classes.removed_guard]
+summary = "a check the file relies on for safety or authorization, removed"
+keywords = [
+  "guard", "check", "verif", "authoriz", "authoris", "permission", "ownership", "trust",
+  "provenance", "validat", "bypass", "no longer", "skip", "removed", "without checking",
+]
+
+[classes.resource_leak]
+summary = "a connection, file or handle acquired and never released"
+keywords = [
+  "leak", "never closed", "not closed", "close", "release", "context manager",
+  "with statement", "`with`", "handle", "connection", "exhaust", "dangling",
+]
+
+[classes.wrong_error_return]
+summary = "an error path that returns the success value, so a failure reads as a pass"
+keywords = [
+  "error path", "on failure", "on error", "error", "fail", "instead of raising", "should raise",
+  "raise", "returns none", "return none", "empty", "treated as success", "success",
+  "fail open", "fail-open", "fail closed", "fail-closed", "false pass", "refus", "unknown",
+]
+
+[classes.shared_state_race]
+summary = "shared state read and written across an await or a thread without its lock"
+keywords = [
+  "race", "concurren", "parallel", "lock", "thread", "atomic", "simultaneous", "interleav",
+  "twice", "synchroniz", "synchronis", "toctou", "check-then-act", "shared state",
+]
+
+# ------------------------------------------------------------------------------ off_by_one
+
+[[cases]]
+id = "obo-budget-zero-dollar-cap"
+kind = "defect"
+class = "off_by_one"
+path = "src/vibey/domain/budget_caps.py"
+how = "`amount <= 0` became `amount < 0`: a zero-dollar cap is accepted, while the docstring, the module docstring and the error message beside it say a cap is above zero."
+anchors = ["amount < 0", "dollars("]
+
+[[cases.edits]]
+find = '''
+        if not math.isfinite(amount) or amount <= 0:
+'''
+replace = '''
+        if not math.isfinite(amount) or amount < 0:
+'''
+planted = "amount < 0"
+
+[[cases]]
+id = "obo-protected-listing-one-short"
+kind = "defect"
+class = "off_by_one"
+path = "src/vibey_tools/gh/vibey_gh/protected_paths.py"
+how = "`listed < total` became `listed + 1 < total`: a listing one file short of GitHub's count passes, while the module docstring says any shorter listing is a refusal."
+anchors = ["listed + 1 < total", "changedFiles", "listed"]
+
+[[cases.edits]]
+find = '''
+        if not isinstance(listed, int) or not isinstance(total, int) or listed < total:
+'''
+replace = '''
+        if not isinstance(listed, int) or not isinstance(total, int) or listed + 1 < total:
+'''
+planted = "listed + 1 < total"
+
+[[cases]]
+id = "obo-estimate-ledger-seq-zero"
+kind = "defect"
+class = "off_by_one"
+path = "src/vibey_tools/gh/vibey_gh/estimate_ledger.py"
+how = "The first record's `seq` became 0; `_records` expects the first seq to be 1, so the ledger is unreadable after its first append."
+anchors = ["seq = 0", "expected_seq", "seq"]
+
+[[cases.edits]]
+find = '''
+        seq = 1 if previous is None else self._integer(previous.get("seq"), "seq") + 1
+'''
+replace = '''
+        seq = 0 if previous is None else self._integer(previous.get("seq"), "seq") + 1
+'''
+planted = "seq = 0 if previous is None"
+
+# ---------------------------------------------------------------------- inverted_condition
+
+[[cases]]
+id = "inv-gate-abandon-resumes"
+kind = "defect"
+class = "inverted_condition"
+path = "src/vibey/infrastructure/db/human_gate_repository.py"
+how = "The `abandons` test was negated: a defect gate answered `abandon` now returns its job to ready, and every other answer cancels it -- the opposite of the module docstring's point 3."
+anchors = ["abandons", "_CANCEL", "_READY", "not self._defect_answers"]
+
+[[cases.edits]]
+find = '''
+                if self._defect_answers.abandons(gate.kind, gate.answer):
+'''
+replace = '''
+                if not self._defect_answers.abandons(gate.kind, gate.answer):
+'''
+planted = "if not self._defect_answers.abandons(gate.kind, gate.answer):"
+
+[[cases]]
+id = "inv-budget-plan-unchanged"
+kind = "defect"
+class = "inverted_condition"
+path = "src/vibey/domain/budget_caps.py"
+how = "`if new != old` became `if new == old`: only the caps a request leaves as they are are recorded as changes, the opposite of `plan`'s docstring."
+anchors = ["new == old", "plan("]
+
+[[cases.edits]]
+find = '''
+            if new != old:
+'''
+replace = '''
+            if new == old:
+'''
+planted = "if new == old:"
+
+[[cases]]
+id = "inv-reaper-read-whole-or"
+kind = "defect"
+class = "inverted_condition"
+path = "src/vibey/application/queue_reaper.py"
+how = "`and` became `or` in `_read_whole`: a broker queue the pass could not measure is treated as read whole, so its sightings are cleared -- what the module docstring says never happens."
+anchors = ["broker_read or", "_read_whole", "unmeasured"]
+
+[[cases.edits]]
+find = '''
+        return found.broker_read and sighting.queue not in found.unmeasured
+'''
+replace = '''
+        return found.broker_read or sighting.queue not in found.unmeasured
+'''
+planted = "found.broker_read or sighting.queue not in found.unmeasured"
+
+# --------------------------------------------------------------------- swallowed_exception
+
+[[cases]]
+id = "swallow-reaper-record-sighting"
+kind = "defect"
+class = "swallowed_exception"
+path = "src/vibey/application/queue_reaper.py"
+how = "A failure to record a sighting is dropped instead of named in the report, so the pass reads as complete; the module docstring says an unreadable source is named and the pass is not ok."
+anchors = ["record_sighting", "continue", "except Exception"]
+
+[[cases.edits]]
+find = '''
+            try:
+                await self._store.record_sighting(project, verdict)
+            except Exception as exc:
+                unreadable.append(f"recording {verdict.condition.value} on {verdict.queue}: {exc}")
+'''
+replace = '''
+            try:
+                await self._store.record_sighting(project, verdict)
+            except Exception:
+                continue
+'''
+planted = '''
+            except Exception:
+                continue'''
+
+[[cases]]
+id = "swallow-skip-markers-unreadable-range"
+kind = "defect"
+class = "swallowed_exception"
+path = "src/vibey_tools/gh/vibey_gh/skip_markers.py"
+how = "A revision range git could not read is now checked as if it held no commits, so the guard passes; the comment in `commits` says such a range is refused, not passed."
+anchors = ["commits = ()", "RuntimeError"]
+
+[[cases.edits]]
+find = '''
+        except RuntimeError as exc:
+            print(f"vibey-gh: {exc}")
+            return 1
+'''
+replace = '''
+        except RuntimeError:
+            commits = ()
+'''
+planted = "commits = ()"
+
+[[cases]]
+id = "swallow-worker-run-once"
+kind = "defect"
+class = "swallowed_exception"
+path = "src/vibey/application/multi_project_worker.py"
+how = "Every exception a project's loop raises is caught and dropped without a word, where `_build` beside it logs each refusal it absorbs."
+anchors = ["except Exception", "continue", "run_once"]
+
+[[cases.edits]]
+find = '''
+            if await loops[slot % len(loops)].run_once(project_id):
+                self._last_served = project_id
+                return True
+'''
+replace = '''
+            try:
+                served = await loops[slot % len(loops)].run_once(project_id)
+            except Exception:
+                continue
+            if served:
+                self._last_served = project_id
+                return True
+'''
+planted = '''
+            except Exception:
+                continue'''
+
+# -------------------------------------------------------------------------- missing_await
+
+[[cases]]
+id = "await-gate-record-event"
+kind = "defect"
+class = "missing_await"
+path = "src/vibey/infrastructure/db/human_gate_repository.py"
+how = "`self._record(...)` lost its `await`: the `GateAnswered` event is never appended, while the module docstring says a gate is never answered without its record."
+anchors = ["self._record(", "_record", "GateAnswered"]
+
+[[cases.edits]]
+find = '''
+            await self._record(conn, gate, account=account, at=row["answered_at"])
+'''
+replace = '''
+            self._record(conn, gate, account=account, at=row["answered_at"])
+'''
+planted = "self._record(conn, gate, account=account, at=row[\"answered_at\"])"
+
+[[cases]]
+id = "await-worktree-ensure-verify"
+kind = "defect"
+class = "missing_await"
+path = "src/vibey/infrastructure/git/worktree_manager.py"
+how = "`self._ownership.verify(...)` in `ensure` lost its `await`: the ownership check never runs, while the comment above it says the worktree is returned only once proved this project's."
+anchors = ["_ownership.verify", "verify("]
+
+[[cases.edits]]
+find = '''
+            await self._ownership.verify(self._naming.branch(item_id), self._naming.project_id)
+'''
+replace = '''
+            self._ownership.verify(self._naming.branch(item_id), self._naming.project_id)
+'''
+planted = "self._ownership.verify(self._naming.branch(item_id), self._naming.project_id)"
+
+[[cases]]
+id = "await-ledger-append"
+kind = "defect"
+class = "missing_await"
+path = "src/vibey/infrastructure/db/ledger_repository.py"
+how = "`append` returns `self._appender.append(...)` without awaiting it: the transaction commits and the connection goes back to the pool before the event is written, and the caller gets a coroutine, not a `LedgerEvent`."
+anchors = ["self._appender.append(conn, draft)", "_appender.append"]
+
+[[cases.edits]]
+find = '''
+            return await self._appender.append(conn, draft)
+'''
+replace = '''
+            return self._appender.append(conn, draft)
+'''
+planted = "return self._appender.append(conn, draft)"
+
+# -------------------------------------------------------------------------- sql_injection
+
+[[cases]]
+id = "sql-gate-open-all-kind"
+kind = "defect"
+class = "sql_injection"
+path = "src/vibey/infrastructure/db/human_gate_repository.py"
+how = "A new `kind` filter on `open_all` is written into the SQL with an f-string rather than passed as a bind parameter, as every other query in the file is."
+anchors = ["kind = '{kind}'", "{kind}", "where +="]
+
+[[cases.edits]]
+find = '''
+    async def open_all(self) -> tuple[HumanGateRecord, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM human_gate
+                WHERE answered_at IS NULL
+                ORDER BY raised_at ASC, gate_id ASC
+                """
+            )
+            return tuple(_row_to_record(r) for r in rows)
+'''
+replace = '''
+    async def open_all(self, kind: str | None = None) -> tuple[HumanGateRecord, ...]:
+        """Every open gate, oldest first; only gates of `kind` when one is named."""
+        where = "answered_at IS NULL"
+        if kind is not None:
+            where += f" AND kind = '{kind}'"
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                f"""
+                SELECT * FROM human_gate
+                WHERE {where}
+                ORDER BY raised_at ASC, gate_id ASC
+                """
+            )
+            return tuple(_row_to_record(r) for r in rows)
+'''
+planted = "where += f\" AND kind = '{kind}'\""
+
+[[cases]]
+id = "sql-ledger-range-order"
+kind = "defect"
+class = "sql_injection"
+path = "src/vibey/infrastructure/db/ledger_repository.py"
+how = "A new `order` argument to `range` is formatted into the ORDER BY clause with an f-string, unchecked, where the rest of the query is parameterised."
+anchors = ["{order}", "ORDER BY seq"]
+
+[[cases.edits]]
+find = '''
+        self, project_id: UUID, *, from_seq: int, to_seq: int
+    ) -> tuple[LedgerEvent, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM event
+                WHERE project_id = $1 AND seq BETWEEN $2 AND $3
+                ORDER BY seq
+                """,
+'''
+replace = '''
+        self, project_id: UUID, *, from_seq: int, to_seq: int, order: str = "ASC"
+    ) -> tuple[LedgerEvent, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                f"""
+                SELECT * FROM event
+                WHERE project_id = $1 AND seq BETWEEN $2 AND $3
+                ORDER BY seq {order}
+                """,
+'''
+planted = "ORDER BY seq {order}"
+
+[[cases]]
+id = "sql-project-holder-path"
+kind = "defect"
+class = "sql_injection"
+path = "src/vibey/infrastructure/db/project_repository.py"
+how = "The holder lookup inlines the checkout path into the SQL with an f-string instead of passing it to `_LIVE_AT_PATH` as `$1`; a path is caller-supplied and may hold a quote."
+anchors = ["'{path}'", "repo_path = '", "_LIVE_AT_PATH"]
+
+[[cases.edits]]
+find = '''
+                holder = await conn.fetchrow(_LIVE_AT_PATH, path)
+'''
+replace = '''
+                holder = await conn.fetchrow(
+                    f"SELECT * FROM project WHERE repo_path = '{path}' AND phase <> 'abandoned'"
+                )
+'''
+planted = "f\"SELECT * FROM project WHERE repo_path = '{path}' AND phase <> 'abandoned'\""
+
+# -------------------------------------------------------------------------- removed_guard
+
+[[cases]]
+id = "guard-worktree-foreign-branch"
+kind = "defect"
+class = "removed_guard"
+path = "src/vibey/infrastructure/git/worktree_manager.py"
+how = "`create` no longer verifies that an existing branch is this project's before reusing it; the module docstring says that check runs first and refuses a foreign branch."
+anchors = ["verify", "ownership", "ForeignBranchRefused", "existing"]
+
+[[cases.edits]]
+find = '''
+        base = ""
+        if existing:
+            await self._ownership.verify(branch, self._naming.project_id)
+        else:
+            base = await self._base_commit(base_ref)
+'''
+replace = '''
+        base = "" if existing else await self._base_commit(base_ref)
+'''
+planted = "base = \"\" if existing else await self._base_commit(base_ref)"
+
+[[cases]]
+id = "guard-budget-untrusted-history"
+kind = "defect"
+class = "removed_guard"
+path = "src/vibey/domain/budget_caps.py"
+how = "The cap history no longer keeps only `trusted` events, so an engine-written event of the same kind reads as a change someone made; the module docstring says only vibey's own trusted events count."
+anchors = ["Provenance.TRUSTED", "provenance", "TRUSTED", "BUDGET_CAP_CHANGED"]
+
+[[cases.edits]]
+find = '''
+                if event.kind is EventKind.BUDGET_CAP_CHANGED
+                and event.provenance is Provenance.TRUSTED
+'''
+replace = '''
+                if event.kind is EventKind.BUDGET_CAP_CHANGED
+'''
+planted = "if event.kind is EventKind.BUDGET_CAP_CHANGED"
+
+[[cases]]
+id = "guard-protected-rename"
+kind = "defect"
+class = "removed_guard"
+path = "src/vibey_tools/gh/vibey_gh/protected_paths.py"
+how = "A renamed file's `previous_filename` is no longer added to the paths checked, so renaming a protected file away passes the guard."
+anchors = ["previous_filename", "previous", "renam"]
+
+[[cases.edits]]
+find = '''
+                paths.append(name)
+                previous = entry.get("previous_filename")
+                if isinstance(previous, str):
+                    # Renaming a protected file away is a change to it.
+                    paths.append(previous)
+'''
+replace = '''
+                paths.append(name)
+'''
+planted = "paths.append(name)"
+
+# -------------------------------------------------------------------------- resource_leak
+
+[[cases]]
+id = "leak-local-auth-knock"
+kind = "defect"
+class = "resource_leak"
+path = "src/vibey/infrastructure/db/local_auth.py"
+how = "A connection the probe was let in on is no longer closed, so every successful knock leaves a session open on the server."
+anchors = ["conn.close", "close()", "_knock"]
+
+[[cases.edits]]
+find = '''
+            return None
+        await conn.close()
+        return True
+'''
+replace = '''
+            return None
+        return True
+'''
+planted = "return True"
+
+[[cases]]
+id = "leak-estimate-ledger-handle"
+kind = "defect"
+class = "resource_leak"
+path = "src/vibey_tools/gh/vibey_gh/estimate_ledger.py"
+how = "The ledger is appended through a handle opened without `with` and never closed, so the record may not be flushed and the handle is leaked."
+anchors = ["path.open", "handle"]
+
+[[cases.edits]]
+find = '''
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n")
+'''
+replace = '''
+        handle = path.open("a", encoding="utf-8")
+        handle.write(json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n")
+'''
+planted = "handle = path.open(\"a\", encoding=\"utf-8\")"
+
+[[cases]]
+id = "leak-ledger-latest-seq"
+kind = "defect"
+class = "resource_leak"
+path = "src/vibey/infrastructure/db/ledger_repository.py"
+how = "`latest_seq` acquires a pooled connection without `async with` and never releases it, so each call takes a connection out of the pool for good."
+anchors = ["acquire()", "release", "conn = await self._pool.acquire()"]
+
+[[cases.edits]]
+find = '''
+        async with self._pool.acquire() as conn:
+            value = await conn.fetchval(
+                "SELECT max(seq) FROM event WHERE project_id = $1", project_id
+            )
+            return int(value) if value is not None else 0
+'''
+replace = '''
+        conn = await self._pool.acquire()
+        value = await conn.fetchval("SELECT max(seq) FROM event WHERE project_id = $1", project_id)
+        return int(value) if value is not None else 0
+'''
+planted = "conn = await self._pool.acquire()"
+
+# --------------------------------------------------------------------- wrong_error_return
+
+[[cases]]
+id = "errret-worktree-list-empty"
+kind = "defect"
+class = "wrong_error_return"
+path = "src/vibey/infrastructure/git/worktree_manager.py"
+how = "A failed `git worktree list` now returns no worktrees instead of raising, so `reclaim_orphans` treats every managed worktree as unregistered and deletes it."
+anchors = ["return ()", "reclaim_orphans", "WorktreeError", "_list_worktree_paths"]
+
+[[cases.edits]]
+find = '''
+        if result.returncode != 0:
+            raise WorktreeError(("worktree", "list", "--porcelain"), result.stderr)
+'''
+replace = '''
+        if result.returncode != 0:
+            return ()
+'''
+planted = "return ()"
+
+[[cases]]
+id = "errret-protected-unlisted-passes"
+kind = "defect"
+class = "wrong_error_return"
+path = "src/vibey_tools/gh/vibey_gh/protected_paths.py"
+how = "A pull request whose changed files could not be listed now returns no refusal, where the module docstring says a listing that could not be fetched is a refusal rather than a pass."
+anchors = ["paths is None", "return None", "could not be listed"]
+
+[[cases.edits]]
+find = '''
+        if paths is None:
+            return f"its changed files could not be listed to check {_KEY} — {_HUMAN}"
+'''
+replace = '''
+        if paths is None:
+            return None
+'''
+planted = '''
+        if paths is None:
+            return None'''
+
+[[cases]]
+id = "errret-local-auth-hba-unreadable"
+kind = "defect"
+class = "wrong_error_return"
+path = "src/vibey/infrastructure/db/local_auth.py"
+how = "An unreadable `pg_hba_file_rules` now reads as an empty, clean rule set instead of None, so the probe can PASS where its docstring says anything less than the rules read and clean is unknown."
+anchors = ["return [], []", "InsufficientPrivilegeError", "_non_scram_rules"]
+
+[[cases.edits]]
+find = '''
+        except asyncpg.InsufficientPrivilegeError:
+            return None, []
+'''
+replace = '''
+        except asyncpg.InsufficientPrivilegeError:
+            return [], []
+'''
+planted = "return [], []"
+
+# ---------------------------------------------------------------------- shared_state_race
+
+[[cases]]
+id = "race-reaper-claim-after-await"
+kind = "defect"
+class = "shared_state_race"
+path = "src/vibey/application/queue_reaper.py"
+how = "`_last_pass` is now set after the pass is awaited, so parallel drive loops that share the reaper can both find it due and run two passes at once -- what the removed comment said claiming it first prevented."
+anchors = ["_last_pass", "run_if_due", "drive loops"]
+
+[[cases.edits]]
+find = '''
+        # Claimed before the first await, so the worker's parallel drive loops that share
+        # this reaper cannot both find it due.
+        self._last_pass = now
+        return await self.run(project_id, leases=False)
+'''
+replace = '''
+        # Recorded once the pass has finished, so a pass that raised is tried again on the
+        # next call instead of waiting out a whole interval.
+        report = await self.run(project_id, leases=False)
+        self._last_pass = now
+        return report
+'''
+planted = "self._last_pass = now"
+
+[[cases]]
+id = "race-worker-build-lock"
+kind = "defect"
+class = "shared_state_race"
+path = "src/vibey/application/multi_project_worker.py"
+how = "The per-project lock around the build is gone, so two drive loops meeting a new project at once both build its loops and preflight its engines twice."
+anchors = ["_built", "_building", "Lock", "lock"]
+
+[[cases.edits]]
+find = '''
+        # Parallel drive loops can meet the same new project at once; the lock makes the
+        # second wait for the first's build instead of preflighting the engines twice.
+        async with self._building.setdefault(project_id, asyncio.Lock()):
+            if project_id not in self._built:
+                self._built[project_id] = await self._build(project_id)
+        return self._built[project_id]
+'''
+replace = '''
+        if project_id not in self._built:
+            self._built[project_id] = await self._build(project_id)
+        return self._built[project_id]
+'''
+planted = "if project_id not in self._built:"
+
+[[cases]]
+id = "race-tracer-emit-lock"
+kind = "defect"
+class = "shared_state_race"
+path = "src/vibey_tools/gh/vibey_gh/debugging.py"
+how = "Only the sequence increment stays under the lock; the hash chain's `_previous_hash` is read and written outside it, so two threads can chain to the same predecessor and fork the chain."
+anchors = ["_previous_hash", "previous_hash", "_lock"]
+
+[[cases.edits]]
+find = '''
+        with self._lock:
+            self._sequence += 1
+            record = {
+                "schema": SCHEMA,
+                "trace_id": self.trace_id,
+                "sequence": self._sequence,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "monotonic_ns": time.monotonic_ns(),
+                "pid": os.getpid(),
+                "thread_id": threading.get_ident(),
+                "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+                "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+                "git_sha": os.environ.get("GITHUB_SHA"),
+                "previous_hash": self._previous_hash,
+                **event,
+            }
+            canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+            record_hash = hashlib.sha256(canonical.encode()).hexdigest()
+            record["event_hash"] = record_hash
+            self._previous_hash = record_hash
+            self.stream.write(json.dumps(record, sort_keys=True) + "\n")
+            self.stream.flush()
+'''
+replace = '''
+        with self._lock:
+            self._sequence += 1
+            sequence = self._sequence
+        record = {
+            "schema": SCHEMA,
+            "trace_id": self.trace_id,
+            "sequence": sequence,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "monotonic_ns": time.monotonic_ns(),
+            "pid": os.getpid(),
+            "thread_id": threading.get_ident(),
+            "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+            "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+            "git_sha": os.environ.get("GITHUB_SHA"),
+            "previous_hash": self._previous_hash,
+            **event,
+        }
+        canonical = json.dumps(record, sort_keys=True, separators=(",", ":"))
+        record_hash = hashlib.sha256(canonical.encode()).hexdigest()
+        record["event_hash"] = record_hash
+        self._previous_hash = record_hash
+        self.stream.write(json.dumps(record, sort_keys=True) + "\n")
+        self.stream.flush()
+'''
+planted = "        self._previous_hash = record_hash"
+
+# ------------------------------------------------------------------------------- controls
+
+[[cases]]
+id = "ctl-gate-canonical-rename"
+kind = "control"
+path = "src/vibey/infrastructure/db/human_gate_repository.py"
+how = "Renames the private helper `_canonical` to `_canonical_json` at its definition and its one call site."
+
+[[cases.edits]]
+find = '''
+def _canonical(answer: Mapping[str, object] | None) -> str:
+'''
+replace = '''
+def _canonical_json(answer: Mapping[str, object] | None) -> str:
+'''
+
+[[cases.edits]]
+find = '''
+        same_answer = _canonical(gate.answer) == _canonical(given)
+'''
+replace = '''
+        same_answer = _canonical_json(gate.answer) == _canonical_json(given)
+'''
+
+[[cases]]
+id = "ctl-gate-open-all-kind-param"
+kind = "control"
+path = "src/vibey/infrastructure/db/human_gate_repository.py"
+how = "The correct form of `sql-gate-open-all-kind`: the optional `kind` filter is passed as a bind parameter (`$1::text IS NULL OR kind = $1`)."
+
+[[cases.edits]]
+find = '''
+    async def open_all(self) -> tuple[HumanGateRecord, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM human_gate
+                WHERE answered_at IS NULL
+                ORDER BY raised_at ASC, gate_id ASC
+                """
+            )
+            return tuple(_row_to_record(r) for r in rows)
+'''
+replace = '''
+    async def open_all(self, kind: str | None = None) -> tuple[HumanGateRecord, ...]:
+        """Every open gate, oldest first; only gates of `kind` when one is named."""
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM human_gate
+                WHERE answered_at IS NULL AND ($1::text IS NULL OR kind = $1)
+                ORDER BY raised_at ASC, gate_id ASC
+                """,
+                kind,
+            )
+            return tuple(_row_to_record(r) for r in rows)
+'''
+
+[[cases]]
+id = "ctl-budget-plan-docstring"
+kind = "control"
+path = "src/vibey/domain/budget_caps.py"
+how = "Rewords `plan`'s docstring; the code is untouched."
+
+[[cases.edits]]
+find = '''
+        """The changes `request` makes to `current`, dollars first. A cap the request
+        would leave as it is -- set to the value it has, or cleared when already
+        uncapped -- is not a change."""
+'''
+replace = '''
+        """The changes `request` makes to `current`, the dollar cap before the turn cap.
+
+        A cap the request would leave as it is -- set to the value it already has, or
+        cleared when it is already uncapped -- is not a change, so it records nothing."""
+'''
+
+[[cases]]
+id = "ctl-protected-shown-rename"
+kind = "control"
+path = "src/vibey_tools/gh/vibey_gh/protected_paths.py"
+how = "Renames the local `shown` to `named` in `refusal`, at all three of its uses."
+
+[[cases.edits]]
+find = '''
+        shown = ", ".join(hits[:_SHOWN])
+        if len(hits) > _SHOWN:
+            shown += f" and {len(hits) - _SHOWN} more"
+        return f"touches protected path(s) {shown} ({_KEY}) — {_HUMAN}"
+'''
+replace = '''
+        named = ", ".join(hits[:_SHOWN])
+        if len(hits) > _SHOWN:
+            named += f" and {len(hits) - _SHOWN} more"
+        return f"touches protected path(s) {named} ({_KEY}) — {_HUMAN}"
+'''
+
+[[cases]]
+id = "ctl-ledger-chain-at-seq-rename"
+kind = "control"
+path = "src/vibey/domain/ledger_chain.py"
+how = "Renames the local `at_seq` to `link_at_seq` in `verify`, at all three of its uses."
+
+[[cases.edits]]
+find = '''
+        at_seq: dict[int, str] = {}
+        for computed in links:
+            at_seq.setdefault(computed.seq, computed.link)
+        for seq, expected in sorted(anchors.items()):
+            actual = at_seq.get(seq)
+'''
+replace = '''
+        link_at_seq: dict[int, str] = {}
+        for computed in links:
+            link_at_seq.setdefault(computed.seq, computed.link)
+        for seq, expected in sorted(anchors.items()):
+            actual = link_at_seq.get(seq)
+'''
+
+[[cases]]
+id = "ctl-worktree-prune-comment"
+kind = "control"
+path = "src/vibey/infrastructure/git/worktree_manager.py"
+how = "Rewrites the comment in `_prune`; the two git calls are unchanged."
+
+[[cases.edits]]
+find = '''
+        # Removing/pruning worktrees can leave the primary checkout marked
+        # core.bare=true (observed live during the expansion-13 build;
+        # same class as scripts/fleet/land.sh's guard). The primary
+        # checkout is never actually bare, so reasserting is always safe --
+        # and _prune() runs inside every mutating path (create, ensure,
+        # remove, reclaim_orphans), so no lifecycle escapes the guard.
+'''
+replace = '''
+        # Removing or pruning worktrees can leave the primary checkout marked
+        # core.bare=true -- seen live in the expansion-13 build, the same failure
+        # scripts/fleet/land.sh guards against. The primary checkout is never
+        # really bare, so setting it back is always safe, and because _prune()
+        # runs on every mutating path (create, ensure, remove, reclaim_orphans)
+        # no lifecycle gets past it.
+'''
+
+[[cases]]
+id = "ctl-worktree-base-ternary"
+kind = "control"
+path = "src/vibey/infrastructure/git/worktree_manager.py"
+how = "The correct form of `guard-worktree-foreign-branch`: the base is computed in one expression and the ownership check for an existing branch stays, still before anything is wiped."
+
+[[cases.edits]]
+find = '''
+        base = ""
+        if existing:
+            await self._ownership.verify(branch, self._naming.project_id)
+        else:
+            base = await self._base_commit(base_ref)
+'''
+replace = '''
+        if existing:
+            await self._ownership.verify(branch, self._naming.project_id)
+        base = "" if existing else await self._base_commit(base_ref)
+'''
+
+[[cases]]
+id = "ctl-reaper-project-for"
+kind = "control"
+path = "src/vibey/application/queue_reaper.py"
+how = "Extracts the choice of which project a sighting is recorded under into a static method, `_project_for`, with the same expression."
+
+[[cases.edits]]
+find = '''
+        for verdict in report.surfaced:
+            project = (
+                found.project_of.get(verdict.queue, report.project_id)
+                if verdict.source is ReapSource.JOB_QUEUE
+                else report.project_id
+            )
+            try:
+'''
+replace = '''
+        for verdict in report.surfaced:
+            project = self._project_for(found, verdict)
+            try:
+'''
+
+[[cases.edits]]
+find = '''
+    @staticmethod
+    def _read_whole(found: _Pass, sighting: ReapVerdict) -> bool:
+'''
+replace = '''
+    @staticmethod
+    def _project_for(found: _Pass, verdict: ReapVerdict) -> UUID:
+        """The project a sighting is recorded under: a job-queue sighting's own project
+        when the pass measured it, and the project the pass ran for otherwise."""
+        report = found.report
+        if verdict.source is ReapSource.JOB_QUEUE:
+            return found.project_of.get(verdict.queue, report.project_id)
+        return report.project_id
+
+    @staticmethod
+    def _read_whole(found: _Pass, sighting: ReapVerdict) -> bool:
+'''
+
+[[cases]]
+id = "ctl-local-auth-query-host"
+kind = "control"
+path = "src/vibey/infrastructure/db/local_auth.py"
+how = "Names the libpq `?host=` fallback in `endpoints` before using it; the value computed is the same."
+
+[[cases.edits]]
+find = '''
+        host = unquote(raw) or next(iter(parse_qs(parts.query).get("host", [])), "")
+'''
+replace = '''
+        query_host = next(iter(parse_qs(parts.query).get("host", [])), "")
+        host = unquote(raw) or query_host
+'''
+
+[[cases]]
+id = "ctl-estimate-ledger-last-rename"
+kind = "control"
+path = "src/vibey_tools/gh/vibey_gh/estimate_ledger.py"
+how = "Renames the local `previous` to `last` in `record`, at all four of its uses."
+
+[[cases.edits]]
+find = '''
+        previous = records[-1] if records else None
+        seq = 1 if previous is None else self._integer(previous.get("seq"), "seq") + 1
+        previous_digest = _text(previous.get("digest"), "digest") if previous else _GENESIS
+'''
+replace = '''
+        last = records[-1] if records else None
+        seq = 1 if last is None else self._integer(last.get("seq"), "seq") + 1
+        previous_digest = _text(last.get("digest"), "digest") if last else _GENESIS
+'''
+
+[[cases]]
+id = "ctl-worker-built-rename"
+kind = "control"
+path = "src/vibey/application/multi_project_worker.py"
+how = "Renames the attribute `_built` to `_loops_built`, at its declaration and all three uses."
+
+[[cases.edits]]
+find = '''
+        self._built: dict[UUID, Sequence[WorkerLoopInterface] | None] = {}
+'''
+replace = '''
+        self._loops_built: dict[UUID, Sequence[WorkerLoopInterface] | None] = {}
+'''
+
+[[cases.edits]]
+find = '''
+            if project_id not in self._built:
+                self._built[project_id] = await self._build(project_id)
+        return self._built[project_id]
+'''
+replace = '''
+            if project_id not in self._loops_built:
+                self._loops_built[project_id] = await self._build(project_id)
+        return self._loops_built[project_id]
+'''
+
+[[cases]]
+id = "ctl-tracer-owned-docstring"
+kind = "control"
+path = "src/vibey_tools/gh/vibey_gh/debugging.py"
+how = "Adds a docstring to `_owned`; the code is untouched."
+
+[[cases.edits]]
+find = '''
+    def _owned(self, filename: str) -> bool:
+        path = Path(filename).resolve()
+'''
+replace = '''
+    def _owned(self, filename: str) -> bool:
+        """Whether `filename` is one of the traced roots or lies beneath one."""
+        path = Path(filename).resolve()
+'''
+
+[[cases]]
+id = "ctl-skip-markers-intersection"
+kind = "control"
+path = "src/vibey_tools/gh/vibey_gh/skip_markers.py"
+how = "Writes the exemption test with `set.intersection` instead of `&`; the result is the same."
+
+[[cases.edits]]
+find = '''
+            if exempt & {commit.author_name, commit.author_email}:
+'''
+replace = '''
+            if exempt.intersection((commit.author_name, commit.author_email)):
+'''
+
+[[cases]]
+id = "ctl-ledger-drafts-event-rename"
+kind = "control"
+path = "src/vibey/infrastructure/db/ledger_repository.py"
+how = "Renames the loop variable `e` to `event` in `to_drafts`, at every use."
+
+[[cases.edits]]
+find = '''
+    for e in events:
+        if not isinstance(e.kind, EventKind):
+            raise ValueError(
+                f"event seq {e.seq} has kind {e.kind.value!r}, which this vibey does not "
+                "know; it reads such an event but never writes one"
+            )
+        engine_id = e.engine_id
+        if (
+            not isinstance(e.phase, Phase)
+            or not isinstance(e.provenance, Provenance)
+            or isinstance(engine_id, UnrecognizedEngineId)
+        ):
+            raise ValueError(
+                f"event seq {e.seq} carries a phase, engine id or provenance this vibey "
+                f"does not know (phase {e.phase.value!r}, engine "
+                f"{engine_id.value if engine_id is not None else None!r}, provenance "
+                f"{e.provenance.value!r}); it reads such an event but never writes one"
+            )
+        drafts.append(
+            LedgerEventDraft(
+                project_id=e.project_id,
+                cycle=e.cycle,
+                phase=e.phase,
+                kind=e.kind,
+                engine_id=engine_id,
+                job_id=e.job_id,
+                causation_id=e.causation_id,
+                correlation_id=e.correlation_id,
+                provenance=e.provenance,
+                produced_at=e.produced_at,
+                payload=dict(e.payload),
+                digest=e.digest,
+            )
+        )
+'''
+replace = '''
+    for event in events:
+        if not isinstance(event.kind, EventKind):
+            raise ValueError(
+                f"event seq {event.seq} has kind {event.kind.value!r}, which this vibey does"
+                " not know; it reads such an event but never writes one"
+            )
+        engine_id = event.engine_id
+        if (
+            not isinstance(event.phase, Phase)
+            or not isinstance(event.provenance, Provenance)
+            or isinstance(engine_id, UnrecognizedEngineId)
+        ):
+            raise ValueError(
+                f"event seq {event.seq} carries a phase, engine id or provenance this vibey "
+                f"does not know (phase {event.phase.value!r}, engine "
+                f"{engine_id.value if engine_id is not None else None!r}, provenance "
+                f"{event.provenance.value!r}); it reads such an event but never writes one"
+            )
+        drafts.append(
+            LedgerEventDraft(
+                project_id=event.project_id,
+                cycle=event.cycle,
+                phase=event.phase,
+                kind=event.kind,
+                engine_id=engine_id,
+                job_id=event.job_id,
+                causation_id=event.causation_id,
+                correlation_id=event.correlation_id,
+                provenance=event.provenance,
+                produced_at=event.produced_at,
+                payload=dict(event.payload),
+                digest=event.digest,
+            )
+        )
+'''

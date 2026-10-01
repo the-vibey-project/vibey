@@ -394,6 +394,32 @@ trusted_only = true
 # (vibey-gh docs/configuration.md, `source_context`).
 source_context = true
 
+# Whether the review above catches real defects, measured (`vibey-gh review-canary run`,
+# weekly by review-canary.yml on the same runner): 27 planted defects in nine classes and 14
+# controls, diffs against this repository's own code, each reviewed through `local-review`
+# with every setting above. The 2026-09-30 audit found `think = "low"` passing every pull
+# request the gate had blocked, and no study so far carried a known-true defect, so recall
+# was never measured. The ledger is append-only; the runbook shows the latest measurement.
+#
+# The floor is what `vibey-gh review-canary status` holds the latest measurement to, for
+# the approver that will lean on a passing review (not wired to approve anything yet):
+# - recall's Wilson lower bound >= 0.5 -- 95% confident the review blocks more than half
+#   of planted defects for the right reason. A rubber stamp scores 0; with 27 defects it
+#   takes 19 caught. A bar this corpus can show, raised once a larger one can show more.
+# - the false-positive rate's Wilson upper bound <= 0.5 -- a blocked correct change goes to
+#   a human, so this bound is about cost, not safety; it is here so a gate that blocks
+#   everything cannot buy its recall that way (14 of 14 blocked fails; 3 of 14 passes).
+# - measured within 14 days (a weekly run and one missed week), on the whole corpus, under
+#   the settings in force -- a measurement under another model or think level vouches for
+#   nothing.
+[pr_automation.review_canary]
+corpus = "docs/architecture/evidence/review-canary/corpus.toml"
+ledger = "docs/architecture/evidence/review-canary/ledger.jsonl"
+report = "docs/runbooks/sovereign-review-runner.md"
+min_recall_lower_bound = 0.5
+max_false_positive_upper_bound = 0.5
+max_age_days = 14
+
 [runners]
 # The machine that serves the sovereign lane above, declared (12.c): `vibey-gh runner install`
 # renders its LaunchAgent and supervisor from this table, `runner check` reconciles the host

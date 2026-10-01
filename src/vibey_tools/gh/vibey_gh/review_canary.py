@@ -1,0 +1,1227 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Does the sovereign review catch real defects? Measured offline, against planted ones.
+
+A 2026-09-30 audit found the sovereign review at `think = "low"` passing all four pull
+requests its own gate had blocked, and an earlier study found that showing the model the
+changed files cut its false findings -- but every one of those runs measured AGREEMENT. No
+pull request in them carried a known-true defect, so whether any setting blocks one was
+never measured (docs/architecture/evidence/autonomy-2026-10-01.md, "Not measured"). An
+approver that trusts a passing review is only as safe as that review's recall.
+
+`vibey-gh review-canary` measures it:
+
+* **The corpus** (`[pr_automation.review_canary] corpus`) holds diffs against this
+  repository's own code, each built as exact edits to one file at a pinned commit and
+  carrying exactly one planted defect of a declared class, beside clean controls.
+* **The review** is the one pull requests get: every case goes through `local-review`'s
+  own entry point with the arguments `pr-review.yml` renders from
+  `[pr_automation.fallback]` -- model, think level, window, reserve, budget, slot wait,
+  the declared documents, the changed file's full text as reference -- never a forked
+  prompt. A test holds the two argument lists to each other.
+* **The matching rule** (`FindingMatcher`): a planted defect is CAUGHT only when the
+  verdict blocks (anything but an explicit pass) AND one finding is on the planted file,
+  either at a `line` within `line_tolerance` of the planted lines or quoting one of the
+  case's anchors, AND uses one of its class's keywords. A control is a FALSE POSITIVE when
+  the verdict blocks or any finding is `blocking`. A review with no verdict -- a timeout, a
+  busy model, a refusal -- is NO_VERDICT: named with its code, and never counted as caught,
+  missed, clean or false.
+* **The record** is one digest-chained line per measurement in `ledger`: recall and the
+  false-positive rate with Wilson intervals, the no-verdict count, recall per class, and
+  the model, settings, commit, host and times it ran under. `render` writes the latest into
+  `report`'s generated block, and `render --check` fails when the block has drifted.
+* **The floor** (`min_recall_lower_bound`, `max_false_positive_upper_bound`,
+  `max_age_days`) is what `status` holds the latest measurement to. Nothing approves on it
+  yet; it is the number the approver will read.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import dataclasses
+import difflib
+import hashlib
+import io
+import json
+import math
+import os
+import platform
+import re
+import subprocess
+import tempfile
+import time
+import tomllib
+from collections import Counter
+from collections.abc import Callable, Mapping, Sequence
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, Final
+
+from vibey_gh import review_outcome as outcome_codes
+from vibey_gh.config import GhConfig, load_config
+from vibey_gh.interfaces.review_canary_interface import (
+    CAUGHT,
+    CLEAN,
+    CONTROL,
+    DEFECT,
+    FALSE_POSITIVE,
+    MISSED,
+    NO_VERDICT,
+    BuiltCase,
+    CanaryCase,
+    CanaryEdit,
+    CanaryFloor,
+    CanaryLedgerInterface,
+    CanaryReportInterface,
+    CanaryScorerInterface,
+    CaseResult,
+    Corpus,
+    CorpusLoaderInterface,
+    DefectClass,
+    FindingMatcherInterface,
+    ReviewCanaryInterface,
+    WilsonIntervalInterface,
+)
+from vibey_gh.interfaces.slots_interface import OllamaClientInterface
+
+__all__ = [
+    "CORPUS_SCHEMA",
+    "LEDGER_FORMAT",
+    "VERDICT_SETTINGS",
+    "CanaryLedger",
+    "CanaryReport",
+    "CanaryScorer",
+    "CorpusLoader",
+    "FindingMatcher",
+    "ReviewCanary",
+    "WilsonInterval",
+]
+
+CORPUS_SCHEMA: Final = "vibey-gh/review-canary-corpus/1"
+LEDGER_FORMAT: Final = "vibey-gh/review-canary-ledger/1"
+LEDGER_KIND: Final = "ReviewCanaryMeasured"
+_GENESIS: Final = "0" * 64
+_ID = re.compile(r"[a-z0-9][a-z0-9-]*")
+_SHA = re.compile(r"[0-9a-f]{40}")
+
+# The settings that change what the review JUDGES. A measurement stands for a configuration
+# only while these are unchanged: `status` refuses one taken under another model, think
+# level, window or set of documents. The timing settings -- deadline rates, slot wait,
+# retries -- are recorded beside them but change only whether a verdict arrives, which the
+# no-verdict count already reports.
+VERDICT_SETTINGS: Final = (
+    "model",
+    "think",
+    "context_window",
+    "reasoning_reserve_tokens",
+    "chars_per_token",
+    "max_diff_chars",
+    "max_document_chars",
+    "max_chunks",
+    "split_added_hunks",
+    "source_context",
+    "max_source_chars",
+    "context_paths",
+    "scope",
+    "role",
+)
+
+BEGIN = "<!-- BEGIN GENERATED review-canary — regenerated by `vibey-gh review-canary render` -->"
+END = "<!-- END GENERATED review-canary -->"
+
+
+class CorpusLoader(CorpusLoaderInterface):
+    """Implements `CorpusLoaderInterface`: reads the corpus, and builds each case from the
+    file at the pin read with `git show` in `root`."""
+
+    def __init__(
+        self,
+        root: Path,
+        *,
+        run: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    ) -> None:
+        self._root = root
+        self._run = run
+        self._files: dict[tuple[str, str], str] = {}
+
+    def load(self, path: Path) -> Corpus:
+        raw = path.read_bytes()
+        data = tomllib.loads(raw.decode("utf-8"))
+        problems: list[str] = []
+        if data.get("schema") != CORPUS_SCHEMA:
+            problems.append(f"schema is {data.get('schema')!r}, not {CORPUS_SCHEMA!r}")
+        pin = data.get("pin")
+        if not isinstance(pin, str) or not _SHA.fullmatch(pin):
+            problems.append("pin must be a full 40-character commit")
+        classes = {
+            name: self._defect_class(name, table, problems)
+            for name, table in dict(data.get("classes") or {}).items()
+        }
+        cases: list[CanaryCase] = []
+        seen: set[str] = set()
+        for number, table in enumerate(data.get("cases") or [], 1):
+            case = self._case(number, table, classes, problems)
+            if case.id in seen:
+                problems.append(f"case {case.id}: the id is used twice")
+            seen.add(case.id)
+            cases.append(case)
+        if not cases:
+            problems.append("there are no cases")
+        if problems:
+            raise ValueError(f"{path} is not a review-canary corpus: " + "; ".join(problems))
+        return Corpus(
+            schema=CORPUS_SCHEMA,
+            pin=str(pin),
+            classes=classes,
+            cases=tuple(cases),
+            digest=hashlib.sha256(raw).hexdigest(),
+        )
+
+    @staticmethod
+    def _defect_class(name: str, table: Any, problems: list[str]) -> DefectClass:
+        keywords = table.get("keywords") if isinstance(table, dict) else None
+        if not _ID.fullmatch(name.replace("_", "-")):
+            problems.append(f"class {name!r}: a name is lower-case letters, digits and _")
+        if (
+            not isinstance(keywords, list)
+            or not keywords
+            or not all(isinstance(word, str) and word.strip() for word in keywords)
+        ):
+            problems.append(f"class {name}: keywords must be a non-empty list of words")
+            keywords = []
+        summary = table.get("summary", "") if isinstance(table, dict) else ""
+        return DefectClass(name, str(summary), tuple(str(word) for word in keywords))
+
+    @staticmethod
+    def _case(
+        number: int, table: Any, classes: Mapping[str, DefectClass], problems: list[str]
+    ) -> CanaryCase:
+        table = table if isinstance(table, dict) else {}
+        case_id = str(table.get("id", f"#{number}"))
+        said = f"case {case_id}"
+        if not _ID.fullmatch(case_id):
+            problems.append(f"{said}: an id is lower-case letters, digits and -")
+        kind = table.get("kind")
+        if kind not in (DEFECT, CONTROL):
+            problems.append(f"{said}: kind must be {DEFECT!r} or {CONTROL!r}")
+        path = str(table.get("path", ""))
+        if not path or path.startswith(("/", "~")) or ".." in Path(path).parts:
+            problems.append(f"{said}: path must be repository-relative")
+        if not str(table.get("how", "")).strip():
+            problems.append(f"{said}: how it was built must be said")
+        edits: list[CanaryEdit] = []
+        for edit in table.get("edits") or []:
+            edit = edit if isinstance(edit, dict) else {}
+            find, replace = edit.get("find"), edit.get("replace")
+            if not isinstance(find, str) or not find or not isinstance(replace, str):
+                problems.append(f"{said}: every edit has a find and a replace")
+                continue
+            if find == replace:
+                problems.append(f"{said}: an edit changes nothing")
+            edits.append(CanaryEdit(find, replace, str(edit.get("planted", ""))))
+        if not edits:
+            problems.append(f"{said}: there are no edits")
+        planted = [edit for edit in edits if edit.planted]
+        anchors = table.get("anchors") or []
+        defect_class = str(table.get("class", ""))
+        if kind == DEFECT:
+            if defect_class not in classes:
+                problems.append(f"{said}: class {defect_class!r} is not declared")
+            if len(planted) != 1:
+                problems.append(f"{said}: exactly one edit carries `planted`")
+            elif planted[0].planted not in planted[0].replace:
+                problems.append(f"{said}: `planted` is not in its edit's replacement")
+            if (
+                not isinstance(anchors, list)
+                or not anchors
+                or not all(isinstance(anchor, str) and anchor for anchor in anchors)
+            ):
+                problems.append(f"{said}: a defect names at least one anchor")
+                anchors = []
+        elif defect_class or anchors or planted:
+            problems.append(f"{said}: a control has no class, anchors or planted text")
+        return CanaryCase(
+            id=case_id,
+            kind=str(kind),
+            path=path,
+            how=str(table.get("how", "")),
+            edits=tuple(edits),
+            defect_class=defect_class,
+            anchors=tuple(str(anchor) for anchor in anchors),
+        )
+
+    def _show(self, pin: str, path: str) -> str:
+        key = (pin, path)
+        if key not in self._files:
+            done = self._run(  # nosec B603 B607 - a fixed argv, never a shell
+                ["git", "-C", str(self._root), "show", f"{pin}:{path}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if done.returncode:
+                raise ValueError(f"git show {pin}:{path}: {done.stderr.strip()}")
+            self._files[key] = done.stdout
+        return self._files[key]
+
+    def build(self, corpus: Corpus, case: CanaryCase) -> BuiltCase:
+        before = self._show(corpus.pin, case.path)
+        after = before
+        for edit in case.edits:
+            found = after.count(edit.find)
+            if found != 1:
+                raise ValueError(
+                    f"case {case.id}: an edit's find occurs {found} times in {case.path}, not once"
+                )
+            after = after.replace(edit.find, edit.replace, 1)
+        lines = None
+        for edit in case.edits:
+            if edit.planted:
+                if after.count(edit.replace) != 1:
+                    raise ValueError(
+                        f"case {case.id}: the planted edit's replacement is not unique in the"
+                        " post-change text, so its lines are ambiguous"
+                    )
+                offset = after.index(edit.replace) + edit.replace.index(edit.planted)
+                start = after.count("\n", 0, offset) + 1
+                lines = (start, start + edit.planted.count("\n"))
+        return BuiltCase(case, before, after, self.diff(case.path, before, after), lines)
+
+    def problems(
+        self, corpus: Corpus, *, min_defects: int, min_classes: int, min_controls: int
+    ) -> list[str]:
+        found: list[str] = []
+        defects, controls = corpus.defects, corpus.controls
+        used = {case.defect_class for case in defects}
+        if len(defects) < min_defects:
+            found.append(f"{len(defects)} defects, fewer than min_defects ({min_defects})")
+        if len(used) < min_classes:
+            found.append(f"{len(used)} defect classes, fewer than min_classes ({min_classes})")
+        if len(controls) < min_controls:
+            found.append(f"{len(controls)} controls, fewer than min_controls ({min_controls})")
+        for case in corpus.cases:
+            try:
+                self.build(corpus, case)
+            except ValueError as exc:
+                found.append(str(exc))
+        return found
+
+    def diff(self, path: str, before: str, after: str) -> str:
+        body = "".join(
+            difflib.unified_diff(
+                before.splitlines(keepends=True),
+                after.splitlines(keepends=True),
+                f"a/{path}",
+                f"b/{path}",
+                n=3,
+            )
+        )
+        return f"diff --git a/{path} b/{path}\n{body}"
+
+
+class FindingMatcher(FindingMatcherInterface):
+    """Implements `FindingMatcherInterface`: the matching rule the module docstring states."""
+
+    def __init__(self, line_tolerance: int = 3) -> None:
+        self._tolerance = line_tolerance
+
+    def same_path(self, said: str, path: str) -> bool:
+        said = said.strip()
+        for prefix in ("a/", "b/", "./"):
+            said = said.removeprefix(prefix)
+        if not said:
+            return False
+        return said == path or path.endswith(f"/{said}") or said.endswith(f"/{path}")
+
+    @staticmethod
+    def words(finding: Mapping[str, Any]) -> str:
+        """What a finding says, as one text: its explanation and its recommended fix."""
+        return f"{finding.get('explanation', '')}\n{finding.get('recommended_fix', '')}"
+
+    def located(self, finding: Mapping[str, Any], built: BuiltCase) -> bool:
+        if not self.same_path(str(finding.get("path", "")), built.case.path):
+            return False
+        line = finding.get("line")
+        if built.lines is not None and type(line) is int:
+            start, end = built.lines
+            if start - self._tolerance <= line <= end + self._tolerance:
+                return True
+        text = self.words(finding)
+        return any(anchor in text for anchor in built.case.anchors)
+
+    def classed(self, finding: Mapping[str, Any], keywords: Sequence[str]) -> bool:
+        text = self.words(finding).lower()
+        return any(word.lower() in text for word in keywords)
+
+
+class WilsonInterval(WilsonIntervalInterface):
+    """Implements `WilsonIntervalInterface`.
+
+    Wilson rather than the normal approximation because the counts here are small and the
+    rates near the ends: at 0 of 14 the normal interval is the single point 0, which says a
+    false positive is impossible; Wilson says it could still be up to ~21%."""
+
+    def bounds(self, k: int, n: int, z: float) -> tuple[float, float] | None:
+        if n <= 0:
+            return None
+        p = k / n
+        z2 = z * z
+        centre = (p + z2 / (2 * n)) / (1 + z2 / n)
+        half = z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / (1 + z2 / n)
+        return max(0.0, centre - half), min(1.0, centre + half)
+
+    def confidence(self, z: float) -> float:
+        return math.erf(z / math.sqrt(2))
+
+
+class CanaryScorer(CanaryScorerInterface):
+    """Implements `CanaryScorerInterface` with `matcher`'s rule and `wilson`'s intervals."""
+
+    def __init__(
+        self,
+        matcher: FindingMatcherInterface | None = None,
+        wilson: WilsonIntervalInterface | None = None,
+    ) -> None:
+        self._matcher = matcher or FindingMatcher()
+        self._wilson = wilson or WilsonInterval()
+
+    def score(
+        self,
+        built: BuiltCase,
+        keywords: Sequence[str],
+        verdict: Mapping[str, Any] | None,
+        *,
+        code: str,
+        seconds: float = 0.0,
+        attempts: int = 0,
+        parts: int = 0,
+        reason: str = "",
+    ) -> CaseResult:
+        case = built.case
+        heard = CaseResult(
+            case_id=case.id,
+            kind=case.kind,
+            outcome=NO_VERDICT,
+            code=code,
+            defect_class=case.defect_class,
+            seconds=seconds,
+            attempts=attempts,
+            parts=parts,
+            reason=reason,
+        )
+        if verdict is None:
+            return heard
+        findings = [item for item in verdict.get("findings") or [] if isinstance(item, Mapping)]
+        # The gate passes a change only on an explicit `pass: true`; anything else stops it.
+        blocked = verdict.get("pass") is not True
+        blocking = sum(
+            1 for item in findings if str(item.get("severity", "")).lower() == "blocking"
+        )
+        located = [item for item in findings if self._matcher.located(item, built)]
+        hits = [item for item in located if self._matcher.classed(item, keywords)]
+        if case.is_defect:
+            outcome = CAUGHT if blocked and hits else MISSED
+        else:
+            outcome = FALSE_POSITIVE if blocked or blocking else CLEAN
+        return dataclasses.replace(
+            heard,
+            outcome=outcome,
+            blocked=blocked,
+            located=bool(located),
+            classed=bool(hits),
+            findings=len(findings),
+            blocking_findings=blocking,
+            matched=" ".join(FindingMatcher.words(hits[0]).split())[:240] if hits else "",
+            evidence=tuple(self._evidence(item) for item in findings),
+        )
+
+    @staticmethod
+    def _evidence(finding: Mapping[str, Any]) -> dict[str, Any]:
+        """A finding as the ledger keeps it: enough to re-adjudicate the match by hand."""
+        return {
+            "severity": str(finding.get("severity", "")),
+            "path": str(finding.get("path", "")),
+            "line": finding.get("line") if type(finding.get("line")) is int else None,
+            "said": " ".join(FindingMatcher.words(finding).split())[:400],
+        }
+
+    def _proportion(self, k: int, n: int, z: float) -> dict[str, Any]:
+        bounds = self._wilson.bounds(k, n, z)
+        return {
+            "k": k,
+            "n": n,
+            "rate": k / n if n else None,
+            "low": bounds[0] if bounds else None,
+            "high": bounds[1] if bounds else None,
+        }
+
+    def summarize(
+        self, results: Sequence[CaseResult], classes: Sequence[str], z: float
+    ) -> dict[str, Any]:
+        answered = [result for result in results if result.outcome != NO_VERDICT]
+        defects = [result for result in answered if result.kind == DEFECT]
+        controls = [result for result in answered if result.kind == CONTROL]
+        silent = [result for result in results if result.outcome == NO_VERDICT]
+        per_class = {}
+        for name in classes:
+            mine = [result for result in results if result.defect_class == name]
+            judged = [result for result in mine if result.outcome != NO_VERDICT]
+            per_class[name] = {
+                "caught": sum(1 for result in judged if result.outcome == CAUGHT),
+                "n": len(judged),
+                "no_verdict": len(mine) - len(judged),
+            }
+        return {
+            "confidence": self._wilson.confidence(z),
+            "z": z,
+            "recall": self._proportion(
+                sum(1 for result in defects if result.outcome == CAUGHT), len(defects), z
+            ),
+            "recall_located": self._proportion(
+                sum(1 for result in defects if result.blocked and result.located),
+                len(defects),
+                z,
+            ),
+            "false_positive": self._proportion(
+                sum(1 for result in controls if result.outcome == FALSE_POSITIVE),
+                len(controls),
+                z,
+            ),
+            "no_verdict": {
+                "count": len(silent),
+                "of": len(results),
+                "codes": dict(sorted(Counter(result.code for result in silent).items())),
+            },
+            "per_class": per_class,
+        }
+
+    def meets(self, summary: Mapping[str, Any], floor: CanaryFloor) -> tuple[bool, list[str]]:
+        reasons: list[str] = []
+        recall = summary.get("recall") or {}
+        low = recall.get("low")
+        if low is None:
+            reasons.append("no planted defect reached a verdict, so recall is unmeasured")
+        elif low < floor.min_recall_lower_bound:
+            reasons.append(
+                f"recall's lower bound {low:.3f} is under min_recall_lower_bound"
+                f" {floor.min_recall_lower_bound}"
+            )
+        false = summary.get("false_positive") or {}
+        high = false.get("high")
+        if high is None:
+            reasons.append("no control reached a verdict, so the false-positive rate is unmeasured")
+        elif high > floor.max_false_positive_upper_bound:
+            reasons.append(
+                f"the false-positive rate's upper bound {high:.3f} is over"
+                f" max_false_positive_upper_bound {floor.max_false_positive_upper_bound}"
+            )
+        return not reasons, reasons
+
+
+class CanaryLedger(CanaryLedgerInterface):
+    """Implements `CanaryLedgerInterface`: one JSON line per measurement, each carrying its
+    sequence number, its predecessor's digest and its own.
+
+    Not `vibey_gh.estimate_ledger.DeliveryEstimateLedger`, which the family would otherwise
+    prefer: its `record` takes a delivery forecast and writes that ledger's own kind and
+    format, so it cannot hold a measurement -- a capability gap. Its chain and its checks
+    are the ones copied here, so a reader of either verifies the same way."""
+
+    @staticmethod
+    def digest(value: Mapping[str, Any]) -> str:
+        encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _records(self, path: Path) -> list[Mapping[str, Any]]:
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except FileNotFoundError:
+            return []
+        records: list[Mapping[str, Any]] = []
+        expected_previous, expected_seq = _GENESIS, 1
+        for number, line in enumerate(lines, 1):
+            if not line.strip():
+                continue
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"{path} line {number} is not JSON: {exc.msg}") from exc
+            if not isinstance(value, dict) or not isinstance(value.get("payload"), dict):
+                raise TypeError(f"{path} line {number} is not a measurement record")
+            if value.get("seq") != expected_seq:
+                raise ValueError(
+                    f"{path} line {number} has seq {value.get('seq')}, not {expected_seq}"
+                )
+            if value.get("previous_digest") != expected_previous:
+                raise ValueError(f"{path} line {number} breaks the digest chain")
+            digest = value.get("digest")
+            if digest != self.digest({key: item for key, item in value.items() if key != "digest"}):
+                raise ValueError(f"{path} line {number} has an invalid digest")
+            records.append(value)
+            expected_previous, expected_seq = str(digest), expected_seq + 1
+        return records
+
+    def read(self, path: Path) -> tuple[Mapping[str, Any], ...]:
+        return tuple(record["payload"] for record in self._records(path))
+
+    def append(self, path: Path, payload: Mapping[str, Any]) -> Mapping[str, Any]:
+        records = self._records(path)
+        previous = records[-1] if records else None
+        envelope: dict[str, Any] = {
+            "format": LEDGER_FORMAT,
+            "kind": LEDGER_KIND,
+            "seq": len(records) + 1,
+            "previous_digest": str(previous["digest"]) if previous else _GENESIS,
+            "payload": dict(payload),
+        }
+        envelope["digest"] = self.digest(envelope)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n")
+        return envelope
+
+
+class CanaryReport(CanaryReportInterface):
+    """Implements `CanaryReportInterface`. The block says only what the entry says, so it
+    is the same on every day it is rendered: how old the measurement is now, and whether
+    the settings have moved since, are `status`'s to say."""
+
+    @staticmethod
+    def _share(value: Any) -> str:
+        return "—" if value is None else f"{value:.1%}"
+
+    def _row(self, label: str, part: Mapping[str, Any]) -> str:
+        k, n = part.get("k", 0), part.get("n", 0)
+        rate = f"{k} of {n} ({self._share(part.get('rate'))})" if n else f"{k} of {n}"
+        interval = (
+            f"{self._share(part.get('low'))} – {self._share(part.get('high'))}"
+            if part.get("low") is not None
+            else "unmeasured"
+        )
+        return f"| {label} | {rate} | {interval} |"
+
+    def block(self, entry: Mapping[str, Any] | None) -> str:
+        if entry is None:
+            body = [
+                (
+                    "No measurement is recorded yet. `vibey-gh review-canary run` reviews the"
+                    " corpus and records one."
+                ),
+            ]
+            return "\n".join([BEGIN, "", *body, "", END])
+        results = entry["results"]
+        settings = entry["settings"]
+        corpus = entry["corpus"]
+        floor = entry["floor"]
+        silent = results["no_verdict"]
+        confidence = f"{results['confidence']:.0%}"
+        scope = (
+            f"a subset of {len(entry.get('case_ids') or [])} of the corpus's {corpus['cases']}"
+            " cases"
+            if entry.get("subset")
+            else f"all {corpus['cases']} cases"
+        )
+        codes = ", ".join(f"{code} {count}" for code, count in silent["codes"].items())
+        meets = "meets" if entry.get("meets_floor_as_measured") else "does not meet"
+        body = [
+            (
+                f"Latest measurement: finished {entry['finished_at']} on `{entry['host']}`, at"
+                f" commit `{str(entry['commit'])[:12]}`, over {scope} of corpus"
+                f" `{str(corpus['digest'])[:12]}` ({corpus['defects']} defects in"
+                f" {corpus['classes']} classes, {corpus['controls']} controls). Model"
+                f" `{settings['model']}`, think `{settings['think'] or 'default'}`, window"
+                f" {settings['context_window']}, reserve {settings['reasoning_reserve_tokens']},"
+                f" scope `{settings['scope']}`, source context"
+                f" {'on' if settings['source_context'] else 'off'}."
+            ),
+            "",
+            f"| Measure | Result | {confidence} Wilson interval |",
+            "|---|---|---|",
+            self._row("Recall: blocked, on the planted lines, naming the class", results["recall"]),
+            self._row("Recall: blocked, on the planted lines", results["recall_located"]),
+            self._row("False positives: controls blocked", results["false_positive"]),
+            (
+                f"| No verdict | {silent['count']} of {silent['of']}"
+                f"{f' ({codes})' if codes else ''} | not counted either way |"
+            ),
+            "",
+            "| Class | Caught | No verdict |",
+            "|---|---|---|",
+            *[
+                f"| `{name}` | {row['caught']} of {row['n']} | {row['no_verdict']} |"
+                for name, row in results["per_class"].items()
+            ],
+            "",
+            (
+                "Small samples: each interval is what this many cases can say, and is wide on"
+                " purpose. Against the floor declared when it ran -- recall's lower bound at"
+                f" least {floor['min_recall_lower_bound']}, the false-positive rate's upper"
+                f" bound at most {floor['max_false_positive_upper_bound']} -- this measurement"
+                f" **{meets}** it. Whether it still stands (its age, and settings changed"
+                " since) is `vibey-gh review-canary status`'s to say."
+            ),
+        ]
+        return "\n".join([BEGIN, "", *body, "", END])
+
+    def apply(self, text: str, block: str) -> str:
+        start, end = text.find(BEGIN), text.find(END)
+        if start < 0 or end < start:
+            raise ValueError(
+                "the report page has no generated review-canary block; add the two markers"
+                f" {BEGIN!r} and {END!r} where it belongs"
+            )
+        return text[:start] + block + text[end + len(END) :]
+
+
+class ReviewCanary(ReviewCanaryInterface):
+    """Implements `ReviewCanaryInterface`: the `vibey-gh review-canary` command."""
+
+    def __init__(
+        self,
+        *,
+        config: Callable[[], GhConfig] = load_config,
+        reviewer: Callable[[list[str]], int] | None = None,
+        loader: Callable[[Path], CorpusLoaderInterface] = CorpusLoader,
+        scorer: CanaryScorerInterface | None = None,
+        ledger: CanaryLedgerInterface | None = None,
+        report: CanaryReportInterface | None = None,
+        client: Callable[[str], OllamaClientInterface] | None = None,
+        run: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+        now: Callable[[], datetime] | None = None,
+        monotonic: Callable[[], float] = time.monotonic,
+        environ: Mapping[str, str] | None = None,
+        out: Callable[[str], None] = print,
+    ) -> None:
+        self._config = config
+        self._reviewer = reviewer
+        self._loader = loader
+        self._scorer = scorer
+        self._ledger = ledger or CanaryLedger()
+        self._report = report or CanaryReport()
+        self._client = client
+        self._run = run
+        self._now = now or (lambda: datetime.now(UTC))
+        self._monotonic = monotonic
+        self._environ = os.environ if environ is None else environ
+        self._out = out
+
+    # ------------------------------------------------------------------ what is reviewed
+
+    @staticmethod
+    def settings(cfg: GhConfig) -> dict[str, Any]:
+        """Every setting the pull-request review runs with, from `[pr_automation.fallback]`
+        and `[pr_automation] paid_review`, exactly as `pr-review.yml` renders them."""
+        fallback = cfg.pr_automation.fallback
+        return {
+            "model": fallback.model,
+            "think": fallback.think,
+            "context_window": fallback.context_window,
+            "reasoning_reserve_tokens": fallback.reasoning_reserve_tokens,
+            "chars_per_token": fallback.chars_per_token,
+            "max_diff_chars": fallback.max_diff_chars,
+            "max_document_chars": fallback.max_document_chars,
+            "max_chunks": fallback.max_chunks,
+            "split_added_hunks": fallback.split_added_hunks,
+            "source_context": fallback.source_context,
+            "max_source_chars": fallback.max_source_chars,
+            "max_source_file_bytes": fallback.max_source_file_bytes,
+            "context_paths": list(fallback.context_paths),
+            # No paid review declared (8.b): the sovereign lane answers the whole review.
+            "scope": "diff-groundable" if cfg.pr_automation.paid_review else "full",
+            "role": "sovereign",
+            "timeout_seconds": fallback.timeout_seconds,
+            "retries": fallback.retries,
+            "retry_backoff_seconds": fallback.retry_backoff_seconds,
+            "prompt_tokens_per_second": fallback.prompt_tokens_per_second,
+            "output_tokens_per_second": fallback.output_tokens_per_second,
+            "slot_wait_seconds": fallback.slot_wait_seconds,
+        }
+
+    @staticmethod
+    def settings_digest(settings: Mapping[str, Any]) -> str:
+        return CanaryLedger.digest({key: settings[key] for key in VERDICT_SETTINGS})
+
+    @staticmethod
+    def argv(
+        settings: Mapping[str, Any],
+        *,
+        base_url: str,
+        diff: Path,
+        outcome: Path,
+        context_dir: Path,
+        source_dir: Path,
+    ) -> list[str]:
+        """`vibey-gh local-review`'s arguments, flag for flag as `pr-review.yml` passes
+        them -- less `--head-sha`, since a canary case is no commit."""
+        # fmt: off
+        argv = [
+            "--diff", str(diff),
+            "--model", str(settings["model"]),
+            "--base-url", base_url,
+            "--max-chars", str(settings["max_diff_chars"]),
+            "--max-document-chars", str(settings["max_document_chars"]),
+            "--timeout", str(settings["timeout_seconds"]),
+            "--context-window", str(settings["context_window"]),
+            "--reasoning-reserve", str(settings["reasoning_reserve_tokens"]),
+            "--chars-per-token", str(settings["chars_per_token"]),
+            "--think", str(settings["think"]),
+            "--max-chunks", str(settings["max_chunks"]),
+            "--split-added-hunks" if settings["split_added_hunks"] else "--no-split-added-hunks",
+            "--retries", str(settings["retries"]),
+            "--retry-backoff-seconds", str(settings["retry_backoff_seconds"]),
+            "--prompt-tokens-per-second", str(settings["prompt_tokens_per_second"]),
+            "--output-tokens-per-second", str(settings["output_tokens_per_second"]),
+            "--slot-wait-seconds", str(settings["slot_wait_seconds"]),
+            "--outcome", str(outcome),
+            "--role", str(settings["role"]),
+        ]
+        if settings["scope"] == "full":
+            argv += [
+                "--scope", "full",
+                "--context-dir", str(context_dir),
+                "--context-paths", " ".join(settings["context_paths"]),
+            ]
+        if settings["source_context"]:
+            argv += [
+                "--source-dir", str(source_dir),
+                "--max-source-chars", str(settings["max_source_chars"]),
+            ]
+        # fmt: on
+        return argv
+
+    def _review(self, argv: list[str]) -> int:
+        if self._reviewer is not None:
+            return self._reviewer(argv)
+        from vibey_gh.local_review import review
+
+        return review(argv)
+
+    def review_case(
+        self,
+        built: BuiltCase,
+        settings: Mapping[str, Any],
+        *,
+        base_url: str,
+        documents: Mapping[str, str],
+    ) -> dict[str, Any]:
+        """One case through `local-review`, in a scratch directory laid out as the workflow
+        lays out its runner's: the diff, the documents, the changed file's text. Returns
+        what the review said -- the verdict, or None and why not -- unscored, so a run
+        resumed from its work file is scored by the rule in force, not the one it ran under."""
+        with tempfile.TemporaryDirectory(prefix="vibey-review-canary-") as scratch:
+            root = Path(scratch)
+            diff, result = root / "pr.diff", root / "outcome.json"
+            diff.write_text(built.diff, encoding="utf-8")
+            for name, text in documents.items():
+                target = root / "context" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(text, encoding="utf-8")
+            if len(built.after.encode()) <= int(settings["max_source_file_bytes"]):
+                target = root / "sources" / built.case.path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(built.after, encoding="utf-8")
+            argv = self.argv(
+                settings,
+                base_url=base_url,
+                diff=diff,
+                outcome=result,
+                context_dir=root / "context",
+                source_dir=root / "sources",
+            )
+            said, complained = io.StringIO(), io.StringIO()
+            started = self._monotonic()
+            with contextlib.redirect_stdout(said), contextlib.redirect_stderr(complained):
+                status = self._review(argv)
+            seconds = self._monotonic() - started
+            record = json.loads(result.read_text(encoding="utf-8")) if result.is_file() else {}
+        if status == 0:
+            verdict: Mapping[str, Any] | None = json.loads(said.getvalue())
+            code, reason = outcome_codes.REVIEWED, ""
+        else:
+            verdict = None
+            code = str(record.get("code") or outcome_codes.UNKNOWN)
+            lines = [line for line in complained.getvalue().splitlines() if line.strip()]
+            reason = (lines[-1] if lines else str(record.get("reason", "")))[:300]
+        return {
+            "verdict": verdict,
+            "code": code,
+            "seconds": round(seconds, 1),
+            "attempts": int(record.get("attempts", 0)),
+            "parts": int(record.get("parts", 0)),
+            "reason": reason,
+        }
+
+    # ------------------------------------------------------------------ measuring
+
+    def _git(self, root: Path, *args: str) -> str:
+        done = self._run(  # nosec B603 B607 - a fixed argv, never a shell
+            ["git", "-C", str(root), *args], capture_output=True, text=True, check=False
+        )
+        return done.stdout.strip() if done.returncode == 0 else ""
+
+    def _connect(self, base_url: str) -> OllamaClientInterface:
+        if self._client is not None:
+            return self._client(base_url)
+        from vibey_gh.slots import OllamaClient
+
+        return OllamaClient(base_url)
+
+    @staticmethod
+    def floor(cfg: GhConfig) -> CanaryFloor:
+        canary = cfg.pr_automation.review_canary
+        return CanaryFloor(
+            min_recall_lower_bound=float(canary.min_recall_lower_bound),
+            max_false_positive_upper_bound=float(canary.max_false_positive_upper_bound),
+            max_age_days=canary.max_age_days,
+        )
+
+    def _corpus(self, cfg: GhConfig) -> tuple[CorpusLoaderInterface, Corpus, list[str]]:
+        canary = cfg.pr_automation.review_canary
+        loader = self._loader(cfg.root)
+        corpus = loader.load(cfg.root / canary.corpus)
+        problems = loader.problems(
+            corpus,
+            min_defects=canary.min_defects,
+            min_classes=canary.min_classes,
+            min_controls=canary.min_controls,
+        )
+        return loader, corpus, problems
+
+    @staticmethod
+    def _resume(work: Path | None, settings_digest: str) -> dict[str, dict[str, Any]]:
+        """What a previous run with these settings already heard, by case id and diff."""
+        done: dict[str, dict[str, Any]] = {}
+        if work is None or not work.is_file():
+            return done
+        for line in work.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            value = json.loads(line)
+            if value.get("settings_digest") == settings_digest:
+                done[f"{value['case']}@{value['case_digest']}"] = value["review"]
+        return done
+
+    def run(
+        self,
+        case_ids: Sequence[str] = (),
+        *,
+        work: Path | None = None,
+        record: bool = True,
+    ) -> dict[str, Any]:
+        cfg = self._config()
+        canary = cfg.pr_automation.review_canary
+        loader, corpus, problems = self._corpus(cfg)
+        if problems:
+            raise ValueError("the corpus is not a measurement: " + "; ".join(problems))
+        known = {case.id for case in corpus.cases}
+        unknown = [case_id for case_id in case_ids if case_id not in known]
+        if unknown:
+            raise ValueError(f"no such case: {', '.join(unknown)}")
+        chosen = [case for case in corpus.cases if not case_ids or case.id in case_ids]
+        settings = self.settings(cfg)
+        digest = self.settings_digest(settings)
+        base_url = self._environ.get("VIBEY_OLLAMA_URL") or cfg.pr_automation.fallback.base_url
+        client = self._connect(base_url)
+        resident = client.loaded()
+        conditions: dict[str, Any] = {
+            "base_url": base_url,
+            "ollama_version": client.version(),
+            "model_digest": client.digest(str(settings["model"])),
+            "loaded_at_start": (
+                None if resident is None else [str(model.get("name", "")) for model in resident]
+            ),
+        }
+        documents: dict[str, str] = {}
+        if settings["scope"] == "full":
+            for name in settings["context_paths"]:
+                page = cfg.root / name
+                if page.is_file():
+                    documents[name] = page.read_text(encoding="utf-8")
+        conditions["documents"] = {
+            name: hashlib.sha256(text.encode()).hexdigest()[:16] for name, text in documents.items()
+        }
+        scorer = self._scorer or CanaryScorer(FindingMatcher(canary.line_tolerance))
+        done = self._resume(work, digest)
+        started_at = self._now()
+        results: list[CaseResult] = []
+        for number, case in enumerate(chosen, 1):
+            built = loader.build(corpus, case)
+            case_digest = CanaryLedger.digest(
+                {
+                    "diff": built.diff,
+                    "lines": built.lines,
+                    "anchors": list(case.anchors),
+                    "class": case.defect_class,
+                    "kind": case.kind,
+                }
+            )
+            review = done.get(f"{case.id}@{case_digest}")
+            if review is None:
+                review = self.review_case(built, settings, base_url=base_url, documents=documents)
+                if work is not None:
+                    work.parent.mkdir(parents=True, exist_ok=True)
+                    with work.open("a", encoding="utf-8") as handle:
+                        line = {
+                            "case": case.id,
+                            "case_digest": case_digest,
+                            "settings_digest": digest,
+                            "review": review,
+                        }
+                        handle.write(json.dumps(line, sort_keys=True) + "\n")
+            keywords = corpus.classes[case.defect_class].keywords if case.is_defect else ()
+            result = scorer.score(
+                built,
+                keywords,
+                review["verdict"],
+                code=str(review["code"]),
+                seconds=float(review["seconds"]),
+                attempts=int(review["attempts"]),
+                parts=int(review["parts"]),
+                reason=str(review["reason"]),
+            )
+            results.append(result)
+            self._out(
+                f"vibey-gh: review-canary {number}/{len(chosen)} {case.id}: {result.outcome}"
+                f" ({result.code}, {result.seconds:.0f}s)"
+            )
+        summary = scorer.summarize(results, list(corpus.classes), canary.confidence_z)
+        floor = self.floor(cfg)
+        meets, _ = scorer.meets(summary, floor)
+        subset = len(chosen) != len(corpus.cases)
+        payload: dict[str, Any] = {
+            "recorded_at": self._now().isoformat(),
+            "started_at": started_at.isoformat(),
+            "finished_at": self._now().isoformat(),
+            "commit": self._git(cfg.root, "rev-parse", "HEAD"),
+            "host": platform.node(),
+            "platform": platform.platform(),
+            "python": platform.python_version(),
+            "runner": self._environ.get("RUNNER_NAME", ""),
+            "corpus": {
+                "path": canary.corpus,
+                "digest": corpus.digest,
+                "pin": corpus.pin,
+                "cases": len(corpus.cases),
+                "defects": len(corpus.defects),
+                "controls": len(corpus.controls),
+                "classes": len({case.defect_class for case in corpus.defects}),
+            },
+            "subset": subset,
+            "case_ids": [case.id for case in chosen] if subset else [],
+            "settings": settings,
+            "settings_digest": digest,
+            "conditions": conditions,
+            "matching": {"line_tolerance": canary.line_tolerance},
+            "results": summary,
+            "floor": {
+                "min_recall_lower_bound": floor.min_recall_lower_bound,
+                "max_false_positive_upper_bound": floor.max_false_positive_upper_bound,
+                "max_age_days": floor.max_age_days,
+            },
+            "meets_floor_as_measured": meets and not subset,
+            "cases": [result.as_dict() for result in results],
+        }
+        if record:
+            self._ledger.append(cfg.root / canary.ledger, payload)
+            if canary.report:
+                self.render()
+        return payload
+
+    def render(self, *, check: bool = False) -> int:
+        """Write the latest measurement into the report page's block; with `check`, only
+        say whether the page already shows it (0) or has drifted (1)."""
+        cfg = self._config()
+        canary = cfg.pr_automation.review_canary
+        if not canary.report:
+            self._out("vibey-gh: [pr_automation.review_canary] declares no report page")
+            return 0
+        entries = self._ledger.read(cfg.root / canary.ledger)
+        page = cfg.root / canary.report
+        text = page.read_text(encoding="utf-8")
+        rendered = self._report.apply(text, self._report.block(entries[-1] if entries else None))
+        if check:
+            if rendered != text:
+                self._out(
+                    f"vibey-gh: {canary.report}'s review-canary block does not show the latest"
+                    " measurement; run `vibey-gh review-canary render`"
+                )
+                return 1
+            self._out(f"vibey-gh: {canary.report}'s review-canary block is current")
+            return 0
+        page.write_text(rendered, encoding="utf-8")
+        return 0
+
+    def status(self) -> dict[str, Any]:
+        cfg = self._config()
+        canary = cfg.pr_automation.review_canary
+        floor = self.floor(cfg)
+        said: dict[str, Any] = {
+            "floor": {
+                "min_recall_lower_bound": floor.min_recall_lower_bound,
+                "max_false_positive_upper_bound": floor.max_false_positive_upper_bound,
+                "max_age_days": floor.max_age_days,
+            },
+        }
+        entries = self._ledger.read(cfg.root / canary.ledger)
+        if not entries:
+            return {
+                "meets_floor": None,
+                "reasons": [f"no measurement is recorded in {canary.ledger}"],
+                **said,
+            }
+        latest = entries[-1]
+        scorer = self._scorer or CanaryScorer(FindingMatcher(canary.line_tolerance))
+        _, reasons = scorer.meets(latest["results"], floor)
+        if latest.get("subset"):
+            reasons.append("the latest measurement reviewed a subset of the corpus, not all of it")
+        corpus = cfg.root / canary.corpus
+        current = hashlib.sha256(corpus.read_bytes()).hexdigest() if corpus.is_file() else ""
+        if current != latest["corpus"]["digest"]:
+            reasons.append("the corpus has changed since the latest measurement")
+        settings = self.settings(cfg)
+        moved = [key for key in VERDICT_SETTINGS if latest["settings"].get(key) != settings[key]]
+        if moved:
+            reasons.append(
+                "the review's settings have changed since it was measured: " + ", ".join(moved)
+            )
+        finished = datetime.fromisoformat(str(latest["finished_at"]))
+        age = (self._now() - finished).total_seconds() / 86400
+        if age > floor.max_age_days:
+            reasons.append(f"the latest measurement is {age:.1f} days old, over max_age_days")
+        return {
+            "meets_floor": not reasons,
+            "reasons": reasons,
+            "measured_at": latest["finished_at"],
+            "age_days": round(age, 2),
+            "commit": latest["commit"],
+            "host": latest["host"],
+            "model": latest["settings"]["model"],
+            "recall": latest["results"]["recall"],
+            "false_positive": latest["results"]["false_positive"],
+            "no_verdict": latest["results"]["no_verdict"],
+            **said,
+        }
+
+    # ------------------------------------------------------------------ the command
+
+    @staticmethod
+    def declare(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+        actions = parser.add_subparsers(dest="canary_action", required=True)
+        actions.add_parser("check", help="validate the corpus and build every case (offline)")
+        show = actions.add_parser("show", help="print one case's diff and planted lines")
+        show.add_argument("--case", required=True, help="the case's id")
+        run = actions.add_parser(
+            "run", help="review the corpus with the PR review's settings and record the result"
+        )
+        run.add_argument(
+            "--case",
+            action="append",
+            default=[],
+            help="review only this case (repeatable); a subset never meets the floor",
+        )
+        run.add_argument(
+            "--work",
+            type=Path,
+            default=None,
+            help="a JSON-lines file each review is appended to, so a run cut short resumes",
+        )
+        run.add_argument("--no-record", action="store_true", help="print the result, write nothing")
+        run.add_argument("--json", action="store_true", help="print the measurement as JSON")
+        render = actions.add_parser(
+            "render", help="write the latest measurement into the report page's block"
+        )
+        render.add_argument(
+            "--check", action="store_true", help="fail if the block does not show it"
+        )
+        status = actions.add_parser(
+            "status", help="does the latest measurement meet the floor? (exit 0 yes, 1 no, 3 none)"
+        )
+        status.add_argument("--json", action="store_true", help="print the answer as JSON")
+        return parser
+
+    @classmethod
+    def dispatch(cls, args: argparse.Namespace) -> int:
+        return cls().command(args)
+
+    def command(self, args: argparse.Namespace) -> int:
+        try:
+            if args.canary_action == "check":
+                return self._check()
+            if args.canary_action == "show":
+                return self._show(args.case)
+            if args.canary_action == "run":
+                measured = self.run(args.case, work=args.work, record=not args.no_record)
+                self._out(json.dumps(measured, indent=2) if args.json else self.summary(measured))
+                return 0
+            if args.canary_action == "render":
+                return self.render(check=args.check)
+            answer = self.status()
+        except (OSError, ValueError, KeyError, tomllib.TOMLDecodeError) as exc:
+            self._out(f"vibey-gh: review-canary: {exc}")
+            return 2
+        if args.json:
+            self._out(json.dumps(answer, indent=2, sort_keys=True))
+        else:
+            verdict = {True: "meets", False: "does not meet", None: "has no measurement for"}
+            self._out(f"vibey-gh: the sovereign review {verdict[answer['meets_floor']]} the floor")
+            for reason in answer["reasons"]:
+                self._out(f"  - {reason}")
+        return {True: 0, False: 1, None: 3}[answer["meets_floor"]]
+
+    def _check(self) -> int:
+        _, corpus, problems = self._corpus(self._config())
+        for problem in problems:
+            self._out(f"  - {problem}")
+        if problems:
+            self._out("vibey-gh: the review-canary corpus is not a measurement")
+            return 1
+        self._out(
+            f"vibey-gh: the review-canary corpus builds: {len(corpus.defects)} defects in"
+            f" {len({case.defect_class for case in corpus.defects})} classes,"
+            f" {len(corpus.controls)} controls, pinned at {corpus.pin[:12]}"
+        )
+        return 0
+
+    def _show(self, case_id: str) -> int:
+        cfg = self._config()
+        loader, corpus, _ = self._corpus(cfg)
+        for case in corpus.cases:
+            if case.id == case_id:
+                built = loader.build(corpus, case)
+                where = (
+                    f" {case.defect_class}, planted at lines {built.lines[0]}-{built.lines[1]}"
+                    if built.lines
+                    else ""
+                )
+                self._out(f"# {case.id}: {case.kind}{where} -- {case.how}")
+                self._out(built.diff)
+                return 0
+        raise ValueError(f"no such case: {case_id}")
+
+    @staticmethod
+    def summary(measured: Mapping[str, Any]) -> str:
+        results = measured["results"]
+
+        def part(name: str) -> str:
+            value = results[name]
+            if value["low"] is None:
+                return f"{value['k']} of {value['n']} (unmeasured)"
+            return (
+                f"{value['k']} of {value['n']} ({value['rate']:.1%}; {results['confidence']:.0%}"
+                f" Wilson {value['low']:.1%}-{value['high']:.1%})"
+            )
+
+        silent = results["no_verdict"]
+        lines = [
+            f"vibey-gh: recall {part('recall')}",
+            f"vibey-gh: recall on location alone {part('recall_located')}",
+            f"vibey-gh: false positives {part('false_positive')}",
+            f"vibey-gh: no verdict {silent['count']} of {silent['of']} {silent['codes']}",
+        ]
+        if measured["subset"]:
+            lines.append("vibey-gh: a subset -- never measured against the floor")
+        elif measured["meets_floor_as_measured"]:
+            lines.append("vibey-gh: meets the floor")
+        else:
+            lines.append("vibey-gh: does not meet the floor")
+        return "\n".join(lines)
