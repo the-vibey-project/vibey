@@ -1006,6 +1006,15 @@ class ReliabilityProbe(ProbeInterface):
         return sorted(found.values(), key=lambda e: (e["at"], e["kind"]))
 
     @staticmethod
+    def fid(kind: str) -> str:
+        """The figure id for a kind's count in the window (the panic driver's is plural)."""
+        return (
+            "reliability.kernel_panics_window"
+            if kind == "kernel_panic"
+            else f"reliability.{kind}_window"
+        )
+
+    @staticmethod
     def window(events: Sequence[Mapping[str, str]], kind: str, since: str) -> int:
         return sum(1 for e in events if e["kind"] == kind and e["at"] >= since)
 
@@ -1024,7 +1033,8 @@ class ReliabilityProbe(ProbeInterface):
             if unreadable == len(dirs):
                 reason = "no report directory was readable"
                 return figures + [
-                    f.skipped(f"reliability.{k}_window", k, "count", method, reason) for k in kinds
+                    f.skipped(self.fid(k), k.replace("_", " "), "count", method, reason)
+                    for k in kinds
                 ]
             events = self.classify(names, kinds)
         else:
@@ -1053,11 +1063,7 @@ class ReliabilityProbe(ProbeInterface):
         )
         for kind in kinds:
             label = f"{kind.replace('_', ' ')} events in the last {days} days"
-            fid = (
-                "reliability.kernel_panics_window"
-                if kind == "kernel_panic"
-                else f"reliability.{kind}_window"
-            )
+            fid = self.fid(kind)
             if self._ctx.mac or kind == "kernel_panic":
                 figures.append(
                     f.measured(fid, label, self.window(events, kind, since), "count", method)
@@ -1665,7 +1671,7 @@ class Thresholds:
         figure = newest.by_id().get(local)
         if figure is None or not figure.has_value:
             return None, f"{local or 'no threshold'} is not measured on this host"
-        return float(figure.value), f"this host's {local} ({figure.measured_at})"
+        return float(figure.value), f"this host's {local} ({(figure.measured_at or '')[:10]})"
 
 
 class Forecaster(ForecasterInterface):
@@ -1901,7 +1907,10 @@ class HealthRenderer(HealthRendererInterface):
             return "yes" if v else "no"
         if figure.unit in ("text", "verdict", "date"):
             return str(v)
-        return f"{v:g} {figure.unit}" if isinstance(v, (int, float)) else str(v)
+        if isinstance(v, (int, float)):
+            number = f"{v:,.0f}" if abs(v) >= 100_000 else f"{v:g}"
+            return f"{number} {figure.unit}"
+        return str(v)
 
     def _host(self, history: Sequence[HealthRecord]) -> str:
         host = history[-1].host
@@ -1971,7 +1980,7 @@ class HealthRenderer(HealthRendererInterface):
             verdict = (
                 "**No driver projects a replacement date yet.** Trend drivers need "
                 f"{self._forecaster._cfg['min_points']} weekly points; dated drivers need a "
-                "vendor date. See each driver's reason above."
+                "vendor date. Each driver's reason is in the table below."
             )
         return f"{verdict} As of {fc['as_of'][:10]}.\n\n" + "\n".join(rows)
 
@@ -2605,6 +2614,8 @@ class HostHealthCli:
                 settings, self._runner, self._home, self.render_check(repo, settings)
             )
             publisher.ensure_clone()
+            # launchd and systemd do not create a log file's directory; install does.
+            log_dir.mkdir(parents=True, exist_ok=True)
         out = (
             args.out
             if args.command == "render-unit"
@@ -2631,7 +2642,8 @@ class HostHealthCli:
             ]
         for path in written:
             print(f"wrote {path}")
-        print(f"logs: {log} (create {log_dir} if it does not exist)")
+        exists = "" if log_dir.is_dir() else f" ({log_dir} is created by `install`)"
+        print(f"logs: {log}{exists}")
         print("load it with (vibey never loads a unit into your session):")
         for line in load:
             print(f"  {line}")
@@ -2639,18 +2651,25 @@ class HostHealthCli:
 
     def _weekly(self, repo: Path, settings: HealthSettings, local: HealthLedger) -> int:
         publisher = Publisher(settings, self._runner, self._home, self.render_check(repo, settings))
-        if settings["publish"]["enabled"]:
+        enabled = bool(settings["publish"]["enabled"])
+        refused = ""
+        if enabled:
             try:
                 publisher.refresh()
             except RuntimeError as exc:
-                print(f"{SCRIPT}: could not refresh {publisher.clone}: {exc}", file=sys.stderr)
+                refused = f"could not refresh {publisher.clone}: {exc}"
+        # The week is measured and kept locally whatever happens to publishing.
         status = self._measure(repo, settings, local)
-        if not settings["publish"]["enabled"]:
+        if not enabled:
             print(f"{SCRIPT}: [host_health.publish] enabled = false: recorded locally only")
             return status
+        if refused:
+            # A clone that could not be brought up to the base is never published from.
+            print(f"{SCRIPT}: {refused}; kept in {local.path} for next week", file=sys.stderr)
+            return 1
         try:
             print(f"{SCRIPT}: {publisher.publish(local.read(), dict(os.environ))}")
-        except RuntimeError as exc:
+        except (RuntimeError, OSError) as exc:
             # The local record keeps the week; the next run carries it (10.g). Said out loud.
             print(f"{SCRIPT}: publishing failed, kept in {local.path}: {exc}", file=sys.stderr)
             return 1
