@@ -5,6 +5,16 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Fix:** the merge train no longer closes a pull request it did not merge. With auto-merge
+  allowed and the approving review still missing, `gh pr merge` exits 0 having only enabled
+  auto-merge; `merge_train.merge` read that exit code as a merge, the train deleted the head
+  branch, and GitHub closed the pull request -- #1295 and #1298 on 2026-10-01, while each run
+  printed "merged 1". A merge is now what GitHub reports: after any `gh pr merge` that exits 0,
+  the train reads the pull request's state and calls it merged only when it is `MERGED`. An
+  `OPEN` one is reported as queued, waiting on the base branch's requirements, and left
+  untouched, branch included, so GitHub can merge it itself once they are met; a state that
+  cannot be read is not a merge either (12.e).
+
 - **Fix:** three of the research paper's ```latex fences printed as raw LaTeX on the
   documentation site: the two `table`/`table*` environments (the dispatch experiments and the
   minimum requirements), which `math.js` did not know, and the bounded-convergence theorem,
