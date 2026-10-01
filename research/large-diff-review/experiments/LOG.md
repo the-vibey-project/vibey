@@ -82,3 +82,10 @@ what was seen, and what it changed.
   built for that lift: deterministic seeds, pinned manifest, resumable, and every request
   record now carries `host` (fingerprint id: CPU, cores, memory, OS, Ollama version, model
   digests) and `model_digest`. Design goes in REPORT.md's implementation plan.
+- **19:20** Waiting on the canary lane (17 of 41 cases at 18:16, ~12 min/case). Meanwhile:
+  `+SA` and `+VER` implemented (`review.StaticAnalysis`, `review.Verifier`), and the
+  deterministic **SA-only** arm run on the whole canary corpus (no model;
+  `results/static_only.json`): a diagnostic counts when the change introduces it within
+  ±2 lines of a changed range. ruff `--select ALL` + bandit flag **5/27** defects (all
+  three `sql_injection` via S608/B608, two of three `swallowed_exception` via S112/B112)
+  and **0/14** controls. Rule-to-class map fixed in `static_only.py` before the run.

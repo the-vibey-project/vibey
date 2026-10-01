@@ -1,0 +1,380 @@
+[
+ {
+  "case": "obo-budget-zero-dollar-cap",
+  "kind": "defect",
+  "class": "off_by_one",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "obo-protected-listing-one-short",
+  "kind": "defect",
+  "class": "off_by_one",
+  "introduced": [
+   "E501"
+  ],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "obo-estimate-ledger-seq-zero",
+  "kind": "defect",
+  "class": "off_by_one",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "inv-gate-abandon-resumes",
+  "kind": "defect",
+  "class": "inverted_condition",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "inv-budget-plan-unchanged",
+  "kind": "defect",
+  "class": "inverted_condition",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "inv-reaper-read-whole-or",
+  "kind": "defect",
+  "class": "inverted_condition",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "swallow-reaper-record-sighting",
+  "kind": "defect",
+  "class": "swallowed_exception",
+  "introduced": [
+   "S112",
+   "B112"
+  ],
+  "substantive": [
+   "S112",
+   "B112"
+  ],
+  "class_hit": true
+ },
+ {
+  "case": "swallow-skip-markers-unreadable-range",
+  "kind": "defect",
+  "class": "swallowed_exception",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "swallow-worker-run-once",
+  "kind": "defect",
+  "class": "swallowed_exception",
+  "introduced": [
+   "S112",
+   "BLE001",
+   "B112"
+  ],
+  "substantive": [
+   "S112",
+   "B112"
+  ],
+  "class_hit": true
+ },
+ {
+  "case": "await-gate-record-event",
+  "kind": "defect",
+  "class": "missing_await",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "await-worktree-ensure-verify",
+  "kind": "defect",
+  "class": "missing_await",
+  "introduced": [
+   "E501"
+  ],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "await-ledger-append",
+  "kind": "defect",
+  "class": "missing_await",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "sql-gate-open-all-kind",
+  "kind": "defect",
+  "class": "sql_injection",
+  "introduced": [
+   "S608",
+   "B608"
+  ],
+  "substantive": [
+   "S608",
+   "B608"
+  ],
+  "class_hit": true
+ },
+ {
+  "case": "sql-ledger-range-order",
+  "kind": "defect",
+  "class": "sql_injection",
+  "introduced": [
+   "S608",
+   "B608"
+  ],
+  "substantive": [
+   "S608",
+   "B608"
+  ],
+  "class_hit": true
+ },
+ {
+  "case": "sql-project-holder-path",
+  "kind": "defect",
+  "class": "sql_injection",
+  "introduced": [
+   "S608",
+   "E501",
+   "B608"
+  ],
+  "substantive": [
+   "S608",
+   "B608"
+  ],
+  "class_hit": true
+ },
+ {
+  "case": "guard-worktree-foreign-branch",
+  "kind": "defect",
+  "class": "removed_guard",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "guard-budget-untrusted-history",
+  "kind": "defect",
+  "class": "removed_guard",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "guard-protected-rename",
+  "kind": "defect",
+  "class": "removed_guard",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "leak-local-auth-knock",
+  "kind": "defect",
+  "class": "resource_leak",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "leak-estimate-ledger-handle",
+  "kind": "defect",
+  "class": "resource_leak",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "leak-ledger-latest-seq",
+  "kind": "defect",
+  "class": "resource_leak",
+  "introduced": [
+   "E501"
+  ],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "errret-worktree-list-empty",
+  "kind": "defect",
+  "class": "wrong_error_return",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "errret-protected-unlisted-passes",
+  "kind": "defect",
+  "class": "wrong_error_return",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "errret-local-auth-hba-unreadable",
+  "kind": "defect",
+  "class": "wrong_error_return",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "race-reaper-claim-after-await",
+  "kind": "defect",
+  "class": "shared_state_race",
+  "introduced": [
+   "E501"
+  ],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "race-worker-build-lock",
+  "kind": "defect",
+  "class": "shared_state_race",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "race-tracer-emit-lock",
+  "kind": "defect",
+  "class": "shared_state_race",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-gate-canonical-rename",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-gate-open-all-kind-param",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-budget-plan-docstring",
+  "kind": "control",
+  "class": "",
+  "introduced": [
+   "D401"
+  ],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-protected-shown-rename",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-ledger-chain-at-seq-rename",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-worktree-prune-comment",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-worktree-base-ternary",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-reaper-project-for",
+  "kind": "control",
+  "class": "",
+  "introduced": [
+   "D401",
+   "D205",
+   "D209"
+  ],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-local-auth-query-host",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-estimate-ledger-last-rename",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-worker-built-rename",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-tracer-owned-docstring",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-skip-markers-intersection",
+  "kind": "control",
+  "class": "",
+  "introduced": [],
+  "substantive": [],
+  "class_hit": false
+ },
+ {
+  "case": "ctl-ledger-drafts-event-rename",
+  "kind": "control",
+  "class": "",
+  "introduced": [
+   "E501",
+   "E501",
+   "E501"
+  ],
+  "substantive": [],
+  "class_hit": false
+ }
+]
