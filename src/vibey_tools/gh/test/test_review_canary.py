@@ -698,6 +698,12 @@ def test_the_block_states_the_measurement_its_conditions_and_its_intervals():
     assert "| No verdict | 1 of 3 (model_busy 1) | not counted either way |" in block
     assert "| `a` | 1 of 1 | 0 |" in block
     assert "this measurement **meets** it" in block
+    assert "work file" not in block
+    resumed = CanaryReport().block(entry(reused_reviews=3, reviewed_between=None))
+    assert "3 of its reviews were heard earlier" in resumed
+    assert "the work file kept no time for them." in resumed
+    timed = CanaryReport().block(entry(reused_reviews=1, reviewed_between=["t0", "t1"]))
+    assert "reviews ran from t0 to t1." in timed
 
 
 def test_the_block_names_a_subset_and_a_measurement_under_the_floor():
@@ -1023,6 +1029,8 @@ def test_a_run_cut_short_resumes_from_its_work_file_and_rescores(tmp_path):
     canary, _ = canary_for(cfg, second)
     measured = canary.run(work=work, record=False)
     assert len(second.calls) == 2  # the two cases not yet heard
+    assert measured["reused_reviews"] == 1
+    assert measured["reviewed_between"] == ["2026-10-01T12:00:00+00:00"] * 2
     assert measured["cases"][0]["outcome"] == CAUGHT
     # Another setting is another measurement: nothing heard under the old one is reused.
     other = dataclasses.replace(
@@ -1093,6 +1101,7 @@ def test_a_failed_review_with_no_record_and_no_words_is_unknown(tmp_path):
     )
     measured = canary.run(["ctl-rename"], record=False)
     (case,) = measured["cases"]
+    assert measured["reused_reviews"] == 0
     assert case["outcome"] == NO_VERDICT and case["code"] == review_outcome.UNKNOWN
     assert case["reason"] == "" and measured["commit"] == ""
 
@@ -1409,3 +1418,18 @@ def test_a_case_result_round_trips_through_its_record():
     assert CaseResult.from_dict(result.as_dict()) == dataclasses.replace(result, seconds=1.2)
     minimal = CaseResult.from_dict({"case": "x", "kind": "control", "outcome": CLEAN, "code": "r"})
     assert minimal.evidence == () and minimal.defect_class == ""
+
+
+def test_reviews_reused_without_a_time_leave_the_review_window_unknown(tmp_path):
+    cfg = repository(tmp_path)
+    work = tmp_path / "work.jsonl"
+    canary, _ = canary_for(cfg)
+    canary.run(["ctl-rename"], work=work, record=False)
+    line = json.loads(work.read_text(encoding="utf-8"))
+    del line["review"]["reviewed_at"]
+    work.write_text(json.dumps(line) + "\n", encoding="utf-8")
+    reviewer = FakeReviewer(answer_by_diff)
+    canary, _ = canary_for(cfg, reviewer)
+    measured = canary.run(["ctl-rename"], work=work, record=False)
+    assert reviewer.calls == [] and measured["reused_reviews"] == 1
+    assert measured["reviewed_between"] is None
