@@ -50,6 +50,12 @@ procedures live in `.agent/rules/`
   the merge train or it does not land. Repair is not authorship; where a lane's
   output is net-negative, revert and re-queue. Declining is a reportable outcome.
   ADR-0046; sub-doctrine 12.d.
+- The operator's standing grant is declared in `[autonomy]` in `.vibey-gh.toml`:
+  while `standing_grant = true`, work fully autonomously (build, test, open pull
+  requests and land them through the merge train, keep the queue moving) and
+  replace a step that needs a person with a declared TOML gate. Its `never` list
+  and the SD-01 §6 floor hold: no bypass, no self-approval, no irreversible
+  real-world act without a person, no self-ratified doctrine.
 - Toil that can be fully automated is, no exceptions: anything a human would do
   *again* (remembering, ordering, repetition, transcription). Fully — a
   half-automation that still needs a remembered step is worse than none; where
