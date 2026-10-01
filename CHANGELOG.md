@@ -573,7 +573,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   durable queue names, and `server turn-worker` hosting for multiple lanes. Direct
   mode remains the default; see the [configuration reference](docs/reference/configuration.md#shared-model-turns).
 
-* **desktop:** Krypton desktop, in C17 on GTK 4 and libadwaita
+* **desktop:** krypton desktop, in C17 on GTK 4 and libadwaita
   ([ADR-0073](docs/architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md)). `clients/desktop`
   holds a pure-C core, libkryptondesktop: hub documents, the libsoup hub client, gate answers,
   state, formatting, themes and channels, pairing, and `_vibey._tcp` discovery with Avahi and
@@ -828,7 +828,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `vibey_ledger_appended` (additive). `WS /api/v1/projects/{id}/live?after=N` resumes after a
   seq and pages until caught up; `WS /api/v1/lanes/live` tails a listed lane by byte offset;
   each has an HTTP polling twin. Sockets check Host and Origin and re-authenticate every page.
-* **hub:** `vibey serve`, the one HTTP API every Krypton client reaches
+* **hub:** `vibey serve`, the one HTTP API every krypton client reaches
   ([ADR-0068](docs/architecture/decisions/0068-the-hub.md)), behind the new `hub` extra
   (`pip install 'vibey[hub]'`). Projects, status, gates (list and answer, through the
   one-answer service), loops, budget (read only), queue (list and bump, as the declared source

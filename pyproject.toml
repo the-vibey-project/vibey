@@ -187,7 +187,7 @@ bootstrap-all = [
     "alembic>=1.13",
     "pymongo>=4.6",
 ]
-# The hub, `vibey serve` (ADR-0067): the one HTTP surface every Krypton client reaches. An
+# The hub, `vibey serve` (ADR-0067): the one HTTP surface every krypton client reaches. An
 # extra for the reason `operator` is one: a worker on a laptop serves nothing, and a web
 # stack in `dependencies` would put its CVE surface on every install. The starlette floor
 # is the advisory floor vibey-bootstrap's own `fastapi` extra carries.

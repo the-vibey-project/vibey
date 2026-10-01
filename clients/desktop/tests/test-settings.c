@@ -6,9 +6,9 @@
 static void
 test_channels(void)
 {
-    g_assert_cmpstr(kr_channel_app_id(KR_CHANNEL_STABLE), ==, "io.github.the_vibey_project.Krypton");
+    g_assert_cmpstr(kr_channel_app_id(KR_CHANNEL_STABLE), ==, "io.github.the_vibey_project.krypton");
     g_assert_cmpstr(kr_channel_app_id(KR_CHANNEL_NIGHTLY), ==,
-                    "io.github.the_vibey_project.Krypton.Nightly");
+                    "io.github.the_vibey_project.krypton.nightly");
     g_assert_cmpstr(kr_channel_display_name(KR_CHANNEL_STABLE), ==, "krypton");
     g_assert_cmpstr(kr_channel_display_name(KR_CHANNEL_NIGHTLY), ==, "krypton nightly");
     g_assert_cmpstr(kr_channel_dir_name(KR_CHANNEL_STABLE), ==, "krypton");

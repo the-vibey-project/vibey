@@ -221,3 +221,21 @@ def test_icon_sizes_are_what_their_names_say() -> None:
             assert width == int(size.group(1)), rel
     ios = (REPO / "design/dist/icons/ios/AppIcon-1024.png").read_bytes()
     assert ios[25] == 2, "the iOS marketing icon must be opaque (RGB, no alpha)"
+
+
+def test_the_vs_code_extension_wears_the_generated_krypton_atom() -> None:
+    """The extension is published as `the-vibey-project.krypton`, and both of its marks come
+    from the design pipeline: the marketplace icon is a generated PNG of at least 128 px
+    (`vsce` refuses an SVG there), and the activity-bar glyph is the one-colour atom."""
+    manifest = json.loads((REPO / "clients/vscode/package.json").read_text(encoding="utf-8"))
+    assert (manifest["publisher"], manifest["name"]) == ("the-vibey-project", "krypton")
+    icon = f"clients/vscode/{manifest['icon']}"
+    assert icon.endswith(".png")
+    rasters = json.loads((REPO / "design/dist/icons/manifest.json").read_text(encoding="utf-8"))[
+        "rasters"
+    ]
+    assert rasters[icon]["width"] >= 128 and rasters[icon]["height"] >= 128
+    containers = manifest["contributes"]["viewsContainers"]["activitybar"]
+    glyph = Path(f"clients/vscode/{containers[0]['icon']}")
+    assert glyph in GENERATOR.outputs()
+    assert "currentColor" in (REPO / glyph).read_text(encoding="utf-8")

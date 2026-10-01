@@ -1,6 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * The two channels every Krypton GUI ships (plan, Lane K): stable from `main`, nightly from
+ * The two channels every krypton GUI ships (plan, Lane K): stable from `main`, nightly from
  * `develop`. They install side by side, so each has its own name, identifiers and scheme.
  * Stable is always the default.
  */

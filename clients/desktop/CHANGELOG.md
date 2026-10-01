@@ -1,11 +1,11 @@
-# Changelog: Krypton desktop
+# Changelog: krypton desktop
 
-Krypton desktop carries its own version. The Python wheel stays one distribution
+krypton desktop carries its own version. The Python wheel stays one distribution
 (ADR-0037).
 
 ## 0.1.0 (unreleased)
 
-- **The first Krypton desktop.** It is C17 on GTK 4 and libadwaita, with an
+- **The first krypton desktop.** It is C17 on GTK 4 and libadwaita, with an
   `AdwNavigationSplitView` that folds on narrow windows. It covers Projects, Gates (with
   answering), Lanes, Loops and effort (to ULTRA), Budgets, Doctor, Devices and Settings.
 - **The core, libkryptondesktop**, is pure C with no GTK:

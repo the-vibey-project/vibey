@@ -1,8 +1,9 @@
 # krypton for VS Code
 
 **krypton** is vibey's face in your editor: the display name of this extension, and of every
-vibey app (sub-doctrine 9.e). The engine underneath is still **vibey**, and the extension's
-id, settings (`vibey.*`) and commands (`vibey.*`) keep their names.
+vibey app (sub-doctrine 9.e). Its extension id is `the-vibey-project.krypton`. The engine
+underneath is still **vibey**, and the extension's settings (`vibey.*`) and commands
+(`vibey.*`) keep their names.
 
 Ask a model that runs **on your own computer** to make a change in your project, and watch
 every step it takes. There is no account and no cloud: the model is **gpt-oss:20b**, running in
@@ -38,23 +39,30 @@ Tick these off once, in this order.
 From a `.vsix` file:
 
 ```sh
-code --install-extension vibey-0.1.0.vsix
+code --install-extension krypton-0.2.0.vsix
 ```
 
 If your Mac says `code: command not found`, use the full path instead:
 
 ```sh
-"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension vibey-0.1.0.vsix
+"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-0.2.0.vsix
 ```
 
 You can also do it without a terminal: open the **Extensions** view, click the `…` menu at its
 top, choose **Install from VSIX…**, and pick the file.
 
+**Upgrading from an earlier build?** Builds before the rename installed as
+`the-vibey-project.vibey`. Uninstall that one first
+(`code --uninstall-extension the-vibey-project.vibey`): two extensions offering the same
+`vibey.*` commands cannot both load. Your `vibey.*` settings and keybindings carry over; a hub
+pairing does not, because the editor keeps secrets per extension id, so run **krypton: Connect
+to vibey on this network** once more.
+
 ## Your first task, step by step
 
 1. **Open your project.** Use **File → Open Folder…** and choose a folder that is a git
    repository with at least one commit. The task will work on a copy of it.
-2. **Open Vibey.** Click the **V** icon in the activity bar on the left.
+2. **Open krypton.** Click the krypton atom in the activity bar on the left.
 3. **Check your setup.** Open the Command Palette (**Cmd+Shift+P** on a Mac, **Ctrl+Shift+P**
    elsewhere), type **krypton: Check my setup**, and press Enter. Each line says `ok`, `warn` or
    `FAIL`. Every `FAIL` comes with a line that says what to do.

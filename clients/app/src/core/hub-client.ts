@@ -1,6 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * The hub transport Krypton's mobile and web app uses: the routes of
+ * The hub transport krypton's mobile and web app uses: the routes of
  * `docs/reference/hub-api.json` (ADR-0068, API version 1), over an injected `fetch`, with the
  * host token or a device key as the bearer. Every document is the one the matching
  * `vibey … --json` prints, so it reads the same shapes `@vibey/core`'s `VibeyCli` reads.

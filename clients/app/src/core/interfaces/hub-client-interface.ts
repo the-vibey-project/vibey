@@ -1,6 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * The hub, as Krypton on a phone or in a browser reaches it: every route of
+ * The hub, as krypton on a phone or in a browser reaches it: every route of
  * `docs/reference/hub-api.json` (ADR-0068) that a device may call, and nothing more.
  */
 import type { VibeyTransportInterface } from '@vibey/core';
@@ -80,7 +80,7 @@ export type HubRefusal =
   | 'bad-answer'
   | 'not-on-a-device';
 
-/** Every call a Krypton device makes. The CLI-shaped calls come from `VibeyTransportInterface`. */
+/** Every call a krypton device makes. The CLI-shaped calls come from `VibeyTransportInterface`. */
 export interface HubClientInterface extends VibeyTransportInterface {
   readonly connection: HubConnection;
   /** `GET /health/live` and `/health/ready`: needs no credentials. */

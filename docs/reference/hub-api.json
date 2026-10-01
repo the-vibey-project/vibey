@@ -151,7 +151,7 @@
     }
   },
   "info": {
-    "summary": "The one HTTP surface every Krypton client reaches (ADR-0067).",
+    "summary": "The one HTTP surface every krypton client reaches (ADR-0067).",
     "title": "vibey hub",
     "version": "1"
   },

@@ -11,8 +11,8 @@
 const char *
 kr_channel_app_id(KrChannel channel)
 {
-    return channel == KR_CHANNEL_NIGHTLY ? "io.github.the_vibey_project.Krypton.Nightly"
-                                         : "io.github.the_vibey_project.Krypton";
+    return channel == KR_CHANNEL_NIGHTLY ? "io.github.the_vibey_project.krypton.nightly"
+                                         : "io.github.the_vibey_project.krypton";
 }
 
 const char *

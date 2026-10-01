@@ -2,6 +2,18 @@
 
 All notable changes to krypton, vibey's extension for VS Code.
 
+## Unreleased
+
+- **Published as `the-vibey-project.krypton`.** The package `name` is `krypton`, so the
+  extension id, the `.vsix` (`krypton-<version>.vsix`) and its first Open VSX listing all say
+  krypton. Command ids, settings, views and the walkthrough keep their `vibey.*` and
+  `krypton.firstRun` ids, so keybindings and settings carry over. A build installed under the
+  old id `the-vibey-project.vibey` must be uninstalled first, and a hub pairing made once more
+  (the editor keeps secrets per extension id).
+- **The krypton atom is the icon.** The marketplace icon is `media/krypton.png`, 256 px, and
+  the activity-bar glyph is `media/krypton.svg`, the same atom in the theme's own colour. Both
+  are drawn by `scripts/design/generate.py` from the design tokens, never by hand.
+
 ## 0.2.0
 
 - **krypton.** The extension's display name, its activity-bar container, its command category

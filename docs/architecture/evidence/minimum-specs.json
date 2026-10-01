@@ -33,7 +33,7 @@
     "PostgreSQL 14-17 and git older than 2.54: only PostgreSQL 18.4 and git 2.54 ran; the floors are declared.",
     "Python 3.12.0-3.12.12: only 3.12.13 ran. Python 3.15 does not install yet (no pydantic-core wheel).",
     "pip and pipx install paths: only uv was used.",
-    "The Krypton desktop GUI, the VS Code extension inside VS Code, and the React Native app at runtime; iOS and Android native builds.",
+    "The krypton desktop GUI, the VS Code extension inside VS Code, and the React Native app at runtime; iOS and Android native builds.",
     "The desktop client's minimum library versions: only the installed versions were built.",
     "Paid engines end to end, the RabbitMQ bus, and the opt-in integrations (Azure, the operator, webhooks, SMTP).",
     "The LAN hub on a real network interface (mDNS multicast was not observed)."
@@ -1011,7 +1011,7 @@
     },
     {
       "id": "download.first_install_bytes",
-      "label": "First install on the wire: Krypton + hub + the sovereign model",
+      "label": "First install on the wire: krypton + hub + the sovereign model",
       "value": 14004463411,
       "unit": "bytes",
       "status": "derived",

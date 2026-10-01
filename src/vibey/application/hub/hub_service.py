@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The hub's use cases: every read and every action a Krypton client can ask for.
+"""The hub's use cases: every read and every action a krypton client can ask for.
 
 `vibey serve` (ADR-0067) exposes these over HTTP. Each use case does three things, in
 this order, and nothing else:

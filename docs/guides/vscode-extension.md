@@ -1,7 +1,7 @@
 # VS Code extension
 
-The extension is called **krypton**, the name every app carries (sub-doctrine 9.e); its
-commands and settings keep their `vibey.*` names. It lets you drive vibey, and a model on your own computer, from VS Code:
+The extension is called **krypton**, the name every app carries (sub-doctrine 9.e), and its id
+is `the-vibey-project.krypton`; its commands and settings keep their `vibey.*` names. It lets you drive vibey, and a model on your own computer, from VS Code:
 describe a task, watch the model work on a copy of your project, and apply the result when
 you are happy with it. It needs no account and no cloud. Everything on the default loop,
 sovereignloop, runs on your machine: gptossloop, vibey's local agent, drives **gpt-oss:20b**
@@ -31,22 +31,27 @@ every command with a worked example, and every setting with its default.
 ## 2. Install it
 
 ```bash
-code --install-extension vibey-0.1.0.vsix
+code --install-extension krypton-0.2.0.vsix
 ```
 
 On a Mac where `code` is not on your PATH:
 
 ```bash
-"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension vibey-0.1.0.vsix
+"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-0.2.0.vsix
 ```
 
 Or use **Install from VSIX…** in the Extensions view's `…` menu. The `.vsix` is built by CI's
 `vscode-extension` job and by `npx vsce package --no-dependencies` in `clients/vscode`.
 
+A build from before the rename installed as `the-vibey-project.vibey`: uninstall it first
+(`code --uninstall-extension the-vibey-project.vibey`), since two extensions offering the same
+`vibey.*` commands cannot both load. Settings and keybindings carry over; a hub pairing does
+not (secrets are kept per extension id), so connect to the hub once more.
+
 ## 3. Your first task
 
 1. Open a folder that is a git repository with at least one commit.
-2. Click the **V** in the activity bar, then run **krypton: Check my setup** from the Command
+2. Click the krypton atom in the activity bar, then run **krypton: Check my setup** from the Command
    Palette. Every `FAIL` says what to do.
 3. Run **krypton: Ask the model to do a task** and describe it, for example
    `add a line to README.md that says how to run the tests`.

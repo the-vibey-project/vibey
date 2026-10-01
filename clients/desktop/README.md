@@ -1,4 +1,4 @@
-# Krypton desktop
+# krypton desktop
 
 The desktop app for vibey, for Linux and macOS. It is written in C17 on GTK 4 and
 libadwaita, and it talks to a vibey hub (`vibey serve`, [ADR-0068](../../docs/architecture/decisions/0068-the-hub.md))
@@ -10,7 +10,7 @@ over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's da
 |---|---|
 | Projects | Every project, its phase and cycle, and how many gates wait on it. |
 | Gates | Every gate waiting on you, with the controls its kind takes: a verdict or choice as buttons, a new bound for a grant, a retry, or a free-form answer. It warns you before an answer that can spend money. A desktop notification tells you when a new gate is raised. |
-| Lanes | The lanes running on the hub's computer. The Krypton mark in the sidebar glows while one runs. |
+| Lanes | The lanes running on the hub's computer. The krypton mark in the sidebar glows while one runs. |
 | Loops and effort | The loops, their engines and the effort ladder, up to ULTRA. |
 | Budgets | What the chosen project has spent this cycle, against its caps. |
 | Doctor | The checks the hub runs itself. |
@@ -22,14 +22,14 @@ Keyboard: `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Setti
 
 ## Connecting
 
-On the computer that runs the hub, Krypton reads the hub's token the way the hub keeps it:
+On the computer that runs the hub, krypton reads the hub's token the way the hub keeps it:
 `~/.local/state/vibey/hub/token` on Linux, `~/Library/Application Support/vibey/hub/token`
 on macOS, or `$VIBEY_HUB_STATE_DIR/token`. The file must be yours alone (mode 0600) and
-not a symlink, or Krypton refuses it, just as the hub does.
+not a symlink, or krypton refuses it, just as the hub does.
 
 A hub on another computer is found on the network, but being on the network proves
 nothing (SD-01). A device is trusted only once it has paired with the hub's QR code or
-6-digit code. The hub's side of pairing is still to come. Until then, Krypton checks a
+6-digit code. The hub's side of pairing is still to come. Until then, krypton checks a
 code and says plainly that the hub cannot take it yet. The client's half of the pairing
 contract is written down in [`src/core/kr-pairing.h`](src/core/kr-pairing.h) and is
 marked provisional.
@@ -51,7 +51,7 @@ and tests the core. json-glib is fetched from its wrap when the system has none.
 
 | Option | Default | Meaning |
 |---|---|---|
-| `-Dchannel=stable\|nightly` | `stable` | Nightly installs beside stable, as "Krypton Nightly" with its own app id and data directory. |
+| `-Dchannel=stable\|nightly` | `stable` | Nightly installs beside stable, as "krypton nightly" with its own app id and data directory. |
 | `-Dgui=` | `auto` | Build the GTK app, not only the core. |
 | `-Dhub_transport=` | `auto` | The libsoup hub client. |
 | `-Ddiscovery=` | `auto` | Avahi or dns_sd. |

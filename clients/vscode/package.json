@@ -1,9 +1,10 @@
 {
-  "name": "vibey",
+  "name": "krypton",
   "displayName": "krypton",
   "description": "krypton for VS Code: drive vibey and a local gpt-oss model from your editor, or a vibey hub on your network. Runs on your own computer; no account and no cloud.",
   "version": "0.2.0",
   "publisher": "the-vibey-project",
+  "icon": "media/krypton.png",
   "license": "MIT",
   "author": {
     "name": "Adam Matthew Steinberger"
@@ -45,7 +46,7 @@
         {
           "id": "vibey",
           "title": "krypton",
-          "icon": "media/vibey.svg"
+          "icon": "media/krypton.svg"
         }
       ]
     },
@@ -80,7 +81,7 @@
     "viewsWelcome": [
       {
         "view": "vibey.runs",
-        "contents": "Ask the local model to do something in this folder. It works on a copy, so nothing changes until you choose Apply.\n[Ask the model](command:vibey.ask)\n[Run a folder of tasks](command:vibey.runBatch)\n[Show every command](command:vibey.showMenu)\n[Take the one-minute tour](command:workbench.action.openWalkthrough?%22the-vibey-project.vibey%23krypton.firstRun%22)"
+        "contents": "Ask the local model to do something in this folder. It works on a copy, so nothing changes until you choose Apply.\n[Ask the model](command:vibey.ask)\n[Run a folder of tasks](command:vibey.runBatch)\n[Show every command](command:vibey.showMenu)\n[Take the one-minute tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
       },
       {
         "view": "vibey.lanes",
@@ -88,7 +89,7 @@
       },
       {
         "view": "vibey.projects",
-        "contents": "Projects come from vibey on this computer, or from a vibey hub on your network.\n[Connect to vibey on this network](command:vibey.connectHub)\n[Take the tour](command:workbench.action.openWalkthrough?%22the-vibey-project.vibey%23krypton.firstRun%22)"
+        "contents": "Projects come from vibey on this computer, or from a vibey hub on your network.\n[Connect to vibey on this network](command:vibey.connectHub)\n[Take the tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
       }
     ],
     "commands": [

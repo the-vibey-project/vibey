@@ -1,7 +1,7 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
-/* kr-settings: what Krypton desktop remembers per device, and which channel it is.
+/* kr-settings: what krypton desktop remembers per device, and which channel it is.
  *
- * Themes: every Krypton GUI offers Light, Dark and System, System by default, following the
+ * Themes: every krypton GUI offers Light, Dark and System, System by default, following the
  * operating system live (the Beauty Bar, ADR-0062; the enum is the design tokens' own,
  * design/dist/c/vibey_tokens.h, ADR-0066). Channels: stable (from main) is the default;
  * nightly (from develop) installs beside it under its own app id, name and data directory.
@@ -24,7 +24,7 @@ typedef enum {
     KR_CHANNEL_NIGHTLY = 1,
 } KrChannel;
 
-/* "io.github.the_vibey_project.Krypton", "...Krypton.Nightly". Static. */
+/* "io.github.the_vibey_project.krypton", "...krypton.Nightly". Static. */
 const char *kr_channel_app_id(KrChannel channel);
 /* "krypton", "krypton nightly". Static. */
 const char *kr_channel_display_name(KrChannel channel);

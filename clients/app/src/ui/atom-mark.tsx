@@ -1,6 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * Krypton's mark, the Kr-84 atom: a nucleus of 36 protons and 48 neutrons, and electron
+ * krypton's mark, the Kr-84 atom: a nucleus of 36 protons and 48 neutrons, and electron
  * shells of 2, 8, 18 and 8, drawn in the palette's violet, cyan and mint
  * (`design/identity/atom.svg` is the master). The shells turn slowly unless motion is reduced.
  */

@@ -1,7 +1,7 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
 /* kr-discovery: finding hubs on the local network.
  *
- * A hub on the LAN advertises itself over mDNS/DNS-SD as `_vibey._tcp` (ADR-0068). Krypton
+ * A hub on the LAN advertises itself over mDNS/DNS-SD as `_vibey._tcp` (ADR-0068). krypton
  * browses for it with Avahi on Linux and dns_sd.h on macOS; both backends sit behind the one
  * interface below, so the views never know which is running. Finding a hub is not trusting
  * it: a found hub still has to be paired (kr-pairing.h). */
@@ -44,7 +44,7 @@ typedef struct _KrDiscovery KrDiscovery;
 
 /* What a backend provides. `start` begins browsing on the thread-default main context and
  * returns FALSE with an error when the platform service is not there (no Avahi daemon, for
- * instance): Krypton then says so and offers the 6-digit code instead. */
+ * instance): krypton then says so and offers the 6-digit code instead. */
 typedef struct {
     const char *name;
     gboolean (*start)(KrDiscovery *discovery, GError **error);

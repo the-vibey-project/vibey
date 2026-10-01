@@ -30,7 +30,7 @@ export class VibeyChat implements VibeyChatInterface {
       return undefined;
     }
     const participant = vscode.chat.createChatParticipant(VibeyChat.ID, (request, _context, stream, token) => this.handle(request, stream, token));
-    participant.iconPath = vscode.Uri.joinPath(this.extensionUri, 'media', 'vibey.svg');
+    participant.iconPath = vscode.Uri.joinPath(this.extensionUri, 'media', 'krypton.svg');
     return participant;
   }
 

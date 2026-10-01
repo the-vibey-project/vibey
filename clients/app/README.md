@@ -1,5 +1,5 @@
 <!-- Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). -->
-# Krypton for iOS, Android and the web
+# krypton for iOS, Android and the web
 
 One Expo (SDK 57, Expo Router, TypeScript strict) app over the vibey hub (`vibey serve`,
 [hub API](../../docs/reference/hub-api.md), ADR-0068). It reads `@vibey/core` and the design
@@ -18,8 +18,8 @@ npx expo start --web
 - `src/screens/`, `src/ui/` — the screens, the Kr-84 atom mark and the kit.
 - `app/` — the routes only.
 
-Channels: `APP_VARIANT=nightly` builds "Krypton Nightly" (`org.vibey.krypton.nightly`);
-anything else is the stable "Krypton" (`org.vibey.krypton`). EAS (`eas.json`) is declared only.
+Channels: `APP_VARIANT=nightly` builds "krypton nightly" (`org.vibey.krypton.nightly`);
+anything else is the stable "krypton" (`org.vibey.krypton`). EAS (`eas.json`) is declared only.
 
 Not built yet: pairing by QR or code (the hub has no pairing routes; the host token connects
 today), mDNS discovery, lane stop/prompt and run start, push notifications and sounds, the

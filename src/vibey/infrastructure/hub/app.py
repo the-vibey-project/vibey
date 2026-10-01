@@ -220,7 +220,7 @@ class HubAppFactory:
         app = FastAPI(
             title="vibey hub",
             version=HUB_API_VERSION,
-            summary="The one HTTP surface every Krypton client reaches (ADR-0067).",
+            summary="The one HTTP surface every krypton client reaches (ADR-0067).",
             openapi_url=f"/api/v{HUB_API_VERSION}/openapi.json",
             docs_url=None,
             redoc_url=None,
