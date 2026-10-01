@@ -20,8 +20,10 @@ vibey-gh check --ci
 ```
 
 Tests belong under `test/`. Maintain 100% line and branch coverage and add focused tests for new
-decisions, and do not weaken checks. Update README, reference docs, changelog, security
-guidance, agent instructions, and configuration examples when behavior changes.
+decisions, and do not weaken checks. Update README, reference docs, security guidance, agent
+instructions, and configuration examples when behavior changes, and record it as a changelog
+fragment -- a new `changelog.d/<slug>.<type>.md` beside `CHANGELOG.md`, never an edit to it
+(`[changelog]` in the repository's `.vibey-gh.toml`; the release folds fragments in).
 
 ## Pull requests and provenance
 

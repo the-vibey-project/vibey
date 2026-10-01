@@ -129,7 +129,14 @@ pin_version = true
 # 3.0.0 release was missing: a skip-ci marker in a hand-made squash body switched off every
 # push workflow on main, develop sat red for a day with nothing saying so, and a hand-made
 # ruleset stood beside the declared one unremarked. See [skip_markers] and [branch_health].
-workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "repository-profile.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml", "skip-markers.yml", "branch-health.yml", "ruleset-drift.yml"]
+# changelog.yml: `vibey-gh changelog check` on every pull request into develop. See
+# [changelog].
+workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "repository-profile.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml", "skip-markers.yml", "branch-health.yml", "ruleset-drift.yml", "changelog.yml"]
+# No path merges with the `union` driver. The changelog it existed for is written as
+# fragments now ([changelog]), and the driver never helped where it mattered: GitHub's
+# mergeability does not run it, so a pull request showed CONFLICTING while a local merge was
+# clean, and where it did run it could keep both sides of a heading and duplicate it.
+union_merge_paths = []
 
 # Declared here rather than clicked, per ADR-0018. `vibey-gh` has reconciled both of these
 # from configuration since 1.x and vibey-skills has used them for months; this repository,
@@ -245,6 +252,50 @@ enabled = false
 enabled = true
 exempt_authors = []
 
+# The changelog is written as fragments: one new file per change, `<slug>.<type>.md` in the
+# `changelog.d/` beside the changelog it belongs to, holding the entry exactly as it should
+# read. Every pull request used to edit the same `## [Unreleased]` lines, so concurrent
+# pull requests conflicted on every merge -- #1295, #1297, #1298 and #1299 were re-merged
+# over and over on 2026-10-01 -- and the `merge=union` attribute meant to absorb it does
+# nothing on GitHub, whose mergeability never runs a custom driver. A new file cannot
+# conflict. `vibey-gh promote` folds the fragments in under their types' headings in the
+# release commit and cuts the version's section; changelog.yml ("Changelog fragment")
+# refuses a pull request into develop that changes a `require_for` path with no fragment
+# (unless labelled `no-changelog`), adds a malformed one, or edits an unreleased section by
+# hand. It gates through the PR automation ("Changelog" in scan_workflows).
+#
+# `require_for` is what reaches an installed user: the `[version] content_paths` above, as
+# globs, and the root manifest. Docs, tests and workflows alone need no entry.
+[changelog]
+enabled = true
+skip_label = "no-changelog"
+require_for = [
+  "src/vibey/*",
+  "src/vibey_runners/claude/src/*",
+  "src/vibey_runners/codex/src/*",
+  "src/vibey_runners/cursor/src/*",
+  "src/vibey_runners/agy/src/*",
+  "src/vibey_runners/qwen/src/*",
+  "src/vibey_runners/common/src/*",
+  "src/vibey_tools/gh/vibey_gh/*",
+  "src/vibey_tools/bootstrap/vibey_bootstrap/*",
+  "src/vibey_tools/skills/src/*",
+  "src/vibey_tools/skills/plugins/*",
+  "src/vibey_tools/skills/.claude-plugin/marketplace.json",
+  "pyproject.toml",
+]
+
+# The engine's changelog: a section per version, cut by the release.
+[[changelog.files]]
+changelog = "CHANGELOG.md"
+
+# vibey-gh's own: everything is recorded under `## Unreleased`, and the releases are the
+# GitHub Releases it links to, so a release folds fragments in and cuts nothing.
+[[changelog.files]]
+changelog = "src/vibey_tools/gh/CHANGELOG.md"
+unreleased = "Unreleased"
+versioned = false
+
 # One tracking issue per permanent branch while its CI push run is red, closed when the tip
 # is green again (branch-health.yml). The watched checks are each branch's required_checks
 # above -- the definition of green this file already makes -- so no list is repeated here.
@@ -271,7 +322,7 @@ plugins = [
 # settles after it, and no run ever looks again -- the pull request then sits blocked with
 # every check green and nothing to rerun. That deadlock has happened here before; the two
 # lines move together. "Skip markers" is here for the same reason (see [skip_markers]).
-scan_workflows = ["CI", "Provenance", "Conventional Commits", "Skip markers"]
+scan_workflows = ["CI", "Provenance", "Conventional Commits", "Skip markers", "Changelog"]
 # Rewrite a nonconforming subject rather than only reporting it. The operator's call, and
 # the trade is worth stating because it is not free: the automatic form is
 # `chore: <the original subject>` -- measured, not assumed -- which conforms without

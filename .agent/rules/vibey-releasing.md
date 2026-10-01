@@ -6,7 +6,8 @@
 hand-run publish. The version is *derived*, not chosen: `vibey-gh version` reads
 what changed against `[version] content_paths` and `code_paths` in
 `.vibey-gh.toml` and answers major, minor, patch, or nothing. `vibey-gh promote`
-applies that answer. The changelog entry is written by hand.
+applies that answer. The changelog is written as fragments, one file per change,
+and the release commit folds them in.
 
 Every workflow on the release path installs the tree's own `vibey-gh` from the
 declared `[install] self_source = "src/vibey_tools/gh"`, and falls back to
@@ -156,8 +157,9 @@ derivation leaves it alone.
    `vibey-gh promote`, which:
    - compares `develop` and `main` **by tree content** and stops if they are identical;
    - derives the version on `develop` and, when a bump is due, commits
-     `chore(release): x.y.z` (version files plus `uv.lock`) and pushes it to
-     `develop`, raising if the push fails;
+     `chore(release): x.y.z` (version files plus `uv.lock`, and the changelog:
+     fragments folded in and deleted, `## [Unreleased]` cut to `## [x.y.z] (date)`)
+     and pushes it to `develop`, raising if the push fails;
    - opens or reuses the `develop` → `main` promotion PR, titled
      `chore(release): <version>`.
 
@@ -192,10 +194,38 @@ release to be yanked. See the `vibey-architecture` skill.
 
 ## The changelog
 
-Nothing in the release path writes `CHANGELOG.md`. Add entries under
-`## [Unreleased]` in the PR that lands the user-visible change, grouped as the
-file already does (`### Features`, `### Bug Fixes`, with issue and commit links).
-When a version ships, the `[Unreleased]` entries move under `## [x.y.z] (date)`.
+**Never edit `CHANGELOG.md` by hand.** Every PR editing the same
+`## [Unreleased]` lines made concurrent PRs conflict on every merge, and the old
+`merge=union` attribute never helped on GitHub, whose mergeability does not run
+it. The changelog is written as fragments instead (`[changelog]` in
+`.vibey-gh.toml`): the PR that lands a user-visible change adds one new file,
+`changelog.d/<slug>.<type>.md` beside the changelog it belongs to
+(`src/vibey_tools/gh/changelog.d/` for vibey-gh's own), holding the entry exactly
+as it should read, bullet included:
+
+```markdown
+* **gh:** what changed, for whom, and why it matters
+  ([#1303](https://github.com/the-vibey-project/vibey/pull/1303)).
+```
+
+The slug is letters, digits, `-` and `_` (the PR number or a short name); the
+type is one of `breaking`, `feature`, `fix`, `perf`, `refactor`, `removed`,
+`docs`, `chore`, which files it under `### BREAKING CHANGES`, `### Features`,
+`### Bug Fixes` and so on. No heading inside a fragment.
+
+`vibey-gh promote` folds every fragment into `## [Unreleased]` under its heading
+in the release commit, deletes it, and cuts the section to `## [x.y.z] (date)`
+with a fresh `## [Unreleased]` above (vibey-gh's own changelog is folded but never
+cut: its releases are the GitHub Releases). No hand step. `uv run vibey-gh
+changelog assemble` does the fold alone, idempotently, if you want to preview it.
+
+The `Changelog fragment` check (`changelog.yml`) refuses a PR into `develop` that
+changes a shipped path (`[changelog] require_for`) without adding a fragment, adds
+a malformed one, or edits an unreleased section directly. Label the PR
+`no-changelog` when no reader of the changelog would miss the change; the label
+never excuses a malformed fragment or a hand edit. The check creates the label
+itself (`vibey-gh changelog ensure-label`), so it always exists.
+
 Entries 0.2.0 through 0.6.0 were reconstructed from the release commits on
 2026-09-15; a released version without an entry is a documentation bug.
 
@@ -238,7 +268,8 @@ can reproduce.
 2. Pass `--apply` so the tool writes it. `apply_version` also re-runs `uv lock`
    and re-renders every managed workflow whose `pip install` pin this repository's
    version decides — both are functions of that number, and a bump that leaves
-   either stale fails the very gates the promotion needs. Editing the two files by
+   either stale fails the very gates the promotion needs. It folds and cuts the
+   changelog too, exactly as `promote` does. Editing the two files by
    hand means doing `uv lock` and `vibey-gh install` yourself, in the same commit.
 3. Commit with `chore(release): x.y.z` — the exact subject `vibey-gh promote`
    writes.
@@ -327,8 +358,11 @@ owner holds the required ruleset role).
 is set — the `realign` job skips (not fails) without it. To realign by hand, and
 only when the trees match: `git push --force-with-lease origin main:develop`.
 
-**CHANGELOG.md doesn't mention the shipped version:** nothing updates it
-automatically; add the entry (see "The changelog").
+**CHANGELOG.md doesn't mention the shipped version:** the release commit cuts
+`## [x.y.z] (date)` from whatever fragments had landed; a change that shipped
+without one was merged without a fragment (labelled `no-changelog`, or before
+fragments existed). Add the entry as a fragment in a follow-up PR; it lands in
+the next version's section (see "The changelog").
 
 ## The workflows
 
@@ -362,6 +396,8 @@ automatically; add the entry (see "The changelog").
   successful `Release` on `main`; outside `Release` so it can never fail the tag.
 - `.github/workflows/skip-markers.yml` — `No skip markers`, on every pull request and
   merge-queue group into `develop` or `main`.
+- `.github/workflows/changelog.yml` — `Changelog fragment`, `vibey-gh changelog check`
+  on every pull request into `develop`.
 - `.github/workflows/branch-health.yml` — one tracking issue per red permanent branch.
 - `.github/workflows/ruleset-drift.yml` — `vibey-gh rulesets --check`, read-only, daily
   and on every change to `.vibey-gh.toml`.

@@ -1,0 +1,117 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Changelog
+
+# The changelog is written as fragments: one new file per change, `<slug>.<type>.md` in a
+# fragments directory beside its changelog, folded in by the release (`[changelog]`). Every
+# pull request used to edit the same unreleased lines instead, so any two open ones
+# conflicted -- and GitHub's mergeability never runs the `merge=union` driver that was
+# meant to absorb it. This refuses a change to a `require_for` path that adds no fragment
+# (unless it carries the skip label), a malformed fragment, and a hand edit to an unreleased
+# section (`vibey-gh changelog check`).
+#
+# Pull requests into the integration branch only. A promotion into the release branch
+# carries the release commit, which empties the unreleased section into the version's own
+# on purpose. `labeled` and `unlabeled` because the skip label changes the answer. It gates
+# through the PR automation (`[pr_automation] scan_workflows`), not the merge queue: a queue
+# group has no labels to read, so this is not a `merge_group` check.
+on:
+  pull_request:
+    branches: [develop]
+    types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]
+
+permissions:
+  contents: read
+
+# A superseded run is cancelled (12.g): only the newest head's answer is worth having.
+concurrency:
+  group: changelog-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Changelog fragment
+    if: false
+    runs-on: ubuntu-latest
+    # `issues: write` is what `gh label create` needs, to make sure the skip label exists
+    # (labels belong to the issues API); nothing here writes code or comments.
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # The configuration read -- which paths need a fragment, the skip label, where the
+      # fragments live -- comes from the trusted default branch, never from the pull
+      # request: a branch could otherwise declare its own changes exempt.
+      - name: Check out trusted automation
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: automation
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install the tooling
+        working-directory: automation
+        run: |
+          set -euo pipefail
+          # Where this repository keeps its own copy of the tooling, from
+          # `[install] self_source` in .vibey-gh.toml -- a DECLARED path, never a search.
+          # Searching the tree for a pyproject declaring `name = "vibey-gh"` would read a
+          # pull request's own files: a branch that adds one anywhere gets it installed
+          # here, with this job's permissions, and hands this check a tool of the
+          # contributor's choosing. The path is verified below before anything runs.
+          self="."
+          # Verified, not assumed: a misconfigured path must fall back to the published
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
+          grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
+          if [ -n "$self" ]; then
+            echo "this repository provides the tooling — installing from source"
+            python -m pip install --quiet -e "$self"
+          else
+            python -m pip install --quiet vibey-engine
+          fi
+          command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
+      # Read as data: nothing from this checkout is installed or executed.
+      - name: Check out the change without executing it
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: target
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Refuse a change with no fragment, a malformed one, or a hand-edited section
+        working-directory: automation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SAME_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          # The tooling and its configuration both come from the default branch, and they
+          # arrive there together. Until a promotion carries `changelog check` to that
+          # branch, its `.vibey-gh.toml` declares no `[changelog]` either, so the rule this
+          # job enforces is not yet the trusted branch's rule: there is nothing declared to
+          # check against, and saying so is the honest answer. It stops applying by itself
+          # once the default branch's tooling has the command.
+          if ! vibey-gh changelog check --help >/dev/null 2>&1; then
+            echo "::notice::the default branch's vibey-gh predates changelog fragments, and so does its [changelog] declaration; nothing to check yet"
+            exit 0
+          fi
+          # The skip label is ensured, never assumed: a label nobody created cannot be
+          # applied, and the refusal below tells people to apply it. Idempotent (`--force`).
+          # A fork's pull request runs with a read-only token, so there the label is left
+          # to the next pull request from this repository rather than failing a check the
+          # contributor cannot fix.
+          if [ "${SAME_REPOSITORY}" = "true" ]; then
+            vibey-gh changelog ensure-label
+          fi
+          vibey-gh changelog check \
+            --checkout ../target \
+            --base "${BASE_SHA}" \
+            --head "${HEAD_SHA}" \
+            --labels-json "${LABELS}"

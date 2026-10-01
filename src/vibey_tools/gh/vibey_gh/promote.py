@@ -32,8 +32,10 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from vibey_gh import github_state, versioning
+from vibey_gh.changelog import Changelog
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.interfaces.promotion_pull_request_interface import PromotionInterface
 
@@ -192,7 +194,11 @@ def promote(
 
     if new and not dry_run:
         written = versioning.apply_version(cfg, new)
-        _git(cfg, "add", *written)
+        # The changelog is part of the release commit: its fragments are folded in and
+        # deleted, and each versioned changelog's unreleased section becomes the version's
+        # own (`[changelog]`). `-A` so a deleted fragment is staged as deleted.
+        written.extend(Changelog().release(cfg, new, datetime.now(UTC).date()))
+        _git(cfg, "add", "-A", "--", *written)
         _git(
             cfg,
             "commit",
