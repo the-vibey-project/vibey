@@ -9,8 +9,9 @@ ledger, $\mathrm{state}(t) = f(\mathrm{ledger}_{\leq t})$, which makes engine ha
 scheduling event rather than a loss of state. Work items are claimed from a PostgreSQL
 queue with `FOR UPDATE SKIP LOCKED` under renewable leases; a handoff between engines
 is admitted only by a pure, model-free no-loss predicate; and delivery proceeds
-through a six-phase state machine whose four human gates each require an explicit
-recorded verdict. Beneath the orchestrator, five session-runner packages expose seven
+through a six-phase state machine whose four human gates each require a recorded
+verdict, which silence never supplies unless a project has declared, kind by kind, that a
+deployment gate may resolve to its stored default. Beneath the orchestrator, five session-runner packages expose seven
 selectable engine identities and share one bounded,
 never-blocking core that never gives a credit balance a clock and lets a capacity
 verdict outrank a completion claim. Above it, an exact-head release calculus binds
@@ -35,6 +36,13 @@ a project from any phase short of done, withdrawing its gates and releasing its
 checkout; build branches that a project must prove are its own; a trust check before an
 issue enters the delivery path; a gate that parks a job failing the same way again and
 again; and a local reviewer that reaches a verdict on a large diff in bounded parts.
+A scan of the integration branch on 2026-09-30 found that only BUILD ran without a
+person and that the forty merges before it all went in through the ruleset bypass with
+no review, and it found seven defects, three of them in the evidence a person is shown. We
+report their repairs, an incident in which the merge train closed pull requests it
+reported as merged, and a measurement of the local reviewer: given the full files it
+judges, none of its seven false findings on four blocked changes returned, though its
+recall is unmeasured.
 
 *Artifacts.* This paper is typeset from `docs/paper.md` and published as
 [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf),
@@ -99,7 +107,8 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
 - Biodigitology, a name for the study of digital life, with operational criteria
   that distinguish software organisms from biological organisms or sentient minds;
 - a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it;
-- an audit of a local storm that locates its binding constraint, its conversion losses and its unenforced controls, and a factual account of merges that ran ahead of review, both read as evidence that the scarce input is judgment.
+- an audit of a local storm that locates its binding constraint, its conversion losses and its unenforced controls, and a factual account of merges that ran ahead of review, both read as evidence that the scarce input is judgment;
+- a scan of how far the delivery loop ran without a person, with the forge's record of who merged, the defects it found and their repairs, an incident in which the merge train closed what it reported as merged, and a measurement of the local reviewer with and without the files it judges.
 
 ```latex
 \begin{figure*}[!t]
@@ -128,7 +137,7 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
   \node[vibeypill] at (r4.south) {Python 3.12+};
   \node[vibeypill] at (r5.south) {Python 3.12+};
   \node[vibeybox,minimum width=7.75cm,minimum height=.7cm] (bar) at (7.775,-5.75)
-    {\textbf{vibey-runners-common}\quad shared by all five runner packages};
+    {\textbf{vibey-runners-common}\quad shared library of claudeloop and codexloop};
   \node[vibeypill] at (bar.south) {Python 3.12+};
   % ---------------------------------------------------------------- tools
   \node[vibeyvioletbox,tool] (t1) at (15.0,-2.55)
@@ -160,7 +169,7 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
   \node[vibeynote,anchor=west,align=left] at (0,-7.15)
     {each tenant keeps its own pyproject, version, test suite and gates (ADR-0022), absorbed into one tree with history preserved (ADR-0021)};
 \end{tikzpicture}
-\caption{The two-package publication surface and the engine family. The dark box names the engine distribution; the apps publish separately as \texttt{krypton-app}. Beneath it sit the orchestrator, five runner packages on their shared library, and three tools. Every tenant requires Python 3.12 or newer. The teal package exposes \texttt{gptossloop}, the sovereign default on GPT-OSS 20B, and opt-in \texttt{qwenloop}; \texttt{claudeloop-local} supplies the seventh selectable identity.}
+\caption{The two-package publication surface and the engine family. The dark box names the engine distribution; the apps publish separately as \texttt{krypton-app}. Beneath it sit the orchestrator, five runner packages (claudeloop and codexloop on their shared library), and three tools. Every tenant requires Python 3.12 or newer. The teal package exposes \texttt{gptossloop}, the sovereign default on GPT-OSS 20B, and opt-in \texttt{qwenloop}; \texttt{claudeloop-local} supplies the seventh selectable identity.}
 \label{fig:family-tree}
 \end{figure*}
 ```
@@ -451,12 +460,19 @@ run time, then by id. A worker started with `--all-projects` (#1249) asks the sa
 condition, in the same order, which projects have claimable work, and claims through each
 project's own loop, so one statement decides both. (A `priority` column keeps its place in the order, but since 3.0.0
 no request can set it, so it is zero for every job and orders nothing; ADR-0054.) An
-item can be bypassed only while it is held, and every hold is bounded by a lease: a
+item can be bypassed only while it is held, and every hold by a worker that dies is bounded by a lease: a
 claim sets the lease expiry to $\mathrm{now} + L$, a live worker renews it, and a reaper
 returns an expired lease to the ready state while the item's attempts remain, and parks
 it for a person once they are spent (ADR-0056). A crashed worker therefore costs at most
 $L$ of delay and never a lost item, and an item that crashes every worker it reaches is
-bounded rather than retried forever. Since 3.1.0 every failed handler run is also a
+bounded rather than retried forever. A lease bounds a crash, not a hang: a live worker
+renews it whether or not its engine is making progress, so until #1296 a BUILD session
+whose event stream never ended held its job indefinitely, and nothing reported it. Since
+#1296 a BUILD session is stopped at a wall-clock limit, 240 minutes by default
+(`[engines] max_run_minutes`, or `VIBEY_ENGINE_MAX_RUN_MINUTES`, with no value that
+switches it off), and failed as an engine fault, so its bounded attempts still end in a
+park; since #1297 the stop ends the session's whole process group, not only the
+runner. Since 3.1.0 every failed handler run is also a
 `JobFailed` event carrying a normalized failure signature, and a job whose last three
 failures share one signature parks on a `defect` gate that offers no further attempts
 (`vibey.domain.defect`; `[queue.defect] identical_failures`), so a deterministic bug is
@@ -617,8 +633,8 @@ human-gated subset $G = \{D, R, D_d, D_r\}$.
 
 ```latex
 \begin{invariant}[Gate soundness]
-For every $\sigma \in G$ the exit guard is a conjunction of an explicit human verdict
-recorded as a ledger row and, where the phase accumulates open items, the emptiness
+For every $\sigma \in G$ the exit guard is a conjunction of a verdict recorded as a
+ledger row, given by a person unless the project has declared otherwise (below), and, where the phase accumulates open items, the emptiness
 of a ledger-derived open set. $D \to B$ requires at least one acceptance criterion,
 every criterion mapped, no blocking question open, every DESIGN job of the cycle
 settled, the visual interstitial explicitly declined, and an accepting verdict;
@@ -626,7 +642,9 @@ $R \to \mathrm{Done}$ requires
 $\mathrm{open}_{\mathrm{findings}}(R) = \varnothing$ and an accepting verdict; $D_d
 \to D_e$ requires the deployment specification accepted and consent recorded; $D_r
 \to \mathrm{Done}$ requires the demonstration accepted. Emptiness is never
-sufficient: no gate exits on the absence of objections alone.
+sufficient: no gate exits on the absence of objections alone, and none on the absence
+of an answer unless the project has declared that gate's kind under
+\texttt{[human\_gates] timeout\_defaults} (\#1299), where the declaration is the consent.
 \end{invariant}
 ```
 
@@ -637,11 +655,18 @@ findings: an unambiguous finding routes $R \to B$, and a finding that needs
 clarification, or a project configured for strict loop-back, routes $R \to D$. Both
 are ledger transitions, not ad-hoc prompts.
 
-The verdict is always a ledger row, and it names who gave it. One path lets someone
-other than a person give it, and only on the operator's explicit opt-in: the
-triaged-delivery bridge, told to, answers the design interview with its declared
-defaults under its own name, `automation:triaged-delivery`, and accepts the design once
-the design chain has settled (#1258); by default those gates wait for a person.
+The verdict is always a ledger row, and it names who gave it. Two paths let something
+other than a person give it, each only on an explicit declaration. The triaged-delivery
+bridge, told to, answers the design interview with its declared defaults under its own
+name, `automation:triaged-delivery`, and accepts the design once the design chain has
+settled (#1258). And since #1299 a project may name, under
+`[human_gates] timeout_defaults`, gate kinds that resolve to their stored default after a declared
+wait; the worker answers such a gate through the one path every answer takes, recorded
+as `GateAnswered` by `gate-timeout`. Only five kinds can be declared, all of them the
+deployment choice and the deployment stage's own gates (`choice`, `deploy_interview`,
+`deploy_acceptance`, `deploy_failure_triage`, `deploy_demo_review`); the DESIGN gates
+and REVIEW's `approval` gate carry no such default and never time out. By default the
+table is empty and every gate waits for a person.
 
 A gate is not a blocked thread. A handler that needs a human returns a *park* value;
 the worker records a gate row, marks the item as awaiting a human, releases its
@@ -735,7 +760,7 @@ loop-backs out of deploy review.
 
 ```latex
 \begin{plainwords}
-Every job moves through six steps: plan it, build it, check it, and then, only if the person wants, plan the launch, launch it, and check the launch. Four of the six steps are gates where a person must say yes. Saying nothing is not the same as saying yes. And when the person is busy, the job simply waits in the notebook while the helpers work on other jobs. If a project is going nowhere, the owner can now stop it cleanly at any step before the end: its open questions are withdrawn, its waiting jobs are cancelled, and the stop is written down with the reason.
+Every job moves through six steps: plan it, build it, check it, and then, only if the person wants, plan the launch, launch it, and check the launch. Four of the six steps are gates where a person must say yes. Saying nothing is not the same as saying yes, unless the owner has written down in advance, for one kind of launch checkpoint, that silence after a set wait means its usual answer. And when the person is busy, the job simply waits in the notebook while the helpers work on other jobs. If a project is going nowhere, the owner can now stop it cleanly at any step before the end: its open questions are withdrawn, its waiting jobs are cancelled, and the stop is written down with the reason.
 \end{plainwords}
 ```
 
@@ -1351,8 +1376,13 @@ durable state rather than from a transcript inside a vendor session. A run is
 therefore admitted only under an explicit bound vector (turns, spend, wall clock,
 per-turn and output-silence watchdogs, and a ceiling $W_{\max}$ on any single
 capacity wait; the exact members vary by runner) and ends at the first bound reached,
-with that bound recorded. Budget enforcement is preemptive: the run stops before an
-overrun, never after.
+with that bound recorded. Budgets are checked at every turn boundary: once a cap is
+reached no further turn starts, so a run can pass a dollar cap by at most the turn that
+crossed it, and the orchestrator's cycle cap is checked before a session starts. Above
+the runners, the orchestrator bounds every BUILD session on its own clock, 240 minutes
+by default, and a stop ends the session's whole process group (#1296, #1297); before
+those changes a session whose event stream never ended held its job with nothing
+reporting it, the gap the queue section above describes.
 
 ```latex
 \begin{invariant}[No interactive waits]
@@ -1416,10 +1446,11 @@ this, and it is not in any release through 3.2.0.
 #1093 merged at 14:37Z on 2026-09-24 (`351c10c4`). Its independent review had found
 six defects, among them vibey's own git calls running programs planted in the
 repository with the DSN in hand (rated critical), the notifier's command injection, and
-engine credentials a project declared never reaching the startup preflight, and each
-was reproduced in a test before it was fixed (#1093's description). A re-review then
-found the skills helper running with the full environment and loading code from the
-working directory; the merged change starts that helper from the system basics as well,
+engine credentials a project declared never reaching the startup preflight, and the
+three it names were each reproduced in a test that failed before the fix (#1093's
+description). A later commit on the same pull request found the skills helper running
+with the full environment and loading code from the working directory, and reproduced it
+first (`tests/infrastructure/test_skills_context_isolation.py`); the merged change starts that helper from the system basics as well,
 with Python isolated so that the working directory is not on its import path
 (`src/vibey/infrastructure/skills_context.py`). No verdict on the merged result is
 recorded in a tracked source.
@@ -1458,8 +1489,8 @@ add names but never widen past that rule.
 
 The driver makes the fit explicit rather than hiding it in a default. A portable
 probe records the endpoint, model, revision, prompt shape, every context/output pair,
-and a selected fit. The runtime accepts only a matching endpoint, model and revision, and
-caps prompt characters from the recorded shape. The probe persists the same `valid`
+and a selected fit. The runtime accepts only a matching endpoint and model, and a
+matching revision when the running revision is named (`VIBEY_REVISION`), and caps prompt characters from the recorded shape. The probe persists the same `valid`
 field the runtime consumes; this producer/consumer contract is regression tested. A
 stale or malformed fit is ignored and the safe configured ceiling is used.
 
@@ -1618,7 +1649,7 @@ in the current implementation), and a warm-session affinity $a_i$. The selector 
 $w_i$ to each candidate's running total, picks the maximum, and subtracts
 $\sum_i w_i$ from the winner, so the sequence is deterministic and spreads load in
 proportion to weight without bursts. Rotation fires only at boundaries (a new item, a
-capacity rejection, which excludes the rejecting engine, a graceful wind-down, an
+capacity rejection, which opens the rejecting engine's circuit until its backoff passes, a graceful wind-down, an
 effort escalation, an engine crash, or a phase transition) and never inside a turn, so
 every handoff has a well-defined ledger range $\rho$, shown in [Fig. 13](#fig:engine-pool).
 
@@ -1663,15 +1694,15 @@ every handoff has a well-defined ledger range $\rho$, shown in [Fig. 13](#fig:en
   \node[vibeygate,minimum width=2.8cm] (gate) at (15.35,-2.55)
     {\textbf{Human gate}\\never a silent partial};
   \draw[vibeyflow,rounded corners=3pt] ([yshift=7pt]sel.east) -- ++(0.35,0) |- node[lab,pos=.3,left] {chosen\\engine} (sess.west);
-  \draw[vibeyback] (sess.south) -- node[redlab,right,xshift=2pt] {capacity rejection\\at a boundary} (brief.north);
-  \draw[vibeyback,rounded corners=3pt] (brief.west) -| node[redlab,pos=.25,below,yshift=-2pt] {seeds the successor;\\rejecting engine excluded} (sel.south);
+  \draw[vibeyback] (sess.south) -- node[redlab,right,xshift=2pt] {graceful wind-down\\(exit 75)} (brief.north);
+  \draw[vibeyback,rounded corners=3pt] (brief.west) -| node[redlab,pos=.25,below,yshift=-2pt] {seeds the successor;\\outgoing engine excluded} (sel.south);
   \draw[vibeyback] (brief.south) -- node[redlab,right,xshift=2pt] {gate fails: retry,\\transcript, or a person} (gate.north);
   % ------------------------------------------------ the boundary rule
   \node[vibeypill] at (4.0,-2.55)
     {rotation fires only at a boundary, never inside a turn:\\
      new item $\cdot$ capacity rejection $\cdot$ wind-down $\cdot$ effort escalation $\cdot$ crash $\cdot$ phase transition};
 \end{tikzpicture}
-\caption{Choosing an engine. Local engines (teal) are preferred; paid engines (blue) are the fallback, and the selector does not yet read the paid declaration sub-doctrine 8.b asks for. The selector ranks eligible engines by smooth weighted round robin. A capacity rejection sends a handoff brief through the no-loss gate to the next engine, excluding the one that failed. Rotation happens only at a boundary, so each handoff has a well-defined ledger range $\rho$.}
+\caption{Choosing an engine. Local engines (teal) are preferred; paid engines (blue) are the fallback, and the selector does not yet read the paid declaration sub-doctrine 8.b asks for. The selector ranks eligible engines by smooth weighted round robin. A graceful wind-down (exit 75, out of window capacity mid-item) sends a handoff brief through the no-loss gate to the next engine, excluding the one that wound down; a capacity rejection instead defers the job and opens that engine's circuit, and no brief is produced on that path yet (ADR-0007). Rotation happens only at a boundary, so each handoff has a well-defined ledger range $\rho$.}
 \label{fig:engine-pool}
 \end{figure*}
 ```
@@ -1901,8 +1932,8 @@ test, the following trace is reachable: reviews of $h_0$ to $h_2$ fail with find
 repairs produce $h_3$ addressing all of them, $a = A$, and evaluation of $h_3$ hits
 the budget guard first and emits $\mathsf{blocked}$. The lineage is escalated as
 unrepairable on the verdict of $h_2$, a revision that no longer exists in the pull
-request. This trace occurred in production: the escalation's own report listed an
-empty set of remaining failures. Commit `4afafbae` reordered the two guards, restoring
+request. This trace occurred in production; the escalation's report, which listed an empty set
+of remaining failures, is not tracked in this repository. Commit `4afafbae` reordered the two guards, restoring
 the budget-placement invariant, and its regression test asserts that the
 counterexample now yields $\mathsf{review}$.
 
@@ -1999,8 +2030,8 @@ is a property of the text, not a constant of the model:
 The first row is #1090's own ratio as #1101 records it; the others are recorded,
 rounded, in the configuration reference beside the `chars_per_token` setting
 (`src/vibey_tools/gh/docs/configuration.md`). A fixed estimate of three over-counts
-prose and code, the safe direction, and under-counts dense text by up to a factor of
-four, so the estimate now decides only what to trim, and the request itself refuses to
+prose and code, the safe direction, and under-counts dense text by more than a factor
+of four (for emoji, at about 0.7 characters per token, by about 4.3), so the estimate now decides only what to trim, and the request itself refuses to
 be cut.
 
 Real truncation looks different, and #1101 reproduced it on the storm's host with
@@ -2040,7 +2071,10 @@ pull request had yet passed the review gate on the sovereign reviewer's verdict 
 cutoff the document budget has landed (`max_document_chars`, 3.0.0), a large diff is
 reviewed in bounded parts (3.1.0) and an added-only hunk is split between lines (3.2.0),
 and every run records why it did or did not reach a verdict, which
-`vibey-gh review-outcomes` tabulates. The added-hunk split exists because the 3.1.0
+`vibey-gh review-outcomes` tabulates. Since #1303, after 3.2.0, the review can also be
+handed the full text at the head of the files the diff changes, as reference only
+(`source_context`, declared on in this repository); a source cut short is named, but it
+never narrows the verdict, because sources are not the documentation contract. The added-hunk split exists because the 3.1.0
 promotion's head got no sovereign verdict: one added file was a single hunk of 136,308
 characters, larger than one part could carry (`CHANGELOG.md`). The check codes'
 false-refusal rate is still unmeasured, and whether any pull request has since passed on
@@ -2048,7 +2082,7 @@ the sovereign verdict alone is not recorded in the repository.
 
 ```latex
 \begin{plainwords}
-A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer.
+A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, where a project switches them on (this one does not), a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer.
 \end{plainwords}
 ```
 
@@ -2176,9 +2210,9 @@ operational reliability observation, not another throughput experiment.
 `scripts/paper_evidence.py` recomputes the stress, Qwen and history figures, and
 `scripts/paper_figures.py` redraws every computed figure from the tracked records;
 history figures are stated at the paper's pinned source revision, `d4c4e1f8`, which
-`scripts/paper_figures.py --rev <pin>` reproduces, and which the tag
-`paper-figures/3.2.0` is to hold so that it stays walkable after a promotion rewrites
-the branch it sits on; the previous pin, `c78049b6`, stays walkable through the tag
+`scripts/paper_figures.py --rev <pin>` reproduces. The 3.2.0 promotion has since
+rewritten `develop`, so the pin is no longer on its history (its tree is that of
+`785e708e`); the tag `paper-figures/3.2.0` holds it and keeps it walkable; the previous pin, `c78049b6`, stays walkable through the tag
 `paper-figures/3.0.0`. Two further sources are not
 tracked, and we name them where we use them:
 the storm throughput audit of 2026-09-23, whose record is a page kept outside the
@@ -2282,7 +2316,7 @@ and successes across the 14 rungs is plotted in [Fig. 19](#fig:stress-cumulative
 
 ### The local Qwen storm pilot
 
-The same-day local storm exercised the latest qwenloop runner against the open Vibey
+A local storm on the evening of 2026-09-20 exercised the then-latest qwenloop runner against the open Vibey
 backlog with `qwen3:14b` through Ollama. It is not a replication of the stress record:
 the work items were heterogeneous, the offered concurrency was not controlled as a
 factorial experiment, and several runs were still alive or had produced no events at
@@ -2438,8 +2472,10 @@ progress log and lane results.
 Each lane was allowed at most three attempts. Across the 30 lanes the ledger holds,
 70 attempts and 2,606 model turns were logged ([Fig. 23](#fig:storm-lanes)). Seventeen
 lanes ended in a completion claim, and a claim is not delivery: over the same span the
-reviewer integrated 12 lanes and abandoned 14, and the rest remained unsettled at the
-cutoff. The figures below are the tool's own, regenerated between its markers; every
+reviewer integrated 12 lanes and abandoned 14, but those lists reach beyond the ledger's
+30. Of the 30, four were integrated (three of the seventeen that claimed completion, and
+one that had failed all three attempts), twelve were abandoned, and fourteen, all of
+them completion claims, remained unsettled at the cutoff. The figures below are the tool's own, regenerated between its markers; every
 sentence about them is written outside those markers.
 
 <!-- BEGIN GENERATED storm-evidence — regenerated by tools/storm-evidence.py -->
@@ -2677,10 +2713,10 @@ skipped the storm's first start line, which ends there (49 starts, not 48).
 \node[font=\sffamily\tiny,anchor=west,text=vibeygray] at (3.97,-8.70) {\#1001 \textcolor{vibeyred}{\ding{55}} 73};
 \node[vibeynote,anchor=north west,align=left] at (-4.0,-9.20)
   {\textcolor{vibeygreen!80}{$\blacksquare$} attempt completed \quad \textcolor{vibeyred!55}{$\blacksquare$} attempt failed \quad
-   30 lanes, 70 attempts, 2,606 turns; 17 lanes claimed completion,
-   12 were integrated and 14 abandoned by the reviewer};
+   30 lanes, 70 attempts, 2,606 turns; 17 lanes claimed completion;
+   of these lanes the reviewer integrated 4 and abandoned 12, and 14 were unsettled};
 \end{tikzpicture}
-\caption{Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one attempt, its length the turns the local model spent, green where the attempt ended in a completion claim and red where it failed; a lane gets at most three. Of 30 lanes, 17 claimed completion, and a claim is not delivery: the reviewer integrated 12 and abandoned 14 over the same span. Read from the ledger between 2026-09-23T04:40:49Z and 2026-09-24T00:24:17Z with no gaps.}
+\caption{Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one attempt, its length the turns the local model spent, green where the attempt ended in a completion claim and red where it failed; a lane gets at most three. Of 30 lanes, 17 claimed completion, and a claim is not delivery: over the same span the reviewer integrated 12 lanes and abandoned 14 in all, of which 4 and 12 are among these 30, and 14 of these were settled neither way. Read from the ledger between 2026-09-23T04:40:49Z and 2026-09-24T00:24:17Z with no gaps.}
 \label{fig:storm-lanes}
 \end{figure*}
 ```
@@ -2858,8 +2894,8 @@ get around it, and the hand repair it implies is capacity nothing records.
 and were read by nothing, or bound only in a mode not in use: the delegated approver's
 author list (with both gates green, the approver would have readied a stranger's pull
 request); the merge train's trusted authors, which held a stranger's pull request only
-when pull-request automation was off, and it was on; 31 forbidden paths (51 are
-declared at this revision), of which a
+when pull-request automation was off, and it was on; 31 forbidden paths (72 are
+declared at this revision, 51 of them at the pin and 21 more since #1302), of which a
 lane could touch up to 19, among them the workflow directory, the canon and the merge
 train itself; the issue text a lane's prompt carried, whose author was never fetched
 and which was followed directly by trusted instructions with no separator; a merge
@@ -2871,8 +2907,9 @@ fixes the audit ranked beside them: a retry on an empty model reply, the end of 
 failed runs (#1077); a lane's commands run in the lane's own environment, after 18 runs
 in 12 lanes had tested the wrong tree (#1080); a per-lane time limit and stall
 watchdog, after one 93-minute stall with no terminal event (#1081); real `search`,
-`find` and `open_file` tools, after 446 calls to tools that did not exist, about 11% of
-model time (#1082); and instruments that report what they measured (#1084). The storm
+`find` and `open_file` tools, after the audit's 446 calls to tools that did not exist,
+about 11% of model time (#1082, whose own recount over the same runs gives 450, 431 of
+them to `search`, `find` and `open_file`); and instruments that report what they measured (#1084). The storm
 had not run since, so at the cutoff the effect of these fixes on yield is unmeasured.
 One control was not settled: the repository's rulesets carry a bypass actor nobody
 declared, and 78 of the last 200 merges went in while the forge reported a review
@@ -2881,7 +2918,9 @@ undeclared bypass lived in a hand-made `develop` ruleset beside the declared one
 Since 3.1.0 `vibey-gh rulesets --check` fails on any undeclared ruleset and names its
 bypass actors, and since 3.2.0 the coverage floor that ruleset carried is declared
 (`minimum_coverage = 100`, #1277), so it can be deleted without losing the floor;
-whether it has been deleted is a fact of the forge, not of the repository.
+whether it has been deleted is a fact of the forge, not of the repository. For a later
+week the forge's rule-suite record answers the who and the how directly, as the
+autonomy scan below reports.
 
 **Most of the audit's first claims were wrong.** Twenty-five agents audited six
 dimensions, and adversarial verifiers then checked the leading claims before anything
@@ -3032,9 +3071,10 @@ recorded but not judged: at a 32,768-token context, two runs reached 172.7 turns
 hour, with structural fidelity still only 88.9% and only 36 of 60 turns completed.
 The evidence does not cover other models, context windows or devices, tool execution
 between turns, whole runs, thermals, or long-horizon stability. The amendment to 8.c that
-sets the method, not a number, was proposed for the operator's ratification (#1141) and
-was not ratified at the cutoff; it has since been carried into sub-doctrine 8.c by the
-3.0.0 merge (#1244), whose text now reads *unmeasured or stale means one*.
+sets the method, not a number, was proposed for the operator's ratification (#1141),
+was not ratified at the cutoff, and was ratified by the operator's merge of #1141 on
+2026-09-25; on `develop` that merge now sits inside the 3.0.0 squash (#1244), and 8.c
+reads *unmeasured or stale means one*.
 
 ### Rolling minimum system requirements
 
@@ -3122,15 +3162,16 @@ most (91) in the 18:00 hour. The longest pause was nine days with no commit, fro
 commit subjects across the absorbed histories end in a pull-request reference, 538 of
 them since 2026-08-09 (`scripts/paper_evidence.py --rev d4c4e1f8`).
 
-Every count is lower than at the previous pin, `c78049b6` (1,514 commits reachable,
+Every commit count is lower than at the previous pin, `c78049b6` (1,514 commits reachable,
 1,502 since 2026-08-09 on 38 active days), although the work grew, and the reason is a
 merge, not a slowdown. The 3.0.0 release reached `develop` as one squash commit (#1244),
 which took the place of the 213 commits of its cycle, dated 2026-09-21 to 2026-09-28,
 in `develop`'s history. Those days now read as nearly empty, and the whole cycle as one
 commit on 2026-09-29: fewer commits, not less work. Nothing is lost: the tag
 `paper-figures/3.0.0` still holds the old history, and the previous figures reproduce
-at that pin. The same squash makes the busiest week of the project look like its
-quietest in [Fig. 27](#fig:commits-daily), so the daily figures below are a record of
+at that pin. The same squash makes the week of 2026-09-21 to 2026-09-27, which held 218 commits at the
+previous pin (US Eastern time), look like the project's quietest in
+[Fig. 27](#fig:commits-daily), so the daily figures below are a record of
 how commits reached the integration branch, not of when the work was done.
 
 The daily rate's spread is 106% of its mean, against 24% in the controlled region.
@@ -3319,7 +3360,7 @@ The timeline of releases across each package in the family is shown in [Fig. 30]
 \draw[vibeyline] (15.40,0.06) -- (15.40,0.48);
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.48) {3.1.0};
 \end{tikzpicture}
-\caption{Every release tag reachable at revision d4c4e1f8, 19 tags on the repository. The 19 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v3.1.0 on 2026-09-30; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
+\caption{Every release tag created by the time of revision d4c4e1f8, 19 tags on the repository; a tag is selected by its date, not by whether the revision's history reaches it. The 19 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v3.1.0 on 2026-09-30; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags were never carried into this repository, whose pre-absorption repositories have since been removed.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
@@ -3448,7 +3489,7 @@ worst were the two high findings in the ledger guard. Merging ahead of review al
 two changes that each passed their own gates break `develop` together: #1100 made the
 suite run as a restricted application role, #1103 added a test that needs the owner's
 privileges, and nothing tested the two together before both had landed (CI run
-35998404322 at `600f3db2`: 1 failed, 3,732 passed; the one-line repair merged as
+35998404322 at `600f3db2`: 1 failed, 3,732 passed; the two-line repair merged as
 #1109; on `develop` the whole episode now sits inside the 3.0.0 squash, #1244, and
 `600f3db2` is held by the tag `paper-figures/3.0.0`). And it created pressure to repair
 in place. A later commit on the job queue's branch rewrote migration 0015 to make it
@@ -3479,6 +3520,206 @@ rescue pull request, a red integration branch or a finding shipped to the develo
 channel. Review before merge limits the rate of delivery in the same sense the stress
 band limits the rate of generation, and it binds for the same reason: it is the step
 that decides whether the output is correct.
+
+### The autonomy scan of 2026-09-30
+
+On 2026-09-30 the operator asked how close the system was to running on its own. A scan
+read `develop` at `15e909d4c` (#1290) that day with four parallel code reviews, of the
+product pipeline, runtime resilience, the self-development loop and the safety
+controls, and with live evidence from the forge and the local queue database. Its page,
+*vibey Autonomy Scan*, is kept outside the repository. We read every figure below again
+for this revision: from the forge on 2026-10-01 (captured at 11:39:49Z), from the code
+at `15e909d4c`, and from the review lane's run records. The tracked record
+`docs/architecture/evidence/autonomy-2026-10-01.md` holds the queries and their output,
+with two JSON records beside it. One of the scan's readings did not survive the second
+reading, and we say which.
+
+**Only BUILD ran without a person.** At `15e909d4c` one phase of the six carried a
+project forward with nobody present: BUILD, whose per-job rotation, retries, circuit
+breakers and no-loss gate were wired and working. DESIGN parks its interview and its
+acceptance for a person unless the bridge is told to answer with defaults. REVIEW's
+approval and deployment-choice gates wait for a person by design, and nothing answered
+them, so a project could not reach DONE unattended. And a gate's stored
+`default_answer` and `timeout_at` were acted on by nothing: `vibey gates` printed the
+time (`src/vibey/cli/gates.py:108`) and no code compared it with the clock, so an
+unanswered gate waited forever. Part of this is the model working as designed, since
+sub-doctrine 12.d bounds unattended authority by a gate and REVIEW's gate is one. The
+rest was defects.
+
+**The forge.** The integration branch shows the same thing from the other side.
+
+```latex
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}p{1.75in}p{1.45in}@{}}
+\textbf{Measure, read 2026-10-01} & \textbf{Value}\\
+The 40 pull requests merged into \texttt{develop} up to \#1290 (\#1226 to \#1290) & 0 reviewed; all 40 merged by the operator's account\\
+What both \texttt{develop} rulesets require & one approving review; their bypass actors may bypass \emph{always}\\
+Rule-suite evaluations of pushes to \texttt{develop}, the week to capture & 280, every one by the operator's account and every one a bypass\\
+Reviews by the delegated approver's account (\texttt{thevibeyproject}, write role) & 0\\
+PR review, the 15 runs created before 2026-10-01T00:00Z & 10 failed (9 in the sovereign diff review), 3 succeeded, 2 cancelled\\
+Merge train, the 30 runs created before 2026-10-01T00:00Z & 22 dispatched, 7 after a review run, 1 on its schedule\\
+\end{tabular}
+\caption{The forge's record of who merged into the integration branch, read on 2026-10-01 at 11:39:49Z. The queries and their output are in the tracked evidence record of 2026-10-01.}
+\label{tab:autonomy-forge}
+\end{table}
+```
+
+Every merge into the integration branch in that window was the operator's, made through
+the ruleset bypass: a merge with no review cannot satisfy a rule that requires one, and
+the forge records each push as a bypass. The storm audit above found that no lane
+reached `develop` without a human step; the scan finds the same of the product's own
+loop. The delegated approver of sub-doctrine 12.f existed, with its grant enabled, and
+no workflow called it. The scan read the 22 dispatched merge-train runs as started by
+hand. They were not. Each names `github-actions[bot]` as its triggering actor, because
+the PR-review workflow dispatches the train itself once its gate is green
+(`gh workflow run merge-train.yml` in `.github/workflows/pr-review.yml`). The merges were made by
+hand; the train's runs were not. It is the storm audit's lesson at a smaller scale: a
+capable first reading of complete records was wrong on a headline figure, and going
+back to the source, not the analysis, caught it.
+
+**Seven gaps in the code.** The code reviews found these at `15e909d4c`. Each was
+checked at that revision, and each repair is named with its state at this one.
+
+```latex
+\begin{table*}[t]
+\centering\small
+\begin{tabular}{@{}p{3.15in}p{2.75in}p{0.7in}@{}}
+\textbf{Gap at \texttt{15e909d4c}} & \textbf{Repair} & \textbf{At \texttt{4acb9be5c}}\\
+REVIEW was shown evidence nobody measured: \texttt{review.demo} was queued with no payload (\texttt{build\_integrate\_handler.py:187}), and its handler fell back to a JUnit report of \texttt{failures='0'} and a coverage file claiming 100\% (\texttt{review\_demo\_handler.py:42,104}) & \#1294: each integration ledgers every verification command, its exit code and its output tail; REVIEW renders only that record, and coverage is never claimed & merged\\
+The evidence guards on BUILD to REVIEW and REVIEW to DONE (\texttt{phase.py:239,262}) were reached only from tests, and BUILD to REVIEW was a bare compare-and-set & none yet; \#1294 names it a follow-up, since nothing produces the first guard's inputs & open\\
+A paid engine's login was trusted only while younger than 24 hours (\texttt{engine\_selector.py:36}) and refreshed only at startup or by \texttt{vibey doctor}, so after a day every job that needed a paid engine was deferred every five minutes, indefinitely & \#1295: an ageing login is rechecked at half its life, a failing one at most every 15 minutes & merged\\
+A BUILD session had no wall-clock limit (\texttt{build\_engine\_run.py}), and the worker's heartbeat kept its lease alive & \#1296: stopped at 240 minutes by default and failed as an engine fault & merged\\
+\texttt{stop()} terminated the runner alone, in the worker's own process group, inside a bare \texttt{except} (\texttt{loop\_process\_adapter.py:654}) & \#1297: each session leads its own process group, which the stop ends & merged\\
+No work item's worktree was ever removed: the removal methods (\texttt{worktree\_manager.py:121,191}) had no callers & \#1298: retired after a clean integration & open pull request\\
+A gate's \texttt{timeout\_at} and \texttt{default\_answer} were stored and shown (\texttt{cli/gates.py:108}) and acted on by nothing & \#1299: a gate times out only where a project declares its kind & merged\\
+\end{tabular}
+\caption{Seven gaps the scan's code reviews found at \texttt{15e909d4c}, each checked again at that revision, with its repair and the repair's state at \texttt{4acb9be5c}. Paths are under \texttt{src/vibey}; the evidence record of 2026-10-01 gives every file and line.}
+\label{tab:autonomy-gaps}
+\end{table*}
+```
+
+Three of the seven are failures of evidence, not of capacity: a review shown numbers
+nobody measured, guards nobody asked, and a deadline nobody read. Sub-doctrine 10.f names
+the first exactly, since a marker is never evidence of completion, and every human
+REVIEW in production had been shown one. The gate timeouts took a ruling, not just a
+fix. Defaulting every gate on timeout would make silence consent, which 12.d forbids,
+and some defaults act for the operator: `deploy_demo_review` defaults to `approve`. The
+operator ruled on 2026-09-30 that a gate times out only where a project declares its
+kind under `[human_gates] timeout_defaults` (#1299). The declaration is the consent, the
+table is empty by default, and REVIEW's `approval` has no default and never times out.
+Three further changes prepared the approver to run unattended. #1300 declared the
+operator's standing grant in `.vibey-gh.toml` (`[autonomy]`), with what it never covers:
+`--admin`, `--no-verify`, a force-push or a direct write to a permanent branch, approving
+its own pull request, an irreversible real-world act without a person, and ratifying a
+change to the canon. #1302 added 21 paths to the approver's forbidden list, among them
+what the review gate measures, what an engine may see, and the code and tests that hold
+the non-negotiables, for 72 in all. #1303 gave the sovereign review the files it judges,
+below. Every one of these repairs merged through the bypass the table records, so at
+this revision the repairs are themselves evidence of the gap they address.
+
+**A merge train that closed what it merged.** `develop` allows auto-merge and requires
+an approving review. With the approval missing, `gh pr merge --squash` does not fail: it
+enables auto-merge and exits 0. The merge train's `merge()` read that exit as a merge,
+printed `merged 1`, and deleted the head branch, and the forge then closed the pull
+request. Between 01:24Z and 06:47Z on 2026-10-01 this closed six pull requests eight
+times: #1295 and #1298 twice each, and #1293, #1301, #1302 and #1297 once. #1301 was the fix
+for this very defect. Each closure shows the same four events within four seconds
+(`auto_merge_enabled`, `closed`, `auto_merge_disabled`, `head_ref_deleted`), 16 to 24
+seconds after a merge-train run started, and
+`gh api repos/the-vibey-project/vibey/issues/<n>/events` reproduces them. Every branch
+was restored and every pull request reopened, the last at 09:17Z. No
+`head_ref_force_pushed` event appears on any of the six, which is what restoring each at
+the head it had when it was closed would leave. #1301 merged at 09:27:44Z: after any
+`gh pr merge` that exits 0, `merge()` now reads the pull request's state and counts only
+`MERGED`, and an `OPEN` one is reported as queued and left alone, branch included. In the
+storm audit the train logged *merged 0* on every pass; here it logged a merge that had
+not happened. Sub-doctrine 12.e names the failure: automation that reports a success it
+did not observe.
+
+**The review lane, measured.** Nine of the ten failed review runs failed in the
+sovereign reviewer (#1086), `gpt-oss:20b` on the operator's machine, which answers the
+whole review because no paid lane is declared (8.b). The model server's own log, which
+is not tracked, shows why. From 09:00 to 15:00 US Eastern on 2026-09-30, the window of
+those runs, fifteen requests with prompts of 32,273 to 47,181 tokens were cut off after
+ten minutes, the limit the review workflow sets, having generated 5,353 to 11,755 tokens
+(median 7,789). The eighteen requests with prompts of at least 30,000 tokens that
+finished on 2026-09-30 and 2026-10-01 generated a median of 2,661. The requests were not
+stuck: they were still generating, at about three times the length of a finished answer,
+when time ran out.
+
+To find what would let the reviewer finish, and whether its verdicts held when it did,
+eight merged pull requests were replayed at their exact heads, one run each. Each run
+used the workflow's own arguments except a 900-second limit and no retry. The gate had
+passed four of them (#1274, #1287, #1289, #1295) and blocked four (#1267, #1272, #1276,
+#1277).
+
+```latex
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}p{1.05in}p{0.55in}p{0.65in}p{0.7in}@{}}
+\textbf{Setting} & \textbf{Verdicts} & \textbf{The 4 the gate passed} & \textbf{The 4 it blocked}\\
+\texttt{think=low}, diff only & 8 of 8 & passed 4 & passed 4\\
+\texttt{think=medium}, diff only & 5 of 8 & passed 3 & failed 2\\
+default effort, with the changed files' full text (\#1303) & 8 of 8 & passed 4 & passed 3, failed 1\\
+\end{tabular}
+\caption{The sovereign reviewer replayed on eight merged pull requests at their exact heads, one run each, with the workflow's arguments except a 900-second limit and no retry. \emph{Diff only} means the diff and the declared documents. The runs are in the tracked review-lane record of 2026-10-01.}
+\label{tab:review-lane}
+\end{table}
+```
+
+Low effort finished, and it passed everything, including the four the gate had blocked:
+a rubber stamp. Medium effort agreed with the gate wherever it answered, but it failed
+to answer three times in eight: once at the time limit, and twice out of room after more
+than 61,000 characters of reasoning, with no answer.
+
+The gate's blocks did not deserve that agreement. We checked its eight findings on the
+four blocked pull requests against the files at the reviewed heads, and seven name
+something the file contains:
+
+- `math` imported at `config.py:45`, and `rulesets as rs` and the `INTEGRATION` and `RELEASE` constants defined in the very test files said to lack them (#1277);
+- the string "draining on SIGTERM", printed at `src/vibey/cli/main.py:1919` (#1272, twice);
+- a test body that is present (#1276).
+
+Six of the seven name lines outside the diff's hunks, which the reviewer was never shown.
+#1276's is in a function the diff adds, and we did not establish why the reviewer missed
+its body. The eighth, a missing configuration example on #1267, we did not adjudicate.
+
+The fix was therefore not less thought but more sight. #1303 gives the reviewer the full
+text at the head of each file the diff changes, as reference only. At default effort
+with those files, the reviewer reached a verdict on all eight, and none of the seven
+false findings came back. One new finding remained, that #1272's drain on SIGTERM is
+undocumented, and we did not adjudicate it either.
+
+The limits are these. Each setting ran once per pull request, so nothing here measures
+repeatability. No pull request in the sample carries a known-true defect, so the lane's
+recall is unmeasured: we have not shown whether it blocks a real defect, with the files
+or without them, and agreement with the gate is agreement, not correctness. The replays
+allowed 900 seconds where the workflow allows 600, and two of the eight source-context
+runs took longer (678 s and 872 s). Under the workflow those attempts would have ended
+without a verdict and gone to its one retry. The study's records were first kept only in
+the session's scratch space. Sub-doctrine 10.h is why they are now tracked beside the
+scan's (`docs/architecture/evidence/review-lane-2026-10-01.json`).
+
+**One file every pull request edits.** Every change edits the same `## [Unreleased]`
+lines of `CHANGELOG.md`, so any two open pull requests conflict. `.gitattributes`
+declared `CHANGELOG.md merge=union` to absorb that. But the forge computes mergeability
+without running a custom merge driver (#1305), so a pull request shows as conflicting
+even when a local merge is clean, and where the driver does run it keeps both sides and
+can duplicate an entry. The four fixes #1295, #1297, #1298 and #1299 each edit
+`CHANGELOG.md`, and together they carry ten commits that merge `develop` in, against four
+of their own. #1305, open at this revision, replaces the union merge with fragments: each
+change adds its own file, `changelog.d/<slug>.<type>.md`, which no other change names,
+the release folds them in, and CI checks them.
+
+**What the scan adds.** Nothing it found was a shortage of production: BUILD ran. What
+stopped the loop at every other link was evidence (a review shown unmeasured numbers,
+guards and a deadline nobody evaluated), authority (every merge a bypass, an approver
+nobody called), or automation that misreported its own act. The repairs took a day of
+changes. The judgment about which to make, and which gates stay, was the operator's: the
+gate timeouts became opt-in, and REVIEW keeps its person. Every merge into `develop` up to
+`4acb9be5c` was still the operator's, through the bypass, so the repairs are not yet
+evidence that the loop will deliver a change with nobody present.
 
 ### Six materials and the modulators of the rate
 
@@ -3648,7 +3889,7 @@ in the delivery-estimate ledger, shown in [Fig. 34](#fig:forecast).
 \addlegendentry{$W/r_{\min}$}
 \end{groupplot}
 \end{tikzpicture}
-\caption{The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker held them: remaining jumped from 25 to 708 on Sep 23, as open issues rose from 23 to 706 when the storm filed its lanes as issues. (b) The zero-shortfall time to completion the forecast derives from the observed merge rate, 45--58 active days at the last record, with every material coordinate unmeasured and so at $\phi_i = 1$.}
+\caption{The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker held them: remaining jumped from 25 to 708 on Sep 23, as open issues rose from 23 to 706 when the storm filed its lanes as issues. (b) The zero-shortfall time to completion the forecast derives from the observed merge rate, 45--58 active days at the last record, with every material coordinate unmeasured and so at $\phi_i = 1$. Read from the ledger in the checkout, 24 records through 2026-09-30 23:49Z, not from the pinned revision: the ledger is appended after the pin, and each refresh redraws this figure.}
 \label{fig:forecast}
 \end{figure*}
 ```
@@ -3715,11 +3956,15 @@ recomputed its run, turn, model-time and overlap figures and its count of starte
 lanes from those logs before they were lost; its conversion, control and refutation
 figures are cited from the audit with its date. The account of merging ahead of review
 covers one day of one project, and it is drawn from the forge's times and the
-release-gate record, not from a controlled comparison.
+release-gate record, not from a controlled comparison. The autonomy scan is one
+revision of one repository, read again a day later. Its forge figures count one
+project's pull requests and runs. Its review-lane measurement is eight pull requests
+run once each, with no known-true defect among them, so it bounds what the lane did on
+those eight and says nothing of its recall.
 
 ```latex
 \begin{plainwords}
-We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Checking takes time, and that time is the price of being right.
+We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Later still we asked how far the whole system could go with nobody watching. Only the building step could. The checking step showed people a green report that nobody had measured, a helper whose sign-in grew old stopped quietly, a stuck helper was never stopped, and the merging robot once threw away finished work while saying it had saved it. Each of these was fixed within a day, but every change still went in by the owner's own hand. A small local grader, shown whole files instead of only the changed lines, stopped making up problems in our small test, though we have not yet shown it catches real ones. Checking takes time, and that time is the price of being right.
 \end{plainwords}
 ```
 
@@ -3757,7 +4002,7 @@ completion.
   % ---- the forward path
   \node[vibeysoft,stp]      (tri)   at (0,0)     {\textbf{Triaged issue}\\forge labels\\order derived};
   \node[vibeysoft,stp]      (lease) at (3.05,0)  {\textbf{Ticket lease}\\PostgreSQL row\\900\,s lease};
-  \node[vibeyvioletbox,stp] (des)   at (6.1,0)   {\textbf{Design}\\interview defaults\\answered, recorded};
+  \node[vibeyvioletbox,stp] (des)   at (6.1,0)   {\textbf{Design}\\parks for a person;\\defaults on opt-in only};
   \node[vibeytealbox,stp]   (bld)   at (9.15,0)  {\textbf{Build}\\gptossloop worker\\own worktree};
   \node[vibeygate,stp]      (rev)   at (12.2,0)  {\textbf{Review}\\human gate\\project parks};
   \node[vibeybox,stp]       (pub)   at (15.25,0) {\textbf{Publish}\\push gate, PR\\train on green};
@@ -3810,14 +4055,17 @@ database would still not dispatch the same issue twice.
   \draw[vibeydashed,-{Stealth[length=1.8mm]}] (disp) -- (blk);
   \node[vibeypill] at (2.9,-3.25) {claim order: bumped first, then critical $\to$ low,\\then least recently updated, then issue number};
 \end{tikzpicture}
-\caption{The triage ticket. Rows mirror the forge's triaged issues and are claimed under a lease with \texttt{FOR UPDATE SKIP LOCKED}; an expired lease returns the row to ready. The claim order is derived from labels and update time, so no one reorders the queue by hand. Blocked is set by the bridge for an untrusted, abandoned or retired issue, or by a person.}
+\caption{The triage ticket. Rows mirror the forge's triaged issues and are claimed under a lease with \texttt{FOR UPDATE SKIP LOCKED}; an expired lease returns the row to ready. The claim order is derived from labels and update time, so no one reorders the queue by hand. Blocked is set by the bridge for an untrusted, abandoned or retired issue, after three failed dispatches, or by a person.}
 \label{fig:queue-state}
 \end{figure}
 ```
 
 **Who may act.** The six-phase machine names the gates; the bridge adds actors who
 were not in the original model ([Fig. 38](#fig:authority-map)). A person labels and
-prioritises issues, answers the review gate, approves the merge, and is the only party
+prioritises issues, answers the review gate, approves the merge unless the operator's
+grant lets the delegated approver of sub-doctrine 12.f give that approval in their place
+(`[unattended_approval]`, with a standing grant declared since #1300; no workflow calls
+the approver, and its account had reviewed no pull request by 2026-10-01), and is the only party
 who can opt a project into deployment, which is never inferred. The bridge claims,
 orders and publishes. The engine writes code only inside BUILD and only in its own
 worktree. The forge's required checks decide whether the merge train may take a pull
@@ -3880,7 +4128,7 @@ end any project short of done with `vibey abandon` (#1263).
      \tikz\node[flag]{}; automated only on the operator's opt-in,\\
      recorded under the automation's own name};
 \end{tikzpicture}
-\caption{The authority map of the delivery path. Gold marks a decision a person records, blue an automated step. The two design steps are a person's by default; red marks that the bridge performs them, with declared defaults recorded under its own name, only when the operator opts in. The bridge admits an issue only when everyone who wrote, edited or labelled it is trusted. Review, merge approval, deployment and abandoning a project remain a person's, and deployment is never inferred.}
+\caption{The authority map of the delivery path. Gold marks a decision a person records, blue an automated step. The two design steps are a person's by default; red marks that the bridge performs them, with declared defaults recorded under its own name, only when the operator opts in. The bridge admits an issue only when everyone who wrote, edited or labelled it is trusted. Review, deployment and abandoning a project remain a person's; merge approval is a person's or, under the operator's grant, the delegated approver's (12.f), never the bridge's; and deployment is never inferred.}
 \label{fig:authority-map}
 \end{figure}
 ```
@@ -3958,8 +4206,10 @@ longer guessed ([Fig. 41](#fig:probe-lifecycle)). A probe (`scripts/sovereign_pr
 also reachable as a doctor check) runs a grid of context and output sizes against the
 local server and writes a record: the endpoint, the model, the source revision, the
 shape of the prompt it measured, and the fastest fit that answered validly. At start,
-the chat client loads that record only if its endpoint, model and revision match the
-running configuration and its fit is marked valid; any mismatch, a missing field, or
+the chat client loads that record only if its endpoint and model match the running
+configuration, its revision matches too when the running revision is named
+(`VIBEY_REVISION`, which nothing in vibey sets, so by default the revision is recorded
+but not checked), and its fit is marked valid; any mismatch, a missing field, or
 an unreadable file drops back to the configured ceilings. At each request the client
 applies the fit only if the prompt is no larger than the shape it was measured on; a
 longer prompt runs under the conservative defaults of 8,192 context tokens and 2,048
@@ -3975,7 +4225,7 @@ revision, and it is never carried to a place it was not measured.
   redlab/.style={lab,text=vibeyred}]
   \node[vibeysoft,s] (probe) at (0,0) {\textbf{probe a grid}\\contexts $\times$ outputs};
   \node[vibeysoft,s] (rec) at (0,-1.3) {\textbf{record the fit}\\endpoint, model, revision,\\prompt shape, fastest valid};
-  \node[vibeybox,s] (load) at (0,-2.75) {\textbf{load at start}\\all four must match};
+  \node[vibeybox,s] (load) at (0,-2.75) {\textbf{load at start}\\endpoint, model, valid fit;\\revision when named};
   \node[vibeybox,s] (req) at (0,-4.05) {\textbf{each request}\\prompt within the shape?};
   \node[vibeytealbox,s] (fit) at (0,-5.35) {\textbf{measured ceilings}};
   \node[vibeywarn,minimum width=2.4cm,minimum height=.7cm] (fb) at (3.6,-3.4) {\textbf{configured ceilings}\\8,192 in, 2,048 out};
@@ -3986,7 +4236,7 @@ revision, and it is never carried to a place it was not measured.
   \draw[vibeyback] (load.east) -| node[redlab,pos=.25,above] {stale or malformed} (fb.north);
   \draw[vibeyback] (req.east) -| node[redlab,pos=.25,below] {longer prompt} (fb.south);
 \end{tikzpicture}
-\caption{The measured-capacity lifecycle. A probed fit is bound to its endpoint, model, revision and prompt shape; any mismatch at load, or a prompt longer than the one measured, falls back to the configured ceilings rather than to a guess.}
+\caption{The measured-capacity lifecycle. A probed fit is bound to its endpoint, model and prompt shape, and to its revision when the running revision is named; any mismatch at load falls back to the configured ceilings, and a prompt longer than the one measured to the conservative defaults, rather than to a guess.}
 \label{fig:probe-lifecycle}
 \end{figure}
 ```
@@ -4039,7 +4289,12 @@ server's own words. The answer must echo both random check codes, one placed at 
 start of the system prompt and one after the diff, so a silent cut at either end is
 caught. And if a supporting document had to be cut or left out, the verdict may claim
 only the half of the review the diff alone can ground. Each failure is a refusal with
-its reason, and none is a pass.
+its reason, and none is a pass. After 3.2.0 the reviewer is also shown the full text at
+the head of the files the diff changes (#1303), as reference only: it may report nothing
+on a line the diff did not change. A source too large for the room left after the diff
+and the documents is shown as an excerpt around each change, with every gap marked, and
+a source cut or left out is named in the prompt and in the verdict's summary; unlike a
+document, it does not narrow the verdict.
 
 ```latex
 \begin{figure}[!t]
@@ -4073,11 +4328,12 @@ its reason, and none is a pass.
 the system loads into a finite window: skills, guides, decisions, prompts and
 specifications ([Fig. 44](#fig:microslice-contract)). Under the proposed ADR-0075, a
 converter (`slice_markdown.py`) turns a source document into numbered slices without
-changing the source; each slice carries a stable identity, one purpose, its provenance,
-a measured size, and explicit `requires` and `links` relations, and an index records
-them. Retrieval starts at the slice that matches the request, follows its required
-safety and acceptance slices, measures the whole closure against the budget, and
-records the identities and size it loaded. A closure over budget is split or parked,
+changing the source; each slice it writes carries a stable identity, a purpose, its
+source, and explicit `requires` and `links` relations to its neighbours, and an index
+records them. The contract adds a measured size to each slice and a retriever that
+starts at the slice that matches the request, follows its required safety and
+acceptance slices, measures the whole closure against the budget, and records the
+identities and size it loaded; neither is implemented yet. A closure over budget is split or parked,
 never cut, and optional links are followed only when needed. The converter's slice
 boundaries are mechanical and still need review; a split is not a claim that each
 slice reads well on its own.
@@ -4208,9 +4464,11 @@ on the lease owner, so the stale one is refused and exactly one commits per job.
 At the *live* level, a runbook drives one project from design through
 build and review to local completion on two paid engines, `claudeloop` and
 `agyloop`, including a forced rotation between them. Live runs over the other
-engines rest today on a scripted-binary conformance suite that asserts each runner's
-flags, run-directory shape, event vocabulary, capacity mapping and completion marker
-against the installed binary; they are not yet reported here. The production-rate
+engines are not yet reported here. Where the binaries are installed, a scripted-binary
+conformance suite drives `claudeloop` and `codexloop`, and `cursorloop` as a strict
+expected failure, through their own offline agents and holds each to the nine
+conformance checks; `agyloop` and the local engines have no offline agent and rest on
+the in-memory double. The production-rate
 claims are validated separately, by the stress record and the evidence script above;
 the local Qwen pilot is reported as an operational reliability observation with its
 own cutoff and does not enlarge the throughput claim.
@@ -4245,8 +4503,10 @@ are pinned where they happened: `tests/meta/test_wheel_ships_migrations.py` buil
 real wheel and asserts that every migration is in it, and
 `tests/infrastructure/db/test_keda_scaler_query.py` holds the KEDA scaler's query to
 the claim's own conditions, word for word. `tests/meta/test_minimum_specs.py` holds the
-requirements table to its record, and `tests/meta/test_first_screen.py` the README's
-first screen to the tests it quotes. One measurement is reported as it came out rather
+requirements table to its record, `tests/meta/test_first_screen.py` the README's first
+screen to its contract and its links to what they name, and
+`tests/meta/test_published_figures.py` the figures it quotes to the test they come
+from. One measurement is reported as it came out rather
 than as hoped: on a canary-injection issue, the frame that quotes an admitted issue to
 DESIGN did not stop the canary (4 of 10 runs with the raw intake, 5 of 10 framed), so
 the trust check that holds a stranger's issue, not the frame, is the control that holds
@@ -4301,7 +4561,11 @@ secrets, and a reviewer that will not grade what it did not read, are each state
 with the limits they do not cross. Releases 3.1.0 and 3.2.0 add an exit that stops a
 project cleanly and releases what it held, branches a project must prove are its own,
 a trust check before an issue reaches the delivery path, a gate for a failure that
-repeats, and notices to a person recorded as evidence rather than assumed. The
+repeats, and notices to a person recorded as evidence rather than assumed. A scan of the
+integration branch after 3.2.0 found the loop autonomous only in BUILD, every merge made
+through the ruleset bypass, and seven defects, three of them failures of evidence, among
+them a review shown numbers nobody measured; the repairs landed within a day, and still
+through the bypass. The
 engineering that remains is less about producing faster than about deciding well and
 cheaply.
 

@@ -779,6 +779,13 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         total_attempts = sum(len(lane["attempts"]) for lane in lanes)
         total_turns = sum(a["turns"] for lane in lanes for a in lane["attempts"])
         claimed = sum(1 for lane in lanes if lane["completed"])
+        # The reviewer's lists reach beyond the ledger's lanes (#396's wave-1 lanes were
+        # integrated before the ledger's first record), so the figure says how many of each
+        # list are among the lanes it draws, and how many are not settled at all.
+        names = {lane["lane"] for lane in lanes}
+        integrated_here = len(names & set(data["integrated"]))
+        abandoned_here = len(names & set(data["abandoned"]))
+        unsettled_here = len(names - set(data["integrated"]) - set(data["abandoned"]))
         body = f"""\\begin{{tikzpicture}}[x=1cm,y=1cm]
 \\begin{{scope}}[on background layer]
 {axis}
@@ -789,15 +796,17 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
 {chr(10).join(lines)}
 \\node[vibeynote,anchor=north west,align=left] at (-4.0,{height - 0.5:.2f})
   {{\\textcolor{{vibeygreen!80}}{{$\\blacksquare$}} attempt completed \\quad \\textcolor{{vibeyred!55}}{{$\\blacksquare$}} attempt failed \\quad
-   {len(lanes)} lanes, {total_attempts} attempts, {_thousands(total_turns)} turns; {claimed} lanes claimed completion,
-   {len(data["integrated"])} were integrated and {len(data["abandoned"])} abandoned by the reviewer}};
+   {len(lanes)} lanes, {total_attempts} attempts, {_thousands(total_turns)} turns; {claimed} lanes claimed completion;
+   of these lanes the reviewer integrated {integrated_here} and abandoned {abandoned_here}, and {unsettled_here} were unsettled}};
 \\end{{tikzpicture}}"""
         caption = (
             f"Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one "
             f"attempt, its length the turns the local model spent, green where the attempt ended in a completion "
             f"claim and red where it failed; a lane gets at most three. Of {len(lanes)} lanes, {claimed} claimed "
-            f"completion, and a claim is not delivery: the reviewer integrated {len(data['integrated'])} and abandoned "
-            f"{len(data['abandoned'])} over the same span. Read from the ledger between "
+            f"completion, and a claim is not delivery: over the same span the reviewer integrated "
+            f"{len(data['integrated'])} lanes and abandoned {len(data['abandoned'])} in all, of which "
+            f"{integrated_here} and {abandoned_here} are among these {len(lanes)}, and {unsettled_here} of these were "
+            f"settled neither way. Read from the ledger between "
             f"{data['consumed_from']} and {data['consumed_to']} with no gaps."
         )
         return self._fence("figure*", "fig:storm-lanes", caption, body)
@@ -1262,11 +1271,13 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             else f"{len(tags)} tags on the repository"
         )
         caption = (
-            f"Every release tag reachable at revision {data['head'][:8]}, {lanes_text}. "
+            f"Every release tag created by the time of revision {data['head'][:8]}, {lanes_text}; a tag is "
+            f"selected by its date, not by whether the revision's history reaches it. "
             f"The {len(vibey_tags)} \\texttt{{vibey}} releases run from {vibey_tags[0]['name']} on "
             f"{vibey_tags[0]['date'].isoformat()} to {vibey_tags[-1]['name']} on {vibey_tags[-1]['date'].isoformat()}; "
             f"since the packages were absorbed into one tree, one version number ships the whole family, "
-            f"and the packages' earlier tags remain in their pre-absorption repositories."
+            f"and the packages' earlier tags were never carried into this repository, whose pre-absorption "
+            f"repositories have since been removed."
         )
         return self._fence("figure*", "fig:release-cadence", caption, body)
 
@@ -1387,7 +1398,9 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
             f"The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker "
             f"held them: {self._largest_rise(records)}. (b) The zero-shortfall time to completion the forecast derives from the "
             f"observed merge rate, {last['days_low']:.0f}--{last['days_high']:.0f} active days at the last record, "
-            f"with every material coordinate unmeasured and so at $\\phi_i = 1$."
+            f"with every material coordinate unmeasured and so at $\\phi_i = 1$. Read from the ledger in the "
+            f"checkout, {n} records through {stamps[-1].strftime('%Y-%m-%d %H:%MZ')}, not from the pinned revision: "
+            f"the ledger is appended after the pin, and each refresh redraws this figure."
         )
         return self._fence("figure*", "fig:forecast", caption, body)
 

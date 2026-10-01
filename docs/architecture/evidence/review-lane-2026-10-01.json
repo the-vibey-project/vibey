@@ -1,0 +1,527 @@
+{
+ "object": "the sovereign review lane (vibey-gh local-review, gpt-oss:20b via Ollama) on eight merged pull requests",
+ "host": "the operator's workstation; one Ollama server; one review at a time",
+ "think_study": {
+  "settings": "as the rendered pr-review.yml, except --think low|medium, --timeout 900, --retries 0; diff and declared documents only",
+  "ran": "2026-09-30T22:08 to 2026-10-01T00:01 America/New_York (progress log)",
+  "rows": [
+   {
+    "pr": 1295,
+    "default": "pass",
+    "think": "low",
+    "rc": 0,
+    "seconds": 295,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1289,
+    "default": "pass",
+    "think": "low",
+    "rc": 0,
+    "seconds": 659,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1287,
+    "default": "pass",
+    "think": "low",
+    "rc": 0,
+    "seconds": 541,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1274,
+    "default": "pass",
+    "think": "low",
+    "rc": 0,
+    "seconds": 245,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1277,
+    "default": "blocking",
+    "think": "low",
+    "rc": 0,
+    "seconds": 63,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1276,
+    "default": "blocking",
+    "think": "low",
+    "rc": 0,
+    "seconds": 69,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1272,
+    "default": "blocking",
+    "think": "low",
+    "rc": 0,
+    "seconds": 50,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1267,
+    "default": "blocking",
+    "think": "low",
+    "rc": 0,
+    "seconds": 59,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1295,
+    "default": "pass",
+    "think": "medium",
+    "rc": 1,
+    "seconds": 900,
+    "pass": null,
+    "blocking": 0,
+    "findings": 0,
+    "code": "model_timeout",
+    "last_err": "local model unreachable or timed out: timed out (1 attempt)"
+   },
+   {
+    "pr": 1289,
+    "default": "pass",
+    "think": "medium",
+    "rc": 0,
+    "seconds": 573,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1287,
+    "default": "pass",
+    "think": "medium",
+    "rc": 0,
+    "seconds": 121,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1274,
+    "default": "pass",
+    "think": "medium",
+    "rc": 0,
+    "seconds": 364,
+    "pass": true,
+    "blocking": 0,
+    "findings": 0,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1277,
+    "default": "blocking",
+    "think": "medium",
+    "rc": 0,
+    "seconds": 631,
+    "pass": false,
+    "blocking": 0,
+    "findings": 1,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1276,
+    "default": "blocking",
+    "think": "medium",
+    "rc": 1,
+    "seconds": 676,
+    "pass": null,
+    "blocking": 0,
+    "findings": 0,
+    "code": "answer_incomplete",
+    "last_err": "the model ran out of room (done_reason=length, 61404 reasoning chars, 0 answer chars)"
+   },
+   {
+    "pr": 1272,
+    "default": "blocking",
+    "think": "medium",
+    "rc": 0,
+    "seconds": 622,
+    "pass": false,
+    "blocking": 0,
+    "findings": 1,
+    "code": "reviewed",
+    "last_err": ""
+   },
+   {
+    "pr": 1267,
+    "default": "blocking",
+    "think": "medium",
+    "rc": 1,
+    "seconds": 886,
+    "pass": null,
+    "blocking": 0,
+    "findings": 0,
+    "code": "answer_incomplete",
+    "last_err": "the model ran out of room (done_reason=length, 63895 reasoning chars, 0 answer chars)"
+   }
+  ]
+ },
+ "source_study": {
+  "settings": "as the rendered pr-review.yml, except --timeout 900, --retries 0; default effort (--think ''); with --source-dir holding the changed files' text at the head (feat/review-source-context, #1303)",
+  "ran": "2026-10-01, finished 02:18 America/New_York (progress log)",
+  "rows": [
+   {
+    "pr": 1295,
+    "default": "pass",
+    "rc": 0,
+    "seconds": 678,
+    "pass": true,
+    "findings": [],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     "CHANGELOG.md",
+     "docs/plans/rotation-and-engines.md",
+     "src/vibey/application/engine_selection.py",
+     "tests/application/test_engine_selection.py"
+    ],
+    "last_err": ""
+   },
+   {
+    "pr": 1289,
+    "default": "pass",
+    "rc": 0,
+    "seconds": 502,
+    "pass": true,
+    "findings": [],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     "CHANGELOG.md"
+    ],
+    "last_err": ""
+   },
+   {
+    "pr": 1287,
+    "default": "pass",
+    "rc": 0,
+    "seconds": 300,
+    "pass": true,
+    "findings": [],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     "CHANGELOG.md",
+     "pyproject.toml",
+     "src/vibey_tools/bootstrap/pyproject.toml"
+    ],
+    "last_err": ""
+   },
+   {
+    "pr": 1274,
+    "default": "pass",
+    "rc": 0,
+    "seconds": 435,
+    "pass": true,
+    "findings": [],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     "CHANGELOG.md",
+     "scripts/triaged_delivery.py",
+     "tests/scripts/test_triaged_delivery.py"
+    ],
+    "last_err": ""
+   },
+   {
+    "pr": 1277,
+    "default": "blocking",
+    "rc": 0,
+    "seconds": 872,
+    "pass": true,
+    "findings": [],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     ".vibey-gh.toml",
+     "CHANGELOG.md",
+     "src/vibey_tools/gh/CHANGELOG.md",
+     "src/vibey_tools/gh/docs/configuration.md",
+     "src/vibey_tools/gh/test/test_ruleset_drift.py",
+     "src/vibey_tools/gh/test/test_rulesets.py",
+     "src/vibey_tools/gh/vibey_gh/config.py",
+     "src/vibey_tools/gh/vibey_gh/interfaces/class_contracts.py",
+     "src/vibey_tools/gh/vibey_gh/rulesets.py"
+    ],
+    "last_err": ""
+   },
+   {
+    "pr": 1276,
+    "default": "blocking",
+    "rc": 0,
+    "seconds": 445,
+    "pass": true,
+    "findings": [],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     "CHANGELOG.md",
+     "deploy/helm/golden/keda-latest.yaml",
+     "deploy/helm/golden/keda-project.yaml",
+     "deploy/helm/vibey/templates/keda-scaledobject.yaml",
+     "docs/guides/kubernetes.md",
+     "docs/plans/architecture-and-roadmap.md",
+     "docs/plans/domain-model.md",
+     "docs/plans/phase-protocols.md",
+     "docs/project.mmd",
+     "docs/reference/cli.md",
+     "src/vibey/domain/abandonment.py",
+     "src/vibey/domain/phase.py",
+     "tests/cli/test_abandon_cli.py",
+     "tests/domain/test_abandonment.py",
+     "tests/domain/test_phase.py",
+     "tests/infrastructure/db/test_keda_scaler_query.py",
+     "tests/infrastructure/db/test_project_abandonment_store.py"
+    ],
+    "last_err": ""
+   },
+   {
+    "pr": 1272,
+    "default": "blocking",
+    "rc": 0,
+    "seconds": 376,
+    "pass": false,
+    "findings": [
+     {
+      "severity": "defect",
+      "path": "docs/README.md",
+      "explanation": "The new capability – worker draining on SIGTERM – is not documented in the README or CLI reference. The documentation contract requires that all capabilities be documented, so this omission is a defect.",
+      "recommended_fix": "Add a section in the CLI reference (and optionally the README) describing that the worker will drain gracefully on SIGTERM, including the output string “draining on SIGTERM” and the behaviour of the SIGTERM latch."
+     }
+    ],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     "CHANGELOG.md",
+     "src/vibey/cli/main.py",
+     "tests/cli/test_operational_commands.py",
+     "tests/cli/test_worker_all_projects.py"
+    ],
+    "last_err": ""
+   },
+   {
+    "pr": 1267,
+    "default": "blocking",
+    "rc": 0,
+    "seconds": 143,
+    "pass": true,
+    "findings": [],
+    "code": "reviewed",
+    "parts": 1,
+    "sources_fetched": [
+     ".vibey-gh.toml",
+     "CHANGELOG.md",
+     "src/vibey_tools/gh/CHANGELOG.md",
+     "src/vibey_tools/gh/docs/configuration.md",
+     "src/vibey_tools/gh/test/test_approve_check.py",
+     "src/vibey_tools/gh/vibey_gh/approval_check.py",
+     "src/vibey_tools/gh/vibey_gh/config.py"
+    ],
+    "last_err": ""
+   }
+  ]
+ },
+ "default_effort_gate": {
+  "1295": {
+   "head": "f980c46cdf73245c911fff7d8c6e99141d79da47",
+   "gate": [],
+   "pass": true,
+   "findings": []
+  },
+  "1289": {
+   "head": "696940d78e19c4c7b03b8554e6c334f11b0f261d",
+   "gate": [
+    {
+     "conclusion": "success",
+     "title": "PR review: gate (sovereign lane, whole review)",
+     "completed_at": "2026-09-30T17:19:36Z"
+    }
+   ],
+   "pass": true,
+   "findings": []
+  },
+  "1287": {
+   "head": "66c8f0cd7577307b177ff64cd94aade938ed69fe",
+   "gate": [
+    {
+     "conclusion": "success",
+     "title": "PR review: gate (sovereign lane, whole review)",
+     "completed_at": "2026-09-30T15:56:05Z"
+    }
+   ],
+   "pass": true,
+   "findings": []
+  },
+  "1274": {
+   "head": "1a0047c02213104344ff5425aacb0965c94faeee",
+   "gate": [
+    {
+     "conclusion": "success",
+     "title": "PR review: gate (sovereign lane, whole review)",
+     "completed_at": "2026-09-30T09:34:51Z"
+    }
+   ],
+   "pass": true,
+   "findings": []
+  },
+  "1277": {
+   "head": "e8ac870b3b1f746a8303d45253c1a88d401840ac",
+   "gate": [
+    {
+     "conclusion": "failure",
+     "title": "PR review: sovereign lane found blocking findings",
+     "completed_at": "2026-09-30T10:07:32Z"
+    }
+   ],
+   "pass": false,
+   "findings": [
+    {
+     "severity": "error",
+     "path": "src/vibey_tools/gh/vibey_gh/config.py",
+     "explanation": "The _coverage_percent method uses math.isfinite but the math module is not imported, leading to a NameError."
+    },
+    {
+     "severity": "error",
+     "path": "src/vibey_tools/gh/test/test_ruleset_drift.py",
+     "explanation": "The test references `rs.desired_rules` and other rs attributes without importing the `vibey_gh.rulesets` module as `rs`."
+    },
+    {
+     "severity": "error",
+     "path": "src/vibey_tools/gh/test/test_ruleset_drift.py",
+     "explanation": "The test uses `INTEGRATION` and `RELEASE` constants that are not defined or imported in the file."
+    },
+    {
+     "severity": "error",
+     "path": "src/vibey_tools/gh/test/test_rulesets.py",
+     "explanation": "The test references `rs.desired_rules` and other rs attributes without importing the `vibey_gh.rulesets` module as `rs`."
+    }
+   ]
+  },
+  "1276": {
+   "head": "76e6a928ee4ce3730c762f42654d962b8e666df3",
+   "gate": [
+    {
+     "conclusion": "failure",
+     "title": "PR review: sovereign lane found blocking findings",
+     "completed_at": "2026-09-30T09:51:19Z"
+    }
+   ],
+   "pass": false,
+   "findings": [
+    {
+     "severity": "defect",
+     "path": "tests/infrastructure/db/test_project_abandonment_store.py",
+     "explanation": "The test function `test_a_done_project_is_refused_and_nothing_is_written` is defined but contains no body, so it will raise a syntax error or fail to run. The test needs to be completed or removed."
+    }
+   ]
+  },
+  "1272": {
+   "head": "153974431cc560afe19d989b394dce483e294239",
+   "gate": [
+    {
+     "conclusion": "failure",
+     "title": "PR review: sovereign lane found blocking findings",
+     "completed_at": "2026-09-30T07:04:31Z"
+    }
+   ],
+   "pass": false,
+   "findings": [
+    {
+     "severity": "defect",
+     "path": "tests/cli/test_operational_commands.py",
+     "explanation": "The test `test_worker_parallelism_spawns_gathered_loops` patches `wait_for_job_ready` to raise a SIGTERM via `sigterm`, then asserts that the worker exits with code 0 and prints \"draining on SIGTERM\". The worker implementation does not print that message and a SIGTERM will terminate the process with a non‑zero exit code, so the test will fail."
+    },
+    {
+     "severity": "defect",
+     "path": "tests/cli/test_worker_all_projects.py",
+     "explanation": "The test `test_all_projects_parallel_loops_share_one_worker` also patches `wait_for_job_ready` to raise SIGTERM and expects the same output and exit code. As with the previous test, this will cause the process to terminate with a non‑zero exit code and no matching output, leading to a failure."
+    }
+   ]
+  },
+  "1267": {
+   "head": "670cb243d2f07191f3be686c16343e0c133dc49b",
+   "gate": [
+    {
+     "conclusion": "failure",
+     "title": "PR review: sovereign lane found blocking findings",
+     "completed_at": "2026-09-30T03:57:02Z"
+    }
+   ],
+   "pass": false,
+   "findings": [
+    {
+     "severity": "defect",
+     "path": "src/vibey_tools/gh/docs/configuration.md",
+     "explanation": "The new `live_switch_required` configuration key is documented in the table, but no working example is provided. The documentation contract requires each new surface to have an example that references only existing items, which is missing here."
+    }
+   ]
+  }
+ },
+ "model_server_log": {
+  "source": "the Ollama server log of the operator's workstation (not tracked), slot records",
+  "method": "a request's prompt is the slot's task.n_tokens at 'new prompt'; generated = n_tokens at 'stop processing' minus the prompt; cancelled = a 'cancel task' line for the task; its HTTP status and duration from the GIN line before it; times are the log's local time (America/New_York)",
+  "cut_at_ten_minutes_2026_09_30_0900_1500": {
+   "requests": 15,
+   "prompt_tokens": [
+    32273,
+    47181
+   ],
+   "generated_tokens": {
+    "min": 5353,
+    "median": 7789,
+    "max": 11755
+   }
+  },
+  "finished_prompt_at_least_30000_2026_09_30_to_10_01": {
+   "requests": 18,
+   "generated_tokens": {
+    "min": 674,
+    "median": 2660.5,
+    "max": 11242
+   }
+  }
+ }
+}
