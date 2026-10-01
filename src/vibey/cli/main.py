@@ -43,6 +43,7 @@ from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
+from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
@@ -1618,6 +1619,12 @@ def doctor(
         supervisor_lines, supervisor_ok = SUPERVISOR.doctor_lines()
         for line in supervisor_lines:
             typer.echo(line)
+        # The machine itself: the newest weekly host-health record, its age and when the
+        # forecast says it needs replacing. Missing or stale is a WARN, a FAIL with
+        # `[host_health] required = true` (12.e).
+        health_lines, health_ok = HOST_HEALTH.doctor_lines()
+        for line in health_lines:
+            typer.echo(line)
         if (
             (conformance and not all_ok)
             or not database_ok
@@ -1625,6 +1632,7 @@ def doctor(
             or not hub_ok
             or not sabbath_ok
             or not supervisor_ok
+            or not health_ok
         ):
             raise typer.Exit(1)
 

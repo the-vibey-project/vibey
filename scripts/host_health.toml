@@ -1,0 +1,344 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/host_health.py (ADR-0051: configuration is declared in
+# TOML, never written into a source file). Every command, path, threshold, window and
+# schedule the weekly host-health run uses is here, with the reason beside it. Nothing in the
+# script has a default of its own: a key missing from this file is an error, not a value.
+#
+# What it answers: how healthy is the machine vibey and krypton run on, and how long until it
+# needs replacing. The probes run ON THE HOST (a launchd agent or a systemd user timer that
+# `python scripts/host_health.py install` renders from [host_health.schedule]), because the
+# self-hosted GitHub runner is a Linux container on that host and cannot see its SSD, its
+# battery, its thermals or its real memory pressure. Nothing here needs sudo: a probe that
+# would is recorded as skipped, with the reason.
+
+[host_health]
+# The committed, append-only weekly record (one JSON object per line), and the host's own
+# durable copy, which every weekly run appends to first and the publish step merges from
+# (sub-doctrine 10.g: a week whose pull request never merged is carried by the next one,
+# de-duplicated by run id, never dropped). Durable storage, never a temporary directory
+# (sub-doctrine 10.h).
+record = "docs/architecture/evidence/host-health.jsonl"
+local_record = "~/.local/state/vibey/host-health/records.jsonl"
+# The page whose GENERATED blocks the record feeds.
+docs_page = "docs/reference/host-health.md"
+# vibey's own requirements are read from the minimum-specs machinery, never restated here:
+# the record for the derived RAM and disk requirements, the configuration for the
+# throughput thresholds and the sovereign model.
+minimum_specs_config = "scripts/minimum_specs.toml"
+# Every probe command is bounded by this many seconds.
+command_timeout_s = 60
+
+[host_health.privacy]
+# The host fingerprint is a SHA-256 over these host facts plus the machine's own platform
+# identifier (IOPlatformUUID on macOS, /etc/machine-id on Linux), truncated. The identifier
+# itself, serial numbers and the host name never reach the record (SD-01 §1).
+fingerprint_chars = 16
+# Key names whose values are never written, whatever a probe parses.
+never_record = ["Serial", "SerialNumber", "Serial Number", "IOPlatformSerialNumber", "IOPlatformUUID", "HostName", "ComputerName"]
+
+[host_health.storage]
+# smartmontools' smartctl reads NVMe health (percentage used, spare, data written, media
+# errors, power-on hours) without root on macOS; on Linux opening the device usually needs
+# root, and that is recorded as skipped, never worked around. It is not installed by vibey.
+smartctl = "smartctl"
+smartctl_install_hint = "install smartmontools (macOS: `brew install smartmontools`; Ubuntu/Debian: `apt install smartmontools`)"
+# The device smartctl reads. On macOS the internal SSD is disk0. On Linux, empty asks
+# `smartctl --scan` and takes the first device it lists.
+device_macos = "disk0"
+device_linux = ""
+# The volume whose free space is trended: the data volume on macOS (the system volume is a
+# sealed snapshot), the root file system on Linux.
+volume_macos = "/System/Volumes/Data"
+volume_linux = "/"
+
+[host_health.battery]
+# macOS: the battery gauge's registry entry and system_profiler's condition string.
+# Linux: the kernel's power-supply class; the first entry whose type is Battery.
+ioreg_class = "AppleSmartBattery"
+power_supply_dir = "/sys/class/power_supply"
+
+[host_health.thermal]
+# Linux reads these without privileges; macOS answers `pmset -g therm`.
+thermal_zone_glob = "/sys/class/thermal/thermal_zone*/temp"
+cpufreq_glob = "/sys/devices/system/cpu/cpu[0-9]*/cpufreq"
+throttle_glob = "/sys/devices/system/cpu/cpu[0-9]*/thermal_throttle/core_throttle_count"
+
+[host_health.memory]
+# Linux pressure-stall information; absent on kernels built without PSI (recorded skipped).
+psi_path = "/proc/pressure/memory"
+
+[host_health.reliability]
+# Crash, panic and shutdown evidence on macOS, read by FILE NAME only: the reports
+# themselves are never opened (they name the host and its user). Each kind is a pattern on
+# the name; the date in the name is the event's date. `~` is the measuring user's home.
+report_dirs = ["/Library/Logs/DiagnosticReports", "/Library/Logs/DiagnosticReports/Retired", "~/Library/Logs/DiagnosticReports"]
+kinds = { kernel_panic = '^panic-(?:full|base)-.*\.(?:panic|ips)$|\.panic$', reset = '^ResetCounter-', shutdown_stall = '^shutdown_stall_', jetsam = '^JetsamEvent-' }
+# Linux: kernel crash dumps the platform kept (pstore), read by name.
+pstore_dir = "/sys/fs/pstore"
+# The trailing window the event counts cover. The weekly records keep every event's date,
+# so the union across weeks outlives the reports macOS prunes.
+window_days = 30
+
+[host_health.throughput]
+# Inference throughput mined PASSIVELY from the Ollama server log (and its rotations):
+# every completed request's generation rate, attributed to the model last loaded and to the
+# last timestamp the log printed before it. No load is added to the model slot.
+log_glob = "~/.ollama/logs/server*.log"
+# A request is comparable week to week only within one prompt-size band, so the trend uses
+# one band: prompts of at least `band_min_tokens` and below `band_max_tokens` tokens.
+band_min_tokens = 1024
+band_max_tokens = 32768
+# Generations shorter than this are dominated by setup (a 1-token reply reports 0 tok/s).
+min_generated_tokens = 32
+# A week with fewer comparable requests than this has no median recorded for it.
+min_samples_per_week = 5
+
+[host_health.microbench]
+# A small, bounded CPU and disk benchmark, run only when the idle gate below says the host
+# is quiet: SHA-256 over `cpu_mib` MiB in memory, and `disk_mib` MiB written and fsynced to
+# a scratch file in the system temporary directory, which is removed at once (a throwaway
+# measurement, nothing to keep; 10.h binds work, not a benchmark's scratch).
+cpu_mib = 256
+disk_mib = 128
+repeats = 3
+
+[host_health.idle]
+# minimum_specs' IdleGate decides: load1 at or below `max_load1`, no Ollama inference
+# request for `quiet_window_s`, and `busy_command` silent. It waits at most `max_wait_s`;
+# then the microbenchmark is recorded as skipped with the reason.
+max_load1 = 4.0
+quiet_window_s = 120
+max_wait_s = 600
+poll_s = 30
+busy_command = ""
+
+[host_health.platform]
+# The operating system's vendor support horizon, declared with its source and the date it
+# was last verified, never guessed. `support_end` is a date (the first day of the month
+# where the vendor publishes only a month: the earlier reading); empty means the vendor
+# publishes none, and `reason` says so. Matched on the probe's `os_key`.
+[host_health.platform.os.macos]
+support_end = ""
+reason = "Apple publishes no end-of-support date for a macOS release (its security-releases page lists updates, not end dates)"
+source = "https://support.apple.com/en-us/100100"
+last_verified = "2026-10-01"
+
+[host_health.platform.os."ubuntu-24.04"]
+support_end = "2029-05-01"
+reason = "standard security maintenance ends May 2029 (Ubuntu Pro ESM to May 2034)"
+source = "https://ubuntu.com/about/release-cycle"
+last_verified = "2026-10-01"
+
+[host_health.platform.os."ubuntu-26.04"]
+support_end = "2031-05-01"
+reason = "standard security maintenance ends May 2031 (Ubuntu Pro ESM to May 2036)"
+source = "https://ubuntu.com/about/release-cycle"
+last_verified = "2026-10-01"
+
+[host_health.platform.os.arch]
+support_end = ""
+reason = "Arch Linux is a rolling release: there is no release to fall out of support"
+source = "https://archlinux.org/"
+last_verified = "2026-10-01"
+
+[host_health.platform.os.fedora]
+support_end = ""
+reason = "each Fedora release is maintained until about four weeks after the release two versions later; no per-release date is declared here yet"
+source = "https://docs.fedoraproject.org/en-US/releases/lifecycle/"
+last_verified = "2026-10-01"
+
+# The hardware's support status, by model identifier. Apple's policy: a product is vintage
+# more than 5 and obsolete more than 7 years after Apple stopped distributing it for sale.
+# `last_sold` is that date when it is known (empty while it is still sold or unknown), and
+# the obsolete date is derived from it, never assumed.
+[host_health.platform.hardware."Mac17,2"]
+vendor = "Apple"
+last_sold = ""
+vintage_after_years = 5
+obsolete_after_years = 7
+reason = "Apple has not stopped selling it as far as this table records; set last_sold when it does"
+source = "https://support.apple.com/en-us/102772"
+last_verified = "2026-10-01"
+
+[host_health.forecast]
+# Trend drivers are fitted by the Theil-Sen estimator (the median of pairwise slopes, robust
+# to an odd week) with Sen's rank-based confidence interval on the slope
+# (scripts/host_health_forecast.py). Fewer than `min_points` weekly points is "insufficient
+# history": no date is projected from it.
+min_points = 4
+confidence = 0.90
+# Points older than this are left out of a fit (the machine's behaviour a year ago says
+# little about its next six months).
+lookback_days = 365
+# A replacement predicted within this many days is a warning (the tracking issue opens).
+warn_within_days = 183
+
+# The drivers: what makes the machine need replacing. `kind` is `trend` (fit the weekly
+# history to the threshold), `level` (past the threshold in `confirm` consecutive records)
+# or `dated` (a date the vendor or the record states). `direction` says which way is worse.
+# A threshold is literal (with `threshold_source`), read from the minimum-specs record
+# (`threshold_figure`), read from its configuration (`threshold_config`), or read from the
+# host's own newest record (`threshold_figure_local`). Reaching the threshold is past it,
+# unless `strict = true`, where only going beyond it is (a requirement met exactly is met).
+[host_health.drivers.ssd_wear]
+label = "SSD wear (NVMe percentage used)"
+figure = "storage.percentage_used"
+kind = "trend"
+direction = "rising"
+threshold = 100
+threshold_source = "NVMe 'Percentage Used' reaches 100 at the vendor's rated endurance (NVM Express base specification, SMART / Health log)"
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.ssd_spare]
+label = "SSD available spare at its threshold"
+figure = "storage.spare_margin_pct"
+kind = "level"
+direction = "falling"
+threshold = 0
+threshold_source = "the drive's own available-spare threshold (spare minus threshold reaching 0)"
+confirm = 1
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.battery_capacity]
+label = "Battery full-charge capacity vs design"
+figure = "battery.capacity_ratio"
+kind = "trend"
+direction = "falling"
+threshold = 0.80
+threshold_source = "a planning figure: 80% of design capacity, the level laptop vendors commonly treat as a consumed battery (no vendor statement for this model is quoted here; not verified)"
+expected = ["Darwin"]
+
+[host_health.drivers.battery_cycles]
+label = "Battery cycles vs the design cycle count"
+figure = "battery.cycle_count"
+kind = "trend"
+direction = "rising"
+threshold_figure_local = "battery.design_cycle_count"
+threshold_source = "the gauge's own design cycle count (DesignCycleCount9C on macOS)"
+expected = ["Darwin"]
+
+[host_health.drivers.throughput]
+label = "Sovereign-model generation rate"
+figure = "throughput.gen_tok_s_week_median"
+# The trend reads the weekly series mined from the whole log history (rotations included),
+# the newest record's value for a week superseding an older one's.
+series_figure = "throughput.weekly"
+kind = "trend"
+direction = "falling"
+threshold_config = "minimum_specs.assumptions.minimum_gen_tok_s"
+threshold_source = "vibey's minimum generation rate, scripts/minimum_specs.toml [minimum_specs.assumptions]"
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.disk_free]
+label = "Free disk vs vibey's minimum"
+figure = "storage.free_gb"
+kind = "trend"
+direction = "falling"
+threshold_figure = "disk.minimum_gb"
+# Exactly the minimum still meets it: only falling below is past the threshold.
+strict = true
+threshold_source = "the minimum free disk derived in docs/architecture/evidence/minimum-specs.json"
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.ram_capacity]
+label = "Memory vs vibey's minimum"
+figure = "memory.ram_gb_as_sold"
+kind = "level"
+direction = "falling"
+threshold_figure = "ram.minimum_gb"
+recommended_figure = "ram.recommended_gb"
+strict = true
+threshold_source = "the minimum memory derived in docs/architecture/evidence/minimum-specs.json (unified, GB as sold)"
+confirm = 1
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.swap]
+label = "Swap in use vs memory (sustained)"
+figure = "memory.swap_used_ratio"
+kind = "level"
+direction = "rising"
+threshold = 0.50
+threshold_source = "a planning figure: swap holding more than half the size of RAM, week after week, means the workload no longer fits in memory"
+confirm = 3
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.panics]
+label = "Kernel panics in the trailing window"
+figure = "reliability.kernel_panics_window"
+kind = "level"
+direction = "rising"
+threshold = 3
+threshold_source = "a planning figure: three kernel panics in 30 days is a machine that cannot be trusted to run unattended"
+confirm = 1
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.thermal]
+label = "Thermal CPU speed limit (sustained)"
+figure = "thermal.cpu_speed_limit_pct"
+kind = "level"
+direction = "falling"
+threshold = 99
+threshold_source = "a planning figure: the OS capping the CPU below full speed in three consecutive weekly readings"
+confirm = 3
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.os_support]
+label = "Operating system out of vendor support"
+figure = "platform.os_support_end"
+kind = "dated"
+expected = ["Darwin", "Linux"]
+
+[host_health.drivers.hardware_support]
+label = "Hardware obsolete (vendor policy)"
+figure = "platform.hardware_obsolete_on"
+kind = "dated"
+expected = ["Darwin"]
+
+[host_health.conditions]
+# The ONE tracking issue (vibey-gh tracking-issue): raised while any condition holds,
+# resolved with a note when none does. A host whose newest record is older than
+# `stale_after_days`, or an expected probe skipped in each of the last `missing_records`
+# records of a host, is a condition as much as a driver near its threshold.
+key = "host-health"
+title = "Host health: the machine vibey runs on needs attention"
+stale_after_days = 14
+missing_records = 2
+
+[host_health.schedule]
+# The host scheduler `install` renders: once a week, Monday 06:41 local time, an hour
+# before the minimum-specs measurement so the two never contend. launchd runs a missed
+# calendar slot at the next wake; systemd's Persistent= does the same after a power-off.
+weekday = 1
+hour = 6
+minute = 41
+label = "dev.vibey.host-health"
+# How the unit starts the script: the way the minimum-specs workflow does, uv pinning an
+# interpreter so the host's own python3 (whatever version it is) never runs it. The first
+# word is resolved to an absolute path at render time (a launchd agent has almost no PATH).
+# It, the clone the script runs from and the log must be durable: a temporary directory or a
+# lane's worktree is refused at render time (sub-doctrine 10.h).
+launcher = ["uv", "run", "--no-project", "--python", "3.12", "python"]
+log_dir_macos = "~/Library/Logs/vibey"
+log_dir_linux = "~/.local/state/vibey/logs"
+unit_dir_macos = "~/Library/LaunchAgents"
+unit_dir_linux = "~/.config/systemd/user"
+
+[host_health.publish]
+# How a week's record reaches develop: never by a push to it. The weekly run merges the
+# host's own record into a dedicated clone (no working tree of the operator's is touched),
+# re-renders, checks, commits to `branch`, pushes it and opens or updates one pull request.
+enabled = true
+repository = "the-vibey-project/vibey"
+base = "develop"
+branch = "automation/host-health"
+clone_dir = "~/.local/share/vibey/host-health/clone"
+# The GitHub credential the timer uses: the runner's file-based gh login, which works under
+# launchd where the operator's keychain login does not (docs/runbooks/sovereign-review-runner.md).
+gh_config_dir = "~/.config/gh-runner"
+commit_title = "chore(health): record the host's weekly health"
+made_with = "Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+git_timeout_s = 300
+# The commit identity in the clone. Empty uses the host's own git configuration.
+git_user_name = ""
+git_user_email = ""
