@@ -336,6 +336,12 @@ size_weights = { xs = 0.5, s = 1.0, m = 3.0, l = 6.0, xl = 12.0 }
 enabled = true
 runner_label = "vibey-local-vibey"
 trusted_only = true
+# Hand the sovereign review the full head text of the files the diff changes, as reference
+# only. Measured 2026-10-01: 5 of 5 "blocking" findings checked were false positives about
+# unchanged code just outside the diff -- an import a few lines above a hunk, a log line the
+# worker already prints -- that the model could not see. The bounds keep their defaults
+# (vibey-gh docs/configuration.md, `source_context`).
+source_context = true
 
 [runners]
 # The machine that serves the sovereign lane above, declared (12.c): `vibey-gh runner install`

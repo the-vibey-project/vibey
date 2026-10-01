@@ -533,6 +533,74 @@ jobs:
               exit 1
             fi
           done
+      # With `[pr_automation.fallback] source_context`, the full text at the exact head of
+      # each file the diff changes, handed to the model as REFERENCE ONLY -- what the diff's
+      # lines refer to, never something it judges. Every one of five "blocking" findings
+      # checked on 2026-10-01 was about unchanged code just outside the diff ("ProcessReaper
+      # is not imported": it is, at lines 51-56 of that file). Read-only through the contents
+      # API, never a checkout, exactly as the documents are. A removed file has no head text;
+      # a path a shell or a URL would read as anything but a path, a `source_exclude` match,
+      # a file past `max_source_file_bytes` or holding a NUL byte is skipped, and at most
+      # `max_source_files` are kept. A source is reference, so a fetch that fails is said
+      # and skipped rather than stopping the review; the verdict names what it was shown.
+      - name: Fetch the changed files the review reads as reference
+        id: sources
+        if: false
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.evaluate.outputs.pr }}
+          HEAD_SHA: ${{ needs.evaluate.outputs.head_sha }}
+          MAX_FILES: 30
+          MAX_BYTES: 1000000
+          EXCLUDE: "*.lock *-lock.json *-lock.yaml go.sum *.min.js *.min.css *.map *.svg *.png *.jpg *.jpeg *.gif *.ico *.pdf *.woff *.woff2 *.ttf *.zip *.gz"
+        run: |
+          set -euo pipefail
+          set -f
+          mkdir -p "${RUNNER_TEMP}/sources"
+          if ! gh api --paginate "repos/${REPO}/pulls/${PR}/files?per_page=100" \
+              --jq '.[] | select(.status != "removed") | .filename
+                    | select(test("^[A-Za-z0-9._@+/-]+$")) | select(test("(^|/)\\.\\.(/|$)") | not)' \
+              > "${RUNNER_TEMP}/changed-files"; then
+            echo "::warning::the changed files could not be listed; the review reads the diff without sources"
+            : > "${RUNNER_TEMP}/changed-files"
+          fi
+          kept=0
+          while IFS= read -r path; do
+            if [ "$kept" -ge "$MAX_FILES" ]; then
+              echo "max_source_files (${MAX_FILES}) reached; the rest are not shown"
+              break
+            fi
+            skip=""
+            for pattern in $EXCLUDE; do
+              case "$path" in $pattern) skip=1 ;; esac
+              case "${path##*/}" in $pattern) skip=1 ;; esac
+            done
+            if [ -n "$skip" ]; then
+              echo "${path} matches source_exclude; not fetched"
+              continue
+            fi
+            dest="${RUNNER_TEMP}/sources/${path}"
+            mkdir -p "$(dirname "$dest")"
+            if ! gh api -H "Accept: application/vnd.github.raw+json" \
+                "repos/${REPO}/contents/${path}?ref=${HEAD_SHA}" \
+                > "$dest" 2> "${RUNNER_TEMP}/sources.err"; then
+              rm -f "$dest"
+              echo "${path} could not be fetched at ${HEAD_SHA} ($(head -c 120 "${RUNNER_TEMP}/sources.err")); the review reads without it"
+              continue
+            fi
+            size=$(wc -c < "$dest" | tr -d ' ')
+            if [ "$size" -gt "$MAX_BYTES" ]; then
+              rm -f "$dest"
+              echo "${path} (${size} bytes) is larger than max_source_file_bytes; not shown"
+            elif ! tr -d '\000' < "$dest" | cmp -s - "$dest"; then
+              rm -f "$dest"
+              echo "${path} is binary; not shown"
+            else
+              kept=$((kept + 1))
+              echo "fetched ${path} at ${HEAD_SHA}"
+            fi
+          done < "${RUNNER_TEMP}/changed-files"
       - name: Review with the local model
         id: result
         env:
@@ -545,8 +613,17 @@ jobs:
           # way first, and the verdict then claims the diff half alone.
           PATHS: "README.md docs/index.md"
           HEAD_SHA: ${{ needs.evaluate.outputs.head_sha }}
+          # With `source_context`, the changed files fetched above: reference beside the
+          # diff, sized from what the diff and the documents leave, never past this many
+          # characters a request.
+          SOURCE_CONTEXT: false
+          MAX_SOURCE_CHARS: 60000
         run: |
           set -euo pipefail
+          SOURCES=""
+          if [ "$SOURCE_CONTEXT" = "true" ] && [ -d "${RUNNER_TEMP}/sources" ]; then
+            SOURCES="${RUNNER_TEMP}/sources"
+          fi
           # Fail closed. An unreachable model or an unusable response must leave no
           # verdict -- the paid lane then answers the whole review, and if it cannot either,
           # or if no paid review is declared, the gate stays red for a human -- never
@@ -585,6 +662,7 @@ jobs:
                 --outcome "${RUNNER_TEMP}/outcome.json" \
                 --role "$ROLE" \
                 ${SCOPE:+--scope "$SCOPE" --context-dir "${RUNNER_TEMP}/context" --context-paths "$PATHS"} \
+                ${SOURCES:+--source-dir "$SOURCES" --max-source-chars "$MAX_SOURCE_CHARS"} \
                 > "${RUNNER_TEMP}/verdict.json" 2> "${RUNNER_TEMP}/local-review.err"; then
             cat "${RUNNER_TEMP}/local-review.err" >&2
             reason=$(grep -v '^[[:space:]]*$' "${RUNNER_TEMP}/local-review.err" | tail -n 1 \
