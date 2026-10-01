@@ -43,6 +43,10 @@ def as_live(payload: dict[str, Any], ruleset_id: int) -> dict[str, Any]:
             rule["parameters"]["do_not_enforce_on_create"] = False
             for check in rule["parameters"]["required_status_checks"]:
                 check["integration_id"] = 15368
+        if rule["type"] == rs.CODE_COVERAGE:
+            # Sent without an unset threshold (the API refuses a null one), echoed with it.
+            for key in rs.COVERAGE_THRESHOLDS:
+                rule["parameters"].setdefault(key, None)
     return live
 
 
@@ -154,6 +158,16 @@ def test_a_declared_coverage_floor_the_forge_holds_is_not_drift(tmp_path):
         "parameters": {"minimum_coverage": 100, "max_coverage_drop": None},
     } in live[0]["rules"]
     assert RulesetDrift().compare(config, live) == ()
+
+
+def test_a_live_drop_nobody_declared_is_drift_though_the_payload_omits_it(tmp_path):
+    """The undeclared drop is never sent, so only the comparison can catch one set by hand."""
+    config = covered(tmp_path)
+    live = covered_live(config)
+    for rule in live[1]["rules"]:
+        if rule["type"] == rs.CODE_COVERAGE:
+            rule["parameters"]["max_coverage_drop"] = 5
+    assert RulesetDrift().compare(config, live) == ("vibey-gh: main: rule code_coverage differs",)
 
 
 def test_a_declared_coverage_floor_missing_live_is_drift(tmp_path):

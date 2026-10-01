@@ -34,6 +34,13 @@ PULL_REQUEST = "pull_request"
 STATUS_CHECKS = "required_status_checks"
 MERGE_QUEUE = "merge_queue"
 CODE_COVERAGE = "code_coverage"
+# The two thresholds a `code_coverage` rule can hold. GitHub echoes an unset one back as
+# null, but its rule *input* types each as a plain number (OpenAPI schema
+# `repository-rule-code-coverage`, api.github.com 1.1.4): a null in a PUT makes the rule
+# match no member of the rule `oneOf`, and the whole ruleset is refused with 422 "Invalid
+# property /rules/N: data matches no possible input". So an unset threshold is omitted
+# from the payload, never sent as null.
+COVERAGE_THRESHOLDS = ("minimum_coverage", "max_coverage_drop")
 
 
 def ruleset_name(branch: str) -> str:
@@ -98,16 +105,17 @@ def desired_rules(policy: RulesetConfig) -> list[dict[str, Any]]:
         )
     if policy.declares_code_coverage:
         # Emitted only when declared: a coverage floor blocks every pull request that has
-        # not uploaded coverage data, so an upgrade must never switch one on. Both keys are
-        # always sent, an unset one as null -- the shape the forge echoes back -- so the
-        # comparison below reads a live threshold nobody declared as drift, not as a match.
+        # not uploaded coverage data, so an upgrade must never switch one on. Only declared
+        # thresholds are sent (see COVERAGE_THRESHOLDS: the forge refuses a null one), and
+        # `rule_matches` still reads a live threshold nobody declared as drift.
+        declared = {
+            "minimum_coverage": policy.minimum_coverage,
+            "max_coverage_drop": policy.max_coverage_drop,
+        }
         rules.append(
             {
                 "type": CODE_COVERAGE,
-                "parameters": {
-                    "minimum_coverage": policy.minimum_coverage,
-                    "max_coverage_drop": policy.max_coverage_drop,
-                },
+                "parameters": {key: value for key, value in declared.items() if value is not None},
             }
         )
     return rules
@@ -176,11 +184,17 @@ def rule_matches(existing: dict[str, Any] | None, desired: dict[str, Any]) -> bo
     sent -- defaults it added after this module was written -- and comparing whole
     dictionaries reports those as drift on every run, which makes a drift check that is
     always red and therefore never read. Status checks compare by context alone, in any
-    order: the forge may echo an integration id the declaration never pinned.
+    order: the forge may echo an integration id the declaration never pinned. A coverage
+    threshold left undeclared is the one exception: it is omitted from the payload, so it
+    must be unset live too -- a drop somebody added by hand is drift, not a match.
     """
     if existing is None:
         return False
     have = existing.get("parameters") or {}
+    if desired.get("type") == CODE_COVERAGE:
+        wanted = desired.get("parameters") or {}
+        if any(have.get(key) is not None for key in COVERAGE_THRESHOLDS if key not in wanted):
+            return False
     for key, value in (desired.get("parameters") or {}).items():
         if key == "required_status_checks":
             live = sorted(str(check.get("context")) for check in have.get(key) or [])

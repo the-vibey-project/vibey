@@ -1906,8 +1906,8 @@ class RulesetConfig:
     # (`minimum_coverage`) and the most it may drop against the default branch
     # (`max_coverage_drop`), both 0-100. Absent is "not declared" and sends no rule, so an
     # upgrade never starts blocking anybody's merges on coverage data they never uploaded.
-    # Declaring either one declares the rule; the other is then sent as null, which is how
-    # the forge itself spells a threshold nobody set.
+    # Declaring either one declares the rule; the other is then left out of the payload.
+    # The forge echoes an unset threshold as null but refuses a null one on input (422).
     minimum_coverage: int | float | None = None
     max_coverage_drop: int | float | None = None
 

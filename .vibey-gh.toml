@@ -197,7 +197,8 @@ bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
 # The 100% coverage floor used to live only in the hand-made rulesets "develop" and "main"
 # (created 2026-08-15), beside these declared ones. Declared here it moves into the rulesets
 # vibey-gh reconciles, so those two can be deleted by the operator without losing it.
-# `max_coverage_drop` stays unset: the forge holds it as null, and so does this.
+# `max_coverage_drop` stays unset: the forge holds it as null, and vibey-gh leaves it out
+# of the payload, because the rulesets API refuses a null threshold on input (422).
 minimum_coverage = 100
 
 # The queue exists because a green pull request is not a green merge: its checks ran
