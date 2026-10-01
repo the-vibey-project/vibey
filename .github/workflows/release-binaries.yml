@@ -268,7 +268,7 @@ jobs:
           if-no-files-found: error
 
   app-web:
-    name: krypton app, web
+    name: krypton app, web (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.mode != 'skip'
     runs-on: ${{ matrix.runner }}
@@ -304,7 +304,7 @@ jobs:
           if-no-files-found: error
 
   app-android:
-    name: krypton app, Android
+    name: krypton app, Android (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.mode != 'skip'
     runs-on: ${{ matrix.runner }}
@@ -351,7 +351,7 @@ jobs:
           if-no-files-found: error
 
   app-ios:
-    name: krypton app, iOS
+    name: krypton app, iOS (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.mode != 'skip'
     runs-on: ${{ matrix.runner }}
@@ -431,7 +431,7 @@ jobs:
             --comment "Built for iOS from $TARGET; EXPO_TOKEN is set. Closing."
 
   vscode:
-    name: krypton for VS Code
+    name: krypton for VS Code (${{ matrix.id }})
     needs: plan
     if: needs.plan.outputs.mode != 'skip'
     runs-on: ${{ matrix.runner }}
