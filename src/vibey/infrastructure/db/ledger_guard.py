@@ -544,7 +544,8 @@ class DatabaseRoleReconciler:
         only that, is tolerated. The grant lives in `pg_parameter_acl`, one row for the
         whole cluster, so two reconciles on different databases of one cluster can race on
         it, and a per-database advisory lock does not serialize them: the loser gets
-        `tuple concurrently updated`. That is retried. Every other error is raised: it used
+        `tuple concurrently updated`, or `tuple concurrently deleted` when the winner's
+        REVOKE emptied the ACL and removed the row. Both are retried. Every other error is raised: it used
         to be swallowed with the rest, and the trigger-silencing grant stayed in place
         without a word (CI, PostgreSQL 16, 2026-10-01).
         """
@@ -561,7 +562,8 @@ class DatabaseRoleReconciler:
                 return
             except asyncpg.InternalServerError as exc:
                 attempt += 1
-                if "concurrently updated" not in str(exc) or attempt >= _REVOKE_ATTEMPTS:
+                raced = any(message in str(exc) for message in _CATALOG_RACE)
+                if not raced or attempt >= _REVOKE_ATTEMPTS:
                     raise
                 await asyncio.sleep(_REVOKE_BACKOFF_SECONDS * attempt)
 
@@ -573,6 +575,10 @@ _REVOKE_ATTEMPTS: Final = 5
 
 _REVOKE_BACKOFF_SECONDS: Final = 0.05
 """Linear backoff between those attempts; the race resolves in milliseconds."""
+
+_CATALOG_RACE: Final = ("tuple concurrently updated", "tuple concurrently deleted")
+"""The two messages PostgreSQL raises when another session changed or removed the same
+catalog row first (CI, PostgreSQL 16, 2026-10-01: both seen on `pg_parameter_acl`)."""
 
 _APP_ROLE: Final = """
 SELECT r.rolsuper, r.rolcreaterole,
