@@ -2229,6 +2229,13 @@ def worker(
                         await resources.gate_reminder.run_if_due(remind_scope)
                     except Exception as exc:
                         typer.echo(f"drive[{idx}] gate reminders failed: {exc}", err=True)
+                    # A gate whose kind its project declared under `[human_gates]
+                    # timeout_defaults` resolves to its default once it has waited; every
+                    # other gate waits for a person (12.d: silence is not consent).
+                    try:
+                        await resources.gate_timeouts.run_if_due(remind_scope)
+                    except Exception as exc:
+                        typer.echo(f"drive[{idx}] gate timeouts failed: {exc}", err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )

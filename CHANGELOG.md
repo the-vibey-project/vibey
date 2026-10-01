@@ -15,6 +15,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **gates:** a project can let chosen human gates resolve to their own default after
+  waiting, and only those. `[human_gates] timeout_defaults` maps a gate kind to minutes;
+  the worker's idle sweep answers a gate of a declared kind that has waited that long with
+  its stored default, through the same path as `vibey answer`, recorded as `GateAnswered`
+  by `gate-timeout`. Nothing times out unless declared: silence is not consent (12.d), and
+  some defaults act for you (`deploy_demo_review` defaults to `approve`), so the
+  declaration is the consent -- the operator's ruling of 2026-09-30. Only the five kinds
+  whose default maps onto their handler's answer can be declared; anything else is refused
+  by `vibey new`, and `approval` can never time out. Gate `timeout_at` was stored and
+  never read before this; a parked job waited forever.
+
 ### Documentation
 
 * **docs:** outcome guides — six pages under `docs/guides/outcomes/`, each titled as the
