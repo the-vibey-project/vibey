@@ -88,6 +88,7 @@ from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
+from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
     OLLAMA_MODEL_ENV,
@@ -2229,6 +2230,13 @@ def worker(
                         await resources.gate_reminder.run_if_due(remind_scope)
                     except Exception as exc:
                         typer.echo(f"drive[{idx}] gate reminders failed: {exc}", err=True)
+                    # A gate whose kind its project declared under `[human_gates]
+                    # timeout_defaults` resolves to its default once it has waited; every
+                    # other gate waits for a person (12.d: silence is not consent).
+                    try:
+                        await resources.gate_timeouts.run_if_due(remind_scope)
+                    except Exception as exc:
+                        typer.echo(f"drive[{idx}] gate timeouts failed: {exc}", err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )
@@ -2252,6 +2260,9 @@ def worker(
                             driver.cancel()
                         await asyncio.gather(*drivers, return_exceptions=True)
             finally:
+                # A session leads its own process group, so it would outlive a worker
+                # stopped by Ctrl-C; end every one still running before going.
+                await LoopProcessAdapter.end_active_sessions()
                 await notifier.close()
 
     with guard():

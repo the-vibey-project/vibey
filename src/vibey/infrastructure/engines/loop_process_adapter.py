@@ -13,8 +13,11 @@ descriptors, not four separate classes.
 
 import asyncio
 import json
+import math
+import os
 import re
 import shutil
+import signal
 import subprocess  # nosec B404 - fixed argv, never shell=True
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
@@ -62,6 +65,20 @@ logger = structlog.get_logger(__name__)
 # garbage collected (which would close stdin and kill the child process).
 # Key: run_id (UUID), Value: asyncio.subprocess.Process
 _active_processes: dict[object, asyncio.subprocess.Process] = {}
+
+
+def _signal_group(process: asyncio.subprocess.Process, signum: int) -> None:
+    """Signal the process group a session leads.
+
+    Module-level because both `stop` and the classmethod `end_active_sessions` need it
+    and it holds no state (ADR-0016's last resort, stated). ProcessLookupError (ESRCH)
+    means the group is already empty; PermissionError (EPERM) is macOS refusing a group
+    whose only member is a zombie. Neither leaves anything to signal.
+    """
+    with suppress(ProcessLookupError, PermissionError):
+        os.killpg(process.pid, signum)
+
+
 _diagnostic_files: dict[object, tuple[TextIO, TextIO]] = {}
 
 # `<binary> run --help` output, keyed by the resolved executable path. Fetched
@@ -127,6 +144,10 @@ class LoopProcessAdapter:
     reaped before the adapter gives up on it and logs `engine_process_not_reaped`
     (#283). The adapter is built without the project's config, so this is a
     constructor value, like `doctor_timeout`."""
+    stop_grace_seconds: float = 2.0
+    """How long `stop` waits for a runner to exit on its stop file before it ends the
+    runner's whole process group (SIGTERM, then the reaper's SIGKILL). A constructor
+    value, like `kill_grace_seconds`."""
     python_env: OrchestratorPythonEnvInterface = field(
         default_factory=OrchestratorPythonEnv, compare=False, repr=False
     )
@@ -143,6 +164,8 @@ class LoopProcessAdapter:
         self.environment.environment(
             self.descriptor, overlay=self.env_overlay, python_env=self.python_env
         )
+        if not math.isfinite(self.stop_grace_seconds) or self.stop_grace_seconds <= 0:
+            raise ValueError("stop grace must be a finite number of seconds greater than zero")
         # Built once, here, so an invalid grace fails when the adapter is built rather
         # than on the first probe that times out.
         object.__setattr__(
@@ -367,11 +390,16 @@ class LoopProcessAdapter:
                 stdout=str(stdout_file.name),
                 stderr=str(stderr_file.name),
             )
+            # Its own process group, so `stop` -- and a worker shutting down -- can end
+            # everything the runner started, not just the runner (a background test
+            # server, a shell's children). The group also means a Ctrl-C of the worker
+            # no longer reaches the session, which `end_active_sessions` makes up for.
             process = await self._spawn(
                 *argv,
                 stdout=stdout_file,
                 stderr=stderr_file,
                 cwd=spec.worktree_path,
+                start_new_session=True,
             )
         except Exception as e:
             stdout_file.close()
@@ -705,18 +733,7 @@ class LoopProcessAdapter:
         self.release_diagnostics(handle)
         process = _active_processes.pop(handle.run_id, None)
         if process is not None:
-            if process.returncode is None:
-                try:
-                    await asyncio.wait_for(process.wait(), timeout=2.0)
-                except TimeoutError:
-                    try:
-                        process.terminate()
-                        await asyncio.wait_for(process.wait(), timeout=1.0)
-                    # The process is already removed from the registry; termination is best-effort.
-                    except Exception:  # noqa: BLE001  # nosec B110
-                        pass
-            else:
-                await process.wait()
+            await self._end_session(process)
 
         return StopSummary(
             run_id=handle.run_id,
@@ -724,6 +741,43 @@ class LoopProcessAdapter:
             summary=summary or f"Stopped run {handle.run_id}",
             remaining_work=tuple(remaining_work),
         )
+
+    async def _end_session(self, process: asyncio.subprocess.Process) -> None:
+        """End a stopped session and everything it started.
+
+        The runner gets `stop_grace_seconds` to exit on its stop file. Then its whole
+        group gets SIGTERM, a moment to act on it, and the reaper's SIGKILL with a
+        bounded reap. This runs even when the runner exited cleanly: whatever it left
+        in its group (a background server, a shell's children) is ended too. This used
+        to `terminate()` the runner alone and swallow any error, so descendants -- paid
+        ones included -- kept running after the job had moved on.
+        """
+        if process.returncode is None:
+            with suppress(TimeoutError):
+                await asyncio.wait_for(process.wait(), timeout=self.stop_grace_seconds)
+        _signal_group(process, signal.SIGTERM)
+        if process.returncode is None:
+            with suppress(TimeoutError):
+                await asyncio.wait_for(process.wait(), timeout=self.stop_grace_seconds)
+        await self._reaper.kill_and_reap(process)
+
+    @classmethod
+    async def end_active_sessions(cls, *, grace_seconds: float = DEFAULT_KILL_GRACE_SECONDS) -> int:
+        """End every session this process still has running; return how many.
+
+        A session leads its own process group, so a Ctrl-C of the worker no longer
+        reaches it. The worker calls this on its way out instead, so a session never
+        outlives the worker that started it. Its job's lease expires and another
+        worker picks the job up: every job is idempotent under replay.
+        """
+        reaper = ProcessReaper(grace_seconds=grace_seconds, event="engine_session_not_reaped")
+        ended = 0
+        while _active_processes:
+            _run_id, process = _active_processes.popitem()
+            _signal_group(process, signal.SIGTERM)
+            await reaper.kill_and_reap(process)
+            ended += 1
+        return ended
 
     async def snapshot(self, handle: RunHandle) -> SnapshotRef | None:
         """Read snapshots/latest.json."""

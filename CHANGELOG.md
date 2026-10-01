@@ -15,8 +15,30 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **gates:** a project can let chosen human gates resolve to their own default after
+  waiting, and only those. `[human_gates] timeout_defaults` maps a gate kind to minutes;
+  the worker's idle sweep answers a gate of a declared kind that has waited that long with
+  its stored default, through the same path as `vibey answer`, recorded as `GateAnswered`
+  by `gate-timeout`. Nothing times out unless declared: silence is not consent (12.d), and
+  some defaults act for you (`deploy_demo_review` defaults to `approve`), so the
+  declaration is the consent -- the operator's ruling of 2026-09-30. Only the five kinds
+  whose default maps onto their handler's answer can be declared; anything else is refused
+  by `vibey new`, and `approval` can never time out. Gate `timeout_at` was stored and
+  never read before this; a parked job waited forever.
 ### Bug Fixes
 
+* **engines:** stopping an engine session now ends everything it started. A session ran in
+  the worker's own process group and `stop()` terminated only the runner, swallowing any
+  error, so a background test server or a shell's children -- paid sessions included --
+  kept running after the job had moved on. Each session now leads a process group of its
+  own; `stop()` gives the runner `stop_grace_seconds` (2) to exit on its stop file, then
+  sends the whole group SIGTERM and, through the shared `ProcessReaper`, SIGKILL with a
+  bounded reap, even when the runner itself exited cleanly. Because the group means a
+  Ctrl-C of the worker no longer reaches a session, the worker ends every session still
+  running on its way out (`LoopProcessAdapter.end_active_sessions`); the job's lease
+  expires and another worker replays it.
 * **engines:** a worker no longer stops using every paid engine after a day. The selector
   trusts a paid engine's login for `AUTH_TTL` (24 hours), but the login was checked only at
   worker startup or by `vibey doctor`, so a worker left running for a day silently deferred
