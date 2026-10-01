@@ -1,12 +1,12 @@
 {
   "schema": "vibey-minimum-specs/1",
-  "generated_at": "2026-10-01T15:19:01.414Z",
+  "generated_at": "2026-10-01T15:33:03.898Z",
   "generated_by": "scripts/minimum_specs.py",
   "hosts": {
-    "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB": {
+    "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2": {
       "image": "",
       "platform": "linux/arm64",
-      "runner": "Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": null
     },
     "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)": {
@@ -21,7 +21,7 @@
       "ram_bytes": 25769803776,
       "os": "macOS 26.6.2 (25G83)"
     },
-    "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB": {
+    "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "x86_64",
       "chip": null,
@@ -31,10 +31,10 @@
       "model": null,
       "image": "archlinux:latest",
       "platform": "linux/amd64",
-      "runner": "Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": true
     },
-    "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB": {
+    "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "x86_64",
       "chip": null,
@@ -44,10 +44,10 @@
       "model": null,
       "image": "fedora:latest",
       "platform": "linux/amd64",
-      "runner": "Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": true
     },
-    "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB": {
+    "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "aarch64",
       "chip": null,
@@ -57,10 +57,25 @@
       "model": null,
       "image": "fedora:latest",
       "platform": "linux/arm64",
-      "runner": "Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": false
     },
-    "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB": {
+    "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2": {
+      "system": "Linux",
+      "arch": "x86_64",
+      "chip": null,
+      "ram_bytes": 25159557120,
+      "mem_available_bytes": 19198517248,
+      "kernel": "7.0.12-linuxkit",
+      "cores_total": 10,
+      "os": "Ubuntu 24.04.5 LTS",
+      "model": null,
+      "image": "ubuntu:24.04",
+      "platform": "linux/amd64",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
+      "emulated": true
+    },
+    "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "aarch64",
       "chip": null,
@@ -70,10 +85,10 @@
       "model": null,
       "image": "ubuntu:24.04",
       "platform": "linux/arm64",
-      "runner": "Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": false
     },
-    "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB": {
+    "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "x86_64",
       "chip": null,
@@ -83,10 +98,10 @@
       "model": null,
       "image": "ubuntu:26.04",
       "platform": "linux/amd64",
-      "runner": "Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": true
     },
-    "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB": {
+    "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "aarch64",
       "chip": null,
@@ -96,7 +111,7 @@
       "model": null,
       "image": "ubuntu:26.04",
       "platform": "linux/arm64",
-      "runner": "Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": false
     }
   },
@@ -108,9 +123,9 @@
   "not_verified": [
     "Windows hosts: nothing was measured.",
     "Linux as an installed system: every Linux cell ran in a container, so a distribution's own kernel, idle memory and desktop session were not measured; Linux memory uses the OS allowance assumed from the Mac (3.5 GiB).",
-    "Linux on x86_64 at the seed: measured under QEMU emulation on the Apple M5, so only sizes and versions; the uv installs that had to fetch a CPython crashed under QEMU (Ubuntu 26.04, Arch, Fedora) and wait for the native CI runner, as do every x86_64 timing.",
+    "Linux on x86_64 at the seed: measured under QEMU emulation on the Apple M5, so only sizes and versions. uv itself crashed under QEMU (signal 11), so every x86_64 cell's install sizes and glibc floor, and every x86_64 timing, wait for the native CI runner.",
     "Arch Linux on arm64: there is no official image (archlinux:latest is amd64 only; Arch Linux ARM is a separate project).",
-    "The model's memory on Linux: the line M(c) = M0 + k*c was fitted on the Mac's Metal backend; the weights and KV cache are the same bytes on Linux, but its CPU and CUDA compute buffers were not measured.",
+    "The model's memory on Linux: the line M(c) = M0 + k*c was fitted on the Mac's Metal backend; the weights and KV cache are the same bytes on Linux, but its CPU and CUDA compute buffers were not measured. The Linux memory figures assume no discrete GPU (the whole model in system RAM).",
     "CPU scaling (Amdahl's law): the thread sweep had not run at the seed (the host was busy with another client's model), and no x86_64 host with the model runs it, so the core counts are not measured on either architecture.",
     "The ledger's bytes per job: not measured yet (the next weekly run measures it); one job's growth is page-granular, so the measurement will be an upper bound.",
     "Ollama's Linux bundle: its unpacked size is the bytes of its tar stream (contents plus headers), not an installed tree.",
@@ -1135,7 +1150,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "lim n->inf T(n) = T1 / (1-p)",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.aarch64.knee_cores",
@@ -1146,7 +1161,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "dT/dn = T1*p / ((1-p)n + p)^2 = theta  =>  n* = (sqrt(T1*p/theta) - p)/(1-p); ceil",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.aarch64.minimum_cores",
@@ -1157,7 +1172,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "T(n) >= F  <=>  n >= p / (T1/F - (1-p)), solvable only when F < T1/(1-p); ceil",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.aarch64.p",
@@ -1168,7 +1183,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "Amdahl over generation rates at n = 1, 2, 4, 6, 8, 10 threads: p = b/(a+b)",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.aarch64.r2",
@@ -1179,7 +1194,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "Amdahl over generation rates at n = 1, 2, 4, 6, 8, 10 threads; R^2 of T(n) against the measured T",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.aarch64.t1_tok_s",
@@ -1190,7 +1205,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "Amdahl T(n) = T1 / ((1-p) + p/n) over generation rates at n = 1, 2, 4, 6, 8, 10 threads: 1/T = (1-p)/T1 + (p/T1)(1/n) by least squares on (1/n, 1/T); T1 = 1/(a+b), p = b/(a+b)",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.aarch64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.aarch64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.x86_64.asymptote_tok_s",
@@ -1201,7 +1216,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "lim n->inf T(n) = T1 / (1-p)",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.x86_64.knee_cores",
@@ -1212,7 +1227,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "dT/dn = T1*p / ((1-p)n + p)^2 = theta  =>  n* = (sqrt(T1*p/theta) - p)/(1-p); ceil",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.x86_64.minimum_cores",
@@ -1223,7 +1238,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "T(n) >= F  <=>  n >= p / (T1/F - (1-p)), solvable only when F < T1/(1-p); ceil",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.x86_64.p",
@@ -1234,7 +1249,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "Amdahl over generation rates at n = 1, 2, 4, 6, 8, 10 threads: p = b/(a+b)",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.x86_64.r2",
@@ -1245,7 +1260,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "Amdahl over generation rates at n = 1, 2, 4, 6, 8, 10 threads; R^2 of T(n) against the measured T",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.cpu.x86_64.t1_tok_s",
@@ -1256,7 +1271,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "Amdahl T(n) = T1 / ((1-p) + p/n) over generation rates at n = 1, 2, 4, 6, 8, 10 threads: 1/T = (1-p)/T1 + (p/T1)(1/n) by least squares on (1/n, 1/T); T1 = 1/(a+b), p = b/(a+b)",
-      "reason": "missing input(s): bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads2.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads4.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads6.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads8.gen_tok_s, bench.gpt-oss:20b.cpu.x86_64.threads10.gen_tok_s"
+      "reason": "a fit needing 3 of its 6 measured points has 0; missing bench.gpt-oss:20b.cpu.x86_64.threads1.gen_tok_s and 5 more"
     },
     {
       "id": "fit.memory.k_kib_per_token",
@@ -1776,7 +1791,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1788,7 +1803,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1800,7 +1815,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1812,7 +1827,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1824,7 +1839,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1836,7 +1851,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1848,7 +1863,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1860,7 +1875,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1872,7 +1887,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1884,7 +1899,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1896,7 +1911,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1908,7 +1923,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1920,7 +1935,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1932,7 +1947,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1944,7 +1959,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1956,7 +1971,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1968,7 +1983,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1980,7 +1995,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1992,7 +2007,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2004,7 +2019,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2016,7 +2031,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2028,7 +2043,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2040,7 +2055,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2052,7 +2067,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2064,7 +2079,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2076,7 +2091,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
       "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2100,7 +2115,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.arch.x86_64.install.vibey-engine.venv_bytes, linux.arch.x86_64.install.vibey-engine.uv_cache_bytes, linux.ollama.x86_64.unpacked_bytes"
+      "reason": "missing input(s): linux.arch.x86_64.install.vibey-engine.venv_bytes, linux.arch.x86_64.install.vibey-engine.uv_cache_bytes"
     },
     {
       "id": "linux.arch.x86_64.disk.recommended_gb",
@@ -2205,7 +2220,7 @@
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
       "measured_at": "2026-10-01T15:08:32.959Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2231,7 +2246,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.125Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2243,7 +2258,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.126Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2255,7 +2270,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.126Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2267,7 +2282,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.126Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2279,7 +2294,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.125Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2291,7 +2306,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.103Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2303,7 +2318,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2315,7 +2330,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2327,7 +2342,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2339,7 +2354,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -2351,7 +2366,7 @@
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
       "measured_at": "2026-10-01T15:08:32.957Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2367,7 +2382,7 @@
       "status": "measured",
       "method": "pacman: the repositories' version of glib2 (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:37.408Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2384,7 +2399,7 @@
       "status": "measured",
       "method": "pacman: the repositories' version of gtk4 (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:39.699Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2401,7 +2416,7 @@
       "status": "measured",
       "method": "pacman: the repositories' version of json-glib (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:38.540Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2418,7 +2433,7 @@
       "status": "measured",
       "method": "pacman: the repositories' version of linux (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:34.074Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2435,7 +2450,7 @@
       "status": "measured",
       "method": "pacman: the repositories' version of libadwaita (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:40.805Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2452,7 +2467,7 @@
       "status": "measured",
       "method": "pacman: the repositories' version of postgresql (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:36.276Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2469,7 +2484,7 @@
       "status": "measured",
       "method": "pacman: the repositories' version of python (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:35.191Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2486,7 +2501,7 @@
       "status": "measured",
       "method": "pacman: packages the bootstrap added (python, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:08:40.973Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2513,7 +2528,7 @@
       "status": "measured",
       "method": "pacman: packages the bootstrap added (python, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:08:40.974Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2540,7 +2555,7 @@
       "status": "measured",
       "method": "pacman: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:10:32.069Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2687,7 +2702,7 @@
       "status": "measured",
       "method": "pacman: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:10:32.070Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2834,7 +2849,7 @@
       "status": "measured",
       "method": "pacman: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:09:07.859Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -2859,7 +2874,7 @@
       "status": "measured",
       "method": "pacman: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:09:07.859Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "archlinux:latest",
         "emulated": true,
@@ -3034,7 +3049,7 @@
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
       "measured_at": "2026-10-01T15:07:58.671Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3050,7 +3065,7 @@
       "status": "measured",
       "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
       "measured_at": "2026-10-01T15:10:24.608Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty",
@@ -3066,7 +3081,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:53.626Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3081,7 +3096,7 @@
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
       "measured_at": "2026-10-01T15:10:56.911Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "files": 81
       },
@@ -3096,7 +3111,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:10:53.625Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3111,7 +3126,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:10:53.674Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3126,7 +3141,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:10:53.653Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3141,7 +3156,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:09:31.420Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3156,7 +3171,7 @@
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
       "measured_at": "2026-10-01T15:10:24.604Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "files": 76
       },
@@ -3171,7 +3186,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:09:31.419Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3186,7 +3201,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:09:31.466Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3201,7 +3216,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:09:31.445Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3216,7 +3231,7 @@
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
       "measured_at": "2026-10-01T15:07:58.671Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3232,7 +3247,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of glib2 (metadata, not installed)",
       "measured_at": "2026-10-01T15:07:59.579Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3249,7 +3264,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of gtk4 (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:00.026Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3266,7 +3281,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of json-glib (metadata, not installed)",
       "measured_at": "2026-10-01T15:07:59.810Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3283,7 +3298,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of kernel-core (metadata, not installed)",
       "measured_at": "2026-10-01T15:07:58.904Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3300,7 +3315,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of libadwaita (metadata, not installed)",
       "measured_at": "2026-10-01T15:08:00.240Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3317,7 +3332,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of postgresql-server (metadata, not installed)",
       "measured_at": "2026-10-01T15:07:59.354Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3334,7 +3349,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of python3 (metadata, not installed)",
       "measured_at": "2026-10-01T15:07:59.121Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3351,7 +3366,7 @@
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:08:00.293Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3382,7 +3397,7 @@
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:08:00.293Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3413,7 +3428,7 @@
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:08:32.579Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3558,7 +3573,7 @@
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:08:32.579Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3703,7 +3718,7 @@
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:08:05.632Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3731,7 +3746,7 @@
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:08:05.632Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3771,7 +3786,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.fedora.x86_64.install.vibey-engine.venv_bytes, linux.fedora.x86_64.install.vibey-engine.uv_cache_bytes, linux.ollama.x86_64.unpacked_bytes"
+      "reason": "missing input(s): linux.fedora.x86_64.install.vibey-engine.venv_bytes, linux.fedora.x86_64.install.vibey-engine.uv_cache_bytes"
     },
     {
       "id": "linux.fedora.x86_64.disk.recommended_gb",
@@ -3876,7 +3891,7 @@
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
       "measured_at": "2026-10-01T15:09:27.429Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -3902,7 +3917,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3914,7 +3929,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3926,7 +3941,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3938,7 +3953,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3950,7 +3965,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3962,7 +3977,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.472Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3974,7 +3989,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3986,7 +4001,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -3998,7 +4013,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -4010,7 +4025,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -4022,7 +4037,7 @@
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
       "measured_at": "2026-10-01T15:09:27.428Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4038,7 +4053,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of glib2 (metadata, not installed)",
       "measured_at": "2026-10-01T15:09:36.802Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4055,7 +4070,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of gtk4 (metadata, not installed)",
       "measured_at": "2026-10-01T15:09:41.290Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4072,7 +4087,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of json-glib (metadata, not installed)",
       "measured_at": "2026-10-01T15:09:39.029Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4089,7 +4104,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of kernel-core (metadata, not installed)",
       "measured_at": "2026-10-01T15:09:29.633Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4106,7 +4121,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of libadwaita (metadata, not installed)",
       "measured_at": "2026-10-01T15:09:43.587Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4123,7 +4138,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of postgresql-server (metadata, not installed)",
       "measured_at": "2026-10-01T15:09:34.513Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4140,7 +4155,7 @@
       "status": "measured",
       "method": "dnf: the repositories' version of python3 (metadata, not installed)",
       "measured_at": "2026-10-01T15:09:31.892Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4157,7 +4172,7 @@
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:09:44.469Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4188,7 +4203,7 @@
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:09:44.469Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4219,7 +4234,7 @@
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:11:03.447Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4365,7 +4380,7 @@
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:11:03.447Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4511,7 +4526,7 @@
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:09:59.958Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4539,7 +4554,7 @@
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:09:59.958Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "fedora:latest",
         "emulated": true,
@@ -4567,7 +4582,7 @@
       "status": "measured",
       "method": "HTTP HEAD https://ollama.com/download/ollama-linux-arm64.tar.zst: Content-Length",
       "measured_at": "2026-10-01T15:03:25.488Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly"
     },
     {
@@ -4578,29 +4593,32 @@
       "status": "measured",
       "method": "curl -fsSL https://ollama.com/download/ollama-linux-arm64.tar.zst | zstd -dc | wc -c",
       "measured_at": "2026-10-01T15:04:37.084Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "note": "the tar stream's bytes: file contents plus tar headers and padding"
     },
     {
       "id": "linux.ollama.x86_64.download_bytes",
       "label": "Ollama Linux bundle (x86_64) download",
-      "value": null,
+      "value": 1427765407,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "HTTP HEAD https://ollama.com/download/ollama-linux-amd64.tar.zst: Content-Length",
+      "measured_at": "2026-10-01T15:27:26.539Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "cadence": "weekly"
     },
     {
       "id": "linux.ollama.x86_64.unpacked_bytes",
       "label": "Ollama Linux bundle (x86_64) unpacked",
-      "value": null,
+      "value": 2238853120,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "status": "measured",
+      "method": "curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst | zstd -dc | wc -c",
+      "measured_at": "2026-10-01T15:28:55.772Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "note": "the tar stream's bytes: file contents plus tar headers and padding"
     },
     {
       "id": "linux.ram.max_context_at_probe",
@@ -4860,7 +4878,7 @@
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
       "measured_at": "2026-10-01T15:04:48.360Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -4876,7 +4894,7 @@
       "status": "measured",
       "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
       "measured_at": "2026-10-01T15:05:48.855Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty",
@@ -4892,7 +4910,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:06:02.588Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4907,7 +4925,7 @@
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
       "measured_at": "2026-10-01T15:06:06.665Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "files": 81
       },
@@ -4922,7 +4940,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:06:02.588Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4937,7 +4955,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:06:02.633Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4952,7 +4970,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:06:02.615Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4967,7 +4985,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:05:19.286Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4982,7 +5000,7 @@
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
       "measured_at": "2026-10-01T15:05:48.853Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "files": 76
       },
@@ -4997,7 +5015,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:05:19.286Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -5012,7 +5030,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:05:19.330Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -5027,7 +5045,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:05:19.312Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -5042,7 +5060,7 @@
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
       "measured_at": "2026-10-01T15:04:48.360Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5058,7 +5076,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
       "measured_at": "2026-10-01T15:04:49.725Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5075,7 +5093,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
       "measured_at": "2026-10-01T15:04:50.360Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5092,7 +5110,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
       "measured_at": "2026-10-01T15:04:50.037Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5109,7 +5127,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
       "measured_at": "2026-10-01T15:04:48.695Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5126,7 +5144,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
       "measured_at": "2026-10-01T15:04:50.680Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5143,7 +5161,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of postgresql (metadata, not installed)",
       "measured_at": "2026-10-01T15:04:49.394Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5160,7 +5178,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of python3 (metadata, not installed)",
       "measured_at": "2026-10-01T15:04:49.076Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5177,7 +5195,7 @@
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:04:50.681Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5235,7 +5253,7 @@
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:04:50.681Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5293,7 +5311,7 @@
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:05:04.768Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5419,7 +5437,7 @@
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:05:04.768Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5545,7 +5563,7 @@
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:04:57.329Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5580,7 +5598,7 @@
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:04:57.329Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5627,7 +5645,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.pkg.base.bytes, linux.ubuntu-24.04.x86_64.pkg.postgres.bytes, linux.ubuntu-24.04.x86_64.install.vibey-engine.venv_bytes, linux.ubuntu-24.04.x86_64.install.vibey-engine.uv_cache_bytes, linux.ollama.x86_64.unpacked_bytes"
+      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.install.vibey-engine.venv_bytes, linux.ubuntu-24.04.x86_64.install.vibey-engine.uv_cache_bytes"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.disk.recommended_gb",
@@ -5649,7 +5667,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.disk.minimum_need_gb, linux.ubuntu-24.04.x86_64.pkg.desktop.bytes, linux.ubuntu-24.04.x86_64.install.krypton-app.venv_bytes"
+      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.disk.minimum_need_gb, linux.ubuntu-24.04.x86_64.install.krypton-app.venv_bytes"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.disk.with_ledger_gb",
@@ -5665,13 +5683,23 @@
     {
       "id": "linux.ubuntu-24.04.x86_64.floor.desktop",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged desktop libraries meet the client's floors",
-      "value": null,
+      "value": true,
       "unit": "verdict",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-01T15:30:32.227Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.packaged.glib, linux.ubuntu-24.04.x86_64.packaged.json_glib, linux.ubuntu-24.04.x86_64.packaged.gtk4, linux.ubuntu-24.04.x86_64.packaged.libadwaita"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.packaged.glib": "2.80.0-6ubuntu3.9",
+        "declared.desktop_glib": ">= 2.74",
+        "linux.ubuntu-24.04.x86_64.packaged.json_glib": "1.8.0-2build2",
+        "declared.desktop_json_glib": ">= 1.6",
+        "linux.ubuntu-24.04.x86_64.packaged.gtk4": "4.14.5+ds-0ubuntu0.10",
+        "declared.desktop_gtk4": ">= 4.12",
+        "linux.ubuntu-24.04.x86_64.packaged.libadwaita": "1.5.0-1ubuntu2",
+        "declared.desktop_libadwaita": ">= 1.4"
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.floor.glibc",
@@ -5682,39 +5710,53 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.glibc, linux.ubuntu-24.04.x86_64.install.glibc_floor"
+      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.install.glibc_floor"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.floor.postgres",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged PostgreSQL meets vibey's floor",
-      "value": null,
+      "value": true,
       "unit": "verdict",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-01T15:30:10.616Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.packaged.postgres"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.packaged.postgres": "16+257build1.1",
+        "declared.postgres_min_major": 14
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.floor.python",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged Python meets the floor (else uv fetches one)",
-      "value": null,
+      "value": true,
       "unit": "verdict",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-01T15:30:05.163Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.packaged.python"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.packaged.python": "3.12.3-0ubuntu2.1",
+        "python.floor": "3.12"
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.glibc",
       "label": "Ubuntu 24.04 LTS (x86_64): glibc",
-      "value": null,
+      "value": "2.39",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "os.confstr('CS_GNU_LIBC_VERSION')",
+      "measured_at": "2026-10-01T15:29:54.389Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.glibc_floor",
@@ -5724,7 +5766,7 @@
       "status": "skipped",
       "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "not reported by this run's probes"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.cold_s",
@@ -5732,19 +5774,23 @@
       "value": null,
       "unit": "s",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:15.017Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.download_bytes",
-      "label": "krypton-app download_bytes",
+      "label": "krypton-app download",
       "value": null,
       "unit": "bytes",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:15.018Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.packages",
@@ -5752,29 +5798,35 @@
       "value": null,
       "unit": "count",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:15.018Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.uv_cache_bytes",
-      "label": "krypton-app uv_cache_bytes",
+      "label": "krypton-app cache",
       "value": null,
       "unit": "bytes",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:15.018Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.venv_bytes",
-      "label": "krypton-app venv_bytes",
+      "label": "krypton-app venv",
       "value": null,
       "unit": "bytes",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:15.018Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.cold_s",
@@ -5782,19 +5834,23 @@
       "value": null,
       "unit": "s",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:14.998Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.download_bytes",
-      "label": "vibey-engine download_bytes",
+      "label": "vibey-engine download",
       "value": null,
       "unit": "bytes",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:14.999Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.packages",
@@ -5802,169 +5858,608 @@
       "value": null,
       "unit": "count",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:14.999Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.uv_cache_bytes",
-      "label": "vibey-engine uv_cache_bytes",
+      "label": "vibey-engine cache",
       "value": null,
       "unit": "bytes",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:14.999Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.venv_bytes",
-      "label": "vibey-engine venv_bytes",
+      "label": "vibey-engine venv",
       "value": null,
       "unit": "bytes",
       "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
+      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
+      "measured_at": "2026-10-01T15:32:14.999Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.os_release",
       "label": "Ubuntu 24.04 LTS (x86_64): OS release",
-      "value": null,
+      "value": "Ubuntu 24.04.5 LTS",
       "unit": "text",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "PRETTY_NAME in /etc/os-release",
+      "measured_at": "2026-10-01T15:29:54.388Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.packaged.glib",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged glib",
-      "value": null,
+      "value": "2.80.0-6ubuntu3.9",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
+      "measured_at": "2026-10-01T15:30:15.980Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "package": "libglib2.0-0t64"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.packaged.gtk4",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged gtk4",
-      "value": null,
+      "value": "4.14.5+ds-0ubuntu0.10",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
+      "measured_at": "2026-10-01T15:30:26.806Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "package": "libgtk-4-1"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.packaged.json_glib",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged json_glib",
-      "value": null,
+      "value": "1.8.0-2build2",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
+      "measured_at": "2026-10-01T15:30:21.395Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "package": "libjson-glib-1.0-0"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.packaged.kernel",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged kernel",
-      "value": null,
+      "value": "6.8.0-146.146",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
+      "measured_at": "2026-10-01T15:29:59.775Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "package": "linux-image-generic"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.packaged.libadwaita",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged libadwaita",
-      "value": null,
+      "value": "1.5.0-1ubuntu2",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
+      "measured_at": "2026-10-01T15:30:32.227Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "package": "libadwaita-1-0"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.packaged.postgres",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged postgres",
-      "value": null,
+      "value": "16+257build1.1",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: the repositories' version of postgresql (metadata, not installed)",
+      "measured_at": "2026-10-01T15:30:10.616Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "package": "postgresql"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.packaged.python",
       "label": "Ubuntu 24.04 LTS (x86_64): packaged python",
-      "value": null,
+      "value": "3.12.3-0ubuntu2.1",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: the repositories' version of python3 (metadata, not installed)",
+      "measured_at": "2026-10-01T15:30:05.163Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "package": "python3"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.pkg.base.bytes",
       "label": "Ubuntu 24.04 LTS (x86_64): base closure",
-      "value": null,
+      "value": 112160768,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
+      "measured_at": "2026-10-01T15:30:32.279Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "packages": [
+          "ca-certificates",
+          "curl",
+          "git",
+          "git-man",
+          "libbrotli1",
+          "libcurl3t64-gnutls",
+          "libcurl4t64",
+          "liberror-perl",
+          "libexpat1",
+          "libgdbm-compat4t64",
+          "libgdbm6t64",
+          "libgssapi-krb5-2",
+          "libk5crypto3",
+          "libkeyutils1",
+          "libkrb5-3",
+          "libkrb5support0",
+          "libldap2",
+          "libnghttp2-14",
+          "libperl5.38t64",
+          "libpsl5t64",
+          "libpython3-stdlib",
+          "libpython3.12-minimal",
+          "libpython3.12-stdlib",
+          "libreadline8t64",
+          "librtmp1",
+          "libsasl2-2",
+          "libsasl2-modules-db",
+          "libsqlite3-0",
+          "libssh-4",
+          "media-types",
+          "netbase",
+          "openssl",
+          "perl",
+          "perl-modules-5.38",
+          "python3",
+          "python3-minimal",
+          "python3.12",
+          "python3.12-minimal",
+          "readline-common",
+          "tzdata"
+        ]
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.pkg.base.count",
       "label": "Ubuntu 24.04 LTS (x86_64): base packages",
-      "value": null,
+      "value": 40,
       "unit": "count",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
+      "measured_at": "2026-10-01T15:30:32.279Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "packages": [
+          "ca-certificates",
+          "curl",
+          "git",
+          "git-man",
+          "libbrotli1",
+          "libcurl3t64-gnutls",
+          "libcurl4t64",
+          "liberror-perl",
+          "libexpat1",
+          "libgdbm-compat4t64",
+          "libgdbm6t64",
+          "libgssapi-krb5-2",
+          "libk5crypto3",
+          "libkeyutils1",
+          "libkrb5-3",
+          "libkrb5support0",
+          "libldap2",
+          "libnghttp2-14",
+          "libperl5.38t64",
+          "libpsl5t64",
+          "libpython3-stdlib",
+          "libpython3.12-minimal",
+          "libpython3.12-stdlib",
+          "libreadline8t64",
+          "librtmp1",
+          "libsasl2-2",
+          "libsasl2-modules-db",
+          "libsqlite3-0",
+          "libssh-4",
+          "media-types",
+          "netbase",
+          "openssl",
+          "perl",
+          "perl-modules-5.38",
+          "python3",
+          "python3-minimal",
+          "python3.12",
+          "python3.12-minimal",
+          "readline-common",
+          "tzdata"
+        ]
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.pkg.desktop.bytes",
       "label": "Ubuntu 24.04 LTS (x86_64): desktop closure",
-      "value": null,
+      "value": 124120064,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
+      "measured_at": "2026-10-01T15:32:14.977Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "packages": [
+          "adwaita-icon-theme",
+          "dbus",
+          "dbus-bin",
+          "dbus-daemon",
+          "dbus-session-bus-common",
+          "dbus-system-bus-common",
+          "dbus-user-session",
+          "dconf-gsettings-backend",
+          "dconf-service",
+          "fontconfig",
+          "fontconfig-config",
+          "fonts-dejavu-core",
+          "fonts-dejavu-mono",
+          "glib-networking",
+          "glib-networking-common",
+          "glib-networking-services",
+          "gsettings-desktop-schemas",
+          "gtk-update-icon-cache",
+          "hicolor-icon-theme",
+          "humanity-icon-theme",
+          "libadwaita-1-0",
+          "libapparmor1",
+          "libappstream5",
+          "libargon2-1",
+          "libavahi-client3",
+          "libavahi-common-data",
+          "libavahi-common3",
+          "libcairo-gobject2",
+          "libcairo-script-interpreter2",
+          "libcairo2",
+          "libcolord2",
+          "libcryptsetup12",
+          "libcups2t64",
+          "libdatrie1",
+          "libdbus-1-3",
+          "libdconf1",
+          "libdeflate0",
+          "libdevmapper1.02.1",
+          "libduktape207",
+          "libepoxy0",
+          "libfdisk1",
+          "libfontconfig1",
+          "libfreetype6",
+          "libfribidi0",
+          "libgdk-pixbuf-2.0-0",
+          "libgdk-pixbuf2.0-common",
+          "libgles2",
+          "libglib2.0-0t64",
+          "libglvnd0",
+          "libgraphene-1.0-0",
+          "libgraphite2-3",
+          "libgtk-4-1",
+          "libgtk-4-common",
+          "libharfbuzz0b",
+          "libjbig0",
+          "libjpeg-turbo8",
+          "libjpeg8",
+          "libjson-c5",
+          "libjson-glib-1.0-0",
+          "libjson-glib-1.0-common",
+          "libkmod2",
+          "liblcms2-2",
+          "liblerc4",
+          "liblzo2-2",
+          "libpam-systemd",
+          "libpango-1.0-0",
+          "libpangocairo-1.0-0",
+          "libpangoft2-1.0-0",
+          "libpixman-1-0",
+          "libpng16-16t64",
+          "libproxy1v5",
+          "libsharpyuv0",
+          "libsoup-3.0-0",
+          "libsoup-3.0-common",
+          "libstemmer0d",
+          "libsystemd-shared",
+          "libthai-data",
+          "libthai0",
+          "libtiff6",
+          "libvulkan1",
+          "libwayland-client0",
+          "libwayland-egl1",
+          "libwebp7",
+          "libx11-6",
+          "libx11-data",
+          "libxau6",
+          "libxcb-render0",
+          "libxcb-shm0",
+          "libxcb1",
+          "libxcursor1",
+          "libxdamage1",
+          "libxdmcp6",
+          "libxext6",
+          "libxfixes3",
+          "libxi6",
+          "libxinerama1",
+          "libxkbcommon0",
+          "libxmlb2",
+          "libxrandr2",
+          "libxrender1",
+          "libyaml-0-2",
+          "session-migration",
+          "shared-mime-info",
+          "systemd",
+          "systemd-dev",
+          "systemd-sysv",
+          "ubuntu-mono",
+          "xkb-data"
+        ]
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.pkg.desktop.count",
       "label": "Ubuntu 24.04 LTS (x86_64): desktop packages",
-      "value": null,
+      "value": 108,
       "unit": "count",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
+      "measured_at": "2026-10-01T15:32:14.978Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "packages": [
+          "adwaita-icon-theme",
+          "dbus",
+          "dbus-bin",
+          "dbus-daemon",
+          "dbus-session-bus-common",
+          "dbus-system-bus-common",
+          "dbus-user-session",
+          "dconf-gsettings-backend",
+          "dconf-service",
+          "fontconfig",
+          "fontconfig-config",
+          "fonts-dejavu-core",
+          "fonts-dejavu-mono",
+          "glib-networking",
+          "glib-networking-common",
+          "glib-networking-services",
+          "gsettings-desktop-schemas",
+          "gtk-update-icon-cache",
+          "hicolor-icon-theme",
+          "humanity-icon-theme",
+          "libadwaita-1-0",
+          "libapparmor1",
+          "libappstream5",
+          "libargon2-1",
+          "libavahi-client3",
+          "libavahi-common-data",
+          "libavahi-common3",
+          "libcairo-gobject2",
+          "libcairo-script-interpreter2",
+          "libcairo2",
+          "libcolord2",
+          "libcryptsetup12",
+          "libcups2t64",
+          "libdatrie1",
+          "libdbus-1-3",
+          "libdconf1",
+          "libdeflate0",
+          "libdevmapper1.02.1",
+          "libduktape207",
+          "libepoxy0",
+          "libfdisk1",
+          "libfontconfig1",
+          "libfreetype6",
+          "libfribidi0",
+          "libgdk-pixbuf-2.0-0",
+          "libgdk-pixbuf2.0-common",
+          "libgles2",
+          "libglib2.0-0t64",
+          "libglvnd0",
+          "libgraphene-1.0-0",
+          "libgraphite2-3",
+          "libgtk-4-1",
+          "libgtk-4-common",
+          "libharfbuzz0b",
+          "libjbig0",
+          "libjpeg-turbo8",
+          "libjpeg8",
+          "libjson-c5",
+          "libjson-glib-1.0-0",
+          "libjson-glib-1.0-common",
+          "libkmod2",
+          "liblcms2-2",
+          "liblerc4",
+          "liblzo2-2",
+          "libpam-systemd",
+          "libpango-1.0-0",
+          "libpangocairo-1.0-0",
+          "libpangoft2-1.0-0",
+          "libpixman-1-0",
+          "libpng16-16t64",
+          "libproxy1v5",
+          "libsharpyuv0",
+          "libsoup-3.0-0",
+          "libsoup-3.0-common",
+          "libstemmer0d",
+          "libsystemd-shared",
+          "libthai-data",
+          "libthai0",
+          "libtiff6",
+          "libvulkan1",
+          "libwayland-client0",
+          "libwayland-egl1",
+          "libwebp7",
+          "libx11-6",
+          "libx11-data",
+          "libxau6",
+          "libxcb-render0",
+          "libxcb-shm0",
+          "libxcb1",
+          "libxcursor1",
+          "libxdamage1",
+          "libxdmcp6",
+          "libxext6",
+          "libxfixes3",
+          "libxi6",
+          "libxinerama1",
+          "libxkbcommon0",
+          "libxmlb2",
+          "libxrandr2",
+          "libxrender1",
+          "libyaml-0-2",
+          "session-migration",
+          "shared-mime-info",
+          "systemd",
+          "systemd-dev",
+          "systemd-sysv",
+          "ubuntu-mono",
+          "xkb-data"
+        ]
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.pkg.postgres.bytes",
       "label": "Ubuntu 24.04 LTS (x86_64): postgres closure",
-      "value": null,
+      "value": 232629248,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
+      "measured_at": "2026-10-01T15:31:26.559Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "packages": [
+          "adduser",
+          "libbsd0",
+          "libedit2",
+          "libicu74",
+          "libjson-perl",
+          "libllvm17t64",
+          "libpq5",
+          "libxml2",
+          "libxslt1.1",
+          "locales",
+          "postgresql",
+          "postgresql-16",
+          "postgresql-client-16",
+          "postgresql-client-common",
+          "postgresql-common",
+          "ssl-cert",
+          "ucf"
+        ]
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.pkg.postgres.count",
       "label": "Ubuntu 24.04 LTS (x86_64): postgres packages",
-      "value": null,
+      "value": 17,
       "unit": "count",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
+      "measured_at": "2026-10-01T15:31:26.559Z",
+      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "conditions": {
+        "image": "ubuntu:24.04",
+        "emulated": true,
+        "container": true,
+        "packages": [
+          "adduser",
+          "libbsd0",
+          "libedit2",
+          "libicu74",
+          "libjson-perl",
+          "libllvm17t64",
+          "libpq5",
+          "libxml2",
+          "libxslt1.1",
+          "locales",
+          "postgresql",
+          "postgresql-16",
+          "postgresql-client-16",
+          "postgresql-client-common",
+          "postgresql-common",
+          "ssl-cert",
+          "ucf"
+        ]
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.aarch64.disk.minimum_gb",
@@ -6124,7 +6619,7 @@
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
       "measured_at": "2026-10-01T15:06:38.409Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6140,7 +6635,7 @@
       "status": "measured",
       "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
       "measured_at": "2026-10-01T15:07:57.968Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty",
@@ -6156,7 +6651,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:08:39.724Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6171,7 +6666,7 @@
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
       "measured_at": "2026-10-01T15:08:45.219Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "files": 81
       },
@@ -6186,7 +6681,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:08:39.723Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6201,7 +6696,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:08:39.796Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6216,7 +6711,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:08:39.764Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6231,7 +6726,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:07:18.190Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6246,7 +6741,7 @@
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
       "measured_at": "2026-10-01T15:07:57.967Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "files": 76
       },
@@ -6261,7 +6756,7 @@
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:07:18.190Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6276,7 +6771,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:07:18.249Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6291,7 +6786,7 @@
       "status": "measured",
       "method": "du -sk after the install above",
       "measured_at": "2026-10-01T15:07:18.222Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6306,7 +6801,7 @@
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
       "measured_at": "2026-10-01T15:06:38.409Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6322,7 +6817,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
       "measured_at": "2026-10-01T15:06:39.448Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6339,7 +6834,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
       "measured_at": "2026-10-01T15:06:39.965Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6356,7 +6851,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
       "measured_at": "2026-10-01T15:06:39.706Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6373,7 +6868,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
       "measured_at": "2026-10-01T15:06:38.684Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6390,7 +6885,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
       "measured_at": "2026-10-01T15:06:40.220Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6407,7 +6902,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of postgresql (metadata, not installed)",
       "measured_at": "2026-10-01T15:06:39.191Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6424,7 +6919,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of python3 (metadata, not installed)",
       "measured_at": "2026-10-01T15:06:38.937Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6441,7 +6936,7 @@
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:06:40.221Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6508,7 +7003,7 @@
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:06:40.221Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6575,7 +7070,7 @@
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:06:56.697Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6741,7 +7236,7 @@
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:06:56.697Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6907,7 +7402,7 @@
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:06:44.593Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6943,7 +7438,7 @@
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:06:44.593Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6991,7 +7486,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.install.vibey-engine.venv_bytes, linux.ubuntu-26.04.x86_64.install.vibey-engine.uv_cache_bytes, linux.ollama.x86_64.unpacked_bytes"
+      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.install.vibey-engine.venv_bytes, linux.ubuntu-26.04.x86_64.install.vibey-engine.uv_cache_bytes"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.disk.recommended_gb",
@@ -7096,7 +7591,7 @@
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
       "measured_at": "2026-10-01T15:10:40.078Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7122,7 +7617,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7134,7 +7629,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7146,7 +7641,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7158,7 +7653,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7170,7 +7665,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7182,7 +7677,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.219Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7194,7 +7689,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.220Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7206,7 +7701,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.220Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7218,7 +7713,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.219Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7230,7 +7725,7 @@
       "status": "skipped",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
       "measured_at": "2026-10-01T15:13:18.219Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "cadence": "weekly",
       "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
     },
@@ -7242,7 +7737,7 @@
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
       "measured_at": "2026-10-01T15:10:40.076Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7258,7 +7753,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
       "measured_at": "2026-10-01T15:10:54.242Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7275,7 +7770,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
       "measured_at": "2026-10-01T15:11:01.071Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7292,7 +7787,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
       "measured_at": "2026-10-01T15:10:57.658Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7309,7 +7804,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
       "measured_at": "2026-10-01T15:10:43.423Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7326,7 +7821,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
       "measured_at": "2026-10-01T15:11:04.447Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7343,7 +7838,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of postgresql (metadata, not installed)",
       "measured_at": "2026-10-01T15:10:50.876Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7360,7 +7855,7 @@
       "status": "measured",
       "method": "apt: the repositories' version of python3 (metadata, not installed)",
       "measured_at": "2026-10-01T15:10:47.564Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7377,7 +7872,7 @@
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:11:04.498Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7444,7 +7939,7 @@
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
       "measured_at": "2026-10-01T15:11:04.498Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7511,7 +8006,7 @@
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:13:18.196Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7679,7 +8174,7 @@
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:13:18.196Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7847,7 +8342,7 @@
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:12:09.620Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,
@@ -7883,7 +8378,7 @@
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
       "measured_at": "2026-10-01T15:12:09.620Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2 · Apple M5 · 24 GiB",
+      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": true,

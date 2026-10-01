@@ -152,7 +152,10 @@ horizon_days = 365
 # its sizes and versions stand (bytes are bytes), its timings are refused. A cell that
 # cannot run is recorded as skipped with the reason, never left out.
 docker = "docker"
+# A whole cell, and one package set's install inside it (GTK's closure is the long one,
+# and under emulation every package's scripts run through QEMU).
 container_timeout_s = 7200
+package_timeout_s = 1800
 # Fetches uv into the container; the measurement then runs on the distribution's python3.
 uv_install = "curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh"
 # The install targets measured per cell (the hub extra adds little over the base engine).

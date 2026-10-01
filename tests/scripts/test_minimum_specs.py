@@ -1166,7 +1166,9 @@ def test_cores_come_from_amdahls_law_fitted_to_the_thread_sweep() -> None:
     assert d["fit.cpu.aarch64.minimum_cores"].value == math.ceil(0.95 / (0.9 / floor - 0.05))
     # No x86_64 sweep was measured: nothing is invented for it.
     assert d["fit.cpu.x86_64.knee_cores"].status == "skipped"
-    assert "threads1.gen_tok_s" in (d["fit.cpu.x86_64.knee_cores"].reason or "")
+    reason = d["fit.cpu.x86_64.knee_cores"].reason or ""
+    assert "a fit needing 3 of its 6 measured points has 0" in reason
+    assert "threads1.gen_tok_s and 5 more" in reason
 
 
 def test_a_floor_above_the_asymptote_is_unreachable_and_a_partial_sweep_still_fits() -> None:
@@ -1338,12 +1340,12 @@ def test_the_package_manager_asks_the_repositories_and_takes_the_newest() -> Non
     config = SETTINGS.linux["package_managers"]["dnf"]
     info = "Installed packages\nVersion        : 2.88.0\n\nAvailable packages\nVersion        : 2.88.3\n"
     runner = FakeRunner({("dnf", "-q", "info"): ok(info), ("/bin/sh",): ok()})
-    pm = ms.PackageManager(config, runner)
+    pm = ms.PackageManager(config, runner, 60)
     assert pm.version("glib2") == "2.88.3"
     pm.install(["gtk4", "evil; rm -rf /"])
     command = runner.calls[-1][2]
     assert "gtk4 evilrm-rf" in command and ";" not in command  # names, never shell
-    nothing = ms.PackageManager(config, FakeRunner({("dnf",): ok("")}))
+    nothing = ms.PackageManager(config, FakeRunner({("dnf",): ok("")}), 60)
     assert nothing.version("absent") is None
     with pytest.raises(OSError, match="listing installed packages failed"):
         nothing.installed()
@@ -1699,3 +1701,26 @@ def test_the_linux_blocks_render_the_matrix_and_the_models() -> None:
     paper = ms.PaperRenderer(SETTINGS).blocks(record)["linux-requirements"]
     assert paper.count(r"\label{tab:linux-requirements}") == 1
     assert "$M(c) = M_0 + kc$" in paper
+
+
+def test_a_failed_linux_install_names_why_its_glibc_floor_was_not_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ms.platform, "system", lambda: "Linux")
+    ws = ms.Workspace(tmp_path)
+    ws.wheel_paths = {"vibey-engine": tmp_path / "e.whl", "krypton-app": tmp_path / "k.whl"}
+    crash = ms.CommandResult(139, "", "qemu: uncaught target signal 11 (Segmentation fault)", 1)
+    runner = FakeRunner({("uv", "venv"): ok(), ("uv", "pip", "install"): crash})
+    builder = ms.PackageBuilder(tmp_path, SETTINGS, runner, ws)
+    probe = ms.InstallFootprintProbe(
+        SETTINGS,
+        runner,
+        builder,
+        ws,
+        ms.DirectorySize(runner),
+        factory(),
+        prefix=f"{UBUNTU}.install",
+        only=["vibey-engine"],
+    )
+    floor = {f.id: f for f in probe.run()}[f"{UBUNTU}.install.glibc_floor"]
+    assert floor.status == "skipped" and "signal 11" in (floor.reason or "")

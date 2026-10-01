@@ -427,6 +427,10 @@ class HostDescriber:
             info["chip"] = self._linux_field("/proc/cpuinfo", r"model name\s*:\s*(.+)")
             mem = self._linux_field("/proc/meminfo", r"MemTotal:\s*(\d+)")
             info["ram_bytes"] = int(mem) * 1024 if mem else None
+            # In a container these are the runner's: its idle memory and its kernel.
+            available = self._linux_field("/proc/meminfo", r"MemAvailable:\s*(\d+)")
+            info["mem_available_bytes"] = int(available) * 1024 if available else None
+            info["kernel"] = platform.release()
             info["cores_total"] = os.cpu_count()
             pretty = self._linux_field("/etc/os-release", r'PRETTY_NAME="?([^"\n]+)')
             info["os"] = pretty
@@ -1161,6 +1165,7 @@ class InstallFootprintProbe(ProbeInterface):
                     self._figures.skipped(i, f"{target} {k}", u, method, why)
                     for k, (i, u) in ids.items()
                 ]
+                out += self._glibc_skipped(target, why)
                 continue
             venv = self._ws.root / f"venv-{re.sub(r'[^a-z0-9]+', '-', target)}"
             cache = self._ws.root / f"cache-{venv.name}"
@@ -1186,6 +1191,7 @@ class InstallFootprintProbe(ProbeInterface):
                     self._figures.skipped(i, f"{target} {k}", u, method, reason)
                     for k, (i, u) in ids.items()
                 ]
+                out += self._glibc_skipped(target, reason)
                 continue
             self._ws.venvs[target] = venv
             conditions = {"python": python, "cache": "empty"}
@@ -1241,6 +1247,19 @@ class InstallFootprintProbe(ProbeInterface):
             if target == "vibey-engine" and platform.system() == "Linux":
                 out.append(self._glibc(venv, conditions))
         return out
+
+    def _glibc_skipped(self, target: str, reason: str) -> list[Figure]:
+        if target != "vibey-engine" or platform.system() != "Linux":
+            return []
+        return [
+            self._figures.skipped(
+                f"{self._prefix}.glibc_floor",
+                "Newest glibc the installed wheels require",
+                "version",
+                "the engine venv's WHEEL tags",
+                f"no engine venv to read: {reason}",
+            )
+        ]
 
     def _glibc(self, venv: Path, conditions: Mapping[str, Any]) -> Figure:
         fid, label = f"{self._prefix}.glibc_floor", "Newest glibc the installed wheels require"
@@ -2184,9 +2203,12 @@ class PackageManager(PackageManagerInterface):
 
     _PACMAN_UNITS: Mapping[str, int] = {"B": 1, "KiB": 1024, "MiB": MIB, "GiB": GIB}
 
-    def __init__(self, config: Mapping[str, Any], runner: CommandRunnerInterface) -> None:
+    def __init__(
+        self, config: Mapping[str, Any], runner: CommandRunnerInterface, timeout: float
+    ) -> None:
         self._config = config
         self._runner = runner
+        self._timeout = timeout
 
     def _env(self) -> dict[str, str]:
         return {str(k): str(v) for k, v in dict(self._config.get("env", {})).items()}
@@ -2230,7 +2252,7 @@ class PackageManager(PackageManagerInterface):
             "{packages}", " ".join(re.sub(r"[^A-Za-z0-9.+_:-]", "", p) for p in packages)
         )
         result: CommandResult = self._runner.run(
-            ["/bin/sh", "-c", command], timeout=1800, env=self._env()
+            ["/bin/sh", "-c", command], timeout=self._timeout, env=self._env()
         )
         return result
 
@@ -3335,7 +3357,7 @@ class Derivations(DerivationsInterface):
                     # e.g. a configuration with one context has no KV slope to take
                     failure = f"cannot compute from these inputs: {exc!r}"
             if missing or failure:
-                reason = failure or "missing input(s): " + ", ".join(missing)
+                reason = failure or self._missing(spec, missing, present)
                 last_good = (
                     previous.stale_since or previous.measured_at if previous is not None else None
                 )
@@ -3391,6 +3413,18 @@ class Derivations(DerivationsInterface):
 
     def ids(self) -> set[str]:
         return {spec.id for spec in self.specs()}
+
+    @staticmethod
+    def _missing(spec: Derivation, missing: Sequence[str], present: int) -> str:
+        """Why a derivation could not run: its missing inputs, or, for a fit over a sweep,
+        how many points it has against how many it needs and the first one missing."""
+        figures = [m for m in missing if not m.startswith(("assumption.", "config."))]
+        if spec.at_least and figures and len(figures) == len(missing):
+            return (
+                f"a fit needing {spec.at_least} of its {present + len(figures)} measured "
+                f"points has {present}; missing {figures[0]} and {len(figures) - 1} more"
+            )
+        return "missing input(s): " + ", ".join(missing)
 
 
 class ModelFits(DerivationSourceInterface):
@@ -4630,7 +4664,7 @@ class PaperRenderer(RequirementsRendererInterface):
             + self.tex(linux.short("fit.memory.m0_mib"))
             + ", $k$ = "
             + self.tex(linux.short("fit.memory.k_kib_per_token"))
-            + ", $R^2$ = "
+            + " KiB/token, $R^2$ = "
             + self.tex(linux.short("fit.memory.r2"))
             + r") with a declared headroom factor. Cores come from Amdahl's law fitted per "
             r"architecture: the minimum reaches the minimum generation rate, the recommended is "
@@ -4709,7 +4743,11 @@ class MeasurementSession:
             if listing:
                 text = Path(listing).read_text(encoding="utf-8")
                 before = {line.strip() for line in text.splitlines() if line.strip()}
-        manager = PackageManager(LinuxMatrix(s).package_manager(cell.distro), self._runner)
+        manager = PackageManager(
+            LinuxMatrix(s).package_manager(cell.distro),
+            self._runner,
+            float(s.linux["package_timeout_s"]),
+        )
         yield LinuxCellProbe(s, cell, manager, install, figures, before, emulated)
 
     def _probes(
