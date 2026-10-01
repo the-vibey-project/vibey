@@ -96,7 +96,7 @@ per_linux_arch = true
 assets = ["krypton-desktop-{version}-linux-{arch}.flatpak"]
 signing = "unsigned"
 install = "flatpak install --user krypton-desktop-{version}-linux-{arch}.flatpak"
-note = "A single-file Flatpak bundle of the declared manifest (clients/desktop/packaging/flatpak), built from the released commit. It needs the GNOME runtime from Flathub, which `flatpak install` fetches."
+note = "A single-file Flatpak bundle of the declared manifest (clients/desktop/packaging/flatpak), built from the released commit. It needs the GNOME runtime from Flathub, which `flatpak install` fetches. The GNOME runtime carries no Avahi, so this build cannot find hubs on the network by itself: pair by typing the hub's address and code."
 # The declared manifest, the module built from the released checkout, the app id the bundle
 # exports, and the remote the runtime and SDK come from.
 with = { manifest = "clients/desktop/packaging/flatpak/io.github.the_vibey_project.krypton.yml", module = "krypton-desktop", app_id = "io.github.the_vibey_project.krypton", remote = "https://dl.flathub.org/repo/flathub.flatpakrepo" }

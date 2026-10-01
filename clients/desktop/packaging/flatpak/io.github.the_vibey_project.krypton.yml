@@ -12,8 +12,10 @@ finish-args:
   - --device=dri
   # mDNS discovery of hubs on the network.
   - --system-talk-name=org.freedesktop.Avahi
-  # The host's hub token, read where the hub keeps it (~/.local/state/vibey/hub).
-  - --filesystem=xdg-state/vibey/hub:ro
+  # The host's hub token, read where the hub keeps it (~/.local/state/vibey/hub). Spelled as
+  # a home path, not `xdg-state/...`: Ubuntu 24.04's flatpak (1.14) refuses `xdg-state` as an
+  # unknown location, at build-finish and on install, which the release build found.
+  - --filesystem=~/.local/state/vibey/hub:ro
 modules:
   - name: krypton-desktop
     buildsystem: meson

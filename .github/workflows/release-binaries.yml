@@ -188,8 +188,11 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          # elfutils: flatpak-builder strips and splits debug info with eu-strip.
-          sudo apt-get install -y -qq --no-install-recommends flatpak flatpak-builder elfutils
+          # On the host, not in the sandbox: elfutils because flatpak-builder strips and splits
+          # debug info with eu-strip, and librsvg2-common because its AppStream compose renders
+          # the SVG icon and fails with "Unrecognized image file format" without the loader.
+          sudo apt-get install -y -qq --no-install-recommends flatpak flatpak-builder elfutils \
+            librsvg2-common
           # Ubuntu 24.04 confines unprivileged user namespaces with AppArmor, and bubblewrap,
           # which flatpak-builder builds inside, needs them.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
