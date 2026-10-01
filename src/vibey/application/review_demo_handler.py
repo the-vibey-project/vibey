@@ -5,7 +5,9 @@ Produces the review demo artifacts under ``.vibey/runs/<cycle>/review/``:
 - ``DEMO.md``: what was built, per acceptance criterion, with evidence
 - ``run-it.sh``: exact commands to see it working locally (executable)
 - ``walkthrough.md``: narrated tour of significant diffs by intent
-- ``evidence/test-report.xml`` & ``evidence/coverage.json``: gate evidence
+- ``evidence/test-report.xml`` & ``evidence/coverage.json``: what the integration gates
+  actually did, read from the ledger (``domain/integration_evidence.py``). Never a
+  default: an unmeasured cycle is reported as unmeasured, and coverage is never claimed.
 - ``deltas.md``: what changed vs the spec, and why, generated directly from
   projections so assumptions and findings cannot be silently omitted.
 
@@ -28,6 +30,7 @@ from vibey.application.interfaces import (
 from vibey.application.ports import Clock, JobRepository
 from vibey.application.worker import Failure, Outcome, Success
 from vibey.domain.effort import Effort
+from vibey.domain.integration_evidence import IntegrationEvidence
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
@@ -38,8 +41,6 @@ from vibey.domain.review import (
     render_run_it_script,
     render_walkthrough_markdown,
 )
-
-DEFAULT_TEST_REPORT = "<testsuites><testsuite name='gates' tests='1' failures='0'/></testsuites>"
 
 
 class ReviewDemoHandler:
@@ -67,6 +68,14 @@ class ReviewDemoHandler:
         spec = await self._specs.load(job.project_id, job.cycle)
         if spec is None:
             return Failure(FailureClass.WORK, "no accepted design spec exists")
+
+        # An unmeasured cycle -- no record, or an item whose plan ran no command --
+        # still reaches the reviewer, but every artifact says it is unmeasured: never a
+        # default pass (sub-doctrine 10.f). REVIEW already waits for a person's verdict,
+        # so the gap is in front of a human either way.
+        evidence = IntegrationEvidence.from_ledger(
+            await self._ledger.all_for_project(job.project_id), cycle=job.cycle
+        )
 
         if self._automated_reviewer is not None:
             # A fresh scan supersedes every earlier automated finding:
@@ -100,8 +109,6 @@ class ReviewDemoHandler:
         events = await self._ledger.all_for_project(job.project_id)
         deltas = build_deltas(events)
 
-        test_report = str(job.payload.get("test_report", DEFAULT_TEST_REPORT))
-        coverage_data = str(job.payload.get("coverage", '{"coverage": 100, "status": "green"}'))
         run_commands_raw = job.payload.get("run_commands", ())
         run_commands = (
             tuple(str(c) for c in run_commands_raw)
@@ -111,12 +118,12 @@ class ReviewDemoHandler:
         summary = str(job.payload.get("summary", ""))
 
         artifacts_dict: dict[str, str] = {
-            "DEMO.md": render_demo_markdown(spec),
+            "DEMO.md": render_demo_markdown(spec, gate_summary=evidence.statement()),
             "run-it.sh": render_run_it_script(run_commands),
             "walkthrough.md": render_walkthrough_markdown(spec=spec, summary=summary),
             "deltas.md": render_deltas_markdown(deltas),
-            "evidence/test-report.xml": test_report,
-            "evidence/coverage.json": coverage_data,
+            "evidence/test-report.xml": evidence.junit_xml(),
+            "evidence/coverage.json": evidence.coverage_json(),
         }
 
         written = await self._artifacts.write_review_artifacts(
@@ -151,7 +158,13 @@ class ReviewDemoHandler:
             )
         )
 
-        return Success({"cycle": job.cycle, "artifacts": tuple(artifacts_dict.keys())})
+        return Success(
+            {
+                "cycle": job.cycle,
+                "artifacts": tuple(artifacts_dict.keys()),
+                "evidence_measured": evidence.measured,
+            }
+        )
 
     async def _supersede_stale_automated_findings(self, job: JobRecord) -> None:
         raised: list[str] = []
