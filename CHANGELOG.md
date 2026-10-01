@@ -29,6 +29,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   never read before this; a parked job waited forever.
 ### Bug Fixes
 
+* **build:** a work item's worktree is removed once its branch integrates cleanly. Every work
+  item kept a full checkout under the project for good -- `GitWorktreeManager.remove` existed
+  and nothing called it -- so a long-running worker's disk grew without bound. The branch is
+  kept; only the checkout goes. A removal that fails never fails the integration (that would
+  send clean work round the retry ladder over housekeeping) and is not silent: the job's
+  result carries `worktree_removed: false` and the error.
 * **engines:** stopping an engine session now ends everything it started. A session ran in
   the worker's own process group and `stop()` terminated only the runner, swallowing any
   error, so a background test server or a shell's children -- paid sessions included --

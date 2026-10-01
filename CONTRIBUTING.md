@@ -17,19 +17,20 @@ call is argued in a [decision record](docs/architecture/decisions/).
 2. [Environment setup](#environment-setup)
 3. [The branch model](#the-branch-model)
 4. [Conventional Commits](#conventional-commits)
-5. [Provenance](#provenance)
-6. [Quality gates](#quality-gates)
-7. [Pushing in this repository](#pushing-in-this-repository)
-8. [The workspace tenants](#the-workspace-tenants)
-9. [The onion architecture import rule](#the-onion-architecture-import-rule)
-10. [Protected tests](#protected-tests)
-11. [Agent surfaces](#agent-surfaces)
-12. [Decisions and governing rules](#decisions-and-governing-rules)
-13. [The paper and the book](#the-paper-and-the-book)
-14. [PR checklist](#pr-checklist)
-15. [Getting help](#getting-help)
-16. [Code of Conduct](#code-of-conduct)
-17. [License of contributions](#license-of-contributions)
+5. [The changelog](#the-changelog)
+6. [Provenance](#provenance)
+7. [Quality gates](#quality-gates)
+8. [Pushing in this repository](#pushing-in-this-repository)
+9. [The workspace tenants](#the-workspace-tenants)
+10. [The onion architecture import rule](#the-onion-architecture-import-rule)
+11. [Protected tests](#protected-tests)
+12. [Agent surfaces](#agent-surfaces)
+13. [Decisions and governing rules](#decisions-and-governing-rules)
+14. [The paper and the book](#the-paper-and-the-book)
+15. [PR checklist](#pr-checklist)
+16. [Getting help](#getting-help)
+17. [Code of Conduct](#code-of-conduct)
+18. [License of contributions](#license-of-contributions)
 
 ## Your first hour
 
@@ -230,6 +231,36 @@ not from the commit types (ADR-0028).
 A commit made in the GitHub web UI — including an accepted Copilot autofix —
 bypasses both hooks and fails the `Provenance` check. Reword it locally before
 merge.
+
+## The changelog
+
+Never edit `CHANGELOG.md` (or `src/vibey_tools/gh/CHANGELOG.md`) by hand: every
+pull request editing the same `## [Unreleased]` lines conflicted with every other
+one. Add a **fragment** instead — one new file per change, in the `changelog.d/`
+directory beside the changelog it belongs to, named `<slug>.<type>.md`:
+
+```text
+changelog.d/1303.feature.md                    # the engine's CHANGELOG.md
+src/vibey_tools/gh/changelog.d/1303.fix.md     # vibey-gh's own
+```
+
+The slug is letters, digits, `-` and `_` — the pull request's number or a short
+name. The type is one of `breaking`, `feature`, `fix`, `perf`, `refactor`,
+`removed`, `docs`, `chore` (`[changelog] types` in `.vibey-gh.toml`), and decides
+the heading the entry is filed under. The content is the entry exactly as it
+should read in that changelog, bullet included and no heading:
+
+```markdown
+* **gh:** what changed, for whom, and why it matters
+  ([#1303](https://github.com/the-vibey-project/vibey/pull/1303)).
+```
+
+The release commit folds every fragment in under its heading and deletes it
+(`vibey-gh promote`; `uv run vibey-gh changelog assemble` previews the fold). The
+`Changelog fragment` check refuses a pull request that changes shipped code
+(`[changelog] require_for`) without a fragment, adds a malformed one, or edits an
+unreleased section directly. Label it `no-changelog` when no reader of the
+changelog would miss the change.
 
 ## Provenance
 
@@ -459,6 +490,7 @@ copies of everything are published under `/develop/`.
 - [ ] Protected tests untouched (or sign-off obtained and noted)
 - [ ] Agent-surface trees updated if a procedure changed
 - [ ] Docs updated if behavior changed; a new ADR bumps the count and the nav
+- [ ] A user-visible change adds a changelog fragment (`changelog.d/<slug>.<type>.md`), never an edit to `CHANGELOG.md`
 - [ ] Any new governing rule is proposed as a sub-doctrine, with the corpus index regenerated
 - [ ] I agree to the [Code of Conduct](CODE_OF_CONDUCT.md) and to license
       this contribution under the MIT License

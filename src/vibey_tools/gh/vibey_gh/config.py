@@ -267,6 +267,7 @@ class WorkflowNamesConfig:
     github_release: str = "GitHub Release"
     repository_profile: str = "Repository profile"
     skip_markers: str = "Skip markers"
+    changelog: str = "Changelog"
     branch_health: str = "Branch health"
     ruleset_drift: str = "Ruleset drift"
 
@@ -1360,6 +1361,38 @@ _IANA_ZONE = re.compile(r"[A-Za-z0-9_+\-]+(/[A-Za-z0-9_+\-]+)*")
 
 
 @dataclass(frozen=True)
+class AutonomyConfig:
+    """The operator's standing grant, declared in `[autonomy]` (ratified by the operator's
+    merge of #1300, 2026-10-01).
+
+    vibey-gh does not act on it: agents read it, through the pointer in CLAUDE.md, AGENTS.md
+    and GEMINI.md, as the operator's instruction. It is declared here so that it is
+    validated rather than merely tolerated -- `doctor` used to report the whole table as one
+    "vibey-gh does not read" -- and so that a grant is never read without its bounds: a
+    `standing_grant` with an empty `never` is refused, because a grant is read narrowly
+    (12.d) and one that names no edge has none to read. The `never` list restates where the
+    SD-01 floor meets the work; it does not move the floor.
+    """
+
+    standing_grant: bool = False
+    operator_role: str = ""
+    scope: tuple[str, ...] = ()
+    never: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.standing_grant, bool):
+            raise TypeError("autonomy.standing_grant must be true or false")
+        if not isinstance(self.operator_role, str):
+            raise TypeError("autonomy.operator_role must be a string")
+        _unique_nonempty("autonomy.scope", self.scope)
+        _unique_nonempty("autonomy.never", self.never)
+        if self.standing_grant and not self.never:
+            raise ValueError(
+                "autonomy.never must name the grant's bounds when standing_grant is true"
+            )
+
+
+@dataclass(frozen=True)
 class SabbathConfig:
     """Sub-doctrine 8.i, fitted to the machine it runs on (vibey ADR-0070).
 
@@ -2020,6 +2053,178 @@ class SkipMarkersConfig:
         _unique_nonempty("skip_markers.exempt_authors", self.exempt_authors)
 
 
+# The fragment types a `<slug>.<type>.md` file may name, each with the `### ` heading its
+# entries are filed under, in the order the headings appear under the unreleased section.
+# The titles are the ones this project's changelogs already use (conventional-changelog's
+# spellings), so a repository adopting fragments keeps the headings its history carries.
+DEFAULT_CHANGELOG_TYPES = (
+    ("breaking", "BREAKING CHANGES"),
+    ("feature", "Features"),
+    ("fix", "Bug Fixes"),
+    ("perf", "Performance Improvements"),
+    ("refactor", "Code Refactoring"),
+    ("removed", "Removed"),
+    ("docs", "Documentation"),
+    ("chore", "Miscellaneous Chores"),
+)
+# A type is the middle of `<slug>.<type>.md`, so it can never hold the dot that separates it.
+_CHANGELOG_TYPE = re.compile(r"[a-z][a-z0-9-]*")
+_RELEASE_PLACEHOLDER = re.compile(r"\{([^{}]*)\}")
+
+
+def _repository_relative(name: str, value: object) -> str:
+    """A repository-relative POSIX path, normalised, or a ValueError naming the key."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a non-empty repository-relative path")
+    path = PurePosixPath(value)
+    if path.is_absolute() or ".." in path.parts or "\\" in value:
+        raise ValueError(f"{name} must be a repository-relative path: {value!r}")
+    return str(path)
+
+
+@dataclass(frozen=True)
+class ChangelogFileConfig:
+    """One `[[changelog.files]]` entry: a changelog and the directory its fragments wait in.
+
+    `fragments` defaults to `changelog.d` beside the changelog. `unreleased` is the heading
+    text of the section fragments are folded into (`## <unreleased>`), matched without
+    regard to case and created where absent. `versioned` says whether a release turns that
+    section into `## <release_heading>` and opens a fresh one above it: true for a changelog
+    with a section per version, false for one whose unreleased section is all it keeps.
+    """
+
+    changelog: str
+    fragments: str = ""
+    unreleased: str = "[Unreleased]"
+    versioned: bool = True
+
+    def __post_init__(self) -> None:
+        changelog = _repository_relative("changelog.files.changelog", self.changelog)
+        object.__setattr__(self, "changelog", changelog)
+        default = str(PurePosixPath(changelog).parent / "changelog.d")
+        fragments = _repository_relative("changelog.files.fragments", self.fragments or default)
+        if fragments == ".":
+            raise ValueError("changelog.files.fragments must name a directory, not the root")
+        object.__setattr__(self, "fragments", fragments)
+        if not isinstance(self.unreleased, str) or not self.unreleased.strip():
+            raise ValueError("changelog.files.unreleased must be a non-empty heading")
+        if "\n" in self.unreleased or "\r" in self.unreleased:
+            raise ValueError("changelog.files.unreleased must be a single line")
+        if not isinstance(self.versioned, bool):
+            raise ValueError("changelog.files.versioned must be a boolean")  # noqa: TRY004
+
+
+@dataclass(frozen=True)
+class ChangelogConfig:
+    """`[changelog]`: one fragment file per change, folded into the changelog at release.
+
+    Every pull request used to edit the same `## [Unreleased]` lines, so concurrent pull
+    requests conflicted on every merge -- and a `merge=union` attribute does not help on
+    GitHub, whose mergeability never runs a custom merge driver, and can silently duplicate
+    a heading where it does run. A fragment is a new file whose name no other change takes,
+    so it cannot conflict. `vibey-gh changelog assemble` folds the fragments in and deletes
+    them; `vibey-gh promote` does that, and cuts the version's section, in the release
+    commit. `vibey-gh changelog check` refuses a pull request that changes a `require_for`
+    path without adding a fragment (unless it carries `skip_label`), that adds a malformed
+    one, or that edits an unreleased section by hand.
+
+    Off by default, so an adopter's pull requests and releases are unchanged until it
+    declares the table.
+    """
+
+    enabled: bool = False
+    files: tuple[ChangelogFileConfig, ...] = (ChangelogFileConfig("CHANGELOG.md"),)
+    types: tuple[tuple[str, str], ...] = DEFAULT_CHANGELOG_TYPES
+    require_for: tuple[str, ...] = ()
+    skip_label: str = "no-changelog"
+    release_heading: str = "[{version}] ({date})"
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise ValueError("changelog.enabled must be a boolean")  # noqa: TRY004
+        if self.enabled and not self.files:
+            raise ValueError("changelog.files must name at least one changelog when enabled")
+        for key, values in (
+            ("changelog.files.changelog", [entry.changelog for entry in self.files]),
+            ("changelog.files.fragments", [entry.fragments for entry in self.files]),
+        ):
+            if len(set(values)) != len(values):
+                raise ValueError(f"{key} entries must be unique")
+        if not self.types:
+            raise ValueError("changelog.types must declare at least one type")
+        for kind, title in self.types:
+            if not _CHANGELOG_TYPE.fullmatch(kind):
+                raise ValueError(
+                    f"changelog.types keys must be lowercase words joined by hyphens: {kind!r}"
+                )
+            if not isinstance(title, str) or not title.strip() or "\n" in title:
+                raise ValueError(f"changelog.types.{kind} must be a one-line heading")
+        titles = [title.strip().lower() for _, title in self.types]
+        if len(set(titles)) != len(titles):
+            raise ValueError("changelog.types headings must be unique")
+        _unique_nonempty("changelog.require_for", self.require_for)
+        for pattern in self.require_for:
+            if pattern.startswith("/"):
+                raise ValueError(
+                    "changelog.require_for entries are repository-root relative,"
+                    f" without a leading '/': {pattern!r}"
+                )
+        if not isinstance(self.skip_label, str) or "\n" in self.skip_label:
+            raise ValueError("changelog.skip_label must be a one-line label name")
+        if not isinstance(self.release_heading, str) or "\n" in self.release_heading:
+            raise ValueError("changelog.release_heading must be a single line")
+        names = set(_RELEASE_PLACEHOLDER.findall(self.release_heading))
+        if "version" not in names or not names <= {"version", "date"}:
+            raise ValueError(
+                "changelog.release_heading must contain {version} and no placeholder but"
+                f" {{version}} and {{date}}: {self.release_heading!r}"
+            )
+
+    @property
+    def titles(self) -> dict[str, str]:
+        """Each type's heading, in the configured order."""
+        return dict(self.types)
+
+    @classmethod
+    def from_table(cls, table: Mapping[str, object]) -> ChangelogConfig:
+        """`[changelog]` as written, every absent key falling back to the default.
+
+        `types` is a table whose order is the headings' order; `files` an array of tables.
+        """
+        known = {f.name for f in dataclasses.fields(cls)}
+        unknown = sorted(set(table) - known)
+        if unknown:
+            raise ValueError(f"changelog: unknown key(s) {', '.join(unknown)}")
+        values: dict[str, object] = {
+            key: table[key] for key in ("enabled", "skip_label", "release_heading") if key in table
+        }
+        if "require_for" in table:
+            patterns = table["require_for"]
+            if not isinstance(patterns, list) or not all(isinstance(p, str) for p in patterns):
+                raise ValueError("changelog.require_for must be a list of strings")
+            values["require_for"] = tuple(patterns)
+        if "types" in table:
+            types = table["types"]
+            if not isinstance(types, Mapping):
+                raise ValueError("changelog.types must be a table of type = heading")
+            values["types"] = tuple((str(kind), title) for kind, title in types.items())
+        if "files" in table:
+            files = table["files"]
+            if not isinstance(files, list) or not all(isinstance(f, Mapping) for f in files):
+                raise ValueError("changelog.files must be an array of tables")
+            entry_keys = {f.name for f in dataclasses.fields(ChangelogFileConfig)}
+            parsed = []
+            for entry in files:
+                extra = sorted(set(entry) - entry_keys)
+                if extra:
+                    raise ValueError(f"changelog.files: unknown key(s) {', '.join(extra)}")
+                if "changelog" not in entry:
+                    raise ValueError("changelog.files entries must name a changelog")
+                parsed.append(ChangelogFileConfig(**dict(entry)))
+            values["files"] = tuple(parsed)
+        return cls(**values)  # type: ignore[arg-type]
+
+
 @dataclass(frozen=True)
 class BranchHealthConfig:
     """`[branch_health]`: a red permanent branch is announced, once, in one issue.
@@ -2591,6 +2796,7 @@ class GhConfig:
     realign: RealignConfig = RealignConfig()
     branch_sync: BranchSyncConfig = BranchSyncConfig()
     sabbath: SabbathConfig = SabbathConfig()
+    autonomy: AutonomyConfig = AutonomyConfig()
     conversation: ConversationConfig = ConversationConfig()
     github_release: GithubReleaseConfig = GithubReleaseConfig()
     announce: AnnounceConfig = AnnounceConfig()
@@ -2602,6 +2808,7 @@ class GhConfig:
     rulesets: RulesetsConfig = RulesetsConfig()
     repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
     skip_markers: SkipMarkersConfig = SkipMarkersConfig()
+    changelog: ChangelogConfig = ChangelogConfig()
     branch_health: BranchHealthConfig = BranchHealthConfig()
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
@@ -2838,6 +3045,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     realigning = data.get("realign", {})
     syncing = data.get("branch_sync", {})
     resting = data.get("sabbath", {})
+    granted = data.get("autonomy", {})
     talking = data.get("conversation", {})
     release = data.get("github_release", {})
     yanking = data.get("yank", {})
@@ -2977,6 +3185,12 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
                 if field.name in resting
             }
         ),
+        autonomy=AutonomyConfig(
+            standing_grant=granted.get("standing_grant", False),
+            operator_role=granted.get("operator_role", ""),
+            scope=tuple(granted.get("scope", ())),
+            never=tuple(granted.get("never", ())),
+        ),
         realign=RealignConfig(
             reconcile_branches=realigning.get("reconcile_branches", True),
             automation_prefixes=tuple(
@@ -3053,6 +3267,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             enabled=skip_markers.get("enabled", True),
             exempt_authors=tuple(skip_markers.get("exempt_authors", ())),
         ),
+        changelog=ChangelogConfig.from_table(data.get("changelog", {})),
         branch_health=BranchHealthConfig(
             enabled=branch_health.get("enabled", True),
             checks=tuple(branch_health.get("checks", ())),

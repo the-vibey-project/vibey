@@ -21,6 +21,7 @@ fails `vibey doctor` until the operator splits the roles (12.e).
 Declared by `interfaces/ledger_guard_interface.py` (ADR-0016).
 """
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -537,20 +538,41 @@ class DatabaseRoleReconciler:
     @staticmethod
     async def _revoke_replication_role(owner: OwnedConnection, role: str) -> None:
         """`SET session_replication_role = replica` silences every trigger. Only a
-        superuser may set it unless granted (PostgreSQL 15+); revoke any grant. An owner
-        that may not revoke it leaves it for the inspector to report."""
+        superuser may set it unless granted (PostgreSQL 15+); revoke any grant.
+
+        An owner that may not revoke it leaves it for the inspector to report -- that, and
+        only that, is tolerated. The grant lives in `pg_parameter_acl`, one row for the
+        whole cluster, so two reconciles on different databases of one cluster can race on
+        it, and a per-database advisory lock does not serialize them: the loser gets
+        `tuple concurrently updated`. That is retried. Every other error is raised: it used
+        to be swallowed with the rest, and the trigger-silencing grant stayed in place
+        without a word (CI, PostgreSQL 16, 2026-10-01).
+        """
         if int(str(await owner.fetchval("SHOW server_version_num"))) < 150000:
             return
-        try:
-            async with owner.transaction():
-                await owner.execute(
-                    f"REVOKE SET ON PARAMETER session_replication_role FROM PUBLIC, {role}"
-                )
-        except asyncpg.PostgresError:
-            return
+        sql = f"REVOKE SET ON PARAMETER session_replication_role FROM PUBLIC, {role}"
+        attempt = 0
+        while True:
+            try:
+                async with owner.transaction():
+                    await owner.execute(sql)
+                return
+            except asyncpg.InsufficientPrivilegeError:
+                return
+            except asyncpg.InternalServerError as exc:
+                attempt += 1
+                if "concurrently updated" not in str(exc) or attempt >= _REVOKE_ATTEMPTS:
+                    raise
+                await asyncio.sleep(_REVOKE_BACKOFF_SECONDS * attempt)
 
 
 _LOCK: Final = "SELECT pg_catalog.pg_advisory_xact_lock($1)"
+
+_REVOKE_ATTEMPTS: Final = 5
+"""How many times a REVOKE that raced another reconcile on the same cluster is tried."""
+
+_REVOKE_BACKOFF_SECONDS: Final = 0.05
+"""Linear backoff between those attempts; the race resolves in milliseconds."""
 
 _APP_ROLE: Final = """
 SELECT r.rolsuper, r.rolcreaterole,

@@ -407,6 +407,10 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         "true" if cfg.skip_markers.enabled else "false",
     )
     wanted = wanted.replace(
+        "__VIBEY_GH_CHANGELOG_ENABLED__",
+        "true" if cfg.changelog.enabled else "false",
+    )
+    wanted = wanted.replace(
         "__VIBEY_GH_BRANCH_HEALTH_ENABLED__",
         "true" if cfg.branch_health.enabled else "false",
     )

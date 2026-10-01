@@ -688,6 +688,9 @@ def build_full_worker(
             lock=resources.integration_lock,
             ledger_reader=resources.ledger,
             human_gates=resources.gates,
+            worktrees=GitWorktreeManager(
+                repo_root, naming=WorktreeNaming(job.project_id, job.cycle)
+            ),
         )
 
     handlers: dict[str, JobHandler] = {

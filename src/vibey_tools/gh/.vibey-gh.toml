@@ -16,6 +16,12 @@ code_paths    = ["vibey_gh/"]
 integration = "develop"
 release     = "main"
 
+# No path merges with the `union` driver: this tool's CHANGELOG.md is written as fragments
+# now, declared by the repository root's `[changelog]`. GitHub's mergeability never ran the
+# driver, and where it did run it could duplicate a heading.
+[install]
+union_merge_paths = []
+
 [merge_train]
 owner           = "adammatthewsteinberger"
 trusted_authors = ["adammatthewsteinberger", "claude[bot]", "github-actions[bot]", "vibey[bot]"]
