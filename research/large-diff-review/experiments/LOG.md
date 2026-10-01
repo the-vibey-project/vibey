@@ -26,3 +26,29 @@ what was seen, and what it changed.
   production room rule (#1290's merge commit is not in the clone — excluded). Split and
   selections drawn by seed (`corpus/selection.json`).
 - **18:05** PREREGISTRATION.md written and committed before any experimental request.
+- **18:12** PRIOR-ART's findings arrived (`../prior-art/findings.md`), before any
+  experimental request. Pre-data amendments, adopted now (PREREGISTRATION §10):
+  1. **Mechanism replay (Hm2):** the #1312 part-1 request (dev host) and the #1317 part-3
+     request replayed at T=0 and at T=1.0/top_p 1.0 × 5 seeds; logged: eval_count,
+     done_reason, wall time, and PRIOR-ART's loop metric (a ≥200-char substring repeating
+     ≥3× in the last ~4k chars of the thinking) beside the registered repeated-8-gram
+     fraction. #1317 is a holdout host: its replay is a **mechanism** measurement of the
+     production request only — completion and loop metrics are read, its verdict content
+     is not read or scored, and no arm is tuned on it. Declared here so it can be checked.
+  2. **Budget forcing:** primary mechanism becomes PRIOR-ART's `/api/chat` prefill — phase 2
+     repeats the messages plus an assistant message carrying the truncated thinking, a
+     short budget note, and a NON-EMPTY content prefix, same think level. The registered
+     raw `/api/generate` route is kept as a second variant. Both are verified live in
+     Stage 0 (does `format` still constrain a prefilled final channel? is the prefix KV
+     reused — `prompt_eval_count` in phase 2?) before either is used for an outcome.
+     Budget sweep R ∈ {4096, 8192, 12288} replaces {2048, 4096, 8192}; answer cap 2,048.
+  3. **Forced-verdict fidelity (Hm3):** requests that finish naturally are re-run with R
+     below their natural length and the two verdicts compared (agreement, CAUGHT kept).
+  4. **Context factor (Stage 2):** reference context = none / changed region with its
+     enclosing function (production `SourceContext.excerpt`) / whole file, since one
+     study found whole-file context lowered detection in 8/8 models.
+  5. **Verifier (+VER):** conclusion-first TRUE/FALSE/UNCERTAIN, N = 3 samples at T=1.0,
+     a finding kept at ≥ 2/3 TRUE; UNCERTAIN kept (a human looks).
+  6. **Never low for verdicts** is PRIOR-ART's advice; D_k-low stays in Stage 2 because
+     small parts may change that, and its recall is the test.
+  7. Secondary matcher sensitivity: file ± 5 lines + class keyword, beside the canary's ± 3.
