@@ -760,6 +760,34 @@ def test_the_canary_passes_local_review_every_flag_the_pull_request_review_does(
     assert "--split-added-hunks" in flags or "--no-split-added-hunks" in flags
 
 
+def test_the_canary_passes_the_same_values_the_rendered_review_does():
+    """Every literal value the rendered sovereign job passes `local-review` -- the model,
+    think level, window, reserve, limits, deadline rates and slot wait -- is the value the
+    canary passes for this repository's configuration."""
+    workflow = (REPO / ".github/workflows/pr-review.yml").read_text(encoding="utf-8")
+    start = workflow.index("vibey-gh local-review \\")
+    end = workflow.index('> "${RUNNER_TEMP}/verdict.json"', start)
+    rendered = {
+        flag: value.strip("'")
+        for flag, value in re.findall(
+            r"(--[a-z][a-z-]+) ('[^']*'|[^\s\\$\"]+)", workflow[start:end]
+        )
+        if not value.startswith("--")
+    }
+    assert {"--model", "--think", "--context-window", "--slot-wait-seconds"} <= set(rendered)
+    settings = ReviewCanary.settings(load_config(REPO))
+    argv = ReviewCanary.argv(
+        settings,
+        base_url="u",
+        diff=Path("d"),
+        outcome=Path("o"),
+        context_dir=Path("c"),
+        source_dir=Path("s"),
+    )
+    for flag, value in rendered.items():
+        assert argv[argv.index(flag) + 1] == value, flag
+
+
 def test_the_canary_argv_follows_each_setting():
     cfg = GhConfig(
         root=Path("."),
