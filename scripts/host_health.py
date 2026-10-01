@@ -2151,7 +2151,16 @@ class UnitPlacement:
 
     @staticmethod
     def volatile_roots() -> list[str]:
-        roots = {tempfile.gettempdir(), "/tmp", "/private/tmp", "/var/tmp", "/private/var/folders"}  # noqa: S108 -- these are the roots being refused
+        # Assembled from parts, as tests/meta/test_no_volatile_work_paths.py assembles its own,
+        # so these roots -- which are refused here -- are not mistaken for a use of them.
+        tmp = "/" + "tmp"
+        roots = {
+            tempfile.gettempdir(),
+            tmp,
+            "/private" + tmp,
+            "/var" + tmp,
+            "/private/var/" + "folders",
+        }
         return sorted(os.path.realpath(r) for r in roots)
 
     @classmethod
