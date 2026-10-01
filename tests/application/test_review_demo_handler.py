@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import json
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +17,7 @@ from vibey.application.review_demo_handler import (
 from vibey.application.worker import Failure, Success
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId
+from vibey.domain.integration_evidence import GateRun, ItemEvidence
 from vibey.domain.job import FailureClass, JobState
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance
 from vibey.domain.phase import Phase
@@ -181,7 +183,8 @@ async def test_review_demo_handler_generates_all_artifacts_and_enqueues_collect(
         clock=FixedClock(),
     )
 
-    job = _make_job(payload={"test_report": "<xml>passed</xml>", "coverage": '{"total": 100}'})
+    job = _make_job()
+    ledger._events.append(_gate_results_event(job, "wi-1", ("pytest tests/", 0, "3 passed")))
     outcome = await handler.handle(job)
 
     assert isinstance(outcome, Success)
@@ -279,3 +282,106 @@ async def test_fresh_scan_supersedes_stale_automated_findings() -> None:
     ]
     assert [p["finding_id"] for p in resolutions] == ["f_code_1_stale111"]
     assert "superseded" in str(resolutions[0]["resolution"])
+
+
+def _gate_results_event(
+    job: JobRecord, work_item_id: str, *runs: tuple[str, int, str], cycle: int | None = None
+) -> LedgerEvent:
+    """What a successful build.integrate records for one work item."""
+    item = ItemEvidence(
+        work_item_id=work_item_id,
+        runs=tuple(GateRun(command, code, tail) for command, code, tail in runs),
+    )
+    payload = item.to_payload(cycle=job.cycle if cycle is None else cycle)
+    return LedgerEvent(
+        event_id=uuid4(),
+        project_id=job.project_id,
+        cycle=job.cycle if cycle is None else cycle,
+        phase=Phase.BUILD,
+        seq=1,
+        kind=EventKind.ARTIFACT_PRODUCED,
+        engine_id=None,
+        job_id=uuid4(),
+        causation_id=None,
+        correlation_id=uuid4(),
+        provenance=Provenance.TRUSTED,
+        produced_at=NOW,
+        payload=payload,
+        digest="abc",
+    )
+
+
+def _notes_spec() -> DesignSpec:
+    return DesignSpec(
+        objective="Deliver notes app",
+        constraints=(),
+        non_goals=(),
+        criteria=(
+            AcceptanceCriterion(
+                criterion_id="AC-1",
+                given="a blank notebook",
+                when="create note is clicked",
+                then="a new note is opened",
+                fit="created within 100ms",
+            ),
+        ),
+        nfrs=(),
+        walking_skeleton="walking skeleton",
+    )
+
+
+async def test_the_reviewer_sees_exactly_what_the_integration_gates_did() -> None:
+    """review.demo was enqueued with no payload and showed a hard-coded
+    "0 failures" report and 100% green coverage on every REVIEW."""
+    job = _make_job()
+    ledger = FakeReviewLedger(
+        events=(
+            _gate_results_event(job, "wi-1", ("pytest tests/", 0, "3 passed")),
+            _gate_results_event(job, "wi-2", ("ruff check .", 0, "(no output)")),
+            # Another cycle's record never counts.
+            _gate_results_event(job, "wi-9", ("make", 0, ""), cycle=job.cycle + 1),
+        )
+    )
+    artifacts = FakeReviewArtifactWriter()
+    handler = ReviewDemoHandler(
+        specs=FakeSpecRepository(spec=_notes_spec()),
+        ledger=ledger,
+        artifacts=artifacts,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    assert outcome.result["evidence_measured"] is True
+    report = artifacts.written["evidence/test-report.xml"]
+    assert 'name="pytest tests/"' in report
+    assert 'name="ruff check ."' in report
+    assert "wi-9" not in report
+    assert 'tests="2" failures="0" skipped="0"' in report
+    coverage = json.loads(artifacts.written["evidence/coverage.json"])
+    assert coverage["measured"] is False
+    assert (
+        "2 integration gate run(s) across 2 work item(s); 0 failed."
+        in (artifacts.written["DEMO.md"])
+    )
+
+
+async def test_a_payload_can_no_longer_supply_its_own_evidence() -> None:
+    """Evidence comes from the ledger only: a job payload is not a measurement."""
+    job = _make_job(payload={"test_report": "<xml>passed</xml>", "coverage": '{"coverage": 100}'})
+    ledger = FakeReviewLedger(events=(_gate_results_event(job, "wi-1", ("pytest", 0, "ok")),))
+    artifacts = FakeReviewArtifactWriter()
+    handler = ReviewDemoHandler(
+        specs=FakeSpecRepository(spec=_notes_spec()),
+        ledger=ledger,
+        artifacts=artifacts,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    await handler.handle(job)
+
+    assert "<xml>passed</xml>" not in artifacts.written["evidence/test-report.xml"]
+    assert '"coverage": 100' not in artifacts.written["evidence/coverage.json"]
