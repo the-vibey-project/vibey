@@ -1513,6 +1513,10 @@ def test_a_failing_reap_is_reported_and_the_worker_keeps_going(tmp_path: Path) -
             "vibey.application.gate_notices.GateReminder.run_if_due",
             new=AsyncMock(side_effect=RuntimeError("the ledger went away")),
         ),
+        patch(
+            "vibey.application.gate_timeouts.GateTimeoutSweep.run_if_due",
+            new=AsyncMock(side_effect=RuntimeError("the gates went away")),
+        ),
     ):
         mock_notifier = AsyncMock()
         mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
@@ -1521,6 +1525,7 @@ def test_a_failing_reap_is_reported_and_the_worker_keeps_going(tmp_path: Path) -
     assert "lease reap failed: a bad lease row" in res.output
     assert "queue reap failed: the broker went away" in res.output
     assert "gate reminders failed: the ledger went away" in res.output
+    assert "gate timeouts failed: the gates went away" in res.output
     mock_notifier.wait_for_job_ready.assert_awaited()
 
 

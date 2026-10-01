@@ -588,6 +588,34 @@ class PlannedNotice:
 
 
 @dataclass(frozen=True, slots=True)
+class ResolvedGate:
+    """One gate a timeout sweep answered with its own default, as the project declared."""
+
+    project_id: UUID
+    gate_id: UUID
+    gate_kind: str
+    answer: Mapping[str, str]
+    waited_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class GateTimeoutReport:
+    """What one gate-timeout sweep found and did.
+
+    ``resolved`` holds every gate answered with its default. ``refused`` names every project
+    whose declaration could not be read or honoured, and any read that failed: nothing was
+    answered for those (10.g). ``failed`` names every answer that was attempted and failed;
+    the gate stays open and the next sweep tries again.
+    """
+
+    project_id: UUID | None
+    waiting: int = 0
+    resolved: tuple[ResolvedGate, ...] = ()
+    refused: tuple[str, ...] = ()
+    failed: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class GateReminderReport:
     """What one reminder sweep found and did.
 

@@ -16,7 +16,7 @@ remain documented inputs for future wiring.
 | Input | Read by | What it controls |
 |---|---|---|
 | `./vibey.toml`, keys `[features].gptossloop`, `[features].qwenloop`, `[features].claudeloop_local` | `vibey doctor` and `vibey loops` (`cli/main.py` `_local_engines_from_toml`, through `LocalEngineSettings`) | Which local engines are added to the health sweep and reported as switched on. The file is read from the current directory with `parse_toml_string`; a missing or malformed file leaves every switch at its default: `gptossloop` on, the others off (ADR-0064). |
-| `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]`, `[engine_environment]` and `[design]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run, what an engine session may see of the environment and how the DESIGN interview declares its defaults ([`[design.interview]`](#designinterview)) into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
+| `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]`, `[engine_environment]`, `[design]` and `[human_gates]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run, what an engine session may see of the environment, how the DESIGN interview declares its defaults ([`[design.interview]`](#designinterview)) and which human gates may resolve to their default after waiting ([`[human_gates]`](#human_gates)) into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. `[notifications] sweep_interval_seconds` is read from the same `./vibey.toml`, for the gate-reminder sweep every idle worker runs. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
@@ -1022,6 +1022,33 @@ allow = ["JAVA_HOME"]
 agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]
 "claudeloop-local" = ["GH_TOKEN"]
 ```
+
+## `[human_gates]` { #human_gates }
+
+Which human gates may resolve to their own default answer once they have waited, and how
+long each waits first. **Nothing times out unless it is declared here.** A gate's default
+is never applied on silence: sub-doctrine 12.d says silence is not consent, and some
+defaults act for you -- `deploy_demo_review` defaults to `approve`. Declaring a kind here is
+the consent, given in advance, in the repository (the operator's ruling of 2026-09-30).
+
+```toml
+[human_gates.timeout_defaults]
+choice = 1440          # REVIEW's deployment opt-in resolves to "local_only" after a day
+deploy_acceptance = 60 # an unanswered deployment acceptance resolves to "reject"
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `timeout_defaults` | table of gate kind → minutes | `{}` | Each key is a gate kind; each value is a positive whole number of minutes. A gate of a declared kind that carries a default and has waited at least that long is answered with its default by the worker's idle sweep (`application/gate_timeouts.py`), through the same path as `vibey answer`: the ledger records it as `GateAnswered` by `gate-timeout`. Every other gate waits for a person, however long, and is still reminded about on the [`[notifications]`](#notifications) schedule. |
+
+Only these kinds can be declared, because only these carry a default this table can turn
+into the answer their handler reads: `choice` (default `local_only`), `deploy_interview`
+(`accept_defaults`), `deploy_acceptance` (`reject`), `deploy_demo_review` (`approve`) and
+`deploy_failure_triage` (`LOOP_DEPLOY_DESIGN`). REVIEW's `approval` gate has no default and
+can never time out. Naming any other kind, or a wait that is not a positive whole number,
+is refused by `vibey new` before the project exists; a stored declaration that cannot be
+honoured makes the sweep answer nothing for that project and log
+`gate.timeout_config_invalid`.
 
 ## `[sabbath]` { #sabbath }
 
