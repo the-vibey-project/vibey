@@ -39,3 +39,4 @@ src/vibey_tools/*/uv.lock
 packages/*/node_modules/
 packages/*/dist/
 packages/*/coverage/
+clients/*/coverage/

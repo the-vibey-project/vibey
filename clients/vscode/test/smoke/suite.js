@@ -18,6 +18,8 @@ async function check(name, body) {
 }
 
 exports.run = async function run() {
+  // First act: tell run.js the suite started, so a failure from here on is never retried.
+  if (process.env.VIBEY_SMOKE_STARTED) require('node:fs').writeFileSync(process.env.VIBEY_SMOKE_STARTED, '');
   const root = path.resolve(__dirname, '..', '..');
   const manifest = require(path.join(root, 'package.json'));
   const table = require('@vibey/core').CommandTable.ALL.map((spec) => spec.id);

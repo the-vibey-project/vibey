@@ -40,6 +40,7 @@ from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
+from vibey_gh.review_canary import ReviewCanary
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 from vibey_gh.ruleset_drift import RulesetDrift
 from vibey_gh.skip_markers import SkipMarkerGuard
@@ -1664,7 +1665,17 @@ def _rulesets(args) -> int:
         if outcome["unexpected_rules"]:
             note = f" — unexpected rule(s) preserved: {', '.join(outcome['unexpected_rules'])}"
         print(f"  {outcome['ruleset']} ({outcome['branch']}): {state}{note}")
-    print(f"vibey-gh: reconciled {len(outcomes)} ruleset(s)")
+    # Report what was observed, not what was attempted (12.e): a dry run applies nothing,
+    # and only a ruleset the forge accepted counts as applied.
+    changed = sum(1 for outcome in outcomes if outcome["changed"])
+    if args.dry_run:
+        print(
+            f"vibey-gh: dry run: {changed} of {len(outcomes)} ruleset(s) would change; "
+            "nothing applied"
+        )
+    else:
+        applied = sum(1 for outcome in outcomes if outcome["applied"])
+        print(f"vibey-gh: reconciled {len(outcomes)} ruleset(s); applied {applied}")
     return 0
 
 
@@ -2168,6 +2179,14 @@ def main(argv: list[str] | None = None) -> int:
         help="write the outcome record, coded in vibey_gh.review_outcome's vocabulary, here",
     )
     local.set_defaults(func=_local_review)
+
+    # The sovereign review measured against planted defects: recall and false positives,
+    # recorded with their intervals, and the floor an approver will read (status).
+    canary = sub.add_parser(
+        "review-canary",
+        help="measure the sovereign review against a corpus of planted defects and controls",
+    )
+    ReviewCanary.declare(canary).set_defaults(func=ReviewCanary.dispatch)
 
     outcomes = sub.add_parser(
         "review-outcomes",

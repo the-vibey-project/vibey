@@ -1085,7 +1085,12 @@ def test_rulesets_cli_reports_each_outcome(repo, monkeypatch, capsys):
     assert "vibey-gh: develop (develop): changed" in out
     assert "unexpected rule(s) preserved: creation" in out
     assert "vibey-gh: main (main): current" in out
-    assert "reconciled 2 ruleset(s)" in out
+    # A dry run never claims to have reconciled anything.
+    assert "dry run: 1 of 2 ruleset(s) would change; nothing applied" in out
+    assert "reconciled" not in out
+
+    assert main(["rulesets"]) == 0
+    assert "reconciled 2 ruleset(s); applied 1" in capsys.readouterr().out
 
 
 def test_rulesets_cli_reports_failures(repo, monkeypatch, capsys):
