@@ -52,3 +52,33 @@ what was seen, and what it changed.
   6. **Never low for verdicts** is PRIOR-ART's advice; D_k-low stays in Stage 2 because
      small parts may change that, and its recall is the test.
   7. Secondary matcher sensitivity: file ± 5 lines + class keyword, beside the canary's ± 3.
+- **18:40** Harness core written (`harness/client.py`, `cases.py`, `review.py`): slot
+  etiquette (process table + server log, two clear reads 8 s apart, 30 s polls), a request
+  that aborts only itself when a review client appears, an append-only request store
+  keyed by the SHA-256 of the exact body (resume = skip what is recorded), deterministic
+  check codes, production's chunker/excerpts/prompts/answer validation reused. Dry run
+  (no model): host #1131 is 21/10/5/3 parts at k = 4/8/16/32k tokens; the contract
+  request is ~30–37k tokens. Production's chunker refuses a context hunk larger than a
+  part; the D arms use a `LenientChunker` that gives such a hunk a part of its own (over
+  budget) instead — logged as a harness design choice. Sources are capped so a part never
+  exceeds the window less the 16,384-token reserve.
+- **18:42** Engineering observation (no quality outcome): production sizes `num_ctx` per
+  request (`ContextSizer.num_ctx` = prompt tokens + reserve, so 65,482 for the canary's
+  current case), and Ollama reloads the runner when `num_ctx` changes. The D arms use a
+  constant `num_ctx` 65,536 so no request of this study forces a reload; the A arms keep
+  production's sizing (they are production).
+- **18:45** **Deliverable amendment (operator, 2026-10-01 22:09Z; changes deliverables,
+  not hypotheses or decision rules).** Once a method is chosen, the experimentation must
+  be reproducible, run monthly, and surfaced in `vibey doctor`, in two tiers: (1) a shipped,
+  deterministic **full calibration** (class + interface, TOML config, pinned corpus
+  manifest, seeds, needles; winner vs B0 plus the sweep that picks this host's operating
+  point — part size, think, temperature/top_p, thinking and answer budgets, verifier N),
+  writing an append-only calibration record with a host fingerprint and a per-host
+  operating profile the review reads; run monthly on `vibey-local-vibey` by a workflow
+  modelled on `minimum-specs.yml`, landing via PR; (2) a **`vibey doctor` "review
+  calibration" section** (minutes): latest record, age, same-host check, FAIL when missing
+  / older than a declared limit / other host or model digest, plus a smoke probe (one
+  known needle + one control), and an opt-in `--calibrate-review` full run. The harness is
+  built for that lift: deterministic seeds, pinned manifest, resumable, and every request
+  record now carries `host` (fingerprint id: CPU, cores, memory, OS, Ollama version, model
+  digests) and `model_digest`. Design goes in REPORT.md's implementation plan.
