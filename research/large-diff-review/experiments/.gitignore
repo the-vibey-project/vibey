@@ -1,0 +1,3 @@
+corpus/raw/*.diff
+results/scratch/
+__pycache__/

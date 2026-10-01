@@ -1,0 +1,2333 @@
+{
+ "schema": "large-diff-review/hosts/1",
+ "window": "merged 2026-09-25..2026-10-01",
+ "split_seed": 20261001,
+ "production_settings": {
+  "model": "gpt-oss:20b",
+  "think": "",
+  "context_window": 65536,
+  "reasoning_reserve_tokens": 16384,
+  "chars_per_token": 3,
+  "max_diff_chars": 60000,
+  "max_document_chars": 120000,
+  "max_chunks": 6,
+  "split_added_hunks": true,
+  "source_context": true,
+  "max_source_chars": 60000,
+  "max_source_file_bytes": 1000000,
+  "context_paths": [
+   "README.md",
+   "docs/index.md"
+  ],
+  "scope": "full",
+  "role": "sovereign",
+  "timeout_seconds": 600,
+  "retries": 1,
+  "retry_backoff_seconds": 30,
+  "prompt_tokens_per_second": 200,
+  "output_tokens_per_second": 20,
+  "slot_wait_seconds": 900
+ },
+ "rows": [
+  {
+   "number": 1110,
+   "title": "docs(paper): bring the research paper up to date for 3.0.0",
+   "base": "develop",
+   "merge_commit": "9abb8c05c0fbabe341f746db39c1771a8de83bba",
+   "chars": 102707,
+   "room": 79613,
+   "files": 2,
+   "diff_sha256": "87ee748f7172cbce968cee6a181f8443286a73e1ca8e5f920d517fc7977fd60b",
+   "doc_chars": 61641,
+   "category_chars": {
+    "docs": 93920,
+    "code": 8787
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1121,
+   "title": "fix(gh): an honest sovereign heartbeat that passes the pre-push gate by the gate's own rule",
+   "base": "develop",
+   "merge_commit": "019b601f2ab99d6905e7f34490eb1ccbe8c3432c",
+   "chars": 304468,
+   "room": 79613,
+   "files": 44,
+   "diff_sha256": "73b48ce5169eefabf1b8e1416cdf27c91a5e0209524aec484135081a8594bab9",
+   "doc_chars": 61641,
+   "category_chars": {
+    "code": 260504,
+    "docs": 41451,
+    "generated": 2513
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1131,
+   "title": "feat(cli): list the two loops, their engines by effort, and what each can do",
+   "base": "develop",
+   "merge_commit": "7e366fb3d99bf768d5f52733e9c45c2786d1b4db",
+   "chars": 194560,
+   "room": 79613,
+   "files": 32,
+   "diff_sha256": "99d3ac7128cba931a06a38e02a4172a0a03a2135000c4e3c0548c9c040b00fbf",
+   "doc_chars": 61641,
+   "category_chars": {
+    "docs": 34645,
+    "code": 159915
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1137,
+   "title": "feat(vscode): the editor layer, the #1131 loops amendments, CI, and ADR-0059 (#290)",
+   "base": "develop",
+   "merge_commit": "0046c1d216058f15a32480e115afe9d6f8c829ad",
+   "chars": 222785,
+   "room": 79613,
+   "files": 52,
+   "diff_sha256": "f2eab3ca04bdde60094d33560905e9084ab3b4e69d5dd018fb6cf312d35616be",
+   "doc_chars": 61641,
+   "category_chars": {
+    "code": 177220,
+    "docs": 45065,
+    "generated": 500
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1138,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "e09b5f3867faf70cd6017b90216e3181d7f8dcad",
+   "chars": 42944,
+   "room": 79613,
+   "files": 3,
+   "diff_sha256": "26a2472ce76fb2694dade0ad92cd7b9afa8b80eef8d17f73e8fba750d6f877a7",
+   "doc_chars": 61641,
+   "category_chars": {
+    "code": 31347,
+    "docs": 11597
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1139,
+   "title": "fix(test): keep a test database while the process that made it lives",
+   "base": "develop",
+   "merge_commit": "c18dabe2776a6fb93eef04d74a807f1ca0767deb",
+   "chars": 30776,
+   "room": 79613,
+   "files": 9,
+   "diff_sha256": "898da02218aa768b655dc6c14762eacfefa7728d4d19e8a228a66963b5af1708",
+   "doc_chars": 61641,
+   "category_chars": {
+    "docs": 6625,
+    "code": 24151
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1140,
+   "title": "docs(canon): 10.i -- the signal is read before it is sent (for the operator's ratification, Article II.3)",
+   "base": "develop",
+   "merge_commit": "59e44109b77bcf3bb295fbc2731423f087333cbf",
+   "chars": 5979,
+   "room": 79613,
+   "files": 3,
+   "diff_sha256": "3f35210711b1a93321f9040925b40b0dd194fafcb972e1561b0488eca746b2ea",
+   "doc_chars": 61641,
+   "category_chars": {
+    "docs": 4670,
+    "code": 1309
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1141,
+   "title": "docs(canon): 8.c -- a local model's concurrent runs are the number measured on each device (for the operator's ratification, Article II.3)",
+   "base": "develop",
+   "merge_commit": "492a875de09586d7f88bfb599a31bd6f45b36358",
+   "chars": 4378,
+   "room": 80307,
+   "files": 2,
+   "diff_sha256": "b3905455cf26cb5799c812377d8f9ac38bf695ee30eea63adeb20c62941e96a4",
+   "doc_chars": 60947,
+   "category_chars": {
+    "code": 1772,
+    "docs": 2606
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1142,
+   "title": "feat(db)!: every PostgreSQL connection authenticates with scram-sha-256 (sub-doctrine 10.j for the operator's ratification, Article II.3)",
+   "base": "develop",
+   "merge_commit": "0a2f856e90738c89506da8512aab256b70524f14",
+   "chars": 72792,
+   "room": 80210,
+   "files": 30,
+   "diff_sha256": "a323fe806d8bc78f6d18fe43404842ccb95db8e54a9893d57e171085e857068a",
+   "doc_chars": 61044,
+   "category_chars": {
+    "code": 43579,
+    "docs": 29213
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1143,
+   "title": "feat(engines)!: remove the repealed opencodeloop engine",
+   "base": "develop",
+   "merge_commit": "bbf12552faa2502c8fd4614e5d0dd9894810b726",
+   "chars": 298926,
+   "room": 80307,
+   "files": 108,
+   "diff_sha256": "c344de79a59507b8ba1a3e4eb5f0436661f843c4b1f11af97d451aef0a72b98f",
+   "doc_chars": 60947,
+   "category_chars": {
+    "deletion": 153565,
+    "docs": 67756,
+    "code": 77605
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1144,
+   "title": "fix(paper): report the per-device sweep and clear the pending marker",
+   "base": "develop",
+   "merge_commit": "3968e5d4ffb36d88720e89f7fec6042e98b45004",
+   "chars": 2639,
+   "room": 80307,
+   "files": 1,
+   "diff_sha256": "3ff2a578637fab8f50cb90bb3242136b684334e89cf3105949b77d1f66632615",
+   "doc_chars": 60947,
+   "category_chars": {
+    "docs": 2639
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1145,
+   "title": "docs(canon): the Beauty Law (12.k), the no-cap path (8.b) and ULTRA, for ratification",
+   "base": "develop",
+   "merge_commit": "fd8388258c29fb8f11ed57e0f28da2f84563073c",
+   "chars": 40438,
+   "room": 80210,
+   "files": 12,
+   "diff_sha256": "2910c486dc700cecdb1b1eabb2da9496b80e293635d0e11814ece0c04e0869f4",
+   "doc_chars": 61044,
+   "category_chars": {
+    "docs": 37218,
+    "code": 3220
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1146,
+   "title": "feat(engines)!: gptossloop is the sovereign engine, and qwenloop is its opt-in Qwen twin",
+   "base": "develop",
+   "merge_commit": "1a5c94012e2a83d27da982163a9cf6b384481c38",
+   "chars": 598752,
+   "room": 79088,
+   "files": 168,
+   "diff_sha256": "d6f9721e80dce7b5cbcf10c447734469a3cb343fedaf8b3da44797124d6d2837",
+   "doc_chars": 62166,
+   "category_chars": {
+    "docs": 232598,
+    "code": 365856,
+    "generated": 298
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1147,
+   "title": "fix(gates): answer a gate once, and record who answered it",
+   "base": "develop",
+   "merge_commit": "da87ad9ceb9f2e77cb14252d6d29a8082e095607",
+   "chars": 100824,
+   "room": 80210,
+   "files": 43,
+   "diff_sha256": "b1842e437258c4c5ef7d717fb4eedcf520b223c65b9aa9601494e8af461c4871",
+   "doc_chars": 61044,
+   "category_chars": {
+    "docs": 8733,
+    "code": 92091
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1148,
+   "title": "docs(canon): 9.e -- the project and engine are vibey, every app is krypton (for the operator's ratification)",
+   "base": "develop",
+   "merge_commit": "6f96f1a5619b6ac58fe8aaa797cbb65210dbecbf",
+   "chars": 14238,
+   "room": 78738,
+   "files": 10,
+   "diff_sha256": "17a901f97621b02057989c9f1a1815da18c69c9ef9c14ba206cdfa8faec5088e",
+   "doc_chars": 62516,
+   "category_chars": {
+    "docs": 12049,
+    "code": 2189
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1149,
+   "title": "feat(design): one design system for every surface, from DTCG tokens",
+   "base": "develop",
+   "merge_commit": "ba0b36849657457a820578dfead08da1255f1873",
+   "chars": 2143829,
+   "room": 78738,
+   "files": 125,
+   "diff_sha256": "1b5221f9564c68d16313779f43721983167b6581af628791b97831264f6c7a30",
+   "doc_chars": 62516,
+   "category_chars": {
+    "code": 621926,
+    "docs": 25610,
+    "generated": 1489186,
+    "binary": 7107
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1150,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "7fab14dd9d108f556dbd441ff468680c127abadb",
+   "chars": 44051,
+   "room": 78738,
+   "files": 3,
+   "diff_sha256": "53ace444073922fffc4174591a3f1913d105084a417a122ca77b772601d1a398",
+   "doc_chars": 62516,
+   "category_chars": {
+    "code": 31347,
+    "docs": 12704
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1151,
+   "title": "fix(ci): publish as vibey-engine from vibey-engine.yml",
+   "base": "main",
+   "merge_commit": "2daef393981417b307aec0bbc9318e1cc2130c1d",
+   "excluded": "base is not develop (a promotion to main)"
+  },
+  {
+   "number": 1152,
+   "title": "fix(ci): publish as vibey-engine from vibey-engine.yml",
+   "base": "develop",
+   "merge_commit": "30356862949f5f13577fe67cca787ff5123f7680",
+   "chars": 2665,
+   "room": 78738,
+   "files": 1,
+   "diff_sha256": "78272fa5e0ae1dfb6e5819b92a768062575c385ff2918c552347ea3a9cd12215",
+   "doc_chars": 62516,
+   "category_chars": {
+    "code": 2665
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1153,
+   "title": "docs(canon): four names, two packages (9.e)",
+   "base": "develop",
+   "merge_commit": "631d327a225ec0ec0a78025cdc183eabd16a099f",
+   "chars": 9290,
+   "room": 78738,
+   "files": 4,
+   "diff_sha256": "78780441703c8458ac65edc44269b7d5c664b4ac8d1f4dffab3e251befd7b9c1",
+   "doc_chars": 62516,
+   "category_chars": {
+    "docs": 8485,
+    "code": 805
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1154,
+   "title": "feat(core): @vibey/core, the shared TypeScript core of every krypton client",
+   "base": "develop",
+   "merge_commit": "2e1266f0f85da8a2a835de5717bd1e5f321c525f",
+   "chars": 182790,
+   "room": 78738,
+   "files": 133,
+   "diff_sha256": "4fd4bf607ab475884bcc249d704a2201ebf318a4587f3835b7b12ef2444d53a8",
+   "doc_chars": 62516,
+   "category_chars": {
+    "code": 156013,
+    "docs": 14007,
+    "generated": 2622,
+    "rename": 10148
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1155,
+   "title": "feat(hub): vibey serve, the hub's core (ADR-0067)",
+   "base": "develop",
+   "merge_commit": "9200a74a951e276723f92261aefe4d442a68a42f",
+   "chars": 234370,
+   "room": 78738,
+   "files": 58,
+   "diff_sha256": "47a0983fc084561e2f22040f9bdea975fef048a7e8882b3781ce47600e51fa4a",
+   "doc_chars": 62516,
+   "category_chars": {
+    "code": 204975,
+    "docs": 26914,
+    "generated": 2481
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1156,
+   "title": "feat(packaging)!: two packages, vibey-engine and krypton-app (ADR-0069)",
+   "base": "develop",
+   "merge_commit": "52c147ea23ceed72b97d9289b5ff265b6caa7ffd",
+   "chars": 267025,
+   "room": 78112,
+   "files": 139,
+   "diff_sha256": "36596cded2db3dc7488c9c402b41d5b966966d53ef02a8a45e97922c4845300a",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 138984,
+    "code": 108278,
+    "rename": 153,
+    "generated": 19610
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1157,
+   "title": "fix(ci): publish as vibey-engine from vibey-engine.yml",
+   "base": "main",
+   "merge_commit": "2daef393981417b307aec0bbc9318e1cc2130c1d",
+   "excluded": "base is not develop (a promotion to main)"
+  },
+  {
+   "number": 1161,
+   "title": "feat(ultra): ULTRA effort without a ceiling, the no-cap path, and every surface (ADR-0063)",
+   "base": "develop",
+   "merge_commit": "0823cdfdd41a88c34199b9c5e9dd60081d9b5a58",
+   "chars": 163508,
+   "room": 78112,
+   "files": 63,
+   "diff_sha256": "eae3bc296db42d49b24295d601dad801a9eda24b0c94c12b3ea66819e9e22e61",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 9844,
+    "code": 153664
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1162,
+   "title": "fix(engines): read a sovereign runner's completed or failed event as its verdict",
+   "base": "develop",
+   "merge_commit": "73adb2484d9aa7678c5772402f5b448c385ad78f",
+   "chars": 3520,
+   "room": 78112,
+   "files": 2,
+   "diff_sha256": "1ad80b04b9d9cfc9b6c7666ff74a2f2b1c5e3ba39f7ca930d0a0392f9b439390",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 3520
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1163,
+   "title": "feat(hub): the live feed, resumed after a seq, and lanes tailed by byte offset",
+   "base": "develop",
+   "merge_commit": "f29341eb035cfcfdd1677da4baeb83d5ea8e3e92",
+   "chars": 69711,
+   "room": 78112,
+   "files": 23,
+   "diff_sha256": "4f78b3727e2093be3253f66e55029ee1da8953e53fe833f91ee6a5d33387d7b7",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 4426,
+    "code": 65285
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1164,
+   "title": "feat(app): Krypton for iOS, Android and the web over the hub",
+   "base": "develop",
+   "merge_commit": "73f02cb30b41be87e6954741763b691a5da11334",
+   "chars": 892135,
+   "room": 78112,
+   "files": 73,
+   "diff_sha256": "9b4b906873dc1c31e7d8b1c680111e31c0f30ea02779d377073bb4104df23139",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 606842,
+    "docs": 1656,
+    "generated": 283139,
+    "binary": 498
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1165,
+   "title": "feat(hub): pairing and trust -- signed device requests, a pinned certificate, _vibey._tcp (ADR-0070)",
+   "base": "develop",
+   "merge_commit": "b8095819db905c903dd5d7986a8ed23d1c956a0d",
+   "chars": 170830,
+   "room": 78112,
+   "files": 40,
+   "diff_sha256": "d05727422f10227ac195e542e78671133849abaa5dcdee159d7c64b4dfbafd18",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 18271,
+    "code": 131173,
+    "generated": 21386
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1166,
+   "title": "feat(failover): the driver hands off to gptossloop at ULTRA and back after a recorded probe (ADR-0070)",
+   "base": "develop",
+   "merge_commit": "589330a9208d488d79869bea8dd4162d87057994",
+   "chars": 169638,
+   "room": 78112,
+   "files": 51,
+   "diff_sha256": "1010e0825f972ee1705c49d1caa4b10206b72371a44ceb81d38d21cb62087a95",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 19414,
+    "code": 150224
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1167,
+   "title": "feat(vscode): krypton, raised to the Beauty Law, with a hub connection",
+   "base": "develop",
+   "merge_commit": "bddccb0d7cdb1d2e49bc45ab098f1509ea7aadb4",
+   "chars": 181935,
+   "room": 78112,
+   "files": 52,
+   "diff_sha256": "31f48231833b708cfd0d5d4a3bab4749ae1170cac582d3865a0bd86092324f70",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 153015,
+    "docs": 28920
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1168,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "ac7aa3c9c3df1203c3d8cadba02883392b1a4137",
+   "chars": 44091,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "43897f7cb5a3e5d79246bedf2ae309fb3dd4438460e393ba27280a486c14e473",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31366,
+    "docs": 12725
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1169,
+   "title": "Feat/sabbath heartbeat",
+   "base": "develop",
+   "merge_commit": "d97800d6437df72e0d073ba81dad5e4de8ba6aa0",
+   "chars": 152771,
+   "room": 78112,
+   "files": 46,
+   "diff_sha256": "2b1a9110b166c74c5f5743507c96dd31f325ec4ea1be17897cefc55658029ccb",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 128853,
+    "docs": 22472,
+    "generated": 1446
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1170,
+   "title": "feat(desktop): Krypton desktop in C on GTK 4 and libadwaita (ADR-0073)",
+   "base": "develop",
+   "merge_commit": "eaebb1f9beceb3e87a3d3ddbe49b0d3212510520",
+   "chars": 258531,
+   "room": 78112,
+   "files": 59,
+   "diff_sha256": "af2c97f4b0ae1f5663116642539e061ee5546e817b687a50d0c8b0588b4340fb",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 238080,
+    "docs": 20451
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1171,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "f31671e98b6cafffed3c6e57fc96fe82d1fdbf39",
+   "chars": 44276,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "68f2f7fdb0846437cf9121dd9cb7aaa5c94e46da3e30aafcca0f15af244ede60",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31364,
+    "docs": 12912
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1175,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "18f79875a8f79262e0a4bfac0ce6d54e73245973",
+   "chars": 44471,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "23e48a56770ec536cdcacd47b798f33f46a5b52b24582f9e10b04bb243e63187",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31374,
+    "docs": 13097
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1177,
+   "title": "Work 1169",
+   "base": "develop",
+   "merge_commit": "109873cdf8756232a06a187bb70c05834ffda6dc",
+   "chars": 2402,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "32412da31d7ea8716253675c939697daad9d37fb6bfd5b7ede5b36caba15a623",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 2402
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1182,
+   "title": "Serve the Search Console verification file, consent-gated analytics, and hermetic engine-sweep tests",
+   "base": "develop",
+   "merge_commit": "e43a83177f85bc47ae09498e7bb405181eafc0b8",
+   "chars": 64281,
+   "room": 78112,
+   "files": 12,
+   "diff_sha256": "047240eac3e9e7a7ce007afbc5a54c1de04507f2099bd468d3746c757f1fd1c5",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 55102,
+    "docs": 9179
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1183,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "a5b5df952331eaf46ae212c641a7b8713e314a8f",
+   "chars": 44573,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "397793d1a41197a85b330671d189e0b9842b90d444398d2703b547ad3605c4c5",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31375,
+    "docs": 13198
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1187,
+   "title": "fix(docs): list only the indexable channel in the sitemap index",
+   "base": "develop",
+   "merge_commit": "501a50f568e28d51ec3f9d0c058f9ee4ad3715b4",
+   "chars": 77032,
+   "room": 78112,
+   "files": 35,
+   "diff_sha256": "1a7d81ee80b3fb5d20bd1a1122afd65491c9fd0c2e56f2ae0e90056df75619c3",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 75487,
+    "docs": 1545
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1190,
+   "title": "Fix/sitemap index readable",
+   "base": "develop",
+   "merge_commit": "243f64658a1e002da03d10b24e12d984ed28411a",
+   "chars": 3425,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "7a3e7682609fa21ca3919f041f068d95ca6b464b4e8ca900216099eee22f45af",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 3425
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1191,
+   "title": "Fix/sitemap index readable",
+   "base": "develop",
+   "merge_commit": "400bdbbfee3149e167357ff4ba178566cbaee804",
+   "chars": 2301,
+   "room": 78112,
+   "files": 1,
+   "diff_sha256": "6658379b7e180484184e03f1b451819748877166fce38a9025d4674395c1c7f5",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 2301
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1192,
+   "title": "feat(gh): automate issue triage ordering",
+   "base": "develop",
+   "merge_commit": "c2c2892ef303c3192c0f62b082cd125ecdbcce5e",
+   "chars": 13611,
+   "room": 78112,
+   "files": 4,
+   "diff_sha256": "ffde00fedd70e72719f0181e400210c46f1349647bef51004eddf3b9a1e77466",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 13611
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1193,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "f23d66894311a5f8a84a8bb7278050361c659908",
+   "chars": 44677,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "b456c32bc82d1cf6964b77e09032107bfa1093a63394bec51d521933757b7bef",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31375,
+    "docs": 13302
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1194,
+   "title": "style(gh): format sabbath setting",
+   "base": "develop",
+   "merge_commit": "10c00103bd0030623061fbb4f78e05708755940a",
+   "chars": 1929,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "0362ecb9bbc14feca2ae600a32ce17028004c08ca981722bda5c4294c52f819c",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 1929
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1195,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "b8f091e96d8cf2a2d78506eb28c55c3f9ede0dd5",
+   "chars": 44866,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "d5fc70837acaa34f8d459d398413c70f0a7cee4551c602d45c7dbf387bcf2200",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31375,
+    "docs": 13491
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1196,
+   "title": "feat(qwenloop): add bounded EXTREME effort",
+   "base": "develop",
+   "merge_commit": "9fec8c5b09e8726945fff103a100f4977798bc90",
+   "chars": 5574,
+   "room": 78112,
+   "files": 4,
+   "diff_sha256": "bbe93c5756dd7ce6ef80587a5c726581806cbf774b78d3b251bd822d89a00ad6",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 5574
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1197,
+   "title": "ci(gh): install repository profile workflow",
+   "base": "develop",
+   "merge_commit": "884cbd9eef4712577ea8bf12b0e0bec68a75c90a",
+   "chars": 27533,
+   "room": 78112,
+   "files": 11,
+   "diff_sha256": "0e0d51788c98fbf7241154e7c3c8a8d360e07c419f02f2eb8dc308d5526d3e59",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 27533
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1199,
+   "title": "fix(config): declare measured sovereign lanes",
+   "base": "develop",
+   "merge_commit": "abdb74c9635b33923b52c24e262daaa2ae87e67d",
+   "chars": 1067,
+   "room": 78112,
+   "files": 2,
+   "diff_sha256": "288e2c744c46f2ff303f6f0e2df92db5df1b903d7d82af6262755c7937a77011",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 681,
+    "docs": 386
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1200,
+   "title": "chore(deps): Bump actions/setup-node from 4 to 7",
+   "base": "develop",
+   "merge_commit": "2231e7b3a6ff9b50b609779b26ccdcd0487d2ba8",
+   "chars": 1524,
+   "room": 78112,
+   "files": 2,
+   "diff_sha256": "6cdce0ffebcd589993c943470eafd1e10bd7393464413166c7d7ea8c36e3d53f",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 1524
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1201,
+   "title": "fix(gh): stamp Dependabot provenance automatically",
+   "base": "develop",
+   "merge_commit": "00283a6cad00ad0f54ff2465aded983bcc2b5f1b",
+   "chars": 13532,
+   "room": 78112,
+   "files": 8,
+   "diff_sha256": "561ebcf082bab4be7acf43293516b03c98f0f2b1b29c3b5ba307aa37f5c410ec",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 13532
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1202,
+   "title": "fix(engine): deliver runner-compatible stop controls",
+   "base": "develop",
+   "merge_commit": "9b8ddd988bb273088bf1b709849344318f5b610e",
+   "chars": 3904,
+   "room": 78112,
+   "files": 2,
+   "diff_sha256": "9c84c18afa126cce93cf59130f0fee75696c62a7c23fb2f646ab681434c854aa",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 3904
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1203,
+   "title": "fix(queue): complete the reaper review findings",
+   "base": "develop",
+   "merge_commit": "210ed2a18ee92d2104dbd25f04ddf1488681d796",
+   "chars": 245124,
+   "room": 78112,
+   "files": 42,
+   "diff_sha256": "19b756b72e8f04e70e4dbe71e2c97a31278ac4bae0fb295ea0e676c330172168",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 206765,
+    "docs": 38359
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1205,
+   "title": "fix(gh): align heartbeat tool path with vibey-engine",
+   "base": "develop",
+   "merge_commit": "d1d9b73fe35a153725b2c281ce42b19e60dcaad1",
+   "chars": 9143,
+   "room": 78112,
+   "files": 8,
+   "diff_sha256": "f1989b2a9ba03158986d7796d657cad2b01eb2755ff6089302d4912afeecbadd",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 8488,
+    "docs": 655
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1206,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "9d413acacd639ac42ca6ba3f4ae028bb87394cc0",
+   "chars": 44959,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "1142bb81a095c5c7a57e56e2973c89c9d4ed960f29c13078935ef7682e0d9f90",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31351,
+    "docs": 13608
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1207,
+   "title": "feat(storm): add measured local turn-pool calibration",
+   "base": "develop",
+   "merge_commit": "20ebc0f77e7e7e73016ebc8b85c528c1c2bd9b2b",
+   "chars": 0,
+   "room": 78112,
+   "files": 0,
+   "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "doc_chars": 63142,
+   "category_chars": {},
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1208,
+   "title": "feat(qwenloop): add shared RabbitMQ turn dispatch",
+   "base": "develop",
+   "merge_commit": "40463db1fe14b347c7c53087adbb29ca1191b7c4",
+   "chars": 44136,
+   "room": 78112,
+   "files": 16,
+   "diff_sha256": "cd2a0add4df546e4b27269483d6d48103f89e828cdf114d0eac46d41811b9ff8",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 5301,
+    "code": 38179,
+    "generated": 656
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1210,
+   "title": "chore(krypton): release app as 1.0.0",
+   "base": "develop",
+   "merge_commit": "5f65431b9a005daa629f99d8275a192f79822267",
+   "chars": 913,
+   "room": 78112,
+   "files": 2,
+   "diff_sha256": "b75683298434b8bdaa91596e3ba99f7c0daedc9a27b5e6727c7f7c1c441adb66",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 913
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1211,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "4a118a4caaa4c5bbd9bb5d6ee86cb8ceff004ec2",
+   "chars": 45217,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "4e1fde995cca1ba034da45170f2881986cb976faa9846425621a6f0610a82c6f",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31365,
+    "docs": 13852
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1212,
+   "title": "feat(qwenloop): add hybrid dispatch benchmark",
+   "base": "develop",
+   "merge_commit": "6aff7b0bba7b69b91b3eedbc7c446afe423c890d",
+   "chars": 67533,
+   "room": 78112,
+   "files": 31,
+   "diff_sha256": "bae9f812f8cd674e957b545010e0da805381b024ca94a39db3045e788c60f85b",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 13659,
+    "code": 53874
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1213,
+   "title": "chore(backlog): triage hybrid multiplexer issue",
+   "base": "develop",
+   "merge_commit": "28eab5e00902bcd296411f6250c6939602bba163",
+   "chars": 502,
+   "room": 78112,
+   "files": 1,
+   "diff_sha256": "7181bb5a654b3cd6af9db8107acc72f280d370fd876ab21409eae74ffa14f764",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 502
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1214,
+   "title": "Fix/graceful stop controls",
+   "base": "develop",
+   "merge_commit": "c1fc21bb5d323ced1476281af3f331a52181c627",
+   "chars": 6513,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "c72253669551bc9898e2d94ad5150830b7cbbca9218e7da2342d2fbd44ce8d36",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 5837,
+    "deletion": 676
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1215,
+   "title": "fix(ci): avoid unauthorized repository profile writes",
+   "base": "develop",
+   "merge_commit": "3aa341eaec2fb53a5603e03bc418890ab09af9d2",
+   "chars": 6003,
+   "room": 78112,
+   "files": 4,
+   "diff_sha256": "7c2c2da9dd6ec3b41cf051836a819144a7be15f4de26e5c6ffefcfa93fd5dc04",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 6003
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1219,
+   "title": "Fix/graceful stop controls",
+   "base": "develop",
+   "merge_commit": "acabb924ae11041dc1c789aa8543dbeb0449c954",
+   "chars": 8307,
+   "room": 78112,
+   "files": 4,
+   "diff_sha256": "627b70ddff6526aa5528c02c4cd06ff3fd2b7e074095d10ca8dcb16c3a94bff0",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 8307
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1220,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "91bc743298be2d2852a38b6ad840ff9f0cdeb630",
+   "chars": 44884,
+   "room": 78112,
+   "files": 3,
+   "diff_sha256": "38e06a82ecf4c97905d1cd4f7ba1f188510647d911bf1e0efbb20e420761d6c7",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 31376,
+    "docs": 13508
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1221,
+   "title": "Fix/graceful stop controls",
+   "base": "develop",
+   "merge_commit": "d3c8c2f1af2014661bd7a7cde1b06a9c872dabe9",
+   "chars": 26892,
+   "room": 78112,
+   "files": 4,
+   "diff_sha256": "6655ee86dbb3b81ef65b39319ece5ef0d2f999e2ab52046b4531e488f52e8b7c",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 26892
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1226,
+   "title": "Fix/graceful stop controls",
+   "base": "develop",
+   "merge_commit": "c837c670840431546d147628dbe9240b79358e1d",
+   "chars": 16723,
+   "room": 78112,
+   "files": 9,
+   "diff_sha256": "6a3d010e0f5136683c6d6b394a855182b93f8e169dc99565901e2d1b9c70015d",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 15703,
+    "docs": 1020
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1232,
+   "title": "Feat/latest changes",
+   "base": "develop",
+   "merge_commit": "d3f3610aa5bf87fd39dd30d6990d517b0827a5ba",
+   "chars": 22384,
+   "room": 78112,
+   "files": 4,
+   "diff_sha256": "ee099e8faa18d598a4bda695c0b7eefccf6518693bbb6075a69d032dc615c062",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 22384
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1234,
+   "title": "chore(backlog): refresh backlog expectations",
+   "base": "develop",
+   "merge_commit": "18da5ae515ce5257927847b6c255ba5b3c11e910",
+   "chars": 2539,
+   "room": 78112,
+   "files": 1,
+   "diff_sha256": "629a2f05ffd75d23bff4e199b9bccdd7e077f449fcc22091645ae2b976d911c9",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 2539
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1235,
+   "title": "Docs/paper data refresh",
+   "base": "develop",
+   "merge_commit": "c78049b6fc6052be04c7da49510ed6bebe6e63bd",
+   "chars": 78736,
+   "room": 78112,
+   "files": 11,
+   "diff_sha256": "cd75a53b604c7ead56c278173c4db973273154c29d5919041612e5912939bfeb",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 11103,
+    "docs": 66142,
+    "deletion": 737,
+    "generated": 754
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1236,
+   "title": "chore(paper): clean up research paper even more",
+   "base": "develop",
+   "merge_commit": "41429aec50da142733ec5676a93c2af4b6088a38",
+   "chars": 1414,
+   "room": 78112,
+   "files": 2,
+   "diff_sha256": "a96a40f51a2117794a428fb42741142c00189eb0690a26c14e0d3276183e7e7f",
+   "doc_chars": 63142,
+   "category_chars": {
+    "code": 1414
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1238,
+   "title": "fix(paper): repair figures, write the 3.0.0 atlas copy, un-orphan the figure pin",
+   "base": "develop",
+   "merge_commit": "b825b8b5235c057bafe2aef8fd1d97cdab31d001",
+   "chars": 172016,
+   "room": 78112,
+   "files": 5,
+   "diff_sha256": "9e97db57c9bfdcbb5b8e02a0381c2445fe0ac8514e8f4ae659f54eade7c6057b",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 119938,
+    "code": 52078
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1239,
+   "title": "fix(scripts): make the triaged-delivery bridge resumable and gate-respecting",
+   "base": "develop",
+   "merge_commit": "2cfc6032e7b7fdf8e735b17118c5e4abcd93dc4b",
+   "chars": 131083,
+   "room": 78112,
+   "files": 9,
+   "diff_sha256": "0e7147d8d1119ed607abc057c498ba3018581c84745ee423a3386f372b461040",
+   "doc_chars": 63142,
+   "category_chars": {
+    "docs": 7843,
+    "code": 123240
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1240,
+   "title": "docs: bring agent guides, CLI/config reference, changelog and architecture map up to date",
+   "base": "develop",
+   "merge_commit": "28598eb54c29686da1e2473ae62dcf1d4d5e274e",
+   "chars": 57662,
+   "room": 77690,
+   "files": 10,
+   "diff_sha256": "c19aa85f1c1054ef0d03544a2eee23a141283e846b4715599c74837d23907a1e",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 44350,
+    "code": 13312
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1241,
+   "title": "fix(engines): length-aware retry and schema-checked re-ask for sovereign producers",
+   "base": "develop",
+   "merge_commit": "155da3475df03f0812baffcff46023a888cd4b09",
+   "chars": 137581,
+   "room": 77690,
+   "files": 19,
+   "diff_sha256": "bcf882eb02fdecf5561c075fffe0454194fa0230fe3fe15b20bbc7e176a589ff",
+   "doc_chars": 63564,
+   "category_chars": {
+    "code": 131181,
+    "docs": 6400
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1242,
+   "title": "docs(changelog): record 3.0.0",
+   "base": "develop",
+   "merge_commit": "0407f8ccb2eaef1de478a22e3580d99c0caafc56",
+   "chars": 334,
+   "room": 77690,
+   "files": 1,
+   "diff_sha256": "dcc296f890376a388b1a37e6256a2d3e2f7e36bd107301bcd6b38d9a30950c02",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 334
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1244,
+   "title": "chore(release): 3.0.0",
+   "base": "main",
+   "merge_commit": "1c42288ccb94fcc8c8b04ab834c21a122f11b3bb",
+   "excluded": "base is not develop (a promotion to main)"
+  },
+  {
+   "number": 1245,
+   "title": "fix(paper): accept a tag-held figure pin; docs(krypton): when krypton-app publishes",
+   "base": "develop",
+   "merge_commit": "d2525be8a67488d55258a04c8563062f0d6e457d",
+   "chars": 13988,
+   "room": 77690,
+   "files": 4,
+   "diff_sha256": "264477dfc7a87b92b971329dd31fca1d9da4e1fd8f92ece0b27e76b375fcff1a",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 10183,
+    "code": 3805
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1246,
+   "title": "chore(release): 3.0.0",
+   "base": "main",
+   "merge_commit": "a3cc13169e0ba1aadf858583b55fe6b9397bb1d7",
+   "excluded": "base is not develop (a promotion to main)"
+  },
+  {
+   "number": 1248,
+   "title": "fix(delivery): admit only trusted issues to the triaged-delivery intake",
+   "base": "develop",
+   "merge_commit": "a25eb54c353e5296b1a72c84b334f2bdefbe8b76",
+   "chars": 89718,
+   "room": 77690,
+   "files": 14,
+   "diff_sha256": "73e7a3758fd688e424f2f28cc120a63664aaa7babde9084ea9255c52da812a4e",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 16791,
+    "code": 72927
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1249,
+   "title": "feat(worker): serve every project and run the worker and delivery bridge supervised (#1189)",
+   "base": "develop",
+   "merge_commit": "6fb935d97e593bac8eb7194d69111181a6089f01",
+   "chars": 159585,
+   "room": 77690,
+   "files": 29,
+   "diff_sha256": "61b82821ffb7a4cf6a44bea9f324030b64c20517c76642c3779f526561553758",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 15613,
+    "code": 143972
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1250,
+   "title": "fix(release): close the release-path gaps found releasing 3.0.0",
+   "base": "develop",
+   "merge_commit": "dfc29b6628ad54418af2f0173e6bea0df33b5956",
+   "chars": 224986,
+   "room": 77690,
+   "files": 47,
+   "diff_sha256": "65ee83c01ac8929ef34a3b2fc9f165e3b497c126118f835f93c6b48d29ee95b9",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 33556,
+    "code": 191430
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1251,
+   "title": "feat(gates): record gate notices, remind stale gates, park defects",
+   "base": "develop",
+   "merge_commit": "7c267d00de50eaf155a56578e7a924480a57b808",
+   "chars": 256209,
+   "room": 77690,
+   "files": 56,
+   "diff_sha256": "cffb172158e05d4023746d9904e77b54ad6db12958b4acf36bd1749f736633c9",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 29569,
+    "code": 226640
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1252,
+   "title": "feat(review): reach a verdict at scale and record why when none is reached",
+   "base": "develop",
+   "merge_commit": "bdf612be7b797d90880e722dc5ca71ef7319078e",
+   "chars": 243068,
+   "room": 77690,
+   "files": 23,
+   "diff_sha256": "a40a41da7494c04208072b180c8d2734ec61983b2eb3a7fcb69b82c6240e9ac8",
+   "doc_chars": 63564,
+   "category_chars": {
+    "code": 220351,
+    "docs": 22717
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1253,
+   "title": "develop -> main",
+   "base": "main",
+   "merge_commit": "21d63104d558c13f66e7f141b03e22a147a4577f",
+   "excluded": "base is not develop (a promotion to main)"
+  },
+  {
+   "number": 1258,
+   "title": "fix(design): refuse design accept until the design chain has settled",
+   "base": "develop",
+   "merge_commit": "029ce706a3e4ad3980d4043db66f28ac446ead2c",
+   "chars": 26020,
+   "room": 77690,
+   "files": 13,
+   "diff_sha256": "4bd86c1e92b5876a3f2a47942092eec4822441899e4ab49dc97a1269da9a9962",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 3842,
+    "code": 19361,
+    "generated": 2817
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1259,
+   "title": "feat(design): let research record a gap instead of parking when no evidence exists",
+   "base": "develop",
+   "merge_commit": "ea9b75ce4f8338f20c60bffa1929d2580d7252b7",
+   "chars": 107190,
+   "room": 77690,
+   "files": 40,
+   "diff_sha256": "c03e0d86a9b33fe00ebf7fe3e7efb3b69958937463cb13652ba9d6ac78d7bda5",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 15934,
+    "code": 91256
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1260,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "2f422d10020c8d6ff0b00b0994c1a78d74d81da8",
+   "chars": 45282,
+   "room": 77690,
+   "files": 3,
+   "diff_sha256": "30217d01cf1bda61ed4988d936c8e0b56407e7b7313f904c50091f2060d44298",
+   "doc_chars": 63564,
+   "category_chars": {
+    "code": 31376,
+    "docs": 13906
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1261,
+   "title": "fix(design): declare the narrowest-scope default, not the model's appetite",
+   "base": "develop",
+   "merge_commit": "83f871d544849d47138c1aa6fa1a6ca13000994b",
+   "chars": 70047,
+   "room": 77690,
+   "files": 21,
+   "diff_sha256": "7d1255f42a985020c98baa0b5e83d7343e1bf1c3d7cd34bb64b228f8cc419c88",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 12630,
+    "code": 48477,
+    "generated": 8940
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1263,
+   "title": "feat(cli): add vibey abandon, the operator's clean exit for a project",
+   "base": "develop",
+   "merge_commit": "a835f35e22c168429241036d9ccaf4fd37f81f2b",
+   "chars": 127658,
+   "room": 77690,
+   "files": 31,
+   "diff_sha256": "9d49107b90654316484379c261f581090ab8c2d523f1b1b2ac8f4add4bd2d82c",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 16634,
+    "code": 111024
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1264,
+   "title": "fix(packaging): ship the migrations in the wheel, and three install defects",
+   "base": "develop",
+   "merge_commit": "6d5c93f0abc053f99c1990752dc7de10c6bd5993",
+   "chars": 55419,
+   "room": 77690,
+   "files": 49,
+   "diff_sha256": "c11e35e5f6119fc889bc37c1db7f1e1e6072261d8aaed90627eb3e2a51a0b829",
+   "doc_chars": 63564,
+   "category_chars": {
+    "docs": 5168,
+    "code": 44330,
+    "generated": 669,
+    "rename": 5252
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1266,
+   "title": "feat(specs): rolling minimum system requirements, remeasured weekly",
+   "base": "develop",
+   "merge_commit": "1b0c16c13d912856106c3884eee27cf9ade1e0d0",
+   "chars": 314941,
+   "room": 76694,
+   "files": 13,
+   "diff_sha256": "6fa36ba921a8d4a806a7bc6f89fccebdebee8c076419f1cc1e25bc81aef64c9e",
+   "doc_chars": 64560,
+   "category_chars": {
+    "code": 284325,
+    "docs": 30616
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1267,
+   "title": "feat(gh): let the declared grant turn delegated approval on, the variable only withdraw",
+   "base": "develop",
+   "merge_commit": "ca1534af8ada1f132ac76b760edebf61a80ea19b",
+   "chars": 16374,
+   "room": 76694,
+   "files": 7,
+   "diff_sha256": "b61f2335c1ab330319e135971e519cb5613948e5c4a7cefce23718b6b98a8adc",
+   "doc_chars": 64560,
+   "category_chars": {
+    "code": 11823,
+    "docs": 4551
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1269,
+   "title": "fix(build): scope BUILD branches per project and refuse foreign ones",
+   "base": "develop",
+   "merge_commit": "66b06c0aac75db2388e0b48db58be4ef0b0348ab",
+   "chars": 147742,
+   "room": 76694,
+   "files": 41,
+   "diff_sha256": "8ebf9d4d76581af82e5b65df3c6f003021660b1650c660ef23239caab5c59427",
+   "doc_chars": 64560,
+   "category_chars": {
+    "docs": 18213,
+    "code": 129529
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1270,
+   "title": "fix(build): refuse phantom-file plans, keep edits out of the shell, never narrow the deliverable",
+   "base": "develop",
+   "merge_commit": "241fc0d7cd6f45ef83361fb15ce763c3decab6ac",
+   "chars": 115712,
+   "room": 76694,
+   "files": 44,
+   "diff_sha256": "ef24d0ae9895f6374f28c20ef18ec74d12088f9ca4bc4ea53ba1c6ce1637c18e",
+   "doc_chars": 64560,
+   "category_chars": {
+    "docs": 6276,
+    "code": 104786,
+    "generated": 4650
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1272,
+   "title": "fix(worker): stop sibling drive loops before closing the pool",
+   "base": "develop",
+   "merge_commit": "6582c3ffb6fdf12c94b9cc829c7ee1eb52797691",
+   "chars": 7458,
+   "room": 76694,
+   "files": 4,
+   "diff_sha256": "67bf693e0fdcf878387fb222b18c872a1c1d79fbb1b88ce0f892f1caca9550df",
+   "doc_chars": 64560,
+   "category_chars": {
+    "docs": 1036,
+    "code": 6422
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1273,
+   "title": "chore(release): 3.1.0",
+   "base": "main",
+   "merge_commit": "7a8917ffb643af673743982c59397cb507b72c95",
+   "excluded": "base is not develop (a promotion to main)"
+  },
+  {
+   "number": 1276,
+   "title": "fix: let an intake project be abandoned, and stop KEDA counting abandoned jobs",
+   "base": "develop",
+   "merge_commit": "6eea0af4800d9e38d71e3459958e7b09b47eb522",
+   "chars": 25775,
+   "room": 76694,
+   "files": 17,
+   "diff_sha256": "76c0a05dddfa6c4aab83cc6a5ea27174cd5d4ef527106a806d6e6c96b76dafc3",
+   "doc_chars": 64560,
+   "category_chars": {
+    "docs": 6626,
+    "code": 19149
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1277,
+   "title": "feat(gh): declare the code_coverage ruleset rule, moving the 100% floor into the declared rulesets",
+   "base": "develop",
+   "merge_commit": "c99ca0bb72beda2e4b986dd057a56d0a9bd5cfaf",
+   "chars": 19365,
+   "room": 76694,
+   "files": 9,
+   "diff_sha256": "a0ba29db765317d5bc3411ecc34d66b4c8c83a2e586cf0ed7da0e31056df208b",
+   "doc_chars": 64560,
+   "category_chars": {
+    "code": 14894,
+    "docs": 4471
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1278,
+   "title": "fix(gh): split added-only hunks between lines in the sovereign review",
+   "base": "develop",
+   "merge_commit": "924b913e6904a51f765a0f2af46c3489c72dc702",
+   "chars": 63862,
+   "room": 76694,
+   "files": 16,
+   "diff_sha256": "44c3cbc1281565b3bdf0a9802fef10038d7003864bbc80b12a9f00730820170c",
+   "doc_chars": 64560,
+   "category_chars": {
+    "code": 45682,
+    "docs": 18180
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1279,
+   "title": "fix(db): let an abandoned project release its checkout",
+   "base": "develop",
+   "merge_commit": "031db100d142e57aa55f7ebe31daae79f818bdd8",
+   "chars": 35285,
+   "room": 76694,
+   "files": 14,
+   "diff_sha256": "e91d06aa9bb24b694270e82b1a9bb67de7656b173d87ae853f49c64276b7dcb6",
+   "doc_chars": 64560,
+   "category_chars": {
+    "docs": 6149,
+    "code": 29136
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1280,
+   "title": "chore(release): 3.2.0",
+   "base": "main",
+   "merge_commit": "15e909d4ce20004a6a92b3398e529b9d20b6b2fd",
+   "excluded": "base is not develop (a promotion to main)"
+  },
+  {
+   "number": 1281,
+   "title": "feat(skills): biblical languages/texts/archaeology and physical-security references (17 skills)",
+   "base": "develop",
+   "merge_commit": "207fb70a500397a6cb786dbfa0e95490d7cccd87",
+   "chars": 362192,
+   "room": 76694,
+   "files": 39,
+   "diff_sha256": "8125d6f6579efd58613e1297477337ce8af1c570f61d5772c9fc06fcf96405d3",
+   "doc_chars": 64560,
+   "category_chars": {
+    "code": 27946,
+    "docs": 334246
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1282,
+   "title": "docs: discoverability and the first hour (README first screen, llms.txt, case study, ADR-0076)",
+   "base": "develop",
+   "merge_commit": "07e340f75d703dae36e829f03ec95cb342995af2",
+   "chars": 179843,
+   "room": 58629,
+   "files": 41,
+   "diff_sha256": "0a11c9840c4b9f96bf112f82d8eee45b6d9d8198cd74faed255062aa44a1ca1b",
+   "doc_chars": 82625,
+   "category_chars": {
+    "docs": 95818,
+    "code": 84025
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1283,
+   "title": "doctrine: propose sub-doctrine 7.e, the open door (ratifying yanks prior releases)",
+   "base": "develop",
+   "merge_commit": "b1ee8f7327b2750a7ce06993a53300e19c1b0028",
+   "chars": 4146,
+   "room": 58629,
+   "files": 2,
+   "diff_sha256": "6dde7c930ae97998a8d9f8fee6493c7638d8de0ba3a29c4c80ef01c8c8f0ad36",
+   "doc_chars": 82625,
+   "category_chars": {
+    "code": 2010,
+    "docs": 2136
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1284,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "d4c4e1f899d56ddb9ecf3166eeb6d6513998bc01",
+   "chars": 45346,
+   "room": 58629,
+   "files": 3,
+   "diff_sha256": "a4ce6834a978af948b5e045b9708dfde33216406c69b5e6907031e314d3562f4",
+   "doc_chars": 82625,
+   "category_chars": {
+    "code": 31388,
+    "docs": 13958
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1285,
+   "title": "docs(changelog): file 3.1.0 and 3.2.0 under their own headings",
+   "base": "develop",
+   "merge_commit": "0183dcd473f93d446fa5cc21bda284726544ee3f",
+   "chars": 21914,
+   "room": 58629,
+   "files": 1,
+   "diff_sha256": "c4c60783703f14848c959904df69b6bd9ad044cdb781a01c622837c0cf1cc015",
+   "doc_chars": 82625,
+   "category_chars": {
+    "docs": 21914
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1286,
+   "title": "fix(gh): render the paper's tables and multi-environment fences on the site",
+   "base": "develop",
+   "merge_commit": "3fc4b4e7e13ee84d70d35a2938cdc6e91769756c",
+   "chars": 39123,
+   "room": 58629,
+   "files": 10,
+   "diff_sha256": "e4a0b897865f6e0af6667faad8217e5e73d14ba912a42f2e275d248428e305de",
+   "doc_chars": 82625,
+   "category_chars": {
+    "code": 32845,
+    "docs": 3208,
+    "generated": 3070
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1288,
+   "title": "docs(paper): bring the research paper current for 3.2.0",
+   "base": "develop",
+   "merge_commit": "0094d2b1392ee08ab5cfcda2f49a766aee29de27",
+   "chars": 157492,
+   "room": 58629,
+   "files": 6,
+   "diff_sha256": "0b616f10919884058d1ca09db39017bc01011b073dac19fcbdbcbc0b8097f8b9",
+   "doc_chars": 82625,
+   "category_chars": {
+    "docs": 151691,
+    "code": 5801
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1289,
+   "title": "fix(deps): virtualenv 21.14.1 for PYSEC-2026-4011..4014",
+   "base": "develop",
+   "merge_commit": "8ebf396dcd7660547d5f00ee9f6446df9d6a7458",
+   "chars": 3946,
+   "room": 58629,
+   "files": 2,
+   "diff_sha256": "86a50a2dbda363f2e85c5582fc8f6fa869d6d21bdb97cede878e874d3fc68a11",
+   "doc_chars": 82625,
+   "category_chars": {
+    "docs": 833,
+    "generated": 3113
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1290,
+   "title": "docs(guides): outcome guides answer the questions practitioners search for (ADR-0077)",
+   "base": "develop",
+   "merge_commit": "692b724d08dbddaa6213e350a202d1f64be18dae",
+   "excluded": "merge commit not in the local clone"
+  },
+  {
+   "number": 1293,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "688c901e15a79917d21f0e447b388a143b833e67",
+   "chars": 44035,
+   "room": 57761,
+   "files": 3,
+   "diff_sha256": "4cb603633bb80996678e7dd4c543932326fada0f94c14ecd10a6fa1a6c40ac8c",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 31356,
+    "docs": 12679
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1294,
+   "title": "fix(review): show REVIEW the gates that actually ran",
+   "base": "develop",
+   "merge_commit": "ac027958c6ed659f89d79fea916800fc50994ef3",
+   "chars": 43403,
+   "room": 57761,
+   "files": 10,
+   "diff_sha256": "776f38493ce2cecefe71895d78c87c4637bf2683e667fd6873025fc75552fca8",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 43403
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1295,
+   "title": "fix(engines): recheck an ageing paid-engine login instead of dropping the engine",
+   "base": "develop",
+   "merge_commit": "bf8dab3c1ec0f0b5cc9676fa455cb5b8f4cd49d0",
+   "chars": 11237,
+   "room": 57761,
+   "files": 4,
+   "diff_sha256": "42474dc290db9dd11f8444f1a9a2cf33ed91a59bbc4f61573dc09d1dd8adfbb5",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 2115,
+    "code": 9122
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1296,
+   "title": "fix(engines): stop a BUILD session at a wall-clock limit instead of hanging forever",
+   "base": "develop",
+   "merge_commit": "c5d3aebab28f4e3920aee7c572a2f2fe91c19383",
+   "chars": 29427,
+   "room": 57761,
+   "files": 10,
+   "diff_sha256": "6414154fa1291ff9e183a06c960e23c7d7f95816495a5df9c74e7f38a98095f6",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 5334,
+    "code": 24093
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1297,
+   "title": "fix(engines): end a stopped session's whole process group, not just the runner",
+   "base": "develop",
+   "merge_commit": "c4906f11180903400b4b035e8335b9fbefe7d237",
+   "chars": 17298,
+   "room": 57761,
+   "files": 4,
+   "diff_sha256": "a290d019b2b9d303d03fb2800558678c67d107192415fe94caa495b86b567879",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 1351,
+    "code": 15947
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1298,
+   "title": "fix(build): retire a work item's worktree once its branch integrates",
+   "base": "develop",
+   "merge_commit": "412e778389097e5f0943e298eee5d32c86b16705",
+   "chars": 8633,
+   "room": 57761,
+   "files": 6,
+   "diff_sha256": "68caf4be4a9bf82c5b1c47d55f0c72a9033880aa6d84d2a392f5581f88cf67cf",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 1082,
+    "code": 7551
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1299,
+   "title": "feat(gates): let a project opt chosen gates into resolving to their default",
+   "base": "develop",
+   "merge_commit": "4acb9be5ccdfc28c8c5847ca4b3f3694987c90da",
+   "chars": 45688,
+   "room": 57761,
+   "files": 17,
+   "diff_sha256": "879e2509e98c08e0de6292fcb0c9938fe9b33e2d916ec3ffc62687177aec2f80",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 7702,
+    "code": 37986
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1300,
+   "title": "chore(config): declare the operator's standing autonomy grant",
+   "base": "develop",
+   "merge_commit": "fe52d37cb6b96525e6c28f6144688a2fae9c3882",
+   "chars": 5481,
+   "room": 57761,
+   "files": 4,
+   "diff_sha256": "98b1cc97a1d2f6b89b4c23eafcfc50ece71203251711a1f38cca9a7873a40336",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 1950,
+    "docs": 3531
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1301,
+   "title": "fix(gh): confirm a merge with GitHub before calling it merged",
+   "base": "develop",
+   "merge_commit": "6aaff3bff224b28e74fcb6917964719fba309c7f",
+   "chars": 7978,
+   "room": 57761,
+   "files": 3,
+   "diff_sha256": "d1f0bf364e841d06587f909e12402e7daf38cf571754ee4b3701edcc7895e0e6",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 1367,
+    "code": 6611
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1302,
+   "title": "chore(config): forbid the approver the code that defines what its gates measure",
+   "base": "develop",
+   "merge_commit": "3906e4aa345fcef82d89980fc348c079ba8fc5c5",
+   "chars": 2304,
+   "room": 57761,
+   "files": 1,
+   "diff_sha256": "63b560a8dabd2eee2dafd308f4b0144b21081612cf7d9e062e30a3bd60cbf3d1",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 2304
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1303,
+   "title": "feat(gh): give the sovereign review the full text of the files it judges",
+   "base": "develop",
+   "merge_commit": "b315afce791e77f76b04293beb95be97a98e02b1",
+   "chars": 107340,
+   "room": 57761,
+   "files": 15,
+   "diff_sha256": "c8a0b265e0df4754329637faf848b8a3368617bc225a5800ad0a09db5fa69e2e",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 91509,
+    "docs": 15831
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1305,
+   "title": "feat(gh): changelog fragments, assembled at release, checked in CI",
+   "base": "develop",
+   "merge_commit": "ea4eaf6b62cb7432fb578a748cba1aa80324391d",
+   "chars": 161315,
+   "room": 57761,
+   "files": 31,
+   "diff_sha256": "0c8c56e9965995a376318ae8a520d885034f6c7395bbced51608430e2d4933c1",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 44719,
+    "code": 116071,
+    "deletion": 525
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1306,
+   "title": "fix(gh): declare [autonomy] and teach doctor the forecast table",
+   "base": "develop",
+   "merge_commit": "411c39110632219e6cdceacae9401697e76b5cd2",
+   "chars": 9207,
+   "room": 57761,
+   "files": 4,
+   "diff_sha256": "75bda2cba6de1b1b3d77f55c7d76056716d304742dd5d9e18461ad9855bf651b",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 864,
+    "code": 8343
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1307,
+   "title": "docs(paper): bring the paper current with the 2026-10-01 autonomy scan and fixes",
+   "base": "develop",
+   "merge_commit": "6e03e48d3404601f4378c1d4a65011086bde5fec",
+   "chars": 207880,
+   "room": 57761,
+   "files": 6,
+   "diff_sha256": "670a8c3b1e9995d253c3aef98835eed9263fa270b537a7aa5eaf077300604514",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 84029,
+    "code": 123851
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1309,
+   "title": "fix(engines): never let ending sessions crash the worker's shutdown",
+   "base": "develop",
+   "merge_commit": "2b17b369f9a035fd3ab174c34ebf27bdc0cfeeb1",
+   "chars": 8333,
+   "room": 57761,
+   "files": 3,
+   "diff_sha256": "b71829e27f4586e734ea4332346f7def2f18d2163e3fe6e8d0c0e27b43dec53f",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 1014,
+    "code": 7319
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1310,
+   "title": "fix(db): retry the replication-role revoke instead of swallowing its failure",
+   "base": "develop",
+   "merge_commit": "09fabadf31e96a8a276d2ad6fc95de40bb6c22ce",
+   "chars": 6623,
+   "room": 57761,
+   "files": 3,
+   "diff_sha256": "65c819802fb9fa37fdd4d2936bc5abf508ca7930115c7b4bf76dea462f2a3760",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 941,
+    "code": 5682
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1311,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "88db6785ca0e5685dbf5d80af36be4521c4eb5d3",
+   "chars": 44714,
+   "room": 57761,
+   "files": 3,
+   "diff_sha256": "0e9306457863cfcaaf85e65f6148b575a985ba6e8876d67afab159eb901af11b",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 31347,
+    "docs": 13367
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1312,
+   "title": "refactor(clients): spell krypton lowercase everywhere; publish the extension as krypton",
+   "base": "develop",
+   "merge_commit": "e9e4032a00db71c4cd97a8af6b0495114c8d31e3",
+   "chars": 101115,
+   "room": 57761,
+   "files": 77,
+   "diff_sha256": "4536d6162d77c231ec2ddd30eb1b63ed21ab5b80b9ff251e75ac0a137b058812",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 38259,
+    "code": 57617,
+    "generated": 4710,
+    "rename": 331,
+    "binary": 198
+   },
+   "large": true,
+   "split": "dev"
+  },
+  {
+   "number": 1313,
+   "title": "feat(specs): derive linux arm64 and x86_64 requirements per distro",
+   "base": "develop",
+   "merge_commit": "b6bf65621322837e0c9b0e726a71d56f6884e516",
+   "chars": 480515,
+   "room": 57761,
+   "files": 13,
+   "diff_sha256": "2580d98839180a51b166653ca31a2ebd0df591d9ae2edc98ab31096d2b36ee9f",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 436561,
+    "docs": 43954
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1314,
+   "title": "fix(db): retry the replication-role revoke on \"tuple concurrently deleted\" too",
+   "base": "develop",
+   "merge_commit": "1f6f9955d9d95eca6529c89df4d7d0f86ece469f",
+   "chars": 4685,
+   "room": 57761,
+   "files": 3,
+   "diff_sha256": "878a6d00ec26a2680c984f48c170cf9dc9975df76cb0c7fa213be9f68a9e7e7f",
+   "doc_chars": 83493,
+   "category_chars": {
+    "docs": 499,
+    "code": 4186
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1315,
+   "title": "chore(deps): bump pypdf from 6.18.1 to 6.19.0 in the uv group across 1 directory",
+   "base": "develop",
+   "merge_commit": "5c3fd58419840ba92deffd4aa30fc55637f63922",
+   "chars": 6067,
+   "room": 57761,
+   "files": 1,
+   "diff_sha256": "27397c193091d133d0c7010a4be5f55b2a193e6f215f2f004dc84ceaf037833b",
+   "doc_chars": 83493,
+   "category_chars": {
+    "generated": 6067
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1316,
+   "title": "fix(gh): let a large diff reach a sovereign verdict, or say exactly why not",
+   "base": "develop",
+   "merge_commit": "7f056017f2bd9501c68e3b6581cf7c52c43405fc",
+   "chars": 109604,
+   "room": 57761,
+   "files": 21,
+   "diff_sha256": "11ffbd2b4cfbc24a2266a1e21e982d0adcee5bb8dc7f32d129ea84aae89798ab",
+   "doc_chars": 83493,
+   "category_chars": {
+    "code": 80393,
+    "docs": 29211
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1317,
+   "title": "feat(release): attach binaries of every user interface to each GitHub Release",
+   "base": "develop",
+   "merge_commit": "76da134485eadf55afda4ab932274d454c1acd74",
+   "chars": 127474,
+   "room": 56890,
+   "files": 14,
+   "diff_sha256": "24e20a13500fedc88a3666a5c05776c7a162d3bc530681f1468ef34920a28f7d",
+   "doc_chars": 84364,
+   "category_chars": {
+    "code": 110665,
+    "docs": 8402,
+    "generated": 8407
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1319,
+   "title": "chore(estimate): refresh delivery forecast",
+   "base": "develop",
+   "merge_commit": "2b17eb714016650be57342236d8d2fa467c3582b",
+   "chars": 39741,
+   "room": 56890,
+   "files": 2,
+   "diff_sha256": "16b79b6ddac7f944f021dfa45045ff7f5c179e40005b3fb6bf7330f86b8efe56",
+   "doc_chars": 84364,
+   "category_chars": {
+    "code": 31355,
+    "docs": 8386
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1321,
+   "title": "fix(gh): send the coverage floor in a shape the rulesets API accepts",
+   "base": "develop",
+   "merge_commit": "70f95f4e883bbb26836681344a23e4d5d78b566b",
+   "chars": 15801,
+   "room": 56890,
+   "files": 9,
+   "diff_sha256": "e4af3a17d3e3976ee6dce514dee331db626e8d02601ceb20f03ab5fb248d3fe5",
+   "doc_chars": 84364,
+   "category_chars": {
+    "code": 13552,
+    "docs": 2249
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1322,
+   "title": "fix(vscode): retry a smoke launch that hangs before the suite starts",
+   "base": "develop",
+   "merge_commit": "36d0bbfeb68502566dcd5a79edabb1356103d271",
+   "chars": 3762,
+   "room": 56890,
+   "files": 2,
+   "diff_sha256": "ddfa537a38b4a5dd029a36e2b0999dbc75b2b6fea268eccf1bab21f0e814c2f4",
+   "doc_chars": 84364,
+   "category_chars": {
+    "code": 3762
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1323,
+   "title": "chore(app): stop tracking the generated coverage report",
+   "base": "develop",
+   "merge_commit": "1d5ed24e324ef31cc6db4ac92e12daf7503e582d",
+   "chars": 284387,
+   "room": 56890,
+   "files": 20,
+   "diff_sha256": "c1b61b7349f627a0ecdceb3bd9feed90d23703fb5ae5bf88e2724e7eb8e86bcb",
+   "doc_chars": 84364,
+   "category_chars": {
+    "code": 236,
+    "docs": 442,
+    "deletion": 283203,
+    "binary": 506
+   },
+   "large": true,
+   "split": "holdout"
+  },
+  {
+   "number": 1324,
+   "title": "docs(paper): bring the paper current for 3.3.0",
+   "base": "develop",
+   "merge_commit": "d93dc958dd5a95a806e05f446c478d905253e914",
+   "chars": 28701,
+   "room": 56890,
+   "files": 2,
+   "diff_sha256": "94df993540fb9fa782aea88d7d0c89a0ff7c1bd6f4f7c27b867a8e0c0cf3bfe1",
+   "doc_chars": 84364,
+   "category_chars": {
+    "docs": 28701
+   },
+   "large": false,
+   "excluded": "fits one production request (not large)"
+  },
+  {
+   "number": 1325,
+   "title": "feat(gh): measure the sovereign review's recall with an offline canary",
+   "base": "develop",
+   "merge_commit": "3293528859c1440d89882f78e05de7b67c1646c1",
+   "chars": 204891,
+   "room": 56890,
+   "files": 14,
+   "diff_sha256": "000c84c8a2d6a514617afc6e36abb6eb3e043f84fdf0c8a9e980067ac7fead51",
+   "doc_chars": 84364,
+   "category_chars": {
+    "code": 187807,
+    "docs": 17084
+   },
+   "large": true,
+   "split": "holdout"
+  }
+ ]
+}
