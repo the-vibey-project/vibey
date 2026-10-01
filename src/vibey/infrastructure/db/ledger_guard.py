@@ -576,9 +576,15 @@ _REVOKE_ATTEMPTS: Final = 5
 _REVOKE_BACKOFF_SECONDS: Final = 0.05
 """Linear backoff between those attempts; the race resolves in milliseconds."""
 
-_CATALOG_RACE: Final = ("tuple concurrently updated", "tuple concurrently deleted")
-"""The two messages PostgreSQL raises when another session changed or removed the same
-catalog row first (CI, PostgreSQL 16, 2026-10-01: both seen on `pg_parameter_acl`)."""
+_CATALOG_RACE: Final = (
+    "tuple concurrently updated",
+    "tuple concurrently deleted",
+    "cache lookup failed for parameter ACL",
+)
+"""The messages PostgreSQL raises when another session changed or removed the same
+`pg_parameter_acl` row first: updated or deleted under the REVOKE (CI, PostgreSQL 16,
+2026-10-01), or dropped between the catalog lookup and its use (CI, PostgreSQL 18,
+2026-10-01). Each is the same race; every other error is still raised."""
 
 _APP_ROLE: Final = """
 SELECT r.rolsuper, r.rolcreaterole,
