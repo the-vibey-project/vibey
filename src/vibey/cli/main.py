@@ -88,6 +88,7 @@ from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
+from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
     OLLAMA_MODEL_ENV,
@@ -2252,6 +2253,9 @@ def worker(
                             driver.cancel()
                         await asyncio.gather(*drivers, return_exceptions=True)
             finally:
+                # A session leads its own process group, so it would outlive a worker
+                # stopped by Ctrl-C; end every one still running before going.
+                await LoopProcessAdapter.end_active_sessions()
                 await notifier.close()
 
     with guard():
