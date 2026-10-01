@@ -4,8 +4,10 @@ ledger" logic used by both build.implement and build.verify -- they differ
 in what they ask an engine to do and what a completing verdict means, not
 in how a run is driven or persisted."""
 
+import asyncio
 import contextlib
 from dataclasses import dataclass
+from datetime import timedelta
 
 from vibey.application.dto import HumanGateRequest, JobRecord, RunHandle
 from vibey.application.interfaces import (
@@ -35,6 +37,25 @@ class RunOutcome:
     when one was seen (`auth_failed`, `credits_exhausted`,
     `window_exhausted`, or a domain class name). None when no rejection
     occurred or the event carried no state key."""
+    timed_out_after: timedelta | None = None
+    """The wall-clock limit the run exceeded, when it did. The run was then
+    stopped mid-flight, so whatever it had said, it did not finish."""
+
+    def deadline_detail(self, descriptor: EngineDescriptor) -> str | None:
+        """The failure detail for a run stopped at its wall-clock limit, or None.
+
+        Charged to the engine (FailureClass.ENGINE) by both BUILD handlers: a session
+        that never ends is the engine's fault far more often than the work's, three in a
+        row open its circuit so the retry rotates away, and the job's bounded attempts
+        still end in a park rather than a loop. Shared so the handlers cannot disagree.
+        """
+        if self.timed_out_after is None:
+            return None
+        minutes = self.timed_out_after.total_seconds() / 60
+        return (
+            f"engine {descriptor.engine_id.value} ran past its {minutes:g}-minute "
+            "wall-clock limit and was stopped"
+        )
 
     def misconfiguration_gate(
         self, descriptor: EngineDescriptor, work_item_id: str | None
@@ -75,6 +96,7 @@ async def run_and_record(
     handle: RunHandle,
     correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
     tracer: TelemetryTracer | None = None,
+    deadline: timedelta | None = None,
 ) -> RunOutcome:
     # One id for the whole delivery, derived from the project; the run's own
     # identity moves to causation_id, which is already on LedgerEvent and was
@@ -87,50 +109,67 @@ async def run_and_record(
     capacity_state: str | None = None
     diagnostics: list[str] = []
     turn_number = 0
-    async for event in engine.tail(handle):
-        turn_span = (
-            tracer.trace_turn(
-                engine_id=engine.descriptor.engine_id,
-                turn_number=turn_number,
-                event_kind=event.kind,
-            )
-            if tracer is not None and event.kind == EventKind.TURN_COMPLETED.value
-            else contextlib.nullcontext()
-        )
-        with turn_span as span:
-            await ledger.record(
-                project_id=job.project_id,
-                cycle=job.cycle,
-                job_id=job.id,
-                engine_id=engine.descriptor.engine_id,
-                correlation_id=correlation_id,
-                causation_id=handle.run_id,
-                event=event,
-            )
-            if span is not None:
-                span.set_attribute("event_kind", event.kind)
-        if event.kind == EventKind.TURN_COMPLETED.value:
-            turn_number += 1
-        if event.kind == EventKind.VERDICT_RENDERED.value and bool(event.payload.get("complete")):
-            complete = True
-        if event.kind == EventKind.CAPACITY_REJECTED.value:
-            capacity_rejected = True
-            raw_state = event.payload.get("capacity_state")
-            if isinstance(raw_state, str) and raw_state.strip():
-                capacity_state = raw_state.strip()
-        for key in (
-            "stderr_tail",
-            "stdout",
-            "stderr",
-            "diagnostic",
-            "message",
-            "error",
-            "detail",
-            "output",
-        ):
-            value = event.payload.get(key)
-            if isinstance(value, str) and value.strip():
-                diagnostics.append(value.strip())
+    timed_out_after: timedelta | None = None
+    # A hung session never ended its tail, and the worker's heartbeat kept the job's
+    # lease alive meanwhile, so the reaper never reclaimed it and nothing said so. The
+    # deadline bounds the whole session; past it the run is stopped and reported.
+    limit = asyncio.timeout(None if deadline is None else deadline.total_seconds())
+    try:
+        async with limit:
+            async for event in engine.tail(handle):
+                turn_span = (
+                    tracer.trace_turn(
+                        engine_id=engine.descriptor.engine_id,
+                        turn_number=turn_number,
+                        event_kind=event.kind,
+                    )
+                    if tracer is not None and event.kind == EventKind.TURN_COMPLETED.value
+                    else contextlib.nullcontext()
+                )
+                with turn_span as span:
+                    await ledger.record(
+                        project_id=job.project_id,
+                        cycle=job.cycle,
+                        job_id=job.id,
+                        engine_id=engine.descriptor.engine_id,
+                        correlation_id=correlation_id,
+                        causation_id=handle.run_id,
+                        event=event,
+                    )
+                    if span is not None:
+                        span.set_attribute("event_kind", event.kind)
+                if event.kind == EventKind.TURN_COMPLETED.value:
+                    turn_number += 1
+                if event.kind == EventKind.VERDICT_RENDERED.value and bool(
+                    event.payload.get("complete")
+                ):
+                    complete = True
+                if event.kind == EventKind.CAPACITY_REJECTED.value:
+                    capacity_rejected = True
+                    raw_state = event.payload.get("capacity_state")
+                    if isinstance(raw_state, str) and raw_state.strip():
+                        capacity_state = raw_state.strip()
+                for key in (
+                    "stderr_tail",
+                    "stdout",
+                    "stderr",
+                    "diagnostic",
+                    "message",
+                    "error",
+                    "detail",
+                    "output",
+                ):
+                    value = event.payload.get(key)
+                    if isinstance(value, str) and value.strip():
+                        diagnostics.append(value.strip())
+    except TimeoutError:
+        if not limit.expired():
+            raise  # the engine's own timeout, not ours: never reported as a deadline
+        timed_out_after = deadline
+        try:
+            await engine.stop(handle)
+        except Exception as exc:  # noqa: BLE001 - reported below, never swallowed
+            diagnostics.append(f"engine run could not be stopped after its deadline: {exc}")
 
     # Read the exit code only after the tail drains: the adapter's process
     # reference stays alive until stop() releases it, and a pre-drain read
@@ -156,6 +195,7 @@ async def run_and_record(
         exit_code=exit_code,
         diagnostic_tail=diagnostic_tail,
         capacity_state=capacity_state,
+        timed_out_after=timed_out_after,
     )
 
 

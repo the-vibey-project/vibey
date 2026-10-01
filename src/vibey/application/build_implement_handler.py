@@ -101,6 +101,7 @@ class BuildImplementHandler:
         skills_context: SkillsContextCompiler | None = None,
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
         tracer: TelemetryTracer | None = None,
+        run_deadline: timedelta | None = None,
         ultra_ledger: LedgerReader | None = None,
         checkpoint: BuildCheckpoint | None = None,
         ultra_policy: UltraPolicyInterface = ULTRA_POLICY,
@@ -122,6 +123,7 @@ class BuildImplementHandler:
         self._human_gates = human_gates
         self._skills_context = skills_context
         self._tracer = tracer
+        self._run_deadline = run_deadline
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "build.implement":
@@ -380,6 +382,7 @@ class BuildImplementHandler:
             handle=handle,
             correlation=self._correlation,
             tracer=self._tracer,
+            deadline=self._run_deadline,
         )
 
         if run_outcome.capacity_rejected:
@@ -404,6 +407,9 @@ class BuildImplementHandler:
                 effort=effort,
                 stop=stop,
             )
+        exceeded = run_outcome.deadline_detail(self._engine.descriptor)
+        if exceeded is not None:
+            return Failure(FailureClass.ENGINE, exceeded)
         if not run_outcome.complete:
             # A run its own backend could not serve is not the work's failure, and no
             # retry fixes it: park for the human who can (exit 78, ADR-0038).
