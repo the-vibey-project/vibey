@@ -1,0 +1,202 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/release_binaries.py and for the release workflow's
+# matrix (ADR-0051: configuration is declared in TOML, never written into a source file or
+# a workflow). Every user interface, on every platform the project supports, is one target
+# here, and each target says what it is:
+#
+#   build        built from the released commit on every release and attached to the
+#                GitHub Release, with SHA-256 checksums and a build-provenance attestation;
+#   credential   buildable only with a credential the repository does not hold yet: the
+#                release names what is missing and keeps ONE tracking issue open, and the
+#                release itself is unaffected (the lesson openvsx.yml's header records);
+#   unsupported  not built, with the reason, so the downloads page says so out loud.
+#
+# `python scripts/release_binaries.py plan` turns this into the workflow's matrix at run
+# time, so a target added here is built from the next release on. `check` fails when the
+# workflow, or the downloads page, no longer agrees with this file (sub-doctrine 12.e).
+# Windows is not a supported platform (#1097, after 3.0.0), so no target names it.
+
+[release_binaries]
+# The workflow this file drives, and the page whose GENERATED block lists the downloads.
+workflow = ".github/workflows/release-binaries.yml"
+downloads_page = "docs/guides/downloads.md"
+# The GitHub Release the files attach to is the one github-release.yml creates. Its tag is
+# computed exactly as `vibey-gh github-release` computes it, by vibey-gh's own loader:
+# `[github_release] tag_prefix` from this configuration, then the version its `[version]`
+# files carry. Read, never repeated here.
+gh_config = ".vibey-gh.toml"
+# The Linux architectures, and the native GitHub-hosted runner of each, are the ones the
+# requirements matrix declares: read from there, never repeated here, so an architecture
+# added to the supported set is built from the next release on.
+linux_arches_source = "scripts/minimum_specs.toml"
+linux_arches_table = "minimum_specs.linux.arches"
+# The checksum file attached beside the binaries (`sha256sum --check` reads it).
+checksums_asset = "SHA256SUMS"
+# The workflow's jobs that are not builders: plan, gather and checksum, attach.
+infrastructure_jobs = ["plan", "collect", "attach"]
+# github-release.yml runs beside this workflow, after the same Release run; the attach job
+# waits this long for the GitHub Release to exist before it fails, polling every `poll_s`.
+release_wait_s = 1800
+poll_s = 20
+# The Python distributions are the bytes PyPI serves. krypton-app publishes from its own
+# workflow, which may finish after this one starts: wait this long for the version to show.
+pypi_wait_s = 1800
+pypi_json_url = "https://pypi.org/pypi/{project}/{version}/json"
+
+# --------------------------------------------------------------------------- interfaces
+# Each user interface, where its version is read (a file and a pattern whose first group is
+# the version), and what it is in one line. An asset's name carries its interface's own
+# version, so a file name never claims a version its contents do not have.
+
+[release_binaries.uis.desktop]
+name = "krypton desktop"
+summary = "The desktop app: C17 on GTK 4 and libadwaita."
+version_file = "clients/desktop/meson.build"
+version_pattern = "version:\\s*'([^']+)'"
+
+[release_binaries.uis.app]
+name = "krypton app"
+summary = "The mobile and web app: one Expo / React Native app over the vibey hub (ADR-0068)."
+version_file = "clients/app/app.config.ts"
+version_pattern = "version:\\s*'([^']+)'"
+
+[release_binaries.uis.vscode]
+name = "krypton for VS Code"
+summary = "The VS Code extension (ADR-0059)."
+version_file = "clients/vscode/package.json"
+version_pattern = '"version":\s*"([^"]+)"'
+
+[release_binaries.uis.krypton-app]
+name = "krypton launcher"
+summary = "The `krypton` command (krypton-app): starts the local hub and opens it."
+version_file = "clients/krypton-app/pyproject.toml"
+version_pattern = '(?m)^version = "([^"]+)"$'
+
+[release_binaries.uis.vibey]
+name = "vibey CLI and TUI"
+summary = "The `vibey` command and its terminal UI, with the whole engine family (vibey-engine)."
+version_file = "pyproject.toml"
+version_pattern = '(?m)^version = "([^"]+)"$'
+
+# ------------------------------------------------------------------------------ targets
+# `per_linux_arch = true` makes one target per architecture above: `{arch}` in its id and
+# asset names becomes the architecture, and its runner is that architecture's own. `with`
+# is handed to the builder's matrix row as it stands. `signing` says what a person can rely
+# on: `unsigned`; `debug-key` (signed with the public Android debug key: installable by
+# sideloading, never a store build); `pypi` (the very bytes PyPI serves, digest-checked).
+
+[[release_binaries.targets]]
+id = "desktop-flatpak-{arch}"
+ui = "desktop"
+builder = "desktop-flatpak"
+status = "build"
+platform = "Linux: any distribution with Flatpak (Ubuntu, Arch, Fedora)"
+per_linux_arch = true
+assets = ["krypton-desktop-{version}-linux-{arch}.flatpak"]
+signing = "unsigned"
+install = "flatpak install --user krypton-desktop-{version}-linux-{arch}.flatpak"
+note = "A single-file Flatpak bundle of the declared manifest (clients/desktop/packaging/flatpak), built from the released commit. It needs the GNOME runtime from Flathub, which `flatpak install` fetches. The GNOME runtime carries no Avahi, so this build cannot find hubs on the network by itself: pair by typing the hub's address and code."
+# The declared manifest, the module built from the released checkout, the app id the bundle
+# exports, and the remote the runtime and SDK come from.
+with = { manifest = "clients/desktop/packaging/flatpak/io.github.the_vibey_project.krypton.yml", module = "krypton-desktop", app_id = "io.github.the_vibey_project.krypton", remote = "https://dl.flathub.org/repo/flathub.flatpakrepo" }
+
+[[release_binaries.targets]]
+id = "desktop-tarball-{arch}"
+ui = "desktop"
+builder = "desktop-tarball"
+status = "build"
+platform = "Linux: Ubuntu 24.04 LTS and newer"
+per_linux_arch = true
+assets = ["krypton-desktop-{version}-linux-{arch}.tar.gz"]
+signing = "unsigned"
+install = "sudo tar -xzf krypton-desktop-{version}-linux-{arch}.tar.gz -C /"
+note = "`meson install` of the app into /usr, built on Ubuntu 24.04. It links against the system's GTK 4, libadwaita, libsoup 3, json-glib and Avahi, so it needs those installed; on another distribution, prefer the Flatpak."
+
+[[release_binaries.targets]]
+id = "desktop-macos"
+ui = "desktop"
+builder = "desktop-macos"
+status = "unsupported"
+platform = "macOS"
+assets = []
+signing = "unsigned"
+reason = "The GTK 4 build has never run on macOS in CI (the `desktop` job builds on Ubuntu and Arch only), and a usable macOS app needs the GTK runtime bundled (gtk-mac-bundler) plus an Apple Developer ID to sign and notarise it (clients/desktop/PACKAGING.md)."
+
+[[release_binaries.targets]]
+id = "app-web"
+ui = "app"
+builder = "app-web"
+status = "build"
+platform = "Web: any current browser, served as static files"
+runner = "ubuntu-24.04"
+assets = ["krypton-web-{version}.tar.gz"]
+signing = "unsigned"
+install = "mkdir krypton-web && tar -xzf krypton-web-{version}.tar.gz -C krypton-web && python3 -m http.server -d krypton-web"
+note = "The `expo export --platform web` bundle (react-native-web), the same build CI proves bundles: static files any web server can serve."
+
+[[release_binaries.targets]]
+id = "app-android"
+ui = "app"
+builder = "app-android"
+status = "build"
+platform = "Android"
+runner = "ubuntu-24.04"
+assets = ["krypton-android-{version}.apk"]
+signing = "debug-key"
+install = "adb install krypton-android-{version}.apk"
+note = "`expo prebuild` and Gradle `assembleRelease`, signed with the Android debug key because the repository holds no release keystore: for sideloading and testing, not a Play Store build. On the device itself, allow installs from unknown sources and open the file."
+with = { java = "17" }
+
+[[release_binaries.targets]]
+id = "app-ios"
+ui = "app"
+builder = "app-ios"
+status = "credential"
+platform = "iOS"
+runner = "macos-latest"
+assets = ["krypton-ios-{version}.ipa"]
+signing = "unsigned"
+credentials = ["EXPO_TOKEN"]
+tracking_key = "release-binaries-ios"
+# The EAS CLI, pinned, and the eas.json profile a release builds (stable, from main).
+with = { eas_cli = "24.8.0", profile = "stable" }
+needs = "An iOS build that installs on a device must be signed by an Apple Developer Program member. It needs the `EXPO_TOKEN` repository secret, the project registered with EAS (`npx eas-cli init`, which adds its project id to clients/app/app.config.ts), and the Apple signing credentials stored in EAS (`npx eas-cli credentials`). An unsigned simulator build would run on nobody's phone, so none is produced."
+
+[[release_binaries.targets]]
+id = "vscode"
+ui = "vscode"
+builder = "vscode"
+status = "build"
+platform = "VS Code 1.90 or newer, on Linux and macOS"
+runner = "ubuntu-24.04"
+assets = ["krypton-vscode-{version}.vsix"]
+signing = "unsigned"
+install = "code --install-extension krypton-vscode-{version}.vsix"
+note = "The same `vsce package` CI builds and smoke-tests in a real VS Code."
+
+[[release_binaries.targets]]
+id = "krypton-app"
+ui = "krypton-app"
+builder = "python-dists"
+status = "build"
+platform = "Linux and macOS, any architecture (Python 3.12+)"
+runner = "ubuntu-24.04"
+assets = ["krypton_app-{version}-py3-none-any.whl", "krypton_app-{version}.tar.gz"]
+signing = "pypi"
+install = "uv tool install ./krypton_app-{version}-py3-none-any.whl"
+note = "The wheel and sdist PyPI serves, fetched and checked against PyPI's own SHA-256 digests. A pure-Python package: one wheel is every platform."
+with = { project = "krypton-app", source = "clients/krypton-app" }
+
+[[release_binaries.targets]]
+id = "vibey-engine"
+ui = "vibey"
+builder = "python-dists"
+status = "build"
+platform = "Linux and macOS, any architecture (Python 3.12+)"
+runner = "ubuntu-24.04"
+assets = ["vibey_engine-{version}-py3-none-any.whl", "vibey_engine-{version}.tar.gz"]
+signing = "pypi"
+install = "uv tool install ./vibey_engine-{version}-py3-none-any.whl"
+note = "The wheel and sdist PyPI serves, fetched and checked against PyPI's own SHA-256 digests. `vibey` and its TUI, every engine and every tool are in this one wheel (ADR-0037)."
+with = { project = "vibey-engine", source = "." }

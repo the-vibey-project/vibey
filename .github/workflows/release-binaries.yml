@@ -1,0 +1,623 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Release binaries
+
+# Binaries of every user interface, for every supported platform, attached to the GitHub
+# Release of each version: krypton desktop (Flatpak bundle and an Ubuntu build, x86_64 and
+# arm64), the krypton app (web bundle, Android APK; iOS once its credential exists), krypton
+# for VS Code (.vsix), and the krypton launcher and vibey's CLI and TUI (the wheels and sdists
+# PyPI serves), with a SHA256SUMS file and a build-provenance attestation over all of them.
+#
+# WHAT is built is not written here: `scripts/release_binaries.toml` declares every target,
+# and the `plan` job turns it into one matrix per builder at run time. Each builder below is
+# a job; `python scripts/release_binaries.py check` (run by tests/meta/test_release_binaries.py)
+# fails when a declared builder has no job, a job builds nothing declared, or the downloads
+# page no longer says what the configuration does (sub-doctrine 12.e).
+#
+# A stage of the release flow, not a second one: it runs after the same successful `Release`
+# run github-release.yml follows, creates no tag and no Release, and attaches to the one
+# github-release.yml creates, refusing a tag that names any commit but the one it built. It
+# is its own workflow for the reason openvsx.yml's header gives: an optional channel must
+# never decide whether the release happened. A build that fails fails THIS workflow, loudly;
+# the tag, the Release and the documentation are already out. A target that needs a
+# credential the repository lacks says so, keeps one tracking issue open, and succeeds.
+#
+# Exercised before it ever runs for real: a pull request that changes how binaries are
+# built runs every builder in dry-run mode (built and kept as workflow artifacts; nothing is
+# written anywhere), and a dispatch does the same by default. A dispatch on main with
+# `dry_run` off is recovery: it re-attaches to an existing release, after the same proof
+# github-release.yml demands of a dispatched commit.
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and keep the files as workflow artifacts only; write nothing"
+        type: boolean
+        default: true
+      target:
+        description: "Commit to build (blank: the selected ref's tip). Publishing needs main."
+        type: string
+        required: false
+  pull_request:
+    paths:
+      - ".github/workflows/release-binaries.yml"
+      - "scripts/release_binaries.py"
+      - "scripts/release_binaries.toml"
+      - "scripts/interfaces/release_binaries_interface.py"
+      - "clients/desktop/packaging/**"
+
+# Read-only by default; only `attach`, after every build and the checks, may write.
+permissions:
+  contents: read
+
+# A superseded pull-request run is cancelled (12.g); a release's run never is, so no upload
+# is cut off half-way.
+concurrency:
+  group: release-binaries-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.workflow_run.head_sha || inputs.target || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    name: Plan the release's binaries
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      target: ${{ steps.plan.outputs.target }}
+      tag: ${{ steps.plan.outputs.tag }}
+      expected: ${{ steps.plan.outputs.expected }}
+      optional: ${{ steps.plan.outputs.optional }}
+      checksums: ${{ steps.plan.outputs.checksums }}
+      release_wait_s: ${{ steps.plan.outputs.release_wait_s }}
+      poll_s: ${{ steps.plan.outputs.poll_s }}
+      desktop-flatpak: ${{ steps.plan.outputs.desktop-flatpak }}
+      desktop-tarball: ${{ steps.plan.outputs.desktop-tarball }}
+      app-web: ${{ steps.plan.outputs.app-web }}
+      app-android: ${{ steps.plan.outputs.app-android }}
+      app-ios: ${{ steps.plan.outputs.app-ios }}
+      vscode: ${{ steps.plan.outputs.vscode }}
+      python-dists: ${{ steps.plan.outputs.python-dists }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || inputs.target || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      # The tag, the release branch and the release workflow's name are read through the
+      # tree's own vibey-gh, exactly as `vibey-gh github-release` computes the tag it creates.
+      - name: Install the tree's own vibey-gh
+        run: python -m pip install --quiet -e src/vibey_tools/gh
+      - id: context
+        run: python scripts/release_binaries.py context >> "$GITHUB_OUTPUT"
+      - id: mode
+        name: Decide what this run may do
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          REF: ${{ github.ref }}
+          TAG: ${{ steps.context.outputs.tag }}
+          RELEASE_BRANCH: ${{ steps.context.outputs.release_branch }}
+          RELEASE_WORKFLOW: ${{ steps.context.outputs.release_workflow }}
+        run: |
+          set -euo pipefail
+          target=$(git rev-parse HEAD)
+          case "$EVENT_NAME" in
+            workflow_run) mode=publish ;;
+            pull_request) mode=dry-run ;;
+            workflow_dispatch)
+              if [ "$DRY_RUN" != "false" ]; then
+                mode=dry-run
+              elif [ "$REF" != "refs/heads/$RELEASE_BRANCH" ]; then
+                echo "::error::publishing is dispatched from $RELEASE_BRANCH only, not $REF"
+                exit 1
+              else
+                mode=publish
+                # A dispatch carries no proof of its own (github-release.yml's verify job
+                # gives the same reasoning): the commit must be on the release branch AND
+                # have a successful run of the release workflow there.
+                status=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${target}...${RELEASE_BRANCH}" --jq .status)
+                case "$status" in
+                  identical|ahead) ;;
+                  *)
+                    echo "::error::$target is not on $RELEASE_BRANCH (compare status: $status)"
+                    exit 1
+                    ;;
+                esac
+                runs=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$RELEASE_WORKFLOW" \
+                  --branch "$RELEASE_BRANCH" --commit "$target" --status success \
+                  --json databaseId --jq 'length')
+                if [ "$runs" -lt 1 ]; then
+                  echo "::error::no successful '$RELEASE_WORKFLOW' run exists for $target on $RELEASE_BRANCH"
+                  exit 1
+                fi
+              fi
+              ;;
+            *)
+              echo "::error::unexpected event $EVENT_NAME"
+              exit 1
+              ;;
+          esac
+          # A release-branch push that bumps no version releases nothing new: its tag names an
+          # earlier commit, and github-release.yml leaves that be. There is nothing to attach.
+          if [ "$mode" = publish ] && tagged=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq .object.sha 2>/dev/null); then
+            if [ "$tagged" != "$target" ]; then
+              echo "::notice::$TAG already names $tagged, so $target released no new version; nothing to build or attach."
+              mode=skip
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "This run: **$mode** for \`$target\` (release tag \`$TAG\`)." >> "$GITHUB_STEP_SUMMARY"
+      - id: plan
+        name: The matrix, from scripts/release_binaries.toml
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          TARGET: ${{ steps.mode.outputs.target }}
+        run: python scripts/release_binaries.py plan --mode "$MODE" --target "$TARGET" --github-output "$GITHUB_OUTPUT"
+
+  desktop-flatpak:
+    name: krypton desktop, Flatpak (${{ matrix.arch }})
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.desktop-flatpak) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+      - name: Flatpak tooling and the Flathub remote
+        env:
+          REMOTE: ${{ matrix.remote }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          # On the host, not in the sandbox: elfutils because flatpak-builder strips and splits
+          # debug info with eu-strip, and librsvg2-common because its AppStream compose renders
+          # the SVG icon and fails with "Unrecognized image file format" without the loader.
+          sudo apt-get install -y -qq --no-install-recommends flatpak flatpak-builder elfutils \
+            librsvg2-common
+          # Ubuntu 24.04 confines unprivileged user namespaces with AppArmor, and bubblewrap,
+          # which flatpak-builder builds inside, needs them.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          flatpak remote-add --user --if-not-exists flathub "$REMOTE"
+      - name: Build the bundle from the released commit
+        env:
+          MANIFEST: ${{ matrix.manifest }}
+          MODULE: ${{ matrix.module }}
+          APP_ID: ${{ matrix.app_id }}
+          REMOTE: ${{ matrix.remote }}
+          ASSETS: ${{ matrix.assets }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/flatpak"
+          # The declared manifest fetches its source from git, as Flathub requires; a release
+          # builds the commit it is releasing, so that one module builds from this checkout.
+          uv run --no-project --python 3.12 --with pyyaml==6.0.3 python scripts/release_binaries.py \
+            flatpak-manifest --manifest "$MANIFEST" --module "$MODULE" --source . \
+            --out "$work/manifest.json"
+          flatpak-builder --user --install-deps-from=flathub --force-clean --disable-rofiles-fuse \
+            --state-dir="$work/state" --repo="$work/repo" "$work/app" "$work/manifest.json"
+          mkdir -p out
+          flatpak build-bundle --runtime-repo="$REMOTE" "$work/repo" "out/$ASSETS" "$APP_ID"
+          test -s "out/$ASSETS"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+
+  desktop-tarball:
+    name: krypton desktop, Ubuntu build (${{ matrix.arch }})
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.desktop-tarball) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      # The same toolchain and libraries the CI `desktop` job builds and tests with.
+      - name: Toolchain and libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends meson ninja-build pkg-config \
+            libglib2.0-dev libjson-glib-dev libsoup-3.0-dev libgtk-4-dev libadwaita-1-dev \
+            libavahi-client-dev libavahi-glib-dev desktop-file-utils appstream
+      - name: Build, test, and stage the install under /usr
+        env:
+          ASSETS: ${{ matrix.assets }}
+        run: |
+          set -euo pipefail
+          build="$RUNNER_TEMP/build"
+          stage="$RUNNER_TEMP/stage"
+          meson setup "$build" clients/desktop --prefix=/usr -Dchannel=stable -Dgui=enabled \
+            -Dhub_transport=enabled -Ddiscovery=enabled
+          meson compile -C "$build"
+          meson test -C "$build" --print-errorlogs
+          meson install -C "$build" --destdir "$stage" --strip
+          test -x "$stage/usr/bin/krypton-desktop"
+          desktop-file-validate "$stage"/usr/share/applications/*.desktop
+          mkdir -p out
+          tar -C "$stage" --owner=0 --group=0 --numeric-owner -czf "out/$ASSETS" .
+          tar -tzf "out/$ASSETS"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+
+  app-web:
+    name: krypton app, web (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.app-web) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: clients/app/package-lock.json
+      - name: Export the web bundle
+        working-directory: clients/app
+        env:
+          ASSETS: ${{ matrix.assets }}
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run export:web
+          test -f dist/index.html
+          mkdir -p ../../out
+          tar -C dist --owner=0 --group=0 --numeric-owner -czf "../../out/$ASSETS" .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+
+  app-android:
+    name: krypton app, Android (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.app-android) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: clients/app/package-lock.json
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      # Expo's native template signs `release` with the Android debug key when no keystore is
+      # configured, and the repository holds none: the APK installs by sideloading and is
+      # labelled so everywhere it is offered. It is never a Play Store build.
+      - name: Prebuild the native project and assemble the release APK
+        working-directory: clients/app
+        env:
+          ASSETS: ${{ matrix.assets }}
+        run: |
+          set -euo pipefail
+          npm ci
+          npx expo prebuild --platform android --no-install --clean
+          (cd android && ./gradlew assembleRelease --no-daemon --stacktrace)
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          test -f "$apk"
+          signer=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)/apksigner
+          "$signer" verify --print-certs "$apk" | tee -a "$GITHUB_STEP_SUMMARY"
+          mkdir -p ../../out
+          cp "$apk" "../../out/$ASSETS"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+
+  app-ios:
+    name: krypton app, iOS (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      issues: write              # the one tracking issue for a missing credential
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.app-ios) }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MODE: ${{ needs.plan.outputs.mode }}
+      TRACKING_KEY: ${{ matrix.tracking_key }}
+      NEEDS: ${{ matrix.needs }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        if: env.MODE == 'publish'
+        with:
+          python-version: "3.12"
+      - name: Install the tree's own vibey-gh
+        if: env.MODE == 'publish'
+        run: python -m pip install --quiet -e src/vibey_tools/gh
+      - name: Without the credential, say so and keep it tracked
+        if: env.EXPO_TOKEN == ''
+        run: |
+          set -euo pipefail
+          echo "::warning::EXPO_TOKEN is not set, so no iOS build of the krypton app was made. The release itself is unaffected."
+          echo "The krypton app for iOS was **not built**: \`EXPO_TOKEN\` is not set. $NEEDS" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$MODE" = publish ]; then
+            vibey-gh tracking-issue raise \
+              --key "$TRACKING_KEY" \
+              --title "Release binaries: the krypton app for iOS is not being built (EXPO_TOKEN is not set)" \
+              --body "Every release on \`main\` skips the iOS build of the krypton app. $NEEDS This issue closes itself after the first iOS build attached to a release (release-binaries.yml)."
+          fi
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: env.EXPO_TOKEN != ''
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: clients/app/package-lock.json
+      # With the credential, a failure is a failure: nothing below is allowed to pass quietly.
+      - name: Build the signed iOS app with EAS, on this runner
+        if: env.EXPO_TOKEN != ''
+        working-directory: clients/app
+        env:
+          ASSETS: ${{ matrix.assets }}
+          EAS_CLI: ${{ matrix.eas_cli }}
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          npm ci
+          mkdir -p ../../out
+          npx --yes "eas-cli@$EAS_CLI" build --platform ios --profile "$PROFILE" --local \
+            --non-interactive --output "../../out/$ASSETS"
+          test -s "../../out/$ASSETS"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: env.EXPO_TOKEN != ''
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+      - name: Close the missing-credential issue, if one is open
+        if: env.EXPO_TOKEN != '' && env.MODE == 'publish'
+        env:
+          TARGET: ${{ needs.plan.outputs.target }}
+        run: |
+          set -euo pipefail
+          vibey-gh tracking-issue resolve \
+            --key "$TRACKING_KEY" \
+            --comment "Built for iOS from $TARGET; EXPO_TOKEN is set. Closing."
+
+  vscode:
+    name: krypton for VS Code (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.vscode) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Compile and package the .vsix
+        env:
+          ASSETS: ${{ matrix.assets }}
+        run: |
+          set -euo pipefail
+          npm ci
+          mkdir -p out
+          (cd clients/vscode && npm run compile && npx vsce package --no-dependencies --out "../../out/$ASSETS")
+          # The same two claims CI checks: it carries @vibey/core and the krypton icon. The
+          # listing is read whole first: `unzip -l | grep -q` under pipefail fails whenever
+          # grep exits before unzip has written everything (SIGPIPE, exit 141).
+          listing=$(unzip -l "out/$ASSETS")
+          grep -qF 'extension/out/node_modules/@vibey/core/dist/packages/vibey-core/src/index.js' <<<"$listing"
+          grep -qF 'extension/media/krypton.png' <<<"$listing"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+
+  python-dists:
+    name: ${{ matrix.project }} wheel and sdist
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.python-dists) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      # A release attaches the very files PyPI serves, each checked against PyPI's digest,
+      # so the GitHub Release can never offer a wheel the index does not.
+      - name: The files PyPI serves for this version
+        if: needs.plan.outputs.mode == 'publish'
+        env:
+          PROJECT: ${{ matrix.project }}
+          VERSION: ${{ matrix.version }}
+        run: python scripts/release_binaries.py pypi-fetch --project "$PROJECT" --version "$VERSION" --out out
+      # A dry run publishes nothing, so there is nothing on PyPI to fetch: it proves the
+      # distributions build from this commit under the names the release will carry.
+      - name: Built from this commit (dry run)
+        if: needs.plan.outputs.mode == 'dry-run'
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: |
+          python -m pip install --quiet build
+          python -m build "$SOURCE" --outdir out
+      - name: Exactly the declared files
+        env:
+          ASSETS: ${{ matrix.assets }}
+        run: |
+          set -euo pipefail
+          read -r -a declared <<<"$ASSETS"
+          expected=$(printf '%s\n' "${declared[@]}" | sort)
+          actual=$(find out -maxdepth 1 -type f -printf '%f\n' | sort)
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::declared: ${expected//$'\n'/ } -- produced: ${actual//$'\n'/ }"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+
+  collect:
+    name: Gather, check and checksum
+    needs: [plan, desktop-flatpak, desktop-tarball, app-web, app-android, app-ios, vscode, python-dists]
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: release-binary-*
+          merge-multiple: true
+          path: assets
+      # Every declared file present, nothing undeclared, then one SHA256SUMS over them all.
+      - name: Hold the files to the plan and write the checksums
+        env:
+          EXPECTED: ${{ needs.plan.outputs.expected }}
+          OPTIONAL: ${{ needs.plan.outputs.optional }}
+          CHECKSUMS: ${{ needs.plan.outputs.checksums }}
+          MODE: ${{ needs.plan.outputs.mode }}
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          set -euo pipefail
+          python scripts/release_binaries.py collect --dir assets --expected "$EXPECTED" --optional "$OPTIONAL"
+          (cd assets && sha256sum --check --strict "$CHECKSUMS")
+          {
+            echo "### Release binaries ($MODE) for \`$TAG\`"
+            echo
+            echo '```'
+            cat "assets/$CHECKSUMS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-binaries
+          path: assets/
+          if-no-files-found: error
+
+  attach:
+    name: Attach to the GitHub Release
+    needs: [plan, collect]
+    if: needs.plan.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write            # upload the files to the release
+      id-token: write            # sign the provenance attestation
+      attestations: write        # store it
+    # Nothing from the tree is checked out or run here: this job only signs, waits and
+    # uploads the files the read-only jobs above built and checked.
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-binaries
+          path: assets
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: assets/${{ needs.plan.outputs.checksums }}
+      - name: Wait for the GitHub Release, then attach
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          TARGET: ${{ needs.plan.outputs.target }}
+          WAIT_S: ${{ needs.plan.outputs.release_wait_s }}
+          POLL_S: ${{ needs.plan.outputs.poll_s }}
+        run: |
+          set -euo pipefail
+          # github-release.yml follows the same Release run and usually finishes first; when
+          # it has not, wait for it rather than create a Release it owns.
+          waited=0
+          until gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; do
+            if [ "$waited" -ge "$WAIT_S" ]; then
+              echo "::error::no GitHub Release $TAG after ${waited}s; github-release.yml has not created it"
+              exit 1
+            fi
+            sleep "$POLL_S"
+            waited=$((waited + POLL_S))
+          done
+          tagged=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq .object.sha)
+          if [ "$tagged" != "$TARGET" ]; then
+            echo "::error::$TAG names $tagged, not the commit these files were built from ($TARGET); refusing to attach them"
+            exit 1
+          fi
+          # --clobber: a re-run replaces this release's own files and nothing else.
+          gh release upload "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --clobber
+          # Observed, not assumed: every file is on the Release, at the size it was built.
+          listed=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[] | "\(.name) \(.size)"')
+          for path in assets/*; do
+            line="$(basename "$path") $(stat -c %s "$path")"
+            if ! grep -qxF "$line" <<<"$listed"; then
+              echo "::error::the Release does not carry $line"
+              exit 1
+            fi
+          done
+          echo "Attached $(find assets -maxdepth 1 -type f | wc -l) files to [$TAG](https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG})." >> "$GITHUB_STEP_SUMMARY"
