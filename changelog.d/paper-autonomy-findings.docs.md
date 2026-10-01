@@ -7,4 +7,5 @@
   the 2026-09-30 autonomy scan: who merged into `develop` and how, seven defects and their
   repairs (#1294 to #1299), the merge-train incident #1301 fixed, and a measurement of the
   sovereign reviewer with and without the files it judges (#1303). Its records are tracked
-  under `docs/architecture/evidence/`.
+  under `docs/architecture/evidence/`
+  ([#1307](https://github.com/the-vibey-project/vibey/pull/1307)).
