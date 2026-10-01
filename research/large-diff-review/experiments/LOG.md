@@ -123,3 +123,43 @@ what was seen, and what it changed.
   3. **Determinism and cache:** the same request twice at T=0 gave byte-identical reasoning
      (2,574 chars) and answer; the second read its 687-token prompt in 0.087 s vs 0.86 s
      — the prompt cache serves an identical prefix.
+- **19:45** The REVIEW-CANARY lane finished (PR #1331): production settings on the 41
+  small cases, 2026-10-01 16:26–19:12 EDT — recall 18/25 (Wilson 0.52–0.86), FP 0/14,
+  no verdict 2/41 (both `model_timeout` ~1,000 s). Its per-case raw verdicts are copied to
+  `results/b0-canary/` (sha256 in `SHA256SUMS`) and are **A0 on the small diffs** for the
+  registered paired non-inferiority test (same argv as A0; the lane's own settings digest
+  is kept beside them). Amendment, before any arm's small-diff outcome is seen:
+  **verdict consistency** becomes a measured outcome in every arm — INCONSISTENT = `pass`
+  true while a finding is `blocking`/`major`, or (defect cases) while the summary uses one
+  of the case's class keywords — because the lane found 2 of its 5 misses with the model's
+  own summary naming the defect under `pass: true`. A free reduce-time intervention,
+  **+CONS** (`pass` := `pass` AND no blocking/major finding; findings decide, not the
+  free boolean), is added to Stage 2 and scored on every arm's existing verdicts at no
+  model cost.
+- **19:47** Harness incident, no data affected: killing the waiting replay process let the
+  earlier `replay; stage1` chain start Stage 1 at 19:31, and the restarted replay then
+  queued a request inside Ollama behind Stage 1's. Caught at 19:42 from the two open
+  sockets; the replay process was killed before its request started (no record written).
+  Fix: `Model.ask` now holds an exclusive `flock` on `results/.model.lock`, so only one
+  harness process talks to the model at a time. Stage 1 continues (it is the main line
+  and covers the 5–20k-token region first); the Hm2 replay is re-queued after it.
+  Also from the server log at 19:42 (Stage 1's first request, D8 part 1 of #1131, ~13.8k
+  prompt tokens): generation passed 15,000 tokens at ~24.7 tok/s — a small part can run
+  to the cap too (EVIDENCE: content matters, not only size).
+- **19:55** First Stage 1 record (D8, #1131 part 1; 13,894 prompt tokens, T=0): ran to the
+  16,384-token cap, `done_reason=length`, 71,679 reasoning chars, no answer, 697 s. Its
+  reasoning trips PRIOR-ART's loop guard and 86% of its word 8-grams are repeats; the tail
+  repeats "The diff changes the bullet list of engine descriptors to include `OPENCODE`.
+  But the reference source shows `OPENCODE` defined. So fine." verbatim, and includes
+  "This is obviously not helpful. Let's step back." followed by the same loop. **Amendments
+  to Stage 1, made before any T=1 outcome was seen:**
+  1. **Fail-fast screening** for the D arms (stop a host at its first part with no verdict;
+     the contract request is then not asked). Registered: every part run. Reason: at T=0 a
+     runaway part costs ~12 min, and the screening rule drops an arm at its first failure
+     anyway; per-part rates are measured in Stage 2 on a fixed sample instead.
+  2. **T=1 variants added** (temperature 1.0, top_p 1.0, seed 42 — the model's own default
+     sampling, as A2 already is for production): D8-T1, D16-T1, D4-T1, D32-T1, and
+     D16-T1-BF8192. Order: D8-T1, D16-T1, D16-BF4096, D8, D16, A2, A0, A1, D16-T1-BF8192,
+     D4-T1, D32-T1, D4, D32.
+  3. The Hm2 replay of #1312/#1317 moves after Stage 1 (A2 on the S1 hosts measures the
+     same question on production requests meanwhile).

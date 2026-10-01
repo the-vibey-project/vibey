@@ -634,6 +634,9 @@ class DecoupledArm:
             results.append((label, res, paths))
             if fail_fast and res.verdict is None:
                 break
+        if fail_fast and results and results[-1][1].verdict is None:
+            # Screening stops at the first part with no verdict; the contract is not asked.
+            return compose(results, Result(None, "not_asked"))
         contract = self.contract(case, host_case if case.kind == "needle" else None)
         return compose(results, contract)
 

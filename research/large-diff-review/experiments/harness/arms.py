@@ -93,6 +93,7 @@ def run_case(
     ledger: DiffLedger,
     host_case: Case | None = None,
     offline: bool = False,
+    fail_fast: bool = False,
 ) -> dict[str, Any] | None:
     found = ledger.done(stage, arm_name, case.case_id)
     if found is not None:
@@ -113,7 +114,7 @@ def run_case(
         if res.missing:
             return None
     else:
-        out = arm.review(case, host_case)
+        out = arm.review(case, host_case, fail_fast=fail_fast)
         if out["code"] == "missing":
             return None
     row = {
