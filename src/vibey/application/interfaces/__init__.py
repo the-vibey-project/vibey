@@ -108,6 +108,7 @@ from vibey.application.interfaces.gate_notices import (
     GateNoticeStore,
     GateReminderInterface,
 )
+from vibey.application.interfaces.gate_timeouts import GateTimeoutSweepInterface
 from vibey.application.interfaces.gates import (
     GateLookup,
     HumanGateRepository,
@@ -231,6 +232,7 @@ __all__ = [
     "GateNoticeServiceInterface",
     "GateNoticeStore",
     "GateReminderInterface",
+    "GateTimeoutSweepInterface",
     "Logger",
     "NotificationSink",
     "TelemetryMetrics",

@@ -12,6 +12,7 @@ from vibey.domain.config import (
     parse_config,
     parse_toml_string,
 )
+from vibey.domain.gate_timeout import GateTimeoutPolicy
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import LOCAL_ENGINE_SWITCHES
@@ -23,7 +24,16 @@ from vibey.infrastructure.interfaces.class_contracts import (
 # The tables `vibey new` copies from vibey.toml into the project record. `gates` and
 # `engine_environment` decide what a gate command and an engine session may see of the
 # worker's environment; they are declared here, never hand-edited into the record.
-RUNTIME_CONFIG_KEYS = ("notifications", "telemetry", "gates", "engine_environment", "design")
+RUNTIME_CONFIG_KEYS = (
+    "notifications",
+    "telemetry",
+    "gates",
+    "engine_environment",
+    "design",
+    # Which gate kinds may resolve to their default after waiting (12.d: declared, never
+    # assumed). Validated below so a kind that cannot time out is refused at `vibey new`.
+    "human_gates",
+)
 
 # Every operational surface's environment overlay: (table, key, variable,
 # cast). An empty variable counts as unset, the way the Ollama client treats
@@ -190,6 +200,7 @@ def load_runtime_config_from_path(path: Path) -> dict[str, object]:
         # name, libpq's PG*, a DSN) is refused here, before anything is stored.
         SubprocessGateRunner.from_config(runtime)
         EngineEnvironmentPolicy.from_config(runtime)
+        GateTimeoutPolicy.from_config(runtime)
     return runtime
 
 

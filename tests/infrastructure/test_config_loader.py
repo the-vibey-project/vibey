@@ -401,3 +401,34 @@ def test_the_environment_declares_the_design_research_policy(
     assert load_config_from_path(config_path).design.research.on_unavailable is (
         ResearchOnUnavailable.RECORD_GAP
     )
+
+
+def test_vibey_new_copies_a_declared_gate_timeout(tmp_path: Path) -> None:
+    """A gate may resolve to its default only where the project declared it; the
+    declaration reaches the worker through the project record `vibey new` writes."""
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text("[human_gates.timeout_defaults]\nchoice = 1440\n")
+
+    assert "human_gates" in RUNTIME_CONFIG_KEYS
+    assert load_runtime_config_from_path(config_path) == {
+        "human_gates": {"timeout_defaults": {"choice": 1440}}
+    }
+
+
+@pytest.mark.parametrize(
+    ("toml", "message"),
+    [
+        ("[human_gates.timeout_defaults]\napproval = 60\n", "approval"),
+        ("[human_gates.timeout_defaults]\nchoice = 0\n", "positive"),
+    ],
+)
+def test_vibey_new_refuses_a_gate_timeout_it_cannot_honour(
+    tmp_path: Path, toml: str, message: str
+) -> None:
+    from vibey.domain.config import ConfigError
+
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text(toml)
+
+    with pytest.raises(ConfigError, match=message):
+        load_runtime_config_from_path(config_path)

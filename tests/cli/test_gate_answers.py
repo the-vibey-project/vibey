@@ -243,3 +243,14 @@ def test_every_gate_kind_vibey_raises_has_exactly_one_rule() -> None:
     stale = sorted(set(ANSWER_RULES) - raised)
     assert missing == [], f"raised with no answer rule in vibey.cli.gate_answers: {missing}"
     assert stale == [], f"rules for kinds nothing raises any more: {stale}"
+
+
+def test_a_timed_out_gate_is_answered_the_way_vibey_answer_answers_it() -> None:
+    """`domain/gate_timeout.py` turns a default into an answer for the sweep; it must use
+    the same key `vibey answer` sends for that kind, or a timeout would send an answer the
+    gate's handler does not read."""
+    from vibey.cli.gate_answers import ANSWER_RULES, CHOICE, VERDICT
+    from vibey.domain.gate_timeout import DEFAULT_ANSWER_KEYS
+
+    for kind, key in DEFAULT_ANSWER_KEYS.items():
+        assert ANSWER_RULES[kind] is (VERDICT if key == "verdict" else CHOICE), kind
