@@ -35,14 +35,19 @@ audit's 18 leading claims. Releases 3.1.0 and 3.2.0 add an operator's exit that 
 a project from any phase short of done, withdrawing its gates and releasing its
 checkout; build branches that a project must prove are its own; a trust check before an
 issue enters the delivery path; a gate that parks a job failing the same way again and
-again; and a local reviewer that reaches a verdict on a large diff in bounded parts.
+again; and a local reviewer that reviews a large diff whole, in bounded parts.
 A scan of the integration branch on 2026-09-30 found that only BUILD ran without a
 person and that the forty merges before it all went in through the ruleset bypass with
 no review, and it found seven defects, three of them in the evidence a person is shown. We
 report their repairs, an incident in which the merge train closed pull requests it
 reported as merged, and a measurement of the local reviewer: given the full files it
 judges, none of its seven false findings on four blocked changes returned, though its
-recall is unmeasured.
+recall is unmeasured. After the scan, the reviewer's failures on large diffs were traced
+to an answer nothing capped and a deadline that did not grow with the request; the repair
+caps the one, scales the other and tells a busy model from a slow one. At our cutoff it
+had passed one small diff, and on the one large diff it had met it gave no verdict: the
+model filled the new cap without answering, and the lane said so by name rather than
+timing out.
 
 *Artifacts.* This paper is typeset from `docs/paper.md` and published as
 [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf),
@@ -108,7 +113,7 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
   that distinguish software organisms from biological organisms or sentient minds;
 - a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it;
 - an audit of a local storm that locates its binding constraint, its conversion losses and its unenforced controls, and a factual account of merges that ran ahead of review, both read as evidence that the scarce input is judgment;
-- a scan of how far the delivery loop ran without a person, with the forge's record of who merged, the defects it found and their repairs, an incident in which the merge train closed what it reported as merged, and a measurement of the local reviewer with and without the files it judges.
+- a scan of how far the delivery loop ran without a person, with the forge's record of who merged, the defects it found and their repairs, an incident in which the merge train closed what it reported as merged, and a measurement of the local reviewer with and without the files it judges, and the cause of that reviewer's missing verdicts on large diffs, with a repair that turns a silent timeout into a named refusal but has not yet brought a large diff to a verdict.
 
 ```latex
 \begin{figure*}[!t]
@@ -318,6 +323,21 @@ the migration lock. Migration 0017 is new rather than an edit of 0016, because a
 migration that may already have been applied is never rewritten. #1112's description
 promised an independent re-review before the operator's merge; no verdict on the
 merged result is recorded in a tracked source, so we report the fix, not a review of it.
+
+The migration lock is per database, and one of the privileges the reconciler revokes is
+not. The grant that lets a role set `session_replication_role`, which silences every
+trigger, the ledger's guard included, lives in one `pg_parameter_acl` row for the whole
+cluster, so two reconciles on different databases of one cluster race on it. Until #1310
+the loser's revoke failed with `tuple concurrently updated`, and the reconciler swallowed
+every database error at that step, so the grant could stay in place without a word. CI
+found it: on PostgreSQL 16 the test workers reconcile in parallel against one cluster,
+and in #1307's checks the application role could still set the parameter after a
+reconcile. Now only a refusal for want of privilege is tolerated, which the inspector
+reports; the race is retried up to five times with a linear backoff; and any other error
+is raised. #1314 adds the race's other message, `tuple concurrently deleted`, which the
+loser receives when the winning revoke empties the row and the server removes it; that
+one failed #1312's checks, again on PostgreSQL 16. Both merged on 2026-10-01, after
+3.2.0, and their tests reproduce each message (`tests/infrastructure/db/test_ledger_guard.py`).
 
 Crash recovery and engine handoff follow as corollaries: a successor engine
 re-derives context from the ledger alone, so a credit exhaustion on $e_i$ between
@@ -1487,6 +1507,16 @@ applies vibey's own model-session rule, rejecting `VIBEY_*`, `PG*` and names con
 `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`; the `vibey.environment.allow` setting may
 add names but never widen past that rule.
 
+Since #1312, after 3.2.0, the extension's identifier is `the-vibey-project.krypton`, in
+the lowercase the client family is now spelled in everywhere. Its commands, settings and
+views keep their `vibey.*` names, so settings and key bindings carry over, but an install
+under the old identifier must be removed first, and a hub pairing, which is kept in
+storage scoped to the extension's identifier, must be made again. No workflow publishes
+the extension to the Visual Studio Marketplace, and it has never been published to Open
+VSX: that workflow skips while the repository holds no `OVSX_PAT` token, and the issue
+that tracks the missing token (#1254) was open at our cutoff, so the first publish will
+carry the new identifier.
+
 The driver makes the fit explicit rather than hiding it in a default. A portable
 probe records the endpoint, model, revision, prompt shape, every context/output pair,
 and a selected fit. The runtime accepts only a matching endpoint and model, and a
@@ -1989,6 +2019,30 @@ so re-promoting identical content never compounds a bump. Published versions for
 monotone sequence, and the publish step treats an already-published version as a
 no-op, never an error.
 
+**What a release carries.** A push to `develop` publishes development builds of
+`vibey-engine` and `krypton-app` to TestPyPI, and a push to `main` publishes both to PyPI,
+each by its own workflow (ADR-0069). Until #1317 the GitHub Release beside them carried the
+tag, the notes, the book and the paper, and no client had a build to download. #1317,
+merged on 2026-10-01, adds a stage, `release-binaries.yml`, that runs after the same
+successful release on `main` and attaches files to the Release that already exists. It
+creates no tag, refuses a tag that names any commit other than the one it built, and is a
+workflow of its own so that a failed build fails it, never the release. Its targets are
+declared, one per interface and platform (`scripts/release_binaries.toml`), each built,
+waiting for a credential, or unsupported with the reason: the desktop client as a Flatpak
+bundle and as a tarball for Linux on x86_64 and arm64, unsigned; the app's web bundle; an
+Android package signed only with the debug key, for sideloading; the VS Code extension;
+and the wheels and source distributions of both packages, fetched from PyPI and checked
+against PyPI's own SHA-256 digests rather than rebuilt. The iOS build waits for signing
+credentials and keeps one tracking issue open instead of failing the release; the desktop
+client is not built for macOS, where its GTK build has never run in CI; and Windows is not
+a target (#1097). One job gathers every declared file, refuses any undeclared one and
+writes `SHA256SUMS`, and the attaching job, the only one with write access, attests the
+build's provenance over that file. All of this has run only as a dry run. At our cutoff
+the stage's two pull-request runs and one dispatched run had built every target on hosted
+runners, the iOS job by warning that its credential is missing, and had skipped the
+attach, as a dry run must (runs 36904265081, 36908198822 and 36904299591); no release had
+been cut since it merged, so the attestation and the upload have never run.
+
 **Degraded modes as first-class states.** The evaluator's own substrate (API credit,
 the hosted review lane, the operator's editor) can refuse service while the
 repositories remain healthy. Each lane is modelled as a probe
@@ -2056,8 +2110,8 @@ end is caught whichever end the server chooses. A diff too large for one request
 never cut. Since 3.1.0 it is reviewed whole in at most `max_chunks` parts, six by
 default, split by file and then by hunk, each part held to every guard above, and a pass
 needs every part to pass at the one head reviewed (#1252); a model that was unreachable
-or timed out is asked again before a person is. Since 3.2.0 a hunk that only adds lines
-is split between lines into labelled pieces (`split_added_hunks`, on by default, #1278);
+is asked again before a person is, and until #1316 so was one that timed out. Since 3.2.0
+a hunk that only adds lines is split between lines into labelled pieces (`split_added_hunks`, on by default, #1278);
 a hunk with context or removed lines never is. Only a diff that still cannot be reviewed
 whole is refused before anything is sent, its reason recorded as a code
 (`diff_exceeds_window`, `chunk_budget_exceeded`), and the gate asks a person. And when a
@@ -2080,9 +2134,54 @@ characters, larger than one part could carry (`CHANGELOG.md`). The check codes'
 false-refusal rate is still unmeasured, and whether any pull request has since passed on
 the sovereign verdict alone is not recorded in the repository.
 
+**Why a large diff still got no verdict.** Bounded parts were not enough. The review of
+#1312 (run 36879717279) ended without a verdict, coded `model_timeout` after two
+attempts. The model server's log for that run, which is not tracked and which #1316
+quotes, shows a free model: no other request reached it, and it had been loaded for the
+review with one slot of 65,536 tokens. The first part's prompt was 46,222 tokens, because
+a whole review fills each part up to the window less the reserve and repeats the
+declared documents in every part, and reading it took 145 s. The model then wrote about
+9,950 tokens at 22.5 per second. That is past the 8,192 tokens the request reserved for
+reasoning and answer, and nothing enforced the reserve: the request set no cap on its
+output, so the only bound was the window, and the fixed 600 s deadline cut the answer off
+unfinished. The retry was the same request at temperature 0. It read for 147 s, wrote
+10,017 tokens and was cut off the same way, 20.5 minutes after the first began. The same
+log holds the failure this one had been taken for: on 2026-09-30 a review waited about
+ten minutes behind another client's request and was then cut off seconds into its own
+work, reported in the same words. Two causes shared one code.
+
+#1316, merged on 2026-10-01, separates them and bounds both. The reserve is now sent as
+the request's `num_predict`, so the model may write no more than the room the request was
+sized with, and the default reserve is 16,384 tokens, above the 11,832 that the longest
+review in the log to finish generated. A model that fills the reserve without finishing
+is refused as `done_reason=length` and named as such, never as a timeout. A request's
+deadline grows with what it sends and what it may write,
+$t = \max(t_0,\; p/r_p + R/r_o)$, for $p$ prompt tokens, reserve $R$, the fixed
+$t_0 = 600$ s, and declared rates $r_p = 200$ and $r_o = 20$ tokens per second, rounded
+down from the 237 to 319 and 22.3 to 22.6 measured in that log. Before each request a
+one-token probe at the same window waits up to 900 s for the model's one slot. A model
+still busy then is coded `model_busy` and retried; a request that started on a free slot
+and still ran past its deadline is coded `model_timeout`, its reason states the
+deadline's arithmetic, and it is not retried, because at temperature 0 the same request
+would run the same way. With these defaults #1316 re-planned #1312's diff into two parts
+of about 49,000 and 45,000 estimated tokens, with deadlines of 1,065 s and 1,044 s. That
+is a plan, not a run. By our cutoff, 20:41Z on 2026-10-01, the lane had run twice under
+the new code. It reviewed #1319, a generated forecast refresh of 73 changed lines, in one
+request and passed it (run 36911659643). Then it reviewed #1317, 2,573 changed lines in
+14 files, in three parts, one attempt each, and reached no verdict (run 36916689987):
+the third part's model wrote 78,418 characters of reasoning and no answer, filled the
+16,384-token reserve, and was refused as `done_reason=length`, coded
+`answer_incomplete`, 39.5 minutes after the review began, and the gate asked for a
+person. #1317 had been merged at 19:53Z, before that review started. So on the one large
+diff it has met, the repair did what it promised, a bounded attempt and a refusal that
+names its cause instead of two timeouts, and not what it was for: no large diff has yet
+reached a sovereign verdict under it, and on that one the reserve was not room enough.
+Whether a larger reserve, less reasoning or smaller parts would let one finish is not
+known; #1316 calls the reasoning setting a quality decision that needs its own study.
+
 ```latex
 \begin{plainwords}
-A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, where a project switches them on (this one does not), a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer.
+A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, where a project switches them on (this one does not), a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer. Later, long drafts kept coming back with no grade at all, and we found why: nothing stopped the grader from writing on and on until the clock ran out. Now it gets a fixed amount of room, more time for a longer draft, and a different message when it was only waiting its turn. The first long draft it met after the change still came back without a grade, but this time with the honest reason: the grader used all its room thinking and never answered. Each release is also meant to carry ready-to-install copies of every app, with a list of fingerprints to check them by; so far that has only been rehearsed, never done for real.
 \end{plainwords}
 ```
 
@@ -3090,7 +3189,9 @@ PostgreSQL server against the floor vibey declares, on a scratch database the ru
 and drops. It reads the model sizes from the registry without pulling them. It measures the
 model's memory at each configured context and its throughput on the GPU and on the CPU
 alone, and the peak memory of the everyday commands, the hub and the launcher. The result
-arrives as a pull request, like any other change.
+arrives as a pull request, like any other change. That is the design. At our cutoff,
+2026-10-01, the workflow had never run (its first scheduled run falls on 2026-10-05), so
+every figure below comes from the seed passes.
 
 The record keeps three kinds of figure apart. A *measured* figure came from a command on
 the named host. A *declared* one was read from the repository: a constant such as the
@@ -3189,6 +3290,22 @@ Fedora (current release) & aarch64 & native & not measured / not measured & 20 G
 \end{table*}
 ```
 <!-- END GENERATED specs:linux-requirements -->
+
+The table is the matrix as seeded on 2026-10-01 (#1313), and most of what the method
+promises is not yet in it. The native runners have not run a cell. Every cell ran in a
+container under Docker Desktop on the Apple M5: natively for arm64, and under QEMU
+emulation for x86_64, where `uv` itself crashed (signal 11), so no x86_64 cell has its
+install sizes, the glibc its wheels need, a disk requirement or a timing. Arch Linux has
+no official arm64 image and is skipped. The memory line was fitted on the Mac, to four
+points from 4,096 to 131,072 tokens on its Metal backend, and the Linux memory figures are
+that line times a declared headroom factor, plus vibey's own share and an allowance for
+the operating system taken from the Mac, with the whole model in system memory; no Linux
+system's memory was measured. No thread sweep had run, so Amdahl's law is fitted on neither architecture and
+every core count reads *not measured*. And the ledger's bytes per job had not been
+measured, so the disk integral has no measured input yet. What the table does establish
+is narrower: in every cell that ran, the distribution packages a Python, a PostgreSQL and
+desktop libraries that meet vibey's floors, and on arm64 its glibc meets the 2.34 the
+wheels require. The record lists each of these gaps under *not verified*.
 
 ### Field data
 
@@ -3688,7 +3805,8 @@ ten minutes, the limit the review workflow sets, having generated 5,353 to 11,75
 (median 7,789). The eighteen requests with prompts of at least 30,000 tokens that
 finished on 2026-09-30 and 2026-10-01 generated a median of 2,661. The requests were not
 stuck: they were still generating, at about three times the length of a finished answer,
-when time ran out.
+when time ran out. Why nothing stopped them sooner, and how the lane now bounds them,
+#1316 found later the same day; the section on exact-head evaluation gives both.
 
 To find what would let the reviewer finish, and whether its verdicts held when it did,
 eight merged pull requests were replayed at their exact heads, one run each. Each run
@@ -3738,8 +3856,9 @@ repeatability. No pull request in the sample carries a known-true defect, so the
 recall is unmeasured: we have not shown whether it blocks a real defect, with the files
 or without them, and agreement with the gate is agreement, not correctness. The replays
 allowed 900 seconds where the workflow allows 600, and two of the eight source-context
-runs took longer (678 s and 872 s). Under the workflow those attempts would have ended
-without a verdict and gone to its one retry. The study's records were first kept only in
+runs took longer (678 s and 872 s). Under the workflow as it then stood, those attempts
+would have ended without a verdict and gone to its one retry; since #1316 its limit grows
+with the request and is never under 600 s. The study's records were first kept only in
 the session's scratch space. Sub-doctrine 10.h is why they are now tracked beside the
 scan's (`docs/architecture/evidence/review-lane-2026-10-01.json`).
 
@@ -3750,9 +3869,25 @@ without running a custom merge driver (#1305), so a pull request shows as confli
 even when a local merge is clean, and where the driver does run it keeps both sides and
 can duplicate an entry. The four fixes #1295, #1297, #1298 and #1299 each edit
 `CHANGELOG.md`, and together they carry ten commits that merge `develop` in, against four
-of their own. #1305, open at this revision, replaces the union merge with fragments: each
-change adds its own file, `changelog.d/<slug>.<type>.md`, which no other change names,
+of their own. #1305, open at `4acb9be5c` and merged later that day, replaces the union
+merge with fragments: each change adds its own file, `changelog.d/<slug>.<type>.md`, which no other change names,
 the release folds them in, and CI checks them.
+
+**After the scan's revision.** The two repairs the table shows open at `4acb9be5c` merged
+later on 2026-10-01, #1298 at 12:06Z and #1305 at 12:09Z. Three further defects surfaced
+the same day. One was in a repair. #1297's stop ends every engine session at shutdown by
+awaiting a reap of each process in a registry shared by the whole module, and an entry
+registered under another event loop cannot be awaited from this one, so shutdown raised
+and a clean exit became exit 1; `develop`'s gates job failed intermittently on it until
+#1309 ended each session on its own and made the call unable to raise. The second was
+older: the reconciler's revoke of the replication role lost a race across databases and
+swallowed the failure (#1310, #1314, under *Enforcement, and what it does not cover*).
+CI, not a review, found both. The third was the review lane's, whose timeouts had a cause
+the measurement above did not reach (#1316, under *Exact-head evaluation*). The forge's
+record of who merges did not change. The fourteen pull requests merged into `develop`
+after `4acb9be5c`, up to #1319 at `2b17eb71`, were all merged by the operator's account and
+none carries a review (read on 2026-10-01 at 20:41Z), so each went in through the bypass,
+this paper's previous revision (#1307) among them.
 
 **What the scan adds.** Nothing it found was a shortage of production: BUILD ran. What
 stopped the loop at every other link was evidence (a review shown unmeasured numbers,
@@ -3760,7 +3895,7 @@ guards and a deadline nobody evaluated), authority (every merge a bypass, an app
 nobody called), or automation that misreported its own act. The repairs took a day of
 changes. The judgment about which to make, and which gates stay, was the operator's: the
 gate timeouts became opt-in, and REVIEW keeps its person. Every merge into `develop` up to
-`4acb9be5c` was still the operator's, through the bypass, so the repairs are not yet
+`2b17eb71` was still the operator's, through the bypass, so the repairs are not yet
 evidence that the loop will deliver a change with nobody present.
 
 ### Six materials and the modulators of the rate
@@ -4002,7 +4137,9 @@ release-gate record, not from a controlled comparison. The autonomy scan is one
 revision of one repository, read again a day later. Its forge figures count one
 project's pull requests and runs. Its review-lane measurement is eight pull requests
 run once each, with no known-true defect among them, so it bounds what the lane did on
-those eight and says nothing of its recall.
+those eight and says nothing of its recall. The cause later found for the lane's
+missing verdicts on large diffs rests on one host's server log, and its repair, at our
+cutoff, had passed one small diff and given no verdict on the one large diff it met.
 
 ```latex
 \begin{plainwords}
@@ -4336,7 +4473,10 @@ the head of the files the diff changes (#1303), as reference only: it may report
 on a line the diff did not change. A source too large for the room left after the diff
 and the documents is shown as an excerpt around each change, with every gap marked, and
 a source cut or left out is named in the prompt and in the verdict's summary; unlike a
-document, it does not narrow the verdict.
+document, it does not narrow the verdict. Since #1316 a part must also finish in the room
+it was sized with: its answer is capped at the reserve, and a model that fills the
+reserve without answering is refused as `done_reason=length`, not passed and not
+reported as a timeout.
 
 ```latex
 \begin{figure}[!t]
@@ -4554,6 +4694,17 @@ DESIGN did not stop the canary (4 of 10 runs with the raw intake, 5 of 10 framed
 the trust check that holds a stranger's issue, not the frame, is the control that holds
 (`CHANGELOG.md`, 3.1.0).
 
+The changes after 3.2.0 are validated more narrowly than they are built, and we say
+where. The review lane's repair (#1316) is held by 31 tests of its own
+(`src/vibey_tools/gh/test/test_local_review_budget.py`), but its rates and its 900 s wait
+come from the model server's log, and in production it had, at our cutoff, passed one
+small diff and refused, by name, to give a verdict on the one large diff it met. The stage that builds every client for a
+release (#1317) has run only dry, on hosted runners, and its attestation and upload have
+never run. The Linux requirements (#1313) were seeded in containers on one Mac, and the
+native matrix has not run. The shutdown repair (#1309) reproduces the cross-loop error CI
+saw before its fix, and the two database repairs (#1310, #1314) reproduce each message of
+the race; all three were found by CI rather than by review.
+
 ```latex
 \begin{plainwords}
 We check the system three ways. Tests that walk every branch of the important code. A chaos test where helpers crash on purpose while a real database is running, to prove that no job is lost and no job is done twice. And a live run of a whole project on two different robot helpers, including a forced switch from one to the other in the middle. The newest parts were also attacked on purpose by separate reviewers, who tried to break them before we wrote about them here.
@@ -4607,7 +4758,11 @@ repeats, and notices to a person recorded as evidence rather than assumed. A sca
 integration branch after 3.2.0 found the loop autonomous only in BUILD, every merge made
 through the ruleset bypass, and seven defects, three of them failures of evidence, among
 them a review shown numbers nobody measured; the repairs landed within a day, and still
-through the bypass. The
+through the bypass. After it, the local reviewer's missing verdicts on large diffs were
+traced to an answer nothing bounded and a deadline that did not grow with the request,
+and a release learned to carry a build of every client. The first now names why it gives
+no verdict but has yet to bring a large diff to one, and the second has run only as a
+rehearsal. The
 engineering that remains is less about producing faster than about deciding well and
 cheaply.
 
