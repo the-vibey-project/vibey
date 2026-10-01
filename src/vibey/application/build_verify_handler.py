@@ -174,6 +174,7 @@ class BuildVerifyHandler:
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
         independence: VerifyIndependencePolicy | None = None,
         tracer: TelemetryTracer | None = None,
+        run_deadline: timedelta | None = None,
     ) -> None:
         self._correlation = correlation
         self._worktrees = worktrees
@@ -189,6 +190,7 @@ class BuildVerifyHandler:
         self._repair = repair
         self._independence = independence
         self._tracer = tracer
+        self._run_deadline = run_deadline
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "build.verify":
@@ -260,6 +262,7 @@ class BuildVerifyHandler:
             handle=handle,
             correlation=self._correlation,
             tracer=self._tracer,
+            deadline=self._run_deadline,
         )
 
         if run_outcome.capacity_rejected:
@@ -279,6 +282,9 @@ class BuildVerifyHandler:
                 capacity=True,
                 capacity_state=run_outcome.capacity_state,
             )
+        exceeded = run_outcome.deadline_detail(self._reviewer.descriptor)
+        if exceeded is not None:
+            return Failure(FailureClass.ENGINE, exceeded)
         if not run_outcome.complete:
             # A reviewer whose backend could not serve the review never judged the
             # diff: park for the fix rather than record a rejection (exit 78).

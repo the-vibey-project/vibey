@@ -583,8 +583,59 @@ class PrAutomationFallbackConfig:
     retries: int = 1
     # The wait before the first retry, doubled before each one after it.
     retry_backoff_seconds: int = 30
+    # Whether the review is also handed the full text, at the exact head, of the files the
+    # diff changes -- as REFERENCE ONLY, never as something to judge. Measured 2026-10-01:
+    # every one of five "blocking" findings checked was a false positive about unchanged
+    # code just outside the diff ("ProcessReaper is not imported" -- it is, at lines 51-56
+    # of that file), because the model saw the diff and nothing around it. Off by default,
+    # so an adopter's review is unchanged until it declares this.
+    source_context: bool = False
+    # The most characters of those files one request is shown, whatever the window would
+    # allow. Sources take only what is left after the diff and the declared documents --
+    # the smallest kept whole, the rest sharing what is left, each cut to its head and the
+    # lines around its changes -- and a source cut or left out is named in
+    # the prompt but never makes a verdict partial -- they are reference, not the contract.
+    max_source_chars: int = 60000
+    # The most changed files fetched, and the largest one, in bytes, that is kept. A
+    # sweep's hundreds of files, or a generated file, is not worth a runner's bandwidth.
+    max_source_files: int = 30
+    max_source_file_bytes: int = 1000000
+    # Changed files never fetched as sources, as shell glob patterns matched against the
+    # path and against its last component: lockfiles, minified and generated text, and
+    # the binary formats a review can never read. A binary file that slips past is still
+    # dropped, by its NUL bytes.
+    source_exclude: tuple[str, ...] = (
+        "*.lock",
+        "*-lock.json",
+        "*-lock.yaml",
+        "go.sum",
+        "*.min.js",
+        "*.min.css",
+        "*.map",
+        "*.svg",
+        "*.png",
+        "*.jpg",
+        "*.jpeg",
+        "*.gif",
+        "*.ico",
+        "*.pdf",
+        "*.woff",
+        "*.woff2",
+        "*.ttf",
+        "*.zip",
+        "*.gz",
+    )
 
     def __post_init__(self) -> None:
+        _unique_nonempty("pr_automation.fallback.source_exclude", self.source_exclude)
+        for pattern in self.source_exclude:
+            # Word-split and used as a `case` pattern in the workflow's shell, so held to
+            # the characters a path glob needs and nothing a shell or YAML would read.
+            if not _SOURCE_PATTERN_RE.fullmatch(pattern):
+                raise ValueError(
+                    "pr_automation.fallback.source_exclude entries must be plain glob"
+                    f" patterns (letters, digits and . _ - / * ? [ ]): {pattern!r}"
+                )
         _unique_nonempty("pr_automation.fallback.context_paths", self.context_paths)
         for entry in self.context_paths:
             # Word-split in the workflow's shell loop and spliced into a contents-API URL,
@@ -669,7 +720,25 @@ class PrAutomationFallbackConfig:
             raise ValueError(
                 "pr_automation.fallback.retry_backoff_seconds must be a whole number from 0 to 600"
             )
+        if type(self.source_context) is not bool:
+            raise ValueError("pr_automation.fallback.source_context must be true or false")
+        if type(self.max_source_chars) is not int or self.max_source_chars < 1000:
+            raise ValueError(
+                "pr_automation.fallback.max_source_chars must be a whole number, at least 1000"
+            )
+        if type(self.max_source_files) is not int or not 1 <= self.max_source_files <= 300:
+            raise ValueError(
+                "pr_automation.fallback.max_source_files must be a whole number from 1 to 300"
+            )
+        if type(self.max_source_file_bytes) is not int or self.max_source_file_bytes < 1000:
+            raise ValueError(
+                "pr_automation.fallback.max_source_file_bytes must be a whole number >= 1000"
+            )
 
+
+# A `source_exclude` pattern: the characters a path glob needs, and nothing a shell or a
+# YAML scalar would read as anything else.
+_SOURCE_PATTERN_RE = re.compile(r"[A-Za-z0-9._/*?\[\]-]+")
 
 _RUNNER_SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
 _RUNNER_PREFIX_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
@@ -2820,6 +2889,13 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             split_added_hunks=fallback.get("split_added_hunks", True),
             retries=fallback.get("retries", 1),
             retry_backoff_seconds=fallback.get("retry_backoff_seconds", 30),
+            source_context=fallback.get("source_context", False),
+            max_source_chars=fallback.get("max_source_chars", 60000),
+            max_source_files=fallback.get("max_source_files", 30),
+            max_source_file_bytes=fallback.get("max_source_file_bytes", 1000000),
+            source_exclude=tuple(
+                fallback.get("source_exclude", PrAutomationFallbackConfig.source_exclude)
+            ),
         ),
     )
     return GhConfig(

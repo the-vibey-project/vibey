@@ -907,3 +907,39 @@ async def test_a_requeued_defect_runs_the_exhausted_ladder_at_top_effort(tmp_pat
     ran = await handler.handle(job)
     assert isinstance(ran, Success)
     assert captured["effort"] is _Effort.HIGH
+
+
+class _HangingEngine(ScriptedEngine):
+    """Seeds, then never ends its tail -- a wedged session."""
+
+    async def tail(self, handle):  # type: ignore[no-untyped-def]
+        import asyncio
+
+        async for event in super().tail(handle):
+            yield event
+            break
+        await asyncio.Event().wait()
+
+
+async def test_a_session_past_its_wall_clock_limit_fails_as_the_engines(tmp_path: Path) -> None:
+    """A hung session kept its job's lease alive forever; now it is stopped and charged
+    to the engine, so three in a row open its circuit and the retry rotates away."""
+    from datetime import timedelta
+
+    engine = _HangingEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        run_deadline=timedelta(milliseconds=50),
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.ENGINE
+    assert "claudeloop" in outcome.detail
+    assert "wall-clock limit" in outcome.detail

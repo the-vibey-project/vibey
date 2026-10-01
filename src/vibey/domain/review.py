@@ -82,14 +82,21 @@ def render_deltas_markdown(report: DeltasReport) -> str:
     return "\n".join(lines)
 
 
-def render_demo_markdown(spec: DesignSpec, *, evidence: Mapping[str, str] | None = None) -> str:
-    """Renders DEMO.md per acceptance criterion with verified evidence."""
-    lines: list[str] = [
-        f"# Demo: {spec.objective}",
-        "",
-        "## Acceptance Criteria & Evidence",
-        "",
-    ]
+def render_demo_markdown(
+    spec: DesignSpec,
+    *,
+    evidence: Mapping[str, str] | None = None,
+    gate_summary: str = "",
+) -> str:
+    """Renders DEMO.md per acceptance criterion with the evidence actually held.
+
+    A criterion with no evidence of its own says so; it is never reported as
+    verified on the strength of a gate suite nobody mapped to it (sub-doctrine 10.f).
+    """
+    lines: list[str] = [f"# Demo: {spec.objective}", ""]
+    if gate_summary:
+        lines += ["## Integration Gate Evidence", "", gate_summary, ""]
+    lines += ["## Acceptance Criteria & Evidence", ""]
     evidence_map = evidence or {}
     for c in spec.criteria:
         lines.append(f"### Criterion: {c.criterion_id}")
@@ -97,7 +104,10 @@ def render_demo_markdown(spec: DesignSpec, *, evidence: Mapping[str, str] | None
         lines.append(f"- **When**: {c.when}")
         lines.append(f"- **Then**: {c.then}")
         lines.append(f"- **Fit Criterion**: {c.fit}")
-        ev = evidence_map.get(c.criterion_id, "Verified by gate suite.")
+        ev = evidence_map.get(
+            c.criterion_id,
+            "Not individually evidenced; see Integration Gate Evidence above.",
+        )
         lines.append(f"- **Evidence**: {ev}")
         lines.append("")
 

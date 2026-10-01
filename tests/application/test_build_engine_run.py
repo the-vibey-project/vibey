@@ -1,11 +1,14 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """run_and_record's optional exit-code channel."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
+
+import pytest
 
 from tests.application.fakes import make_job
 from vibey.application.build_engine_run import run_and_record
@@ -186,3 +189,108 @@ async def test_capacity_rejected_without_state_defaults_to_none() -> None:
 
     assert outcome.capacity_rejected is True
     assert outcome.capacity_state is None
+
+
+# ── the wall-clock limit (a hung session never wedges its job) ──────────────
+
+
+class _HangingEngine(_NoExitCodeEngine):
+    """Emits one turn, then hangs -- the shape a wedged session takes. The worker's
+    heartbeat kept such a job's lease alive, so nothing ever reclaimed it."""
+
+    def __init__(self, *, stop_raises: bool = False) -> None:
+        self.stopped = 0
+        self._stop_raises = stop_raises
+
+    async def tail(self, handle: RunHandle) -> AsyncIterator[EngineEvent]:
+        del handle
+        yield EngineEvent(kind="TurnCompleted", at=datetime.now(UTC), payload={})
+        await asyncio.Event().wait()  # never set
+        yield EngineEvent(
+            kind="TurnCompleted", at=datetime.now(UTC), payload={}
+        )  # pragma: no cover
+
+    async def stop(self, handle: RunHandle) -> object:
+        del handle
+        self.stopped += 1
+        if self._stop_raises:
+            raise RuntimeError("runner already gone")
+        return None
+
+
+async def test_a_run_past_its_deadline_is_stopped_and_reported() -> None:
+    engine = _HangingEngine()
+    job = replace(make_job(uuid4()), kind="build.implement")
+
+    outcome = await run_and_record(
+        engine,  # type: ignore[arg-type]
+        _RecordingLedger(),
+        job=job,
+        handle=_handle(),
+        deadline=timedelta(milliseconds=50),
+    )
+
+    assert outcome.timed_out_after == timedelta(milliseconds=50)
+    assert not outcome.complete
+    assert engine.stopped == 1
+
+
+async def test_a_failing_stop_is_reported_not_swallowed() -> None:
+    engine = _HangingEngine(stop_raises=True)
+    job = replace(make_job(uuid4()), kind="build.implement")
+
+    outcome = await run_and_record(
+        engine,  # type: ignore[arg-type]
+        _RecordingLedger(),
+        job=job,
+        handle=_handle(),
+        deadline=timedelta(milliseconds=50),
+    )
+
+    assert outcome.timed_out_after is not None
+    assert "could not be stopped" in outcome.diagnostic_tail
+    assert "runner already gone" in outcome.diagnostic_tail
+
+
+async def test_a_run_inside_its_deadline_is_untouched() -> None:
+    job = replace(make_job(uuid4()), kind="build.implement")
+
+    outcome = await run_and_record(
+        _TurnEngine(),  # type: ignore[arg-type]
+        _RecordingLedger(),
+        job=job,
+        handle=_handle(),
+        deadline=timedelta(minutes=5),
+    )
+
+    assert outcome.timed_out_after is None
+
+
+class _OwnTimeoutEngine(_NoExitCodeEngine):
+    async def tail(self, handle: RunHandle) -> AsyncIterator[EngineEvent]:
+        del handle
+        raise TimeoutError("the engine's own socket timed out")
+        yield  # pragma: no cover
+
+
+async def test_an_engines_own_timeout_is_never_mistaken_for_the_deadline() -> None:
+    job = replace(make_job(uuid4()), kind="build.implement")
+
+    with pytest.raises(TimeoutError, match="own socket"):
+        await run_and_record(
+            _OwnTimeoutEngine(),  # type: ignore[arg-type]
+            _RecordingLedger(),
+            job=job,
+            handle=_handle(),
+            deadline=timedelta(minutes=5),
+        )
+
+
+def test_the_deadline_detail_names_the_engine_and_the_limit() -> None:
+    from vibey.application.build_engine_run import RunOutcome
+
+    assert RunOutcome(complete=False, capacity_rejected=False).deadline_detail(CLAUDELOOP) is None
+    detail = RunOutcome(
+        complete=True, capacity_rejected=False, timed_out_after=timedelta(minutes=240)
+    ).deadline_detail(CLAUDELOOP)
+    assert detail == ("engine claudeloop ran past its 240-minute wall-clock limit and was stopped")

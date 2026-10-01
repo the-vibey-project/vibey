@@ -15,6 +15,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **engines:** a hung engine session no longer wedges its job forever. A BUILD session
+  (`build.implement` or `build.verify`) that never ended its tail kept the job's lease alive
+  through the worker's heartbeat, so the reaper never reclaimed it and nothing said so.
+  Every such session now has a wall-clock limit -- 240 minutes by default, set by
+  `[engines] max_run_minutes` or `VIBEY_ENGINE_MAX_RUN_MINUTES`, and never switchable off.
+  Past it the engine is stopped (a failed stop is reported in the diagnostics, not
+  swallowed) and the job fails as `ENGINE`, naming the engine and the limit, so three in a
+  row rotate the retry away and the bounded attempts still end in a park. An engine's own
+  `TimeoutError` is never mistaken for the limit.
+
 ### Documentation
 
 * **docs:** outcome guides — six pages under `docs/guides/outcomes/`, each titled as the
