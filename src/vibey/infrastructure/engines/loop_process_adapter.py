@@ -771,11 +771,35 @@ class LoopProcessAdapter:
         worker picks the job up: every job is idempotent under replay.
         """
         reaper = ProcessReaper(grace_seconds=grace_seconds, event="engine_session_not_reaped")
+        loop = asyncio.get_running_loop()
         ended = 0
+        # Never raises: this runs in the worker's shutdown, and housekeeping that crashed
+        # it (CI 2026-10-01: a session registered under another event loop made the reap
+        # await a Future attached to a different loop) turned a clean exit into exit 1.
+        # Each session is ended on its own; one that cannot be is reported, not skipped
+        # silently, and the rest still end.
         while _active_processes:
-            _run_id, process = _active_processes.popitem()
+            run_id, process = _active_processes.popitem()
+            if not isinstance(getattr(process, "pid", None), int):
+                logger.warning("engine_session_unreapable", run_id=str(run_id), reason="no pid")
+                continue
             _signal_group(process, signal.SIGTERM)
-            await reaper.kill_and_reap(process)
+            if getattr(process, "_loop", loop) is not loop:
+                # Another loop's process cannot be awaited here; its group is killed and
+                # that loop's own child watcher reaps it.
+                _signal_group(process, signal.SIGKILL)
+                ended += 1
+                continue
+            try:
+                await reaper.kill_and_reap(process)
+            except Exception as exc:  # noqa: BLE001 - reported below, never raised in shutdown
+                logger.warning(
+                    "engine_session_end_failed",
+                    run_id=str(run_id),
+                    pid=process.pid,
+                    error=str(exc),
+                )
+                continue
             ended += 1
         return ended
 

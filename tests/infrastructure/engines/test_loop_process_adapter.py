@@ -27,6 +27,17 @@ from vibey.infrastructure.engines.loop_process_adapter import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolated_session_registry():  # type: ignore[no-untyped-def]
+    """The session registry is module-global, like the worker process it serves. A test
+    that leaves a process in it hands that process to whatever runs next -- in CI, a worker
+    shutdown then awaited another test's process from a different event loop and exited 1.
+    Each test here starts and ends with it empty."""
+    _active_processes.clear()
+    yield
+    _active_processes.clear()
+
+
 def _make_handle(run_dir: Path) -> RunHandle:
     return RunHandle(
         run_id=uuid4(),
@@ -2251,3 +2262,92 @@ def test_applying_a_project_policy_rechecks_the_descriptor() -> None:
     assert applied.environment.allow_list(CLAUDELOOP).admits("JAVA_HOME")
     with pytest.raises(ValueError, match="can never be passed"):
         replace(applied, descriptor=replace(CLAUDELOOP, env_passthrough=("VIBEY_*",)))
+
+
+async def test_shutdown_ends_a_session_from_another_event_loop_without_crashing(
+    tmp_path: Path,
+) -> None:
+    """CI 2026-10-01: a session registered under another event loop made the worker's
+    shutdown await a Future attached to a different loop, and the worker exited 1. The
+    registry is process-wide, so shutdown kills such a group without awaiting it."""
+    import asyncio
+    import subprocess
+    import threading
+
+    started: dict[str, object] = {}
+
+    def spawn_in_another_loop() -> None:
+        async def spawn() -> None:
+            process = await asyncio.create_subprocess_exec(
+                "/bin/sh",
+                "-c",
+                "sleep 60",
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            started["process"] = process
+
+        asyncio.run(spawn())
+
+    thread = threading.Thread(target=spawn_in_another_loop)
+    thread.start()
+    thread.join()
+    process = started["process"]
+    run_id = uuid4()
+    _active_processes[run_id] = process  # type: ignore[assignment]
+
+    ended = await LoopProcessAdapter.end_active_sessions()
+
+    assert ended == 1
+    assert run_id not in _active_processes
+    assert await _gone(process.pid)  # type: ignore[attr-defined]
+
+
+async def test_shutdown_skips_an_entry_with_no_process_and_reports_it() -> None:
+    from types import SimpleNamespace
+
+    from structlog.testing import capture_logs
+
+    run_id = uuid4()
+    _active_processes[run_id] = SimpleNamespace(returncode=None)  # type: ignore[assignment]
+
+    with capture_logs() as logs:
+        ended = await LoopProcessAdapter.end_active_sessions()
+
+    assert ended == 0
+    assert run_id not in _active_processes
+    assert [log["event"] for log in logs] == ["engine_session_unreapable"]
+
+
+async def test_a_reap_that_fails_is_reported_and_the_others_still_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from structlog.testing import capture_logs
+
+    from vibey.infrastructure.process import ProcessReaper
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    process, _child = await _session(adapter, tmp_path, "wait")
+    _active_processes[uuid4()] = process
+
+    async def refuse(self, process):  # type: ignore[no-untyped-def]
+        raise OSError("the reap refused")
+
+    monkeypatch.setattr(ProcessReaper, "kill_and_reap", refuse)
+
+    with capture_logs() as logs:
+        ended = await LoopProcessAdapter.end_active_sessions()
+
+    assert ended == 0
+    assert [log["event"] for log in logs] == ["engine_session_end_failed"]
+    assert "the reap refused" in str(logs[0]["error"])
+    import contextlib
+    import os
+    import signal
+
+    # The SIGTERM above already ended the shell; what may be left is a zombie-only group,
+    # which macOS refuses to signal (EPERM) -- the case the reaper tolerates too.
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(process.pid, signal.SIGKILL)
+    await process.wait()
