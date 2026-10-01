@@ -5,6 +5,28 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** the sovereign review can now see the code its diff refers to. Measured on
+  2026-10-01, every one of five "blocking" findings checked was a false positive about
+  unchanged code just outside the diff: "ProcessReaper is not imported" (it is, at lines 51-56
+  of the file), "math is not imported", "the worker does not print 'draining on SIGTERM'" (it
+  does), and two misreadings of asyncio calls. With `[pr_automation.fallback] source_context
+  = true` the review job fetches the full text at the exact head of each changed, non-removed
+  text file -- read-only through the contents API, never a checkout; at most
+  `max_source_files`, none past `max_source_file_bytes`, none matching `source_exclude`
+  (lockfiles, minified and binary formats), none holding a NUL byte -- and `vibey-gh
+  local-review --source-dir DIR --max-source-chars N` hands them to the model as **reference
+  only**, in their own `<sources>` block apart from the `<document>`s, with rules saying they
+  show what the diff's lines refer to, that no finding may be reported on a line the diff did
+  not change, and that the documentation contract is never judged against them. Sources take
+  only what the diff and the documents leave (the diff is never cut and the documents keep
+  priority); what is left is shared rather than taken first come first served -- the smallest
+  shown whole, the rest each cut to the start of the file and the lines around each change,
+  every run of lines left out marked with its numbers; a source cut or
+  left out is named to the model and in the verdict's summary but never makes a verdict
+  partial. A review split into parts shows each part only the sources of its own files and
+  records them under `review_parts`. Off by default, so an adopter's review is unchanged
+  until it declares the key; on in this repository.
+
 - **Fix:** three of the research paper's ```latex fences printed as raw LaTeX on the
   documentation site: the two `table`/`table*` environments (the dispatch experiments and the
   minimum requirements), which `math.js` did not know, and the bounded-convergence theorem,

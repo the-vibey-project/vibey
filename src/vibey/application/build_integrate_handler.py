@@ -36,6 +36,7 @@ from vibey.application.worker import Defer, Failure, Outcome, Park, Success
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import Effort
 from vibey.domain.errors import ForeignBranchRefused
+from vibey.domain.integration_evidence import GateRun, ItemEvidence
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.job import FOREIGN_BRANCH_GATE_KIND, FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
@@ -111,6 +112,7 @@ class BuildIntegrateHandler:
         integration_path = await self._integration.ensure()
         verification = job.payload.get("verification", {})
         commands = verification.get("commands", ()) if isinstance(verification, Mapping) else ()
+        runs: list[GateRun] = []
         for command in commands:
             result = await self._gates.run(tuple(shlex.split(str(command))), cwd=integration_path)
             if result.returncode != 0:
@@ -119,6 +121,12 @@ class BuildIntegrateHandler:
                     f"{gate_output_tail(result)}"
                 )
                 return await self._fail_or_repair(job, work_item_id, detail, merge_conflict=False)
+            runs.append(GateRun(str(command), result.returncode, gate_output_tail(result)))
+
+        # REVIEW's evidence is what these gates did, recorded before REVIEW can be
+        # entered so review.demo never runs ahead of it. An item with no commands is
+        # recorded too -- unmeasured, which REVIEW must be able to see (sub-doctrine 10.f).
+        await self._record_gate_evidence(job, ItemEvidence(work_item_id, tuple(runs)))
 
         if self._ledger_reader is not None:
             # A successful integrate closes its own earlier merge/gate
@@ -130,6 +138,20 @@ class BuildIntegrateHandler:
 
         await self._maybe_enter_review(job)
         return Success({"work_item_id": job.work_item_id})
+
+    async def _record_gate_evidence(self, job: JobRecord, item: ItemEvidence) -> None:
+        await self._ledger.record(
+            project_id=job.project_id,
+            cycle=job.cycle,
+            job_id=job.id,
+            engine_id=None,
+            correlation_id=self._correlation.for_project(job.project_id).value,
+            event=EngineEvent(
+                kind=EventKind.ARTIFACT_PRODUCED.value,
+                at=self._clock.now(),
+                payload=item.to_payload(cycle=job.cycle),
+            ),
+        )
 
     async def _resolve_own_findings(
         self, job: JobRecord, work_item_id: str, reader: LedgerReader
