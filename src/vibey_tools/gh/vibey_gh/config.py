@@ -1360,6 +1360,38 @@ _IANA_ZONE = re.compile(r"[A-Za-z0-9_+\-]+(/[A-Za-z0-9_+\-]+)*")
 
 
 @dataclass(frozen=True)
+class AutonomyConfig:
+    """The operator's standing grant, declared in `[autonomy]` (ratified by the operator's
+    merge of #1300, 2026-10-01).
+
+    vibey-gh does not act on it: agents read it, through the pointer in CLAUDE.md, AGENTS.md
+    and GEMINI.md, as the operator's instruction. It is declared here so that it is
+    validated rather than merely tolerated -- `doctor` used to report the whole table as one
+    "vibey-gh does not read" -- and so that a grant is never read without its bounds: a
+    `standing_grant` with an empty `never` is refused, because a grant is read narrowly
+    (12.d) and one that names no edge has none to read. The `never` list restates where the
+    SD-01 floor meets the work; it does not move the floor.
+    """
+
+    standing_grant: bool = False
+    operator_role: str = ""
+    scope: tuple[str, ...] = ()
+    never: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.standing_grant, bool):
+            raise TypeError("autonomy.standing_grant must be true or false")
+        if not isinstance(self.operator_role, str):
+            raise TypeError("autonomy.operator_role must be a string")
+        _unique_nonempty("autonomy.scope", self.scope)
+        _unique_nonempty("autonomy.never", self.never)
+        if self.standing_grant and not self.never:
+            raise ValueError(
+                "autonomy.never must name the grant's bounds when standing_grant is true"
+            )
+
+
+@dataclass(frozen=True)
 class SabbathConfig:
     """Sub-doctrine 8.i, fitted to the machine it runs on (vibey ADR-0070).
 
@@ -2591,6 +2623,7 @@ class GhConfig:
     realign: RealignConfig = RealignConfig()
     branch_sync: BranchSyncConfig = BranchSyncConfig()
     sabbath: SabbathConfig = SabbathConfig()
+    autonomy: AutonomyConfig = AutonomyConfig()
     conversation: ConversationConfig = ConversationConfig()
     github_release: GithubReleaseConfig = GithubReleaseConfig()
     announce: AnnounceConfig = AnnounceConfig()
@@ -2838,6 +2871,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     realigning = data.get("realign", {})
     syncing = data.get("branch_sync", {})
     resting = data.get("sabbath", {})
+    granted = data.get("autonomy", {})
     talking = data.get("conversation", {})
     release = data.get("github_release", {})
     yanking = data.get("yank", {})
@@ -2976,6 +3010,12 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
                 for field in dataclasses.fields(SabbathConfig)
                 if field.name in resting
             }
+        ),
+        autonomy=AutonomyConfig(
+            standing_grant=granted.get("standing_grant", False),
+            operator_role=granted.get("operator_role", ""),
+            scope=tuple(granted.get("scope", ())),
+            never=tuple(granted.get("never", ())),
         ),
         realign=RealignConfig(
             reconcile_branches=realigning.get("reconcile_branches", True),
