@@ -57,6 +57,8 @@ def make_arm(name: str, model: Model, offline: bool = False):
             cfg.static = True
         elif flag == "VER":
             cfg.verify = True
+        elif flag == "FF":
+            cfg.findings_first = True
         else:
             raise ValueError(f"{name}: {flag}")
     if llm:

@@ -163,3 +163,17 @@ what was seen, and what it changed.
      D4-T1, D32-T1, D4, D32.
   3. The Hm2 replay of #1312/#1317 moves after Stage 1 (A2 on the S1 hosts measures the
      same question on production requests meanwhile).
+- **20:10** T=1 on the identical request: D8-T1 #1131 part 1 (13,895 tokens) finished in
+  368 tokens / 39 s, where T=0 ran 16,384 tokens / 697 s with no answer. Parts 2–7 at T=1
+  finished in 81–382 s.
+- **20:15** **+CONS scored on the canary lane's A0 verdicts** (`harness/cons.py`, zero model
+  cost; my scorer reproduces the lane's 18/25 recall and 0/14 FP exactly): A0+CONS is also
+  18/25, 0/14 — the findings-decide rule recovers nothing, because the inconsistent
+  verdicts carry **no findings at all**: 4 verdicts are `pass: true` with an empty findings
+  list while the summary names the change (e.g. `sql-project-holder-path`: "replaces a
+  parameterized query with a raw SQL string, introducing a potential SQL injection
+  vulnerability" — and `pass: true`). Mechanism: production's schema orders `pass` before
+  `findings`, and constrained decoding writes properties in schema order, so the model
+  commits to `pass` before it writes a finding. Added before any outcome: **+FF**
+  (findings-first: schema order findings → summary → pass, plus one rule line), a Stage 2
+  modifier.
