@@ -5,6 +5,7 @@
 #include "kr-answer.h"
 #include "kr-app.h"
 #include "kr-model.h"
+#include "kr-pairing-client.h"
 #include "kr-window.h"
 
 /* How often the views are refreshed while the window is open. */
@@ -167,6 +168,10 @@ ask(KrApp *app, KrHubRoute route, const char *project_id, Want want)
 void
 kr_app_refresh(KrApp *app)
 {
+    /* A hub elsewhere that this device has not paired with would refuse every request: the
+     * banner already says to pair, and nothing is sent until it has. */
+    if (app->awaiting_pairing)
+        return;
     ask(app, KR_HUB_ROUTE_PROJECTS, NULL, WANT_PROJECTS);
     ask(app, KR_HUB_ROUTE_GATES, NULL, WANT_GATES);
     ask(app, KR_HUB_ROUTE_LANES, NULL, WANT_LANES);
@@ -180,7 +185,7 @@ kr_app_refresh(KrApp *app)
 void
 kr_app_refresh_budget(KrApp *app, const char *project_id)
 {
-    if (project_id != NULL)
+    if (project_id != NULL && !app->awaiting_pairing)
         ask(app, KR_HUB_ROUTE_PROJECT_BUDGET, project_id, WANT_BUDGET);
 }
 
@@ -216,19 +221,38 @@ static void
 connect_client(KrApp *app)
 {
     g_clear_pointer(&app->client, kr_hub_client_free);
-    /* This computer's hub is reached with its host token; a hub elsewhere needs pairing,
-     * which lands with the hub's pairing change (ADR-0068). */
-    g_autofree char *token = NULL;
-    const char *problem = NULL;
-    if (app->settings->hub_host == NULL) {
+    g_clear_pointer(&app->paired, kr_device_credential_free);
+    app->awaiting_pairing = FALSE;
+    const char *host = app->settings->hub_host;
+    guint16 port = app->settings->hub_port;
+    g_autoptr(KrHubEndpoint) endpoint = NULL;
+    g_autofree char *problem = NULL;
+    if (host == NULL) {
+        /* This computer's hub is reached with its host token, read where the hub keeps it. */
         g_autofree char *path = kr_hub_token_path(g_getenv("VIBEY_HUB_STATE_DIR"));
         g_autoptr(GError) error = NULL;
-        token = kr_hub_read_token(path, &error);
+        g_autofree char *token = kr_hub_read_token(path, &error);
         if (token == NULL)
-            problem = "No hub token on this computer yet. Start the hub with: vibey serve";
+            problem = g_strdup("No hub token on this computer yet. Start the hub with: vibey serve");
+        endpoint = kr_hub_endpoint_new("http", NULL, port, token);
+    } else {
+        /* A hub elsewhere is reached as the device paired with it, or not at all. */
+        g_autoptr(GError) error = NULL;
+        g_autoptr(KrDeviceCredential) credential =
+            kr_device_credential_load(app->credential_path, &error);
+        if (credential != NULL && kr_device_credential_matches(credential, host, port)) {
+            endpoint = kr_device_credential_endpoint(credential);
+            app->paired = g_steal_pointer(&credential);
+        } else {
+            app->awaiting_pairing = TRUE;
+            problem = error != NULL && !g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)
+                          ? g_strdup(error->message)
+                          : g_strdup("This computer is not paired with that hub yet. Type the "
+                                     "6-digit code its host shows (vibey hub pair) on the "
+                                     "Devices page.");
+            endpoint = kr_hub_endpoint_new("https", host, port, NULL);
+        }
     }
-    g_autoptr(KrHubEndpoint) endpoint =
-        kr_hub_endpoint_new("http", app->settings->hub_host, app->settings->hub_port, token);
     app->client = kr_hub_client_new(endpoint, 0);
     kr_state_set_connection(app->state,
                             problem != NULL ? KR_CONNECTION_OFFLINE : KR_CONNECTION_UNKNOWN,
@@ -245,6 +269,89 @@ kr_app_use_hub(KrApp *app, const char *host, guint16 port)
     connect_client(app);
     kr_app_refresh(app);
     kr_app_toast(app, host != NULL ? "Using the hub you chose." : "Using this computer's hub.");
+}
+
+const char *
+kr_app_advertised_fingerprint(KrApp *app, const char *host, guint16 port)
+{
+    if (app->discovery == NULL || host == NULL)
+        return NULL;
+    guint16 wanted = port != 0 ? port : KR_HUB_DEFAULT_PORT;
+    g_autoptr(GPtrArray) services = kr_discovery_services(app->discovery);
+    for (guint i = 0; i < services->len; i++) {
+        const KrHubService *service = g_ptr_array_index(services, i);
+        if (g_ascii_strcasecmp(service->host, host) == 0 && service->port == wanted)
+            return service->fingerprint;
+    }
+    return NULL;
+}
+
+static void
+on_paired(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void) source;
+    KrApp *app = data;
+    g_autoptr(GError) error = NULL;
+    g_autoptr(KrDeviceCredential) credential = kr_pairing_claim_finish(result, &error);
+    if (credential == NULL) {
+        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+            kr_app_toast(app, error->message);
+        return;
+    }
+    /* The key is kept; from here the app speaks as this device, to that hub. */
+    g_free(app->settings->hub_host);
+    app->settings->hub_host = g_strdup(credential->host);
+    app->settings->hub_port = credential->port;
+    kr_app_save_settings(app);
+    connect_client(app);
+    kr_app_refresh(app);
+    g_autofree char *said =
+        g_strdup_printf("Paired with %s as \"%s\". krypton now signs every request with this "
+                        "device's own key.",
+                        credential->host, credential->name);
+    kr_app_toast(app, said);
+}
+
+void
+kr_app_pair(KrApp *app, const char *typed)
+{
+    g_autoptr(GError) error = NULL;
+    g_autoptr(KrHubEndpoint) target = NULL;
+    g_autofree char *code = NULL;
+    g_autofree char *text = g_strstrip(g_strdup(typed != NULL ? typed : ""));
+    if (g_str_has_prefix(text, KR_PAIRING_SCHEME ":")) {
+        /* The whole address the host shows: where the hub is, its certificate, the code. */
+        g_autoptr(KrPairingOffer) offer = kr_pairing_offer_parse(text, &error);
+        if (offer != NULL) {
+            target = kr_pairing_target(offer->host, offer->port, offer->fingerprint, &error);
+            code = g_strdup(offer->code);
+        }
+    } else {
+        code = kr_pairing_code_normalise(text);
+        if (code == NULL) {
+            kr_app_toast(app, "A pairing code is six digits, or paste the whole vibey-pair:// "
+                              "address the host shows.");
+            return;
+        }
+        const char *host = app->settings->hub_host;
+        if (host == NULL) {
+            kr_app_toast(app, "This computer's hub needs no pairing: krypton uses its token. To "
+                              "pair with a hub on another computer, choose it above first.");
+            return;
+        }
+        /* The certificate the chosen hub advertises, shown on the Devices page for a person
+         * to compare with the one the host shows; a loopback hub has none and needs none. */
+        guint16 port = app->settings->hub_port;
+        target = kr_pairing_target(host, port, kr_app_advertised_fingerprint(app, host, port),
+                                   &error);
+    }
+    if (target == NULL) {
+        kr_app_toast(app, error->message);
+        return;
+    }
+    g_autofree char *name = kr_pairing_device_name(g_get_host_name());
+    kr_app_toast(app, "Pairing…");
+    kr_pairing_claim_async(target, code, name, app->credential_path, app->cancel, on_paired, app);
 }
 
 void
@@ -404,6 +511,7 @@ main(int argc, char **argv)
     app.state = kr_state_new();
     app.settings_path = kr_settings_path(app.channel, NULL);
     app.settings = kr_settings_load(app.settings_path);
+    app.credential_path = kr_device_credential_path(app.settings_path);
     app.cancel = g_cancellable_new();
 
     g_set_application_name(kr_channel_display_name(app.channel));
@@ -419,6 +527,8 @@ main(int argc, char **argv)
     g_object_unref(app.application);
     kr_discovery_free(app.discovery);
     kr_hub_client_free(app.client);
+    kr_device_credential_free(app.paired);
+    g_free(app.credential_path);
     kr_state_free(app.state);
     kr_settings_free(app.settings);
     g_free(app.settings_path);

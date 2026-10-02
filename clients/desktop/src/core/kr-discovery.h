@@ -21,6 +21,10 @@ typedef struct {
     guint16 port;
     char *version; /* TXT "version", NULL when absent */
     char *path;    /* TXT "path", the API prefix; "/api/v1" when absent */
+    /* TXT "fp": the SHA-256 of the certificate the hub says it serves (lowercase hex), NULL
+     * when absent or malformed. Anyone on the network can advertise anything, so this is a
+     * claim for a person to compare with the fingerprint the host shows, never proof. */
+    char *fingerprint;
 } KrHubService;
 
 /* Builds a service from what the resolver reported. `txt` is a NULL-terminated array of
