@@ -74,8 +74,8 @@ its figures, the storm's `storm-evidence.py` regenerates its evidence table,
 `scripts/autonomy_scorecard.py` its autonomy scorecard. The one exception, the storm
 throughput audit, is named where we use it. The large-diff study we report is in
 progress, and its committed record is cited at the cutoff its own log gives. Unless a
-passage names its own, this revision's cutoff is `develop` at `7fe72281b` (#1340), with
-the forge read on 2026-10-02 at about 03:40Z. The visual atlas holds forty-five
+passage names its own, this revision's cutoff is `develop` at `ca9e47452` (#1341), with
+the forge read on 2026-10-02 at about 03:50Z. The visual atlas holds forty-five
 figures: thirty drawn from the model as deterministic TikZ in this source, and fifteen
 computed from tracked repository records, so the PDF, its labels and its diagrams are
 reviewable and reproducible rather than screenshots detached from the system. Every
@@ -2216,10 +2216,11 @@ Whether a larger reserve, less reasoning or smaller parts would let one finish i
 known; #1316 calls the reasoning setting a quality decision that needs its own study.
 
 **The lane's record since.** We read every pull-request review run the forge recorded
-from #1316's merge, at 18:16Z on 2026-10-01, to 02:49Z on 2026-10-02 whose sovereign job
-finished. The lane gave seven verdicts, on #1319, #1322, #1324, #1326, #1327, #1329 and
-#1332, each reviewed in a single request, and blocked one of them (#1322). It gave none
-on five. #1317 is above. #1321, reviewed in one request, wrote 69,015 characters of
+from #1316's merge, at 18:16Z on 2026-10-01, whose sovereign job had finished by 03:50Z
+on 2026-10-02. The lane gave seven verdicts, on #1319, #1322, #1324, #1326, #1327, #1329
+and #1332, each reviewed in a single request, and blocked one of them (#1322). It gave
+none on six. #1317 is above, and #1335's third part of five ended the same way, out of
+room after 68,224 characters of reasoning (run 36956973134). #1321, reviewed in one request, wrote 69,015 characters of
 reasoning and no answer and was refused as `done_reason=length` (run 36924458568). Two
 were refused before anything was sent: #1323 because one hunk of a generated coverage
 file was larger than a part may carry, and a hunk is never cut (run 36926257830), and
@@ -2289,20 +2290,27 @@ among them arms added before any of their outcomes was seen. Two
 sibling tracks, on prior art and on the server log's record of past reviews, fed the plan
 before the first request; their own write-ups are not in the committed tree, and only the
 amendments they caused are. The study shares the one model slot with live reviews and
-yields to them. It found that the self-hosted runner's reviews run in a container its
-idle check could not see, so one of its requests queued behind a live review; it now
-audits every record against the server log and voids any that queued behind another
-client, and that audit continues in #1341. No result we cite here comes from a voided
-record.
+yields to them, and that is a threat to its timings it found and closed (#1341). The
+self-hosted runner's live reviews run inside Docker, so the harness's process check could
+not see them: a review from the runner began seconds after an idle check, and two of the
+study's requests, parts 4 and 5 of one arm on #1131, queued behind it for 638 s and
+1,063 s, the second until its own deadline. The harness now refuses to start while any
+other client is connected to the model's port and yields its own request to one forwarded
+from Docker, and an audit (`experiments/harness/contention.py`) matches every record to
+the server's access log and voids any that began while another client's request was still
+running. Its first pass voided exactly those two (`experiments/data/invalidations.jsonl`);
+the records stay in the append-only store, the arm they belong to is void on #1131 and is
+being run again, and the audit is to run again before every stage boundary and before any
+number is reported. No result we cite here comes from a voided record.
 
-At the study's cutoff, 23:05 EDT on 2026-10-01, its committed record
+At the study's cutoff, the newest entry of its committed log, 23:20 EDT on 2026-10-01, its committed record
 (`experiments/LOG.md`, `experiments/data/`) shows the following. Every Stage 1 result is
 from one host diff, #1131 (194,560 characters), the first of four screening hosts, so each
 is screening-grade, not a rate.
 
 - **Stage 0, on a toy diff and no corpus case.** The model's harmony prompt template was rendered exactly (687 prompt tokens by either route). A cut-off reasoning can be continued into a forced verdict through `/api/chat` with the response schema kept, and the schema still constrains the answer. Because the server reuses the cached prompt and reasoning, the forced phase is cheap: on the four parts of #1131 that D16 forced, it took 3.7 to 5.0 s in all. The same request sent twice at temperature 0 gave byte-identical reasoning and answer (`experiments/data/stage0.json`).
 - **The loop.** The first part of #1131 cut to at most 8,000 diff tokens (13,894 prompt tokens) ran at temperature 0 to the 16,384-token cap with no answer, in 697 s. Of its reasoning's word 8-grams, 86% were repeats, and its tail repeats one sentence verbatim. The same part at temperature 1.0, top-p 1.0 and seed 42 answered in 368 tokens and 39 s. Production sends temperature 0 (`src/vibey_tools/gh/vibey_gh/local_review.py`).
-- **Screening on #1131.** Nine of the thirteen Stage 1 arms had run. Production gave no verdict: its first part, at temperature 0, ran to the cap. Production at temperature 1.0 alone reached a verdict in 13 minutes, and production with its reasoning forced at 4,096 tokens in 23 minutes. The small-part arms at temperature 0, D8 and D16, gave none, because their first part looped. D8 and D16 at temperature 1.0, D16 forced at 4,096 tokens, and D16 at temperature 1.0 with forcing at 8,192 tokens each reached a verdict, in 19 to 28 minutes. Four of those six verdicts blocked #1131, which had merged; none of their findings has been adjudicated, so a verdict here is an answer, not a correct one.
+- **Screening on #1131.** Nine of the thirteen Stage 1 arms had a result that stands; a tenth was voided by the audit and is being run again. Production gave no verdict: its first part, at temperature 0, ran to the cap. Production at temperature 1.0 alone reached a verdict in 13 minutes, and production with its reasoning forced at 4,096 tokens in 23 minutes. The small-part arms at temperature 0, D8 and D16, gave none, because their first part looped. D8 and D16 at temperature 1.0, D16 forced at 4,096 tokens, and D16 at temperature 1.0 with forcing at 8,192 tokens each reached a verdict, in 19 to 28 minutes. Four of those six verdicts blocked #1131, which had merged; none of their findings has been adjudicated, so a verdict here is an answer, not a correct one.
 - **Why `pass` can contradict the summary.** In production's response schema `pass` comes before `findings`, and the track's explanation is that constrained decoding writes the fields in that order, so the model commits to `pass` before it writes a finding. A rule that lets the findings decide `pass` recovers none of the canary's inconsistent verdicts, because those verdicts carry no findings at all: scored on the canary's own verdicts, at no model cost, by a scorer that reproduces the canary's 18 of 25 and 0 of 14 exactly, the rule leaves both figures unchanged. An arm that writes the findings first was added for Stage 2 before any of its outcomes was seen.
 - **Static analysis alone.** Ruff with every rule selected, and bandit, with no model, flag 5 of the canary's 27 defects, all three of the SQL cases and two of the three swallowed exceptions, and none of its 14 controls (`experiments/data/static_only.json`).
 
@@ -2313,8 +2321,8 @@ tokens with probability 0.92 at 20,000 prompt tokens, 0.73 at 30,000, 0.53 at 40
 reasoning length depends on what a part contains as well as on its size. Not yet
 measured: the recall or the false-positive rate of any new arm, Stage 1 on the other
 three hosts, the replays of #1312 and #1317, and anything on the held-out diffs or
-needles. The committed request store holds 55 requests and about three hours of wall
-time. The screening points to a fix, sampling at the model's own default temperature,
+needles. The committed request store holds 56 requests; the 54 the audit did not void
+took about 2.8 hours of wall time. The screening points to a fix, sampling at the model's own default temperature,
 with or without a bound on the reasoning: it is identified, but neither confirmed nor
 shipped. Production is unchanged: it
 still reviews at temperature 0 with the parts and reserve #1316 set, and a change will
@@ -4089,8 +4097,8 @@ the measurement above did not reach (#1316, under *Exact-head evaluation*). The 
 record of who merges did not change. The fourteen pull requests merged into `develop`
 after `4acb9be5c`, up to #1319 at `2b17eb71`, were all merged by the operator's account and
 none carries a review (read on 2026-10-01 at 20:41Z), so each went in through the bypass,
-the revision of this paper before the last (#1307) among them. So did the twenty after
-them, #1321 to #1340, up to `7fe72281b` (read on 2026-10-02 at about 03:40Z), the
+the revision of this paper before the last (#1307) among them. So did the twenty-one after
+them, #1321 to #1341, up to `ca9e47452` (read on 2026-10-02 at about 03:50Z), the
 previous revision (#1324) and every change this revision reports among them; #1334 was
 merged at 02:40Z, half an hour before its sovereign review ended without a verdict.
 
@@ -4142,7 +4150,7 @@ guards and a deadline nobody evaluated), authority (every merge a bypass, an app
 nobody called), or automation that misreported its own act. The repairs took a day of
 changes. The judgment about which to make, and which gates stay, was the operator's: the
 gate timeouts became opt-in, and REVIEW keeps its person. Every merge into `develop` up to
-`7fe72281b` (#1340) was still the operator's, through the bypass, so the repairs are not
+`ca9e47452` (#1341) was still the operator's, through the bypass, so the repairs are not
 yet evidence that the loop will deliver a change with nobody present.
 
 ### Six materials and the modulators of the rate
@@ -4880,7 +4888,7 @@ following, each named with where it lives.
 
 ### Changes after 3.2.0
 
-What follows is on `develop` at `7fe72281b`, planned for 3.3.0 (#1320) and not yet
+What follows is on `develop` at `ca9e47452`, planned for 3.3.0 (#1320) and not yet
 released. Each item is reported in the section named.
 
 - **REVIEW shown what ran.** Each integration ledgers its verification commands, their exit codes and output tails, and REVIEW renders only that record (#1294; *The autonomy scan of 2026-09-30*).
@@ -4893,7 +4901,7 @@ released. Each item is reported in the section named.
 - **Clients on every release.** A release is to carry a build of every client, so far run only dry (#1317).
 - **Requirements, health and distance from autonomy, measured.** Linux requirements as a matrix of distributions and architectures (#1313; *Rolling minimum system requirements*), the host's weekly health, forecast and declared tuning (#1330, #1334; *Host health and the memory budget*), and the weekly autonomy scorecard (#1335).
 - **The revoke race and the gates around CI.** The replication-role revoke retries all three messages of its race and the tests serialize their grants (#1310, #1314, #1326, #1332); the KEDA contract no longer races a drain (#1327), the Arch job survives a failing mirror (#1333), and dependency advisories may be excepted only by a declared, expiring entry (#1336; *Validation*).
-- **The large-diff study.** A preregistered study of the reviewer's large-diff failures, in progress (#1328, #1340, continuing in #1341; *Exact-head evaluation*).
+- **The large-diff study.** A preregistered study of the reviewer's large-diff failures, in progress: mechanism and screening only (#1328, #1340, #1341; *Exact-head evaluation*).
 
 ```latex
 \begin{plainwords}
