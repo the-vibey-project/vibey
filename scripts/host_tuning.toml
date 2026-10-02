@@ -1,0 +1,281 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The declared tuning of the machine vibey runs on (ADR-0045: fitted to the iron; ADR-0051:
+# configuration is declared in TOML). `python scripts/host_health.py tune check` reports, item
+# by item, what is declared here against what the host actually has; `tune apply` applies
+# what each item's gate allows and journals the prior value; `tune undo ITEM` puts that prior
+# value back. The weekly host-health record carries the same check (figure `tuning.state`),
+# so every change is judged by the weeks that follow it: swap in use, swap-out rate, SSD bytes
+# per hour, model loads per day and generation rate at comparable context.
+#
+# Nothing in scripts/host_tuning.py has a default of its own: a key missing here is an error.
+# The measurements each item cites were taken on the operator's MacBook Pro (Mac17,2, Apple
+# M5, 10 cores, 24 GiB) on 2026-10-01; the runbook docs/runbooks/host-optimization.md has the
+# full budget. Re-measure on another host rather than copying these values (8.j).
+
+[host_tuning]
+# The append-only journal of every apply, undo, reclaim and rotation, with the prior value
+# each replaced: durable storage, never a temporary directory (sub-doctrine 10.h).
+journal = "~/.local/state/vibey/host-tuning/journal.jsonl"
+# Where rendered service files are staged before a person installs them (a Linux drop-in
+# under /etc needs root; the tool never runs sudo, it prints the command).
+stage_dir = "~/.local/state/vibey/host-tuning/staged"
+command_timeout_s = 60
+# The weekly host-health probe observes these kinds only; disk reclaim is sized when it is
+# applied (sizing a 76 GB cache every week is work the record does not need).
+weekly_kinds = ["env", "docker_desktop", "postgres", "log", "ollama_loads", "models"]
+# The review-canary measurement every class-B item is judged against before adoption.
+canary_baseline = "docs/architecture/evidence/review-canary/ledger.jsonl (2026-10-01, PR #1331): 18 of 25 planted defects caught, 0 of 14 controls blocked"
+
+# What lets `tune apply` touch an item of each class. A: always (cannot affect the model or
+# the experiments, and is reversible or regenerable). B: the item's `adopted = true`, set in a
+# merged pull request that cites the review-canary run which held recall and the
+# false-positive floor against the baseline. C: the item's `operator_approved` names the
+# operator's approving pull request or date; even then, a step needing root or a desktop
+# settings pane is printed for the operator, never performed.
+[host_tuning.gates]
+A = "always"
+B = "adopted"
+C = "operator_approved"
+
+# ----------------------------------------------------------------------------- services
+
+# How a service's environment is set, per platform, the way each platform supports.
+# macOS: the Ollama app hands its server the launchd session environment at launch
+# (`launchctl setenv`, documented in Ollama's FAQ), which does not survive a log-out; so the
+# applied values are also written into a login agent that re-asserts them. The app must be
+# restarted for a change to reach the server: the tool says so and never restarts it.
+# Linux: a systemd drop-in with `Environment=` lines, then daemon-reload and a restart.
+[host_tuning.services.ollama]
+agent_label = "dev.vibey.host-tuning.ollama-env"
+agent_dir = "~/Library/LaunchAgents"
+restart_macos = "quit the Ollama app from its menu-bar icon and open it again"
+systemd_unit = "ollama.service"
+drop_in = "/etc/systemd/system/ollama.service.d/vibey-host-tuning.conf"
+restart_linux = "sudo systemctl daemon-reload && sudo systemctl restart ollama"
+# The server's own process, whose start time says whether it predates a change (pending
+# restart), and the model runner whose argv says what the server actually passed on.
+server_pattern = "ollama serve"
+runner_pattern = "llama-server"
+# The server log, for model loads and their context sizes.
+log_glob = "~/.ollama/logs/server*.log"
+manifest_dir = "~/.ollama/models/manifests"
+
+[host_tuning.services.docker_desktop]
+settings = "~/Library/Group Containers/group.com.docker/settings-store.json"
+
+[host_tuning.services.postgres]
+# psql's connection: its own default local socket (PGHOST overrides it), the maintenance
+# database.
+psql = ["psql", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1"]
+
+# ----------------------------------------------------------------------------- items
+
+# ---- class B: model-affecting; waits for the experiments, then must pass the canary ----
+
+[host_tuning.items.ollama_max_loaded_models]
+label = "Ollama keeps at most one model resident"
+class = "B"
+kind = "env"
+service = "ollama"
+name = "OLLAMA_MAX_LOADED_MODELS"
+value = "1"
+adopted = false
+expected = "A second model (qwen3:14b 9.3 GB, gemma4:26b 18 GB) can never be co-resident with gpt-oss:20b. On 24 GiB that co-residence would wire most of what is left and force everything else into swap."
+risk = "A request for another model evicts gpt-oss:20b and reloads it afterwards (about 4.8 s each, plus 13 GB read). No output change."
+evidence = "The server log holds loads of two model blobs since 2026-09-27 (e7b273f9 395 times, a8cc1361 4 times); Ollama's default allows three per GPU."
+judged_by = ["ollama.loads_per_day", "memory.swap_used_gib", "throughput.gen_tok_s_week_median"]
+
+[host_tuning.items.ollama_num_parallel]
+label = "Ollama serves one request at a time"
+class = "B"
+kind = "env"
+service = "ollama"
+name = "OLLAMA_NUM_PARALLEL"
+value = "1"
+runner_flag = "-np"
+adopted = false
+expected = "No measurable change today: the running llama-server already has `-np 1` (observed 2026-10-01). Declaring it pins that against a future default (sub-doctrine 8.c: one run at a time on the operator's hardware)."
+risk = "None beyond queueing, which vibey-gh slots measures before raising it."
+evidence = "llama-server argv on 2026-10-01: `-c 65536 -np 1 --flash-attn auto`."
+judged_by = ["throughput.gen_tok_s_week_median"]
+
+[host_tuning.items.ollama_keep_alive]
+label = "Ollama keeps an idle model loaded for 15 minutes"
+class = "B"
+kind = "env"
+service = "ollama"
+name = "OLLAMA_KEEP_ALIVE"
+value = "15m"
+adopted = false
+expected = "Fewer reloads after idle gaps: of 631 gaps between requests (2026-09-28 to 2026-10-01), 129 exceeded the default 5 minutes and 38 exceeded 15, so about 91 expiry reloads would not happen."
+risk = "The model's ~16 GiB stays wired up to 10 minutes longer in each idle gap, which is memory the Docker VM and the IDE cannot have back. The weekly swap figures must not rise."
+evidence = "Inter-request gaps mined from ~/.ollama/logs/server*.log on 2026-10-01."
+judged_by = ["ollama.loads_per_day", "memory.swap_used_gib", "memory.swapout_gb_per_hour"]
+
+[host_tuning.items.ollama_flash_attention]
+label = "Ollama uses flash attention"
+class = "B"
+kind = "env"
+service = "ollama"
+name = "OLLAMA_FLASH_ATTENTION"
+value = "1"
+runner_flag = "--flash-attn"
+adopted = false
+expected = "Little or none on its own: the runner already starts with `--flash-attn auto`. It is the precondition for a quantised KV cache."
+risk = "Can change numerical results slightly; the canary decides."
+evidence = "llama-server argv on 2026-10-01."
+judged_by = ["throughput.gen_tok_s_week_median"]
+
+[host_tuning.items.ollama_kv_cache_type]
+label = "Ollama quantises the KV cache to q8_0"
+class = "B"
+kind = "env"
+service = "ollama"
+name = "OLLAMA_KV_CACHE_TYPE"
+value = "q8_0"
+runner_flag = "--cache-type-k"
+adopted = false
+expected = "Roughly halves the KV cache. At 65536 tokens of gpt-oss:20b that is about 0.65 GiB of wired memory back (ADR-0045 measured 1.30 GiB between 131072 and 65536 at f16)."
+risk = "Can change outputs. ADR-0045 found Ollama 0.34.2 did not pass the setting to llama-server at all; `tune check` reads the runner's argv to prove it arrived (`--cache-type-k`) before any canary is believed."
+evidence = "ADR-0045 sweep, 2026-09-22; Ollama 0.35.0 installed on 2026-10-01."
+judged_by = ["memory.swap_used_gib", "throughput.gen_tok_s_week_median"]
+
+[host_tuning.items.ollama_fixed_num_ctx]
+label = "Every lane sends one fixed num_ctx, so a request never reloads the model"
+class = "B"
+kind = "ollama_loads"
+service = "ollama"
+# Within the trailing window: at most this many distinct context sizes and loads per day.
+window_hours = 24
+max_distinct_num_ctx = 2
+max_loads_per_day = 12
+adopted = false
+expected = "Most reloads stop. 298 of 358 loads since 2026-09-28 changed the context size or model; 166 loads on 2026-10-01 alone, at 168 distinct num_ctx values. The evidence track measured 72% of CI review requests reloading, median 4.8 s each."
+risk = "Not an environment setting: the callers must send one num_ctx per lane (the review lane and OllamaChatClient), which changes what the canary measured. A fixed size large enough for the largest diff costs KV memory on every request."
+evidence = "~/.ollama/logs/server*.log, `starting llama-server ... -c N`, 2026-09-28 to 2026-10-01; research/large-diff-review evidence/findings.md."
+judged_by = ["ollama.loads_per_day", "ollama.distinct_num_ctx", "throughput.gen_tok_s_week_median"]
+
+# ---- class C: the operator's call (desktop settings, the queue database, models) ----
+
+[host_tuning.items.docker_kubernetes]
+label = "Docker Desktop's built-in Kubernetes is off"
+class = "C"
+kind = "docker_desktop"
+key = "KubernetesEnabled"
+value = false
+where = "Docker Desktop > Settings > Kubernetes: turn off Enable Kubernetes, then Apply & restart"
+operator_approved = ""
+expected = "About 6.4 GiB of container memory freed: a 10-node kind cluster (1 control plane, 9 workers) measured at 16 MiB to 740 MiB each by `docker stats` on 2026-10-01, the largest single item in the Docker VM's 8.6 GiB footprint."
+risk = "Anything using the `docker-desktop` kubectl context stops working. Its API server was not answering on 2026-10-01 (TLS handshake timeouts), which is itself a sign of the thrashing."
+evidence = "settings-store.json KubernetesEnabled = true, KubernetesNodesCount = 10; `docker stats --no-stream`; `top` MEM 8.6 GiB / CMPRS 8.1 GiB for com.docker.sailor."
+judged_by = ["memory.budget", "memory.swap_used_gib", "memory.swapout_gb_per_hour"]
+
+[host_tuning.items.docker_memory_cap]
+label = "Docker Desktop's VM may use at most 8 GiB"
+class = "C"
+kind = "docker_desktop"
+key = "MemoryMiB"
+value = 8192
+where = "Docker Desktop > Settings > Resources > Advanced: Memory limit 8 GB, then Apply & restart"
+operator_approved = ""
+expected = "Bounds the worst case: today the cap is 24576 MiB, all of the machine's memory, so the VM may grow until macOS swaps everything else. The self-hosted runner's container measured 48 MiB idle; a CI job's peak is to be read from the weekly budget before the cap is lowered further."
+risk = "A CI job that needs more than the cap fails inside the VM. Lower it only after Kubernetes is off, and watch the runner's jobs for the first week."
+evidence = "settings-store.json MemoryMiB = 24576, SwapMiB = 4096; `docker info` MemTotal 23.43 GiB."
+judged_by = ["memory.budget", "memory.swap_used_gib"]
+
+[host_tuning.items.postgres_shared_buffers]
+label = "Postgres keeps its 128 MB shared buffers"
+class = "C"
+kind = "postgres"
+name = "shared_buffers"
+value = "128MB"
+operator_approved = ""
+expected = "A guard, not a change: Postgres is not where this host's memory or writes go (0.73 GiB footprint across 9 processes; 27.9 GB physically written in the 29 hours since boot, about 1 GB/h of a measured 128 GB/h). Raising it would buy nothing measured and cost memory the model needs."
+risk = "None while it stays; any change is the operator's, on the queue's own database."
+evidence = "pg_settings on 2026-10-01; proc_pid_rusage disk-write counters per process since boot."
+judged_by = ["memory.budget"]
+
+[host_tuning.items.unused_models]
+label = "Models not loaded recently are listed for the operator"
+class = "C"
+kind = "models"
+service = "ollama"
+# A model with no load in the retained logs, or none for this many days, is listed.
+stale_after_days = 30
+operator_approved = ""
+expected = "Disk only, never memory: a model on disk costs nothing until it loads. 48 GB of models; gpt-oss:20b is the sovereign default (8.d) and qwen3:14b is qwenloop's."
+risk = "Deleting a model is irreversible without a re-download and is the operator's decision; the tool lists, it never runs `ollama rm`."
+evidence = "`ollama list` and the manifests under ~/.ollama/models/manifests, 2026-10-01."
+judged_by = ["storage.free_gb"]
+
+# ---- class A: safe now; cannot touch the model or the experiments ----
+
+[host_tuning.items.uv_cache]
+label = "uv's cache holds only reachable entries"
+class = "A"
+kind = "reclaim"
+path = "~/.cache/uv"
+measure = ["du", "-sk", "~/.cache/uv"]
+command = ["uv", "cache", "prune"]
+timeout_s = 900
+# `uv run` holds the cache for as long as its child runs, so a prune started under it waits
+# on its own parent until the timeout. uv marks its children with this variable.
+not_under = "UV_RUN_RECURSION_DEPTH"
+why_regenerable = "uv rebuilds any pruned entry from the package index on the next sync; `prune` removes only entries no environment reaches and waits for (never breaks) a uv process holding the cache."
+expected = "Disk only. 82 GB (76 GiB) on 2026-10-01."
+risk = "None to the model. A lane's next `uv sync` may download again."
+evidence = "du -sh ~/.cache/uv, 2026-10-01."
+judged_by = ["storage.free_gb"]
+
+[host_tuning.items.npm_cache]
+label = "npm's cache is garbage-collected"
+class = "A"
+kind = "reclaim"
+path = "~/.npm/_cacache"
+measure = ["du", "-sk", "~/.npm/_cacache"]
+command = ["npm", "cache", "verify"]
+timeout_s = 900
+why_regenerable = "`npm cache verify` removes only content no index entry points at; anything still referenced stays, and npm re-fetches the rest on demand."
+expected = "Disk only. 11 GB on 2026-10-01."
+risk = "None to the model."
+evidence = "du -sh ~/.npm/_cacache, 2026-10-01."
+judged_by = ["storage.free_gb"]
+
+[host_tuning.items.docker_build_cache]
+label = "Docker's build cache keeps only the last week"
+class = "A"
+kind = "reclaim"
+path = "docker build cache (inside the Docker VM)"
+measure = ["docker", "builder", "du"]
+command = ["docker", "builder", "prune", "--force", "--filter", "until=168h"]
+timeout_s = 600
+why_regenerable = "Build cache is a memo of image layers; BuildKit removes only records no running build uses, and the next build recomputes any it needs."
+expected = "Disk inside the Docker VM: 6.8 GB reclaimable, 0 of 68 records active, on 2026-10-01."
+risk = "The runner image's next rebuild is slower if its layers were older than a week."
+evidence = "docker builder du / docker system df, 2026-10-01."
+judged_by = ["storage.free_gb"]
+
+[host_tuning.items.postgres_log]
+label = "The Postgres server log is rotated past 64 MiB"
+class = "A"
+kind = "log"
+path = "/opt/homebrew/var/log/postgresql@18.log"
+max_mib = 64
+keep = 3
+expected = "Bounded disk; nothing today (29 MiB on 2026-10-01)."
+risk = "None: the rotated content is kept compressed beside the log (copy, then truncate in place; the server keeps appending)."
+evidence = "ls -la /opt/homebrew/var/log, 2026-10-01."
+judged_by = ["storage.free_gb"]
+
+[host_tuning.items.host_health_log]
+label = "The weekly host-health log is rotated past 16 MiB"
+class = "A"
+kind = "log"
+path = "~/Library/Logs/vibey/host-health.log"
+max_mib = 16
+keep = 3
+expected = "Bounded disk for the log the weekly unit writes."
+risk = "None."
+evidence = "[host_health.schedule] log_dir_macos in scripts/host_health.toml."
+judged_by = ["storage.free_gb"]

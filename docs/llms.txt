@@ -23,6 +23,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Self-hosted sovereign surfaces](https://the-vibey-project.github.io/vibey/main/guides/self-hosted-surfaces/): vibey orchestrates software delivery end-to-end on sovereign defaults: every operational dependency — issue tracking, documentation, secrets, files, email, SMS, messaging, configuration store, caching, message bus…
 - [The Sabbath](https://the-vibey-project.github.io/vibey/main/guides/sabbath/): From sundown on Friday to sundown on Saturday, vibey rests.
 - [Sovereign review runner](https://the-vibey-project.github.io/vibey/main/runbooks/sovereign-review-runner/): How to stand up, verify and remove the self-hosted runner that runs pr-review.yml's review-sovereign job on [self-hosted, vibey-local-vibey] (sub-doctrine 8.a).
+- [Host optimization](https://the-vibey-project.github.io/vibey/main/runbooks/host-optimization/): How the machine vibey runs on is kept healthy and fitted to its workload, with every change declared in the repository, applied under a gate, measured week after week, and reversible.
 
 ## What do you want to do?
 
