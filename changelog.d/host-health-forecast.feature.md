@@ -19,3 +19,12 @@
   open while a host goes quiet, a probe goes missing, or a driver nears or passes its
   threshold. `vibey doctor` prints the newest record, its age and the forecast. There is
   a new page, "Host health".
+  The probes' tools are declared per platform in `[host_health.tools]`. `install` runs a
+  privilege-free install (`brew install smartmontools`) and prints the `sudo` command for
+  apt, pacman or dnf instead of running it. The Apple SSD is read without `sudo`. Its
+  unreadable error-log page is recorded as skipped with smartctl's own reason. Bytes
+  written, writes per power-on hour and bytes written per week are recorded. The primary
+  SSD driver is data written against rated endurance; Apple publishes no TBW rating for
+  its SSDs, so that driver says so and the forecast falls back to percentage used. A
+  declared hypothesis (swap as a possible contributor to SSD writes) is printed as a
+  note, never as a finding.

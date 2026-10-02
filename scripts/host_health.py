@@ -222,11 +222,11 @@ class ToolCatalog(ToolCatalogInterface):
         self,
         settings: HealthSettings,
         system: str,
-        which: Callable[[str], str | None] = shutil.which,
+        which: Callable[[str], str | None] | None = None,
     ) -> None:
         self._cfg = settings["tools"]
         self._system = system
-        self._which = which
+        self._which = which or shutil.which
 
     def tools(self) -> dict[str, Mapping[str, Any]]:
         return {
@@ -2564,13 +2564,36 @@ class MeasurementSession:
         runner: CommandRunnerInterface | None = None,
         system: str | None = None,
         home: Path | None = None,
+        root: Path = Path("/"),
+        describer: Any = None,
+        which: Callable[[str], str | None] | None = None,
     ) -> None:
+        """Every input that reaches the host is here, so a test can replace all of them:
+        the command runner, the platform, the home and file-system root the probes read
+        under, the host describer and the PATH lookup. The probes' notion of "now" is the
+        clock's, never the wall's."""
         self._repo = repo
         self._settings = settings
         self._clock = clock
         self._runner = runner or SubprocessRunner()
         self._system = system or platform.system()
         self._home = home or Path.home()
+        self._root = root
+        self._describer = describer
+        self._which = which or shutil.which
+
+    def context(self, host: str) -> ProbeContext:
+        stamp = self._clock.now()
+        return ProbeContext(
+            self._settings,
+            self._runner,
+            FigureFactory(self._clock, host),
+            self._system,
+            root=self._root,
+            home=self._home,
+            wall=lambda: Stamp.parse(stamp).timestamp(),
+            which=self._which,
+        )
 
     def specs(self) -> tuple[SpecsRecord | None, SpecsSettings, Mapping[str, Any]]:
         config_path = self._repo / str(self._settings["minimum_specs_config"])
@@ -2655,21 +2678,8 @@ class MeasurementSession:
 
     def run(self, history: Sequence[HealthRecord]) -> HealthRecord:
         stamp = self._clock.now()
-        bare = ProbeContext(
-            self._settings,
-            self._runner,
-            FigureFactory(self._clock, ""),
-            self._system,
-            home=self._home,
-        )
-        host = HostIdentity(bare).describe()
-        ctx = ProbeContext(
-            self._settings,
-            self._runner,
-            FigureFactory(self._clock, str(host["fingerprint"])),
-            self._system,
-            home=self._home,
-        )
+        host = HostIdentity(self.context(""), self._describer).describe()
+        ctx = self.context(str(host["fingerprint"]))
         specs, specs_settings, raw = self.specs()
         figures: list[Figure] = []
         for probe in self.probes(ctx, host, specs, specs_settings):
@@ -2709,13 +2719,19 @@ class HostHealthCli:
         clock: ClockInterface | None = None,
         runner: CommandRunnerInterface | None = None,
         home: Path | None = None,
-        which: Callable[[str], str | None] = shutil.which,
+        which: Callable[[str], str | None] | None = None,
+        system: str | None = None,
+        root: Path = Path("/"),
+        describer: Any = None,
     ) -> None:
         self._repo = repo
         self._clock = clock or SystemClock()
         self._runner = runner or SubprocessRunner()
         self._home = home or Path.home()
-        self._which = which
+        self._which = which or shutil.which
+        self._system = system or platform.system()
+        self._root = root
+        self._describer = describer
 
     def parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
@@ -2811,7 +2827,7 @@ class HostHealthCli:
             print(json.dumps(result, indent=2))
             return 0
         if args.command == "tools":
-            catalog = ToolCatalog(settings, platform.system())
+            catalog = ToolCatalog(settings, self._system, self._which)
             for name in catalog.tools():
                 state = "MISSING; " + catalog.hint(name) if name in catalog.missing() else "present"
                 print(f"tool {name}: {state}")
@@ -2821,9 +2837,17 @@ class HostHealthCli:
         return self._weekly(repo, settings, local)
 
     def _measure(self, repo: Path, settings: HealthSettings, ledger: HealthLedger) -> int:
-        record = MeasurementSession(repo, settings, self._clock, self._runner, home=self._home).run(
-            ledger.read()
-        )
+        record = MeasurementSession(
+            repo,
+            settings,
+            self._clock,
+            self._runner,
+            self._system,
+            self._home,
+            self._root,
+            self._describer,
+            self._which,
+        ).run(ledger.read())
         ledger.append(record)
         counts: dict[str, int] = {}
         for figure in record.figures:
@@ -2884,7 +2908,7 @@ class HostHealthCli:
         mac = args.platform == "launchd"
         log_dir = self._expand(str(schedule["log_dir_macos" if mac else "log_dir_linux"]))
         launcher = [str(part) for part in schedule["launcher"]]
-        resolved = shutil.which(launcher[0]) or launcher[0]
+        resolved = self._which(launcher[0]) or launcher[0]
         argv = [resolved, *launcher[1:], str(clone / SCRIPT), "--repo", str(clone), "weekly"]
         for path in (str(clone), str(log_dir), resolved):
             refusal = UnitPlacement.refusal(path)

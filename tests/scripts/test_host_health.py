@@ -82,11 +82,81 @@ def ctx(
         root=root,
         home=home,
         wall=lambda: NOW_EPOCH,
+        which=lambda name: None,
     )
 
 
 def by_id(figures: Sequence[ms.Figure]) -> dict[str, ms.Figure]:
     return {f.id: f for f in figures}
+
+
+class FakeDescriber:
+    """The host's description, fixed: the real HostDescriber reads sysctl or /proc."""
+
+    def __init__(self, ram_bytes: int = 24 * 2**30) -> None:
+        self.info = {
+            "system": "Darwin",
+            "arch": "arm64",
+            "model": "Mac17,2",
+            "chip": "Apple M5",
+            "ram_bytes": ram_bytes,
+            "cores_total": 10,
+            "os": "macOS 26.6.2",
+        }
+
+    def describe(self) -> dict[str, Any]:
+        return dict(self.info)
+
+
+def make_cli(
+    repo: Path,
+    clock: Any,
+    runner: Any,
+    home: Path,
+    which: Any = None,
+    describer: Any = None,
+) -> hh.HostHealthCli:
+    """A command whose every input that could reach the host is a fake: the runner, the
+    platform, the file-system root and home, the describer and the PATH lookup."""
+    return hh.HostHealthCli(
+        repo,
+        clock,
+        runner,
+        home=home,
+        which=which or (lambda name: None),
+        system="Darwin",
+        root=home / "no-host-root",
+        describer=describer or FakeDescriber(),
+    )
+
+
+@pytest.fixture(autouse=True)
+def _the_host_is_out_of_reach(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test here runs on fixtures. A test that reached the real host -- a command,
+    the host's description, its platform, PATH, its home, or a probe reading under `/` --
+    would pass or fail with the machine it ran on, as one did on CI's Linux runner. Each of
+    those is made to fail loudly instead."""
+
+    def reached(what: str) -> Any:
+        def refuse(*args: Any, **kwargs: Any) -> Any:
+            raise AssertionError(f"a test reached the real host: {what}")
+
+        return refuse
+
+    monkeypatch.setattr(ms.SubprocessRunner, "run", reached("a subprocess"))
+    monkeypatch.setattr(ms.HostDescriber, "describe", reached("HostDescriber.describe"))
+    monkeypatch.setattr(hh.platform, "system", reached("platform.system()"))
+    monkeypatch.setattr(hh.shutil, "which", reached("shutil.which"))
+    original = hh.ProbeContext.path
+
+    def path(self: hh.ProbeContext, text: str) -> Path:
+        if text.startswith("/") and self.root == Path("/"):
+            raise AssertionError(f"a test reached the real host: a probe read {text}")
+        if text.startswith("~") and self.home == Path.home():
+            raise AssertionError(f"a test reached the real host: a probe read {text}")
+        return original(self, text)
+
+    monkeypatch.setattr(hh.ProbeContext, "path", path)
 
 
 # ------------------------------------------------------------------------ fixtures
@@ -970,7 +1040,7 @@ def test_a_unit_refuses_volatile_and_worktree_paths(
     import tempfile
 
     assert "a reboot empties" in str(hh.UnitPlacement.refusal(tempfile.gettempdir() + "/x"))
-    assert hh.UnitPlacement.refusal(str(Path.home())) is None
+    assert hh.UnitPlacement.refusal("/srv/vibey-durable-example/clone") is None
     monkeypatch.setattr(hh.UnitPlacement, "volatile_roots", staticmethod(lambda: []))
     (tmp_path / "lane").mkdir()
     (tmp_path / "lane" / ".git").write_text("gitdir: elsewhere\n")
@@ -981,9 +1051,9 @@ def test_a_unit_refuses_volatile_and_worktree_paths(
 def test_render_unit_writes_files_and_prints_the_load_command(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    home = Path.home()  # durable: tmp_path itself is a volatile root and would be refused
+    home = Path("/srv/vibey-durable-example")  # never written: render-unit writes to --out
     monkeypatch.setattr(hh.UnitPlacement, "refusal", staticmethod(lambda path: None))
-    cli = hh.HostHealthCli(REPO, FixedClock(), FakeRunner(), home=home)
+    cli = make_cli(REPO, FixedClock(), FakeRunner(), home=home)
     out = tmp_path / "units"
     assert (
         cli.run(
@@ -1015,7 +1085,7 @@ def test_render_unit_writes_files_and_prints_the_load_command(
 def test_render_unit_refuses_a_volatile_clone(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    cli = hh.HostHealthCli(REPO, FixedClock(), FakeRunner(), home=tmp_path)
+    cli = make_cli(REPO, FixedClock(), FakeRunner(), home=tmp_path)
     assert (
         cli.run(
             [
@@ -1184,7 +1254,7 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_measure_appends_a_record_with_a_forecast_and_forecast_prints_it(
     repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    cli = hh.HostHealthCli(repo, FixedClock(), FakeRunner(), home=tmp_path / "home")
+    cli = make_cli(repo, FixedClock(), FakeRunner(), home=tmp_path / "home")
     out = tmp_path / "r.jsonl"
     assert cli.run(["--repo", str(repo), "measure", "--out", str(out)]) == 0
     records = hh.HealthLedger(out).read()
@@ -1203,7 +1273,17 @@ def test_a_probe_that_crashes_is_recorded_not_fatal(
         raise RuntimeError("bang")
 
     monkeypatch.setattr(hh.ThermalProbe, "run", boom)
-    session = hh.MeasurementSession(repo, SETTINGS, FixedClock(), FakeRunner(), "Linux", tmp_path)
+    session = hh.MeasurementSession(
+        repo,
+        SETTINGS,
+        FixedClock(),
+        FakeRunner(),
+        "Linux",
+        tmp_path,
+        tmp_path / "root",
+        FakeDescriber(),
+        which_of(),
+    )
     figure = session.run([]).by_id()["thermal.probe"]
     assert figure.status == "skipped" and "RuntimeError: bang" in str(figure.reason)
 
@@ -1215,14 +1295,14 @@ def test_render_then_check_and_the_append_only_guard(
     record.parent.mkdir(parents=True, exist_ok=True)
     first = make_record("2026-09-28T06:41:00.000Z", {"battery.cycle_count": 18})
     record.write_text(first.to_line() + "\n")
-    cli = hh.HostHealthCli(repo, FixedClock(), FakeRunner(), home=tmp_path)
+    cli = make_cli(repo, FixedClock(), FakeRunner(), home=tmp_path)
     assert cli.run(["--repo", str(repo), "check"]) == 1  # the page is not rendered yet
     assert cli.run(["--repo", str(repo), "render"]) == 0
     assert cli.run(["--repo", str(repo), "check"]) == 0
     rewritten = FakeRunner(
         {("git",): ok(make_record("2026-09-21T06:41:00.000Z", {}).to_line() + "\n")}
     )
-    guarded = hh.HostHealthCli(repo, FixedClock(), rewritten, home=tmp_path)
+    guarded = make_cli(repo, FixedClock(), rewritten, home=tmp_path)
     assert guarded.run(["--repo", str(repo), "check", "--against", "origin/develop"]) == 1
     assert "append-only" in capsys.readouterr().err
     record.write_text("not json\n")
@@ -1232,7 +1312,7 @@ def test_render_then_check_and_the_append_only_guard(
 def test_conditions_print_the_issue_as_json(
     repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    cli = hh.HostHealthCli(repo, FixedClock(), FakeRunner(), home=tmp_path)
+    cli = make_cli(repo, FixedClock(), FakeRunner(), home=tmp_path)
     assert cli.run(["--repo", str(repo), "conditions", "--now", NOW]) == 0
     result = json.loads(capsys.readouterr().out)
     assert result["raise"] is False and result["key"] == "host-health"
@@ -1245,13 +1325,13 @@ def test_weekly_keeps_the_week_locally_when_publishing_is_off_or_fails(
     original = config.read_text(encoding="utf-8")
     config.write_text(original.replace("enabled = true", "enabled = false"), encoding="utf-8")
     home = tmp_path / "home"
-    cli = hh.HostHealthCli(repo, FixedClock(), FakeRunner(), home=home)
+    cli = make_cli(repo, FixedClock(), FakeRunner(), home=home)
     assert cli.run(["--repo", str(repo), "weekly"]) == 0
     assert "recorded locally only" in capsys.readouterr().out
     local = home / DEFAULT_LOCAL_RECORD[2:]
     assert len(hh.HealthLedger(local).read()) == 1
     config.write_text(original, encoding="utf-8")
-    failing = hh.HostHealthCli(
+    failing = make_cli(
         repo, FixedClock("2026-10-12T06:41:00.000Z"), GitWorld(fail="fetch"), home=home
     )
     assert failing.run(["--repo", str(repo), "weekly"]) == 1
@@ -1266,7 +1346,7 @@ def test_weekly_publishes_through_the_clone(
     home = tmp_path / "home"
     clone = mini_repo(home / ".local/share/vibey/host-health/clone")
     (clone / ".git").mkdir()
-    cli = hh.HostHealthCli(repo, FixedClock(), GitWorld(), home=home)
+    cli = make_cli(repo, FixedClock(), GitWorld(), home=home)
     assert cli.run(["--repo", str(repo), "weekly"]) == 0
     assert "opened https://" in capsys.readouterr().out
     assert len(hh.HealthLedger(clone / SETTINGS["record"]).read()) == 1
@@ -1278,7 +1358,7 @@ def test_install_clones_and_writes_into_the_service_managers_directory(
     home = repo.parent / "home"
     monkeypatch.setattr(hh.UnitPlacement, "refusal", staticmethod(lambda path: None))
     runner = GitWorld()
-    cli = hh.HostHealthCli(repo, FixedClock(), runner, home=home)
+    cli = make_cli(repo, FixedClock(), runner, home=home)
     assert cli.run(["--repo", str(repo), "install", "--platform", "systemd"]) == 0
     assert runner.calls[0][:2] == ["git", "clone"]
     assert (home / ".config/systemd/user/dev.vibey.host-health.timer").is_file()
@@ -1377,7 +1457,8 @@ def test_the_catalog_knows_each_platforms_tools_and_install_commands() -> None:
     table = json.loads(json.dumps(SETTINGS.table))
     table["tools"]["smartctl"]["install"] = {}
     assert (
-        hh.ToolCatalog(hh.HealthSettings(table), "Linux").hint("smartctl") == "no install declared"
+        hh.ToolCatalog(hh.HealthSettings(table), "Linux", which_of()).hint("smartctl")
+        == "no install declared"
     )
     assert contracts.ToolCatalogInterface in hh.ToolCatalog.__mro__
 
@@ -1420,7 +1501,7 @@ def test_install_runs_brew_but_only_prints_sudo() -> None:
 def test_the_tools_command_reports(
     repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    cli = hh.HostHealthCli(repo, FixedClock(), FakeRunner(), home=tmp_path)
+    cli = make_cli(repo, FixedClock(), FakeRunner(), home=tmp_path)
     assert cli.run(["--repo", str(repo), "tools"]) == 0
     assert "tool smartctl:" in capsys.readouterr().out
 
@@ -1504,6 +1585,34 @@ def test_install_reports_the_tools_first(
 ) -> None:
     home = repo.parent / "home"
     monkeypatch.setattr(hh.UnitPlacement, "refusal", staticmethod(lambda path: None))
-    cli = hh.HostHealthCli(repo, FixedClock(), GitWorld(), home=home, which=which_of("apt-get"))
+    cli = make_cli(repo, FixedClock(), GitWorld(), home=home, which=which_of("apt-get"))
     assert cli.run(["--repo", str(repo), "install", "--platform", "systemd"]) == 0
     assert "sudo apt-get install -y smartmontools" in capsys.readouterr().out
+
+
+def test_a_host_below_vibeys_minimum_memory_is_due_for_replacement_now(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The capacity driver is meant to fire at once on a machine smaller than vibey needs:
+    16 GiB against the record's 24 GB minimum binds the forecast to the measurement's day."""
+    sixteen = 16 * 2**30
+    runner = FakeRunner({("sysctl", "-n", "hw.memsize"): ok(f"{sixteen}\n")})
+    cli = make_cli(repo, FixedClock(), runner, tmp_path / "home", describer=FakeDescriber(sixteen))
+    out = tmp_path / "r.jsonl"
+    assert cli.run(["--repo", str(repo), "measure", "--out", str(out)]) == 0
+    assert "replace by 2026-10-05 (2026-10-05 to 2026-10-05), bound by ram_capacity" in (
+        capsys.readouterr().out
+    )
+    fc = hh.HealthLedger(out).read()[0].forecast
+    ram = driver(fc, "ram_capacity")
+    assert ram["state"] == "exceeded" and ram["value"] == 16.0 and ram["threshold"] == 24.0
+    assert fc["warning"] is True
+
+
+def test_at_exactly_the_minimum_nothing_binds(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    runner = FakeRunner({("sysctl", "-n", "hw.memsize"): ok(f"{24 * 2**30}\n")})
+    cli = make_cli(repo, FixedClock(), runner, tmp_path / "home")
+    assert cli.run(["--repo", str(repo), "measure", "--out", str(tmp_path / "r.jsonl")]) == 0
+    assert "no driver projects a replacement date yet" in capsys.readouterr().out
