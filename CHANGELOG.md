@@ -15,6 +15,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [3.3.0] (2026-10-02)
+
 ### Features
 
 * **gates:** a project can let chosen human gates resolve to their own default after
@@ -27,6 +29,133 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   whose default maps onto their handler's answer can be declared; anything else is refused
   by `vibey new`, and `approval` can never time out. Gate `timeout_at` was stored and
   never read before this; a parked job waited forever.
+* **gh:** `vibey-gh advisory-check` replaces `npm audit --audit-level=high` in CI. Every npm
+  advisory at high or worse still fails, except one declared in
+  `.github/advisory-exceptions.toml`. A declared exception is a reviewed decision that the
+  vulnerable code is not reached, and it expires within 30 days (`[advisories]`). Every run
+  prints the exceptions it honours. An exception fails the check once it has expired, matches
+  nothing, or a patched release replaces it. The file is a protected path. The first exception
+  is GHSA-86w9-cpqp-85rv: node-forge <= 1.4.0, with no patched release. It is reached only
+  through Expo's developer CLI and is in neither the web nor the Android bundle. It expires on
+  2026-10-31.
+- **Feature:** the autonomy scorecard. How far vibey is from full autonomy is now a weekly
+  measurement, not a paragraph: `scripts/autonomy_scorecard.py` judges each declared stage of
+  the delivery loop (DESIGN, BUILD, the paid engines, REVIEW, the pull-request review and its
+  trustworthiness, approval, merge, promotion and release, CI, the queue reaching DONE) from
+  the forge (`gh`), the review canary (`vibey-gh review-canary status`), the code and the
+  local queue (read only), against the thresholds and reasons declared in
+  `scripts/autonomy_scorecard.toml`. Each measurement is appended to the digest-chained record
+  `docs/architecture/evidence/autonomy-scorecard.jsonl`; a source a run cannot read keeps its
+  last values, marked stale with their date, then shows as unknown. The new page
+  [How far vibey is from full autonomy](docs/reference/autonomy.md), the README's and the
+  landing page's Status summaries and the paper's scorecard table are generated from the
+  latest line, `check` fails CI on any drift, and `autonomy-scorecard.yml` refreshes it every
+  Thursday through a pull request.
+* **gh:** changelog fragments. A pull request no longer edits `CHANGELOG.md`: it adds one new
+  file, `changelog.d/<slug>.<type>.md` beside the changelog it belongs to, holding its entry,
+  so two open pull requests can no longer conflict over the same `## [Unreleased]` lines --
+  which GitHub's mergeability never resolved, because it does not run the `merge=union`
+  driver, and which cost repeated re-merges of #1295, #1297, #1298 and #1299 in one night.
+  The release commit `vibey-gh promote` makes now folds every fragment in under its type's
+  heading, deletes it, and cuts `## [Unreleased]` to `## [x.y.z] (date)`, so a release needs
+  no hand step; `vibey-gh changelog assemble` runs the fold alone and is idempotent. The new
+  `Changelog fragment` check (`changelog.yml`, `vibey-gh changelog check`) refuses a pull
+  request into `develop` that changes shipped code without a fragment (unless labelled
+  `no-changelog`, a label the check creates itself), adds a malformed one, or edits an
+  unreleased section by hand. Declared by
+  `[changelog]`, off by default for adopters; on here, for both this changelog and
+  vibey-gh's, and the `merge=union` attribute is gone.
+* **health:** a weekly check of the machine vibey and krypton run on, and a forecast of when
+  it needs replacing (`scripts/host_health.py`, configured in `scripts/host_health.toml`).
+  The probes run on the host itself, from a launchd agent or a systemd user timer that
+  `python scripts/host_health.py install` renders. They cannot run in the self-hosted
+  runner, a Linux container on the host that sees none of its hardware. Nothing needs
+  `sudo`. The probes cover SSD health through smartctl, or the OS's own SMART verdict
+  without it, and free space; battery cycles and capacity against design; thermal
+  limits; memory, swap and pressure; panic, reset, shutdown-stall and jetsam reports, read
+  by name and date only; the sovereign model's weekly generation rate, mined passively
+  from the Ollama log; an idle-gated CPU and disk microbenchmark; the OS's vendor support
+  date; and vibey's own memory and disk requirements, read from the minimum-specs record.
+  Every figure is measured, declared or skipped with its reason. The record is append-only
+  JSON lines with a hashed host fingerprint and no serials or host name. Each driver is
+  fitted with Theil-Sen and Sen's interval on the slope against its declared threshold.
+  The machine's replacement date is the earliest driver's, with its interval and the
+  driver that binds; a trend with fewer than four weekly points says "insufficient
+  history". Each week lands as a pull request from a clone of its own, carrying any week
+  that has not merged yet. `.github/workflows/host-health.yml` keeps one tracking issue
+  open while a host goes quiet, a probe goes missing, or a driver nears or passes its
+  threshold. `vibey doctor` prints the newest record, its age and the forecast. There is
+  a new page, "Host health".
+  The probes' tools are declared per platform in `[host_health.tools]`. `install` runs a
+  privilege-free install (`brew install smartmontools`) and prints the `sudo` command for
+  apt, pacman or dnf instead of running it. The Apple SSD is read without `sudo`. Its
+  unreadable error-log page is recorded as skipped with smartctl's own reason. Bytes
+  written, writes per power-on hour and bytes written per week are recorded. The primary
+  SSD driver is data written against rated endurance; Apple publishes no TBW rating for
+  its SSDs, so that driver says so and the forecast falls back to percentage used. A
+  declared hypothesis (swap as a possible contributor to SSD writes) is printed as a
+  note, never as a finding.
+* **health:** the machine vibey runs on has a declared tuning, and every change to it is
+  measured. `scripts/host_tuning.toml` declares each setting with its class, the evidence
+  behind it, its expected effect, its risk and the weekly figures that judge it; `python
+  scripts/host_health.py tune check|plan|apply|undo` reports drift between declared and
+  actual, applies only what each item's gate allows (class A always; class B once a merged
+  pull request adopts it after the review canary held; class C once the operator approved
+  it), journals every prior value so `undo` restores it, and never restarts a service or
+  runs sudo. The Ollama environment is set the way each platform supports: `launchctl
+  setenv` plus a login agent on macOS, a staged systemd drop-in on Linux; `check` reads the
+  model runner's argv to prove a setting reached it. The weekly host-health record gains
+  model loads per day and distinct context sizes, a memory budget by process group, disk
+  writes per hour since boot with the share that is swap, and the tuning in force.
+  `docs/runbooks/host-optimization.md` has the measured budget (on the operator's 24 GiB
+  host, swap-outs were 85% of 152 GB/h of SSD writes, and process file writes 1.2%), the
+  classified plan, the class-B adoption procedure and the operator's class-C asks.
+* **specs:** vibey's system requirements now cover Linux as a matrix: every distribution
+  `[minimum_specs.linux]` declares (Ubuntu 24.04 and 26.04 LTS, Arch Linux, Fedora) on each
+  declared architecture (x86_64, arm64), each cell measured inside that distribution's own
+  container by `python scripts/minimum_specs.py cell`: the repository version behind each
+  floor (kernel, Python, PostgreSQL, the desktop libraries), glibc against the newest
+  `manylinux` floor of the installed wheels, the closure each package set adds as the
+  package manager sizes it, and a cold uv install. The requirements are fitted, not read
+  off one point (`scripts/requirements_math.py`): memory against context by least squares,
+  M(c) = M0 + k*c, with R^2 and residuals; CPU generation against cores by Amdahl's law,
+  with the recommended cores at the closed-form knee of dT/dn and the minimum solved
+  against the minimum generation rate; and the append-only ledger's disk as the integral
+  of its growth rate over a declared horizon. Thresholds, the headroom factor and the
+  horizon are declared in TOML with their reasons. The weekly workflow runs every cell on a
+  native GitHub-hosted runner of its architecture and folds them in with `merge --complete`,
+  so a cell that reports nothing goes stale with the reason; an emulated cell keeps its
+  sizes and refuses its timings; a cell with no image (Arch on arm64) is skipped, saying
+  why. The host's weekly run now leaves the Linux figures alone instead of marking them
+  stale, sweeps CPU-only generation across thread counts, and measures the database after
+  one job. New generated blocks on the requirements page and in the paper.
+* **release:** every GitHub Release now carries ready-built files for each user interface
+  on each supported platform: krypton desktop as a Flatpak bundle and an Ubuntu 24.04 build
+  (x86_64 and arm64), the krypton app as a web bundle and an Android APK (debug-signed, for
+  sideloading), krypton for VS Code as a `.vsix`, and the krypton launcher and vibey's CLI
+  and TUI as the wheels and sdists PyPI serves, checked against PyPI's digests. A
+  `SHA256SUMS` file and a GitHub build-provenance attestation cover them all.
+  `release-binaries.yml` runs after a successful Release on main and attaches to the Release
+  `github-release.yml` creates, refusing a tag that names another commit; a failed build
+  fails that workflow, never the release. The targets are declared in
+  `scripts/release_binaries.toml` (one per interface and platform: built, waiting for a
+  credential, or unsupported with the reason), the matrix is planned from it at run time,
+  and `scripts/release_binaries.py check` fails when the workflow, that file and the new
+  downloads page (`docs/guides/downloads.md`) disagree. iOS waits for `EXPO_TOKEN` and EAS
+  signing credentials, with one tracking issue open until then; the desktop app is not built
+  for macOS, for the reason the page gives. A pull request that changes how binaries are
+  built runs every builder as a dry run that writes nothing.
+* **gh:** `vibey-gh review-canary` measures whether the sovereign review catches real
+  defects. A corpus of diffs against this repository's own code -- 27 with one planted defect
+  each, in nine classes, and 14 clean controls -- goes through `local-review` with every
+  `[pr_automation.fallback]` setting the pull-request review uses, and recall, the
+  false-positive rate (each with a Wilson interval), the no-verdict count and recall per class
+  are appended to an append-only ledger, with the model, settings, commit and host. The
+  runbook shows the latest measurement; `review-canary.yml` re-measures weekly on the
+  sovereign runner and lands it as a pull request; `status` says whether the latest
+  measurement meets the declared floor (`[pr_automation.review_canary]`), for the approver
+  that will read it. Nothing approves on it yet.
+
 ### Bug Fixes
 
 * **build:** a work item's worktree is removed once its branch integrates cleanly. Every work
@@ -62,6 +191,59 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   swallowed) and the job fails as `ENGINE`, naming the engine and the limit, so three in a
   row rotate the retry away and the bounded attempts still end in a park. An engine's own
   `TimeoutError` is never mistaken for the limit.
+* **engines:** a worker's shutdown no longer crashes on a session it cannot reap. #1297 made
+  the worker end every live engine session on its way out, by awaiting a reap of each one
+  in a process-wide registry; an entry registered under another event loop raised
+  "Future attached to a different loop" and turned a clean exit into exit 1 (CI's `gates`
+  job on develop, 2026-10-01). Shutdown now ends each session on its own: another loop's
+  group is killed without being awaited, an entry with no process is reported
+  (`engine_session_unreapable`), and a reap that fails is reported
+  (`engine_session_end_failed`) while the rest still end. The adapter's tests now start
+  and end with the registry empty, which is the leak that exposed it.
+* **db:** the role reconciler no longer silently leaves `session_replication_role` grantable.
+  The grant lives in `pg_parameter_acl`, one row for the whole cluster, so two reconciles on
+  different databases of one cluster race on it (a per-database advisory lock cannot
+  serialize them), and the loser's `REVOKE` fails with `tuple concurrently updated`. Every
+  `PostgresError` there was swallowed, so the trigger-silencing grant stayed in place without
+  a word (CI, PostgreSQL 16, 2026-10-01). Now only a lack of privilege is tolerated (the
+  inspector reports it, as documented); a concurrent update is retried with a short backoff,
+  up to five attempts; anything else is raised.
+- **Database role reconcile:** a replication-role `REVOKE` that loses the cluster-wide `pg_parameter_acl` race with `cache lookup failed for parameter ACL` (the row dropped between lookup and use, seen on PostgreSQL 18 in CI) is now retried like the `tuple concurrently updated/deleted` cases, instead of failing the reconcile.
+- **Database role reconcile:** a `REVOKE SET ON PARAMETER session_replication_role` that loses the cluster-wide `pg_parameter_acl` race with `tuple concurrently deleted` is now retried like `tuple concurrently updated`, instead of failing the reconcile (seen on PostgreSQL 16 in CI).
+* **gh:** the declared 100% coverage floor reaches the forge, and the "Repository profile"
+  workflow goes green again. Every reconcile since #1277 was refused with `Invalid property
+  /rules/6: data matches no possible input (HTTP 422)`: vibey-gh sent the `code_coverage`
+  rule with `"max_coverage_drop": null`, copied from how GitHub *echoes* an unset threshold,
+  but GitHub's rule input types both thresholds as plain numbers (OpenAPI
+  `repository-rule-code-coverage`), so the null matched no rule type and the whole ruleset
+  PUT failed, leaving the floor off both declared rulesets. An unset threshold is now left
+  out of the payload, and a threshold set by hand that nobody declared is still reported as
+  drift. `vibey-gh rulesets --dry-run` no longer prints "reconciled" when it applied nothing.
+* **gh:** the sovereign review's failures on a large pull request are bounded and named,
+  where they were two silent timeouts. PR #1312's
+  77-file review gave none: the model was free, read its first part in 145s, then reasoned
+  past its 8,192-token reserve until a fixed 600s timeout cut it off, twice. The reserve is
+  now the most the model may write (`num_predict`, default 16,384), each request's deadline
+  scales with its size at the host's measured rates (`prompt_tokens_per_second`,
+  `output_tokens_per_second`), and a review waits, bounded (`slot_wait_seconds`), for the
+  model to come free before it is sent -- so a busy model (`model_busy`, retried) is told
+  apart from one too slow for its input (`model_timeout`, named and not retried). It does
+  not yet bring a large diff to a verdict: up to 2026-10-02 every verdict given under it
+  was on a diff reviewed in one request (`docs/paper.md`, *Exact-head evaluation*).
+
+### Code Refactoring
+
+* **clients:** krypton is spelled lowercase everywhere, the way vibey is: in every app's
+  visible text (the desktop's window and messages, the mobile app's permission prompts and
+  name), in the hub's OpenAPI summary and `vibey serve --help`, in the documentation, ADR
+  titles and CI job names. The desktop's app id follows: `io.github.the_vibey_project.krypton`
+  and `io.github.the_vibey_project.krypton.nightly` ("krypton nightly", as the mobile app
+  already says), changed now because Flathub freezes an app id at first submission. Code
+  identifiers whose language convention wants a capital stay (`KryptonSettings`,
+  `KryptonLauncher`, `KryptonLauncherInterface`). The VS Code extension is published as
+  `the-vibey-project.krypton` with the krypton atom as its marketplace icon (generated by
+  `scripts/design/generate.py --rasters`), and `openvsx.yml` creates the publisher's Open VSX
+  namespace before the first publish, tolerating only "already exists".
 
 ### Documentation
 
@@ -74,6 +256,54 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   to do?*, sits in the nav after the guides and is linked from both first screens.
   ADR-0077 records the shape and `tests/meta/test_outcome_guides.py` checks it, every link
   included.
+* **paper:** the research paper is brought current with what landed after #1307. It
+  reports why the sovereign review gave no verdict on large diffs (an answer nothing
+  capped and a fixed 600 s deadline, with a futile identical retry) and #1316's repair,
+  with what it has done since: one small diff passed, and the one large diff it met
+  (#1317) ended as a named `done_reason=length` refusal, not a verdict. It adds the stage
+  that attaches a build of every client to a GitHub Release (#1317), stated as run only
+  dry; the reconciler's replication-role revoke race (#1310, #1314) and the shutdown
+  regression (#1309); the VS Code extension's new identifier,
+  `the-vibey-project.krypton`, with Open VSX still unpublished (#1312); and how much of
+  the Linux requirements matrix (#1313) was actually measured at its seed. The forge's
+  record of who merged is extended to #1319.
+* **paper:** the research paper is checked claim by claim against `develop` at `4acb9be5c`,
+  and every stale or wrong claim the check found is corrected: the gate-soundness invariant
+  now admits #1299's declared timeouts, a lease is said to bound a crash and not a hang,
+  the fit record's revision is checked only when named, the engine-pool figure's handoff
+  path is the wind-down's and not the capacity rejection's, and the storm, release-tag and
+  forecast captions come from the generator in their corrected form. A new section reports
+  the 2026-09-30 autonomy scan: who merged into `develop` and how, seven defects and their
+  repairs (#1294 to #1299), the merge-train incident #1301 fixed, and a measurement of the
+  sovereign reviewer with and without the files it judges (#1303). Its records are tracked
+  under `docs/architecture/evidence/`
+  ([#1307](https://github.com/the-vibey-project/vibey/pull/1307)).
+* **paper:** the final pass for 3.3.0 brings the research paper current with everything
+  merged after #1324, up to `ca9e47452` (#1341). It reports the review canary's first
+  measurement of the sovereign reviewer's recall (18 of 25 planted defects caught, Wilson
+  95% 0.524 to 0.857; 0 of 14 controls blocked), with the two misses passed while the
+  reviewer's own summary named the defect; the large-diff study, as what it is, in
+  progress (mechanism and screening only, on one diff), with its contention audit and the
+  two records it voided, and production unchanged; the
+  lane's record under #1316 (every verdict on a diff reviewed in one request) and the one
+  four-part verdict before it (#1307); the host's weekly health record and its measured
+  memory budget (about 49 GiB of demand on 24 GiB, swap-outs about 85% of SSD writes); the
+  revoke race's third message and its cause in the tests; the KEDA contract, the Arch
+  mirror fallback, the declared and expiring advisory exceptions, and the push-gate tests'
+  isolation; and the forge's record of who merged, extended to #1341. The paper's history
+  figures stay pinned at `d4c4e1f8`. The root changelog fragment for #1316 no longer says
+  that the review reaches a verdict on a large pull request. The README and the
+  documentation home link the host-health and host-optimization pages, and the sovereign
+  review runbook says what the canary does not measure.
+* **gh:** the review canary's first measurement is recorded: on the operator's host,
+  `gpt-oss:20b` at default think with every `[pr_automation.fallback]` setting, the sovereign
+  review caught 18 of 25 planted defects that reached a verdict (95% Wilson 52.4–85.7%) and
+  blocked none of 14 controls (0.0–21.5%); 2 of 41 reviews timed out. A measurement whose
+  reviews were resumed from a work file now says so, and when they ran.
+
+### Miscellaneous Chores
+
+- **Repository hygiene:** the krypton app's generated coverage report (`clients/app/coverage/`, committed by accident with 3.0.0) is no longer tracked, and `clients/*/coverage/` is ignored like `packages/*/coverage/`.
 
 ## [3.2.0] (2026-09-30)
 
