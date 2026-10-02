@@ -31,15 +31,61 @@ def _id(source: Path, heading: str, ordinal: int) -> str:
     return f"{_slug(source.stem)}-{_slug(heading)}-{digest}"
 
 
+# A fenced code block by CommonMark 0.31's rule (section 4.5): an opener is a run of three
+# or more backticks or tildes indented at most three columns, and a backtick opener's info
+# string holds no backtick; only a line holding nothing but a run of the SAME character, at
+# least as long, indented at most three columns, closes it.
+_FENCE_OPEN = re.compile(r" {0,3}(?P<run>`{3,}|~{3,})(?P<info>.*)$")
+_FENCE_CLOSE = re.compile(r" {0,3}(?P<run>`{3,}|~{3,}) *$")
+
+
+def _headings(text: str, level: int) -> list[tuple[int, str]]:
+    """(offset, title) of each level-`level` ATX heading at the start of a line, outside
+    fenced code.
+
+    The split used to be a bare regex over the whole text, so a `## ` line inside a fence
+    -- a SKILL.md showing the skeleton of another SKILL.md -- cut the fence in two, and eight
+    generated slices opened a code block they never closed (the documentation deep scan
+    found them, 2026-10-02). This applies the same CommonMark fence rule as
+    `vibey_gh.markdown_fences`, which it cannot import: vibey-skills declares no
+    dependencies, its CI job installs it alone, and the converter runs as a bare
+    `python3` script. Containers are not followed, and need not be for a heading that
+    starts its line: column 0 ends any block quote or list item, and a fence with it.
+
+    Module-level for the same reason as the rest of this script (vibey ADR-0016): it is a
+    standalone tool, loaded by path, whose functions its tests call by name.
+    """
+    heading = re.compile(rf"({'#' * level})[ \t]+(.+?)\s*$")
+    found: list[tuple[int, str]] = []
+    fence: str | None = None
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        bare = line.rstrip("\r\n").expandtabs(4)
+        if fence is not None:
+            close = _FENCE_CLOSE.match(bare)
+            if close and close["run"][0] == fence[0] and len(close["run"]) >= len(fence):
+                fence = None
+        else:
+            opener = _FENCE_OPEN.match(bare)
+            if opener and not (opener["run"][0] == "`" and "`" in opener["info"]):
+                fence = opener["run"]
+            else:
+                match = heading.match(line.rstrip("\r\n"))
+                if match:
+                    found.append((offset, match.group(2)))
+        offset += len(line)
+    return found
+
+
 def slice_markdown(source: Path, destination: Path, level: int = 2) -> list[Slice]:
     text = source.read_text(encoding="utf-8")
-    matches = list(re.finditer(rf"^({'#' * level})\s+(.+?)\s*$", text, re.MULTILINE))
+    matches = _headings(text, level)
     if not matches:
         raise ValueError(f"no level-{level} headings found in {source}")
     chunks = []
-    for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        chunks.append((match.group(2), text[match.start() : end].strip() + "\n"))
+    for index, (start, title) in enumerate(matches):
+        end = matches[index + 1][0] if index + 1 < len(matches) else len(text)
+        chunks.append((title, text[start:end].strip() + "\n"))
     records: list[Slice] = []
     for index, (heading, body) in enumerate(chunks):
         slice_id = _id(source, heading, index)
