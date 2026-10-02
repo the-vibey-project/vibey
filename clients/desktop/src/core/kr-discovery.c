@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+#include "kr-pairing.h"
+
 #if defined(KR_HAVE_AVAHI)
 extern const KrDiscoveryBackend kr_discovery_avahi_backend;
 #elif defined(KR_HAVE_DNSSD)
@@ -44,6 +46,9 @@ kr_hub_service_new(const char *name, const char *host, guint16 port, const char 
     service->version = filled(version) ? g_strdup(version) : NULL;
     const char *path = kr_txt_lookup(txt, "path");
     service->path = g_strdup(filled(path) ? path : "/api/v1");
+    const char *fingerprint = kr_txt_lookup(txt, "fp");
+    service->fingerprint =
+        kr_pairing_fingerprint_valid(fingerprint) ? g_ascii_strdown(fingerprint, -1) : NULL;
     return service;
 }
 
@@ -56,6 +61,7 @@ kr_hub_service_copy(const KrHubService *service)
     copy->port = service->port;
     copy->version = g_strdup(service->version);
     copy->path = g_strdup(service->path);
+    copy->fingerprint = g_strdup(service->fingerprint);
     return copy;
 }
 
@@ -68,6 +74,7 @@ kr_hub_service_free(KrHubService *service)
     g_free(service->host);
     g_free(service->version);
     g_free(service->path);
+    g_free(service->fingerprint);
     g_free(service);
 }
 
@@ -75,7 +82,8 @@ static gboolean
 same_service(const KrHubService *a, const KrHubService *b)
 {
     return g_str_equal(a->host, b->host) && a->port == b->port &&
-           g_strcmp0(a->version, b->version) == 0 && g_str_equal(a->path, b->path);
+           g_strcmp0(a->version, b->version) == 0 && g_str_equal(a->path, b->path) &&
+           g_strcmp0(a->fingerprint, b->fingerprint) == 0;
 }
 
 const KrDiscoveryBackend *

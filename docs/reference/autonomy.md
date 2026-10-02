@@ -98,7 +98,7 @@ declared minimum is unknown, never a pass.
 | [CI stays green without human re-runs](#ci) | CI runs on the integration branch that succeeded | 195 of 288 (68%) | ≥ 90%, n ≥ 10 | partial | **partial** |
 | [CI stays green without human re-runs](#ci) | CI runs on the integration branch that were re-run | 0 of 343 (0%) | ≤ 5%, n ≥ 10 | autonomous | **partial** |
 | [The queue delivers projects to DONE](#queue) | projects that reached DONE | 0 (stale, measured 2026-10-02) | ≥ 1 | manual | **manual** |
-| [The queue delivers projects to DONE](#queue) | hours since the queue's latest event | 40.5 h (stale, measured 2026-10-02) | ≤ 24 h | partial | **manual** |
+| [The queue delivers projects to DONE](#queue) | hours since the queue's latest event | 50.1 h (stale, measured 2026-10-02) | ≤ 24 h | partial | **manual** |
 <!-- END GENERATED autonomy:table -->
 
 ## Each stage's evidence
@@ -115,7 +115,7 @@ An **unknown** figure has no number, and none is invented.
 
 **Status: partial.** Of the DESIGN-phase gates answered in the window, how many were answered by the gate-timeout sweep or a declared automation rather than a person?
 
-- *DESIGN gates answered without a person*: **14 of 23 (61%) (stale, measured 2026-10-02)**, stale; autonomous at ≥ 95%, n ≥ 5; criterion **partial**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 01:33Z; `human_gate` rows raised in the window by DESIGN jobs and answered; unattended = answered by `gate-timeout`, `automation:%`. Why this threshold: DESIGN is designed to talk to a person (CLAUDE.md, the six-phase model); it is autonomous only where every gate it raises is answered by a declared, ledgered rule.
+- *DESIGN gates answered without a person*: **14 of 23 (61%) (stale, measured 2026-10-02)**, stale; autonomous at ≥ 95%, n ≥ 5; criterion **partial**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 11:07Z; `human_gate` rows raised in the window by DESIGN jobs and answered; unattended = answered by `gate-timeout`, `automation:%`. Why this threshold: DESIGN is designed to talk to a person (CLAUDE.md, the six-phase model); it is autonomous only where every gate it raises is answered by a declared, ledgered rule.
 
 **What would close it:** Answer the DESIGN interview from declared defaults (`[design.interview]`) or a declared automation, and record it on the ledger, so no DESIGN gate waits for a person.
 
@@ -125,7 +125,7 @@ Answers to: ADR-0009, ADR-0027, sub-doctrine 12.d.
 
 **Status: unknown.** Of the BUILD jobs that finished and the BUILD escalations raised in the window, how many were finished jobs rather than gates waiting for a person?
 
-- *BUILD jobs finished per finished job or escalation*: **1 of 3 (33%) (stale, measured 2026-10-02)**, stale; autonomous at ≥ 90%, n ≥ 10; criterion **unknown**. a sample of 3, under the declared minimum of 10. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 01:33Z; BUILD jobs that reached `succeeded` in the window, over those plus the gates BUILD jobs raised in it. Why this threshold: BUILD is designed to run unattended; an exhaustion gate is the point where it stops and asks a person.
+- *BUILD jobs finished per finished job or escalation*: **1 of 3 (33%) (stale, measured 2026-10-02)**, stale; autonomous at ≥ 90%, n ≥ 10; criterion **unknown**. a sample of 3, under the declared minimum of 10. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 11:07Z; BUILD jobs that reached `succeeded` in the window, over those plus the gates BUILD jobs raised in it. Why this threshold: BUILD is designed to run unattended; an exhaustion gate is the point where it stops and asks a person.
 
 **What would close it:** Fewer BUILD escalations (budget, repair or attempts exhausted) per finished job: the escalations are the gates a person answers.
 
@@ -135,7 +135,7 @@ Answers to: ADR-0004, ADR-0005, ADR-0024, ADR-0038.
 
 **Status: manual.** Of the declared paid engines, how many passed a login check within its time-to-live at the cutoff?
 
-- *paid engines with a login check inside its time-to-live*: **0 of 4 (0%) (stale, measured 2026-10-02)**, stale; autonomous at ≥ 100%; criterion **manual**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 01:33Z; each paid engine's latest `engine_health.auth_ok_at`, within 24 h of the cutoff. Why this threshold: The 2026-09-30 scan found every paid job deferred once a login was a day old; a lapsed login is the dropout.
+- *paid engines with a login check inside its time-to-live*: **0 of 4 (0%) (stale, measured 2026-10-02)**, stale; autonomous at ≥ 100%; criterion **manual**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 11:07Z; each paid engine's latest `engine_health.auth_ok_at`, within 24 h of the cutoff. Why this threshold: The 2026-09-30 scan found every paid job deferred once a login was a day old; a lapsed login is the dropout.
 
 **What would close it:** A running worker that keeps every paid engine's login fresh (#1295 rechecks at half its life); an engine whose login lapses drops out of rotation until someone logs in.
 
@@ -221,8 +221,8 @@ Answers to: ADR-0023, sub-doctrine 9.c, sub-doctrine 12.e.
 
 **Status: manual.** Did any project reach DONE in the window, and has the queue recorded any event within a day of the cutoff?
 
-- *projects that reached DONE*: **0 (stale, measured 2026-10-02)**, stale; autonomous at ≥ 1; criterion **manual**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 01:33Z; `PhaseTransitioned` events into `done` in the window. Why this threshold: DONE is the only completion the six-phase model records; nothing else is delivery.
-- *hours since the queue's latest event*: **40.5 h (stale, measured 2026-10-02)**, stale; autonomous at ≤ 24 h; criterion **partial**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 01:33Z; the latest `event.produced_at` before the cutoff. Why this threshold: A queue with no event in a day has no worker draining it.
+- *projects that reached DONE*: **0 (stale, measured 2026-10-02)**, stale; autonomous at ≥ 1; criterion **manual**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 11:07Z; `PhaseTransitioned` events into `done` in the window. Why this threshold: DONE is the only completion the six-phase model records; nothing else is delivery.
+- *hours since the queue's latest event*: **50.1 h (stale, measured 2026-10-02)**, stale; autonomous at ≤ 24 h; criterion **partial**. Note: not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN. Source: queue, window 2026-09-02 to 2026-10-02 11:07Z; the latest `event.produced_at` before the cutoff. Why this threshold: A queue with no event in a day has no worker draining it.
 
 **What would close it:** A worker and the bridge installed as services (`vibey supervisor install`) and draining the queue, with projects reaching DONE.
 
@@ -255,7 +255,7 @@ Answers to: ADR-0002, ADR-0044, sub-doctrine 9.c.
 | `queue.design.unattended_share` | 14 of 23 (61%) (stale, measured 2026-10-02) | stale | queue | not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN |
 | `queue.done_projects` | 0 (stale, measured 2026-10-02) | stale | queue | not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN |
 | `queue.engines.paid_auth_fresh_share` | 0 of 4 (0%) (stale, measured 2026-10-02) | stale | queue | not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN |
-| `queue.last_event_hours` | 40.5 h (stale, measured 2026-10-02) | stale | queue | not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN |
+| `queue.last_event_hours` | 50.1 h (stale, measured 2026-10-02) | stale | queue | not re-read at 2026-10-02: no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN |
 | `queue.review.unattended_share` | unknown | unknown | queue | no read-only queue DSN in $VIBEY_AUTONOMY_QUEUE_DSN |
 | `repo.review.timeout_kinds_share` | 1 of 2 (50%) | declared | repo | cannot time out: `approval` |
 <!-- END GENERATED autonomy:figures -->

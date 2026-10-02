@@ -105,12 +105,14 @@ For the sovereign default (a local model), memory is the binding constraint.
 
 Prefer a ready-built file? Every release on GitHub also carries the user interfaces built
 for each supported platform: krypton desktop for Linux (a Flatpak bundle and an Ubuntu
-build, x86_64 and arm64), the krypton app for Android and the web, krypton for VS Code,
-and the Python wheels below, with checksums and build provenance. The
+build, x86_64 and arm64) and, from 3.3.1, for macOS on Apple silicon (a self-contained
+`.dmg`), the krypton app for Android, the web and, from 3.3.1, iOS (signed for TestFlight
+and the App Store), krypton for VS Code (also on Open VSX), and the Python wheels below,
+with checksums and build provenance. The
 [downloads page](guides/downloads.md) lists each file, what it runs on and whether it is signed.
 
-One install is the whole family: `vibey`, all five `*loop` engines, and the
-tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey`
+One install is the whole family: `vibey`, all six `*loop` engine commands, and the
+tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey-engine`
 distribution and land on `PATH` together
 ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). What
 each engine still needs separately is its own vendor CLI and credentials —
@@ -581,7 +583,7 @@ critiques, pull requests and wild ideas are all welcome.
 These packages live in this repository as uv workspace members
 (`src/vibey_runners/*`, `src/vibey_tools/*`; ADR-0021). Each keeps its own
 `pyproject.toml`, version, Python floor, tests and gates — but none is
-published separately any more: all nine ship inside the one `vibey`
+published separately any more: all nine ship inside the one `vibey-engine`
 distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)),
 and their former standalone GitHub repositories and PyPI projects no longer
 exist.

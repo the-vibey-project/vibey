@@ -22,7 +22,8 @@ waits for a human (sub-doctrine 12.d).
 | macOS app | `krypton.app` | `krypton nightly.app` |
 | Meson | `-Dchannel=stable` | `-Dchannel=nightly` |
 
-This mirrors PyPI `vibey` and TestPyPI `vibey-dev` (ADR-0028). Stable is always the
+This mirrors `vibey-engine` on PyPI (from `main`) and its development builds on TestPyPI
+(from `develop`) (ADR-0028, ADR-0069). Stable is always the
 default. On macOS too, the settings live in `~/.config/` (GLib's configuration directory
 there), and the hub's token is read from `~/Library/Application Support/vibey/hub/token`,
 where the hub keeps it. The macOS app's bundle identifier and name are the app id and name
@@ -49,9 +50,9 @@ CI already proves the parts every recipe relies on, on Ubuntu, on Arch and on ma
 
 ## Order of work
 
-1. **Release assets.** Done for the Flatpak bundle and the Ubuntu tarball:
-   `release-binaries.yml` builds both from the released commit and attaches them to the
-   vibey GitHub Release. Still to come: `krypton-desktop-vX.Y.Z` tags for the recipes to
+1. **Release assets.** Done for the Flatpak bundle, the Ubuntu tarball and, from 3.3.1,
+   the macOS `.dmg`: `release-binaries.yml` builds each from the released commit and
+   attaches it to the vibey GitHub Release (3.3.0 was the first to carry the Linux files). Still to come: `krypton-desktop-vX.Y.Z` tags for the recipes to
    fetch, and the Arch package as an asset. None of this is a store upload.
 2. **Nightly.** The same workflow on `develop` builds `-Dchannel=nightly` and attaches it
    to a rolling pre-release.

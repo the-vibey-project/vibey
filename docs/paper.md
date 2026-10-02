@@ -51,12 +51,20 @@ defects then measured the reviewer's recall for the first time: it caught 18 of 
 small defects it judged (Wilson 95% interval 0.524 to 0.857) and blocked none of 14 clean
 changes, and two of its misses passed while its own summary named the defect. A
 preregistered study of the large-diff failures is in progress, mechanism and screening
-only: on one large diff, a request at temperature 0 looped to its cap with no answer, and
-the same request sampled at temperature 1 answered in 368 tokens. The fix this points to
-is identified but neither confirmed nor shipped, and production is unchanged. We also
-measure, weekly, how far the delivery loop is from running without a person, one of
-eleven declared stages at the first reading, and the health of the machine it runs on,
-whose memory demand we measured at about twice its 24 GiB.
+only. On its first screening diff, a request at temperature 0 looped to its cap with no
+answer, and the same request sampled at temperature 1 answered in 368 tokens; on its
+fourth, sampling alone failed as well, once with an empty answer and once with an answer
+outside the response grammar, and of the three arms that have reached all four diffs only
+the one that bounds the reasoning and then forces a verdict answered on every one. No
+arm's recall is measured yet, and production is unchanged. We also measure, weekly, how
+far the delivery loop is from running without a person, one of eleven declared stages at
+each of the two readings so far, and the health of the machine it runs on, whose memory
+demand we measured at about twice its 24 GiB. Last, we read the 3.3.0 release as evidence.
+It was the first to attach a build of every client, eleven files, each found to match its
+checksum and to carry a build-provenance attestation, and it gave the editor extension its
+first Open VSX listing. We also state what 3.3.1 adds: a self-contained desktop app for
+macOS on Apple silicon, an iOS build signed for the App Store, and a release path on which
+a change to the clients alone is releasable.
 
 *Artifacts.* This paper is typeset from `docs/paper.md` and published as
 [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf),
@@ -74,8 +82,8 @@ its figures, the storm's `storm-evidence.py` regenerates its evidence table,
 `scripts/autonomy_scorecard.py` its autonomy scorecard. The one exception, the storm
 throughput audit, is named where we use it. The large-diff study we report is in
 progress, and its committed record is cited at the cutoff its own log gives. Unless a
-passage names its own, this revision's cutoff is `develop` at `ca9e47452` (#1341), with
-the forge read on 2026-10-02 at about 03:50Z. The visual atlas holds forty-five
+passage names its own, this revision's cutoff is `develop` at `3bb577a4e` (#1354), with
+the forge read on 2026-10-02 between about 10:55 and 11:20Z. The visual atlas holds forty-five
 figures: thirty drawn from the model as deterministic TikZ in this source, and fifteen
 computed from tracked repository records, so the PDF, its labels and its diagrams are
 reviewable and reproducible rather than screenshots detached from the system. Every
@@ -128,7 +136,8 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
 - an audit of a local storm that locates its binding constraint, its conversion losses and its unenforced controls, and a factual account of merges that ran ahead of review, both read as evidence that the scarce input is judgment;
 - a scan of how far the delivery loop ran without a person, with the forge's record of who merged, the defects it found and their repairs, an incident in which the merge train closed what it reported as merged, and a measurement of the local reviewer with and without the files it judges, and the cause of that reviewer's missing verdicts on large diffs, with a repair that turns a silent timeout into a named refusal but has not yet brought a large diff to a verdict;
 - the first measurement of that reviewer's recall, on planted defects, and a preregistered study of its large-diff failures reported as what it is, in progress: mechanism and screening only;
-- weekly measurements, generated into the text from append-only records, of how far the delivery loop is from running without a person and of the health of the machine it runs on.
+- weekly measurements, generated into the text from append-only records, of how far the delivery loop is from running without a person and of the health of the machine it runs on;
+- the 3.3.0 release read as evidence of what a release carries, a build of every client with its checksum and its provenance attestation, and the changes 3.3.1 adds to that set: a macOS desktop app, an iOS build, and a release path that a change to the clients alone now reaches.
 
 ```latex
 \begin{figure*}[!t]
@@ -1547,10 +1556,10 @@ the lowercase the client family is now spelled in everywhere. Its commands, sett
 views keep their `vibey.*` names, so settings and key bindings carry over, but an install
 under the old identifier must be removed first, and a hub pairing, which is kept in
 storage scoped to the extension's identifier, must be made again. No workflow publishes
-the extension to the Visual Studio Marketplace, and it has never been published to Open
-VSX: that workflow skips while the repository holds no `OVSX_PAT` token, and the issue
-that tracks the missing token (#1254) was open at our cutoff, so the first publish will
-carry the new identifier.
+the extension to the Visual Studio Marketplace. Its Open VSX workflow skipped while the
+repository held no `OVSX_PAT` token; with the token set, the 3.3.0 release published it
+there for the first time, under the new identifier, as `the-vibey-project.krypton` 0.2.0
+(run 36965092635), and the issue that had tracked the missing token (#1254) is closed.
 
 The driver makes the fit explicit rather than hiding it in a default. A portable
 probe records the endpoint, model, revision, prompt shape, every context/output pair,
@@ -2062,22 +2071,66 @@ merged on 2026-10-01, adds a stage, `release-binaries.yml`, that runs after the 
 successful release on `main` and attaches files to the Release that already exists. It
 creates no tag, refuses a tag that names any commit other than the one it built, and is a
 workflow of its own so that a failed build fails it, never the release. Its targets are
-declared, one per interface and platform (`scripts/release_binaries.toml`), each built,
-waiting for a credential, or unsupported with the reason: the desktop client as a Flatpak
-bundle and as a tarball for Linux on x86_64 and arm64, unsigned; the app's web bundle; an
-Android package signed only with the debug key, for sideloading; the VS Code extension;
-and the wheels and source distributions of both packages, fetched from PyPI and checked
-against PyPI's own SHA-256 digests rather than rebuilt. The iOS build waits for signing
-credentials and keeps one tracking issue open instead of failing the release; the desktop
-client is not built for macOS, where its GTK build has never run in CI; and Windows is not
-a target (#1097). One job gathers every declared file, refuses any undeclared one and
-writes `SHA256SUMS`, and the attaching job, the only one with write access, attests the
-build's provenance over that file. All of this has run only as a dry run. By 20:41Z on
-2026-10-01 the stage's two pull-request runs and one dispatched run had built every target on hosted
-runners, the iOS job by warning that its credential is missing, and had skipped the
-attach, as a dry run must (runs 36904265081, 36908198822 and 36904299591). No release has
-been cut since it merged, the latest being 3.2.0 at our cutoff, so the attestation and the
-upload have never run.
+declared, one per interface and platform (`scripts/release_binaries.toml`), each built on
+every release, built only while a credential is set, or unsupported with the reason. One
+job gathers every declared file, refuses any undeclared one and writes `SHA256SUMS`, and
+the attaching job, the only one with write access, attests the provenance of every file
+that list names.
+
+*3.3.0, the first release to carry them.* The promotion (#1343) reached `main` at
+`4188aad66` at 04:30Z on 2026-10-02, and every workflow that follows a release succeeded:
+the binaries in run 36965092599, from 04:33 to 05:00Z. The Release `vibey-v3.3.0` carries 18
+assets: eleven declared files, `SHA256SUMS`, the paper as PDF and DOCX, and the book as PDF,
+EPUB, DOCX and print HTML. The eleven are the desktop client as a Flatpak bundle and as a
+tarball for Linux on x86_64 and arm64, unsigned; the app's web bundle; an Android package
+signed only with the debug key, for sideloading; the VS Code extension; and the wheel and
+source distribution of both packages, fetched from PyPI and checked against PyPI's own
+SHA-256 digests rather than rebuilt. The operator's verification, recorded on the release
+plan (#1320) at about 05:05Z, found all eleven matching `SHA256SUMS` and all eleven carrying
+an attestation that `gh attestation verify` accepts, one per file, not one over the list;
+`vibey-engine` 3.3.0 on PyPI, installed into a fresh environment, with all twelve of its
+console scripts; `krypton-app` unchanged at 0.1.0, because nothing in its paths changed; and
+the VS Code extension listed on Open VSX for the first time, as `the-vibey-project.krypton`
+0.2.0, by its own workflow (run 36965092635). The iOS build did not run: its credential was
+not yet set, so the job said so, opened its tracking issue (#1345, still open at our
+cutoff) and left the release unaffected, as declared.
+
+*What 3.3.1 adds.* Three changes after 3.3.0 widen that set, and they are what the 3.3.1
+promotion carries. First, the desktop client is built for macOS (#1351). A `macos-15` runner
+builds it against Homebrew's GTK 4, and `scripts/macos_app_bundle.py` turns the installed
+program into a self-contained `krypton.app`: it copies in every library the program loads
+that macOS does not provide and rewrites each load command to the bundle; `verify` fails on
+any reference to a Homebrew prefix, and `smoke` runs the app with every Homebrew prefix made
+unreadable and requires a window on screen and no file mapped from a Homebrew prefix. The
+app finds hubs over Bonjour through the client's existing `dns_sd` backend
+(`clients/desktop/src/core/kr-discovery-dnssd.c`), so no C source changed. It is ad-hoc
+signed, and the release signs it with a Developer ID and has Apple notarise it only when
+the certificate and a notarisation credential are all set; until then it keeps one
+tracking issue open. Intel
+Macs are declared unsupported, with the reason: Homebrew no longer bottles the GTK 4 stack
+for them. Second, the iOS build is unblocked. The token was set at 05:10Z, as the 3.3.1 release plan records (#1349), the app
+was registered with EAS under the Expo organisation that owns it (#1346, #1347, #1348,
+#1350), and a dry run that then stopped on a build-number rule EAS cannot apply to a
+dynamic app configuration (run 36973159467) led to EAS keeping the build number itself
+(#1351). Third, a change confined to the clients now derives a patch release (#1348): before,
+`clients/` was in neither of the version's path lists, so such a change derived nothing to
+release, and no binaries. With all three on `develop`, `vibey-gh version --since origin/main`
+derives 3.3.1.
+
+The release-binaries dry run 36976031188, on #1351's head at 06:57Z, built every target
+the configuration then declared and gathered and checksummed the files, and skipped the
+attach, as a dry run must. We read its two new files ourselves. The iOS package,
+`krypton-ios-0.1.0.ipa` (18,503,622 bytes), is bundle `org.vibey.krypton` 0.1.0, build 1, for
+iOS 16.4 or newer, signed by "iPhone Distribution: ADAM STEINBERGER (7WVT2Z27BB)" with an App
+Store provisioning profile that names no devices; it is the file App Store Connect takes
+for TestFlight and the App Store, and it does not install by opening it. The macOS image,
+`krypton-desktop-0.1.0-macos-arm64.dmg` (20,319,554 bytes), holds an arm64 `krypton.app`
+signed ad hoc, declaring macOS 15.0 as its minimum and `_vibey._tcp` as its Bonjour service.
+A 3.3.1 release is therefore declared to carry thirteen files and `SHA256SUMS`. That is a
+declaration and a rehearsal, not a release: at our cutoff 3.3.1 had not been cut, no
+Developer ID or notarisation credential was set, no build had been submitted to TestFlight
+from this workflow, which submits nothing, and Gatekeeper's handling of a downloaded,
+quarantined `.dmg` had not been exercised.
 
 **Degraded modes as first-class states.** The evaluator's own substrate (API credit,
 the hosted review lane, the operator's editor) can refuse service while the
@@ -2288,29 +2341,37 @@ false-positive rate minus production's, on the 14 controls, is below 0.15. As th
 every change to it since is logged with its time and reason in `experiments/LOG.md`,
 among them arms added before any of their outcomes was seen. Two
 sibling tracks, on prior art and on the server log's record of past reviews, fed the plan
-before the first request; their own write-ups are not in the committed tree, and only the
-amendments they caused are. The study shares the one model slot with live reviews and
-yields to them, and that is a threat to its timings it found and closed (#1341). The
-self-hosted runner's live reviews run inside Docker, so the harness's process check could
-not see them: a review from the runner began seconds after an idle check, and two of the
-study's requests, parts 4 and 5 of one arm on #1131, queued behind it for 638 s and
-1,063 s, the second until its own deadline. The harness now refuses to start while any
+before the first request. Their write-ups are now in the committed tree
+(`research/large-diff-review/prior-art/` and `research/large-diff-review/evidence/`, each
+with its own cutoff in its header); the evidence track's raw logs, about 28 MB, stay on the
+host, and only their SHA-256 manifest is tracked. The study shares the one model slot with
+live reviews and yields to them, and that is a threat to its timings it found and closed
+(#1341). The self-hosted runner's live reviews run inside Docker, so the harness's process
+check could not see them: a review from the runner began seconds after an idle check, and
+two of the study's requests, parts 4 and 5 of one arm on #1131, queued behind it for 638 s
+and 1,063 s, the second until its own deadline. The harness now refuses to start while any
 other client is connected to the model's port and yields its own request to one forwarded
-from Docker, and an audit (`experiments/harness/contention.py`) matches every record to
-the server's access log and voids any that began while another client's request was still
-running. Its first pass voided exactly those two (`experiments/data/invalidations.jsonl`);
-the records stay in the append-only store, the arm they belong to is void on #1131 and is
-being run again, and the audit is to run again before every stage boundary and before any
-number is reported. No result we cite here comes from a voided record.
+from Docker, and an audit (`experiments/harness/contention.py`) matches every record to the
+server's access log and voids any that began while another client's request was still
+running. Its first pass voided exactly those two (`experiments/data/invalidations.jsonl`),
+the records stay in the append-only store, and the arm was run again. Nothing has been
+voided since the fix, made at 23:20 EDT on 2026-10-01: the voids file still holds only those
+two, and the log's latest audit, at 05:59 EDT on 2026-10-02, found no request contended. No result we cite here comes
+from a voided record. Since 3.3.0 the harness also pins what it calls production: an arm
+that stands for production refuses to build a request unless the review settings it reads
+at run time equal the ones the study registered (`experiments/corpus/hosts.json`).
 
-At the study's cutoff, the newest entry of its committed log, 23:20 EDT on 2026-10-01, its committed record
-(`experiments/LOG.md`, `experiments/data/`) shows the following. Every Stage 1 result is
-from one host diff, #1131 (194,560 characters), the first of four screening hosts, so each
-is screening-grade, not a rate.
+At the study's cutoff, the committed snapshot of #1354, whose last request ended at
+06:48 EDT on 2026-10-02 and whose log's newest entry is 05:59 EDT, its committed record
+(`experiments/LOG.md`, `experiments/data/`) shows the following. Stage 1 screens on four
+host diffs, #1131, #1161, #1250 and #1282 (163,508 to 224,986 characters), and stops an arm
+at its first diff with no verdict, so every Stage 1 result is screening-grade, not a rate.
 
 - **Stage 0, on a toy diff and no corpus case.** The model's harmony prompt template was rendered exactly (687 prompt tokens by either route). A cut-off reasoning can be continued into a forced verdict through `/api/chat` with the response schema kept, and the schema still constrains the answer. Because the server reuses the cached prompt and reasoning, the forced phase is cheap: on the four parts of #1131 that D16 forced, it took 3.7 to 5.0 s in all. The same request sent twice at temperature 0 gave byte-identical reasoning and answer (`experiments/data/stage0.json`).
-- **The loop.** The first part of #1131 cut to at most 8,000 diff tokens (13,894 prompt tokens) ran at temperature 0 to the 16,384-token cap with no answer, in 697 s. Of its reasoning's word 8-grams, 86% were repeats, and its tail repeats one sentence verbatim. The same part at temperature 1.0, top-p 1.0 and seed 42 answered in 368 tokens and 39 s. Production sends temperature 0 (`src/vibey_tools/gh/vibey_gh/local_review.py`).
-- **Screening on #1131.** Nine of the thirteen Stage 1 arms had a result that stands; a tenth was voided by the audit and is being run again. Production gave no verdict: its first part, at temperature 0, ran to the cap. Production at temperature 1.0 alone reached a verdict in 13 minutes, and production with its reasoning forced at 4,096 tokens in 23 minutes. The small-part arms at temperature 0, D8 and D16, gave none, because their first part looped. D8 and D16 at temperature 1.0, D16 forced at 4,096 tokens, and D16 at temperature 1.0 with forcing at 8,192 tokens each reached a verdict, in 19 to 28 minutes. Four of those six verdicts blocked #1131, which had merged; none of their findings has been adjudicated, so a verdict here is an answer, not a correct one.
+- **The loop.** The first part of #1131 cut to at most 8,000 diff tokens (13,894 prompt tokens) ran at temperature 0 to the 16,384-token cap with no answer, in 697 s. Of its reasoning's word 8-grams, 86% were repeats, and its tail repeats one sentence verbatim. The same part at temperature 1.0, top-p 1.0 and seed 42 answered in 368 tokens and 39 s. Production sends temperature 0 (`src/vibey_tools/gh/vibey_gh/local_review.py`). Every arm at temperature 0, production (A0) and D4, D8, D16 and D32, gave no verdict on #1131 and was dropped there.
+- **Two more ways to give no verdict.** Sampling ends the loop, but it does not guarantee an answer. D4 at temperature 1.0, run again after the void, answered eight parts of #1131 and then, on the ninth (6,576 prompt tokens), stopped of its own accord with an answer that escaped the response grammar: the check codes as bare text, then JSON with keys the schema does not have. Constrained decoding is not a guarantee on this path. On #1282, the fourth host, D8 at temperature 1.0 answered six parts and on the seventh stopped after 921 tokens with 3,834 characters of reasoning and an empty answer: the model closed its turn in the reasoning channel and never opened the answer. D16 at temperature 1.0 answered four parts of #1282 and on the fifth (5,949 prompt tokens) stopped with 163 characters that began with the check codes as bare text, which the JSON parser refuses as extra data. Each of the three is an `answer_incomplete` production's own validation refuses, and each dropped its arm. So every unforced temperature-1.0 arm that reached all four hosts failed on #1282, the two of them by two different mechanisms.
+- **Forcing.** The arms that bound the reasoning and then force a verdict, through the prefill with the grammar kept, are built to repair all three mechanisms: a loop is cut at the bound, and since an amendment logged before any outcome under it, an empty or ungrammatical answer that ends of its own accord is forced again from the same reasoning. In the committed record every forced request followed a cut at the bound, and all 27 forced answers came back complete; no forcing arm has yet met an empty or ungrammatical first answer, so the repair of those two is by construction, not yet observed. D16 with the reasoning bounded at 4,096 tokens is the one arm with a verdict on all four hosts; it forced 17 of its 19 parts and 1 of its 4 contract requests, and took 19.4 to 24.0 minutes a host, a median of 20.2.
+- **Still standing, with #1282 to come.** Production forced at 4,096 tokens (A1), production at temperature 1.0 (A2), D16 at temperature 1.0 forced at 8,192 tokens, and D32 at temperature 1.0 each gave a verdict on the first three hosts, in 13.0 to 25.3 minutes a host. Of all 22 verdicts so far, 18 blocked a diff that had merged; none of their findings has been adjudicated, so a verdict here is an answer, not a correct one.
 - **Why `pass` can contradict the summary.** In production's response schema `pass` comes before `findings`, and the track's explanation is that constrained decoding writes the fields in that order, so the model commits to `pass` before it writes a finding. A rule that lets the findings decide `pass` recovers none of the canary's inconsistent verdicts, because those verdicts carry no findings at all: scored on the canary's own verdicts, at no model cost, by a scorer that reproduces the canary's 18 of 25 and 0 of 14 exactly, the rule leaves both figures unchanged. An arm that writes the findings first was added for Stage 2 before any of its outcomes was seen.
 - **Static analysis alone.** Ruff with every rule selected, and bandit, with no model, flag 5 of the canary's 27 defects, all three of the SQL cases and two of the three swallowed exceptions, and none of its 14 controls (`experiments/data/static_only.json`).
 
@@ -2319,20 +2380,20 @@ ran its arms: from the server log's past reviews, a request finishes within 16,3
 tokens with probability 0.92 at 20,000 prompt tokens, 0.73 at 30,000, 0.53 at 40,000 and
 0.36 at 50,000, partly extrapolated below 20,000, where only six past requests fell, and
 reasoning length depends on what a part contains as well as on its size. Not yet
-measured: the recall or the false-positive rate of any new arm, Stage 1 on the other
-three hosts, the replays of #1312 and #1317, and anything on the held-out diffs or
-needles. The committed request store holds 56 requests; the 54 the audit did not void
-took about 2.8 hours of wall time. The screening points to a fix, sampling at the model's own default temperature,
-with or without a bound on the reasoning: it is identified, but neither confirmed nor
-shipped. Production is unchanged: it
-still reviews at temperature 0 with the parts and reserve #1316 set, and a change will
-ship in a later release only once the study confirms it on the held-out diffs. If a
-method is chosen, the operator has asked that its calibration ship with it, reproducible,
-repeated monthly and reported by `vibey doctor`.
+measured: the recall or the false-positive rate of any arm, which is Stage 2's; the four
+surviving arms' runs on #1282; the replays of #1312 and #1317; and anything on the held-out
+diffs or needles. The committed request store holds 178 distinct requests that the audit
+did not void, which took about 8.9 hours of wall time. The screening points to a fix, a
+bound on the reasoning with a forced verdict, the only arm so far to answer on all four
+diffs: it is identified, but neither confirmed nor shipped. Production is unchanged: it still reviews at temperature 0 with the parts and
+reserve #1316 set, and a change will ship in a later release only once the study confirms
+it on the held-out diffs; 3.3.1 carries none. If a method is chosen, the operator has asked
+that its calibration ship with it, reproducible, repeated monthly and reported by
+`vibey doctor`.
 
 ```latex
 \begin{plainwords}
-A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, where a project switches them on (this one does not), a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer. Later, long drafts kept coming back with no grade at all, and we found why: nothing stopped the grader from writing on and on until the clock ran out. Now it gets a fixed amount of room, more time for a longer draft, and a different message when it was only waiting its turn. The first long draft it met after the change still came back without a grade, but this time with the honest reason: the grader used all its room thinking and never answered. Since then no long draft has come back with a grade under the new rules. We also tested the grader on short drafts with mistakes planted in them on purpose. It caught 18 of the 25 it graded and never failed a good draft, but twice it wrote down the mistake and still gave a pass. Why it gets stuck on long drafts is being studied now, with the plan written down before the first test. On one long draft it went round in circles when told always to pick its most likely next word, and finished quickly when allowed a little chance. That is a clue from one draft, not a result, and the grader has not been changed. Each release is also meant to carry ready-to-install copies of every app, with a list of fingerprints to check them by; so far that has only been rehearsed, never done for real.
+A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, where a project switches them on (this one does not), a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer. Later, long drafts kept coming back with no grade at all, and we found why: nothing stopped the grader from writing on and on until the clock ran out. Now it gets a fixed amount of room, more time for a longer draft, and a different message when it was only waiting its turn. The first long draft it met after the change still came back without a grade, but this time with the honest reason: the grader used all its room thinking and never answered. Since then no long draft has come back with a grade under the new rules. We also tested the grader on short drafts with mistakes planted in them on purpose. It caught 18 of the 25 it graded and never failed a good draft, but twice it wrote down the mistake and still gave a pass. Why it gets stuck on long drafts is being studied now, with the plan written down before the first test. On one long draft it went round in circles when told always to pick its most likely next word, and finished quickly when allowed a little chance. But on a fourth long draft, a little chance was not enough: once it stopped without writing any answer, and once it wrote its answer in the wrong shape. Only the version that is told ``stop thinking now and answer'' after a fixed amount of thinking has answered on all four. These are clues from four drafts, not a result: nobody has yet checked whether its answers are right, and the grader has not been changed. Each release now also carries ready-to-install copies of the apps, with a list of fingerprints to check them by. Version 3.3.0 did it for real for the first time, eleven files, and every fingerprint and every certificate of origin checked out. The next version adds a Mac app and an iPhone app; the iPhone app has to go through Apple's own store to reach a phone.
 \end{plainwords}
 ```
 
@@ -3341,8 +3402,8 @@ and drops. It reads the model sizes from the registry without pulling them. It m
 model's memory at each configured context and its throughput on the GPU and on the CPU
 alone, and the peak memory of the everyday commands, the hub and the launcher. The result
 arrives as a pull request, like any other change. That is the design. At our cutoff,
-2026-10-01, the workflow had never run (its first scheduled run falls on 2026-10-05), so
-every figure below comes from the seed passes.
+2026-10-02, the workflow had still never run (its first scheduled run falls on 2026-10-05),
+so every figure below comes from the seed passes.
 
 The record keeps three kinds of figure apart. A *measured* figure came from a command on
 the named host. A *declared* one was read from the repository: a constant such as the
@@ -4100,7 +4161,10 @@ none carries a review (read on 2026-10-01 at 20:41Z), so each went in through th
 the revision of this paper before the last (#1307) among them. So did the twenty-one after
 them, #1321 to #1341, up to `ca9e47452` (read on 2026-10-02 at about 03:50Z), the
 previous revision (#1324) and every change this revision reports among them; #1334 was
-merged at 02:40Z, half an hour before its sovereign review ended without a verdict.
+merged at 02:40Z, half an hour before its sovereign review ended without a verdict. The ten
+after those, from the paper's 3.3.0 revision (#1342) and the 3.3.0 promotion into `main`
+(#1343) to #1354, up to `3bb577a4e`, went in the same way: each merged by the operator's
+account with no review (read on 2026-10-02 at about 11:10Z).
 
 **The scan, repeated weekly.** The scan was one reading. Since this revision its questions
 are asked again each week by `scripts/autonomy_scorecard.py`. It declares the stages of the
@@ -4108,7 +4172,10 @@ delivery loop in `scripts/autonomy_scorecard.toml`, each with the figures that j
 the threshold at which it counts as running without a person. It observes those figures
 from the forge, the review canary, the code and the local queue, and appends each reading
 to an append-only record. The sentence and the table below are generated from the latest
-reading; neither is edited by hand.
+reading; neither is edited by hand. The scorecard's weekly workflow had not yet run at our
+cutoff: both readings in the record, at 01:33Z and 11:07Z on 2026-10-02, were taken by hand
+with the same script, the second for this revision, and the stage verdicts did not change
+between them.
 
 <!-- BEGIN GENERATED autonomy:paper — regenerated by scripts/autonomy_scorecard.py -->
 At the latest measurement's cutoff, 2026-10-02 11:39Z, 1 of the 11 declared stages of the delivery loop met every threshold for running without a person; not yet autonomous: DESIGN resolves without a person (partial), BUILD runs unattended (unknown), Paid engines stay available (manual), REVIEW resolves without a person (partial), The pull-request review reaches a verdict (manual), Approval comes from the delegated approver (manual), Merges land without the operator (manual), Promotion and release run without hand steps (manual), CI stays green without human re-runs (partial), The queue delivers projects to DONE (manual). The record is `docs/architecture/evidence/autonomy-scorecard.jsonl`.
@@ -4136,7 +4203,7 @@ Promotion and release run without hand steps & release publishes that succeeded 
 CI stays green without human re-runs & CI runs on the integration branch that succeeded & 195 of 288 (68\%) & $\geq$ 90\%, n $\geq$ 10 & partial\\
 CI stays green without human re-runs & CI runs on the integration branch that were re-run & 0 of 343 (0\%) & $\leq$ 5\%, n $\geq$ 10 & partial\\
 The queue delivers projects to DONE & projects that reached DONE & 0 (stale, measured 2026-10-02) & $\geq$ 1 & manual\\
-The queue delivers projects to DONE & hours since the queue's latest event & 40.5 h (stale, measured 2026-10-02) & $\leq$ 24 h & manual\\
+The queue delivers projects to DONE & hours since the queue's latest event & 50.1 h (stale, measured 2026-10-02) & $\leq$ 24 h & manual\\
 \end{tabular}
 \caption{The autonomy scorecard: each declared stage of the delivery loop, the figures that judge it, and the threshold at which it counts as running without a person. A stage is as far along as its weakest criterion, and unknown when nothing judged falls short but something could not be judged. Cutoff 2026-10-02 11:39Z; forge figures over the 14 days before it, queue figures over 30. A stale value is the last good one, with the date it was measured. Record docs/architecture/evidence/autonomy-scorecard.jsonl, regenerated by scripts/autonomy\_scorecard.py.}
 \label{tab:autonomy-scorecard}
@@ -4396,14 +4463,17 @@ those eight and says nothing of its recall. The cause later found for the lane's
 missing verdicts on large diffs rests on one host's server log, and under its repair,
 at our cutoff, every verdict was on a diff reviewed in one request. The canary's recall
 is one run on one host over 41 small single-file diffs written by one author, matched by a
-lexical rule. The large-diff study is in progress, and its screening rests on one diff of
-one repository; nothing in it is yet a rate, and none of its arms has a measured recall.
-The autonomy scorecard and the host's health record each held one or two readings at our
-cutoff, so neither yet shows a trend.
+lexical rule. The large-diff study is in progress, and its screening rests on four diffs of
+one repository, on one host; nothing in it is yet a rate, and none of its arms has a
+measured recall. The autonomy scorecard and the host's health record each held two
+readings at our cutoff, so neither yet shows a trend. The account of the 3.3.0 release
+rests on its workflows' runs and on one verification by the operator, recorded on the
+release plan; 3.3.1's macOS and iOS builds rest on one dry run, whose two new files we
+read, and on none of a person installing them.
 
 ```latex
 \begin{plainwords}
-We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Later still we asked how far the whole system could go with nobody watching. Only the building step could. The checking step showed people a green report that nobody had measured, a helper whose sign-in grew old stopped quietly, a stuck helper was never stopped, and the merging robot once threw away finished work while saying it had saved it. Each of these was fixed within a day, but every change still went in by the owner's own hand. A small local grader, shown whole files instead of only the changed lines, stopped making up problems in our small test. When we later planted mistakes for it on purpose, it caught 18 of the 25 small ones it graded, though on long changes it still often gives no grade at all. We now also count, every week, how many steps of the whole job can run with nobody watching: at the first count, one of eleven. Checking takes time, and that time is the price of being right.
+We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Later still we asked how far the whole system could go with nobody watching. Only the building step could. The checking step showed people a green report that nobody had measured, a helper whose sign-in grew old stopped quietly, a stuck helper was never stopped, and the merging robot once threw away finished work while saying it had saved it. Each of these was fixed within a day, but every change still went in by the owner's own hand. A small local grader, shown whole files instead of only the changed lines, stopped making up problems in our small test. When we later planted mistakes for it on purpose, it caught 18 of the 25 small ones it graded, though on long changes it still often gives no grade at all. We now also count, every week, how many steps of the whole job can run with nobody watching: at each of the first two counts, one of eleven. Checking takes time, and that time is the price of being right.
 \end{plainwords}
 ```
 
@@ -4886,10 +4956,10 @@ following, each named with where it lives.
 - **One worker for every project.** `vibey worker --all-projects` serves every project's queue, and `vibey supervisor install` runs it and the bridge supervised (#1249).
 - **Draft publication.** Delivery pull requests open as drafts that the pull-request automation promotes; this one landed with the 3.0.0 release itself (#1244), after the atlas's cutoff (`scripts/triaged_delivery.py`).
 
-### Changes after 3.2.0
+### Changes in 3.3.0
 
-What follows is on `develop` at `ca9e47452`, planned for 3.3.0 (#1320) and not yet
-released. Each item is reported in the section named.
+Released on 2026-10-02 (`main` at `4188aad66`, promoted by #1343). Each item is reported in
+the section named.
 
 - **REVIEW shown what ran.** Each integration ledgers its verification commands, their exit codes and output tails, and REVIEW renders only that record (#1294; *The autonomy scan of 2026-09-30*).
 - **Gates that time out by declaration.** A gate resolves to its stored default only for the kinds a project declares, and REVIEW's approval never does (#1299).
@@ -4898,10 +4968,20 @@ released. Each item is reported in the section named.
 - **The approver's grant, declared.** The operator's standing grant and what it never covers are in `[autonomy]` (#1300), and the approver may not approve the code that defines what its gates measure (#1302).
 - **A reviewer that sees more and stops in time.** The sovereign review reads the full text of the files it judges (#1303), its output is capped and its deadline grows with the request (#1316; *Exact-head evaluation*), and its recall on planted defects is measured by an offline canary (#1325, #1331).
 - **One file per change.** Changelog entries are fragments assembled at release (#1305), and the coverage floor reaches the forge's rulesets (#1321).
-- **Clients on every release.** A release is to carry a build of every client, so far run only dry (#1317).
+- **Clients on every release.** A release carries a build of every client, with checksums and per-file provenance attestations; 3.3.0 attached eleven, and the VS Code extension was first listed on Open VSX (#1317; *Exact-head evaluation*).
 - **Requirements, health and distance from autonomy, measured.** Linux requirements as a matrix of distributions and architectures (#1313; *Rolling minimum system requirements*), the host's weekly health, forecast and declared tuning (#1330, #1334; *Host health and the memory budget*), and the weekly autonomy scorecard (#1335).
 - **The revoke race and the gates around CI.** The replication-role revoke retries all three messages of its race and the tests serialize their grants (#1310, #1314, #1326, #1332); the KEDA contract no longer races a drain (#1327), the Arch job survives a failing mirror (#1333), and dependency advisories may be excepted only by a declared, expiring entry (#1336; *Validation*).
 - **The large-diff study.** A preregistered study of the reviewer's large-diff failures, in progress: mechanism and screening only (#1328, #1340, #1341; *Exact-head evaluation*).
+
+### Changes after 3.3.0
+
+What follows is on `develop` at `3bb577a4e`, planned for 3.3.1 (#1349) and not yet
+released. Each item is reported in the section named.
+
+- **A macOS desktop app.** krypton desktop is built for Apple silicon on macOS 15 or newer as a self-contained `krypton.app` in a `.dmg`, verified to name nothing outside itself and launched with Homebrew hidden; ad-hoc signed until the Developer ID secrets exist, and Intel Macs declared unsupported with the reason (#1351, `scripts/macos_app_bundle.py`; *Exact-head evaluation*).
+- **An iOS build.** The app is registered with EAS under its Expo organisation and EAS keeps its build number, so a release builds an `.ipa` signed for the App Store while `EXPO_TOKEN` is set (#1346, #1347, #1348, #1350, #1351; *Exact-head evaluation*).
+- **Client changes are releasable.** `clients/` is in the version's code paths, so a change to the clients alone derives a patch release (#1348).
+- **The large-diff study, continued.** Its sibling tracks' write-ups are committed, its production arms are pinned to the registered settings at run time, and Stage 1 has reached all four screening hosts; still mechanism and screening only, and production is unchanged (#1352, #1354; *Exact-head evaluation*).
 
 ```latex
 \begin{plainwords}
@@ -4985,10 +5065,15 @@ repeat it has not run. The autonomy scorecard (#1335) and the host's health and 
 (#1330, #1334) are tested against fixture records, with every host input injectable and a
 guard that fails any test that reaches the real host (`tests/scripts/test_autonomy_scorecard.py`,
 `tests/scripts/test_host_health.py`, `tests/scripts/test_host_tuning.py`); the scorecard's
-workflow has not run, its first reading was taken outside it, and the host's Linux probes
+workflow has not run, both its readings were taken outside it, and the host's Linux probes
 have run only on fixture trees. The stage that builds every client for a
-release (#1317) has run only dry, on hosted runners, and its attestation and upload have
-never run. The Linux requirements (#1313) were seeded in containers on one Mac, and the
+release (#1317) ran in earnest for the first time on 3.3.0: it attached eleven files, and
+the operator found each matching its checksum and carrying an attestation (#1320). Its
+macOS bundler (#1351) is held by tests over a fake command runner
+(`tests/scripts/test_macos_app_bundle.py`) and by CI's macOS cell, which builds, verifies
+and launches the app; its Developer ID signing and notarisation have run only against that fake, because no
+credential exists, and the release workflow's tracking issue for them has never been
+raised, because no release has built the app yet. The iOS build has run only in dry runs. The Linux requirements (#1313) were seeded in containers on one Mac, and the
 native matrix has not run. The shutdown repair (#1309) reproduces the cross-loop error CI
 saw before its fix, and the database repairs (#1310, #1314, #1326) reproduce each of the
 race's three messages; all were found by CI rather than by review. The race in the tests
@@ -5075,13 +5160,16 @@ them a review shown numbers nobody measured; the repairs landed within a day, an
 through the bypass. After it, the local reviewer's missing verdicts on large diffs were
 traced to an answer nothing bounded and a deadline that did not grow with the request,
 and a release learned to carry a build of every client. The first now names why it gives
-no verdict but has yet to bring a large diff to one, and the second has run only as a
-rehearsal. The reviewer's recall has now been measured once, on small planted defects,
-and it showed a reviewer that can describe a defect and still pass it; why it fails on
-large diffs is under a preregistered study that has reached its mechanism and its first
-screening, not its result, and production is unchanged until it does. The distance from
-running without a person is now measured weekly rather than written once, and at its
-first reading one of eleven stages met its thresholds. The
+no verdict but has yet to bring a large diff to one in production; the second did it for
+real in 3.3.0, eleven files whose checksums and attestations all held, and 3.3.1 is to add a
+macOS app and an iOS build to them. The reviewer's recall has now been measured once, on
+small planted defects, and it showed a reviewer that can describe a defect and still pass
+it; why it fails on large diffs is under a preregistered study that has reached its
+mechanism and screened four diffs, not its result, and production is unchanged until it
+does. On those four diffs the model failed to answer in three different ways, and the one
+arm that has answered on all of them bounds its reasoning and then forces a verdict. The distance
+from running without a person is now measured weekly rather than written once, and at each
+of its first two readings one of eleven stages met its thresholds. The
 engineering that remains is less about producing faster than about deciding well and
 cheaply.
 

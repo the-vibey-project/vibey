@@ -584,7 +584,7 @@ What `vibey supervisor install` renders, and what `vibey supervisor status` and
 
 ## `[hub]` { #hub }
 
-The hub, `vibey serve` (ADR-0067). Every key is optional, and the defaults are the closed
+The hub, `vibey serve` (ADR-0068). Every key is optional, and the defaults are the closed
 ones: with no `[hub]` table the hub listens on loopback only. An unknown key, or a key of
 the wrong type, is refused rather than ignored, so a misspelt `lan` can never silently
 mean "not declared".
@@ -1053,7 +1053,7 @@ honoured makes the sweep answer nothing for that project and log
 ## `[sabbath]` { #sabbath }
 
 Sub-doctrine 8.i: from sundown Friday to sundown Saturday nothing writes, merges, tests or
-ships code ([ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
+ships code ([ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
 Sundown is computed for the machine the process runs on, with the NOAA algorithm. The same
 table is read from a local `vibey.toml` (by the engine) and from `.vibey-gh.toml` (by the
 merge train, the promotion and the heartbeat). **Never commit coordinates**: put them only
