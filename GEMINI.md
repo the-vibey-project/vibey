@@ -90,8 +90,10 @@ procedures live in `.agent/rules/`
   `clients/krypton-app/`, `krypton-app` (`krypton-app.yml`) (ADR-0069). A successful
   `Release` on `main` is followed by the `vibey-v<version>` tag and GitHub Release
   (`github-release.yml`), the client binaries `release-binaries.yml` attaches to it
-  (krypton desktop for Linux, and for macOS as a `.dmg`; the krypton app; the `.vsix`),
-  and Open VSX (`openvsx.yml`, declared-only until `OVSX_PAT` exists). `clients/` is in
+  (krypton desktop for Linux, and for macOS as a `.dmg`, ad-hoc signed while the
+  Developer ID signing and notarisation secrets are absent; the krypton app for web,
+  Android and iOS; the `.vsix`), and the extension's publication to Open VSX
+  (`openvsx.yml`). `clients/` is in
   `[version] code_paths`, so a client-only change is releasable. ADR-0028.
 
 ## Layer map
