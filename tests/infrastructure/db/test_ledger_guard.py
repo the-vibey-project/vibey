@@ -901,7 +901,14 @@ class _Flaky(_OldServer):
         return "REVOKE"
 
 
-@pytest.mark.parametrize("message", ["tuple concurrently updated", "tuple concurrently deleted"])
+@pytest.mark.parametrize(
+    "message",
+    [
+        "tuple concurrently updated",
+        "tuple concurrently deleted",
+        "cache lookup failed for parameter ACL 128323",
+    ],
+)
 async def test_a_revoke_that_races_another_reconcile_is_retried_until_it_lands(
     message: str,
 ) -> None:

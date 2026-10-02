@@ -1,0 +1,73 @@
+{
+ "schema": "large-diff-review/selection/1",
+ "seeds": {
+  "split": 20261001,
+  "screen_hosts": 20261002,
+  "confirm_hosts": 20261003,
+  "needles": 20261004
+ },
+ "screen_hosts_s1": [
+  1131,
+  1161,
+  1250,
+  1282
+ ],
+ "halving_hosts_s2": [
+  1131,
+  1155,
+  1161,
+  1250,
+  1282,
+  1305
+ ],
+ "confirm_hosts": [
+  1121,
+  1137,
+  1166,
+  1170,
+  1249,
+  1251,
+  1252,
+  1259,
+  1307,
+  1313,
+  1317,
+  1323
+ ],
+ "dev_needles": [
+  "obo-budget-zero-dollar-cap",
+  "inv-budget-plan-unchanged",
+  "swallow-skip-markers-unreadable-range",
+  "await-ledger-append",
+  "sql-ledger-range-order",
+  "guard-worktree-foreign-branch",
+  "leak-estimate-ledger-handle",
+  "errret-worktree-list-empty",
+  "race-worker-build-lock"
+ ],
+ "holdout_needles": [
+  "obo-estimate-ledger-seq-zero",
+  "obo-protected-listing-one-short",
+  "inv-gate-abandon-resumes",
+  "inv-reaper-read-whole-or",
+  "swallow-reaper-record-sighting",
+  "swallow-worker-run-once",
+  "await-gate-record-event",
+  "await-worktree-ensure-verify",
+  "sql-gate-open-all-kind",
+  "sql-project-holder-path",
+  "guard-budget-untrusted-history",
+  "guard-protected-rename",
+  "leak-ledger-latest-seq",
+  "leak-local-auth-knock",
+  "errret-local-auth-hba-unreadable",
+  "errret-protected-unlisted-passes",
+  "race-reaper-claim-after-await",
+  "race-tracer-emit-lock"
+ ],
+ "positions": {
+  "early": 0.05,
+  "middle": 0.5,
+  "late": 0.95
+ }
+}

@@ -1134,7 +1134,11 @@ jobs:
           cpus: 4
           memory: 10240m
 
+      # Pinned: the contracts below depend on how `helm upgrade` waits, and Helm 4 changed
+      # that (kstatus). An unpinned setup takes whatever release is newest that day.
       - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.0
 
       - name: Build the image into minikube's daemon
         # BuildKit's default docker-container driver pulls a separate
@@ -1289,11 +1293,19 @@ jobs:
       # other check in this file and fails this one -- which is exactly
       # how it once shipped unnoticed.
       - name: Contract - the ScaledObject reconciles against real Postgres
+        # The upgrade replaces the worker pod. A worker holding an in-flight job drains it
+        # first, for up to terminationGracePeriodSeconds (7200) -- correctly, and that drain
+        # is its own contract below. Helm 4's --wait counts a terminating pod as "Pending
+        # termination", so waiting on the upgrade made this contract fail whenever a job
+        # happened to be in flight (#1326, run 36927741704). Wait instead for what this
+        # contract is about: a worker Available under KEDA, and the ScaledObject Ready.
         run: |
           helm repo add kedacore https://kedacore.github.io/charts
           helm install keda kedacore/keda -n keda --create-namespace --wait --timeout 5m
           helm upgrade vibey deploy/helm/vibey -n vibey \
-            --set keda.enabled=true --wait --timeout 5m
+            --set keda.enabled=true --timeout 5m
+          kubectl wait --for=condition=available deployment/vibey-vibey-worker \
+            -n vibey --timeout=5m
           ready=""
           for _ in $(seq 1 24); do
             ready=$(kubectl get scaledobject vibey-vibey-worker -n vibey \
