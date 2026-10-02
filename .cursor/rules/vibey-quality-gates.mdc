@@ -157,7 +157,13 @@ push went ahead but none of that stage's gates ran. Run them by hand before you 
 
 ## The other CI jobs
 
-`ci.yml` runs seven jobs on every push and PR to `develop`/`main`:
+`ci.yml` runs fourteen jobs on every push and PR to `develop`/`main`. The seven
+below are the Python and deployment gates; the others are `noloss` (the no-loss
+property suite at 10,000 examples), `postgres-compatibility` (the database suite on
+PostgreSQL 14 to 18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (the krypton
+app, mobile and web), `vscode-extension` (Ubuntu and macOS) and `desktop` (the krypton
+desktop client on Ubuntu, Arch and macOS, where it also bundles, verifies, launches and
+images the app):
 
 | Job | What it checks |
 |---|---|
@@ -170,8 +176,8 @@ push went ahead but none of that stage's gates ran. Run them by hand before you 
 | `cluster-smoke` | Helm install of `deploy/helm/vibey` on minikube and four cluster contracts: a projectless worker parks instead of crash-looping, the worker picks up a project created in-cluster, the KEDA ScaledObject reconciles against real Postgres, and a worker drains promptly on SIGTERM (ADR-0025, ADR-0026). |
 
 Other workflows also gate a merge: `provenance.yml` (runs on every push and PR),
-and `pr-automation.yml`, which re-evaluates a PR each time `CI` or `Provenance`
-completes (`[pr_automation] scan_workflows` in `.vibey-gh.toml`) and hands ready
+and `pr-evaluate.yml`, which re-evaluates a PR each time `CI` or `Provenance`
+completes and dispatches `pr-review.yml` for the review (`[pr_automation] scan_workflows` in `.vibey-gh.toml`) and hands ready
 PRs to `merge-train.yml` (see the `vibey-releasing` skill).
 
 ## Workspace tenants: their own checks
@@ -254,8 +260,8 @@ else's service, so it must never gate a merge.
 
 The runners (`src/vibey_runners/{claude,codex,cursor,agy,qwen}`) carry their own
 `tests/`, ruff, mypy and import-linter configuration in their `pyproject.toml`.
-Since 2026-09-15 the root `tools` matrix runs all five -- thirteen rows of it -- so a
-runner regression turns the `tools` job red. It reports rather than blocks: `tools`
+Since 2026-09-15 the root `tools` matrix runs all five, one row per runner and Python
+version (read the rows in `ci.yml`), so a runner regression turns the `tools` job red. It reports rather than blocks: `tools`
 is not named in `required_checks` in `.vibey-gh.toml`, and no tools row ever has been.
 Read a runner's `[tool.pytest.ini_options]` before running anything by hand. agyloop's
 and cursorloop's addopts exclude `live` and `system` tests (agyloop's system harness is

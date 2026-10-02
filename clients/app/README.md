@@ -19,12 +19,17 @@ npx expo start --web
 - `app/` — the routes only.
 
 Channels: `APP_VARIANT=nightly` builds "krypton nightly" (`org.vibey.krypton.nightly`);
-anything else is the stable "krypton" (`org.vibey.krypton`). EAS (`eas.json`) is declared only:
-nothing builds or submits until the `EXPO_TOKEN` secret and the store credentials exist. The
-`stable` profile is built from `main` and is the default; `nightly` from `develop` with
-`APP_VARIANT=nightly`. Keep notes like this one here, not in `eas.json`: EAS validates that file
+anything else is the stable "krypton" (`org.vibey.krypton`). Each identity is its own EAS
+project, owned by the Expo organisation `the-vibey-project` (`easOwner` and `easProjectId`
+in `src/core/identities.json`), and EAS keeps the build number (`appVersionSource: "remote"`).
+The `stable` profile is built from `main` and is the default; `nightly` from `develop` with
+`APP_VARIANT=nightly`. A release builds the stable iOS app on a macOS runner with
+`eas build --local` while the `EXPO_TOKEN` secret is set, signed for the App Store with the
+Apple credentials EAS holds, and attaches the `.ipa` (see the
+[downloads page](../../docs/guides/downloads.md)); nothing submits it to TestFlight or the
+App Store yet. Keep notes like this one here, not in `eas.json`: EAS validates that file
 strictly and refuses any key it does not know (a `"$comment"` key stopped `eas init`).
 
-Not built yet: pairing by QR or code (the hub has no pairing routes; the host token connects
-today), mDNS discovery, lane stop/prompt and run start, push notifications and sounds, the
+Not built yet: pairing by QR or code (the hub's pairing routes exist, ADR-0071, but the app
+does not call them yet; the host token connects today), mDNS discovery, lane stop/prompt and run start, push notifications and sounds, the
 nightly icon badge, Reanimated/Skia motion, Maestro flows.

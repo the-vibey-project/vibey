@@ -62,6 +62,7 @@ nav:
       - The Sabbath: guides/sabbath.md
       - Sovereign review runner: runbooks/sovereign-review-runner.md
       - Host optimization: runbooks/host-optimization.md
+      - Triaged delivery bridge: runbooks/triaged-delivery.md
   - "What do you want to do?":
       - Overview: guides/outcomes/index.md
       - Run agents on your own hardware: guides/outcomes/run-agents-on-your-own-hardware.md

@@ -71,6 +71,21 @@ test_service(void)
     g_assert_cmpstr(copy->host, ==, "studio.local");
     g_assert_cmpuint(copy->port, ==, 8765);
 
+    g_assert_null(service->fingerprint);
+
+    /* What `vibey serve` advertises on a LAN (mdns.py): fp, api, tls. */
+    const char *const advertised[] = {
+        "fp=0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef", "api=1", "tls=1",
+        NULL};
+    g_autoptr(KrHubService) hub = kr_hub_service_new("studio", "studio.local", 8765, advertised);
+    g_assert_cmpstr(hub->fingerprint, ==,
+                    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+    g_autoptr(KrHubService) hub_copy = kr_hub_service_copy(hub);
+    g_assert_cmpstr(hub_copy->fingerprint, ==, hub->fingerprint);
+    const char *const malformed[] = {"fp=abc", NULL};
+    g_autoptr(KrHubService) odd = kr_hub_service_new("odd", "odd.local", 8765, malformed);
+    g_assert_null(odd->fingerprint);
+
     g_autoptr(KrHubService) bare = kr_hub_service_new("S", "h", 1, NULL);
     g_assert_null(bare->version);
     g_assert_null(kr_hub_service_new("", "h", 1, NULL));
@@ -93,11 +108,17 @@ test_discovery(void)
     g_autoptr(KrHubService) b = kr_hub_service_new("Beta", "b.local", 8765, NULL);
     g_autoptr(KrHubService) a = kr_hub_service_new("Alpha", "a.local", 8765, NULL);
     g_autoptr(KrHubService) moved = kr_hub_service_new("Beta", "b.local", 9000, NULL);
+    const char *const pinned[] = {
+        "fp=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", NULL};
+    g_autoptr(KrHubService) recertified = kr_hub_service_new("Beta", "b.local", 9000, pinned);
     kr_discovery_report_found(discovery, b);
     kr_discovery_report_found(discovery, a);
     kr_discovery_report_found(discovery, b); /* the same again: not reported twice */
     kr_discovery_report_found(discovery, moved);
     g_assert_cmpuint(heard.found->len, ==, 3);
+    /* A new certificate on the same address is a change worth reporting. */
+    kr_discovery_report_found(discovery, recertified);
+    g_assert_cmpuint(heard.found->len, ==, 4);
 
     g_autoptr(GPtrArray) seen = kr_discovery_services(discovery);
     g_assert_cmpuint(seen->len, ==, 2);

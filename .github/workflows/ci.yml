@@ -972,9 +972,12 @@ jobs:
         working-directory: .
         run: |
           sudo apt-get update
+          # glib-networking is GIO's TLS backend: libsoup only recommends it, and without it
+          # the hub client cannot reach a paired hub over HTTPS, nor can the pinning tests run.
           sudo apt-get install -y --no-install-recommends meson ninja-build gcovr pkg-config \
             libglib2.0-dev libjson-glib-dev libsoup-3.0-dev libgtk-4-dev libadwaita-1-dev \
-            libavahi-client-dev libavahi-glib-dev desktop-file-utils appstream
+            libavahi-client-dev libavahi-glib-dev desktop-file-utils appstream \
+            glib-networking ca-certificates openssl
       - name: Toolchain and libraries (Arch)
         if: matrix.distro == 'arch'
         working-directory: /
@@ -992,7 +995,8 @@ jobs:
             > /etc/pacman.d/mirrorlist
           for attempt in 1 2 3; do
             pacman -Syu --noconfirm --needed base-devel git meson ninja pkgconf glib2 json-glib \
-              libsoup3 gtk4 libadwaita avahi desktop-file-utils appstream && exit 0
+              libsoup3 glib-networking gtk4 libadwaita avahi desktop-file-utils appstream \
+              openssl && exit 0
             echo "::warning::pacman attempt $attempt of 3 failed; retrying"
             sleep $((attempt * 15))
           done

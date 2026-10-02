@@ -510,16 +510,7 @@ static void
 on_pair_code(AdwEntryRow *entry, gpointer data)
 {
     KrWindow *self = data;
-    g_autofree char *code = kr_pairing_code_normalise(gtk_editable_get_text(GTK_EDITABLE(entry)));
-    if (code == NULL) {
-        kr_window_toast(self->app->window, "A pairing code is six digits.");
-        return;
-    }
-    /* The hub's half of pairing is its own change (ADR-0068); until it lands, a code is
-     * checked here and the person is told plainly that the hub cannot take it yet. */
-    kr_window_toast(self->app->window,
-                    "Code accepted. This hub cannot pair devices yet: it lands with the "
-                    "hub's pairing change.");
+    kr_app_pair(self->app, gtk_editable_get_text(GTK_EDITABLE(entry)));
 }
 
 static void
@@ -539,9 +530,16 @@ render_devices(KrWindow *self)
         g_autoptr(GPtrArray) services = kr_discovery_services(self->app->discovery);
         for (guint i = 0; i < services->len; i++) {
             const KrHubService *service = g_ptr_array_index(services, i);
-            g_autofree char *where = g_strdup_printf("%s:%u%s%s", service->host, service->port,
-                                                     service->version ? " · vibey " : "",
-                                                     service->version ? service->version : "");
+            /* The certificate it advertises, for a person to compare with the one the host
+             * shows: an advertisement is anyone's to make (SD-01), the host's screen is not. */
+            g_autofree char *certificate =
+                service->fingerprint != NULL
+                    ? kr_pairing_fingerprint_display(service->fingerprint)
+                    : NULL;
+            g_autofree char *where = g_strdup_printf(
+                "%s:%u%s%s%s%s", service->host, service->port,
+                service->version ? " · vibey " : "", service->version ? service->version : "",
+                certificate ? "\ncertificate " : "", certificate ? certificate : "");
             GtkWidget *found = row(service->name, where);
             adw_action_row_add_suffix(ADW_ACTION_ROW(found),
                                       use_button(self, service->host, service->port));
@@ -552,10 +550,23 @@ render_devices(KrWindow *self)
                                       self->app->discovery_problem));
     }
 
+    const KrDeviceCredential *paired = self->app->paired;
+    if (paired != NULL) {
+        g_autofree char *scopes = g_strjoinv(", ", paired->scopes);
+        g_autofree char *certificate =
+            paired->fingerprint != NULL ? kr_pairing_fingerprint_display(paired->fingerprint)
+                                        : g_strdup("none: the hub is on this computer");
+        g_autofree char *title = g_strdup_printf("Paired as \"%s\"", paired->name);
+        g_autofree char *about = g_strdup_printf(
+            "device %s · may %s\ncertificate %s", paired->device_id,
+            *scopes != '\0' ? scopes : "nothing yet", certificate);
+        gtk_list_box_append(list, row(title, about));
+    }
+
     GtkWidget *pair = adw_entry_row_new();
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(pair), "Pair with a 6-digit code");
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(pair),
+                                  "Pair: the host's 6-digit code, or its vibey-pair:// address");
     adw_entry_row_set_show_apply_button(ADW_ENTRY_ROW(pair), TRUE);
-    adw_entry_row_set_input_purpose(ADW_ENTRY_ROW(pair), GTK_INPUT_PURPOSE_DIGITS);
     g_signal_connect(pair, "apply", G_CALLBACK(on_pair_code), self);
     gtk_list_box_append(list, pair);
     gtk_list_box_append(list, row(current, kr_state_connection_message(self->app->state)));
