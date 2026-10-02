@@ -1,0 +1,1 @@
+{"stage": "s2", "arm": "D16-T1-BF8192", "case_id": "host-1161#part1", "finding": "UltraVerdict not imported in build_implement_handler.py (blocking)", "verdict": "false", "evidence": "src/vibey/application/build_implement_handler.py line 75 at merge 0823cdf imports UltraVerdict from vibey.domain.ultra", "by": "EXPERIMENT track, hand check"}

@@ -30,3 +30,60 @@
 {"arm": "D32-T1-BF8192", "case_id": "needle-1155-sql-ledger-range-order-middle#part", "code": "reviewed", "wall_s": 447.98, "outcome": "missed"}
 {"arm": "D32-T1-BF8192", "case_id": "needle-1155-guard-worktree-foreign-branch-late#part", "code": "reviewed", "wall_s": 245.74, "outcome": "caught"}
 {"arm": "D32-T1-BF8192", "case_id": "needle-1161-leak-estimate-ledger-handle-early#part", "code": "reviewed", "wall_s": 451.0, "outcome": "missed"}
+{"arm": "D32-T1-BF8192", "case_id": "needle-1161-errret-worktree-list-empty-middle#part", "code": "reviewed", "wall_s": 318.17, "outcome": "missed"}
+{"arm": "D32-T1-BF8192", "case_id": "needle-1161-race-worker-build-lock-late#part", "code": "reviewed", "wall_s": 363.86, "outcome": "caught"}
+{"arm": "D32-T1-BF8192", "case_id": "host-1131#part2", "code": "reviewed", "wall_s": 328.06, "outcome": "false_positive"}
+{"arm": "D32-T1-BF8192", "case_id": "host-1131#part3", "code": "reviewed", "wall_s": 343.17, "outcome": "clean"}
+[etiquette] yielded {'arm': 'D32-T1-BF8192', 'case': 'host-1131', 'part': 'part1'} after 162s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:55574->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:55617->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1-BF8192', 'case': 'host-1131', 'part': 'part1'} after 162s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56137->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56176->[::1]:11434
+{"arm": "D32-T1-BF8192", "case_id": "host-1131#part1", "code": "reviewed", "wall_s": 206.85, "outcome": "false_positive"}
+{"arm": "D32-T1-BF8192", "case_id": "host-1155#part1", "code": "reviewed", "wall_s": 192.78, "outcome": "clean"}
+{"arm": "D32-T1-BF8192", "case_id": "host-1155#part3", "code": "reviewed", "wall_s": 327.14, "outcome": "false_positive"}
+{"arm": "D32-T1-BF8192", "case_id": "host-1155#part2", "code": "reviewed", "wall_s": 338.25, "outcome": "false_positive"}
+{"arm": "D32-T1-BF8192", "case_id": "host-1161#part1", "code": "reviewed", "wall_s": 484.59, "outcome": "false_positive"}
+{"arm": "D32-T1-BF8192", "case_id": "host-1161#part2", "code": "reviewed", "wall_s": 267.24, "outcome": "clean"}
+{"arm": "D16-BF4096", "case_id": "needle-1131-obo-budget-zero-dollar-cap-early#part", "code": "reviewed", "wall_s": 200.38, "outcome": "caught"}
+{"arm": "D16-BF4096", "case_id": "needle-1131-inv-budget-plan-unchanged-middle#part", "code": "reviewed", "wall_s": 251.47, "outcome": "missed"}
+{"arm": "D16-BF4096", "case_id": "needle-1131-swallow-skip-markers-unreadable-range-late#part", "code": "reviewed", "wall_s": 150.86, "outcome": "caught"}
+{"arm": "D16-BF4096", "case_id": "needle-1155-await-ledger-append-early#part", "code": "reviewed", "wall_s": 92.31, "outcome": "caught"}
+{"arm": "D16-BF4096", "case_id": "needle-1155-sql-ledger-range-order-middle#part", "code": "reviewed", "wall_s": 77.13, "outcome": "missed"}
+{"arm": "D16-BF4096", "case_id": "needle-1155-guard-worktree-foreign-branch-late#part", "code": "reviewed", "wall_s": 87.29, "outcome": "caught"}
+{"arm": "D16-BF4096", "case_id": "needle-1161-leak-estimate-ledger-handle-early#part", "code": "reviewed", "wall_s": 238.60999999999999, "outcome": "caught"}
+{"arm": "D16-BF4096", "case_id": "needle-1161-errret-worktree-list-empty-middle#part", "code": "reviewed", "wall_s": 219.60999999999999, "outcome": "missed"}
+{"arm": "D16-BF4096", "case_id": "needle-1161-race-worker-build-lock-late#part", "code": "reviewed", "wall_s": 123.11, "outcome": "caught"}
+{"arm": "D16-BF4096", "case_id": "host-1131#part3", "code": "reviewed", "wall_s": 237.61, "outcome": "clean"}
+{"arm": "D16-BF4096", "case_id": "host-1131#part5", "code": "reviewed", "wall_s": 93.25, "outcome": "clean"}
+{"arm": "D16-BF4096", "case_id": "host-1131#part2", "code": "reviewed", "wall_s": 234.07, "outcome": "clean"}
+{"arm": "D16-BF4096", "case_id": "host-1155#part2", "code": "reviewed", "wall_s": 219.07, "outcome": "false_positive"}
+{"arm": "D16-BF4096", "case_id": "host-1155#part1", "code": "reviewed", "wall_s": 231.88, "outcome": "false_positive"}
+{"arm": "D16-BF4096", "case_id": "host-1155#part5", "code": "reviewed", "wall_s": 198.71, "outcome": "clean"}
+{"arm": "D16-BF4096", "case_id": "host-1161#part1", "code": "reviewed", "wall_s": 335.74, "outcome": "clean"}
+{"arm": "D16-BF4096", "case_id": "host-1161#part4", "code": "reviewed", "wall_s": 262.39, "outcome": "clean"}
+{"arm": "D16-BF4096", "case_id": "host-1161#part2", "code": "reviewed", "wall_s": 270.01000000000005, "outcome": "clean"}
+{"arm": "A2", "case_id": "needle-1131-obo-budget-zero-dollar-cap-early#part", "code": "reviewed", "wall_s": 215.49, "outcome": "caught"}
+{"arm": "A2", "case_id": "needle-1131-inv-budget-plan-unchanged-middle#part", "code": "reviewed", "wall_s": 341.91, "outcome": "caught"}
+{"arm": "A2", "case_id": "needle-1131-swallow-skip-markers-unreadable-range-late#part", "code": "reviewed", "wall_s": 179.1, "outcome": "caught"}
+[etiquette] yielded {'arm': 'A2', 'case': 'needle-1155-await-ledger-append-early', 'part': 'part1'} after 300s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58842->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58881->[::1]:11434
+{"arm": "A2", "case_id": "needle-1155-await-ledger-append-early#part", "code": "reviewed", "wall_s": 306.69, "outcome": "caught"}
+{"arm": "A2", "case_id": "needle-1155-sql-ledger-range-order-middle#part", "code": "reviewed", "wall_s": 188.85, "outcome": "missed"}
+{"arm": "A2", "case_id": "needle-1155-guard-worktree-foreign-branch-late#part", "code": "reviewed", "wall_s": 223.05, "outcome": "caught"}
+{"arm": "A2", "case_id": "needle-1161-leak-estimate-ledger-handle-early#part", "code": "reviewed", "wall_s": 606.49, "outcome": "missed"}
+{"arm": "A2", "case_id": "needle-1161-errret-worktree-list-empty-middle#part", "code": "reviewed", "wall_s": 226.84, "outcome": "caught"}
+{"arm": "A2", "case_id": "needle-1161-race-worker-build-lock-late#part", "code": "reviewed", "wall_s": 230.26, "outcome": "caught"}
+{"arm": "A2", "case_id": "host-1131#part2", "code": "reviewed", "wall_s": 184.83, "outcome": "clean"}
+{"arm": "A2", "case_id": "host-1131#part3", "code": "reviewed", "wall_s": 258.27, "outcome": "false_positive"}
+{"arm": "A2", "case_id": "host-1131#part1", "code": "reviewed", "wall_s": 338.51, "outcome": "clean"}
+{"arm": "A2", "case_id": "host-1155#part2", "code": "reviewed", "wall_s": 495.36, "outcome": "false_positive"}
+{"arm": "A2", "case_id": "host-1155#part1", "code": "reviewed", "wall_s": 290.21, "outcome": "false_positive"}
+{"arm": "A2", "case_id": "host-1155#part3", "code": "reviewed", "wall_s": 504.27, "outcome": "clean"}
+{"arm": "A2", "case_id": "host-1161#part1", "code": "reviewed", "wall_s": 299.88, "outcome": "false_positive"}
+{"arm": "A2", "case_id": "host-1161#part3", "code": "reviewed", "wall_s": 219.68, "outcome": "clean"}
+{"arm": "A2", "case_id": "host-1161#part2", "code": "reviewed", "wall_s": 455.21, "outcome": "false_positive"}
+{"arm": "A1", "case_id": "needle-1131-obo-budget-zero-dollar-cap-early#part", "code": "reviewed", "wall_s": 313.75, "outcome": "caught"}
+{"arm": "A1", "case_id": "needle-1131-inv-budget-plan-unchanged-middle#part", "code": "reviewed", "wall_s": 218.22, "outcome": "missed"}
