@@ -255,6 +255,36 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   for administration: an administrator authenticates with scram-sha-256 like everyone
   else.
 
+### 8. Dependency advisories — every known one blocks, unless an expiring exception is declared and reviewed
+
+Python dependencies are gated by `pip-audit` in CI's `gates` job. The npm lockfiles, the root
+workspace and `clients/app`, are gated by `vibey-gh advisory-check` in the `@vibey/core`, `app` and
+`vscode-extension` jobs. The check runs `npm audit --json` and fails on every advisory at
+`[advisories] audit_level` (`high`) or worse, as `npm audit --audit-level=high` does. The one
+difference is that an advisory may be excepted in `.github/advisory-exceptions.toml`.
+
+An exception exists for an advisory that cannot be fixed yet, such as one with no patched release,
+where the vulnerable code is shown not to be reached. It is not a way to skip the gate:
+
+- **Declared narrowly.** Each entry names one GitHub advisory (`GHSA-…`), one package and one
+  workspace. It says why the vulnerable code is not reached, with the evidence (dependency path,
+  call sites, shipped bundles). It also gives the condition that retires it and where upstream
+  tracks that condition.
+- **Expiring.** `expires` is at most `[advisories] max_exception_days` (30) after `added`.
+  On that date the exception stops being honoured and CI fails until someone takes the fix or
+  re-decides it with fresh evidence. `warn_days` (7) before then, every run warns.
+- **Never silent.** Every run prints each exception it honours, the date it runs until, and the
+  packages that are flagged only because of it.
+- **Self-retiring.** The check fails when an exception matches nothing at the audit level any
+  more, so it is deleted rather than left to rot. It also fails when the advisory database
+  names a patched release of the package, so the fix replaces the exception. When the database
+  cannot be read, the exception is not honoured. The same applies when npm reports an error or
+  returns a report the check cannot account for: it is refused, not passed.
+- **Reviewed.** The file is a protected path (`.github/CODEOWNERS`, `[merge_train]
+  protected_paths`). Accepting a risk takes the code owner's approval and a human merge, and
+  the merge train never lands a change to it unattended. Merging an exception accepts its risk
+  until it expires.
+
 ---
 
 ## Reporting a Vulnerability

@@ -30,3 +30,6 @@
 /tests/system/test_delivery_stage_set.py       @adammatthewsteinberger
 /tests/live/**                                 @adammatthewsteinberger
 /.github/CODEOWNERS                            @adammatthewsteinberger
+# Each entry accepts a known security risk until it expires ([advisories] in .vibey-gh.toml),
+# so only the owner may accept one.
+/.github/advisory-exceptions.toml              @adammatthewsteinberger
