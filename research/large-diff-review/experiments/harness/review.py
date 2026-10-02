@@ -60,6 +60,22 @@ def schema_with_line(schema: dict[str, Any]) -> dict[str, Any]:
 DEFECT_SCHEMA = schema_with_line(lr.REVIEW_SCHEMA)
 
 
+def findings_first(schema: dict[str, Any]) -> dict[str, Any]:
+    """+FF: the same schema with `findings` and `summary` generated BEFORE `pass` -- under
+    constrained decoding the model writes properties in schema order, so production's order
+    commits to `pass` before it has written a single finding."""
+    props = schema["properties"]
+    order = ["findings", "summary"] + [k for k in props if k not in ("findings", "summary")]
+    return {**schema, "properties": {k: props[k] for k in order if k in props}}
+
+
+FF_RULE = (
+    "\n- Write your findings first. Then set pass=false if ANY finding you wrote, or anything"
+    " your summary says, is a defect the rules above call blocking; pass=true only when you"
+    " wrote no such finding."
+)
+
+
 def render_harmony(system: str, user: str, think: str = "") -> str:
     """The conversation as the model's template renders it (`ollama show --template`)."""
     level = think or "medium"
@@ -434,6 +450,7 @@ class DecoupledConfig:
     model: str = "gpt-oss:20b"
     static: bool = False
     verify: bool = False
+    findings_first: bool = False
     chars_per_token: int = 3
 
 
@@ -508,10 +525,12 @@ class DecoupledArm:
             user += extra
         if count > 1:
             user += DEFECT_PART_NOTE.format(index=index, count=count)
+        if self.cfg.findings_first:
+            system += FF_RULE
         payload = {
             "model": self.cfg.model,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            "format": DEFECT_SCHEMA,
+            "format": findings_first(DEFECT_SCHEMA) if self.cfg.findings_first else DEFECT_SCHEMA,
             "stream": False,
             "options": dict(self.cfg.options),
         }
@@ -634,6 +653,9 @@ class DecoupledArm:
             results.append((label, res, paths))
             if fail_fast and res.verdict is None:
                 break
+        if fail_fast and results and results[-1][1].verdict is None:
+            # Screening stops at the first part with no verdict; the contract is not asked.
+            return compose(results, Result(None, "not_asked"))
         contract = self.contract(case, host_case if case.kind == "needle" else None)
         return compose(results, contract)
 

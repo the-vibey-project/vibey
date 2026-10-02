@@ -1,0 +1,12 @@
+[etiquette] yielded {'stage': 'hm2', 'host': 1312, 'part': 1, 'variant': 'T0', 'rep': 0} after 25s; re-queued
+[etiquette] waiting: another review client is running: .venv/bin/python -m pytest -q -p no:cacheprovider test/test_review_canary.py --cov=vibey_gh --cov-branch --cov-report=term-missing
+[etiquette] yielded {'stage': 'hm2', 'host': 1312, 'part': 1, 'variant': 'T0', 'rep': 0} after 25s; re-queued
+[etiquette] waiting: another review client is running: /Users/adam/git/vibey-storm/lane-review-canary/.venv/bin/python3 /Users/adam/git/vibey-storm/lane-review-canary/.venv/bin/pytest -q -p no:cacheprovider --cov=vi
+[etiquette] yielded {'stage': 'hm2', 'host': 1312, 'part': 1, 'variant': 'T0', 'rep': 0} after 270s; re-queued
+[etiquette] waiting: another review client is running: /Users/adam/git/vibey-storm/lane-review-canary/src/vibey_tools/gh/.venv/bin/python /private/var/folders/_8/kbndvzyd60dgqj2sq8rffpp00000gn/T/pytest-of-adam/pytes
+[etiquette] yielded {'stage': 'hm2', 'host': 1312, 'part': 1, 'variant': 'T0', 'rep': 0} after 25s; re-queued
+[etiquette] waiting: another review client is running: /Users/adam/git/vibey-storm/lane-review-canary/src/vibey_tools/gh/.venv/bin/python /private/var/folders/_8/kbndvzyd60dgqj2sq8rffpp00000gn/T/pytest-of-adam/pytes
+[etiquette] waiting: a request is in flight (server log)
+[etiquette] yielded {'stage': 'hm2', 'host': 1312, 'part': 1, 'variant': 'T0', 'rep': 0} after 46s; re-queued
+[etiquette] waiting: another review client is running: .venv/bin/python -m pytest -q -p no:cacheprovider --no-cov test/test_review_canary.py test/test_changelog.py
+[etiquette] waiting: another review client is running: /Applications/Xcode.app/Contents/Developer/usr/bin/git push -q -u origin lane/review-canary-measurement

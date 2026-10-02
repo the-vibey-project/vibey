@@ -14,7 +14,21 @@ from arms import DiffLedger, run_case
 from cases import CaseBook
 from client import Model
 
-ARMS = ["D8", "D16", "D4", "D16-BF4096", "D32", "A0", "A1", "A2"]
+ARMS = [
+    "D8-T1",
+    "D16-T1",
+    "D16-BF4096",
+    "D8",
+    "D16",
+    "A2",
+    "A0",
+    "A1",
+    "D16-T1-BF8192",
+    "D4-T1",
+    "D32-T1",
+    "D4",
+    "D32",
+]
 
 
 def main(argv: list[str]) -> int:
@@ -28,7 +42,7 @@ def main(argv: list[str]) -> int:
         for arm in arms:
             if arm in dropped:
                 continue
-            row = run_case("s1", arm, case, model, ledger)
+            row = run_case("s1", arm, case, model, ledger, fail_fast=True)
             if row is None:
                 continue
             print(

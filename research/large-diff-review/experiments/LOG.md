@@ -123,3 +123,64 @@ what was seen, and what it changed.
   3. **Determinism and cache:** the same request twice at T=0 gave byte-identical reasoning
      (2,574 chars) and answer; the second read its 687-token prompt in 0.087 s vs 0.86 s
      — the prompt cache serves an identical prefix.
+- **19:45** The REVIEW-CANARY lane finished (PR #1331): production settings on the 41
+  small cases, 2026-10-01 16:26–19:12 EDT — recall 18/25 (Wilson 0.52–0.86), FP 0/14,
+  no verdict 2/41 (both `model_timeout` ~1,000 s). Its per-case raw verdicts are copied to
+  `results/b0-canary/` (sha256 in `SHA256SUMS`) and are **A0 on the small diffs** for the
+  registered paired non-inferiority test (same argv as A0; the lane's own settings digest
+  is kept beside them). Amendment, before any arm's small-diff outcome is seen:
+  **verdict consistency** becomes a measured outcome in every arm — INCONSISTENT = `pass`
+  true while a finding is `blocking`/`major`, or (defect cases) while the summary uses one
+  of the case's class keywords — because the lane found 2 of its 5 misses with the model's
+  own summary naming the defect under `pass: true`. A free reduce-time intervention,
+  **+CONS** (`pass` := `pass` AND no blocking/major finding; findings decide, not the
+  free boolean), is added to Stage 2 and scored on every arm's existing verdicts at no
+  model cost.
+- **19:47** Harness incident, no data affected: killing the waiting replay process let the
+  earlier `replay; stage1` chain start Stage 1 at 19:31, and the restarted replay then
+  queued a request inside Ollama behind Stage 1's. Caught at 19:42 from the two open
+  sockets; the replay process was killed before its request started (no record written).
+  Fix: `Model.ask` now holds an exclusive `flock` on `results/.model.lock`, so only one
+  harness process talks to the model at a time. Stage 1 continues (it is the main line
+  and covers the 5–20k-token region first); the Hm2 replay is re-queued after it.
+  Also from the server log at 19:42 (Stage 1's first request, D8 part 1 of #1131, ~13.8k
+  prompt tokens): generation passed 15,000 tokens at ~24.7 tok/s — a small part can run
+  to the cap too (EVIDENCE: content matters, not only size).
+- **19:55** First Stage 1 record (D8, #1131 part 1; 13,894 prompt tokens, T=0): ran to the
+  16,384-token cap, `done_reason=length`, 71,679 reasoning chars, no answer, 697 s. Its
+  reasoning trips PRIOR-ART's loop guard and 86% of its word 8-grams are repeats; the tail
+  repeats "The diff changes the bullet list of engine descriptors to include `OPENCODE`.
+  But the reference source shows `OPENCODE` defined. So fine." verbatim, and includes
+  "This is obviously not helpful. Let's step back." followed by the same loop. **Amendments
+  to Stage 1, made before any T=1 outcome was seen:**
+  1. **Fail-fast screening** for the D arms (stop a host at its first part with no verdict;
+     the contract request is then not asked). Registered: every part run. Reason: at T=0 a
+     runaway part costs ~12 min, and the screening rule drops an arm at its first failure
+     anyway; per-part rates are measured in Stage 2 on a fixed sample instead.
+  2. **T=1 variants added** (temperature 1.0, top_p 1.0, seed 42 — the model's own default
+     sampling, as A2 already is for production): D8-T1, D16-T1, D4-T1, D32-T1, and
+     D16-T1-BF8192. Order: D8-T1, D16-T1, D16-BF4096, D8, D16, A2, A0, A1, D16-T1-BF8192,
+     D4-T1, D32-T1, D4, D32.
+  3. The Hm2 replay of #1312/#1317 moves after Stage 1 (A2 on the S1 hosts measures the
+     same question on production requests meanwhile).
+- **20:10** T=1 on the identical request: D8-T1 #1131 part 1 (13,895 tokens) finished in
+  368 tokens / 39 s, where T=0 ran 16,384 tokens / 697 s with no answer. Parts 2–7 at T=1
+  finished in 81–382 s.
+- **20:15** **+CONS scored on the canary lane's A0 verdicts** (`harness/cons.py`, zero model
+  cost; my scorer reproduces the lane's 18/25 recall and 0/14 FP exactly): A0+CONS is also
+  18/25, 0/14 — the findings-decide rule recovers nothing, because the inconsistent
+  verdicts carry **no findings at all**: 4 verdicts are `pass: true` with an empty findings
+  list while the summary names the change (e.g. `sql-project-holder-path`: "replaces a
+  parameterized query with a raw SQL string, introducing a potential SQL injection
+  vulnerability" — and `pass: true`). Mechanism: production's schema orders `pass` before
+  `findings`, and constrained decoding writes properties in schema order, so the model
+  commits to `pass` before it writes a finding. Added before any outcome: **+FF**
+  (findings-first: schema order findings → summary → pass, plus one rule line), a Stage 2
+  modifier.
+- **23:05** Branch housekeeping: the operator squash-merged draft #1328 into develop at
+  23:27Z and reopened the work as #1340; the coordinator merged develop into the branch
+  (d12bb7978). Here: `git merge origin/research/large-diff-review` (fast-forward) and
+  `git merge origin/develop` (c4c8dfd9a); nothing under research/ changed. From now on
+  every push is preceded by both merges. Stage 1 host #1131 is done for 9 of 13 arms
+  (`analyze.py s1`): no verdict for A0, D8, D16 (all T=0, first part loops); verdicts for
+  A1, A2, D8-T1, D16-T1, D16-BF4096, D16-T1-BF8192. Interim status sent to the main session.

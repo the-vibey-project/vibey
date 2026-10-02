@@ -27,7 +27,10 @@ RESULTS = EXP / "results"
 SERVER_LOG = Path.home() / ".ollama" / "logs" / "server.log"
 # Another review client: a live pull-request review, or the canary lane. The harness never
 # runs under these names (it is `python3 .../harness/run.py`).
-OTHERS = re.compile(r"local-review|local_review|review-canary|review_canary")
+OTHERS = re.compile(
+    r"vibey-gh\s+(local-review|review-canary\s+run)|vibey_gh[./]local_review|"
+    r"-m\s+vibey_gh\S*\s+(local-review|review-canary\s+run)"
+)
 SHELLS = {"zsh", "bash", "sh", "-zsh", "-bash", "sleep", "tail"}
 
 
@@ -303,6 +306,20 @@ class Model:
             return cached
         if offline:
             return None
+        import fcntl
+
+        # One harness process at a time talks to the model: two of ours that both saw the
+        # slot free would otherwise queue one request behind the other inside Ollama, where
+        # its deadline runs while it waits.
+        lock = (RESULTS / ".model.lock").open("w")
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            return self._ask_locked(endpoint, body, deadline_s, tag, replicate, key)
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+            lock.close()
+
+    def _ask_locked(self, endpoint, body, deadline_s, tag, replicate, key):
         while True:
             waited = self.etiquette.wait_clear()
             reply = self.client.post(endpoint, body, deadline_s)
