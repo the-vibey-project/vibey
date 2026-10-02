@@ -11,3 +11,18 @@
 [stage1] A0 dropped: no verdict on host 1131 (answer_incomplete)
 {"arm": "A1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1363.67, "parts": 6, "forced": 1, "elapsed_s": 1413.2}
 {"arm": "D16-T1-BF8192", "case_id": "host-1131", "code": "reviewed", "wall_s": 1516.7, "parts": 5, "forced": 0, "elapsed_s": 1565.8}
+{"arm": "D4-T1", "case_id": "host-1131", "code": "model_timeout", "wall_s": 2038.5, "parts": 5, "forced": 0, "elapsed_s": 2079.2}
+[stage1] D4-T1 dropped: no verdict on host 1131 (model_timeout)
+{"arm": "D8-T1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1677.7, "parts": 10, "forced": 0, "elapsed_s": 1767.2}
+{"arm": "D16-T1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1153.2, "parts": 5, "forced": 0, "elapsed_s": 1719.1}
+{"arm": "D16-BF4096", "case_id": "host-1131", "code": "reviewed", "wall_s": 1171.7, "parts": 5, "forced": 4, "elapsed_s": 1252.7}
+{"arm": "D8", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 697.2, "parts": 1, "forced": 0, "elapsed_s": 0.0}
+[stage1] D8 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "D16", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 840.8, "parts": 1, "forced": 0, "elapsed_s": 848.9}
+[stage1] D16 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "A2", "case_id": "host-1131", "code": "reviewed", "wall_s": 781.61, "parts": 3, "forced": 0, "elapsed_s": 806.0}
+{"arm": "A0", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 952.6, "parts": 1, "forced": 0, "elapsed_s": 960.7}
+[stage1] A0 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "A1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1363.67, "parts": 6, "forced": 1, "elapsed_s": 1413.2}
+{"arm": "D16-T1-BF8192", "case_id": "host-1131", "code": "reviewed", "wall_s": 1516.7, "parts": 5, "forced": 0, "elapsed_s": 1565.8}
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:63759->[::1]:11434
