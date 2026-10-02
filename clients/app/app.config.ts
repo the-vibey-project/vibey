@@ -20,6 +20,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: identity.name,
   slug: identity.slug,
+  // The Expo account that owns the EAS project (`eas init` asks for it; a fork changes it).
+  ...(identity.easOwner ? { owner: identity.easOwner } : {}),
   scheme: identity.scheme,
   version: '0.1.0',
   orientation: 'default',
@@ -67,5 +69,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   experiments: { typedRoutes: true },
   updates: { requestHeaders: { 'expo-channel-name': identity.updateChannel } },
-  extra: { channel: identity.channel },
+  extra: {
+    channel: identity.channel,
+    // EAS links a project id to ONE slug, so each channel has its own project:
+    // @the-vibey-project/krypton and @the-vibey-project/krypton-nightly.
+    ...(identity.easProjectId ? { eas: { projectId: identity.easProjectId } } : {}),
+  },
 });

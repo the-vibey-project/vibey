@@ -1,0 +1,1 @@
+- **Release:** a change to the client apps (`clients/`) now derives a patch release. Since every release attaches the clients' binaries (#1317), a client-only change is releasable; before, it derived "nothing to release", so no version, no Release run and no binaries.
