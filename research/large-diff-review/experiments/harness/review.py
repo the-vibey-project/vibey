@@ -146,6 +146,19 @@ class Asker:
         stopped_in_thought = rec.get("done_reason") == "length" or (
             rec.get("outcome") == "ok" and not rec.get("answer_chars")
         )
+        # A finished answer that escaped the `format` grammar (seen at T=1: bare check codes,
+        # then JSON with keys outside the schema) is repaired the same way: the reasoning is
+        # kept and the final channel is asked again under the grammar.
+        escaped = (
+            rec.get("outcome") == "ok"
+            and rec.get("done_reason") == "stop"
+            and code
+            in (
+                oc.ANSWER_INCOMPLETE,
+                oc.ANSWER_UNUSABLE,
+            )
+        )
+        stopped_in_thought = stopped_in_thought or escaped
         if verdict is None and force and rec.get("outcome") == "ok" and stopped_in_thought:
             thinking = self.model.store.thinking(rec["key"])
             second = self.forced(body, thinking, codes, force, tag, replicate)

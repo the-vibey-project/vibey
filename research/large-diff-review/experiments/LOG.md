@@ -227,3 +227,19 @@ what was seen, and what it changed.
   `read_text()`). They were **not re-executed** after the edit — this host has no
   environment with their dependencies (pandas, matplotlib) on record — so the committed
   `results.json`, summaries and figures are the original run's output, unchanged.
+- **00:21 (10-02)** D4-T1 #1131 re-run after the contention void: parts 1–8 answered,
+  **part 9 (6,576 prompt tokens, T=1) finished (`done_reason=stop`, 1,950 tokens) with an
+  answer that escaped the `format` grammar** — the check codes as bare text, then JSON with
+  keys outside the schema (`lineno`, `type`, `message`). Production's `SizedChat.answer`
+  refuses it (`answer_incomplete`), so D4-T1 is dropped under the registered rule. A second
+  mechanism, besides the T=0 loop: constrained decoding is not a guarantee on this path.
+  Amendment for the BF arms, before any outcome under it: phase 2 (prefill with the
+  grammar) also runs when a finished answer is unusable (`answer_incomplete` /
+  `answer_unusable` with `done_reason=stop`) — repair, not only budget. Non-BF arms
+  are unchanged.
+- Harness fix (no data changed): invalidations are now keyed by (key, t_start), since the
+  re-asked request has the same body hash as the voided one and was being filtered too;
+  the two existing entries got appended back-fills with their t_start. Diff rows that used
+  a voided request are tombstoned by line number in `results/void_rows.jsonl` (the
+  ledger stays append-only); the first D4-T1 #1131 row (line 9) is tombstoned, the re-run
+  (line 10) stands. Stage 1 restarted to load the BF repair rule.
