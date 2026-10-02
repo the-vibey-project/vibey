@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -463,20 +464,27 @@ def test_a_stale_figure_shows_in_the_tables_and_the_status_list() -> None:
 
 
 def test_every_generated_table_names_its_host_and_dates() -> None:
+    # Held against whatever the record says today: the weekly remeasure rewrites the hosts
+    # and the dates, and a test pinned to last week's values fails every remeasure.
     record = committed()
+    days = {f.measured_at[:10] for f in record.figures if f.measured_at}
+    span = r"(\d{4}-\d{2}-\d{2})(?: to (\d{4}-\d{2}-\d{2}))?"
     docs = ms.DocsRenderer(SETTINGS).blocks(record)
-    host = next(h for h in record.hosts if "macOS" in h)  # the Linux cells are hosts too
     for name in ("hardware", "software", "network", "clients"):
-        assert f"*Measured on {host}; figures dated 2026-09-29" in docs[name], name
+        found = re.search(rf"^\*Measured on (.+?); figures dated {span} \(UTC\)", docs[name])
+        assert found, name
+        assert any(host in found[1] for host in record.hosts), name
+        assert {d for d in found.groups()[1:] if d} <= days, name
     paper = ms.PaperRenderer(SETTINGS).blocks(record)["minimum-requirements"]
-    assert "figures dated 2026-09-29 to 2026-09-30 (UTC)" in paper
+    found = re.search(rf"figures dated {span} \(UTC\)", paper)
+    assert found and {d for d in found.groups() if d} <= days
     assert r"\label{tab:minimum-requirements}" in paper
     assert r"\begin{figure" not in paper  # the paper counts its figures; a table is not one
 
 
 def test_tex_escaping_keeps_every_special_character_literal() -> None:
     assert ms.PaperRenderer.tex("50% & #1 _x_ $y {z} ~ ^ [hub] · `c`") == (
-        r"50\% \& \#1 \_x\_ \$y \{z\} \textasciitilde{} \textasciicircum{} {[}hub{]} $\cdot$ c"
+        r"50\% \& \#1 \_x\_ \textdollar{}y \{z\} \textasciitilde{} \textasciicircum{} {[}hub{]} $\cdot$ c"
     )
     assert ms.PaperRenderer.tex(r">=3.12 <=900 a\b") == r"$\geq$3.12 $\leq$900 a\textbackslash{}b"
 
@@ -505,22 +513,26 @@ def test_check_fails_on_a_hand_edited_table_and_on_a_hand_edited_derivation(tmp_
     assert cli.run(["check"]) == 0
 
     page = tmp_path / SETTINGS.docs_page
-    page.write_text(
-        page.read_text(encoding="utf-8").replace("24 GB (needs", "16 GB (needs"), encoding="utf-8"
+    # A hand edit inside the markers, whatever the record's figures are this week.
+    edited = page.read_text(encoding="utf-8").replace(
+        "| Requirement | Minimum |", "| Requirement | Minimum (edited) |", 1
     )
+    assert edited != page.read_text(encoding="utf-8")
+    page.write_text(edited, encoding="utf-8")
     assert cli.run(["check"]) == 1
     assert cli.run(["render"]) == 0
     assert cli.run(["check"]) == 0
 
     record_path = tmp_path / SETTINGS.record
     raw = json.loads(record_path.read_text(encoding="utf-8"))
+    derived = ms.SpecsRecord.load(record_path).by_id()["ram.minimum_gb"].value
     for figure in raw["figures"]:
         if figure["id"] == "ram.minimum_gb":
-            figure["value"] = 16
+            figure["value"] = derived + 8
     record_path.write_text(json.dumps(raw), encoding="utf-8")
     assert cli.run(["check"]) == 1
     assert cli.run(["derive"]) == 0
-    assert ms.SpecsRecord.load(record_path).by_id()["ram.minimum_gb"].value == 24
+    assert ms.SpecsRecord.load(record_path).by_id()["ram.minimum_gb"].value == derived
     assert cli.run(["check"]) == 0
 
 

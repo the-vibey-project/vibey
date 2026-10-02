@@ -195,11 +195,16 @@ jobs:
           shopt -s nullglob
           python scripts/minimum_specs.py merge --complete cells/*.json
           python scripts/minimum_specs.py render
+          # The host-health page cites this record's minimums, so it moves with every remeasure.
+          python scripts/host_health.py render
 
       # The same check CI runs: the record's derivations and every generated table agree.
       # A handed-over file that disagrees stops here instead of reaching a pull request.
       - name: Check the record against the tables
-        run: python scripts/minimum_specs.py check
+        run: |
+          set -euo pipefail
+          python scripts/minimum_specs.py check
+          python scripts/host_health.py check
 
       - name: Commit and open the pull request
         # The Actions token may not open pull requests here, so the pull request is opened
@@ -216,7 +221,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/architecture/evidence/minimum-specs.json \
-            docs/reference/system-requirements.md docs/paper.md
+            docs/reference/system-requirements.md docs/paper.md docs/reference/host-health.md
           # A macOS measurement always rewrites the record, so when it succeeded an unchanged
           # record means the handover never reached the tracked files: say so and fail
           # (sub-doctrine 12.e). Without it, only the Linux cells can change the record.

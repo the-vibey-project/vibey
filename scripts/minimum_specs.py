@@ -4582,7 +4582,8 @@ class PaperRenderer(RequirementsRendererInterface):
         "%": r"\%",
         "#": r"\#",
         "_": r"\_",
-        "$": r"\$",
+        # Not `\$`: the paper's render check reads an escaped dollar as math that failed.
+        "$": r"\textdollar{}",
         "~": r"\textasciitilde{}",
         "^": r"\textasciicircum{}",
         # A bracket right after `\\` would be read as the row's optional argument.
