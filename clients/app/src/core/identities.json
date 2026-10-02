@@ -6,7 +6,8 @@
     "scheme": "krypton",
     "iosBundleIdentifier": "org.vibey.krypton",
     "androidPackage": "org.vibey.krypton",
-    "updateChannel": "stable"
+    "updateChannel": "stable",
+    "easProjectId": "405ce3e1-b0de-4ae9-a03e-492891a91ad2"
   },
   "nightly": {
     "channel": "nightly",
@@ -15,6 +16,7 @@
     "scheme": "krypton-nightly",
     "iosBundleIdentifier": "org.vibey.krypton.nightly",
     "androidPackage": "org.vibey.krypton.nightly",
-    "updateChannel": "nightly"
+    "updateChannel": "nightly",
+    "easProjectId": ""
   }
 }

@@ -67,5 +67,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   experiments: { typedRoutes: true },
   updates: { requestHeaders: { 'expo-channel-name': identity.updateChannel } },
-  extra: { channel: identity.channel },
+  extra: {
+    channel: identity.channel,
+    // EAS links a project id to ONE slug: stable (`krypton`) has its project; nightly
+    // (`krypton-nightly`) needs its own before EAS can build it, so it carries none yet.
+    ...(identity.easProjectId ? { eas: { projectId: identity.easProjectId } } : {}),
+  },
 });
