@@ -7,9 +7,9 @@
 #
 #   build        built from the released commit on every release and attached to the
 #                GitHub Release, with SHA-256 checksums and a build-provenance attestation;
-#   credential   buildable only with a credential the repository does not hold yet: the
-#                release names what is missing and keeps ONE tracking issue open, and the
-#                release itself is unaffected (the lesson openvsx.yml's header records);
+#   credential   built by a release only while a credential is set: a release run without
+#                it names what is missing and keeps ONE tracking issue open, and the release
+#                itself is unaffected (the lesson openvsx.yml's header records);
 #   unsupported  not built, with the reason, so the downloads page says so out loud.
 #
 # `python scripts/release_binaries.py plan` turns this into the workflow's matrix at run
@@ -85,7 +85,9 @@ version_pattern = '(?m)^version = "([^"]+)"$'
 # is handed to the builder's matrix row as it stands. `signing` says what a person can rely
 # on: `unsigned`; `debug-key` (signed with the public Android debug key: installable by
 # sideloading, never a store build); `pypi` (the very bytes PyPI serves, digest-checked);
-# `apple-ad-hoc` (ad-hoc code signature, not notarised). A built target whose signing can
+# `apple-ad-hoc` (ad-hoc code signature, not notarised); `apple-app-store` (signed with an
+# Apple Distribution certificate and an App Store provisioning profile: it reaches a phone
+# through TestFlight or the App Store, never by opening the file). A built target whose signing can
 # be raised by a credential the repository lacks names it in `signing_credentials`, with a
 # `signing_tracking_key` and `signing_needs`: it is built either way, and without the
 # credential the release says so and keeps one tracking issue open, as a `credential`
@@ -196,12 +198,13 @@ status = "credential"
 platform = "iOS"
 runner = "macos-latest"
 assets = ["krypton-ios-{version}.ipa"]
-signing = "unsigned"
+signing = "apple-app-store"
 credentials = ["EXPO_TOKEN"]
 tracking_key = "release-binaries-ios"
+note = "Built on the runner by EAS (`eas build --local`, the `stable` profile) and signed with the project's Apple Distribution certificate and an App Store provisioning profile, which EAS holds. It is the file App Store Connect takes for TestFlight and the App Store; it does not install on a phone by opening it, and the release workflow does not submit it anywhere."
 # The EAS CLI, pinned, and the eas.json profile a release builds (stable, from main).
 with = { eas_cli = "24.8.0", profile = "stable" }
-needs = "An iOS build that installs on a device must be signed by an Apple Developer Program member. It needs the `EXPO_TOKEN` repository secret, the project registered with EAS (`npx eas-cli init`, which adds its project id to clients/app/app.config.ts), and the Apple signing credentials stored in EAS (`npx eas-cli credentials`). An unsigned simulator build would run on nobody's phone, so none is produced."
+needs = "An iOS build that installs on a device must be signed by an Apple Developer Program member. It needs the `EXPO_TOKEN` repository secret, the project registered with EAS (its id is in clients/app/src/core/identities.json, owned by the Expo organisation `the-vibey-project`), and the Apple signing credentials stored in EAS (`npx eas-cli credentials`). EAS keeps the build number (`appVersionSource: \"remote\"` in clients/app/eas.json). An unsigned simulator build would run on nobody's phone, so none is produced."
 
 [[release_binaries.targets]]
 id = "vscode"

@@ -15,7 +15,7 @@ and the release commit folds them in.
 
 Every workflow on the release path installs the tree's own `vibey-gh` from the
 declared `[install] self_source = "src/vibey_tools/gh"`, and falls back to
-installing `vibey` from PyPI -- which carries `vibey-gh` (ADR-0037) -- only when
+installing `vibey-engine` from PyPI -- which carries `vibey-gh` (ADR-0037) -- only when
 that path does not hold the package. A change to `vibey-gh` therefore changes the
 release path on the next push.
 
@@ -128,7 +128,8 @@ cover every prefix whose content reaches an installed user: `src/vibey/`, each
 runner's and tool's package root, and the skills marketplace tree. It deliberately
 does *not* cover a tenant's `docs/` or `tests/`, which change nothing a user
 installs. `code_paths` must include `pyproject.toml`, because the root manifest now
-decides what ships. Left narrower than that, a release that touches only tenants
+decides what ships, and `clients/`, because every release attaches the clients'
+builds, so a change to the clients alone derives a patch (#1348). Left narrower than that, a release that touches only tenants
 classifies as "nothing to release" and republishes the current version into
 `skip-existing` — a green run that publishes nothing. The literal prefixes are in
 `.vibey-gh.toml`; read them there rather than from memory, because `startswith`
@@ -142,9 +143,10 @@ derivation leaves it alone.
 
 ## Release workflow
 
-1. **PRs land on `develop` through the merge train.** `pr-automation.yml`
-   re-evaluates a PR each time `CI` or `Provenance` completes;
-   `merge-train.yml` runs each time a PR-automation run completes, deliberately
+1. **PRs land on `develop` through the merge train.** `pr-evaluate.yml`
+   re-evaluates a PR each time `CI` or `Provenance` completes, and dispatches
+   `pr-review.yml` when a review is called for;
+   `merge-train.yml` runs each time a `PR review` run completes, deliberately
    whatever its conclusion (with a weekly Monday cron and manual dispatch as
    backstops); `vibey-gh merge-train` merges only PRs whose head carries a
    successful `PR automation / gate`. PRs into
@@ -181,12 +183,19 @@ derivation leaves it alone.
    compares branches by content.
 6. **After a successful Release run on `main`**, `github-release.yml` runs
    `vibey-gh github-release --target <sha>`: it creates the immutable tag
-   `v<version>` (the default `[github_release] tag_prefix`) and the GitHub
-   Release, and never moves an existing tag. A manual dispatch must prove the
+   `<tag_prefix><version>` (`[github_release] tag_prefix` is `vibey-v` here, so
+   `vibey-v3.3.0`; the default is `v`) and the GitHub Release, and never moves an
+   existing tag. A manual dispatch must prove the
    target SHA is on `main` and has a successful Release run.
 7. **After a successful Release run on `develop` or `main`**,
    `release-surfaces.yml` publishes the documentation surfaces and the OCI bundle
    (see "The workflows").
+8. **After a successful Release run on `main`**, `release-binaries.yml` builds every
+   client target `scripts/release_binaries.toml` declares, writes `SHA256SUMS`,
+   attests each file's build provenance and attaches them to that GitHub Release
+   (`docs/guides/downloads.md` lists them); `openvsx.yml` publishes the VS Code
+   extension to Open VSX. Both are workflows of their own, so neither can fail the
+   release.
 
 To preview what the next promotion will do, run
 `uv run vibey-gh version --since origin/main --explain`, or dispatch
@@ -285,8 +294,8 @@ can reproduce.
 
 After `main` builds:
 
-1. Check the `Release` run in GitHub Actions, then `GitHub Release` and
-   `Release surfaces`.
+1. Check the `Release` run in GitHub Actions, then `GitHub Release`,
+   `Release surfaces`, `Release binaries` and `Open VSX`.
 2. Verify PyPI: https://pypi.org/project/vibey-engine/ and https://pypi.org/project/krypton-app/
 3. Install and test:
 
@@ -309,6 +318,20 @@ done
    - Book: https://the-vibey-project.github.io/vibey/main/book.pdf,
      https://the-vibey-project.github.io/vibey/main/book.epub,
      https://the-vibey-project.github.io/vibey/main/book-print.html
+5. Check the release's files: every file `docs/guides/downloads.md` lists is attached
+   (a target built only while a credential is set may be missing, with its tracking
+   issue open), and in a folder holding them all:
+
+```bash
+gh release download vibey-vx.y.z --repo the-vibey-project/vibey
+shasum -a 256 --check --ignore-missing SHA256SUMS
+for f in $(awk '{print $2}' SHA256SUMS); do
+  gh attestation verify "$f" --repo the-vibey-project/vibey >/dev/null || echo "UNATTESTED: $f"
+done
+```
+
+   The attestation is per listed file, not on `SHA256SUMS` itself. Then check that
+   Open VSX lists `the-vibey-project.krypton` at the extension's version.
 
 For a `develop` push, the `verify-testpypi` job already installs the dev build.
 On TestPyPI, read the release history of `vibey-engine` and `krypton-app`, not
@@ -338,16 +361,16 @@ therefore live in workflows of their own: the Open VSX publish is `openvsx.yml`,
 after a successful Release on `main`; without `OVSX_PAT` it warns and keeps one
 tracking issue open rather than failing anything. With the token it first creates the
 publisher's Open VSX namespace (`the-vibey-project`) when it is missing, treating only
-"already exists" as success, so the first publish of `the-vibey-project.krypton` needs no
-hand step.
+"already exists" as success, so the first publish of `the-vibey-project.krypton` needed no
+hand step (0.2.0, with 3.3.0).
 
 **`develop` is red:** `branch-health.yml` keeps one issue per permanent branch open
 while a CI push run fails one of its required checks, and closes it when the tip is
 green. Fix the branch before merging over it.
 
 **Version didn't change on PyPI:** the derivation found nothing under
-`src/vibey/` (docs, workflow and tenant changes release nothing), or the bump was
-never pushed. An unbumped version with `skip-existing: true` is a green run that
+`[version] content_paths` or `code_paths` (docs, workflow and test changes release
+nothing), or the bump was never pushed. An unbumped version with `skip-existing: true` is a green run that
 publishes nothing.
 
 **`uv-lock` fails after a version change:** the lock carries vibey's own
@@ -373,8 +396,10 @@ the next version's section (see "The changelog").
 
 ## The workflows
 
-- `.github/workflows/pr-automation.yml` — the event-driven review and
-  merge-readiness gate, re-run on each `CI`/`Provenance` completion.
+- `.github/workflows/pr-evaluate.yml` and `pr-review.yml` — the split PR
+  automation: `pr-evaluate.yml` triages the exact head on each `CI`/`Provenance`
+  completion and publishes `PR evaluate / gate`; `pr-review.yml`, which it dispatches,
+  runs the exact-head review and publishes `PR review / gate`.
 - `.github/workflows/merge-train.yml` — merges ready PRs (squash into `develop`,
   rebase into `main`).
 - `.github/workflows/promote-to-main.yml` — `vibey-gh promote`.
@@ -401,6 +426,11 @@ the next version's section (see "The changelog").
   PR that repairs a broken privileged gate.
 - `.github/workflows/openvsx.yml` — the VS Code extension to Open VSX, after a
   successful `Release` on `main`; outside `Release` so it can never fail the tag.
+- `.github/workflows/release-binaries.yml` — every client's build for the release,
+  after a successful `Release` on `main`: the targets in `scripts/release_binaries.toml`,
+  `SHA256SUMS`, a provenance attestation per file, attached to the GitHub Release;
+  `python scripts/release_binaries.py check` holds the workflow and the downloads page
+  to that file.
 - `.github/workflows/skip-markers.yml` — `No skip markers`, on every pull request and
   merge-queue group into `develop` or `main`.
 - `.github/workflows/changelog.yml` — `Changelog fragment`, `vibey-gh changelog check`

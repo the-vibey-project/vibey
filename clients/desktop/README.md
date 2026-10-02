@@ -37,7 +37,7 @@ host's token:
 2. In krypton's Devices page, either choose the hub krypton found, compare the certificate
    shown under it with the one `vibey hub pair` printed, and type the 6-digit code; or paste
    the whole `vibey-pair://` address, which names the hub and its certificate itself.
-3. krypton claims the code (`POST /api/v1/pairing/claim`, ADR-0068). The hub answers, once,
+3. krypton claims the code (`POST /api/v1/pairing/claim`, ADR-0068 and ADR-0071). The hub answers, once,
    with this device's id and its own key. From then on krypton signs every request with that
    key (HMAC-SHA256, the form the hub checks); the key itself is never sent.
 
