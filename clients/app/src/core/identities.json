@@ -7,7 +7,8 @@
     "iosBundleIdentifier": "org.vibey.krypton",
     "androidPackage": "org.vibey.krypton",
     "updateChannel": "stable",
-    "easProjectId": "405ce3e1-b0de-4ae9-a03e-492891a91ad2"
+    "easProjectId": "405ce3e1-b0de-4ae9-a03e-492891a91ad2",
+    "easOwner": "adammatthewsteinberger"
   },
   "nightly": {
     "channel": "nightly",
@@ -17,6 +18,7 @@
     "iosBundleIdentifier": "org.vibey.krypton.nightly",
     "androidPackage": "org.vibey.krypton.nightly",
     "updateChannel": "nightly",
-    "easProjectId": ""
+    "easProjectId": "",
+    "easOwner": "adammatthewsteinberger"
   }
 }
