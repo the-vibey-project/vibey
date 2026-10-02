@@ -71,8 +71,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   updates: { requestHeaders: { 'expo-channel-name': identity.updateChannel } },
   extra: {
     channel: identity.channel,
-    // EAS links a project id to ONE slug: stable (`krypton`) has its project; nightly
-    // (`krypton-nightly`) needs its own before EAS can build it, so it carries none yet.
+    // EAS links a project id to ONE slug, so each channel has its own project:
+    // @the-vibey-project/krypton and @the-vibey-project/krypton-nightly.
     ...(identity.easProjectId ? { eas: { projectId: identity.easProjectId } } : {}),
   },
 });

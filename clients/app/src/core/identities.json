@@ -18,7 +18,7 @@
     "iosBundleIdentifier": "org.vibey.krypton.nightly",
     "androidPackage": "org.vibey.krypton.nightly",
     "updateChannel": "nightly",
-    "easProjectId": "",
+    "easProjectId": "b1bdcb71-23d1-40aa-bbce-b62b9e51d9bf",
     "easOwner": "the-vibey-project"
   }
 }
