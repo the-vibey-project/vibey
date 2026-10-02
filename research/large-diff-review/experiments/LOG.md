@@ -203,3 +203,51 @@ what was seen, and what it changed.
      D4-T1 #1131 diff row is void and re-runs. The audit runs again before every stage
      boundary and before any number is reported.
   Stage 1 was stopped while a CI review was in flight and restarted (resumes from cache).
+- **00:10 (10-02)** Two drafts merged by the operator (#1340 at 03:17Z, #1341 at 03:42Z);
+  work continues on `research/large-diff-review-3` from develop (ca9e47452). Committed the
+  sibling tracks' outputs so they can be cited: `prior-art/` (findings, sources,
+  search-log; cutoffs in their headers; the "taken from memory" flags in sources.md left
+  as they are) and `evidence/` (findings, analysis code and summaries, figures,
+  `dataset-reviews.jsonl`, and `dataset-ollama.jsonl` after review: per-request metrics
+  only — no prompts, no paths, no tokens; client addresses are loopback). `evidence/raw/`
+  (28 MB of Ollama/GitHub logs, artifacts, diffs) stays on the host, gitignored, with its
+  12-line sha256 `MANIFEST` and `SNAPSHOT_AT_UTC` tracked. One edit to EVIDENCE's code:
+  `analysis/analyze.py` read a document by an absolute home path; it now resolves it from
+  the repository root.
+- **00:12** **Count reconciliation.** My 23:05 status said "63 requests, ~3.0 model-hours";
+  that was my arithmetic error (Stage 0's 8 requests added a second time — `analyze.py
+  requests` printed 55, which already includes them). Authoritative count: the records in
+  `results/requests.jsonl` (snapshot `data/requests.jsonl`) minus the keys in
+  `invalidations.jsonl`, as `analyze.py requests` computes it: 55 at 23:05; 56 in the
+  #1341 snapshot; 54 standing after the 2 voided D4-T1 records. Every count reported from
+  now on is that function's output at a stated time.
+- **00:25** EVIDENCE's analysis scripts got behaviour-preserving lint fixes so the
+  repository's pre-commit gate passes on them (renamed `l`, `zip(..., strict=False)`,
+  `.eq(True)` for an element-wise pandas comparison, a lambda made a def, file reads via
+  `read_text()`). They were **not re-executed** after the edit — this host has no
+  environment with their dependencies (pandas, matplotlib) on record — so the committed
+  `results.json`, summaries and figures are the original run's output, unchanged.
+- **00:21 (10-02)** D4-T1 #1131 re-run after the contention void: parts 1–8 answered,
+  **part 9 (6,576 prompt tokens, T=1) finished (`done_reason=stop`, 1,950 tokens) with an
+  answer that escaped the `format` grammar** — the check codes as bare text, then JSON with
+  keys outside the schema (`lineno`, `type`, `message`). Production's `SizedChat.answer`
+  refuses it (`answer_incomplete`), so D4-T1 is dropped under the registered rule. A second
+  mechanism, besides the T=0 loop: constrained decoding is not a guarantee on this path.
+  Amendment for the BF arms, before any outcome under it: phase 2 (prefill with the
+  grammar) also runs when a finished answer is unusable (`answer_incomplete` /
+  `answer_unusable` with `done_reason=stop`) — repair, not only budget. Non-BF arms
+  are unchanged.
+- Harness fix (no data changed): invalidations are now keyed by (key, t_start), since the
+  re-asked request has the same body hash as the voided one and was being filtered too;
+  the two existing entries got appended back-fills with their t_start. Diff rows that used
+  a voided request are tombstoned by line number in `results/void_rows.jsonl` (the
+  ledger stays append-only); the first D4-T1 #1131 row (line 9) is tombstoned, the re-run
+  (line 10) stands. Stage 1 restarted to load the BF repair rule.
+- **03:27 (10-02)** develop was rebuilt for 3.3.0 (#1340/#1341 re-landed with new
+  SHAs), so branch -3 / #1344 could no longer merge; the work moved to
+  `research/large-diff-review-4` (one research/-only commit on the new develop; draft
+  #1352; #1344 closed with a pointer). The study's pinned inputs did not move:
+  `local_review.py`, `fit.py`, `review_contract.py` are unchanged since 3293528, and
+  `ReviewCanary.settings()` equals the registered production settings. To keep it so,
+  the production arms now refuse to build a request unless the settings read at run time
+  equal `corpus/hosts.json`'s `production_settings` (`review.pinned_settings`).

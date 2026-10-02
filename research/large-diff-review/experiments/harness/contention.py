@@ -94,15 +94,45 @@ class Audit:
             path = RESULTS / "invalidations.jsonl"
             known = set()
             if path.is_file():
-                known = {json.loads(x)["key"] for x in path.read_text().splitlines() if x.strip()}
+                known = {
+                    (row["key"], row.get("t_start"))
+                    for row in map(json.loads, filter(str.strip, path.read_text().splitlines()))
+                }
             with path.open("a") as handle:
                 for c in contended:
-                    if c["key"] not in known:
+                    if (c["key"], c["t_start"]) not in known:
                         handle.write(
                             json.dumps({**c, "reason": "overlapped another client's request"})
                             + "\n"
                         )
+            self.tombstone({c["key"] for c in contended})
         return contended
+
+    def tombstone(self, keys: set[str]) -> None:
+        """Void every diff row already written that used a voided request."""
+        diffs, void = RESULTS / "diffs.jsonl", RESULTS / "void_rows.jsonl"
+        if not diffs.is_file():
+            return
+        done = set()
+        if void.is_file():
+            done = {json.loads(x)["line"] for x in void.read_text().splitlines() if x.strip()}
+        lines = [x for x in diffs.read_text().splitlines() if x.strip()]
+        with void.open("a") as handle:
+            for i, line in enumerate(lines):
+                row = json.loads(line)
+                if i not in done and keys.intersection(row.get("keys") or []):
+                    handle.write(
+                        json.dumps(
+                            {
+                                "line": i,
+                                "stage": row["stage"],
+                                "arm": row["arm"],
+                                "case_id": row["case_id"],
+                                "reason": "used a request the contention audit voided",
+                            }
+                        )
+                        + "\n"
+                    )
 
 
 if __name__ == "__main__":

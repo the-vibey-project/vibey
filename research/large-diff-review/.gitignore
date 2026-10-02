@@ -1,0 +1,8 @@
+# The EVIDENCE track's raw snapshot (Ollama logs, GitHub logs, artifacts, diffs; ~28 MB)
+# stays on the host; only its sha256 manifest and snapshot time are tracked.
+evidence/raw/*
+!evidence/raw/ollama/
+evidence/raw/ollama/*
+!evidence/raw/ollama/MANIFEST
+!evidence/raw/ollama/SNAPSHOT_AT_UTC
+evidence/analysis/__pycache__/

@@ -38,6 +38,10 @@ def main(argv: list[str]) -> int:
     hosts, needles = cases(book, round_)
     for name in arms:
         arm = make_arm(name, model)
+        if not hasattr(arm, "part_requests"):
+            from review import ProductionParts
+
+            arm = ProductionParts(arm)
         for case in needles:
             cid = f"{case.case_id}#part"
             if ledger.done("s2", name, cid):
