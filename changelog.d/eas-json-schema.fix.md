@@ -1,0 +1,1 @@
+- **krypton app:** `clients/app/eas.json` no longer carries a `"$comment"` key, which EAS's strict schema rejected (`eas init` failed with `"$comment" is not allowed`); the note now lives in the app's README.
