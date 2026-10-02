@@ -288,3 +288,13 @@ what was seen, and what it changed.
   Four hosts can only prune: a 4/4 arm's Wilson interval is [0.51, 1.00]. The CI review
   load held the model from ~07:50 to 11:05 (the last cell waited 3 h); the harness waited
   as registered. Stage 2 round 1 starts from the chain in `harness/round1.sh`.
+- **16:03 (10-02)** Snapshot discipline (sub-doctrine 10.h): `harness/push_snapshot.sh`
+  snapshots `results/` → `data/`, commits research/ only, merges origin/develop, and pushes
+  **through the storm push gate** (`push_gate.py --root ~/git/vibey-storm run -- git push`);
+  when the branch's PR has merged it starts the next numbered branch from develop and opens
+  a draft PR. No force, no --no-verify, never merges a PR, draft PRs only. Run every ~30–40
+  min while experiments run. (Earlier pushes from this track went straight through the
+  repository's own pre-push hooks, not the storm gate; from now on all go through the gate.)
+  Hand adjudication of blocking findings on clean parts starts in `results/adjudication.jsonl`:
+  the first, D16-T1-BF8192 on #1161 part 1 ("UltraVerdict is not imported"), is FALSE —
+  `build_implement_handler.py` line 75 imports it at the merge commit.
