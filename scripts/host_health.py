@@ -3041,8 +3041,10 @@ class HostHealthCli:
         system: str | None = None,
         root: Path = Path("/"),
         describer: Any = None,
+        environ: Mapping[str, str] | None = None,
     ) -> None:
         self._repo = repo
+        self._environ = dict(os.environ) if environ is None else dict(environ)
         self._clock = clock or SystemClock()
         self._runner = runner or SubprocessRunner()
         self._home = home or Path.home()
@@ -3175,6 +3177,7 @@ class HostHealthCli:
             float(tuning["command_timeout_s"]),
             self._home,
             self._root,
+            self._environ,
         )
         return HostTuner(tuning, ctx)
 

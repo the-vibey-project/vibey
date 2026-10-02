@@ -32,7 +32,7 @@ import shutil
 import time
 import tomllib
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -181,6 +181,7 @@ class TuningContext:
     timeout: float
     home: Path
     root: Path = Path("/")
+    environ: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def mac(self) -> bool:
@@ -714,6 +715,12 @@ class ReclaimBackend(Backend):
         )
 
     def apply(self, item: TuningItem) -> list[str]:
+        marker = str(item.spec.get("not_under", ""))
+        if marker and marker in self._ctx.environ:
+            return [
+                f"{item.key}: not run: {marker} is set, so this runs under the tool whose cache"
+                f" it would trim, and would wait on itself; run it with a plain python3"
+            ]
         before = self.size(item)
         lines = [
             f"{item.key}: target {item.spec['path']}, {self.gb(before)};"

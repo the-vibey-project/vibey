@@ -458,6 +458,19 @@ def test_reclaim_lists_target_size_and_why_then_journals_before_and_after(tmp_pa
     assert "not reversible, by design" in ht.HostTuner(SETTINGS, c).undo("uv_cache")[0]
 
 
+def test_a_uv_prune_is_refused_under_uv_run_which_would_make_it_wait_on_itself(
+    tmp_path: Path,
+) -> None:
+    c = ctx(tmp_path, {("du",): ok("100\t/c\n")})
+    c = ht.TuningContext(
+        c.runner, "Darwin", c.now, 5.0, c.home, c.root, {"UV_RUN_RECURSION_DEPTH": "1"}
+    )
+    (c.home / ".cache/uv").mkdir(parents=True)
+    lines = ht.HostTuner(SETTINGS, c).apply(["uv_cache"])
+    assert "UV_RUN_RECURSION_DEPTH is set" in lines[0]
+    assert ["uv", "cache", "prune"] not in c.runner.calls
+
+
 def test_reclaim_that_times_out_or_fails_says_so(tmp_path: Path) -> None:
     c = ctx(
         tmp_path,
@@ -806,6 +819,7 @@ def cli(tmp_path: Path, answers: Mapping[tuple[str, ...], Any] | None = None) ->
         system="Darwin",
         root=tmp_path / "root",
         describer=None,
+        environ={},
     )
 
 

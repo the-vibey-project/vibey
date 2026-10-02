@@ -25,7 +25,7 @@ command_timeout_s = 60
 # applied (sizing a 76 GB cache every week is work the record does not need).
 weekly_kinds = ["env", "docker_desktop", "postgres", "log", "ollama_loads", "models"]
 # The review-canary measurement every class-B item is judged against before adoption.
-canary_baseline = "docs/architecture/evidence (review-canary, 2026-10-01; PR #1331)"
+canary_baseline = "docs/architecture/evidence/review-canary/ledger.jsonl (2026-10-01, PR #1331): 18 of 25 planted defects caught, 0 of 14 controls blocked"
 
 # What lets `tune apply` touch an item of each class. A: always (cannot affect the model or
 # the experiments, and is reversible or regenerable). B: the item's `adopted = true`, set in a
@@ -219,6 +219,9 @@ path = "~/.cache/uv"
 measure = ["du", "-sk", "~/.cache/uv"]
 command = ["uv", "cache", "prune"]
 timeout_s = 900
+# `uv run` holds the cache for as long as its child runs, so a prune started under it waits
+# on its own parent until the timeout. uv marks its children with this variable.
+not_under = "UV_RUN_RECURSION_DEPTH"
 why_regenerable = "uv rebuilds any pruned entry from the package index on the next sync; `prune` removes only entries no environment reaches and waits for (never breaks) a uv process holding the cache."
 expected = "Disk only. 76 GB on 2026-10-01."
 risk = "None to the model. A lane's next `uv sync` may download again."
