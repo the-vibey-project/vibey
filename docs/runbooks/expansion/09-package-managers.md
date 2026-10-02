@@ -1,5 +1,11 @@
 # Runbook: package everything, everywhere
 
+> **Status (2026-10-02):** since 3.3.0 every GitHub Release also attaches a Flatpak bundle
+> and an Ubuntu tarball of the desktop client, and from 3.3.1 a macOS `.dmg`
+> ([Downloads](../../guides/downloads.md)); none of them is a store or registry upload. The
+> TestPyPI dev builds are published as `vibey-engine` (ADR-0069); `vibey-dev`, below, is
+> the retired name.
+>
 > **Status (2026-09-15):** PyPI channel done — `vibey-engine.yml` publishes `main`
 > to PyPI by trusted publishing and `develop` to TestPyPI as `vibey-dev`
 > (ADR-0028). Everything else is open. **ADR-0019 supersedes this runbook's

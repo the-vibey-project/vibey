@@ -30,18 +30,30 @@ every command with a worked example, and every setting with its default.
 
 ## 2. Install it
 
+In an editor whose extension gallery is Open VSX, such as VSCodium, install it by its
+identifier; it has been listed there as `the-vibey-project.krypton` since 3.3.0:
+
 ```bash
-code --install-extension krypton-0.2.0.vsix
+code --install-extension the-vibey-project.krypton
+```
+
+Visual Studio Code's own Marketplace does not carry it, so in VS Code install the `.vsix`
+that every [release](https://github.com/the-vibey-project/vibey/releases) attaches
+([Downloads](downloads.md)):
+
+```bash
+code --install-extension krypton-vscode-0.2.0.vsix
 ```
 
 On a Mac where `code` is not on your PATH:
 
 ```bash
-"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-0.2.0.vsix
+"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.2.0.vsix
 ```
 
-Or use **Install from VSIX…** in the Extensions view's `…` menu. The `.vsix` is built by CI's
-`vscode-extension` job and by `npx vsce package --no-dependencies` in `clients/vscode`.
+Or use **Install from VSIX…** in the Extensions view's `…` menu. CI's `vscode-extension` job
+builds the same file, and `npx vsce package --no-dependencies` in `clients/vscode` builds it
+locally, named `krypton-0.2.0.vsix`.
 
 A build from before the rename installed as `the-vibey-project.vibey`: uninstall it first
 (`code --uninstall-extension the-vibey-project.vibey`), since two extensions offering the same

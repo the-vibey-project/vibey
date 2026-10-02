@@ -17,8 +17,8 @@ runners, `vibey-gh`, `vibey-skills` and `vibey-bootstrap` were separate
 GitHub repositories. They are now subtrees of this repository
 (`src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`,
 `src/vibey_tools/{gh,skills,bootstrap}`), registered as a uv workspace
-(ADR-0021). The sibling repositories no longer exist; their PyPI projects
-do. Where a runbook still says "each repo", read "each workspace member".
+(ADR-0021). The sibling repositories no longer exist, and neither do their PyPI projects:
+everything ships as `vibey-engine` (ADR-0037, ADR-0069). Where a runbook still says "each repo", read "each workspace member".
 
 ## Status ledger (as of 2026-09-15)
 
@@ -45,6 +45,16 @@ do. Where a runbook still says "each repo", read "each workspace member".
 | 19 | Monorepo & shared libraries | Landed differently | Subtree imports (runners 2026-09-10, tools 2026-09-15) + uv workspace (ADR-0021); domain extraction open |
 | 20 | PR reviewer | Partial | `vibey_gh` `merge_train`, `pr_automation`, `local_review` |
 | 21 | Explorer | Not started | — |
+
+**Update (2026-10-02).** Three rows above have moved since the ledger's date, and are
+restated here rather than in place so that the ledger keeps one date: **07** has an app to
+submit, and a release builds its iOS package signed for the App Store while `EXPO_TOKEN` is
+set (`scripts/release_binaries.toml`, target `app-ios`), though nothing submits it yet;
+**08** has started, with the hub's API (ADR-0068) and device pairing (ADR-0071) on the server
+side, and the clients under `clients/` (`app`, `desktop`, `vscode`, `krypton-app`); **09**
+attaches Linux desktop bundles (Flatpak and a tarball) to every GitHub Release since 3.3.0,
+and a macOS `.dmg` from 3.3.1 ([Downloads](../../guides/downloads.md)). The other rows were
+not re-checked for this note.
 
 House rule: every runbook carries a `> **Status (YYYY-MM-DD):** …` line
 under its title. Update it in the PR that changes the facts.

@@ -10,6 +10,7 @@
 
 #include "kr-discovery.h"
 #include "kr-hub-client.h"
+#include "kr-pairing.h"
 #include "kr-settings.h"
 #include "kr-state.h"
 
@@ -22,6 +23,9 @@ typedef struct {
     KrSettings *settings;
     char *settings_path;
     KrHubClient *client;
+    char *credential_path;        /* where this device's key is kept once it pairs */
+    KrDeviceCredential *paired;   /* the key the client signs with, or NULL (the host token) */
+    gboolean awaiting_pairing;    /* a hub elsewhere is chosen and not paired: nothing is asked */
     KrDiscovery *discovery;
     char *discovery_problem; /* why discovery is not running, or NULL */
     GCancellable *cancel;
@@ -37,6 +41,12 @@ void kr_app_refresh_budget(KrApp *app, const char *project_id);
 void kr_app_answer(KrApp *app, const KrGate *gate, const char *value);
 /* Points the app at a hub; NULL host means this computer's. Saves the choice. */
 void kr_app_use_hub(KrApp *app, const char *host, guint16 port);
+/* Pairs with a hub: `typed` is the 6-digit code its host shows (for the hub chosen on the
+ * Devices page) or the whole vibey-pair:// address. On success the key is kept and the app
+ * speaks as the paired device; every outcome is said in a toast. */
+void kr_app_pair(KrApp *app, const char *typed);
+/* The certificate fingerprint the hub at host:port advertises on the network, or NULL. */
+const char *kr_app_advertised_fingerprint(KrApp *app, const char *host, guint16 port);
 /* Applies the theme in app->settings through AdwStyleManager (saving is the caller's). */
 void kr_app_apply_theme(KrApp *app);
 void kr_app_save_settings(KrApp *app);

@@ -79,7 +79,7 @@ core_deps = [glib_dep, gio_dep, json_dep, math_dep]
 core_args = []
 
 if soup_dep.found()
-  core_sources += files('src/core/kr-hub-client.c')
+  core_sources += files('src/core/kr-hub-client.c', 'src/core/kr-pairing-client.c')
   core_deps += soup_dep
   core_args += '-DKR_HAVE_HUB_CLIENT'
 endif
