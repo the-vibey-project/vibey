@@ -62,3 +62,65 @@
 {"arm": "A1", "case_id": "host-1161", "code": "reviewed", "wall_s": 901.4, "parts": 6, "forced": 1, "elapsed_s": 950.8}
 {"arm": "D16-T1-BF8192", "case_id": "host-1161", "code": "reviewed", "wall_s": 799.7, "parts": 4, "forced": 0, "elapsed_s": 840.8}
 {"arm": "D32-T1", "case_id": "host-1161", "code": "reviewed", "wall_s": 864.2, "parts": 2, "forced": 0, "elapsed_s": 657.9}
+{"arm": "D8-T1", "case_id": "host-1250", "code": "reviewed", "wall_s": 1612.3, "parts": 11, "forced": 0, "elapsed_s": 1710.7}
+{"arm": "D16-T1", "case_id": "host-1250", "code": "reviewed", "wall_s": 1032.4, "parts": 5, "forced": 0, "elapsed_s": 907.5}
+{"arm": "D16-BF4096", "case_id": "host-1250", "code": "reviewed", "wall_s": 1163.0, "parts": 5, "forced": 4, "elapsed_s": 1245.1}
+{"arm": "A2", "case_id": "host-1250", "code": "reviewed", "wall_s": 1323.94, "parts": 3, "forced": 0, "elapsed_s": 1348.5}
+Traceback (most recent call last):
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/stage1.py", line 74, in <module>
+    sys.exit(main(sys.argv))
+             ~~~~^^^^^^^^^^
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/stage1.py", line 45, in main
+    row = run_case("s1", arm, case, model, ledger, fail_fast=True)
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/arms.py", line 118, in run_case
+    res = arm.review(case)
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/review.py", line 411, in review
+    lr._post = self._post_factory(case, keys, flags)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 2 (char 1)
+{"arm": "D8-T1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1677.7, "parts": 10, "forced": 0, "elapsed_s": 1767.2}
+{"arm": "D16-T1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1153.2, "parts": 5, "forced": 0, "elapsed_s": 1719.1}
+{"arm": "D16-BF4096", "case_id": "host-1131", "code": "reviewed", "wall_s": 1171.7, "parts": 5, "forced": 4, "elapsed_s": 1252.7}
+{"arm": "D8", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 697.2, "parts": 1, "forced": 0, "elapsed_s": 0.0}
+[stage1] D8 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "D16", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 840.8, "parts": 1, "forced": 0, "elapsed_s": 848.9}
+[stage1] D16 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "A2", "case_id": "host-1131", "code": "reviewed", "wall_s": 781.61, "parts": 3, "forced": 0, "elapsed_s": 806.0}
+{"arm": "A0", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 952.6, "parts": 1, "forced": 0, "elapsed_s": 960.7}
+[stage1] A0 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "A1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1363.67, "parts": 6, "forced": 1, "elapsed_s": 1413.2}
+{"arm": "D16-T1-BF8192", "case_id": "host-1131", "code": "reviewed", "wall_s": 1516.7, "parts": 5, "forced": 0, "elapsed_s": 1565.8}
+{"arm": "D4-T1", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 751.3, "parts": 9, "forced": 0, "elapsed_s": 3859.2}
+[stage1] D4-T1 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "D32-T1", "case_id": "host-1131", "code": "reviewed", "wall_s": 1182.7, "parts": 3, "forced": 0, "elapsed_s": 1003.1}
+{"arm": "D4", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 1750.5, "parts": 5, "forced": 0, "elapsed_s": 1791.5}
+[stage1] D4 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "D32", "case_id": "host-1131", "code": "answer_incomplete", "wall_s": 913.5, "parts": 1, "forced": 0, "elapsed_s": 922.0}
+[stage1] D32 dropped: no verdict on host 1131 (answer_incomplete)
+{"arm": "D8-T1", "case_id": "host-1161", "code": "reviewed", "wall_s": 1153.4, "parts": 8, "forced": 0, "elapsed_s": 1227.6}
+{"arm": "D16-T1", "case_id": "host-1161", "code": "reviewed", "wall_s": 957.8, "parts": 4, "forced": 0, "elapsed_s": 768.1}
+{"arm": "D16-BF4096", "case_id": "host-1161", "code": "reviewed", "wall_s": 1438.1, "parts": 4, "forced": 4, "elapsed_s": 1512.3}
+{"arm": "A2", "case_id": "host-1161", "code": "reviewed", "wall_s": 974.77, "parts": 3, "forced": 0, "elapsed_s": 999.5}
+{"arm": "A1", "case_id": "host-1161", "code": "reviewed", "wall_s": 901.4, "parts": 6, "forced": 1, "elapsed_s": 950.8}
+{"arm": "D16-T1-BF8192", "case_id": "host-1161", "code": "reviewed", "wall_s": 799.7, "parts": 4, "forced": 0, "elapsed_s": 840.8}
+{"arm": "D32-T1", "case_id": "host-1161", "code": "reviewed", "wall_s": 864.2, "parts": 2, "forced": 0, "elapsed_s": 657.9}
+{"arm": "D8-T1", "case_id": "host-1250", "code": "reviewed", "wall_s": 1612.3, "parts": 11, "forced": 0, "elapsed_s": 1710.7}
+{"arm": "D16-T1", "case_id": "host-1250", "code": "reviewed", "wall_s": 1032.4, "parts": 5, "forced": 0, "elapsed_s": 907.5}
+{"arm": "D16-BF4096", "case_id": "host-1250", "code": "reviewed", "wall_s": 1163.0, "parts": 5, "forced": 4, "elapsed_s": 1245.1}
+{"arm": "A2", "case_id": "host-1250", "code": "reviewed", "wall_s": 1323.94, "parts": 3, "forced": 0, "elapsed_s": 1348.5}
+{"arm": "A1", "case_id": "host-1250", "code": "reviewed", "wall_s": 948.1, "parts": 6, "forced": 1, "elapsed_s": 0.0}
+{"arm": "D16-T1-BF8192", "case_id": "host-1250", "code": "reviewed", "wall_s": 1035.3, "parts": 5, "forced": 0, "elapsed_s": 1084.6}
+{"arm": "D32-T1", "case_id": "host-1250", "code": "reviewed", "wall_s": 1047.5, "parts": 3, "forced": 0, "elapsed_s": 906.3}
+{"arm": "D8-T1", "case_id": "host-1282", "code": "answer_incomplete", "wall_s": 482.9, "parts": 7, "forced": 0, "elapsed_s": 540.3}
+[stage1] D8-T1 dropped: no verdict on host 1282 (answer_incomplete)
+{"arm": "D16-T1", "case_id": "host-1282", "code": "answer_incomplete", "wall_s": 775.5, "parts": 5, "forced": 0, "elapsed_s": 816.6}
+[stage1] D16-T1 dropped: no verdict on host 1282 (answer_incomplete)
+{"arm": "D16-BF4096", "case_id": "host-1282", "code": "reviewed", "wall_s": 1254.6, "parts": 5, "forced": 6, "elapsed_s": 1353.1}

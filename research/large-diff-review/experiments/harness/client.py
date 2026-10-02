@@ -16,6 +16,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -39,10 +40,17 @@ def body_key(body: dict[str, Any], endpoint: str, replicate: int = 0) -> str:
     return hashlib.sha256(f"{raw}#rep{replicate}".encode()).hexdigest()
 
 
+def say(text: str) -> None:
+    """The harness's own messages, to the process's real stdout: a production review run
+    in-process redirects `sys.stdout` to capture its verdict JSON, and a message printed
+    into that capture corrupts the verdict (Stage 1, 05:15)."""
+    print(text, file=sys.__stdout__, flush=True)
+
+
 class Etiquette:
     """Waits until nobody else is using the model, and says when someone starts to."""
 
-    def __init__(self, poll_s: float = 30.0, out=print) -> None:
+    def __init__(self, poll_s: float = 30.0, out=say) -> None:
         self.poll_s = poll_s
         self.out = out
         self.me = os.getpid()
@@ -325,7 +333,7 @@ def host_fingerprint() -> dict[str, Any]:
 class Model:
     """The study's one door to the model: etiquette, then the request, then the record."""
 
-    def __init__(self, store: RequestStore | None = None, out=print) -> None:
+    def __init__(self, store: RequestStore | None = None, out=say) -> None:
         self.store = store or RequestStore()
         self.etiquette = Etiquette(out=out)
         self.client = YieldingClient(etiquette=self.etiquette)

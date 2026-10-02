@@ -251,3 +251,14 @@ what was seen, and what it changed.
   `ReviewCanary.settings()` equals the registered production settings. To keep it so,
   the production arms now refuse to build a request unless the settings read at run time
   equal `corpus/hosts.json`'s `production_settings` (`review.pinned_settings`).
+- **05:16 (10-02)** Stage 1 stopped at 05:15 on a harness bug, not a model outcome:
+  A1 on #1250 waited for a CI review, and the etiquette's "waiting" message was printed
+  into the stdout capture that holds the in-process production review's verdict JSON, so
+  parsing it failed. Reproduced offline from the cache: A1 #1250 composes to a verdict.
+  Fix: harness messages go to `sys.__stdout__` (`client.say`). Restarted; it resumes
+  from the cache.
+- **05:59 (10-02)** D8-T1 dropped on #1282: part 7 ended `done_reason=stop` after
+  921 tokens with 3,834 reasoning chars and an EMPTY answer — the model closed its turn in
+  the analysis channel and never opened the final one. A third failure mode (after the
+  T=0 loop and the T=1 grammar escape); like the escape, the forcing arms' phase 2 repairs
+  it (an empty answer counts as stopped in thought). Contention audit: 0 contended.
