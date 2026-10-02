@@ -164,12 +164,16 @@ jobs:
           ref: develop
           fetch-depth: 0
 
+      # upload-artifact stores files relative to the deepest directory all its paths share,
+      # here `docs/`, so the download goes back under `docs/`. Downloaded to `.`, the files
+      # landed beside the tracked ones and the first remeasure folded the Linux cells onto
+      # develop's stale macOS figures (tests/meta/test_workflow_artifacts.py).
       - name: Take the measured files
         if: ${{ needs.measure.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
           name: minimum-specs
-          path: .
+          path: docs
 
       - name: Take the Linux cells' records
         uses: actions/download-artifact@v4
@@ -204,6 +208,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
           GH_REPO: ${{ github.repository }}
+          MEASURED: ${{ needs.measure.result }}
         run: |
           set -euo pipefail
           branch="chore/minimum-specs-$(date -u +%Y-%m-%d)"
@@ -212,7 +217,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/architecture/evidence/minimum-specs.json \
             docs/reference/system-requirements.md docs/paper.md
+          # A macOS measurement always rewrites the record, so when it succeeded an unchanged
+          # record means the handover never reached the tracked files: say so and fail
+          # (sub-doctrine 12.e). Without it, only the Linux cells can change the record.
           if git diff --cached --quiet; then
+            if [ "$MEASURED" = "success" ]; then
+              echo "::error::the macOS measurement left the tracked record unchanged; the handed-over files did not land where they are committed from"
+              exit 1
+            fi
             echo "the minimum-specs record is unchanged"
             exit 0
           fi

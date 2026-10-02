@@ -92,11 +92,15 @@ jobs:
           ref: develop
           fetch-depth: 0
 
+      # upload-artifact stores files relative to the deepest directory all its paths share,
+      # here `docs/`, so the download goes back under `docs/`. Downloaded to `.`, the files
+      # landed beside the tracked ones, the checks below read develop's own copies, and the
+      # first measurement was reported "unchanged" (tests/meta/test_workflow_artifacts.py).
       - name: Take the measurement
         uses: actions/download-artifact@v4
         with:
           name: review-canary
-          path: .
+          path: docs
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -126,9 +130,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/architecture/evidence/review-canary/ledger.jsonl \
             docs/runbooks/sovereign-review-runner.md
+          # A measurement always appends a ledger entry, so an unchanged ledger here means the
+          # handover never reached the tracked file: say so and fail (sub-doctrine 12.e).
           if git diff --cached --quiet; then
-            echo "the review-canary ledger is unchanged"
-            exit 0
+            echo "::error::the measurement left the tracked ledger unchanged; the handed-over files did not land where they are committed from"
+            exit 1
           fi
           git commit -m "chore(canary): record the weekly review-canary measurement" \
             -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
