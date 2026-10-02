@@ -1,0 +1,313 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/autonomy_scorecard.py (ADR-0051: configuration is
+# declared in TOML, never written into a source file). Every stage of the delivery loop the
+# scorecard judges, every metric, every threshold and every window is here, with the reason
+# beside it. Change a value and run `python scripts/autonomy_scorecard.py reevaluate`: a new
+# line is appended to the record with the same figures judged by the new definitions, and
+# every generated block follows. `check` fails until it has.
+
+[scorecard]
+# The append-only record (one JSON line per measurement, digest-chained) and the documents
+# whose GENERATED blocks it feeds.
+record = "docs/architecture/evidence/autonomy-scorecard.jsonl"
+docs_page = "docs/reference/autonomy.md"
+readme = "README.md"
+docs_index = "docs/index.md"
+paper = "docs/paper.md"
+# The forge the scorecard reads, and its integration and release branches.
+repository = "the-vibey-project/vibey"
+integration_branch = "develop"
+release_branch = "main"
+# The operator's account (a merge by it is a merge by the operator) and the delegated
+# approver's (sub-doctrine 12.f, `[unattended_approval]` in .vibey-gh.toml). Both are the
+# accounts docs/architecture/evidence/autonomy-2026-10-01.md names.
+operator = "adammatthewsteinberger"
+approver = "thevibeyproject"
+# A carried-forward figure (one a run could not re-read) stays usable, marked stale, for at
+# most this many days; after that it is unknown. A week's refresh that misses one source
+# still shows last week's value with its date; two missed weeks show nothing.
+max_stale_days = 14
+
+[scorecard.windows]
+# The forge moves fast: two weeks hold dozens of merged pull requests and hundreds of CI
+# runs, enough for every share below to rest on a real sample.
+forge_days = 14
+# The local queue is bursty -- a storm, then days of nothing -- so two weeks often hold too
+# few gates or jobs to judge; thirty days is the shortest window that held a sample on
+# 2026-10-02.
+queue_days = 30
+
+[scorecard.forge]
+# The check run `pr-review.yml` publishes on each pull request's head, and the titles that
+# mean the review reached a verdict (it passed the head, or it blocked it with findings).
+# Any other title -- "review incomplete", "pull request is not open" -- or no check run at
+# all is no verdict.
+review_check = "PR review / gate"
+verdict_titles = [
+  "^PR review: gate \\(",
+  "found blocking findings",
+]
+# The workflows each stage reads, by file name, and the event that counts. A promotion run
+# dispatched by hand (`workflow_dispatch` by an account that is not a bot) is a person
+# starting what the merge train's `workflow_run` and the weekly schedule did not.
+ci_workflow = "ci.yml"
+ci_event = "push"
+promote_workflow = "promote-to-main.yml"
+release_workflow = "vibey-engine.yml"
+release_event = "push"
+# Conclusions that are not an outcome: a cancelled or skipped run says nothing about
+# whether the step works, so it is left out of the denominator and counted beside it.
+not_an_outcome = ["cancelled", "skipped", "neutral", "stale"]
+
+[scorecard.canary]
+# The review canary's own answer to "does the latest measurement meet the floor, for the
+# review's current settings and corpus, within its age?" -- read, never recomputed here.
+# `{python}` is the interpreter running the scorecard, so the tree's own vibey-gh answers.
+command = ["{python}", "-m", "vibey_gh", "review-canary", "status", "--json"]
+timeout_seconds = 120
+
+[scorecard.queue]
+# The local queue is read only when this variable holds a DSN, and only read: the session
+# runs with `default_transaction_read_only=on`, so a mistaken statement cannot write. With
+# the variable unset the queue's figures are carried forward, marked stale, then unknown.
+dsn_env = "VIBEY_AUTONOMY_QUEUE_DSN"
+psql = "psql"
+timeout_seconds = 60
+# Who answers a gate without a person: the gate-timeout sweep (`[human_gates]
+# timeout_defaults`, #1299) and the declared automation answerers (`automation:` prefix,
+# e.g. the triaged-delivery bridge answering with declared defaults). Every other
+# `answered_by` -- `cli`, an operator's login -- is a person. SQL LIKE patterns.
+unattended_answerers = ["gate-timeout", "automation:%"]
+# The engines vibey calls PAID (CLAUDE.md, "The queue and engines"), and how long a login
+# check stays good (`AUTH_TTL` in src/vibey/application/engine_selector.py, 24 hours).
+paid_engines = ["claudeloop", "codexloop", "cursorloop", "agyloop"]
+auth_ttl_hours = 24
+
+[scorecard.repo]
+# The module that declares which gate kinds may time out to their default
+# (`DEFAULT_ANSWER_KEYS`), and the gate kinds REVIEW raises (`approval`, then the deployment
+# opt-in `choice`). Read from the source, never restated.
+gate_timeout_module = "src/vibey/domain/gate_timeout.py"
+gate_timeout_mapping = "DEFAULT_ANSWER_KEYS"
+review_gate_kinds = ["approval", "choice"]
+
+# ----------------------------------------------------------------------------- the stages
+#
+# A stage is one link of the delivery loop, and it is as far along as its weakest judged
+# criterion: AUTONOMOUS when every criterion meets its `autonomous` threshold, MANUAL when
+# any judged criterion is under its `partial` threshold, PARTIAL otherwise, and UNKNOWN when
+# a criterion cannot be judged and none of the judged ones falls short (a stage with a judged
+# shortfall is not autonomous whatever the unknown one says). A criterion
+# whose sample is under `min_sample` is unknown, never a pass. `refs` are the decisions and
+# sub-doctrines the stage answers to; `closes` says what would make it autonomous.
+
+[[stage]]
+id = "design"
+title = "DESIGN resolves without a person"
+phase = "product"
+question = "Of the DESIGN-phase gates answered in the window, how many were answered by the gate-timeout sweep or a declared automation rather than a person?"
+refs = ["ADR-0009", "ADR-0027", "sub-doctrine 12.d"]
+closes = "Answer the DESIGN interview from declared defaults (`[design.interview]`) or a declared automation, and record it on the ledger, so no DESIGN gate waits for a person."
+  [[stage.criteria]]
+  figure = "queue.design.unattended_share"
+  compare = ">="
+  autonomous = 0.95
+  partial = 0.5
+  min_sample = 5
+  reason = "DESIGN is designed to talk to a person (CLAUDE.md, the six-phase model); it is autonomous only where every gate it raises is answered by a declared, ledgered rule."
+
+[[stage]]
+id = "build"
+title = "BUILD runs unattended"
+phase = "product"
+question = "Of the BUILD jobs that finished and the BUILD escalations raised in the window, how many were finished jobs rather than gates waiting for a person?"
+refs = ["ADR-0004", "ADR-0005", "ADR-0024", "ADR-0038"]
+closes = "Fewer BUILD escalations (budget, repair or attempts exhausted) per finished job: the escalations are the gates a person answers."
+  [[stage.criteria]]
+  figure = "queue.build.unattended_share"
+  compare = ">="
+  autonomous = 0.9
+  partial = 0.5
+  min_sample = 10
+  reason = "BUILD is designed to run unattended; an exhaustion gate is the point where it stops and asks a person."
+
+[[stage]]
+id = "engines"
+title = "Paid engines stay available"
+phase = "product"
+question = "Of the declared paid engines, how many passed a login check within its time-to-live at the cutoff?"
+refs = ["ADR-0038", "ADR-0070", "sub-doctrine 8.a"]
+closes = "A running worker that keeps every paid engine's login fresh (#1295 rechecks at half its life); an engine whose login lapses drops out of rotation until someone logs in."
+  [[stage.criteria]]
+  figure = "queue.engines.paid_auth_fresh_share"
+  compare = ">="
+  autonomous = 1.0
+  partial = 0.5
+  min_sample = 1
+  reason = "The 2026-09-30 scan found every paid job deferred once a login was a day old; a lapsed login is the dropout."
+
+[[stage]]
+id = "review"
+title = "REVIEW resolves without a person"
+phase = "product"
+question = "Can each gate REVIEW raises resolve without a person, and did the ones answered in the window?"
+refs = ["ADR-0009", "ADR-0010", "sub-doctrine 12.d", "sub-doctrine 12.f"]
+closes = "A declared, ledgered rule for REVIEW's `approval` gate, which today carries no default and can never time out; until then REVIEW keeps its person by design."
+  [[stage.criteria]]
+  figure = "repo.review.timeout_kinds_share"
+  compare = ">="
+  autonomous = 1.0
+  partial = 0.5
+  min_sample = 1
+  reason = "A gate kind without a timeout default waits for a person however long (the operator's ruling of 2026-09-30, #1299)."
+  [[stage.criteria]]
+  figure = "queue.review.unattended_share"
+  compare = ">="
+  autonomous = 0.95
+  partial = 0.5
+  min_sample = 3
+  reason = "What the declarations allow is not evidence they are used: the answered gates are."
+
+[[stage]]
+id = "pr-review"
+title = "The pull-request review reaches a verdict"
+phase = "self-development"
+question = "Of the pull requests merged into the integration branch in the window, how many carry a review verdict (passed or blocked) at their merged head?"
+refs = ["ADR-0042", "sub-doctrine 8.b", "sub-doctrine 10.f"]
+closes = "A review that answers every head in time (#1316 bounds the call; #1303 gives it the files), and a merge that waits for the verdict."
+  [[stage.criteria]]
+  figure = "forge.review.verdict_share"
+  compare = ">="
+  autonomous = 0.95
+  partial = 0.5
+  min_sample = 5
+  reason = "A merge without a verdict is a merge a person vouched for, or nobody did."
+
+[[stage]]
+id = "review-trust"
+title = "The review's verdict is trustworthy"
+phase = "self-development"
+question = "Does the latest review-canary measurement meet the declared recall and false-positive floor, for the review's current settings and corpus, within its age limit?"
+refs = ["ADR-0040", "sub-doctrine 10.f", "sub-doctrine 12.f"]
+closes = "A weekly review-canary measurement that meets `[pr_automation.review_canary]`'s floor for the settings the review runs with."
+  [[stage.criteria]]
+  figure = "canary.meets_floor"
+  compare = "is"
+  autonomous = true
+  reason = "An unattended approver leans on the review; a review whose recall is unmeasured or under the floor is not something to lean on (`vibey-gh review-canary status`)."
+
+[[stage]]
+id = "approval"
+title = "Approval comes from the delegated approver"
+phase = "self-development"
+question = "Of the pull requests merged in the window, how many carry an approving review by the delegated approver, and is the review gate a required check?"
+refs = ["ADR-0046", "ADR-0049", "sub-doctrine 12.f"]
+closes = "A workflow that calls the delegated approver once every gate is green, and `PR review / gate` declared as a required status check on the integration branch."
+  [[stage.criteria]]
+  figure = "forge.approval.approver_share"
+  compare = ">="
+  autonomous = 0.95
+  partial = 0.5
+  min_sample = 5
+  reason = "Sub-doctrine 12.f: approval while nobody watches comes from the operator's declared approver, applying a standard it did not choose."
+  [[stage.criteria]]
+  figure = "forge.approval.gate_required"
+  compare = "is"
+  autonomous = true
+  reason = "A gate that is not required can be merged past; the approver's standard rests on the gate being green."
+
+[[stage]]
+id = "merge"
+title = "Merges land without the operator"
+phase = "self-development"
+question = "Of the pull requests merged in the window, how many were merged by an account other than the operator's, and how many carried the approving review the ruleset requires (no bypass)?"
+refs = ["ADR-0036", "ADR-0046", "sub-doctrine 12.d"]
+closes = "Merges made by the merge train after an approval, so the ruleset is satisfied rather than bypassed."
+  [[stage.criteria]]
+  figure = "forge.merge.not_operator_share"
+  compare = ">="
+  autonomous = 0.95
+  partial = 0.5
+  min_sample = 5
+  reason = "A merge by the operator's account is a merge by the operator."
+  [[stage.criteria]]
+  figure = "forge.merge.reviewed_share"
+  compare = ">="
+  autonomous = 0.95
+  partial = 0.5
+  min_sample = 5
+  reason = "The integration branch requires one approving review; a merge without one went in through the ruleset bypass (12.d: no gate routed around)."
+
+[[stage]]
+id = "promotion"
+title = "Promotion and release run without hand steps"
+phase = "self-development"
+question = "In the window, how many promotions did a person dispatch by hand, how many promotions merged into the release branch without the operator, and how many release publishes succeeded?"
+refs = ["ADR-0028", "ADR-0069", "sub-doctrine 12.e"]
+closes = "Promotion started by the merge train or its schedule and merged without the operator's account; a release workflow that publishes on every push to the release branch."
+  [[stage.criteria]]
+  figure = "forge.promotion.hand_dispatches"
+  compare = "<="
+  autonomous = 0
+  partial = 2
+  min_sample = 0
+  reason = "A promotion dispatched by hand is a hand step. A share of runs would hide it: the merge train starts hundreds of runs that find nothing to promote, so the count of hand dispatches is the honest figure (at most one a week is partial)."
+  [[stage.criteria]]
+  figure = "forge.promotion.main_not_operator_share"
+  compare = ">="
+  autonomous = 0.95
+  partial = 0.5
+  min_sample = 2
+  reason = "A promotion merged by the operator's account is the operator's act."
+  [[stage.criteria]]
+  figure = "forge.release.success_share"
+  compare = ">="
+  autonomous = 0.9
+  partial = 0.5
+  min_sample = 2
+  reason = "A failed publish needs a person to repair and re-run it."
+
+[[stage]]
+id = "ci"
+title = "CI stays green without human re-runs"
+phase = "self-development"
+question = "Of the CI runs on the integration branch in the window, how many succeeded, and how many needed a re-run?"
+refs = ["ADR-0023", "sub-doctrine 9.c", "sub-doctrine 12.e"]
+closes = "A green integration branch whose failures are real and repaired by a change, not by pressing re-run on a flake."
+  [[stage.criteria]]
+  figure = "forge.ci.success_share"
+  compare = ">="
+  autonomous = 0.9
+  partial = 0.5
+  min_sample = 10
+  reason = "A red integration branch stops the merge train until someone repairs it."
+  [[stage.criteria]]
+  figure = "forge.ci.rerun_share"
+  compare = "<="
+  autonomous = 0.05
+  partial = 0.2
+  min_sample = 10
+  reason = "A re-run is a person deciding a failure was a flake."
+
+[[stage]]
+id = "queue"
+title = "The queue delivers projects to DONE"
+phase = "product"
+question = "Did any project reach DONE in the window, and has the queue recorded any event within a day of the cutoff?"
+refs = ["ADR-0002", "ADR-0044", "sub-doctrine 9.c"]
+closes = "A worker and the bridge installed as services (`vibey supervisor install`) and draining the queue, with projects reaching DONE."
+  [[stage.criteria]]
+  figure = "queue.done_projects"
+  compare = ">="
+  autonomous = 1
+  partial = 1
+  min_sample = 0
+  reason = "DONE is the only completion the six-phase model records; nothing else is delivery."
+  [[stage.criteria]]
+  figure = "queue.last_event_hours"
+  compare = "<="
+  autonomous = 24
+  partial = 168
+  min_sample = 0
+  reason = "A queue with no event in a day has no worker draining it."
