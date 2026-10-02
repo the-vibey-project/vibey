@@ -209,6 +209,23 @@ Small samples: each interval is what this many cases can say, and is wide on pur
 
 <!-- END GENERATED review-canary -->
 
+What the block does not say on its own:
+
+- **The corpus is small diffs.** Every case is one file changed in one request. The canary
+  says nothing about large diffs, which the review splits into parts and on which, up to
+  2026-10-02, it had reached no verdict under #1316's settings. Why, and what would, is a
+  preregistered study in progress, mechanism and screening only
+  ([`research/large-diff-review/experiments/`](https://github.com/the-vibey-project/vibey/tree/develop/research/large-diff-review/experiments)).
+  Production settings are unchanged until that study confirms a method.
+- **A pass can contradict its own summary.** In the first measurement, five planted defects
+  passed with no findings, and in two of them the summary named the defect while `pass` was
+  true. The gate reads `pass`.
+- **The matching rule is strict.** By hand, two of the first measurement's misses were real
+  catches the lexical rule did not credit, so recall by hand was 20 of 25. The floor reads
+  the strict figure.
+- **One run.** The first measurement ran once, on one host, and `review-canary.yml` had not
+  yet run on its schedule on 2026-10-02.
+
 ## Remove it
 
 ```bash

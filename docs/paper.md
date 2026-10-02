@@ -41,13 +41,22 @@ person and that the forty merges before it all went in through the ruleset bypas
 no review, and it found seven defects, three of them in the evidence a person is shown. We
 report their repairs, an incident in which the merge train closed pull requests it
 reported as merged, and a measurement of the local reviewer: given the full files it
-judges, none of its seven false findings on four blocked changes returned, though its
-recall is unmeasured. After the scan, the reviewer's failures on large diffs were traced
+judges, none of its seven false findings on four blocked changes returned, though that
+measurement could not show its recall. After the scan, the reviewer's failures on large diffs were traced
 to an answer nothing capped and a deadline that did not grow with the request; the repair
-caps the one, scales the other and tells a busy model from a slow one. At our cutoff it
-had passed one small diff, and on the one large diff it had met it gave no verdict: the
-model filled the new cap without answering, and the lane said so by name rather than
-timing out.
+caps the one, scales the other and tells a busy model from a slow one. Every verdict the
+lane has given since was on a diff it reviewed in one request; on each large diff it met
+it gave none, and said why by name rather than timing out. An offline canary of planted
+defects then measured the reviewer's recall for the first time: it caught 18 of the 25
+small defects it judged (Wilson 95% interval 0.524 to 0.857) and blocked none of 14 clean
+changes, and two of its misses passed while its own summary named the defect. A
+preregistered study of the large-diff failures is in progress, mechanism and screening
+only: on one large diff, a request at temperature 0 looped to its cap with no answer, and
+the same request sampled at temperature 1 answered in 368 tokens. The fix this points to
+is identified but neither confirmed nor shipped, and production is unchanged. We also
+measure, weekly, how far the delivery loop is from running without a person, one of
+eleven declared stages at the first reading, and the health of the machine it runs on,
+whose memory demand we measured at about twice its 24 GiB.
 
 *Artifacts.* This paper is typeset from `docs/paper.md` and published as
 [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf),
@@ -60,9 +69,13 @@ documentation is published as a book:
 [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html). Every
 empirical figure in the section on production rate is recomputed from tracked sources:
 `scripts/paper_evidence.py` recomputes its numbers, `scripts/paper_figures.py` redraws
-its figures, the storm's `storm-evidence.py` regenerates its evidence table, and
-`scripts/minimum_specs.py` its table of minimum requirements. The one exception, the
-storm throughput audit, is named where we use it. The visual atlas holds forty-five
+its figures, the storm's `storm-evidence.py` regenerates its evidence table,
+`scripts/minimum_specs.py` its table of minimum requirements, and
+`scripts/autonomy_scorecard.py` its autonomy scorecard. The one exception, the storm
+throughput audit, is named where we use it. The large-diff study we report is in
+progress, and its committed record is cited at the cutoff its own log gives. Unless a
+passage names its own, this revision's cutoff is `develop` at `ca9e47452` (#1341), with
+the forge read on 2026-10-02 at about 03:50Z. The visual atlas holds forty-five
 figures: thirty drawn from the model as deterministic TikZ in this source, and fifteen
 computed from tracked repository records, so the PDF, its labels and its diagrams are
 reviewable and reproducible rather than screenshots detached from the system. Every
@@ -113,7 +126,9 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
   that distinguish software organisms from biological organisms or sentient minds;
 - a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it;
 - an audit of a local storm that locates its binding constraint, its conversion losses and its unenforced controls, and a factual account of merges that ran ahead of review, both read as evidence that the scarce input is judgment;
-- a scan of how far the delivery loop ran without a person, with the forge's record of who merged, the defects it found and their repairs, an incident in which the merge train closed what it reported as merged, and a measurement of the local reviewer with and without the files it judges, and the cause of that reviewer's missing verdicts on large diffs, with a repair that turns a silent timeout into a named refusal but has not yet brought a large diff to a verdict.
+- a scan of how far the delivery loop ran without a person, with the forge's record of who merged, the defects it found and their repairs, an incident in which the merge train closed what it reported as merged, and a measurement of the local reviewer with and without the files it judges, and the cause of that reviewer's missing verdicts on large diffs, with a repair that turns a silent timeout into a named refusal but has not yet brought a large diff to a verdict;
+- the first measurement of that reviewer's recall, on planted defects, and a preregistered study of its large-diff failures reported as what it is, in progress: mechanism and screening only;
+- weekly measurements, generated into the text from append-only records, of how far the delivery loop is from running without a person and of the health of the machine it runs on.
 
 ```latex
 \begin{figure*}[!t]
@@ -338,6 +353,19 @@ is raised. #1314 adds the race's other message, `tuple concurrently deleted`, wh
 loser receives when the winning revoke empties the row and the server removes it; that
 one failed #1312's checks, again on PostgreSQL 16. Both merged on 2026-10-01, after
 3.2.0, and their tests reproduce each message (`tests/infrastructure/db/test_ledger_guard.py`).
+A third message followed on PostgreSQL 18, `cache lookup failed for parameter ACL`, when
+the row was dropped between the catalog lookup and its use (run 36925371389), and #1326
+retries it too. Three messages for one race sent us after its cause in the tests, and
+#1332 found it. The privilege is one row per server, every parallel test worker uses the
+one application role, and another worker's reconcile, at setup or inside a test, revoked
+the grant a test had made a moment before; on PostgreSQL 17 the inspector then found the
+grant already gone (run 36942213820). The test workers now take an exclusive file lock
+named for the server around every grant and reconcile of that privilege
+(`ClusterParameterAclLock`, `tests/db_roles.py`). That repairs the tests only. In
+production, several vibey databases on one cluster still race on the row, the
+per-database migration lock cannot serialize them, and a bounded retry that matches three
+messages is what holds; a lock that spans the cluster is a recorded follow-up, not a
+repair (#1326, #1332).
 
 Crash recovery and engine handoff follow as corollaries: a successor engine
 re-derives context from the ledger alone, so a credit exhaustion on $e_i$ between
@@ -601,7 +629,14 @@ alone is not the rule, because a slow test that is still computing is not a hung
 The reaper's own schedule and the trace of locks without an owner record (#1107) and
 the fixes from its first independent review (#1120) are merged. The re-review of #1120
 then found seven more defects, the ownerless-lock signal the worst; their fixes were
-saved on a branch and have not merged (the re-review record is not tracked).
+saved on a branch and have not merged (the re-review record is not tracked). The gate's
+own tests once held the lock they test. On 2026-10-02 a lane's real push waited 30
+minutes behind the storm's push lock, and its owner was a test: run inside a real push,
+it inherited the lock's path from the environment, took the machine's lock and died
+holding it. The reaper classified it stale and released it when asked; its schedule was
+not installed on that host, which is why a person had to ask. #1337 and #1339 drop the
+lock's path and the storm home from every push-gate test and every process it starts
+(`tests/meta/test_storm_push_gate.py`, `tests/meta/test_storm_push_gate_review.py`).
 
 The same rule now covers everything a queue guards (#1108, with the post-merge review
 fixes of #1119; ADR-0056, whose status is *proposed*). ADR-0056 began with an inventory
@@ -2037,11 +2072,12 @@ credentials and keeps one tracking issue open instead of failing the release; th
 client is not built for macOS, where its GTK build has never run in CI; and Windows is not
 a target (#1097). One job gathers every declared file, refuses any undeclared one and
 writes `SHA256SUMS`, and the attaching job, the only one with write access, attests the
-build's provenance over that file. All of this has run only as a dry run. At our cutoff
-the stage's two pull-request runs and one dispatched run had built every target on hosted
+build's provenance over that file. All of this has run only as a dry run. By 20:41Z on
+2026-10-01 the stage's two pull-request runs and one dispatched run had built every target on hosted
 runners, the iOS job by warning that its credential is missing, and had skipped the
-attach, as a dry run must (runs 36904265081, 36908198822 and 36904299591); no release had
-been cut since it merged, so the attestation and the upload have never run.
+attach, as a dry run must (runs 36904265081, 36908198822 and 36904299591). No release has
+been cut since it merged, the latest being 3.2.0 at our cutoff, so the attestation and the
+upload have never run.
 
 **Degraded modes as first-class states.** The evaluator's own substrate (API credit,
 the hosted review lane, the operator's editor) can refuse service while the
@@ -2179,9 +2215,124 @@ reached a sovereign verdict under it, and on that one the reserve was not room e
 Whether a larger reserve, less reasoning or smaller parts would let one finish is not
 known; #1316 calls the reasoning setting a quality decision that needs its own study.
 
+**The lane's record since.** We read every pull-request review run the forge recorded
+from #1316's merge, at 18:16Z on 2026-10-01, whose sovereign job had finished by 03:50Z
+on 2026-10-02. The lane gave seven verdicts, on #1319, #1322, #1324, #1326, #1327, #1329
+and #1332, each reviewed in a single request, and blocked one of them (#1322). It gave
+none on six. #1317 is above, and #1335's third part of five ended the same way, out of
+room after 68,224 characters of reasoning (run 36956973134). #1321, reviewed in one request, wrote 69,015 characters of
+reasoning and no answer and was refused as `done_reason=length` (run 36924458568). Two
+were refused before anything was sent: #1323 because one hunk of a generated coverage
+file was larger than a part may carry, and a hunk is never cut (run 36926257830), and
+#1328 because its diff of 247,237 characters needed seven parts where `max_chunks` allows
+six (run 36935786057). The second of #1334's four parts, about 49,133 prompt tokens, did
+not finish within its deadline of 1,065 s and was named as too slow for its input, with
+the deadline's arithmetic (run 36956577348); #1334 had been merged at 02:40Z, half an hour
+before that review ended. So under #1316 no diff that needed more than one request has
+reached a sovereign verdict. Before it, one had: the lane passed #1307, an earlier
+revision of this paper, in four parts at 14:49Z on 2026-10-01 (run 36876571436), under the
+fixed 600 s deadline. That is one verdict, not a rate, and a pass on a documentation
+change says little about recall. #1334's timeout has the shape the study below
+anticipated: from the model server's log of past reviews, its evidence track estimated
+that #1316's deadline barely covers a request that writes its full reserve once the
+prompt passes about 40,000 tokens (`research/large-diff-review/experiments/LOG.md`).
+
+**Recall, measured offline.** Until 2026-10-01 nothing had measured the reviewer's
+recall: every study above measured agreement on pull requests that carried no known
+defect. `vibey-gh review-canary` (#1325) measures it on a fixed corpus pinned at
+`2b17eb7` (`docs/architecture/evidence/review-canary/corpus.toml`): 41 small single-file
+diffs against this repository's own code, 27 of them planted defects, three in each of
+nine classes (off by one, inverted condition, swallowed exception, missing `await`, SQL
+built by string formatting, removed guard, resource leak, wrong return on the error path,
+and a race on shared state), and 14 controls, two of them the correct forms of defect
+cases. Every case goes through the production entry point with exactly the arguments the
+review workflow passes. A defect counts as caught only when the verdict blocks, a finding
+names the planted file and either its lines or one of its anchors, and the finding uses
+one of the class's words; a control that is blocked or draws a blocking finding is a
+false positive; a review with no verdict is counted apart and never either way. The first
+measurement (#1331) ran on the operator's machine from about 16:26 to 19:12 EDT on
+2026-10-01, at the production settings. It caught 18 of the 25 defects that drew a
+verdict (Wilson 95% interval 0.524 to 0.857), blocked none of the 14 controls (0 to
+0.215), and gave no verdict on 2 of the 41 cases, both timeouts at about 1,000 s. It is
+one run on one host at temperature 0, not repeated, and its corpus is small diffs, not
+large ones. It is one digest-chained line in
+`docs/architecture/evidence/review-canary/ledger.jsonl`, rendered into the runbook
+`docs/runbooks/sovereign-review-runner.md`, and it meets the floor declared for it, a
+recall lower bound of at least 0.5 and a false-positive upper bound of at most 0.5. That
+floor is low on purpose: it asks only for 95% confidence that the review blocks more than
+half the planted defects for the right reason. The weekly workflow that is to repeat the
+measurement had not run by our cutoff. Two things the numbers do not say on their own.
+The matching rule under-counts: by hand, two of the seven misses are real catches that
+used none of the class's words or quoted neither line nor anchor, so recall by hand is 20
+of 25, and the floor reads the strict figure. And the other five defects passed with no
+findings at all; in two of them the reviewer's own summary named the defect, one as
+"introducing a potential SQL injection vulnerability", while `pass` was true. The gate
+reads `pass`, so those two would have merged.
+
+**The large-diff study, in progress: mechanism and screening only.** Why the lane gives
+no verdict on a large diff, and what would let it, is the subject of a study that is in
+progress, and what follows is its mechanism and its screening, not its result. Its plan
+was registered before any data: `research/large-diff-review/experiments/PREREGISTRATION.md`,
+committed at 17:57 EDT on 2026-10-01 on the study's branch, before the first experimental
+request. Its population is the 45 diffs merged into `develop` from 2026-09-25 to
+2026-10-01 that production cannot review in one request, split by seed into 22 for
+development and 23 held out. Its arms are production (A0); production with its reasoning
+cut at 4,096 tokens and a verdict then forced (A1); production sampled at temperature 1.0
+and top-p 1.0 with seed 42, the model's own default (A2); and decoupled arms (D4, D8, D16,
+D32) that review parts of at most that many thousand diff tokens, without the declared
+documents, plus one request that judges the documentation contract from a digest. A
+method *works* only if it reaches a verdict on at least 95% of 48 held-out confirmation
+cases, the lower bound of the paired 95% interval of its recall minus production's, on
+the canary's 27 defects, is above minus 0.15, and the upper bound of the interval of its
+false-positive rate minus production's, on the 14 controls, is below 0.15. As the plan requires,
+every change to it since is logged with its time and reason in `experiments/LOG.md`,
+among them arms added before any of their outcomes was seen. Two
+sibling tracks, on prior art and on the server log's record of past reviews, fed the plan
+before the first request; their own write-ups are not in the committed tree, and only the
+amendments they caused are. The study shares the one model slot with live reviews and
+yields to them, and that is a threat to its timings it found and closed (#1341). The
+self-hosted runner's live reviews run inside Docker, so the harness's process check could
+not see them: a review from the runner began seconds after an idle check, and two of the
+study's requests, parts 4 and 5 of one arm on #1131, queued behind it for 638 s and
+1,063 s, the second until its own deadline. The harness now refuses to start while any
+other client is connected to the model's port and yields its own request to one forwarded
+from Docker, and an audit (`experiments/harness/contention.py`) matches every record to
+the server's access log and voids any that began while another client's request was still
+running. Its first pass voided exactly those two (`experiments/data/invalidations.jsonl`);
+the records stay in the append-only store, the arm they belong to is void on #1131 and is
+being run again, and the audit is to run again before every stage boundary and before any
+number is reported. No result we cite here comes from a voided record.
+
+At the study's cutoff, the newest entry of its committed log, 23:20 EDT on 2026-10-01, its committed record
+(`experiments/LOG.md`, `experiments/data/`) shows the following. Every Stage 1 result is
+from one host diff, #1131 (194,560 characters), the first of four screening hosts, so each
+is screening-grade, not a rate.
+
+- **Stage 0, on a toy diff and no corpus case.** The model's harmony prompt template was rendered exactly (687 prompt tokens by either route). A cut-off reasoning can be continued into a forced verdict through `/api/chat` with the response schema kept, and the schema still constrains the answer. Because the server reuses the cached prompt and reasoning, the forced phase is cheap: on the four parts of #1131 that D16 forced, it took 3.7 to 5.0 s in all. The same request sent twice at temperature 0 gave byte-identical reasoning and answer (`experiments/data/stage0.json`).
+- **The loop.** The first part of #1131 cut to at most 8,000 diff tokens (13,894 prompt tokens) ran at temperature 0 to the 16,384-token cap with no answer, in 697 s. Of its reasoning's word 8-grams, 86% were repeats, and its tail repeats one sentence verbatim. The same part at temperature 1.0, top-p 1.0 and seed 42 answered in 368 tokens and 39 s. Production sends temperature 0 (`src/vibey_tools/gh/vibey_gh/local_review.py`).
+- **Screening on #1131.** Nine of the thirteen Stage 1 arms had a result that stands; a tenth was voided by the audit and is being run again. Production gave no verdict: its first part, at temperature 0, ran to the cap. Production at temperature 1.0 alone reached a verdict in 13 minutes, and production with its reasoning forced at 4,096 tokens in 23 minutes. The small-part arms at temperature 0, D8 and D16, gave none, because their first part looped. D8 and D16 at temperature 1.0, D16 forced at 4,096 tokens, and D16 at temperature 1.0 with forcing at 8,192 tokens each reached a verdict, in 19 to 28 minutes. Four of those six verdicts blocked #1131, which had merged; none of their findings has been adjudicated, so a verdict here is an answer, not a correct one.
+- **Why `pass` can contradict the summary.** In production's response schema `pass` comes before `findings`, and the track's explanation is that constrained decoding writes the fields in that order, so the model commits to `pass` before it writes a finding. A rule that lets the findings decide `pass` recovers none of the canary's inconsistent verdicts, because those verdicts carry no findings at all: scored on the canary's own verdicts, at no model cost, by a scorer that reproduces the canary's 18 of 25 and 0 of 14 exactly, the rule leaves both figures unchanged. An arm that writes the findings first was added for Stage 2 before any of its outcomes was seen.
+- **Static analysis alone.** Ruff with every rule selected, and bandit, with no model, flag 5 of the canary's 27 defects, all three of the SQL cases and two of the three swallowed exceptions, and none of its 14 controls (`experiments/data/static_only.json`).
+
+The evidence track's estimates, as the log records them, set the order in which Stage 1
+ran its arms: from the server log's past reviews, a request finishes within 16,384 output
+tokens with probability 0.92 at 20,000 prompt tokens, 0.73 at 30,000, 0.53 at 40,000 and
+0.36 at 50,000, partly extrapolated below 20,000, where only six past requests fell, and
+reasoning length depends on what a part contains as well as on its size. Not yet
+measured: the recall or the false-positive rate of any new arm, Stage 1 on the other
+three hosts, the replays of #1312 and #1317, and anything on the held-out diffs or
+needles. The committed request store holds 56 requests; the 54 the audit did not void
+took about 2.8 hours of wall time. The screening points to a fix, sampling at the model's own default temperature,
+with or without a bound on the reasoning: it is identified, but neither confirmed nor
+shipped. Production is unchanged: it
+still reviews at temperature 0 with the parts and reserve #1316 set, and a change will
+ship in a later release only once the study confirms it on the held-out diffs. If a
+method is chosen, the operator has asked that its calibration ship with it, reproducible,
+repeated monthly and reported by `vibey doctor`.
+
 ```latex
 \begin{plainwords}
-A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, where a project switches them on (this one does not), a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer. Later, long drafts kept coming back with no grade at all, and we found why: nothing stopped the grader from writing on and on until the clock ran out. Now it gets a fixed amount of room, more time for a longer draft, and a different message when it was only waiting its turn. The first long draft it met after the change still came back without a grade, but this time with the honest reason: the grader used all its room thinking and never answered. Each release is also meant to carry ready-to-install copies of every app, with a list of fingerprints to check them by; so far that has only been rehearsed, never done for real.
+A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot keep repairing forever; after two automatic second chances, where a project switches them on (this one does not), a change that still fails waits for a person. A grade from the small local grader alone never triggers a repair: the change is simply graded again, and the paper admits that nothing yet stops that from repeating. And the key that grades a change is never the key that merges it, so no single stolen grading key can ship a change. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer. Later, long drafts kept coming back with no grade at all, and we found why: nothing stopped the grader from writing on and on until the clock ran out. Now it gets a fixed amount of room, more time for a longer draft, and a different message when it was only waiting its turn. The first long draft it met after the change still came back without a grade, but this time with the honest reason: the grader used all its room thinking and never answered. Since then no long draft has come back with a grade under the new rules. We also tested the grader on short drafts with mistakes planted in them on purpose. It caught 18 of the 25 it graded and never failed a good draft, but twice it wrote down the mistake and still gave a pass. Why it gets stuck on long drafts is being studied now, with the plan written down before the first test. On one long draft it went round in circles when told always to pick its most likely next word, and finished quickly when allowed a little chance. That is a clue from one draft, not a result, and the grader has not been changed. Each release is also meant to carry ready-to-install copies of every app, with a list of fingerprints to check them by; so far that has only been rehearsed, never done for real.
 \end{plainwords}
 ```
 
@@ -3307,6 +3458,63 @@ is narrower: in every cell that ran, the distribution packages a Python, a Postg
 desktop libraries that meet vibey's floors, and on arm64 its glibc meets the 2.34 the
 wheels require. The record lists each of these gaps under *not verified*.
 
+### Host health and the memory budget
+
+The minimum requirements say what a host must have. They do not say whether the host vibey
+runs on is still healthy, or when it will need replacing. Since #1330,
+`scripts/host_health.py` answers both from a weekly, append-only record
+(`docs/architecture/evidence/host-health.jsonl`), rendered into
+`docs/reference/host-health.md` and into `vibey doctor`. The probes run on the host
+itself, from a launchd agent or a systemd user timer, because the self-hosted runner is a
+Linux container on the host and cannot see its SSD, battery, thermal state or real memory
+pressure. None needs root, each that cannot run is recorded as skipped with its reason,
+and the host enters the record only as a truncated hash. Each driver of replacement
+carries a declared threshold: SSD wear, battery capacity and cycles, generation rate, free
+disk, memory against vibey's own minimum, sustained swap, kernel panics, thermal limiting
+and the vendor's support dates. A trend is a Theil–Sen slope with Sen's rank interval; a
+projected crossing is dated with an earliest and a latest bound, and the latest is
+*unbounded* when the data cannot rule out never. A trend needs four weekly points, and swap
+must stay past its threshold in three records before it counts. At our cutoff the record
+held two, of 2026-10-01 and 2026-10-02, and no driver projected a replacement date. Every
+trend had too little history, Apple publishes neither an end of support for macOS nor an
+endurance rating for this SSD, and memory sat exactly at vibey's 24 GB minimum, which
+counts as within. Swap in use was 0.60 and then 0.68 of memory, past its 0.5 threshold in
+two of the three records that would confirm it. The weekly agent is rendered by `install`
+and loaded only by the operator, and whether it has been loaded is not recorded.
+
+That swap prompted a measurement (#1334), on 2026-10-02 from 00:39 to 01:09Z, with the
+model loaded throughout and the large-diff study running on it
+(`docs/runbooks/host-optimization.md`). The process footprints added up to about 49 GiB on
+the 24 GiB machine: the model server 18.5 GiB, Docker Desktop's virtual machine 8.9 GiB,
+almost all of it compressed or swapped, and about 13 GiB the operator's own applications
+and their tool servers. Docker Desktop's built-in Kubernetes alone measured about 6.4 GiB
+across ten nodes. The SSD took 152.5 GB of writes an hour, swap-outs accounted for 130.1 GB
+of them, 85%, and every readable process's own file writes came to 1.8 GB. That a
+swap-out writes one 16 KiB page to the swap file is inferred, and an upper bound, since the
+swap files may hold compressed pages; tracing writes one by one would need root. The model
+was also loaded 166 times on 2026-10-01, and of 358 loads since 2026-09-28, 298 changed the
+context size or the model, because clients ask for a different window per request. So the
+SSD's 36.55 TB written in 337 power-on hours is, by elimination rather than by trace,
+mostly the price of overcommitted memory, and the lever is memory, not the disk. It is
+also a confound for every timing in this section and the last: the rate at which a review
+generates depends on what else the host holds.
+
+The plan that followed is declared, gated and reversible (`scripts/host_tuning.toml`,
+`scripts/host_health.py tune`). Class A, regenerable caches and logs, is always applied; it
+freed 6.16 GB of npm's cache, and left uv's alone, because other processes held its lock
+and forcing it would route around that check. Class B changes the model's behaviour or
+memory: one loaded model and one parallel request, a fixed context size per lane, a longer
+keep-alive, then flash attention and a quantised cache. It waits until the experiments on
+the host end; each item is then applied alone and kept only if a review-canary run after
+it still meets its floor and holds recall and false positives against the baseline. Class
+C is the operator's: turning off Docker Desktop's Kubernetes, the largest single lever
+measured, then capping its virtual machine at 8 GiB, deciding on unused models, and sizing
+the next machine at 32 GiB. Every prior value goes to an append-only journal that `undo`
+restores, the tool never restarts a service or uses root, and the weekly record judges each
+change by the weeks after it. At our cutoff only class A had been applied, and no class-A
+item reaches memory, so nothing that could move the swap or the SSD's writes had yet been
+done.
+
 ### Field data
 
 The git history is field data: nothing in it was held fixed. At the pinned source
@@ -3854,7 +4062,9 @@ undocumented, and we did not adjudicate it either.
 The limits are these. Each setting ran once per pull request, so nothing here measures
 repeatability. No pull request in the sample carries a known-true defect, so the lane's
 recall is unmeasured: we have not shown whether it blocks a real defect, with the files
-or without them, and agreement with the gate is agreement, not correctness. The replays
+or without them, and agreement with the gate is agreement, not correctness. The review
+canary has since measured recall on small planted defects (under
+*Exact-head evaluation*); on large diffs it is still unmeasured. The replays
 allowed 900 seconds where the workflow allows 600, and two of the eight source-context
 runs took longer (678 s and 872 s). Under the workflow as it then stood, those attempts
 would have ended without a verdict and gone to its one retry; since #1316 its limit grows
@@ -3887,7 +4097,10 @@ the measurement above did not reach (#1316, under *Exact-head evaluation*). The 
 record of who merges did not change. The fourteen pull requests merged into `develop`
 after `4acb9be5c`, up to #1319 at `2b17eb71`, were all merged by the operator's account and
 none carries a review (read on 2026-10-01 at 20:41Z), so each went in through the bypass,
-this paper's previous revision (#1307) among them.
+the revision of this paper before the last (#1307) among them. So did the twenty-one after
+them, #1321 to #1341, up to `ca9e47452` (read on 2026-10-02 at about 03:50Z), the
+previous revision (#1324) and every change this revision reports among them; #1334 was
+merged at 02:40Z, half an hour before its sovereign review ended without a verdict.
 
 **The scan, repeated weekly.** The scan was one reading. Since this revision its questions
 are asked again each week by `scripts/autonomy_scorecard.py`. It declares the stages of the
@@ -3937,8 +4150,8 @@ guards and a deadline nobody evaluated), authority (every merge a bypass, an app
 nobody called), or automation that misreported its own act. The repairs took a day of
 changes. The judgment about which to make, and which gates stay, was the operator's: the
 gate timeouts became opt-in, and REVIEW keeps its person. Every merge into `develop` up to
-`2b17eb71` was still the operator's, through the bypass, so the repairs are not yet
-evidence that the loop will deliver a change with nobody present.
+`ca9e47452` (#1341) was still the operator's, through the bypass, so the repairs are not
+yet evidence that the loop will deliver a change with nobody present.
 
 ### Six materials and the modulators of the rate
 
@@ -4180,12 +4393,17 @@ revision of one repository, read again a day later. Its forge figures count one
 project's pull requests and runs. Its review-lane measurement is eight pull requests
 run once each, with no known-true defect among them, so it bounds what the lane did on
 those eight and says nothing of its recall. The cause later found for the lane's
-missing verdicts on large diffs rests on one host's server log, and its repair, at our
-cutoff, had passed one small diff and given no verdict on the one large diff it met.
+missing verdicts on large diffs rests on one host's server log, and under its repair,
+at our cutoff, every verdict was on a diff reviewed in one request. The canary's recall
+is one run on one host over 41 small single-file diffs written by one author, matched by a
+lexical rule. The large-diff study is in progress, and its screening rests on one diff of
+one repository; nothing in it is yet a rate, and none of its arms has a measured recall.
+The autonomy scorecard and the host's health record each held one or two readings at our
+cutoff, so neither yet shows a trend.
 
 ```latex
 \begin{plainwords}
-We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Later still we asked how far the whole system could go with nobody watching. Only the building step could. The checking step showed people a green report that nobody had measured, a helper whose sign-in grew old stopped quietly, a stuck helper was never stopped, and the merging robot once threw away finished work while saying it had saved it. Each of these was fixed within a day, but every change still went in by the owner's own hand. A small local grader, shown whole files instead of only the changed lines, stopped making up problems in our small test, though we have not yet shown it catches real ones. Checking takes time, and that time is the price of being right.
+We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Later still we asked how far the whole system could go with nobody watching. Only the building step could. The checking step showed people a green report that nobody had measured, a helper whose sign-in grew old stopped quietly, a stuck helper was never stopped, and the merging robot once threw away finished work while saying it had saved it. Each of these was fixed within a day, but every change still went in by the owner's own hand. A small local grader, shown whole files instead of only the changed lines, stopped making up problems in our small test. When we later planted mistakes for it on purpose, it caught 18 of the 25 small ones it graded, though on long changes it still often gives no grade at all. We now also count, every week, how many steps of the whole job can run with nobody watching: at the first count, one of eleven. Checking takes time, and that time is the price of being right.
 \end{plainwords}
 ```
 
@@ -4668,6 +4886,23 @@ following, each named with where it lives.
 - **One worker for every project.** `vibey worker --all-projects` serves every project's queue, and `vibey supervisor install` runs it and the bridge supervised (#1249).
 - **Draft publication.** Delivery pull requests open as drafts that the pull-request automation promotes; this one landed with the 3.0.0 release itself (#1244), after the atlas's cutoff (`scripts/triaged_delivery.py`).
 
+### Changes after 3.2.0
+
+What follows is on `develop` at `ca9e47452`, planned for 3.3.0 (#1320) and not yet
+released. Each item is reported in the section named.
+
+- **REVIEW shown what ran.** Each integration ledgers its verification commands, their exit codes and output tails, and REVIEW renders only that record (#1294; *The autonomy scan of 2026-09-30*).
+- **Gates that time out by declaration.** A gate resolves to its stored default only for the kinds a project declares, and REVIEW's approval never does (#1299).
+- **Workers bounded.** A BUILD session stops at a wall-clock limit (#1296), a stop ends the session's whole process group (#1297), shutdown cannot crash on a session it cannot reap (#1309), an ageing paid login is rechecked (#1295), and an integrated work item's worktree is retired (#1298).
+- **Merges that are confirmed.** The merge train counts a merge only when the forge reports it merged (#1301).
+- **The approver's grant, declared.** The operator's standing grant and what it never covers are in `[autonomy]` (#1300), and the approver may not approve the code that defines what its gates measure (#1302).
+- **A reviewer that sees more and stops in time.** The sovereign review reads the full text of the files it judges (#1303), its output is capped and its deadline grows with the request (#1316; *Exact-head evaluation*), and its recall on planted defects is measured by an offline canary (#1325, #1331).
+- **One file per change.** Changelog entries are fragments assembled at release (#1305), and the coverage floor reaches the forge's rulesets (#1321).
+- **Clients on every release.** A release is to carry a build of every client, so far run only dry (#1317).
+- **Requirements, health and distance from autonomy, measured.** Linux requirements as a matrix of distributions and architectures (#1313; *Rolling minimum system requirements*), the host's weekly health, forecast and declared tuning (#1330, #1334; *Host health and the memory budget*), and the weekly autonomy scorecard (#1335).
+- **The revoke race and the gates around CI.** The replication-role revoke retries all three messages of its race and the tests serialize their grants (#1310, #1314, #1326, #1332); the KEDA contract no longer races a drain (#1327), the Arch job survives a failing mirror (#1333), and dependency advisories may be excepted only by a declared, expiring entry (#1336; *Validation*).
+- **The large-diff study.** A preregistered study of the reviewer's large-diff failures, in progress: mechanism and screening only (#1328, #1340, #1341; *Exact-head evaluation*).
+
 ```latex
 \begin{plainwords}
 This part of the paper is a picture book of the newest machinery. A robot helper now takes a job from the project's to-do list, but only after a person has sorted and labelled it, and it holds the job for fifteen minutes at a time so that a stuck helper cannot keep it forever. The helper builds the change in its own copy of the project, and then it stops and waits for a person to check the work. If a helper runs too long, it is stopped completely, every little process it started included, before anything is written down. If the computer is too busy or out of allowance, the helper writes down that it paused, not that it finished. The helper only uses as much memory as was actually measured on this computer, and it only sees the secrets it was allowed to see. A grader must prove it read the whole change. One thing we tell you straight: on this path the helper used to fill in the first design questions with standard answers by itself, under the owner's name. Now it waits for a person to answer them, unless it has been told it may fill in the standard answers, and then it signs them with its own name. It also refuses to start on a job that a stranger wrote or changed. And the pictures in this paper are checked by a person with their own eyes, which is how we found the ones we fixed.
@@ -4718,7 +4953,9 @@ that head, not of this revision.
 
 The 3.1.0 and 3.2.0 additions carry their own tests under the same four floors, which
 since 3.2.0 are also declared to the forge as a coverage rule on both permanent branches
-(`minimum_coverage = 100`, #1277). Abandonment is tested from the phase machine through
+(`minimum_coverage = 100`, #1277), though the forge refused every reconcile of that rule
+until #1321, after 3.2.0; read on 2026-10-02, both branches' rulesets carry it.
+Abandonment is tested from the phase machine through
 the store and the command line (`tests/domain/test_abandonment.py`,
 `tests/cli/test_abandon_cli.py`); the defect signature and the plan-reference rule are
 pure functions with tests of their own (`tests/domain/test_defect.py`,
@@ -4739,13 +4976,48 @@ the trust check that holds a stranger's issue, not the frame, is the control tha
 The changes after 3.2.0 are validated more narrowly than they are built, and we say
 where. The review lane's repair (#1316) is held by 31 tests of its own
 (`src/vibey_tools/gh/test/test_local_review_budget.py`), but its rates and its 900 s wait
-come from the model server's log, and in production it had, at our cutoff, passed one
-small diff and refused, by name, to give a verdict on the one large diff it met. The stage that builds every client for a
+come from the model server's log, and in production, at our cutoff, every verdict it gave
+was on a diff reviewed in one request. The review canary (#1325) is held by its own tests
+(`src/vibey_tools/gh/test/test_review_canary.py`): the corpus builds with its pin
+reachable, each planted defect is located by its anchor and by its line, and the ledger
+refuses an edited line; its measurement is one run, and the weekly workflow that would
+repeat it has not run. The autonomy scorecard (#1335) and the host's health and tuning
+(#1330, #1334) are tested against fixture records, with every host input injectable and a
+guard that fails any test that reaches the real host (`tests/scripts/test_autonomy_scorecard.py`,
+`tests/scripts/test_host_health.py`, `tests/scripts/test_host_tuning.py`); the scorecard's
+workflow has not run, its first reading was taken outside it, and the host's Linux probes
+have run only on fixture trees. The stage that builds every client for a
 release (#1317) has run only dry, on hosted runners, and its attestation and upload have
 never run. The Linux requirements (#1313) were seeded in containers on one Mac, and the
 native matrix has not run. The shutdown repair (#1309) reproduces the cross-loop error CI
-saw before its fix, and the two database repairs (#1310, #1314) reproduce each message of
-the race; all three were found by CI rather than by review.
+saw before its fix, and the database repairs (#1310, #1314, #1326) reproduce each of the
+race's three messages; all were found by CI rather than by review. The race in the tests
+behind them was closed by #1332, and green runs alone cannot show that, because the race
+was intermittent: the fix holds by construction, since no other worker's reconcile can
+now fall between a test's grant and its revoke.
+
+CI itself changed in three places. The KEDA contract of the cluster smoke test raced a
+worker's drain (#1327). Under Helm 4, whose `--wait` counts a terminating pod as still in
+progress, an upgrade that replaced a worker in the middle of a job timed out while the
+worker, correctly, kept draining, so whether the step passed depended on whether a job was
+in flight. It now waits for what it checks, the deployment's availability and the
+scaler's readiness, and Helm's version is pinned, so a new release cannot change how the
+upgrade waits without a commit. The Arch Linux desktop job failed before building
+anything when its image's one package mirror failed (#1333); it now falls through four
+official mirrors and retries the install three times, so a real failure still fails. And
+the dependency gate no longer runs `npm audit --audit-level=high` itself (#1336).
+`vibey-gh advisory-check` fails on the same advisories, except one declared in
+`.github/advisory-exceptions.toml`, a protected path that needs the code owner and a human
+merge. An exception names one advisory in one package in one workspace, states why the
+vulnerable code is not reached, and expires within 30 days; the check prints every
+exception it honours, and fails when one has expired, matches nothing, or its package has
+a patched release. The one exception is GHSA-86w9-cpqp-85rv, a signature forgery against
+low-exponent RSA keys in node-forge 1.4.0, which has no patched release, excepted from
+2026-10-01 until 2026-10-31. Its evidence is that node-forge reaches the app only through
+Expo's developer command line, that neither the exported web bundle nor the Android bundle
+contains it, and that the command line verifies only the developer's own certificate and
+signatures it has just made, with keys generated at the default exponent of 65,537. That
+is a risk accepted with a date on it, not a fix (`SECURITY.md`).
 
 ```latex
 \begin{plainwords}
@@ -4804,7 +5076,12 @@ through the bypass. After it, the local reviewer's missing verdicts on large dif
 traced to an answer nothing bounded and a deadline that did not grow with the request,
 and a release learned to carry a build of every client. The first now names why it gives
 no verdict but has yet to bring a large diff to one, and the second has run only as a
-rehearsal. The
+rehearsal. The reviewer's recall has now been measured once, on small planted defects,
+and it showed a reviewer that can describe a defect and still pass it; why it fails on
+large diffs is under a preregistered study that has reached its mechanism and its first
+screening, not its result, and production is unchanged until it does. The distance from
+running without a person is now measured weekly rather than written once, and at its
+first reading one of eleven stages met its thresholds. The
 engineering that remains is less about producing faster than about deciding well and
 cheaply.
 
@@ -4833,7 +5110,7 @@ Put the notebook, not the robot, at the centre. Then any robot can be swapped ou
 - SQLite, *FTS5 Extension*, `https://www.sqlite.org/fts5.html`.
 - G. M. Amdahl, "Validity of the Single Processor Approach to Achieving Large Scale Computing Capabilities," *Proceedings of the AFIPS Spring Joint Computer Conference*, 1967, pp. 483–485. doi:10.1145/1465482.1465560.
 - PostgreSQL Global Development Group, *The Rule System* and *CREATE TRIGGER* (rules and row-level triggers on partitioned tables; `TRUNCATE` triggers). PostgreSQL documentation, `https://www.postgresql.org/docs/current/`.
-- The vibey repository: the sovereignty stress record, `src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`; the evidence script, `scripts/paper_evidence.py`; the figure generator, `scripts/paper_figures.py`; the minimum-requirements record and its generator, `docs/architecture/evidence/minimum-specs.json` and `scripts/minimum_specs.py`; the architecture decision records, `docs/architecture/decisions/`; `https://github.com/the-vibey-project/vibey`, 2026.
+- The vibey repository: the sovereignty stress record, `src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`; the evidence script, `scripts/paper_evidence.py`; the figure generator, `scripts/paper_figures.py`; the minimum-requirements record and its generator, `docs/architecture/evidence/minimum-specs.json` and `scripts/minimum_specs.py`; the review canary's corpus and ledger, `docs/architecture/evidence/review-canary/`; the autonomy scorecard's record and its generator, `docs/architecture/evidence/autonomy-scorecard.jsonl` and `scripts/autonomy_scorecard.py`; the host-health record, `docs/architecture/evidence/host-health.jsonl`; the large-diff study's preregistration, log and data, `research/large-diff-review/experiments/`; the architecture decision records, `docs/architecture/decisions/`; `https://github.com/the-vibey-project/vibey`, 2026.
 
 ## Citing this work
 
