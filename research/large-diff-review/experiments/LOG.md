@@ -184,3 +184,22 @@ what was seen, and what it changed.
   every push is preceded by both merges. Stage 1 host #1131 is done for 9 of 13 arms
   (`analyze.py s1`): no verdict for A0, D8, D16 (all T=0, first part loops); verdicts for
   A1, A2, D8-T1, D16-T1, D16-BF4096, D16-T1-BF8192. Interim status sent to the main session.
+- **23:20** **Contention found and fixed.** D4-T1 on #1131 reported `model_timeout` on part 5
+  (1,080 s, nothing generated) after part 4 took 702 s for 1,139 tokens. The server log
+  shows why: the self-hosted CI runner runs **inside Docker**, so its live reviews are
+  invisible to `ps` — a CI request (`::1`, 17m45s, then HTTP 500) began seconds after the
+  harness's idle check, and part 5 queued behind it until its own deadline. Not the
+  model's behaviour; a harness defect. Fixes, effective from the 23:20 restart:
+  1. `Etiquette.connections()` lists every non-Ollama, non-self TCP connection to port
+     11434 (`lsof`); any one blocks a new request, and a Docker-forwarded one (`com.docke`)
+     seen twice 4 s apart makes the harness abort its own request (yield) — live reviews
+     keep priority even though the runner is containerised.
+  2. `harness/contention.py audit --write`: matches every record to its server access line
+     and flags a record when ANOTHER client's request began before it and was still running
+     when it began (one slot, FIFO: ours waited). Flagged keys go to
+     `results/invalidations.jsonl`; the store and the diff ledger ignore them (the records
+     stay in the append-only log) and the requests are asked again. First audit over all
+     records: 2 flagged — D4-T1 #1131 parts 4 and 5 (638 s and 1,063 s of queueing); the
+     D4-T1 #1131 diff row is void and re-runs. The audit runs again before every stage
+     boundary and before any number is reported.
+  Stage 1 was stopped while a CI review was in flight and restarted (resumes from cache).

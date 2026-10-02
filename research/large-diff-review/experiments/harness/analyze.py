@@ -22,7 +22,9 @@ def rows(stage: str) -> list[dict]:
     path = RESULTS / "diffs.jsonl"
     if not path.is_file():
         return []
-    return [r for r in map(json.loads, path.read_text().splitlines()) if r["stage"] == stage]
+    from arms import DiffLedger
+
+    return [r for r in DiffLedger(path).rows if r["stage"] == stage]
 
 
 def hm2() -> None:

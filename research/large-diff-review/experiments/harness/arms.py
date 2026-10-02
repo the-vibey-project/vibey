@@ -73,7 +73,16 @@ class DiffLedger:
         self.path = path
         self.rows: list[dict[str, Any]] = []
         if path.is_file():
-            self.rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+            from client import invalid_keys
+
+            invalid = invalid_keys()
+            self.rows = [
+                row
+                for row in (
+                    json.loads(line) for line in path.read_text().splitlines() if line.strip()
+                )
+                if not invalid.intersection(row.get("keys") or [])
+            ]
 
     def done(self, stage: str, arm: str, case_id: str) -> dict[str, Any] | None:
         for row in reversed(self.rows):
