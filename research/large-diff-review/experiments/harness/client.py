@@ -218,7 +218,10 @@ def invalid_keys() -> set[str]:
     path = RESULTS / "invalidations.jsonl"
     if not path.is_file():
         return set()
-    return {json.loads(line)["key"] for line in path.read_text().splitlines() if line.strip()}
+    return {
+        (row["key"], row.get("t_start"))
+        for row in map(json.loads, filter(str.strip, path.read_text().splitlines()))
+    }
 
 
 class RequestStore:
@@ -235,7 +238,7 @@ class RequestStore:
             for line in self.path.read_text().splitlines():
                 if line.strip():
                     record = json.loads(line)
-                    if record["key"] not in invalid:
+                    if (record["key"], record.get("t_start")) not in invalid:
                         self._index[record["key"]] = record
 
     def get(self, key: str) -> dict[str, Any] | None:

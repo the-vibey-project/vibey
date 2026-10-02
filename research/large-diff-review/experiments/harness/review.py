@@ -146,6 +146,19 @@ class Asker:
         stopped_in_thought = rec.get("done_reason") == "length" or (
             rec.get("outcome") == "ok" and not rec.get("answer_chars")
         )
+        # A finished answer that escaped the `format` grammar (seen at T=1: bare check codes,
+        # then JSON with keys outside the schema) is repaired the same way: the reasoning is
+        # kept and the final channel is asked again under the grammar.
+        escaped = (
+            rec.get("outcome") == "ok"
+            and rec.get("done_reason") == "stop"
+            and code
+            in (
+                oc.ANSWER_INCOMPLETE,
+                oc.ANSWER_UNUSABLE,
+            )
+        )
+        stopped_in_thought = stopped_in_thought or escaped
         if verdict is None and force and rec.get("outcome") == "ok" and stopped_in_thought:
             thinking = self.model.store.thinking(rec["key"])
             second = self.forced(body, thinking, codes, force, tag, replicate)
@@ -1014,3 +1027,75 @@ def review_part(arm: DecoupledArm, case: Case, label: str, payload, paths) -> Re
     if arm.cfg.verify and res.verdict is not None and res.verdict.get("findings"):
         res = VERIFIER.verify(arm, res, payload, case, tag)
     return res
+
+
+class ProductionParts:
+    """A production arm (A0-A2) seen part by part, with the D arms' interface
+    (`part_requests`, `_ask`, `cfg`), so Stage 2 can score its needle part and sample its
+    clean parts. Each part's body is exactly the one `ProductionArm` sends."""
+
+    def __init__(self, arm: ProductionArm) -> None:
+        import types
+
+        self.arm = arm
+        self.model = arm.model
+        self.parts_builder = ProductionPart(arm.model, arm.options)
+        self.cfg = types.SimpleNamespace(name=arm.name, verify=False, model="gpt-oss:20b")
+        self.asker = arm.asker
+
+    def part_requests(self, case: Case):
+        return [
+            (f"part{b['index']}", b, tuple(b["paths"])) for b in self.parts_builder.bodies(case)
+        ]
+
+    def _ask(self, part: dict[str, Any], tag: dict[str, Any]) -> Result:
+        body = json.loads(json.dumps(part["body"]))
+        if self.arm.force:
+            body["options"]["num_predict"] = self.arm.budget
+        rec = self.model.ask("/api/chat", body, part["deadline"], tag=tag, offline=self.arm.offline)
+        if rec is None:
+            return Result(None, "missing", missing=True)
+        codes = part["codes"]
+        reserve = int(body["options"]["num_predict"])
+        verdict, code, reason = self._judge(rec, body["options"]["num_ctx"], reserve, codes)
+        keys, wall = [rec["key"]], rec["wall_s"]
+        escaped = rec.get("done_reason") == "stop" and code in (
+            oc.ANSWER_INCOMPLETE,
+            oc.ANSWER_UNUSABLE,
+        )
+        stopped = rec.get("done_reason") == "length" or not rec.get("answer_chars")
+        if (
+            verdict is None
+            and self.arm.force
+            and rec.get("outcome") == "ok"
+            and (stopped or escaped)
+        ):
+            second = self.asker.forced(
+                body, self.model.store.thinking(rec["key"]), codes, self.arm.force, tag, 0
+            )
+            if second is None:
+                return Result(None, "missing", keys=keys, missing=True)
+            rec2, verdict, code, reason = second
+            return Result(verdict, code, reason, keys + [rec2["key"]], wall + rec2["wall_s"], True)
+        return Result(verdict, code, reason, keys, wall)
+
+    def _judge(self, rec, num_ctx, reserve, codes):
+        if rec.get("outcome") == "timeout":
+            return None, oc.MODEL_TIMEOUT, "deadline"
+        if rec.get("outcome") != "ok":
+            return None, oc.MODEL_REFUSED, rec.get("error", "")
+        body = {
+            "prompt_eval_count": rec.get("prompt_tokens"),
+            "done_reason": rec.get("done_reason"),
+            "message": {"content": rec.get("content", ""), "thinking": ""},
+        }
+        try:
+            return (
+                lr.SIZED_CHAT.answer(body, num_ctx=num_ctx, reserve=reserve, codes=codes),
+                oc.REVIEWED,
+                "",
+            )
+        except lr.ReviewRefused as refused:
+            return None, refused.code, str(refused)[:300]
+        except (TypeError, ValueError) as error:
+            return None, oc.ANSWER_UNUSABLE, str(error)[:300]

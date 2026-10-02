@@ -3,3 +3,4 @@
 {"key": "eef9f730b877333aa92bf3dd8cc9e3b75f606f667822ec5aed447ce5ddea0603", "tag": {"stage": "hm2", "host": 1312, "part": 1, "variant": "T0", "rep": 0}, "wall_s": 269.6128597909992, "t": 1790897108.445906}
 {"key": "eef9f730b877333aa92bf3dd8cc9e3b75f606f667822ec5aed447ce5ddea0603", "tag": {"stage": "hm2", "host": 1312, "part": 1, "variant": "T0", "rep": 0}, "wall_s": 25.179626040990115, "t": 1790897171.7218812}
 {"key": "eef9f730b877333aa92bf3dd8cc9e3b75f606f667822ec5aed447ce5ddea0603", "tag": {"stage": "hm2", "host": 1312, "part": 1, "variant": "T0", "rep": 0}, "wall_s": 45.57051054200565, "t": 1790897435.851728}
+{"key": "b2f90dff6a01a5830982160fb5bee1bc313db55535310aecad0090ecce470def", "tag": {"arm": "D4-T1", "case": "host-1131", "part": "part4"}, "wall_s": 44.936464291997254, "t": 1790912932.212527}

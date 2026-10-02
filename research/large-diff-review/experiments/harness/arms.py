@@ -73,16 +73,19 @@ class DiffLedger:
         self.path = path
         self.rows: list[dict[str, Any]] = []
         if path.is_file():
-            from client import invalid_keys
-
-            invalid = invalid_keys()
-            self.rows = [
-                row
-                for row in (
-                    json.loads(line) for line in path.read_text().splitlines() if line.strip()
-                )
-                if not invalid.intersection(row.get("keys") or [])
-            ]
+            # A row computed while a voided request record stood is tombstoned by its line
+            # number (`contention.py` writes results/void_rows.jsonl); the file itself stays
+            # append-only, and a re-run appends a fresh row.
+            void = set()
+            void_path = path.parent / "void_rows.jsonl"
+            if void_path.is_file():
+                void = {
+                    json.loads(line)["line"]
+                    for line in void_path.read_text().splitlines()
+                    if line.strip()
+                }
+            lines = [line for line in path.read_text().splitlines() if line.strip()]
+            self.rows = [json.loads(line) for i, line in enumerate(lines) if i not in void]
 
     def done(self, stage: str, arm: str, case_id: str) -> dict[str, Any] | None:
         for row in reversed(self.rows):

@@ -1,0 +1,171 @@
+{
+ "rows": 180,
+ "with_log": 130,
+ "span": [
+  "2026-09-21T21:25:01Z",
+  "2026-10-01T21:21:29Z"
+ ],
+ "codes": [
+  [
+   "cancelled",
+   65
+  ],
+  [
+   "reviewed",
+   49
+  ],
+  [
+   "model_timeout",
+   33
+  ],
+  [
+   "diff_exceeds_window",
+   14
+  ],
+  [
+   "answer_unusable",
+   8
+  ],
+  [
+   "chunk_budget_exceeded",
+   5
+  ],
+  [
+   "job_failed_before_review",
+   2
+  ],
+  [
+   "answer_incomplete",
+   2
+  ],
+  [
+   "prompt_truncated",
+   1
+  ],
+  [
+   "empty_diff",
+   1
+  ]
+ ],
+ "codes_derived_vs_record": [
+  [
+   [
+    "cancelled",
+    null
+   ],
+   65
+  ],
+  [
+   [
+    "reviewed",
+    "reviewed"
+   ],
+   35
+  ],
+  [
+   [
+    "model_timeout",
+    "model_timeout"
+   ],
+   22
+  ],
+  [
+   [
+    "reviewed",
+    null
+   ],
+   14
+  ],
+  [
+   [
+    "model_timeout",
+    null
+   ],
+   11
+  ],
+  [
+   [
+    "diff_exceeds_window",
+    null
+   ],
+   9
+  ],
+  [
+   [
+    "answer_unusable",
+    null
+   ],
+   8
+  ],
+  [
+   [
+    "chunk_budget_exceeded",
+    "chunk_budget_exceeded"
+   ],
+   5
+  ],
+  [
+   [
+    "diff_exceeds_window_hunk",
+    "diff_exceeds_window"
+   ],
+   5
+  ],
+  [
+   [
+    "job_failed_before_review",
+    null
+   ],
+   2
+  ],
+  [
+   [
+    "answer_incomplete_length",
+    "answer_incomplete"
+   ],
+   2
+  ],
+  [
+   [
+    "prompt_truncated",
+    null
+   ],
+   1
+  ],
+  [
+   [
+    "empty_diff",
+    null
+   ],
+   1
+  ]
+ ],
+ "with_diff_stats": 126,
+ "diff_size_validation": [
+  {
+   "pr": 1253,
+   "logged_chars": 955714,
+   "fetched_chars": 955714
+  },
+  {
+   "pr": 1280,
+   "logged_chars": 757231,
+   "fetched_chars": 757231
+  },
+  {
+   "pr": 1280,
+   "logged_chars": 794728,
+   "fetched_chars": 794728
+  },
+  {
+   "pr": 1280,
+   "logged_chars": 952406,
+   "fetched_chars": 952406
+  },
+  {
+   "pr": 1280,
+   "logged_chars": 1026667,
+   "fetched_chars": 1026667
+  }
+ ]
+}
