@@ -941,9 +941,25 @@ jobs:
       - name: Toolchain and libraries (Arch)
         if: matrix.distro == 'arch'
         working-directory: /
+        # One failing mirror used to fail the job: on 2026-10-01 fastly.mirror.pkgbuild.com
+        # stopped serving package signatures and pacman, given that one server, gave up
+        # (#1332, run 36943837654). Several official mirrors let pacman fall through to the
+        # next; three attempts absorb a blip. A real failure (a missing package) still fails.
         run: |
-          pacman -Syu --noconfirm --needed base-devel git meson ninja pkgconf glib2 json-glib \
-            libsoup3 gtk4 libadwaita avahi desktop-file-utils appstream
+          # shellcheck disable=SC2016  # $repo and $arch are pacman's, not the shell's
+          printf 'Server = %s\n' \
+            'https://geo.mirror.pkgbuild.com/$repo/os/$arch' \
+            'https://fastly.mirror.pkgbuild.com/$repo/os/$arch' \
+            'https://mirrors.kernel.org/archlinux/$repo/os/$arch' \
+            'https://mirror.rackspace.com/archlinux/$repo/os/$arch' \
+            > /etc/pacman.d/mirrorlist
+          for attempt in 1 2 3; do
+            pacman -Syu --noconfirm --needed base-devel git meson ninja pkgconf glib2 json-glib \
+              libsoup3 gtk4 libadwaita avahi desktop-file-utils appstream && exit 0
+            echo "::warning::pacman attempt $attempt of 3 failed; retrying"
+            sleep $((attempt * 15))
+          done
+          exit 1
       - uses: actions/checkout@v4
       - name: Build everything under ASan and UBSan, warnings as errors
         run: |
