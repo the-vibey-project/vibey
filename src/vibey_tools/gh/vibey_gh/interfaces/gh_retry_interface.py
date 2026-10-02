@@ -22,8 +22,10 @@ class GhRetryInterface(Protocol):
     seen (sub-doctrine 12.e).
     """
 
-    @property
-    def policy(self) -> ForgeRetryConfig: ...
+    #: The declared `[forge_retry]` policy. An attribute, not a property: the implementation
+    #: is a frozen dataclass whose field this is, and an inherited read-only property would
+    #: refuse the dataclass's own assignment ("property 'policy' ... has no setter").
+    policy: ForgeRetryConfig
 
     def wait(
         self, result: subprocess.CompletedProcess[str], attempt: int
