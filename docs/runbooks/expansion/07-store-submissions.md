@@ -1,5 +1,12 @@
 # Runbook: App Store & Play Store submissions
 
+> **Status (2026-10-02):** an app to submit now exists (`clients/app`, workstream 08), and
+> a release builds its iOS package with EAS, signed with an Apple Distribution certificate
+> and an App Store profile, while `EXPO_TOKEN` is set (`scripts/release_binaries.toml`,
+> target `app-ios`; first built in the release-binaries dry run 36976031188). Nothing
+> submits it to App Store Connect or the Play Store yet, and the Android package is signed
+> only with the debug key. The rest of this runbook is still open.
+>
 > **Status (2026-09-15):** not started; blocked on 08 (no mobile app exists to
 > submit). No `StoreSubmissionPort`, store adapters, or `mobile_store`
 > topology.

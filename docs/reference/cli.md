@@ -54,7 +54,7 @@ with payloads.
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 | `78` | A supervisor setting no service could run with (EX_CONFIG): `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
-| `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
+| `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
 
 ### Guarded and unguarded commands
 
@@ -141,8 +141,8 @@ the new project is created beside them, and they stay readable by id.
 
 ## `vibey serve`
 
-The hub (ADR-0067): the HTTP API every krypton client reaches, built on
-`vibey_bootstrap`. Install it with `pip install 'vibey[hub]'`. It serves until stopped.
+The hub (ADR-0068): the HTTP API every krypton client reaches, built on
+`vibey_bootstrap`. Install it with `pip install 'vibey-engine[hub]'`. It serves until stopped.
 
 | Option | Default | What it does |
 |---|---|---|
@@ -168,7 +168,7 @@ HTTP and announces nothing.
 
 ## `vibey hub`
 
-The host's side of pairing devices with the running hub (ADR-0068). Each subcommand
+The host's side of pairing devices with the running hub (ADR-0071). Each subcommand
 reads `<state_dir>/serving.json`, presents the host token, and -- when the hub serves
 TLS -- trusts only the hub's own certificate. With no hub running they exit 3.
 
@@ -181,7 +181,7 @@ TLS -- trusts only the hub's own certificate. With no hub running they exit 3.
 ## `vibey sabbath`
 
 Print the Sabbath window on this host (sub-doctrine 8.i,
-[ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)):
+[ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)):
 whether it is enabled, the zone, where the location came from and how accurate it is, and
 when the current or next rest ends. It only reads, and is never held. From sundown Friday
 to sundown Saturday `vibey new` and `vibey work` decline with exit code `75`, the worker
@@ -960,7 +960,7 @@ Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-pro
 ## `vibey-gh sabbath`
 
 The Sabbath as the release tooling keeps it (sub-doctrine 8.i,
-[ADR-0070](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
+[ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
 `vibey-gh merge-train` and `vibey-gh promote` stand down inside the window: they print
 the hold, write it to the job summary, and exit 0. `vibey-gh sovereign --beat` keeps
 beating, recording "resting until ...".
