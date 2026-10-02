@@ -1,5 +1,5 @@
 {
-  "cli": { "version": ">= 16.0.0", "appVersionSource": "local" },
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
   "build": {
     "stable": { "channel": "stable", "env": { "APP_VARIANT": "stable" }, "autoIncrement": true },
     "nightly": { "channel": "nightly", "distribution": "internal", "env": { "APP_VARIANT": "nightly" }, "autoIncrement": true }
