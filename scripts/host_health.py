@@ -46,6 +46,12 @@ from xml.sax.saxutils import escape  # nosec B406 -- escaping text we write, par
 
 try:
     from scripts.host_health_forecast import TheilSenEstimator, ThresholdProjector
+    from scripts.host_tuning import (
+        HostTuner,
+        OllamaLoadLog,
+        TuningContext,
+        TuningSettings,
+    )
     from scripts.interfaces.host_health_interface import (
         ConditionEvaluatorInterface,
         ForecasterInterface,
@@ -77,6 +83,12 @@ except ModuleNotFoundError:  # Direct execution keeps the script directory on sy
     from host_health_forecast import (  # type: ignore[import-not-found,no-redef]
         TheilSenEstimator,
         ThresholdProjector,
+    )
+    from host_tuning import (  # type: ignore[import-not-found,no-redef]
+        HostTuner,
+        OllamaLoadLog,
+        TuningContext,
+        TuningSettings,
     )
     from interfaces.host_health_interface import (  # type: ignore[import-not-found,no-redef]
         ConditionEvaluatorInterface,
@@ -1701,6 +1713,309 @@ class CapacityProbe(ProbeInterface):
         return out
 
 
+class ModelLoadProbe(ProbeInterface):
+    """How often the sovereign model was (re)loaded, and at how many context sizes, over the
+    trailing window: each load is seconds of a stalled request and the whole model read off
+    the SSD again. Passive: the server log already says so."""
+
+    name = "ollama"
+
+    def __init__(self, ctx: ProbeContext) -> None:
+        self._ctx = ctx
+
+    def run(self) -> list[Figure]:
+        f = self._ctx.figures
+        pattern = str(self._ctx.settings["throughput"]["log_glob"])
+        days = int(self._ctx.settings["model_loads"]["window_days"])
+        method = f"count `starting llama-server` lines in {pattern} (passive)"
+        files = self._ctx.glob(pattern)
+        ids = (
+            ("ollama.loads_per_day", "Model loads per day", "loads/day"),
+            ("ollama.distinct_num_ctx", "Distinct context sizes loaded", "count"),
+            ("ollama.loads_by_day", "Model loads by day", "loads"),
+        )
+        if not files:
+            return [
+                f.skipped(i, label, unit, method, f"no log matches {pattern}")
+                for i, label, unit in ids
+            ]
+        now = datetime.fromtimestamp(self._ctx.wall(), UTC)
+        since = now - timedelta(days=days)
+        loads = [load for load in OllamaLoadLog.read(files) if load.at >= since]
+        by_day: dict[str, int] = {}
+        for load in loads:
+            day = load.at.date().isoformat()
+            by_day[day] = by_day.get(day, 0) + 1
+        conditions = {"window_days": days, "files": len(files), "since": Stamp.iso(since)}
+        return [
+            f.measured(
+                ids[0][0], ids[0][1], round(len(loads) / days, 1), ids[0][2], method, conditions
+            ),
+            f.measured(
+                ids[1][0],
+                ids[1][1],
+                len({load.num_ctx for load in loads}),
+                ids[1][2],
+                method,
+                conditions,
+            ),
+            f.measured(ids[2][0], ids[2][1], by_day, ids[2][2], method, conditions),
+        ]
+
+
+class ProcessBudgetProbe(ProbeInterface):
+    """Where the memory goes, by declared process group, and where the SSD's writes come
+    from: all bytes written to disk since boot against the bytes swapped out since boot.
+
+    macOS: `top` gives each process's memory (MEM, its footprint) and how much of it is
+    compressed or swapped out (CMPRS), and the disks' cumulative written bytes; `vm_stat`
+    the swap-outs. Linux: `ps` resident sizes (nothing per process is compressed there),
+    `/proc/diskstats` and `/proc/vmstat`. No sudo either way."""
+
+    name = "budget"
+    _SIZE = re.compile(r"^([\d.]+)([BKMGT])[+-]?$")
+    _SCALE = {"B": 1, "K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}
+    _DISKS = re.compile(r"Disks:\s*\d+/([\d.]+)([BKMGT]) read,\s*\d+/([\d.]+)([BKMGT]) written")
+    _WHOLE_DISK = re.compile(r"^(sd[a-z]+|nvme\d+n\d+|vd[a-z]+|xvd[a-z]+|mmcblk\d+)$")
+
+    def __init__(self, ctx: ProbeContext) -> None:
+        self._ctx = ctx
+        self._cfg = ctx.settings["budget"]
+
+    @classmethod
+    def size(cls, text: str) -> int | None:
+        found = cls._SIZE.match(text.strip())
+        return round(float(found.group(1)) * cls._SCALE[found.group(2)]) if found else None
+
+    def group(self, command: str) -> str:
+        for name, pattern in self._cfg["groups"]:
+            if re.search(str(pattern), command, re.I):
+                return str(name)
+        return "other"
+
+    @classmethod
+    def parse_top(cls, text: str) -> tuple[list[tuple[str, int, int | None]], int | None]:
+        """(command, footprint bytes, compressed bytes) per process, and the bytes written
+        to disk since boot, from `top -l 1 -stats pid,command,mem,cmprs`."""
+        rows: list[tuple[str, int, int | None]] = []
+        written = None
+        disks = cls._DISKS.search(text)
+        if disks:
+            written = round(float(disks.group(3)) * cls._SCALE[disks.group(4)])
+        header = False
+        for line in text.splitlines():
+            words = line.split()
+            if words[:2] == ["PID", "COMMAND"]:
+                header = True
+                continue
+            if not header or len(words) < 4 or not words[0].isdigit():
+                continue
+            mem = cls.size(words[-2])
+            if mem is not None:
+                rows.append((" ".join(words[1:-2]), mem, cls.size(words[-1])))
+        return rows, written
+
+    def budget(self, rows: Sequence[tuple[str, int, int | None]]) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for command, mem, compressed in rows:
+            g = out.setdefault(
+                self.group(command), {"processes": 0, "mem_gib": 0.0, "compressed_gib": 0.0}
+            )
+            g["processes"] += 1
+            g["mem_gib"] += mem / GIB
+            g["compressed_gib"] = (
+                None
+                if compressed is None or g["compressed_gib"] is None
+                else g["compressed_gib"] + compressed / GIB
+            )
+        for g in out.values():
+            g["mem_gib"] = round(g["mem_gib"], 2)
+            if g["compressed_gib"] is not None:
+                g["compressed_gib"] = round(g["compressed_gib"], 2)
+        return dict(sorted(out.items(), key=lambda kv: -float(kv[1]["mem_gib"])))
+
+    def run(self) -> list[Figure]:
+        return self._mac() if self._ctx.mac else self._linux()
+
+    def _writes(
+        self, written: int | None, swapped: int | None, hours: float, method: str, swap_method: str
+    ) -> list[Figure]:
+        f = self._ctx.figures
+        out: list[Figure] = []
+        rate_id, rate_label = (
+            "storage.host_writes_gb_per_hour_since_boot",
+            "Disk writes per hour since boot",
+        )
+        share_id, share_label = (
+            "memory.swap_share_of_writes",
+            "Swap-outs as a share of disk writes since boot",
+        )
+        if written is None or hours <= 0:
+            reason = "no cumulative disk-write counter or boot time"
+            return [
+                f.skipped(rate_id, rate_label, "GB/h", method, reason),
+                f.skipped(share_id, share_label, "ratio", swap_method, reason),
+            ]
+        conditions = {"hours_since_boot": round(hours, 1), "bytes_written_since_boot": written}
+        out.append(
+            f.measured(
+                rate_id, rate_label, round(written / 1e9 / hours, 1), "GB/h", method, conditions
+            )
+        )
+        if swapped is None or written <= 0:
+            out.append(
+                f.skipped(share_id, share_label, "ratio", swap_method, "no swap-out counter")
+            )
+        else:
+            out.append(
+                f.measured(
+                    share_id,
+                    share_label,
+                    round(swapped / written, 2),
+                    "ratio",
+                    f"{swap_method} / {method}",
+                    {**conditions, "bytes_swapped_out_since_boot": swapped},
+                    note="swap-out pages times the page size, over all bytes the disks were sent;"
+                    " an attribution by counters, not by tracing each write",
+                )
+            )
+        return out
+
+    def _mac(self) -> list[Figure]:
+        f = self._ctx.figures
+        n = int(self._cfg["top_processes"])
+        argv = ["top", "-l", "1", "-o", "mem", "-n", str(n), "-stats", "pid,command,mem,cmprs"]
+        method = " ".join(argv)
+        result = self._ctx.run(argv)
+        rows, written = self.parse_top(str(result.stdout)) if result.returncode == 0 else ([], None)
+        out: list[Figure] = []
+        if rows:
+            out.append(
+                f.measured(
+                    "memory.budget",
+                    "Memory by process group (footprint, and how much of it is compressed or swapped)",
+                    self.budget(rows),
+                    "GiB",
+                    method,
+                    {"processes": len(rows), "top_n": n},
+                    note="MEM is each process's footprint; a GPU-resident model's Metal buffers are"
+                    " wired, so its footprint is the closest per-process figure to what it costs",
+                )
+            )
+        else:
+            out.append(
+                f.skipped(
+                    "memory.budget",
+                    "Memory by process group",
+                    "GiB",
+                    method,
+                    "top printed no processes",
+                )
+            )
+        boot = MemoryProbe.parse_boottime(
+            str(self._ctx.run(["sysctl", "-n", "kern.boottime"]).stdout)
+        )
+        hours = (self._ctx.wall() - boot) / 3600 if boot else 0.0
+        vm_stat = str(self._ctx.run(["vm_stat"]).stdout)
+        stats = MemoryProbe.parse_vm_stat(vm_stat)
+        page = re.search(r"page size of (\d+) bytes", vm_stat)
+        swapped = stats["swapouts"] * int(page.group(1)) if "swapouts" in stats and page else None
+        return out + self._writes(
+            written, swapped, hours, f"{method}: Disks written", "vm_stat Swapouts x page size"
+        )
+
+    def _linux(self) -> list[Figure]:
+        f = self._ctx.figures
+        result = self._ctx.run(["ps", "-eo", "rss=,comm="])
+        rows: list[tuple[str, int, int | None]] = []
+        for line in str(result.stdout).splitlines() if result.returncode == 0 else []:
+            rss, _, command = line.strip().partition(" ")
+            if rss.isdigit():
+                rows.append((command.strip(), int(rss) * 1024, None))
+        out: list[Figure] = []
+        if rows:
+            out.append(
+                f.measured(
+                    "memory.budget",
+                    "Memory by process group (resident)",
+                    self.budget(rows),
+                    "GiB",
+                    "ps -eo rss=,comm=",
+                    {"processes": len(rows)},
+                    note="resident set sizes; Linux keeps no per-process compressed figure",
+                )
+            )
+        else:
+            out.append(
+                f.skipped(
+                    "memory.budget", "Memory by process group", "GiB", "ps", "ps printed nothing"
+                )
+            )
+        sectors = 0
+        found = False
+        for line in (self._ctx.read("/proc/diskstats") or "").splitlines():
+            parts = line.split()
+            if len(parts) > 9 and self._WHOLE_DISK.match(parts[2]):
+                sectors += int(parts[9])
+                found = True
+        uptime = (self._ctx.read("/proc/uptime") or "").split()
+        hours = float(uptime[0]) / 3600 if uptime else 0.0
+        vmstat = dict(re.findall(r"^(\w+) (\d+)$", self._ctx.read("/proc/vmstat") or "", re.M))
+        page = str(self._ctx.run(["getconf", "PAGESIZE"]).stdout).strip()
+        swapped = (
+            int(vmstat["pswpout"]) * int(page) if "pswpout" in vmstat and page.isdigit() else None
+        )
+        return out + self._writes(
+            sectors * 512 if found else None,
+            swapped,
+            hours,
+            "read /proc/diskstats: sectors written x 512",
+            "read /proc/vmstat: pswpout x page size",
+        )
+
+
+class TuningProbe(ProbeInterface):
+    """Which declared tuning was in force this week (scripts/host_tuning.toml), so the weeks
+    after a change can be compared with the weeks before it."""
+
+    name = "tuning"
+
+    def __init__(self, ctx: ProbeContext, settings_path: Path) -> None:
+        self._ctx = ctx
+        self._path = settings_path
+
+    def run(self) -> list[Figure]:
+        f = self._ctx.figures
+        method = "scripts/host_health.py tune check (declared against actual)"
+        settings = TuningSettings.load(self._path)
+        tuner = HostTuner(
+            settings,
+            TuningContext(
+                self._ctx.runner,
+                self._ctx.system,
+                lambda: Stamp.iso(datetime.fromtimestamp(self._ctx.wall(), UTC)),
+                self._ctx.timeout,
+                self._ctx.home,
+                self._ctx.root,
+            ),
+        )
+        seen = tuner.check(list(settings["weekly_kinds"]))
+        state = {
+            o.key: {"class": o.klass, "state": o.state, "declared": o.declared, "actual": o.actual}
+            for o in seen
+        }
+        return [
+            f.measured("tuning.state", "Declared tuning against the host", state, "items", method),
+            f.measured(
+                "tuning.attention",
+                "Tuning items whose gate is open but which are not in force",
+                sum(1 for o in seen if o.wants_attention),
+                "count",
+                method,
+            ),
+        ]
+
+
 # ------------------------------------------------------------------------ the record
 
 
@@ -2622,6 +2937,9 @@ class MeasurementSession:
             MicroBenchmark(ctx, gate),
             PlatformProbe(ctx, host),
             CapacityProbe(ctx, specs, specs_settings.record),
+            ModelLoadProbe(ctx),
+            ProcessBudgetProbe(ctx),
+            TuningProbe(ctx, self._repo / str(self._settings["tuning_config"])),
         ]
 
     @staticmethod
@@ -2765,6 +3083,16 @@ class HostHealthCli:
         )
         sub.add_parser("tools", help="which declared tools this platform has and lacks")
         sub.add_parser("weekly", help="measure, then publish (what the unit runs)")
+        tune = sub.add_parser("tune", help="declared host tuning (scripts/host_tuning.toml)")
+        tune.add_argument(
+            "action",
+            choices=("check", "plan", "apply", "undo"),
+            help="check: declared against actual; plan: what apply would do; apply: apply"
+            " what each item's gate allows; undo ITEM: restore what the journal says it replaced",
+        )
+        tune.add_argument("item", nargs="?", default="", help="the item to undo")
+        tune.add_argument("--only", action="append", default=[], help="limit apply to an item")
+        tune.add_argument("--json", action="store_true", help="check: print JSON")
         return parser
 
     @staticmethod
@@ -2834,7 +3162,53 @@ class HostHealthCli:
             return 0
         if args.command in ("render-unit", "install"):
             return self._unit(repo, settings, args)
+        if args.command == "tune":
+            return self._tune(repo, settings, args)
         return self._weekly(repo, settings, local)
+
+    def tuner(self, repo: Path, settings: HealthSettings) -> HostTuner:
+        tuning = TuningSettings.load(repo / str(settings["tuning_config"]))
+        ctx = TuningContext(
+            self._runner,
+            self._system,
+            self._clock.now,
+            float(tuning["command_timeout_s"]),
+            self._home,
+            self._root,
+        )
+        return HostTuner(tuning, ctx)
+
+    def _tune(self, repo: Path, settings: HealthSettings, args: argparse.Namespace) -> int:
+        tuner = self.tuner(repo, settings)
+        try:
+            if args.action == "check":
+                seen = tuner.check()
+                if args.json:
+                    print(json.dumps([o.to_dict() for o in seen], indent=2))
+                else:
+                    for observation in seen:
+                        print(observation.line())
+                attention = [o.key for o in seen if o.wants_attention]
+                if attention:
+                    print(
+                        f"{SCRIPT}: allowed by their gate but not in force: {', '.join(attention)}",
+                        file=sys.stderr,
+                    )
+                    return 1
+                return 0
+            if args.action == "undo":
+                if not args.item:
+                    print(f"{SCRIPT}: tune undo needs the item to undo", file=sys.stderr)
+                    return 2
+                lines = tuner.undo(args.item)
+            else:
+                lines = tuner.apply(args.only, dry_run=args.action == "plan")
+        except KeyError as exc:
+            print(f"{SCRIPT}: {exc.args[0]}", file=sys.stderr)
+            return 2
+        for line in lines:
+            print(line)
+        return 0
 
     def _measure(self, repo: Path, settings: HealthSettings, ledger: HealthLedger) -> int:
         record = MeasurementSession(
