@@ -2367,6 +2367,59 @@ class ChangelogConfig:
         return cls(**values)  # type: ignore[arg-type]
 
 
+# The severities `npm audit --audit-level` accepts, least to most severe.
+AUDIT_LEVELS = ("low", "moderate", "high", "critical")
+
+
+@dataclass(frozen=True)
+class AdvisoriesConfig:
+    """`[advisories]`: the dependency-advisory gate, and where its declared exceptions live.
+
+    `vibey-gh advisory-check` fails on every advisory `npm audit` reports at `audit_level` or
+    worse, exactly as `npm audit --audit-level=<level>` does, unless `exceptions_file` holds
+    an exception for it. An exception is a decision somebody reviewed, not a skip: it names
+    the advisory, the package and the workspace, says why the vulnerable code is not
+    reached, and expires -- at most `max_exception_days` after it was added -- so it is
+    re-decided rather than forgotten. The check prints every exception it honours and fails
+    on one that has expired, one that no longer matches anything, and one whose package now
+    has a patched release. `warn_days` before expiry it says so out loud.
+    """
+
+    audit_level: str = "high"
+    exceptions_file: str = ".github/advisory-exceptions.toml"
+    max_exception_days: int = 30
+    warn_days: int = 7
+
+    def __post_init__(self) -> None:
+        if self.audit_level not in AUDIT_LEVELS:
+            raise ValueError(
+                f"advisories.audit_level must be one of {', '.join(AUDIT_LEVELS)}:"
+                f" {self.audit_level!r}"
+            )
+        object.__setattr__(
+            self,
+            "exceptions_file",
+            _repository_relative("advisories.exceptions_file", self.exceptions_file),
+        )
+        for key, value, floor in (
+            ("max_exception_days", self.max_exception_days, 1),
+            ("warn_days", self.warn_days, 0),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or value < floor:
+                raise ValueError(f"advisories.{key} must be an integer of at least {floor}")
+        if self.warn_days > self.max_exception_days:
+            raise ValueError("advisories.warn_days must not exceed max_exception_days")
+
+    @classmethod
+    def from_table(cls, table: Mapping[str, object]) -> AdvisoriesConfig:
+        """`[advisories]` as written, every absent key falling back to the default."""
+        known = {f.name for f in dataclasses.fields(cls)}
+        unknown = sorted(set(table) - known)
+        if unknown:
+            raise ValueError(f"advisories: unknown key(s) {', '.join(unknown)}")
+        return cls(**dict(table))  # type: ignore[arg-type]
+
+
 @dataclass(frozen=True)
 class BranchHealthConfig:
     """`[branch_health]`: a red permanent branch is announced, once, in one issue.
@@ -2951,6 +3004,7 @@ class GhConfig:
     repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
     skip_markers: SkipMarkersConfig = SkipMarkersConfig()
     changelog: ChangelogConfig = ChangelogConfig()
+    advisories: AdvisoriesConfig = AdvisoriesConfig()
     branch_health: BranchHealthConfig = BranchHealthConfig()
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
@@ -3422,6 +3476,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             exempt_authors=tuple(skip_markers.get("exempt_authors", ())),
         ),
         changelog=ChangelogConfig.from_table(data.get("changelog", {})),
+        advisories=AdvisoriesConfig.from_table(data.get("advisories", {})),
         branch_health=BranchHealthConfig(
             enabled=branch_health.get("enabled", True),
             checks=tuple(branch_health.get("checks", ())),

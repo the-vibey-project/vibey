@@ -1,0 +1,73 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# Declared exceptions to the dependency-advisory gate (`vibey-gh advisory-check`, run by CI in
+# place of `npm audit --audit-level=high`; `[advisories]` in .vibey-gh.toml).
+#
+# An entry here ACCEPTS A KNOWN RISK until its `expires` date. It is a decision, not a skip,
+# so every entry must carry the evidence a reviewer needs to make it:
+#
+# - `advisory`, `package`, `workspace`: exactly what is excepted -- one GitHub advisory, in
+#   one package, in one npm workspace (a repository-relative directory holding a
+#   package-lock.json). Nothing broader.
+# - `reason`: why the vulnerable code is not reached by anything we ship or run, with the
+#   evidence -- not "low risk".
+# - `added`, `expires`: unquoted TOML dates. `expires` is at most `max_exception_days` after
+#   `added`; the exception stops being honoured ON that date. Renewing is a new decision:
+#   fresh evidence, a new `added`, a new `expires`.
+# - `retire_when`: the condition that ends it early; `upstream`: where that is tracked.
+#
+# The check prints every exception it honours on every run, and fails when one has expired,
+# no longer matches anything (delete it), or its package has a patched release (take the fix
+# and delete it). This file is a protected path (.github/CODEOWNERS, `[merge_train]
+# protected_paths`): accepting a risk needs the code owner's approval and a human merge, and
+# the merge train never lands a change to it unattended.
+
+[[exception]]
+advisory = "GHSA-86w9-cpqp-85rv"
+package = "node-forge"
+workspace = "clients/app"
+added = 2026-10-01
+# 30 days, the [advisories] maximum. The fix is close but not certain: digitalbazaar/forge
+# #1152 (open since 2026-09-21) fixes exactly this, and the advisory was last updated on
+# 2026-10-01. A month is long enough not to churn CI on every node-forge release cadence and
+# short enough that a stalled upstream is re-decided, not forgotten.
+expires = 2026-10-31
+reason = """
+CVE-2026-85393, CVSS 7.5 (I:H): node-forge <= 1.4.0 accepts extra nested DigestAlgorithm
+elements when verifying an RSA PKCS#1 v1.5 signature, so a signature can be forged for
+arbitrary messages -- but only against a LOW-EXPONENT RSA public key (e = 3). It is an
+incomplete fix for CVE-2026-33894. No patched release exists: 1.4.0 is the latest.
+
+Not reached by anything krypton ships or runs. Evidence, on expo 57.0.25 (2026-10-01):
+
+1. The only path is expo -> @expo/cli 57.0.27 -> node-forge 1.4.0, and
+   @expo/cli -> @expo/code-signing-certificates 0.0.6 -> node-forge (`npm ls node-forge`).
+   The only modules in the installed tree that import node-forge are
+   @expo/cli/build/src/run/ios/codeSigning/Security.js and
+   @expo/code-signing-certificates/build/main.js. @expo/cli is the developer CLI
+   (`expo start`, `expo export`); no app source imports it, node-forge, or the
+   code-signing library.
+2. The shipped bundles do not contain it. `npm run export:web` (1.32 MB entry bundle) and
+   `expo export --platform android` (3.13 MB Hermes bytecode) both have zero occurrences of
+   node-forge, forge.pki, emsaPkcs1v15, DigestInfo, rsaEncryption, certificateFromPem,
+   the RSA OID 1.2.840.113549 or code-signing-certificates; the control string
+   expo-router is present in both.
+3. In the CLI, node-forge never verifies a signature it did not make with a key it holds.
+   Security.js only parses certificates (certificateFromPem). code-signing-certificates
+   verifies (a) the developer's own self-signed code-signing certificate, after checking
+   its public key equals the locally held key pair, and (b) a signature it has just made
+   with that key (signBufferRSASHA256AndVerify), as a sanity check. Its keys come from
+   forge's generateKeyPair, whose default exponent is 65537, not 3. Both paths run only
+   when a dev client sends the expo-expect-signature header for expo-updates code signing,
+   and the app does not depend on expo-updates (`npm ls expo-updates` is empty).
+
+So an attacker would need to make the developer's own CLI accept a forged signature over a
+low-exponent key it never uses, on a code path the app never takes. npm's suggested "fix"
+(expo 44.0.6) is a breaking downgrade of thirteen SDK majors and is not taken.
+"""
+retire_when = "node-forge publishes a release that fixes GHSA-86w9-cpqp-85rv (then refresh clients/app/package-lock.json), or expo drops node-forge from @expo/cli"
+upstream = [
+  "https://github.com/advisories/GHSA-86w9-cpqp-85rv",
+  "https://github.com/digitalbazaar/forge/issues/1149",
+  "https://github.com/digitalbazaar/forge/pull/1152",
+]
