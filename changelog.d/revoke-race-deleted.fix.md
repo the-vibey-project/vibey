@@ -1,1 +1,0 @@
-- **Database role reconcile:** a `REVOKE SET ON PARAMETER session_replication_role` that loses the cluster-wide `pg_parameter_acl` race with `tuple concurrently deleted` is now retried like `tuple concurrently updated`, instead of failing the reconcile (seen on PostgreSQL 16 in CI).

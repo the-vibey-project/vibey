@@ -1358,6 +1358,93 @@ This file follows Keep a Changelog and semantic versioning conventions.
 - Gate Claude progress comments to the direct PR and issue event types supported by the
   action, preserving phase-level visibility for automated workflow events.
 
+### Features
+
+- **Feature:** `vibey-gh advisory-check [--workspace PATH]... [--audit-file JSON]` is
+  `npm audit --audit-level=<level>` with declared, expiring exceptions (`[advisories]`:
+  `audit_level`, `exceptions_file`, `max_exception_days`, `warn_days`). Each `[[exception]]`
+  names one GHSA advisory, package and workspace, gives the reachability reason, `added`,
+  `expires` (at most `max_exception_days` later) and `retire_when`, and may link `upstream`.
+  The check prints each exception it honours, its expiry, and the packages flagged only
+  because of it. It exits 1 on:
+  - an unexcepted advisory;
+  - an expired exception;
+  - a stale exception (matches nothing at the level);
+  - an exception whose package has a patched release in the GitHub advisory database;
+  - an exception for a workspace with no lockfile.
+
+  An npm error, an unreadable report, a package with no advisory behind its severity, or an
+  unreadable advisory database is refused, never passed.
+- **Feature:** `CanaryLedger` takes the `record_format` and `kind` its lines carry (the review
+  canary's by default), so another measurement can keep the same append-only digest chain
+  without reimplementing it; the autonomy scorecard (`scripts/autonomy_scorecard.py`) is the
+  first.
+- **Feature:** changelog fragments (`[changelog]`). A change is recorded as a new file,
+  `changelog.d/<slug>.<type>.md`, never as an edit to the changelog, so concurrent pull
+  requests stop conflicting over one unreleased section -- a conflict GitHub reports even when
+  a `merge=union` attribute would resolve it, because its mergeability never runs the driver.
+  `vibey-gh changelog assemble` files each fragment under its type's `### ` heading in the
+  unreleased section (creating the section or heading where absent, in `types` order, never
+  twice) and deletes it; `vibey-gh promote` and `vibey-gh version --apply` do that in the
+  release commit and cut each `versioned` changelog's section into the version's own. `vibey-gh
+  changelog check`, rendered as `changelog.yml` ("Changelog fragment"), refuses a pull request
+  that changes a `require_for` path without a fragment unless it carries `skip_label`, one with
+  a malformed fragment, and one that edits an unreleased section directly; `vibey-gh changelog
+  ensure-label` creates the skip label first, so it never has to be made by hand. Off by default.
+- **Feature:** `vibey-gh review-canary` -- `check`, `show`, `run`, `render [--check]`,
+  `status [--json]` -- measures the sovereign review's recall and false-positive rate against
+  a corpus of planted defects and clean controls (`[pr_automation.review_canary]`). Each case
+  is a diff built from exact edits to one file at a pinned commit, reviewed through
+  `local-review` with exactly the arguments `pr-review.yml` renders from
+  `[pr_automation.fallback]`. A defect is caught only when the verdict blocks and a finding is
+  on the planted lines and names the defect's class; a control blocked or given a `blocking`
+  finding is a false positive; a review with no verdict is counted apart by its outcome code.
+  Each measurement is one digest-chained line in an append-only ledger, rendered into a page's
+  generated block (`render --check` fails on drift). `status` holds the latest measurement to
+  the declared floor -- recall's Wilson lower bound, the false-positive rate's Wilson upper
+  bound, its age, the whole corpus, and the settings in force -- and exits 0, 1 or 3. A 2026-09-30
+  audit found `think = "low"` passing every pull request the gate had blocked; no study had
+  carried a known-true defect, so recall was never measured.
+
+### Bug Fixes
+
+- **Fix:** `vibey-gh doctor` no longer reports two tables it misjudged. `[autonomy]` (the
+  operator's standing grant, #1300) is now a section vibey-gh reads and validates
+  (`AutonomyConfig`): a `standing_grant` whose `never` list is empty is refused, because a
+  grant is read narrowly and one that names no bounds has none to read. `[estimate.forecast]`
+  was always read by the loader, but `doctor` called it "silently ignored" because its keys
+  carry no `forecast_` prefix; `doctor` now knows that table's keys and still names a stray
+  one in it.
+- **Fix:** a `review-canary` measurement whose reviews were resumed from a `--work` file now
+  records how many (`reused_reviews`) and when the reviews that carry a time ran
+  (`reviewed_between`), and the rendered block says so -- before, its start and finish times
+  were only when it was scored and recorded.
+- **Fix:** `vibey-gh rulesets` no longer sends a null coverage threshold. A declared
+  `minimum_coverage` with no `max_coverage_drop` rendered `"max_coverage_drop": null` --
+  the shape GitHub returns for an unset threshold -- but the rulesets API types each
+  threshold of a `code_coverage` rule as a number on input (OpenAPI
+  `repository-rule-code-coverage`; docs.github.com "REST API endpoints for rules"), so the
+  rule matched no member of the rule `oneOf` and GitHub refused the whole ruleset with 422
+  `Invalid property /rules/N: data matches no possible input`. Undeclared thresholds are now
+  omitted; `rulesets --check` and the reconcile diff still treat a live threshold nobody
+  declared as drift. `rulesets --dry-run` now ends "dry run: N of M ruleset(s) would change;
+  nothing applied" instead of claiming it reconciled them, and a real run reports how many
+  it applied.
+- **Fix:** a large pull request can get a sovereign verdict again, or an honest, specific
+  reason why not. PR #1312's 77-file review gave none: the operator's host's Ollama log shows
+  the model was free, read its first part (46,222 tokens) in 145s, then wrote ~9,950 tokens
+  of reasoning -- past an 8,192-token reserve nothing enforced -- until a fixed 600s cut it
+  off; the retry, identical at temperature 0, did the same (10,017 tokens). Now the
+  reasoning reserve is sent as `num_predict`, so it is the most the model may write, and its
+  default is 16,384 (that log's reviews finished at up to 11,832 tokens). Each request's
+  deadline scales with its size at the host's measured `prompt_tokens_per_second` (200) and
+  `output_tokens_per_second` (20), never under `timeout_seconds`. Before each request a
+  one-token probe at the same window waits, up to `slot_wait_seconds` (900), for the model
+  to come free, so a review queued behind another client is coded `model_busy` (new) and
+  retried, while a request that started on a free model and still ran past its deadline is
+  `model_timeout`, says why, and is not retried. All three are `[pr_automation.fallback]`
+  keys, rendered into `pr-review.yml`; `0` for them restores the old behaviour.
+
 ## Historical releases
 
 See GitHub Releases for versioned notes, tags, artifacts, and provenance attestations.
