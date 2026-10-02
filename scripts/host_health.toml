@@ -28,6 +28,9 @@ docs_page = "docs/reference/host-health.md"
 minimum_specs_config = "scripts/minimum_specs.toml"
 # Every probe command is bounded by this many seconds.
 command_timeout_s = 60
+# The declared tuning of this host (`host_health.py tune`), and the weekly record's view of
+# which of it was in force (figure `tuning.state`).
+tuning_config = "scripts/host_tuning.toml"
 
 [host_health.privacy]
 # The host fingerprint is a SHA-256 over these host facts plus the machine's own platform
@@ -123,6 +126,30 @@ band_max_tokens = 32768
 min_generated_tokens = 32
 # A week with fewer comparable requests than this has no median recorded for it.
 min_samples_per_week = 5
+
+[host_health.model_loads]
+# Model (re)loads mined passively from the same Ollama server log as the throughput: each
+# `starting llama-server` line is one load, with the context size it was asked for. The
+# figures cover this many trailing days.
+window_days = 7
+
+[host_health.budget]
+# Where the memory goes, by process group: the first group whose pattern matches a process's
+# command (case-insensitively) takes it; the rest are "other". macOS `top` truncates a
+# command to 16 characters and Linux `comm` to 15, so the patterns match a name's start.
+top_processes = 400
+groups = [
+    ["ollama", "^(llama-server|ollama)"],
+    ["docker", "^(com\\.docker|docker|vpnkit|qemu|com\\.apple\\.virtua)"],
+    ["postgres", "^postgres"],
+    ["rabbitmq", "^(beam\\.smp|erl_child|epmd|inet_gethost)"],
+    ["ide", "^(code|cursor|electron|idea|pycharm)\\b"],
+    ["browser", "(brave|chrome|safari|firefox|webkit)"],
+    ["agents", "^(claude|codex|cloudcode|gemini|agy)"],
+    ["node", "^node$"],
+    ["python", "^python"],
+    ["spotlight", "^(mds|mdworker|corespotlight)"],
+]
 
 [host_health.microbench]
 # A small, bounded CPU and disk benchmark, run only when the idle gate below says the host
@@ -346,6 +373,13 @@ expected = ["Darwin"]
 drivers = ["swap"]
 figures = ["memory.swap_used_gib", "memory.ram_gib", "memory.swapout_gb_per_hour", "storage.write_gb_per_power_on_hour"]
 text = "Hypothesis, not a conclusion: {memory.swap_used_gib} GiB of swap in use on {memory.ram_gib} GiB of memory, with swap-outs of about {memory.swapout_gb_per_hour} GB/h since boot, may be a large part of the SSD's {storage.write_gb_per_power_on_hour} GB per power-on hour of writes. The record cannot attribute writes to swap; per-process disk I/O would test it."
+
+[host_health.hypotheses.swap_share_of_writes]
+# The counter-based attribution the hypothesis above asks for: bytes swapped out since boot
+# against all bytes the disks were sent since boot (memory.swap_share_of_writes).
+drivers = ["swap"]
+figures = ["memory.swap_share_of_writes", "storage.host_writes_gb_per_hour_since_boot"]
+text = "Counter evidence, not a trace: swap-outs since boot equal {memory.swap_share_of_writes} of the bytes written to disk since boot ({storage.host_writes_gb_per_hour_since_boot} GB/h). If that share is high, the SSD's wear is the price of the memory overcommit, and the lever is memory, not the disk (docs/runbooks/host-optimization.md)."
 
 [host_health.conditions]
 # The ONE tracking issue (vibey-gh tracking-issue): raised while any condition holds,

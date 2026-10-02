@@ -70,6 +70,9 @@ recorded as **skipped**, with the reason, and no number is invented for it.
 | Microbenchmark | SHA-256 and a flushed sequential write. They run only when the minimum-specs idle gate says the host is quiet. | Same |
 | Platform | The OS and its vendor support end, and the hardware's support status. Declared in the TOML with a source and a last-verified date. | Same |
 | Capacity | vibey's own memory and disk requirements, copied in from the [minimum-specs record](system-requirements.md) with their dates | Same |
+| Model loads | How often the sovereign model was loaded, per day, and at how many distinct context sizes, over the trailing week, mined **passively** from the Ollama server log | Same |
+| Budget | Memory by process group from `top` (each process's footprint, and how much of it is compressed or swapped out). All bytes written to disk since boot, and the share of them that swap-outs account for (`vm_stat`) | `ps` resident sizes, `/proc/diskstats`, `/proc/vmstat` |
+| Tuning | Which items of the declared host tuning (`scripts/host_tuning.toml`) were in force, so the weeks after a change can be compared with the weeks before it ([Host optimization](../runbooks/host-optimization.md)) | Same |
 
 Privacy (SD-01 §1): the host is named by a fingerprint, a truncated SHA-256 over its
 hardware facts and platform identifier. The identifier, serial numbers and the host name

@@ -37,6 +37,16 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 
+@pytest.fixture(autouse=True)
+def _off_the_machines_lock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests run inside real pushes (the pre-push suite, under the gate), where
+    `VIBEY_PUSH_LOCK` names the machine's lock and the gate takes it ahead of `storm.toml`.
+    Every subprocess a test starts inherits this environment: drop both variables so none
+    can reach the real lock or storm home (a test that wants one sets it itself)."""
+    monkeypatch.delenv(push_gate.LOCK_ENV, raising=False)
+    monkeypatch.delenv("VIBEY_STORM_HOME", raising=False)
+
+
 def _load(name: str, filename: str):  # noqa: ANN202 - a module object
     spec = importlib.util.spec_from_file_location(name, TOOLS / filename)
     assert spec and spec.loader

@@ -61,6 +61,7 @@ nav:
       - Self-hosted sovereign surfaces: guides/self-hosted-surfaces.md
       - The Sabbath: guides/sabbath.md
       - Sovereign review runner: runbooks/sovereign-review-runner.md
+      - Host optimization: runbooks/host-optimization.md
   - "What do you want to do?":
       - Overview: guides/outcomes/index.md
       - Run agents on your own hardware: guides/outcomes/run-agents-on-your-own-hardware.md
@@ -77,6 +78,7 @@ nav:
       - Configuration: reference/configuration.md
       - Hub API: reference/hub-api.md
       - System requirements: reference/system-requirements.md
+      - Distance from full autonomy: reference/autonomy.md
       - Host health: reference/host-health.md
       - Context microslices: context-microslices.md
   - Design:

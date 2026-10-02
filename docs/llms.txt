@@ -23,6 +23,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Self-hosted sovereign surfaces](https://the-vibey-project.github.io/vibey/main/guides/self-hosted-surfaces/): vibey orchestrates software delivery end-to-end on sovereign defaults: every operational dependency — issue tracking, documentation, secrets, files, email, SMS, messaging, configuration store, caching, message bus…
 - [The Sabbath](https://the-vibey-project.github.io/vibey/main/guides/sabbath/): From sundown on Friday to sundown on Saturday, vibey rests.
 - [Sovereign review runner](https://the-vibey-project.github.io/vibey/main/runbooks/sovereign-review-runner/): How to stand up, verify and remove the self-hosted runner that runs pr-review.yml's review-sovereign job on [self-hosted, vibey-local-vibey] (sub-doctrine 8.a).
+- [Host optimization](https://the-vibey-project.github.io/vibey/main/runbooks/host-optimization/): How the machine vibey runs on is kept healthy and fitted to its workload, with every change declared in the repository, applied under a gate, measured week after week, and reversible.
 
 ## What do you want to do?
 
@@ -44,6 +45,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Configuration](https://the-vibey-project.github.io/vibey/main/reference/configuration/): The schema below is fully implemented and unit-tested in src/vibey/domain/config.py (VibeyConfig, parse_config, parse_toml_string) and src/vibey/infrastructure/config_loader.py (load_config_from_path). vibey new reads…
 - [Hub API](https://the-vibey-project.github.io/vibey/main/reference/hub-api/): The hub is vibey serve (ADR-0068): one HTTP API that every krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
 - [System requirements](https://the-vibey-project.github.io/vibey/main/reference/system-requirements/): What a machine needs to run vibey and its krypton clients, and how each figure is known.
+- [Distance from full autonomy](https://the-vibey-project.github.io/vibey/main/reference/autonomy/): How far vibey is from running its whole delivery loop without a person, stage by stage, measured weekly from the forge, the review canary, the code and the local queue.
 - [Host health](https://the-vibey-project.github.io/vibey/main/reference/host-health/): How healthy is the machine vibey and krypton run on, and how long until it needs replacing?
 - [Context microslices](https://the-vibey-project.github.io/vibey/main/context-microslices/): This is the implementation contract for proposed doctrine 10.k and ADR-0075.
 
