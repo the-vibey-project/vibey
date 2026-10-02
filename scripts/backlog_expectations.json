@@ -404,6 +404,13 @@
       "next": "define the System 1 model contract, training or serving plan, target hardware, safety boundary, and measurable acceptance criteria before implementation",
       "probes": []
     },
+    "1292": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator priority order",
+      "probes": []
+    },
     "133": {
       "close_when_done": false,
       "kind": "standalone",
@@ -451,6 +458,24 @@
           }
         }
       ]
+    },
+    "1345": {
+      "close_when_done": false,
+      "hold_reason": "release-binaries.yml opened this tracking issue and owns it; it reflects whether a release builds the iOS app",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "1349": {
+      "close_when_done": false,
+      "hold_reason": "the operator's release plan; it closes when the release it plans is published and verified",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
     },
     "136": {
       "close_when_done": false,

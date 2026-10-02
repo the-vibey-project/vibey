@@ -123,17 +123,47 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -euo pipefail
-          # --pre: the engine this depends on is itself a dev build on TestPyPI.
+          # Only the two packages under test come from TestPyPI, and without their
+          # dependencies. --pre picks up the engine's own dev build, and it applies to every
+          # package it resolves: with TestPyPI as the index, a broken pre-release of a
+          # dependency uploaded there (fastapi, 2026-09-30) beat the real one from PyPI.
+          installed=""
           for i in $(seq 1 20); do
-            if pip install --no-cache-dir --quiet --pre \
+            if pip install --no-cache-dir --quiet --pre --no-deps \
                  --index-url https://test.pypi.org/simple/ \
-                 --extra-index-url https://pypi.org/simple/ \
-                 "krypton-app==${VERSION}"; then
+                 "krypton-app==${VERSION}" vibey-engine; then
+              installed=yes
               break
             fi
             echo "not indexed yet (attempt $i); waiting"
             sleep 30
           done
+          if [ -z "$installed" ]; then
+            echo "::error::krypton-app ${VERSION} never installed from TestPyPI"
+            exit 1
+          fi
+          # Every dependency comes from PyPI alone, so no name on TestPyPI can stand in for it.
+          pip install --no-cache-dir --quiet packaging
+          python - > "${RUNNER_TEMP}/requirements.txt" <<'PY'
+          from importlib.metadata import requires
+          from packaging.requirements import Requirement
+
+          under_test = {"krypton-app", "vibey-engine"}
+          wanted = set()
+          for dist, extras in (("krypton-app", ("",)), ("vibey-engine", ("", "hub"))):
+              for raw in requires(dist) or []:
+                  req = Requirement(raw)
+                  if req.name in under_test:
+                      continue
+                  if req.marker and not any(req.marker.evaluate({"extra": e}) for e in extras):
+                      continue
+                  extra = f"[{','.join(sorted(req.extras))}]" if req.extras else ""
+                  wanted.add(f"{req.name}{extra}{req.specifier}")
+          print("\n".join(sorted(wanted)))
+          PY
+          pip install --no-cache-dir --quiet --index-url https://pypi.org/simple/ \
+            -r "${RUNNER_TEMP}/requirements.txt"
+          pip check
           krypton --version
           krypton --help >/dev/null
           echo "installed krypton-app ${VERSION} from TestPyPI; krypton runs"
