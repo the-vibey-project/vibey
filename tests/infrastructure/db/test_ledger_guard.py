@@ -12,13 +12,14 @@ import asyncio
 import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
 import pytest_asyncio
 
-from tests.db_roles import TestDatabaseRoles
+from tests.db_roles import ClusterParameterAclLock, TestDatabaseRoles
 from vibey.domain.ledger import EventKind, Provenance, digest_event
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.database_setup import OwnerMigration, SchemaPreparer
@@ -54,6 +55,14 @@ from .conftest import MIGRATIONS_DIR
 
 ROLES = TestDatabaseRoles.from_environ(os.environ)
 split_only = pytest.mark.skipif(not ROLES.split, reason="the suite runs as one role")
+
+
+async def _locked_reconcile(conn: asyncpg.Connection, **kwargs: Any) -> None:
+    """Reconcile under the cluster-wide parameter-ACL lock (see `ClusterParameterAclLock`)."""
+    async with ClusterParameterAclLock.held():
+        await DatabaseRoleReconciler().reconcile(conn, **kwargs)
+
+
 PARTITION = "event_partitioned_0013_default"
 REFUSED = "the ledger is append-only"
 
@@ -214,7 +223,7 @@ async def test_a_partition_added_later_is_guarded(
     missing = await LedgerGuardInspector().inspect(owner_conn)
     assert "public.event_later has no event_no_truncate trigger" in missing.problems
 
-    await DatabaseRoleReconciler().reconcile(owner_conn, app_role=ROLES.app_role)
+    await _locked_reconcile(owner_conn, app_role=ROLES.app_role)
 
     with pytest.raises(asyncpg.InsufficientPrivilegeError, match=REFUSED):
         await owner_conn.execute("TRUNCATE event_later")
@@ -260,7 +269,7 @@ async def test_a_grant_added_by_hand_is_revoked_at_the_next_reconcile(
     await owner_conn.execute(f"GRANT DELETE, TRUNCATE ON job, event TO {role}")
     assert await app_conn.fetchval("SELECT has_table_privilege('event', 'DELETE')")
 
-    await DatabaseRoleReconciler().reconcile(owner_conn, app_role=ROLES.app_role)
+    await _locked_reconcile(owner_conn, app_role=ROLES.app_role)
 
     assert not await app_conn.fetchval("SELECT has_table_privilege('event', 'DELETE')")
     assert not await app_conn.fetchval("SELECT has_table_privilege('job', 'TRUNCATE')")
@@ -273,7 +282,7 @@ async def test_the_owner_itself_is_refused_as_the_application_role(
     superuser = await owner_conn.fetchval("SELECT rolsuper FROM pg_roles WHERE rolname = $1", owner)
 
     with pytest.raises(RoleSeparationRefused, match="refusing to reconcile grants"):
-        await DatabaseRoleReconciler().reconcile(owner_conn, app_role=owner)
+        await _locked_reconcile(owner_conn, app_role=owner)
     assert superuser is not None
 
 
@@ -283,7 +292,7 @@ async def test_a_member_of_the_owner_is_refused(owner_conn: asyncpg.Connection) 
     await owner_conn.execute(f"CREATE ROLE {member} NOLOGIN IN ROLE {RoleIdentifier.quote(owner)}")
     try:
         with pytest.raises(RoleSeparationRefused, match="member of, the owner"):
-            await DatabaseRoleReconciler().reconcile(owner_conn, app_role=member)
+            await _locked_reconcile(owner_conn, app_role=member)
     finally:
         await owner_conn.execute(f"DROP ROLE {member}")
 
@@ -295,7 +304,7 @@ async def test_a_superuser_is_refused(owner_conn: asyncpg.Connection) -> None:
     await owner_conn.execute(f"CREATE ROLE {role} NOLOGIN SUPERUSER")
     try:
         with pytest.raises(RoleSeparationRefused, match="it is a superuser"):
-            await DatabaseRoleReconciler().reconcile(owner_conn, app_role=role)
+            await _locked_reconcile(owner_conn, app_role=role)
     finally:
         await owner_conn.execute(f"DROP ROLE {role}")
 
@@ -305,9 +314,9 @@ async def test_a_missing_role_is_created_only_when_a_password_is_given(
 ) -> None:
     role = f"vibey_test_new_{uuid4().hex[:8]}"
     with pytest.raises(AppRoleMissing, match=f"{role!r} does not exist"):
-        await DatabaseRoleReconciler().reconcile(owner_conn, app_role=role)
+        await _locked_reconcile(owner_conn, app_role=role)
     try:
-        await DatabaseRoleReconciler().reconcile(owner_conn, app_role=role, app_password="p'w\"d")
+        await _locked_reconcile(owner_conn, app_role=role, app_password="p'w\"d")
         assert await owner_conn.fetchval("SELECT has_table_privilege($1, 'event', 'INSERT')", role)
         assert not await owner_conn.fetchval(
             "SELECT has_table_privilege($1, 'event', 'UPDATE')", role
@@ -522,7 +531,7 @@ async def test_finding_1_an_operator_the_app_planted_never_runs_as_the_owner(
     await app_conn.execute(_HIJACK.format(app=ROLES.app_role))
     before = await owner_conn.fetchval("SELECT count(*) FROM event")
 
-    await DatabaseRoleReconciler().reconcile(owner_conn, app_role=ROLES.app_role)
+    await _locked_reconcile(owner_conn, app_role=ROLES.app_role)
 
     assert await owner_conn.fetchval("SELECT to_regprocedure('public.backdoor_wipe()')") is None
     assert await owner_conn.fetchval("SELECT count(*) FROM event") == before
@@ -604,7 +613,7 @@ async def test_finding_5_concurrent_reconciles_all_succeed(
     async def one() -> None:
         conn = await asyncpg.connect(database_url)
         try:
-            await DatabaseRoleReconciler().reconcile(conn, app_role=ROLES.app_role)
+            await _locked_reconcile(conn, app_role=ROLES.app_role)
         finally:
             await conn.close()
 
@@ -673,7 +682,7 @@ async def test_finding_8_a_role_that_may_create_roles_is_refused(
     await owner_conn.execute(f"CREATE ROLE {role} NOLOGIN CREATEROLE")
     try:
         with pytest.raises(RoleSeparationRefused, match="it may create roles"):
-            await DatabaseRoleReconciler().reconcile(owner_conn, app_role=role)
+            await _locked_reconcile(owner_conn, app_role=role)
     finally:
         await owner_conn.execute(f"DROP ROLE {role}")
 
@@ -689,7 +698,7 @@ async def test_finding_8_membership_is_checked_against_the_ledgers_owner(
     await owner_conn.execute(f"ALTER TABLE event OWNER TO {owner}")
     try:
         with pytest.raises(RoleSeparationRefused, match="member of, the owner"):
-            await DatabaseRoleReconciler().reconcile(owner_conn, app_role=member)
+            await _locked_reconcile(owner_conn, app_role=member)
     finally:
         await owner_conn.execute("ALTER TABLE event OWNER TO CURRENT_USER")
         await owner_conn.execute(f"DROP ROLE {member}")
@@ -707,7 +716,7 @@ async def test_finding_8_default_privileges_and_public_grants_are_reset(
     )
     await owner_conn.execute("GRANT UPDATE, DELETE ON event TO PUBLIC")
 
-    await DatabaseRoleReconciler().reconcile(owner_conn, app_role=ROLES.app_role)
+    await _locked_reconcile(owner_conn, app_role=ROLES.app_role)
 
     default_acl = await owner_conn.fetchval(
         "SELECT count(*) FROM pg_default_acl, aclexplode(defaclacl) a "
@@ -748,7 +757,7 @@ async def test_finding_9_a_new_role_gets_a_scram_verifier_never_the_plaintext(
     password = "correct horse battery staple"
     recording = _Recording(owner_conn)
     try:
-        await DatabaseRoleReconciler().reconcile(
+        await _locked_reconcile(
             recording,  # type: ignore[arg-type]
             app_role=role,
             app_password=password,
@@ -773,7 +782,7 @@ async def test_finding_9_an_owner_that_cannot_create_roles_gets_a_clean_error(
 
     recording = _Recording(owner_conn, refuse="CREATE ROLE")
     with pytest.raises(OwnerCannotCreateRole, match="CREATEROLE"):
-        await DatabaseRoleReconciler().reconcile(
+        await _locked_reconcile(
             recording,  # type: ignore[arg-type]
             app_role=f"vibey_test_nocr_{uuid4().hex[:8]}",
             app_password="pw",
@@ -807,18 +816,23 @@ async def test_finding_8_a_granted_session_replication_role_is_reported_and_revo
     if int(await owner_conn.fetchval("SHOW server_version_num")) < 150000:
         pytest.skip("parameter privileges arrived in PostgreSQL 15")
     role = RoleIdentifier.quote(ROLES.app_role)
-    await owner_conn.execute(f"GRANT SET ON PARAMETER session_replication_role TO {role}")
-    try:
-        problems = (await LedgerGuardInspector().inspect(app_conn)).problems
-        assert "it may SET session_replication_role, which silences triggers" in problems
+    # The grant is cluster-wide and the role is shared by every worker: hold the lock from the
+    # grant to the revoke, or another worker's reconcile strips it mid-test.
+    async with ClusterParameterAclLock.held():
+        await owner_conn.execute(f"GRANT SET ON PARAMETER session_replication_role TO {role}")
+        try:
+            problems = (await LedgerGuardInspector().inspect(app_conn)).problems
+            assert "it may SET session_replication_role, which silences triggers" in problems
 
-        await DatabaseRoleReconciler().reconcile(owner_conn, app_role=ROLES.app_role)
+            await _locked_reconcile(owner_conn, app_role=ROLES.app_role)
 
-        assert not await app_conn.fetchval(
-            "SELECT has_parameter_privilege('session_replication_role', 'SET')"
-        )
-    finally:
-        await owner_conn.execute(f"REVOKE SET ON PARAMETER session_replication_role FROM {role}")
+            assert not await app_conn.fetchval(
+                "SELECT has_parameter_privilege('session_replication_role', 'SET')"
+            )
+        finally:
+            await owner_conn.execute(
+                f"REVOKE SET ON PARAMETER session_replication_role FROM {role}"
+            )
 
 
 class _OldServer:
@@ -901,7 +915,14 @@ class _Flaky(_OldServer):
         return "REVOKE"
 
 
-@pytest.mark.parametrize("message", ["tuple concurrently updated", "tuple concurrently deleted"])
+@pytest.mark.parametrize(
+    "message",
+    [
+        "tuple concurrently updated",
+        "tuple concurrently deleted",
+        "cache lookup failed for parameter ACL 128323",
+    ],
+)
 async def test_a_revoke_that_races_another_reconcile_is_retried_until_it_lands(
     message: str,
 ) -> None:

@@ -600,6 +600,23 @@ class CanaryReport(CanaryReportInterface):
         )
         return f"| {label} | {rate} | {interval} |"
 
+    @staticmethod
+    def _reused(entry: Mapping[str, Any]) -> str:
+        """When the reviews were heard, if not in the run that recorded them."""
+        reused = int(entry.get("reused_reviews") or 0)
+        if not reused:
+            return ""
+        window = entry.get("reviewed_between")
+        when = (
+            f"reviews ran from {window[0]} to {window[1]}"
+            if window
+            else "the work file kept no time for them"
+        )
+        return (
+            f" {reused} of its reviews were heard earlier and resumed from a work file, so"
+            f" its finish time is when it was scored and recorded; {when}."
+        )
+
     def block(self, entry: Mapping[str, Any] | None) -> str:
         if entry is None:
             body = [
@@ -632,7 +649,7 @@ class CanaryReport(CanaryReportInterface):
                 f" `{settings['model']}`, think `{settings['think'] or 'default'}`, window"
                 f" {settings['context_window']}, reserve {settings['reasoning_reserve_tokens']},"
                 f" scope `{settings['scope']}`, source context"
-                f" {'on' if settings['source_context'] else 'off'}."
+                f" {'on' if settings['source_context'] else 'off'}.{self._reused(entry)}"
             ),
             "",
             f"| Measure | Result | {confidence} Wilson interval |",
@@ -849,6 +866,7 @@ class ReviewCanary(ReviewCanaryInterface):
             "attempts": int(record.get("attempts", 0)),
             "parts": int(record.get("parts", 0)),
             "reason": reason,
+            "reviewed_at": self._now().isoformat(),
         }
 
     # ------------------------------------------------------------------ measuring
@@ -944,6 +962,7 @@ class ReviewCanary(ReviewCanaryInterface):
         done = self._resume(work, digest)
         started_at = self._now()
         results: list[CaseResult] = []
+        reused, moments = 0, []
         for number, case in enumerate(chosen, 1):
             built = loader.build(corpus, case)
             case_digest = CanaryLedger.digest(
@@ -956,7 +975,9 @@ class ReviewCanary(ReviewCanaryInterface):
                 }
             )
             review = done.get(f"{case.id}@{case_digest}")
-            if review is None:
+            if review is not None:
+                reused += 1
+            else:
                 review = self.review_case(built, settings, base_url=base_url, documents=documents)
                 if work is not None:
                     work.parent.mkdir(parents=True, exist_ok=True)
@@ -980,6 +1001,8 @@ class ReviewCanary(ReviewCanaryInterface):
                 reason=str(review["reason"]),
             )
             results.append(result)
+            if review.get("reviewed_at"):
+                moments.append(str(review["reviewed_at"]))
             self._out(
                 f"vibey-gh: review-canary {number}/{len(chosen)} {case.id}: {result.outcome}"
                 f" ({result.code}, {result.seconds:.0f}s)"
@@ -1008,6 +1031,10 @@ class ReviewCanary(ReviewCanaryInterface):
             },
             "subset": subset,
             "case_ids": [case.id for case in chosen] if subset else [],
+            # The run's own times are when it scored and recorded. When reviews came from a
+            # work file, these say how many, and when the reviews that carry a time ran.
+            "reused_reviews": reused,
+            "reviewed_between": [min(moments), max(moments)] if moments else None,
             "settings": settings,
             "settings_digest": digest,
             "conditions": conditions,

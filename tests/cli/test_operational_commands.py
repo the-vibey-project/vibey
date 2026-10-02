@@ -912,6 +912,24 @@ def test_doctor_prints_the_supervisor_and_fails_on_its_fail(
     assert "FAIL supervisor-worker" in res.output
 
 
+def test_doctor_prints_host_health_and_fails_on_its_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The machine's weekly health record is said out loud; a FAIL line fails the doctor."""
+    res = runner.invoke(app, ["doctor"])
+    assert res.exit_code == 0, res.output
+    assert "WARN host-health" in res.output
+
+    class _Failing:
+        def doctor_lines(self) -> tuple[list[str], bool]:
+            return ["FAIL host-health           no host-health record"], False
+
+    monkeypatch.setattr("vibey.cli.main.HOST_HEALTH", _Failing())
+    res = runner.invoke(app, ["doctor"])
+    assert res.exit_code == 1
+    assert "FAIL host-health" in res.output
+
+
 def test_install_requires_an_explicit_postgres_target() -> None:
     res = runner.invoke(app, ["install"])
 

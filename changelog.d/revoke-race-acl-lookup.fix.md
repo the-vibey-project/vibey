@@ -1,0 +1,1 @@
+- **Database role reconcile:** a replication-role `REVOKE` that loses the cluster-wide `pg_parameter_acl` race with `cache lookup failed for parameter ACL` (the row dropped between lookup and use, seen on PostgreSQL 18 in CI) is now retried like the `tuple concurrently updated/deleted` cases, instead of failing the reconcile.

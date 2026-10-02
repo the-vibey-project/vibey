@@ -98,6 +98,16 @@ dependencies.
 uv run pip-audit
 ```
 
+The npm lockfiles (the root workspace and `clients/app`) get the same gate from
+`vibey-gh advisory-check` in the `@vibey/core`, `app` and `vscode-extension` jobs:
+`npm audit` at `[advisories] audit_level` (high), less the declared exceptions in
+`.github/advisory-exceptions.toml`. An exception is never a silent skip: it names one
+advisory, package and workspace, records why the vulnerable code is not reached, and
+expires within `max_exception_days` (30). Every run prints each exception it honours and
+until when, and fails when one has expired, matches nothing (remove it), or its package has
+a patched release (take the fix). The file is a protected path, so accepting a risk takes the
+code owner's approval and a human merge. `SECURITY.md`, "Dependency advisories", has the rest.
+
 ## Hook diet
 
 The seven gates are split across git hook stages so commits stay fast

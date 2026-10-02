@@ -817,9 +817,20 @@ jobs:
       - name: Install the npm workspace from its one lockfile
         working-directory: .
         run: npm ci
-      - name: No known high-severity advisory in any dependency
+      # `npm audit --audit-level=high`, plus the declared, expiring exceptions in
+      # .github/advisory-exceptions.toml ([advisories] in .vibey-gh.toml): every advisory at
+      # high or worse fails, except one somebody reviewed and dated, and every exception
+      # honoured is printed with its expiry. GH_TOKEN reads the advisory database, which
+      # says when a patched release replaces an exception.
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: No high-severity advisory in any dependency, but a declared, unexpired exception
         working-directory: .
-        run: npm audit --audit-level=high
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m pip install --quiet -e src/vibey_tools/gh
+          vibey-gh advisory-check --workspace .
       - name: Build with no platform types, and type-check the tests
         run: |
           npm run build
@@ -848,8 +859,16 @@ jobs:
           cache-dependency-path: clients/app/package-lock.json
       - name: Install from the app's own lockfile
         run: npm ci
-      - name: No known high-severity advisory in any dependency
-        run: npm audit --audit-level=high
+      # As in @vibey/core: npm audit at high, less the declared, expiring exceptions.
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: No high-severity advisory in any dependency, but a declared, unexpired exception
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m pip install --quiet -e src/vibey_tools/gh
+          vibey-gh advisory-check --workspace clients/app
       - name: Type-check, strict
         run: npm run typecheck
       - name: Unit and screen tests, with the core at 100% of lines, branches, functions and statements
@@ -881,9 +900,16 @@ jobs:
       - name: Install the npm workspace from its one lockfile
         working-directory: .
         run: npm ci
-      - name: No known high-severity advisory in any dependency
+      # As in @vibey/core: npm audit at high, less the declared, expiring exceptions.
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: No high-severity advisory in any dependency, but a declared, unexpired exception
         working-directory: .
-        run: npm audit --audit-level=high
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m pip install --quiet -e src/vibey_tools/gh
+          vibey-gh advisory-check --workspace .
       - name: Type-check the extension and its tests
         run: npm run typecheck
       - name: Compile, and package.json still agrees with the one command table
@@ -941,9 +967,25 @@ jobs:
       - name: Toolchain and libraries (Arch)
         if: matrix.distro == 'arch'
         working-directory: /
+        # One failing mirror used to fail the job: on 2026-10-01 fastly.mirror.pkgbuild.com
+        # stopped serving package signatures and pacman, given that one server, gave up
+        # (#1332, run 36943837654). Several official mirrors let pacman fall through to the
+        # next; three attempts absorb a blip. A real failure (a missing package) still fails.
         run: |
-          pacman -Syu --noconfirm --needed base-devel git meson ninja pkgconf glib2 json-glib \
-            libsoup3 gtk4 libadwaita avahi desktop-file-utils appstream
+          # shellcheck disable=SC2016  # $repo and $arch are pacman's, not the shell's
+          printf 'Server = %s\n' \
+            'https://geo.mirror.pkgbuild.com/$repo/os/$arch' \
+            'https://fastly.mirror.pkgbuild.com/$repo/os/$arch' \
+            'https://mirrors.kernel.org/archlinux/$repo/os/$arch' \
+            'https://mirror.rackspace.com/archlinux/$repo/os/$arch' \
+            > /etc/pacman.d/mirrorlist
+          for attempt in 1 2 3; do
+            pacman -Syu --noconfirm --needed base-devel git meson ninja pkgconf glib2 json-glib \
+              libsoup3 gtk4 libadwaita avahi desktop-file-utils appstream && exit 0
+            echo "::warning::pacman attempt $attempt of 3 failed; retrying"
+            sleep $((attempt * 15))
+          done
+          exit 1
       - uses: actions/checkout@v4
       - name: Build everything under ASan and UBSan, warnings as errors
         run: |
@@ -1134,7 +1176,11 @@ jobs:
           cpus: 4
           memory: 10240m
 
+      # Pinned: the contracts below depend on how `helm upgrade` waits, and Helm 4 changed
+      # that (kstatus). An unpinned setup takes whatever release is newest that day.
       - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.0
 
       - name: Build the image into minikube's daemon
         # BuildKit's default docker-container driver pulls a separate
@@ -1289,11 +1335,19 @@ jobs:
       # other check in this file and fails this one -- which is exactly
       # how it once shipped unnoticed.
       - name: Contract - the ScaledObject reconciles against real Postgres
+        # The upgrade replaces the worker pod. A worker holding an in-flight job drains it
+        # first, for up to terminationGracePeriodSeconds (7200) -- correctly, and that drain
+        # is its own contract below. Helm 4's --wait counts a terminating pod as "Pending
+        # termination", so waiting on the upgrade made this contract fail whenever a job
+        # happened to be in flight (#1326, run 36927741704). Wait instead for what this
+        # contract is about: a worker Available under KEDA, and the ScaledObject Ready.
         run: |
           helm repo add kedacore https://kedacore.github.io/charts
           helm install keda kedacore/keda -n keda --create-namespace --wait --timeout 5m
           helm upgrade vibey deploy/helm/vibey -n vibey \
-            --set keda.enabled=true --wait --timeout 5m
+            --set keda.enabled=true --timeout 5m
+          kubectl wait --for=condition=available deployment/vibey-vibey-worker \
+            -n vibey --timeout=5m
           ready=""
           for _ in $(seq 1 24); do
             ready=$(kubectl get scaledobject vibey-vibey-worker -n vibey \
