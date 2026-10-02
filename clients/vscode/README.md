@@ -32,21 +32,36 @@ Tick these off once, in this order.
    switch it on in vibey
    ([ADR-0064](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0064-gptossloop-is-the-sovereign-engine/)).
 5. **The model, gpt-oss:20b.** It is about 14 GB, and the extension can download it for you
-   (step 4 below). A computer with 16 GB of memory runs it; 24 GB runs it comfortably.
+   (step 4 below). It needs at least 24 GB of memory, and 32 GB is recommended; a 16 GB Mac
+   cannot run it
+   ([system requirements](https://the-vibey-project.github.io/vibey/main/reference/system-requirements/)).
 
 ## Install the extension
 
-From a `.vsix` file:
+From Open VSX, where it is listed as `the-vibey-project.krypton` (editors that read Open VSX,
+such as VSCodium, find it in their Extensions view):
 
 ```sh
-code --install-extension krypton-0.2.0.vsix
+code --install-extension the-vibey-project.krypton
+```
+
+That works in an editor whose extension gallery is Open VSX. Visual Studio Code's own
+Marketplace does not carry it, so in VS Code install the `.vsix` that every
+[release](https://github.com/the-vibey-project/vibey/releases) attaches,
+`krypton-vscode-<version>.vsix`:
+
+```sh
+code --install-extension krypton-vscode-0.2.0.vsix
 ```
 
 If your Mac says `code: command not found`, use the full path instead:
 
 ```sh
-"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-0.2.0.vsix
+"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.2.0.vsix
 ```
+
+A `.vsix` you build yourself (`npx vsce package --no-dependencies` here) is named
+`krypton-0.2.0.vsix`; install it the same way.
 
 You can also do it without a terminal: open the **Extensions** view, click the `…` menu at its
 top, choose **Install from VSIX…**, and pick the file.
@@ -416,7 +431,7 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 
 ## Uninstall
 
-In the **Extensions** view, find **Vibey** and choose **Uninstall**. Your tasks' branches and
+In the **Extensions** view, find **krypton** and choose **Uninstall**. Your tasks' branches and
 copies stay in your repository and storm home: remove them with Discard, or with git.
 
 ## License

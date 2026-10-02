@@ -29,8 +29,10 @@ not a symlink, or krypton refuses it, just as the hub does.
 
 A hub on another computer is found on the network, but being on the network proves
 nothing (SD-01). A device is trusted only once it has paired with the hub's QR code or
-6-digit code. The hub's side of pairing is still to come. Until then, krypton checks a
-code and says plainly that the hub cannot take it yet. The client's half of the pairing
+6-digit code. The hub's side of pairing exists (`POST /api/v1/pairing/claim`,
+ADR-0071), but this client does not call it yet: it checks that a code is six digits and
+says it cannot pair yet (its message still names the hub as the missing half, which is out
+of date). The client's half of the pairing
 contract is written down in [`src/core/kr-pairing.h`](src/core/kr-pairing.h) and is
 marked provisional.
 
