@@ -61,7 +61,7 @@ content_paths = [
 ]
 # clients/: since #1317 every release attaches the client apps' binaries (desktop, mobile, web,
 # VS Code), so a client change is releasable content. Without it a client-only change derived
-# "nothing to release" -- no bump, no Release run, no binaries (found preparing 3.3.1).
+# "nothing to release" -- no bump, no Release run, no binaries (found preparing 3.4.0).
 code_paths    = ["src/vibey/", "pyproject.toml", "clients/"]
 
 [branches]

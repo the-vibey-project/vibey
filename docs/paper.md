@@ -64,7 +64,7 @@ each of the three readings so far, and the health of the machine it runs on, who
 demand we measured at about twice its 24 GiB. Last, we read the 3.3.0 release as evidence.
 It was the first to attach a build of every client, eleven files, each found to match its
 checksum and to carry a build-provenance attestation, and it gave the editor extension its
-first Open VSX listing. We also state what 3.3.1 adds: a self-contained desktop app for
+first Open VSX listing. We also state what 3.4.0 adds: a self-contained desktop app for
 macOS on Apple silicon, an iOS build signed for the App Store, a desktop client that pairs
 with a hub by its one-time code over a pinned certificate, and a release path on which a
 change to the clients alone is releasable.
@@ -87,7 +87,7 @@ throughput audit, is named where we use it. The large-diff study we report is in
 progress, and its committed record is cited at the cutoff its own log gives. Unless a
 passage names its own, this revision's cutoff is `develop` at `3bb577a4e` (#1354), with
 the forge read on 2026-10-02 between about 10:55 and 11:20Z; what this revision adds for
-the 3.3.1 release is at `develop` at `4d51a764c` (#1365), with the forge read at about 17:45Z. The visual atlas holds forty-five
+the 3.4.0 release is at `develop` at `4d51a764c` (#1365), with the forge read at about 17:45Z. The visual atlas holds forty-five
 figures: thirty drawn from the model as deterministic TikZ in this source, and fifteen
 computed from tracked repository records, so the PDF, its labels and its diagrams are
 reviewable and reproducible rather than screenshots detached from the system. Every
@@ -141,7 +141,7 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
 - a scan of how far the delivery loop ran without a person, with the forge's record of who merged, the defects it found and their repairs, an incident in which the merge train closed what it reported as merged, and a measurement of the local reviewer with and without the files it judges, and the cause of that reviewer's missing verdicts on large diffs, with a repair that turns a silent timeout into a named refusal but has not yet brought a large diff to a verdict;
 - the first measurement of that reviewer's recall, on planted defects, and its first weekly repetition, and a preregistered study of its large-diff failures reported as what it is, in progress: its mechanism and its completed screening, not its result;
 - weekly measurements, generated into the text from append-only records, of how far the delivery loop is from running without a person and of the health of the machine it runs on;
-- the 3.3.0 release read as evidence of what a release carries, a build of every client with its checksum and its provenance attestation, and the changes 3.3.1 adds to that set: a macOS desktop app, an iOS build, desktop pairing with a hub, and a release path that a change to the clients alone now reaches.
+- the 3.3.0 release read as evidence of what a release carries, a build of every client with its checksum and its provenance attestation, and the changes 3.4.0 adds to that set: a macOS desktop app, an iOS build, desktop pairing with a hub, and a release path that a change to the clients alone now reaches.
 
 ```latex
 \begin{figure*}[!t]
@@ -2099,7 +2099,7 @@ the VS Code extension listed on Open VSX for the first time, as `the-vibey-proje
 not yet set, so the job said so, opened its tracking issue (#1345, still open at our
 cutoff) and left the release unaffected, as declared.
 
-*What 3.3.1 adds.* Three changes after 3.3.0 widen that set, and they are what the 3.3.1
+*What 3.4.0 adds.* Three changes after 3.3.0 widen that set, and they are what the 3.4.0
 promotion carries. First, the desktop client is built for macOS (#1351). A `macos-15` runner
 builds it against Homebrew's GTK 4, and `scripts/macos_app_bundle.py` turns the installed
 program into a self-contained `krypton.app`: it copies in every library the program loads
@@ -2112,17 +2112,19 @@ signed, and the release signs it with a Developer ID and has Apple notarise it o
 the certificate and a notarisation credential are all set; until then it keeps one
 tracking issue open. Intel
 Macs are declared unsupported, with the reason: Homebrew no longer bottles the GTK 4 stack
-for them. Second, the iOS build is unblocked. The token was set at 05:10Z, as the 3.3.1 release plan records (#1349), the app
+for them. Second, the iOS build is unblocked. The token was set at 05:10Z, as the 3.4.0 release plan records (#1349), the app
 was registered with EAS under the Expo organisation that owns it (#1346, #1347, #1348,
 #1350), and a dry run that then stopped on a build-number rule EAS cannot apply to a
 dynamic app configuration (run 36973159467) led to EAS keeping the build number itself
 (#1351). Third, a change confined to the clients now derives a patch release (#1348): before,
 `clients/` was in neither of the version's path lists, so such a change derived nothing to
 release, and no binaries. With all three on `develop`, `vibey-gh version --since origin/main`
-derives 3.3.1.
+would derive a patch release, as the release plan (#1349) expected. It derives 3.4.0
+instead, because #1358 also changed `vibey-gh` code that `vibey-engine` ships, and a change
+to shipped content is a minor release by the paths rule, whatever the change is for.
 
 A fourth change is in what the desktop client does rather than in the set of files. Before
-3.3.1 it accepted a hub's six-digit pairing code and then said the hub could not pair,
+3.4.0 it accepted a hub's six-digit pairing code and then said the hub could not pair,
 though the hub has paired devices since ADR-0068. #1359 adds the client's half of the
 hub's own contract (`docs/reference/hub-api.json`). The code is claimed once, with no
 credential, for a device key the hub returns once; every later request is signed with
@@ -2142,8 +2144,8 @@ Store provisioning profile that names no devices; it is the file App Store Conne
 for TestFlight and the App Store, and it does not install by opening it. The macOS image,
 `krypton-desktop-0.1.0-macos-arm64.dmg` (20,319,554 bytes), holds an arm64 `krypton.app`
 signed ad hoc, declaring macOS 15.0 as its minimum and `_vibey._tcp` as its Bonjour service.
-A 3.3.1 release is therefore declared to carry thirteen files and `SHA256SUMS`. That is a
-declaration and a rehearsal, not a release: at our cutoff 3.3.1 had not been cut, no
+A 3.4.0 release is therefore declared to carry thirteen files and `SHA256SUMS`. That is a
+declaration and a rehearsal, not a release: at our cutoff 3.4.0 had not been cut, no
 Developer ID or notarisation credential was set, no build had been submitted to TestFlight
 from this workflow, which submits nothing, and Gatekeeper's handling of a downloaded,
 quarantined `.dmg` had not been exercised.
@@ -2420,7 +2422,7 @@ answer: it is identified, but neither confirmed nor shipped. Stage 2 began in th
 log fixed before any of its outcomes, and we report none of its figures, because a round
 that has not finished is not a rate. Production is unchanged: it still reviews at temperature 0 with the parts and
 reserve #1316 set, and a change will ship in a later release only once the study confirms
-it on the held-out diffs; 3.3.1 carries none. If a method is chosen, the operator has asked
+it on the held-out diffs; 3.4.0 carries none. If a method is chosen, the operator has asked
 that its calibration ship with it, reproducible, repeated monthly and reported by
 `vibey doctor`.
 
@@ -4502,7 +4504,7 @@ measured recall. The autonomy scorecard held three
 readings and the host's health record two at our cutoff, all within two days, so neither
 yet shows a trend. The account of the 3.3.0 release
 rests on its workflows' runs and on one verification by the operator, recorded on the
-release plan; 3.3.1's macOS and iOS builds rest on one dry run, whose two new files we
+release plan; 3.4.0's macOS and iOS builds rest on one dry run, whose two new files we
 read, and on none of a person installing them.
 
 ```latex
@@ -5009,7 +5011,7 @@ the section named.
 
 ### Changes after 3.3.0
 
-What follows is on `develop` at `4d51a764c`, planned for 3.3.1 (#1349) and not yet
+What follows is on `develop` at `4d51a764c`, planned for 3.4.0 (#1349) and not yet
 released. Each item is reported in the section named.
 
 - **A macOS desktop app.** krypton desktop is built for Apple silicon on macOS 15 or newer as a self-contained `krypton.app` in a `.dmg`, verified to name nothing outside itself and launched with Homebrew hidden; ad-hoc signed until the Developer ID secrets exist, and Intel Macs declared unsupported with the reason (#1351, `scripts/macos_app_bundle.py`; *Exact-head evaluation*).
@@ -5197,7 +5199,7 @@ through the bypass. After it, the local reviewer's missing verdicts on large dif
 traced to an answer nothing bounded and a deadline that did not grow with the request,
 and a release learned to carry a build of every client. The first now names why it gives
 no verdict but has yet to bring a large diff to one in production; the second did it for
-real in 3.3.0, eleven files whose checksums and attestations all held, and 3.3.1 is to add a
+real in 3.3.0, eleven files whose checksums and attestations all held, and 3.4.0 is to add a
 macOS app and an iOS build to them. The reviewer's recall has now been measured once, on
 small planted defects, and it showed a reviewer that can describe a defect and still pass
 it; why it fails on large diffs is under a preregistered study that has reached its

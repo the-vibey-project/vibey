@@ -17,12 +17,12 @@ here are the same bytes PyPI serves, attached so that one release page has every
 
 Windows is not a supported platform, so nothing here is built for it.
 
-As declared for 3.3.1, a release carries thirteen files and `SHA256SUMS`: four Linux
+As declared for 3.4.0, a release carries thirteen files and `SHA256SUMS`: four Linux
 builds of the desktop client and its macOS `.dmg`, the web bundle, the Android and iOS
 packages, the VS Code extension, and the wheel and source distribution of each Python
 package. The iOS package is built only while its credential is set, so without it there are
 twelve. 3.3.0, the first release to attach any, carried eleven; the macOS and iOS builds are
-new in 3.3.1. The table below is the declaration, and it is generated, so it is the one to
+new in 3.4.0. The table below is the declaration, and it is generated, so it is the one to
 trust if this paragraph ever disagrees with it.
 
 ## What each release carries

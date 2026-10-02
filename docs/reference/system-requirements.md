@@ -220,7 +220,7 @@ fails.
   - **On Linux**, the release's tarball needs the distribution's GTK 4, libadwaita,
     libsoup 3, json-glib and Avahi; the Flatpak needs only Flatpak and fetches the GNOME
     runtime from Flathub, which carries no Avahi, so it cannot discover hubs by itself.
-  - **On macOS**, from 3.3.1, the release's `.dmg` holds a self-contained `krypton.app` for
+  - **On macOS**, from 3.4.0, the release's `.dmg` holds a self-contained `krypton.app` for
     Apple silicon that carries its own GTK 4 runtime, so it needs no Homebrew. It runs on
     macOS 15 Sequoia or newer: the app built by the dry run 36976031188 declares
     `LSMinimumSystemVersion` 15.0, the macOS of the runner it is built on. It discovers hubs
