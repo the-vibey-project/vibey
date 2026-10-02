@@ -1,12 +1,18 @@
 {
   "schema": "vibey-minimum-specs/1",
-  "generated_at": "2026-10-01T15:33:03.898Z",
+  "generated_at": "2026-10-02T12:10:11.809Z",
   "generated_by": "scripts/minimum_specs.py",
   "hosts": {
     "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2": {
       "image": "",
       "platform": "linux/arm64",
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
+      "emulated": null
+    },
+    "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940": {
+      "image": "",
+      "platform": "linux/arm64",
+      "runner": "GitHub-hosted GitHub Actions 1000073940",
       "emulated": null
     },
     "Mac17,2 · Apple M5 · 24 GiB · macOS 26.6.2 (25G83)": {
@@ -34,6 +40,21 @@
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": true
     },
+    "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941": {
+      "system": "Linux",
+      "arch": "x86_64",
+      "chip": "AMD EPYC 7763 64-Core Processor",
+      "ram_bytes": 16766414848,
+      "mem_available_bytes": 15270739968,
+      "kernel": "6.17.0-1022-azure",
+      "cores_total": 4,
+      "os": "Arch Linux",
+      "model": null,
+      "image": "archlinux:latest",
+      "platform": "linux/amd64",
+      "runner": "GitHub-hosted GitHub Actions 1000073941",
+      "emulated": false
+    },
     "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "x86_64",
@@ -47,6 +68,21 @@
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": true
     },
+    "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938": {
+      "system": "Linux",
+      "arch": "x86_64",
+      "chip": "AMD EPYC 7763 64-Core Processor",
+      "ram_bytes": 16766414848,
+      "mem_available_bytes": 15486005248,
+      "kernel": "6.17.0-1022-azure",
+      "cores_total": 4,
+      "os": "Fedora Linux 44 (Container Image)",
+      "model": null,
+      "image": "fedora:latest",
+      "platform": "linux/amd64",
+      "runner": "GitHub-hosted GitHub Actions 1000073938",
+      "emulated": false
+    },
     "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "aarch64",
@@ -58,6 +94,21 @@
       "image": "fedora:latest",
       "platform": "linux/arm64",
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
+      "emulated": false
+    },
+    "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936": {
+      "system": "Linux",
+      "arch": "aarch64",
+      "chip": null,
+      "ram_bytes": 16722010112,
+      "mem_available_bytes": 15357923328,
+      "kernel": "6.17.0-1022-azure",
+      "cores_total": 4,
+      "os": "Fedora Linux 44 (Container Image)",
+      "model": null,
+      "image": "fedora:latest",
+      "platform": "linux/arm64",
+      "runner": "GitHub-hosted GitHub Actions 1000073936",
       "emulated": false
     },
     "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2": {
@@ -75,6 +126,21 @@
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": true
     },
+    "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942": {
+      "system": "Linux",
+      "arch": "x86_64",
+      "chip": "INTEL(R) XEON(R) PLATINUM 8573C",
+      "ram_bytes": 16765374464,
+      "mem_available_bytes": 15428734976,
+      "kernel": "6.17.0-1022-azure",
+      "cores_total": 4,
+      "os": "Ubuntu 24.04.5 LTS",
+      "model": null,
+      "image": "ubuntu:24.04",
+      "platform": "linux/amd64",
+      "runner": "GitHub-hosted GitHub Actions 1000073942",
+      "emulated": false
+    },
     "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "aarch64",
@@ -86,6 +152,21 @@
       "image": "ubuntu:24.04",
       "platform": "linux/arm64",
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
+      "emulated": false
+    },
+    "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935": {
+      "system": "Linux",
+      "arch": "aarch64",
+      "chip": null,
+      "ram_bytes": 16722042880,
+      "mem_available_bytes": 15392985088,
+      "kernel": "6.17.0-1022-azure",
+      "cores_total": 4,
+      "os": "Ubuntu 24.04.5 LTS",
+      "model": null,
+      "image": "ubuntu:24.04",
+      "platform": "linux/arm64",
+      "runner": "GitHub-hosted GitHub Actions 1000073935",
       "emulated": false
     },
     "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2": {
@@ -101,6 +182,21 @@
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
       "emulated": true
     },
+    "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939": {
+      "system": "Linux",
+      "arch": "x86_64",
+      "chip": "AMD EPYC 7763 64-Core Processor",
+      "ram_bytes": 16766410752,
+      "mem_available_bytes": 15418679296,
+      "kernel": "6.17.0-1022-azure",
+      "cores_total": 4,
+      "os": "Ubuntu 26.04.1 LTS",
+      "model": null,
+      "image": "ubuntu:26.04",
+      "platform": "linux/amd64",
+      "runner": "GitHub-hosted GitHub Actions 1000073939",
+      "emulated": false
+    },
     "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2": {
       "system": "Linux",
       "arch": "aarch64",
@@ -112,6 +208,21 @@
       "image": "ubuntu:26.04",
       "platform": "linux/arm64",
       "runner": "Docker Desktop 29.8.0 on Mac17,2",
+      "emulated": false
+    },
+    "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937": {
+      "system": "Linux",
+      "arch": "aarch64",
+      "chip": null,
+      "ram_bytes": 16722010112,
+      "mem_available_bytes": 15261319168,
+      "kernel": "6.17.0-1022-azure",
+      "cores_total": 4,
+      "os": "Ubuntu 26.04.1 LTS",
+      "model": null,
+      "image": "ubuntu:26.04",
+      "platform": "linux/arm64",
+      "runner": "GitHub-hosted GitHub Actions 1000073937",
       "emulated": false
     }
   },
@@ -1790,8 +1901,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.925Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1802,8 +1913,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1814,8 +1925,8 @@
       "unit": "s",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1826,8 +1937,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1838,8 +1949,8 @@
       "unit": "count",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1850,8 +1961,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1862,8 +1973,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1874,8 +1985,8 @@
       "unit": "s",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1886,8 +1997,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1898,8 +2009,8 @@
       "unit": "count",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1910,8 +2021,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1922,8 +2033,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1934,8 +2045,8 @@
       "unit": "text",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.925Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1946,8 +2057,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.925Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1958,8 +2069,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1970,8 +2081,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.925Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1982,8 +2093,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.925Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -1994,8 +2105,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2006,8 +2117,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.925Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2018,8 +2129,8 @@
       "unit": "version",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.925Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2030,8 +2141,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2042,8 +2153,8 @@
       "unit": "count",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2054,8 +2165,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2066,8 +2177,8 @@
       "unit": "count",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2078,8 +2189,8 @@
       "unit": "bytes",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
@@ -2090,54 +2201,83 @@
       "unit": "count",
       "status": "skipped",
       "method": "minimum_specs.py cell arch aarch64",
-      "measured_at": "2026-10-01T15:08:26.193Z",
-      "host": "Arch Linux (linux/arm64, not run) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:11.926Z",
+      "host": "Arch Linux (linux/arm64, not run) on GitHub-hosted GitHub Actions 1000073940",
       "cadence": "weekly",
       "reason": "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch"
     },
     {
       "id": "linux.arch.x86_64.disk.minimum_gb",
       "label": "Arch Linux (x86_64): minimum free disk",
-      "value": null,
+      "value": 20,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:55.283Z",
       "cadence": "weekly",
       "formula": "the need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.arch.x86_64.disk.minimum_need_gb"
+      "inputs": {
+        "linux.arch.x86_64.disk.minimum_need_gb": 19.9
+      }
     },
     {
       "id": "linux.arch.x86_64.disk.minimum_need_gb",
       "label": "Arch Linux (x86_64): free disk needed",
-      "value": null,
+      "value": 19.9,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:55.283Z",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.arch.x86_64.install.vibey-engine.venv_bytes, linux.arch.x86_64.install.vibey-engine.uv_cache_bytes"
+      "inputs": {
+        "linux.arch.x86_64.pkg.base.bytes": 193790259,
+        "linux.arch.x86_64.pkg.postgres.bytes": 259522151,
+        "linux.arch.x86_64.install.vibey-engine.venv_bytes": 711655424,
+        "linux.arch.x86_64.install.vibey-engine.uv_cache_bytes": 733130752,
+        "linux.ollama.x86_64.unpacked_bytes": 2238853120,
+        "model.gpt-oss:20b.download_bytes": 13793441244,
+        "disk.git_pack_mib": 92.32,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "assumption.postgres_data_allowance_gb": 1.0
+      }
     },
     {
       "id": "linux.arch.x86_64.disk.recommended_gb",
       "label": "Arch Linux (x86_64): recommended free disk",
-      "value": null,
+      "value": 50,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:05.993Z",
       "cadence": "weekly",
       "formula": "the recommended need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.arch.x86_64.disk.recommended_need_gb"
+      "inputs": {
+        "linux.arch.x86_64.disk.recommended_need_gb": 48.6
+      }
     },
     {
       "id": "linux.arch.x86_64.disk.recommended_need_gb",
       "label": "Arch Linux (x86_64): free disk recommended",
-      "value": null,
+      "value": 48.6,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:05.993Z",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
-      "reason": "missing input(s): linux.arch.x86_64.disk.minimum_need_gb, linux.arch.x86_64.install.krypton-app.venv_bytes"
+      "inputs": {
+        "linux.arch.x86_64.disk.minimum_need_gb": 19.9,
+        "linux.arch.x86_64.pkg.desktop.bytes": 558647776,
+        "linux.arch.x86_64.install.krypton-app.venv_bytes": 717320192,
+        "model.qwen3:14b.download_bytes": 9276198565,
+        "disk.dev_venv_bytes": 834072576,
+        "assumption.recommended_worktrees": 50,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "model.gpt-oss:20b.download_bytes": 13793441244
+      }
     },
     {
       "id": "linux.arch.x86_64.disk.with_ledger_gb",
@@ -2148,7 +2288,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "minimum need + ledger growth over the horizon",
-      "reason": "missing input(s): linux.arch.x86_64.disk.minimum_need_gb, disk.ledger_growth_gb"
+      "reason": "missing input(s): disk.ledger_growth_gb"
     },
     {
       "id": "linux.arch.x86_64.floor.desktop",
@@ -2157,7 +2297,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:08:40.805Z",
+      "measured_at": "2026-10-02T11:39:36.775Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
       "inputs": {
@@ -2174,13 +2314,17 @@
     {
       "id": "linux.arch.x86_64.floor.glibc",
       "label": "Arch Linux (x86_64): glibc meets the installed wheels' manylinux floor",
-      "value": null,
+      "value": true,
       "unit": "verdict",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:03.356Z",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
-      "reason": "missing input(s): linux.arch.x86_64.install.glibc_floor"
+      "inputs": {
+        "linux.arch.x86_64.glibc": "2.44",
+        "linux.arch.x86_64.install.glibc_floor": "2.34"
+      }
     },
     {
       "id": "linux.arch.x86_64.floor.postgres",
@@ -2189,7 +2333,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:08:36.276Z",
+      "measured_at": "2026-10-02T11:39:35.978Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
       "inputs": {
@@ -2204,7 +2348,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:08:35.191Z",
+      "measured_at": "2026-10-02T11:39:35.779Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
       "inputs": {
@@ -2219,11 +2363,11 @@
       "unit": "version",
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
-      "measured_at": "2026-10-01T15:08:32.959Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:35.380Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -2231,132 +2375,168 @@
     {
       "id": "linux.arch.x86_64.install.glibc_floor",
       "label": "Newest glibc the installed wheels require",
-      "value": null,
+      "value": "2.34",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell arch x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
+      "measured_at": "2026-10-02T11:40:03.356Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty",
+        "manylinux_wheels": 18
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.krypton-app.cold_s",
-      "label": "krypton-app cold_s",
-      "value": null,
+      "label": "krypton-app cold install",
+      "value": 2.4,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.125Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:05.853Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.krypton-app.download_bytes",
       "label": "krypton-app download",
-      "value": null,
+      "value": 243437502,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.126Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:40:11.000Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "files": 81
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.arch.x86_64.install.krypton-app.packages",
       "label": "krypton-app packages",
-      "value": null,
+      "value": 81,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.126Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:05.853Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.krypton-app.uv_cache_bytes",
-      "label": "krypton-app cache",
-      "value": null,
+      "label": "krypton-app uv cache",
+      "value": 742014976,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.126Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:06.105Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.krypton-app.venv_bytes",
-      "label": "krypton-app venv",
-      "value": null,
+      "label": "krypton-app installed size",
+      "value": 717320192,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.125Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:05.993Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.vibey-engine.cold_s",
-      "label": "vibey-engine cold_s",
-      "value": null,
+      "label": "vibey-engine cold install",
+      "value": 2.0,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.103Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:55.029Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.vibey-engine.download_bytes",
       "label": "vibey-engine download",
-      "value": null,
+      "value": 241773179,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:40:03.352Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "files": 76
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.arch.x86_64.install.vibey-engine.packages",
       "label": "vibey-engine packages",
-      "value": null,
+      "value": 76,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:55.028Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.vibey-engine.uv_cache_bytes",
-      "label": "vibey-engine cache",
-      "value": null,
+      "label": "vibey-engine uv cache",
+      "value": 733130752,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:55.283Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.install.vibey-engine.venv_bytes",
-      "label": "vibey-engine venv",
-      "value": null,
+      "label": "vibey-engine installed size",
+      "value": 711655424,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:32.104Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:55.172Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.arch.x86_64.os_release",
@@ -2365,11 +2545,11 @@
       "unit": "text",
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
-      "measured_at": "2026-10-01T15:08:32.957Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:35.380Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -2381,11 +2561,11 @@
       "unit": "version",
       "status": "measured",
       "method": "pacman: the repositories' version of glib2 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:37.408Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:36.180Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "glib2"
       },
@@ -2398,11 +2578,11 @@
       "unit": "version",
       "status": "measured",
       "method": "pacman: the repositories' version of gtk4 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:39.699Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:36.576Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "gtk4"
       },
@@ -2415,11 +2595,11 @@
       "unit": "version",
       "status": "measured",
       "method": "pacman: the repositories' version of json-glib (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:38.540Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:36.378Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "json-glib"
       },
@@ -2428,15 +2608,15 @@
     {
       "id": "linux.arch.x86_64.packaged.kernel",
       "label": "Arch Linux (x86_64): packaged kernel",
-      "value": "7.2.7.arch1-1",
+      "value": "7.2.8.arch1-2",
       "unit": "version",
       "status": "measured",
       "method": "pacman: the repositories' version of linux (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:34.074Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:35.579Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "linux"
       },
@@ -2449,11 +2629,11 @@
       "unit": "version",
       "status": "measured",
       "method": "pacman: the repositories' version of libadwaita (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:40.805Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:36.775Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libadwaita"
       },
@@ -2466,11 +2646,11 @@
       "unit": "version",
       "status": "measured",
       "method": "pacman: the repositories' version of postgresql (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:36.276Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:35.978Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "postgresql"
       },
@@ -2483,11 +2663,11 @@
       "unit": "version",
       "status": "measured",
       "method": "pacman: the repositories' version of python (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:35.191Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:35.779Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "python"
       },
@@ -2500,11 +2680,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "pacman: packages the bootstrap added (python, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:08:40.973Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:36.804Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "db5.3",
@@ -2527,11 +2707,11 @@
       "unit": "count",
       "status": "measured",
       "method": "pacman: packages the bootstrap added (python, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:08:40.974Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:36.805Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "db5.3",
@@ -2550,15 +2730,15 @@
     {
       "id": "linux.arch.x86_64.pkg.desktop.bytes",
       "label": "Arch Linux (x86_64): desktop closure",
-      "value": 558637291,
+      "value": 558647776,
       "unit": "bytes",
       "status": "measured",
       "method": "pacman: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:10:32.069Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:51.699Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adwaita-cursors",
@@ -2701,11 +2881,11 @@
       "unit": "count",
       "status": "measured",
       "method": "pacman: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:10:32.070Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:51.699Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adwaita-cursors",
@@ -2848,11 +3028,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "pacman: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:09:07.859Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:39.955Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "libedit",
@@ -2873,11 +3053,11 @@
       "unit": "count",
       "status": "measured",
       "method": "pacman: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:09:07.859Z",
-      "host": "archlinux:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:39.956Z",
+      "host": "archlinux:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073941",
       "conditions": {
         "image": "archlinux:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "libedit",
@@ -2898,7 +3078,7 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:09:31.466Z",
+      "measured_at": "2026-10-02T11:39:54.638Z",
       "cadence": "weekly",
       "formula": "the need rounded up to the next 10 GB",
       "inputs": {
@@ -2912,14 +3092,14 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:09:31.466Z",
+      "measured_at": "2026-10-02T11:39:54.638Z",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
       "inputs": {
         "linux.fedora.aarch64.pkg.base.bytes": 88718861,
         "linux.fedora.aarch64.pkg.postgres.bytes": 108794927,
-        "linux.fedora.aarch64.install.vibey-engine.venv_bytes": 701755392,
-        "linux.fedora.aarch64.install.vibey-engine.uv_cache_bytes": 723210240,
+        "linux.fedora.aarch64.install.vibey-engine.venv_bytes": 701919232,
+        "linux.fedora.aarch64.install.vibey-engine.uv_cache_bytes": 723386368,
         "linux.ollama.aarch64.unpacked_bytes": 2238464000,
         "model.gpt-oss:20b.download_bytes": 13793441244,
         "disk.git_pack_mib": 92.32,
@@ -2935,7 +3115,7 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:10:53.653Z",
+      "measured_at": "2026-10-02T11:40:04.216Z",
       "cadence": "weekly",
       "formula": "the recommended need rounded up to the next 10 GB",
       "inputs": {
@@ -2949,13 +3129,13 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:10:53.653Z",
+      "measured_at": "2026-10-02T11:40:04.216Z",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
       "inputs": {
         "linux.fedora.aarch64.disk.minimum_need_gb": 19.6,
         "linux.fedora.aarch64.pkg.desktop.bytes": 405558521,
-        "linux.fedora.aarch64.install.krypton-app.venv_bytes": 709279744,
+        "linux.fedora.aarch64.install.krypton-app.venv_bytes": 709443584,
         "model.qwen3:14b.download_bytes": 9276198565,
         "disk.dev_venv_bytes": 834072576,
         "assumption.recommended_worktrees": 50,
@@ -2982,7 +3162,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:08:00.240Z",
+      "measured_at": "2026-10-02T11:39:29.059Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
       "inputs": {
@@ -3003,7 +3183,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:10:24.608Z",
+      "measured_at": "2026-10-02T11:40:02.319Z",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
       "inputs": {
@@ -3018,7 +3198,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:07:59.354Z",
+      "measured_at": "2026-10-02T11:39:27.153Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
       "inputs": {
@@ -3033,7 +3213,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:07:59.121Z",
+      "measured_at": "2026-10-02T11:39:26.674Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
       "inputs": {
@@ -3048,8 +3228,8 @@
       "unit": "version",
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
-      "measured_at": "2026-10-01T15:07:58.671Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:25.714Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3064,8 +3244,8 @@
       "unit": "version",
       "status": "measured",
       "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
-      "measured_at": "2026-10-01T15:10:24.608Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:02.319Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty",
@@ -3076,12 +3256,12 @@
     {
       "id": "linux.fedora.aarch64.install.krypton-app.cold_s",
       "label": "krypton-app cold install",
-      "value": 29.0,
+      "value": 1.7,
       "unit": "s",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:53.626Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:04.140Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3091,12 +3271,12 @@
     {
       "id": "linux.fedora.aarch64.install.krypton-app.download_bytes",
       "label": "krypton-app download",
-      "value": 237992755,
+      "value": 238037098,
       "unit": "bytes",
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
-      "measured_at": "2026-10-01T15:10:56.911Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:08.854Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "files": 81
       },
@@ -3110,8 +3290,8 @@
       "unit": "count",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:10:53.625Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:04.140Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3121,12 +3301,12 @@
     {
       "id": "linux.fedora.aarch64.install.krypton-app.uv_cache_bytes",
       "label": "krypton-app uv cache",
-      "value": 733954048,
+      "value": 734130176,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:10:53.674Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:04.276Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3136,12 +3316,12 @@
     {
       "id": "linux.fedora.aarch64.install.krypton-app.venv_bytes",
       "label": "krypton-app installed size",
-      "value": 709279744,
+      "value": 709443584,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:10:53.653Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:04.216Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3151,12 +3331,12 @@
     {
       "id": "linux.fedora.aarch64.install.vibey-engine.cold_s",
       "label": "vibey-engine cold install",
-      "value": 55.8,
+      "value": 3.3,
       "unit": "s",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:09:31.420Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:54.509Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3166,12 +3346,12 @@
     {
       "id": "linux.fedora.aarch64.install.vibey-engine.download_bytes",
       "label": "vibey-engine download",
-      "value": 236385716,
+      "value": 236430059,
       "unit": "bytes",
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
-      "measured_at": "2026-10-01T15:10:24.604Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:02.317Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "files": 76
       },
@@ -3185,8 +3365,8 @@
       "unit": "count",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:09:31.419Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:54.509Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3196,12 +3376,12 @@
     {
       "id": "linux.fedora.aarch64.install.vibey-engine.uv_cache_bytes",
       "label": "vibey-engine uv cache",
-      "value": 723210240,
+      "value": 723386368,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:09:31.466Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:54.638Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3211,12 +3391,12 @@
     {
       "id": "linux.fedora.aarch64.install.vibey-engine.venv_bytes",
       "label": "vibey-engine installed size",
-      "value": 701755392,
+      "value": 701919232,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:09:31.445Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:54.582Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -3230,8 +3410,8 @@
       "unit": "text",
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
-      "measured_at": "2026-10-01T15:07:58.671Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:25.714Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3246,8 +3426,8 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of glib2 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:07:59.579Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.626Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3263,8 +3443,8 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of gtk4 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:00.026Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:28.577Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3280,8 +3460,8 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of json-glib (metadata, not installed)",
-      "measured_at": "2026-10-01T15:07:59.810Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:28.110Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3297,8 +3477,8 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of kernel-core (metadata, not installed)",
-      "measured_at": "2026-10-01T15:07:58.904Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:26.196Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3314,8 +3494,8 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of libadwaita (metadata, not installed)",
-      "measured_at": "2026-10-01T15:08:00.240Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.059Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3331,8 +3511,8 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of postgresql-server (metadata, not installed)",
-      "measured_at": "2026-10-01T15:07:59.354Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.153Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3348,8 +3528,8 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of python3 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:07:59.121Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:26.674Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3365,8 +3545,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:08:00.293Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.166Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3396,8 +3576,8 @@
       "unit": "count",
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:08:00.293Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.166Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3427,8 +3607,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:08:32.579Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:50.065Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3572,8 +3752,8 @@
       "unit": "count",
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:08:32.579Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:50.065Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3717,8 +3897,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:08:05.632Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:37.438Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3745,8 +3925,8 @@
       "unit": "count",
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:08:05.632Z",
-      "host": "fedora:latest (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:37.439Z",
+      "host": "fedora:latest (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073936",
       "conditions": {
         "image": "fedora:latest",
         "emulated": false,
@@ -3769,46 +3949,75 @@
     {
       "id": "linux.fedora.x86_64.disk.minimum_gb",
       "label": "Fedora (current release) (x86_64): minimum free disk",
-      "value": null,
+      "value": 20,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:47.072Z",
       "cadence": "weekly",
       "formula": "the need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.fedora.x86_64.disk.minimum_need_gb"
+      "inputs": {
+        "linux.fedora.x86_64.disk.minimum_need_gb": 19.6
+      }
     },
     {
       "id": "linux.fedora.x86_64.disk.minimum_need_gb",
       "label": "Fedora (current release) (x86_64): free disk needed",
-      "value": null,
+      "value": 19.6,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:47.072Z",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.fedora.x86_64.install.vibey-engine.venv_bytes, linux.fedora.x86_64.install.vibey-engine.uv_cache_bytes"
+      "inputs": {
+        "linux.fedora.x86_64.pkg.base.bytes": 83981364,
+        "linux.fedora.x86_64.pkg.postgres.bytes": 104698527,
+        "linux.fedora.x86_64.install.vibey-engine.venv_bytes": 711647232,
+        "linux.fedora.x86_64.install.vibey-engine.uv_cache_bytes": 733122560,
+        "linux.ollama.x86_64.unpacked_bytes": 2238853120,
+        "model.gpt-oss:20b.download_bytes": 13793441244,
+        "disk.git_pack_mib": 92.32,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "assumption.postgres_data_allowance_gb": 1.0
+      }
     },
     {
       "id": "linux.fedora.x86_64.disk.recommended_gb",
       "label": "Fedora (current release) (x86_64): recommended free disk",
-      "value": null,
+      "value": 50,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:56.820Z",
       "cadence": "weekly",
       "formula": "the recommended need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.fedora.x86_64.disk.recommended_need_gb"
+      "inputs": {
+        "linux.fedora.x86_64.disk.recommended_need_gb": 48.1
+      }
     },
     {
       "id": "linux.fedora.x86_64.disk.recommended_need_gb",
       "label": "Fedora (current release) (x86_64): free disk recommended",
-      "value": null,
+      "value": 48.1,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:56.820Z",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
-      "reason": "missing input(s): linux.fedora.x86_64.disk.minimum_need_gb, linux.fedora.x86_64.install.krypton-app.venv_bytes"
+      "inputs": {
+        "linux.fedora.x86_64.disk.minimum_need_gb": 19.6,
+        "linux.fedora.x86_64.pkg.desktop.bytes": 431687903,
+        "linux.fedora.x86_64.install.krypton-app.venv_bytes": 717324288,
+        "model.qwen3:14b.download_bytes": 9276198565,
+        "disk.dev_venv_bytes": 834072576,
+        "assumption.recommended_worktrees": 50,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "model.gpt-oss:20b.download_bytes": 13793441244
+      }
     },
     {
       "id": "linux.fedora.x86_64.disk.with_ledger_gb",
@@ -3819,7 +4028,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "minimum need + ledger growth over the horizon",
-      "reason": "missing input(s): linux.fedora.x86_64.disk.minimum_need_gb, disk.ledger_growth_gb"
+      "reason": "missing input(s): disk.ledger_growth_gb"
     },
     {
       "id": "linux.fedora.x86_64.floor.desktop",
@@ -3828,7 +4037,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:09:43.587Z",
+      "measured_at": "2026-10-02T11:39:27.179Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
       "inputs": {
@@ -3845,13 +4054,17 @@
     {
       "id": "linux.fedora.x86_64.floor.glibc",
       "label": "Fedora (current release) (x86_64): glibc meets the installed wheels' manylinux floor",
-      "value": null,
+      "value": true,
       "unit": "verdict",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:54.541Z",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
-      "reason": "missing input(s): linux.fedora.x86_64.install.glibc_floor"
+      "inputs": {
+        "linux.fedora.x86_64.glibc": "2.43",
+        "linux.fedora.x86_64.install.glibc_floor": "2.34"
+      }
     },
     {
       "id": "linux.fedora.x86_64.floor.postgres",
@@ -3860,7 +4073,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:09:34.513Z",
+      "measured_at": "2026-10-02T11:39:25.404Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
       "inputs": {
@@ -3875,7 +4088,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:09:31.892Z",
+      "measured_at": "2026-10-02T11:39:24.973Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
       "inputs": {
@@ -3890,11 +4103,11 @@
       "unit": "version",
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
-      "measured_at": "2026-10-01T15:09:27.429Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:24.088Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -3902,132 +4115,168 @@
     {
       "id": "linux.fedora.x86_64.install.glibc_floor",
       "label": "Newest glibc the installed wheels require",
-      "value": null,
+      "value": "2.34",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell fedora x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
+      "measured_at": "2026-10-02T11:39:54.541Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty",
+        "manylinux_wheels": 18
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.krypton-app.cold_s",
-      "label": "krypton-app cold_s",
-      "value": null,
+      "label": "krypton-app cold install",
+      "value": 2.0,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:56.675Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.krypton-app.download_bytes",
       "label": "krypton-app download",
-      "value": null,
+      "value": 243437502,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:40:02.156Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "files": 81
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.fedora.x86_64.install.krypton-app.packages",
       "label": "krypton-app packages",
-      "value": null,
+      "value": 81,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:56.675Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.krypton-app.uv_cache_bytes",
-      "label": "krypton-app cache",
-      "value": null,
+      "label": "krypton-app uv cache",
+      "value": 742014976,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:56.935Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.krypton-app.venv_bytes",
-      "label": "krypton-app venv",
-      "value": null,
+      "label": "krypton-app installed size",
+      "value": 717324288,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.494Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:56.820Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.vibey-engine.cold_s",
-      "label": "vibey-engine cold_s",
-      "value": null,
+      "label": "vibey-engine cold install",
+      "value": 2.1,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.472Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:46.814Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.vibey-engine.download_bytes",
       "label": "vibey-engine download",
-      "value": null,
+      "value": 241773179,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:39:54.537Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "files": 76
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.fedora.x86_64.install.vibey-engine.packages",
       "label": "vibey-engine packages",
-      "value": null,
+      "value": 76,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:46.814Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.vibey-engine.uv_cache_bytes",
-      "label": "vibey-engine cache",
-      "value": null,
+      "label": "vibey-engine uv cache",
+      "value": 733122560,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:47.072Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.install.vibey-engine.venv_bytes",
-      "label": "vibey-engine venv",
-      "value": null,
+      "label": "vibey-engine installed size",
+      "value": 711647232,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:11:03.473Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:46.959Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.fedora.x86_64.os_release",
@@ -4036,11 +4285,11 @@
       "unit": "text",
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
-      "measured_at": "2026-10-01T15:09:27.428Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:24.088Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -4052,11 +4301,11 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of glib2 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:09:36.802Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:25.847Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "glib2"
       },
@@ -4069,11 +4318,11 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of gtk4 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:09:41.290Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:26.736Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "gtk4"
       },
@@ -4086,11 +4335,11 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of json-glib (metadata, not installed)",
-      "measured_at": "2026-10-01T15:09:39.029Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:26.288Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "json-glib"
       },
@@ -4103,11 +4352,11 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of kernel-core (metadata, not installed)",
-      "measured_at": "2026-10-01T15:09:29.633Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:24.534Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "kernel-core"
       },
@@ -4120,11 +4369,11 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of libadwaita (metadata, not installed)",
-      "measured_at": "2026-10-01T15:09:43.587Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.179Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libadwaita"
       },
@@ -4137,11 +4386,11 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of postgresql-server (metadata, not installed)",
-      "measured_at": "2026-10-01T15:09:34.513Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:25.404Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "postgresql-server"
       },
@@ -4154,11 +4403,11 @@
       "unit": "version",
       "status": "measured",
       "method": "dnf: the repositories' version of python3 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:09:31.892Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:24.973Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "python3"
       },
@@ -4171,11 +4420,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:09:44.469Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.308Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "expat",
@@ -4202,11 +4451,11 @@
       "unit": "count",
       "status": "measured",
       "method": "dnf: packages the bootstrap added (python3, git-core, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:09:44.469Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.308Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "expat",
@@ -4233,11 +4482,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:11:03.447Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:43.372Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "abattis-cantarell-vf-fonts",
@@ -4379,11 +4628,11 @@
       "unit": "count",
       "status": "measured",
       "method": "dnf: install gtk4 libadwaita json-glib libsoup3 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:11:03.447Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:43.372Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "abattis-cantarell-vf-fonts",
@@ -4525,11 +4774,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:09:59.958Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.178Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "cryptsetup-libs",
@@ -4553,11 +4802,11 @@
       "unit": "count",
       "status": "measured",
       "method": "dnf: install postgresql-server (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:09:59.958Z",
-      "host": "fedora:latest (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.178Z",
+      "host": "fedora:latest (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073938",
       "conditions": {
         "image": "fedora:latest",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "cryptsetup-libs",
@@ -4581,8 +4830,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "HTTP HEAD https://ollama.com/download/ollama-linux-arm64.tar.zst: Content-Length",
-      "measured_at": "2026-10-01T15:03:25.488Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:03.927Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "cadence": "weekly"
     },
     {
@@ -4592,8 +4841,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "curl -fsSL https://ollama.com/download/ollama-linux-arm64.tar.zst | zstd -dc | wc -c",
-      "measured_at": "2026-10-01T15:04:37.084Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:10.187Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "cadence": "weekly",
       "note": "the tar stream's bytes: file contents plus tar headers and padding"
     },
@@ -4604,8 +4853,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "HTTP HEAD https://ollama.com/download/ollama-linux-amd64.tar.zst: Content-Length",
-      "measured_at": "2026-10-01T15:27:26.539Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:25.315Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "cadence": "weekly"
     },
     {
@@ -4615,8 +4864,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst | zstd -dc | wc -c",
-      "measured_at": "2026-10-01T15:28:55.772Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:30.838Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "cadence": "weekly",
       "note": "the tar stream's bytes: file contents plus tar headers and padding"
     },
@@ -4727,7 +4976,7 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:05:19.330Z",
+      "measured_at": "2026-10-02T11:39:46.323Z",
       "cadence": "weekly",
       "formula": "the need rounded up to the next 10 GB",
       "inputs": {
@@ -4741,14 +4990,14 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:05:19.330Z",
+      "measured_at": "2026-10-02T11:39:46.323Z",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
       "inputs": {
         "linux.ubuntu-24.04.aarch64.pkg.base.bytes": 115960832,
         "linux.ubuntu-24.04.aarch64.pkg.postgres.bytes": 233686016,
-        "linux.ubuntu-24.04.aarch64.install.vibey-engine.venv_bytes": 701739008,
-        "linux.ubuntu-24.04.aarch64.install.vibey-engine.uv_cache_bytes": 723202048,
+        "linux.ubuntu-24.04.aarch64.install.vibey-engine.venv_bytes": 701915136,
+        "linux.ubuntu-24.04.aarch64.install.vibey-engine.uv_cache_bytes": 723374080,
         "linux.ollama.aarch64.unpacked_bytes": 2238464000,
         "model.gpt-oss:20b.download_bytes": 13793441244,
         "disk.git_pack_mib": 92.32,
@@ -4764,7 +5013,7 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:06:02.615Z",
+      "measured_at": "2026-10-02T11:39:55.453Z",
       "cadence": "weekly",
       "formula": "the recommended need rounded up to the next 10 GB",
       "inputs": {
@@ -4778,13 +5027,13 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:06:02.615Z",
+      "measured_at": "2026-10-02T11:39:55.453Z",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
       "inputs": {
         "linux.ubuntu-24.04.aarch64.disk.minimum_need_gb": 19.8,
         "linux.ubuntu-24.04.aarch64.pkg.desktop.bytes": 134172672,
-        "linux.ubuntu-24.04.aarch64.install.krypton-app.venv_bytes": 709271552,
+        "linux.ubuntu-24.04.aarch64.install.krypton-app.venv_bytes": 709447680,
         "model.qwen3:14b.download_bytes": 9276198565,
         "disk.dev_venv_bytes": 834072576,
         "assumption.recommended_worktrees": 50,
@@ -4811,7 +5060,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:04:50.680Z",
+      "measured_at": "2026-10-02T11:39:29.655Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
       "inputs": {
@@ -4832,7 +5081,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:05:48.855Z",
+      "measured_at": "2026-10-02T11:39:53.168Z",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
       "inputs": {
@@ -4847,7 +5096,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:04:49.394Z",
+      "measured_at": "2026-10-02T11:39:26.764Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
       "inputs": {
@@ -4862,7 +5111,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:04:49.076Z",
+      "measured_at": "2026-10-02T11:39:26.063Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
       "inputs": {
@@ -4877,8 +5126,8 @@
       "unit": "version",
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
-      "measured_at": "2026-10-01T15:04:48.360Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:24.647Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -4893,8 +5142,8 @@
       "unit": "version",
       "status": "measured",
       "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
-      "measured_at": "2026-10-01T15:05:48.855Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:53.168Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty",
@@ -4905,12 +5154,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.krypton-app.cold_s",
       "label": "krypton-app cold install",
-      "value": 13.7,
+      "value": 2.1,
       "unit": "s",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:06:02.588Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:55.379Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4920,12 +5169,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.krypton-app.download_bytes",
       "label": "krypton-app download",
-      "value": 237992755,
+      "value": 238037098,
       "unit": "bytes",
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
-      "measured_at": "2026-10-01T15:06:06.665Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:00.733Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "files": 81
       },
@@ -4939,8 +5188,8 @@
       "unit": "count",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:06:02.588Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:55.378Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4950,12 +5199,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.krypton-app.uv_cache_bytes",
       "label": "krypton-app uv cache",
-      "value": 733958144,
+      "value": 734134272,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:06:02.633Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:55.513Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4965,12 +5214,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.krypton-app.venv_bytes",
       "label": "krypton-app installed size",
-      "value": 709271552,
+      "value": 709447680,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:06:02.615Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:55.453Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4980,12 +5229,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.vibey-engine.cold_s",
       "label": "vibey-engine cold install",
-      "value": 14.5,
+      "value": 1.5,
       "unit": "s",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:05:19.286Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:46.189Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -4995,12 +5244,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.vibey-engine.download_bytes",
       "label": "vibey-engine download",
-      "value": 236385716,
+      "value": 236430059,
       "unit": "bytes",
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
-      "measured_at": "2026-10-01T15:05:48.853Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:53.165Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "files": 76
       },
@@ -5014,8 +5263,8 @@
       "unit": "count",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:05:19.286Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:46.189Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -5025,12 +5274,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.vibey-engine.uv_cache_bytes",
       "label": "vibey-engine uv cache",
-      "value": 723202048,
+      "value": 723374080,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:05:19.330Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:46.323Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -5040,12 +5289,12 @@
     {
       "id": "linux.ubuntu-24.04.aarch64.install.vibey-engine.venv_bytes",
       "label": "vibey-engine installed size",
-      "value": 701739008,
+      "value": 701915136,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:05:19.312Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:46.263Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -5059,8 +5308,8 @@
       "unit": "text",
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
-      "measured_at": "2026-10-01T15:04:48.360Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:24.647Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5075,8 +5324,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:04:49.725Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.490Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5092,8 +5341,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:04:50.360Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:28.945Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5109,8 +5358,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:04:50.037Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:28.215Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5126,8 +5375,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
-      "measured_at": "2026-10-01T15:04:48.695Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:25.355Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5143,8 +5392,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:04:50.680Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.655Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5160,8 +5409,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of postgresql (metadata, not installed)",
-      "measured_at": "2026-10-01T15:04:49.394Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:26.764Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5177,8 +5426,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of python3 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:04:49.076Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:26.063Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5194,8 +5443,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:04:50.681Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.659Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5252,8 +5501,8 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:04:50.681Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.659Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5310,8 +5559,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:05:04.768Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:44.553Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5436,8 +5685,8 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:05:04.768Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:44.553Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5562,8 +5811,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:04:57.329Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:35.597Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5597,8 +5846,8 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:04:57.329Z",
-      "host": "ubuntu:24.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:35.597Z",
+      "host": "ubuntu:24.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073935",
       "conditions": {
         "image": "ubuntu:24.04",
         "emulated": false,
@@ -5628,46 +5877,75 @@
     {
       "id": "linux.ubuntu-24.04.x86_64.disk.minimum_gb",
       "label": "Ubuntu 24.04 LTS (x86_64): minimum free disk",
-      "value": null,
+      "value": 20,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:18.268Z",
       "cadence": "weekly",
       "formula": "the need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.disk.minimum_need_gb"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.disk.minimum_need_gb": 19.8
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.disk.minimum_need_gb",
       "label": "Ubuntu 24.04 LTS (x86_64): free disk needed",
-      "value": null,
+      "value": 19.8,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:18.268Z",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.install.vibey-engine.venv_bytes, linux.ubuntu-24.04.x86_64.install.vibey-engine.uv_cache_bytes"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.pkg.base.bytes": 112160768,
+        "linux.ubuntu-24.04.x86_64.pkg.postgres.bytes": 232629248,
+        "linux.ubuntu-24.04.x86_64.install.vibey-engine.venv_bytes": 711647232,
+        "linux.ubuntu-24.04.x86_64.install.vibey-engine.uv_cache_bytes": 733118464,
+        "linux.ollama.x86_64.unpacked_bytes": 2238853120,
+        "model.gpt-oss:20b.download_bytes": 13793441244,
+        "disk.git_pack_mib": 92.32,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "assumption.postgres_data_allowance_gb": 1.0
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.disk.recommended_gb",
       "label": "Ubuntu 24.04 LTS (x86_64): recommended free disk",
-      "value": null,
+      "value": 50,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:34.425Z",
       "cadence": "weekly",
       "formula": "the recommended need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.disk.recommended_need_gb"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.disk.recommended_need_gb": 48.0
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.disk.recommended_need_gb",
       "label": "Ubuntu 24.04 LTS (x86_64): free disk recommended",
-      "value": null,
+      "value": 48.0,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:34.425Z",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.disk.minimum_need_gb, linux.ubuntu-24.04.x86_64.install.krypton-app.venv_bytes"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.disk.minimum_need_gb": 19.8,
+        "linux.ubuntu-24.04.x86_64.pkg.desktop.bytes": 124120064,
+        "linux.ubuntu-24.04.x86_64.install.krypton-app.venv_bytes": 717316096,
+        "model.qwen3:14b.download_bytes": 9276198565,
+        "disk.dev_venv_bytes": 834072576,
+        "assumption.recommended_worktrees": 50,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "model.gpt-oss:20b.download_bytes": 13793441244
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.disk.with_ledger_gb",
@@ -5678,7 +5956,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "minimum need + ledger growth over the horizon",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.disk.minimum_need_gb, disk.ledger_growth_gb"
+      "reason": "missing input(s): disk.ledger_growth_gb"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.floor.desktop",
@@ -5687,7 +5965,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:30:32.227Z",
+      "measured_at": "2026-10-02T11:39:55.546Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
       "inputs": {
@@ -5704,13 +5982,17 @@
     {
       "id": "linux.ubuntu-24.04.x86_64.floor.glibc",
       "label": "Ubuntu 24.04 LTS (x86_64): glibc meets the installed wheels' manylinux floor",
-      "value": null,
+      "value": true,
       "unit": "verdict",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:31.069Z",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
-      "reason": "missing input(s): linux.ubuntu-24.04.x86_64.install.glibc_floor"
+      "inputs": {
+        "linux.ubuntu-24.04.x86_64.glibc": "2.39",
+        "linux.ubuntu-24.04.x86_64.install.glibc_floor": "2.34"
+      }
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.floor.postgres",
@@ -5719,7 +6001,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:30:10.616Z",
+      "measured_at": "2026-10-02T11:39:52.681Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
       "inputs": {
@@ -5734,7 +6016,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:30:05.163Z",
+      "measured_at": "2026-10-02T11:39:51.989Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
       "inputs": {
@@ -5749,11 +6031,11 @@
       "unit": "version",
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
-      "measured_at": "2026-10-01T15:29:54.389Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:50.546Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -5761,132 +6043,168 @@
     {
       "id": "linux.ubuntu-24.04.x86_64.install.glibc_floor",
       "label": "Newest glibc the installed wheels require",
-      "value": null,
+      "value": "2.34",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-24.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not reported by this run's probes"
+      "status": "measured",
+      "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
+      "measured_at": "2026-10-02T11:40:31.069Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty",
+        "manylinux_wheels": 18
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.cold_s",
-      "label": "krypton-app cold_s",
-      "value": null,
+      "label": "krypton-app cold install",
+      "value": 3.2,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:15.017Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:34.334Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.download_bytes",
       "label": "krypton-app download",
-      "value": null,
+      "value": 243437502,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:15.018Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:40:41.109Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "files": 81
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.packages",
       "label": "krypton-app packages",
-      "value": null,
+      "value": 81,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:15.018Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:34.334Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.uv_cache_bytes",
-      "label": "krypton-app cache",
-      "value": null,
+      "label": "krypton-app uv cache",
+      "value": 742010880,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:15.018Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:34.494Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.krypton-app.venv_bytes",
-      "label": "krypton-app venv",
-      "value": null,
+      "label": "krypton-app installed size",
+      "value": 717316096,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:15.018Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:34.425Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.cold_s",
-      "label": "vibey-engine cold_s",
-      "value": null,
+      "label": "vibey-engine cold install",
+      "value": 2.9,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:14.998Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:18.111Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.download_bytes",
       "label": "vibey-engine download",
-      "value": null,
+      "value": 241773179,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:14.999Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:40:31.066Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "files": 76
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.packages",
       "label": "vibey-engine packages",
-      "value": null,
+      "value": 76,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:14.999Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:18.111Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.uv_cache_bytes",
-      "label": "vibey-engine cache",
-      "value": null,
+      "label": "vibey-engine uv cache",
+      "value": 733118464,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:14.999Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:18.268Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.install.vibey-engine.venv_bytes",
-      "label": "vibey-engine venv",
-      "value": null,
+      "label": "vibey-engine installed size",
+      "value": 711647232,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:32:14.999Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:18.198Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-24.04.x86_64.os_release",
@@ -5895,11 +6213,11 @@
       "unit": "text",
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
-      "measured_at": "2026-10-01T15:29:54.388Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:50.546Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -5911,11 +6229,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:30:15.980Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:53.393Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libglib2.0-0t64"
       },
@@ -5928,11 +6246,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:30:26.806Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:54.827Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libgtk-4-1"
       },
@@ -5945,11 +6263,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:30:21.395Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:54.119Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libjson-glib-1.0-0"
       },
@@ -5962,11 +6280,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
-      "measured_at": "2026-10-01T15:29:59.775Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:51.261Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "linux-image-generic"
       },
@@ -5979,11 +6297,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:30:32.227Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:55.546Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libadwaita-1-0"
       },
@@ -5996,11 +6314,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of postgresql (metadata, not installed)",
-      "measured_at": "2026-10-01T15:30:10.616Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:52.681Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "postgresql"
       },
@@ -6013,11 +6331,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of python3 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:30:05.163Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:51.989Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "python3"
       },
@@ -6030,11 +6348,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:30:32.279Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:55.550Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "ca-certificates",
@@ -6088,11 +6406,11 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:30:32.279Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:55.550Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "ca-certificates",
@@ -6146,11 +6464,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:32:14.977Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:15.160Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adwaita-icon-theme",
@@ -6272,11 +6590,11 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:32:14.978Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:15.160Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adwaita-icon-theme",
@@ -6398,11 +6716,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:31:26.559Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:04.287Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adduser",
@@ -6433,11 +6751,11 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:31:26.559Z",
-      "host": "ubuntu:24.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:04.287Z",
+      "host": "ubuntu:24.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073942",
       "conditions": {
         "image": "ubuntu:24.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adduser",
@@ -6468,7 +6786,7 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:07:18.249Z",
+      "measured_at": "2026-10-02T11:39:58.453Z",
       "cadence": "weekly",
       "formula": "the need rounded up to the next 10 GB",
       "inputs": {
@@ -6482,14 +6800,14 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:07:18.249Z",
+      "measured_at": "2026-10-02T11:39:58.453Z",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
       "inputs": {
         "linux.ubuntu-26.04.aarch64.pkg.base.bytes": 131049472,
         "linux.ubuntu-26.04.aarch64.pkg.postgres.bytes": 90946560,
-        "linux.ubuntu-26.04.aarch64.install.vibey-engine.venv_bytes": 701751296,
-        "linux.ubuntu-26.04.aarch64.install.vibey-engine.uv_cache_bytes": 723202048,
+        "linux.ubuntu-26.04.aarch64.install.vibey-engine.venv_bytes": 701919232,
+        "linux.ubuntu-26.04.aarch64.install.vibey-engine.uv_cache_bytes": 723382272,
         "linux.ollama.aarch64.unpacked_bytes": 2238464000,
         "model.gpt-oss:20b.download_bytes": 13793441244,
         "disk.git_pack_mib": 92.32,
@@ -6505,7 +6823,7 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:08:39.764Z",
+      "measured_at": "2026-10-02T11:40:13.098Z",
       "cadence": "weekly",
       "formula": "the recommended need rounded up to the next 10 GB",
       "inputs": {
@@ -6519,13 +6837,13 @@
       "unit": "GB",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:08:39.764Z",
+      "measured_at": "2026-10-02T11:40:13.098Z",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
       "inputs": {
         "linux.ubuntu-26.04.aarch64.disk.minimum_need_gb": 19.6,
         "linux.ubuntu-26.04.aarch64.pkg.desktop.bytes": 376589312,
-        "linux.ubuntu-26.04.aarch64.install.krypton-app.venv_bytes": 709287936,
+        "linux.ubuntu-26.04.aarch64.install.krypton-app.venv_bytes": 709443584,
         "model.qwen3:14b.download_bytes": 9276198565,
         "disk.dev_venv_bytes": 834072576,
         "assumption.recommended_worktrees": 50,
@@ -6552,7 +6870,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:06:40.220Z",
+      "measured_at": "2026-10-02T11:39:31.619Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
       "inputs": {
@@ -6573,7 +6891,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:07:57.968Z",
+      "measured_at": "2026-10-02T11:40:09.993Z",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
       "inputs": {
@@ -6588,7 +6906,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:06:39.191Z",
+      "measured_at": "2026-10-02T11:39:29.388Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
       "inputs": {
@@ -6603,7 +6921,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:06:38.937Z",
+      "measured_at": "2026-10-02T11:39:28.844Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
       "inputs": {
@@ -6618,8 +6936,8 @@
       "unit": "version",
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
-      "measured_at": "2026-10-01T15:06:38.409Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.760Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6634,8 +6952,8 @@
       "unit": "version",
       "status": "measured",
       "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
-      "measured_at": "2026-10-01T15:07:57.968Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:09.993Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty",
@@ -6646,12 +6964,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.krypton-app.cold_s",
       "label": "krypton-app cold install",
-      "value": 41.7,
+      "value": 2.9,
       "unit": "s",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:08:39.724Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:13.011Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6661,12 +6979,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.krypton-app.download_bytes",
       "label": "krypton-app download",
-      "value": 237992755,
+      "value": 238037098,
       "unit": "bytes",
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
-      "measured_at": "2026-10-01T15:08:45.219Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:18.327Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "files": 81
       },
@@ -6680,8 +6998,8 @@
       "unit": "count",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:08:39.723Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:13.011Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6691,12 +7009,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.krypton-app.uv_cache_bytes",
       "label": "krypton-app uv cache",
-      "value": 733958144,
+      "value": 734130176,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:08:39.796Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:13.172Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6706,12 +7024,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.krypton-app.venv_bytes",
       "label": "krypton-app installed size",
-      "value": 709287936,
+      "value": 709443584,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:08:39.764Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:13.098Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6721,12 +7039,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.vibey-engine.cold_s",
       "label": "vibey-engine cold install",
-      "value": 19.0,
+      "value": 2.8,
       "unit": "s",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:07:18.190Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:58.296Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6736,12 +7054,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.vibey-engine.download_bytes",
       "label": "vibey-engine download",
-      "value": 236385716,
+      "value": 236430059,
       "unit": "bytes",
       "status": "measured",
       "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
-      "measured_at": "2026-10-01T15:07:57.967Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:40:09.991Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "files": 76
       },
@@ -6755,8 +7073,8 @@
       "unit": "count",
       "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:07:18.190Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:58.296Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6766,12 +7084,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.vibey-engine.uv_cache_bytes",
       "label": "vibey-engine uv cache",
-      "value": 723202048,
+      "value": 723382272,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:07:18.249Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:58.453Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6781,12 +7099,12 @@
     {
       "id": "linux.ubuntu-26.04.aarch64.install.vibey-engine.venv_bytes",
       "label": "vibey-engine installed size",
-      "value": 701751296,
+      "value": 701919232,
       "unit": "bytes",
       "status": "measured",
       "method": "du -sk after the install above",
-      "measured_at": "2026-10-01T15:07:18.222Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:58.382Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "python": "3.12",
         "cache": "empty"
@@ -6800,8 +7118,8 @@
       "unit": "text",
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
-      "measured_at": "2026-10-01T15:06:38.409Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:27.760Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6816,8 +7134,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:06:39.448Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.949Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6833,8 +7151,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:06:39.965Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.061Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6850,8 +7168,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:06:39.706Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:30.495Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6867,8 +7185,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
-      "measured_at": "2026-10-01T15:06:38.684Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:28.304Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6884,8 +7202,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:06:40.220Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.619Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6901,8 +7219,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of postgresql (metadata, not installed)",
-      "measured_at": "2026-10-01T15:06:39.191Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:29.388Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6918,8 +7236,8 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of python3 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:06:38.937Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:28.844Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -6935,8 +7253,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:06:40.221Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.624Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -7002,8 +7320,8 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:06:40.221Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.624Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -7069,8 +7387,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:06:56.697Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:53.452Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -7235,8 +7553,8 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:06:56.697Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:53.452Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -7401,8 +7719,8 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:06:44.593Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:39.539Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -7437,8 +7755,8 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:06:44.593Z",
-      "host": "ubuntu:26.04 (linux/arm64, native) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:39.539Z",
+      "host": "ubuntu:26.04 (linux/arm64, native) on GitHub-hosted GitHub Actions 1000073937",
       "conditions": {
         "image": "ubuntu:26.04",
         "emulated": false,
@@ -7469,46 +7787,75 @@
     {
       "id": "linux.ubuntu-26.04.x86_64.disk.minimum_gb",
       "label": "Ubuntu 26.04 LTS (x86_64): minimum free disk",
-      "value": null,
+      "value": 20,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:58.049Z",
       "cadence": "weekly",
       "formula": "the need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.disk.minimum_need_gb"
+      "inputs": {
+        "linux.ubuntu-26.04.x86_64.disk.minimum_need_gb": 19.7
+      }
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.disk.minimum_need_gb",
       "label": "Ubuntu 26.04 LTS (x86_64): free disk needed",
-      "value": null,
+      "value": 19.7,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:39:58.049Z",
       "cadence": "weekly",
       "formula": "(base + PostgreSQL closures + engine venv + uv cache + Ollama bundle unpacked + model + git objects + minimum worktrees x one worktree) / 1e9 + Postgres data allowance",
-      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.install.vibey-engine.venv_bytes, linux.ubuntu-26.04.x86_64.install.vibey-engine.uv_cache_bytes"
+      "inputs": {
+        "linux.ubuntu-26.04.x86_64.pkg.base.bytes": 127212544,
+        "linux.ubuntu-26.04.x86_64.pkg.postgres.bytes": 86347776,
+        "linux.ubuntu-26.04.x86_64.install.vibey-engine.venv_bytes": 711651328,
+        "linux.ubuntu-26.04.x86_64.install.vibey-engine.uv_cache_bytes": 733118464,
+        "linux.ollama.x86_64.unpacked_bytes": 2238853120,
+        "model.gpt-oss:20b.download_bytes": 13793441244,
+        "disk.git_pack_mib": 92.32,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "assumption.postgres_data_allowance_gb": 1.0
+      }
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.disk.recommended_gb",
       "label": "Ubuntu 26.04 LTS (x86_64): recommended free disk",
-      "value": null,
+      "value": 50,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:09.729Z",
       "cadence": "weekly",
       "formula": "the recommended need rounded up to the next 10 GB",
-      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.disk.recommended_need_gb"
+      "inputs": {
+        "linux.ubuntu-26.04.x86_64.disk.recommended_need_gb": 48.2
+      }
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.disk.recommended_need_gb",
       "label": "Ubuntu 26.04 LTS (x86_64): free disk recommended",
-      "value": null,
+      "value": 48.2,
       "unit": "GB",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:09.729Z",
       "cadence": "weekly",
       "formula": "minimum need + desktop closure + krypton-app venv + optional models + dev venv + further worktrees + room to re-pull the model",
-      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.disk.minimum_need_gb, linux.ubuntu-26.04.x86_64.install.krypton-app.venv_bytes"
+      "inputs": {
+        "linux.ubuntu-26.04.x86_64.disk.minimum_need_gb": 19.7,
+        "linux.ubuntu-26.04.x86_64.pkg.desktop.bytes": 373934080,
+        "linux.ubuntu-26.04.x86_64.install.krypton-app.venv_bytes": 717320192,
+        "model.qwen3:14b.download_bytes": 9276198565,
+        "disk.dev_venv_bytes": 834072576,
+        "assumption.recommended_worktrees": 50,
+        "assumption.minimum_worktrees": 10,
+        "disk.worktree_bytes": 86958080,
+        "model.gpt-oss:20b.download_bytes": 13793441244
+      }
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.disk.with_ledger_gb",
@@ -7519,7 +7866,7 @@
       "method": "derived",
       "cadence": "weekly",
       "formula": "minimum need + ledger growth over the horizon",
-      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.disk.minimum_need_gb, disk.ledger_growth_gb"
+      "reason": "missing input(s): disk.ledger_growth_gb"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.floor.desktop",
@@ -7528,7 +7875,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:11:04.447Z",
+      "measured_at": "2026-10-02T11:39:34.703Z",
       "cadence": "weekly",
       "formula": "glib, json-glib, gtk4 and libadwaita each >= the meson.build floor",
       "inputs": {
@@ -7545,13 +7892,17 @@
     {
       "id": "linux.ubuntu-26.04.x86_64.floor.glibc",
       "label": "Ubuntu 26.04 LTS (x86_64): glibc meets the installed wheels' manylinux floor",
-      "value": null,
+      "value": true,
       "unit": "verdict",
-      "status": "skipped",
+      "status": "derived",
       "method": "derived",
+      "measured_at": "2026-10-02T11:40:06.808Z",
       "cadence": "weekly",
       "formula": "glibc >= the newest glibc any installed wheel requires",
-      "reason": "missing input(s): linux.ubuntu-26.04.x86_64.install.glibc_floor"
+      "inputs": {
+        "linux.ubuntu-26.04.x86_64.glibc": "2.43",
+        "linux.ubuntu-26.04.x86_64.install.glibc_floor": "2.34"
+      }
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.floor.postgres",
@@ -7560,7 +7911,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:10:50.876Z",
+      "measured_at": "2026-10-02T11:39:32.455Z",
       "cadence": "weekly",
       "formula": "major(packaged PostgreSQL) >= the floor vibey checks on connect",
       "inputs": {
@@ -7575,7 +7926,7 @@
       "unit": "verdict",
       "status": "derived",
       "method": "derived",
-      "measured_at": "2026-10-01T15:10:47.564Z",
+      "measured_at": "2026-10-02T11:39:31.888Z",
       "cadence": "weekly",
       "formula": "packaged python3 >= the oldest Python vibey-engine runs on",
       "inputs": {
@@ -7590,11 +7941,11 @@
       "unit": "version",
       "status": "measured",
       "method": "os.confstr('CS_GNU_LIBC_VERSION')",
-      "measured_at": "2026-10-01T15:10:40.078Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:30.737Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -7602,132 +7953,168 @@
     {
       "id": "linux.ubuntu-26.04.x86_64.install.glibc_floor",
       "label": "Newest glibc the installed wheels require",
-      "value": null,
+      "value": "2.34",
       "unit": "version",
-      "status": "skipped",
-      "method": "minimum_specs.py cell ubuntu-26.04 x86_64",
-      "cadence": "weekly",
-      "reason": "not measured yet: awaiting this cell's run (minimum_specs.py cell)"
+      "status": "measured",
+      "method": "max over the venv's *.dist-info/WHEEL of each wheel's oldest manylinux_X_Y tag",
+      "measured_at": "2026-10-02T11:40:06.808Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty",
+        "manylinux_wheels": 18
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.krypton-app.cold_s",
-      "label": "krypton-app cold_s",
-      "value": null,
+      "label": "krypton-app cold install",
+      "value": 2.7,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:09.575Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.krypton-app.download_bytes",
       "label": "krypton-app download",
-      "value": null,
+      "value": 243437502,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:40:14.849Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "files": 81
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.krypton-app.packages",
       "label": "krypton-app packages",
-      "value": null,
+      "value": 81,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:40:09.575Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.krypton-app.uv_cache_bytes",
-      "label": "krypton-app cache",
-      "value": null,
+      "label": "krypton-app uv cache",
+      "value": 742014976,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:09.851Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.krypton-app.venv_bytes",
-      "label": "krypton-app venv",
-      "value": null,
+      "label": "krypton-app installed size",
+      "value": 717320192,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install krypton-app (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.240Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:40:09.729Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.vibey-engine.cold_s",
-      "label": "vibey-engine cold_s",
-      "value": null,
+      "label": "vibey-engine cold install",
+      "value": 2.4,
       "unit": "s",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.219Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:57.768Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.vibey-engine.download_bytes",
       "label": "vibey-engine download",
-      "value": null,
+      "value": 241773179,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.220Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "status": "measured",
+      "method": "pip download --only-binary=:all: into an empty directory; sum of file sizes",
+      "measured_at": "2026-10-02T11:40:06.804Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "files": 76
+      },
       "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "note": "includes this checkout's locally built wheel(s)"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.vibey-engine.packages",
       "label": "vibey-engine packages",
-      "value": null,
+      "value": 76,
       "unit": "count",
-      "status": "skipped",
+      "status": "measured",
       "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.220Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "measured_at": "2026-10-02T11:39:57.768Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.vibey-engine.uv_cache_bytes",
-      "label": "vibey-engine cache",
-      "value": null,
+      "label": "vibey-engine uv cache",
+      "value": 733118464,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.219Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:58.049Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.install.vibey-engine.venv_bytes",
-      "label": "vibey-engine venv",
-      "value": null,
+      "label": "vibey-engine installed size",
+      "value": 711651328,
       "unit": "bytes",
-      "status": "skipped",
-      "method": "uv venv -p 3.12; UV_CACHE_DIR=<empty> uv pip install vibey-engine (this checkout's wheels)",
-      "measured_at": "2026-10-01T15:13:18.219Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
-      "cadence": "weekly",
-      "reason": "install failed: qemu: uncaught target signal 11 (Segmentation fault) - core dumped"
+      "status": "measured",
+      "method": "du -sk after the install above",
+      "measured_at": "2026-10-02T11:39:57.929Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
+      "conditions": {
+        "python": "3.12",
+        "cache": "empty"
+      },
+      "cadence": "weekly"
     },
     {
       "id": "linux.ubuntu-26.04.x86_64.os_release",
@@ -7736,11 +8123,11 @@
       "unit": "text",
       "status": "measured",
       "method": "PRETTY_NAME in /etc/os-release",
-      "measured_at": "2026-10-01T15:10:40.076Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:30.737Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true
       },
       "cadence": "weekly"
@@ -7752,11 +8139,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libglib2.0-0t64 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:10:54.242Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:33.017Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libglib2.0-0t64"
       },
@@ -7769,11 +8156,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libgtk-4-1 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:11:01.071Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:34.141Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libgtk-4-1"
       },
@@ -7786,11 +8173,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libjson-glib-1.0-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:10:57.658Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:33.578Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libjson-glib-1.0-0"
       },
@@ -7803,11 +8190,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of linux-image-generic (metadata, not installed)",
-      "measured_at": "2026-10-01T15:10:43.423Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.303Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "linux-image-generic"
       },
@@ -7820,11 +8207,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of libadwaita-1-0 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:11:04.447Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:34.703Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "libadwaita-1-0"
       },
@@ -7837,11 +8224,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of postgresql (metadata, not installed)",
-      "measured_at": "2026-10-01T15:10:50.876Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:32.455Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "postgresql"
       },
@@ -7854,11 +8241,11 @@
       "unit": "version",
       "status": "measured",
       "method": "apt: the repositories' version of python3 (metadata, not installed)",
-      "measured_at": "2026-10-01T15:10:47.564Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:31.888Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "package": "python3"
       },
@@ -7871,11 +8258,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:11:04.498Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:34.708Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "ca-certificates",
@@ -7938,11 +8325,11 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: packages the bootstrap added (python3, git, ca-certificates, curl and their dependencies), installed sizes summed",
-      "measured_at": "2026-10-01T15:11:04.498Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:34.708Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "ca-certificates",
@@ -8005,11 +8392,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:13:18.196Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:53.970Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adwaita-icon-theme",
@@ -8173,11 +8560,11 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install libgtk-4-1 libadwaita-1-0 libjson-glib-1.0-0 libsoup-3.0-0 (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:13:18.196Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:53.970Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adwaita-icon-theme",
@@ -8341,11 +8728,11 @@
       "unit": "bytes",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:12:09.620Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:40.932Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adduser",
@@ -8377,11 +8764,11 @@
       "unit": "count",
       "status": "measured",
       "method": "apt: install postgresql (no recommends / weak deps); packages it added, installed sizes summed",
-      "measured_at": "2026-10-01T15:12:09.620Z",
-      "host": "ubuntu:26.04 (linux/amd64, emulated) on Docker Desktop 29.8.0 on Mac17,2",
+      "measured_at": "2026-10-02T11:39:40.932Z",
+      "host": "ubuntu:26.04 (linux/amd64, native) on GitHub-hosted GitHub Actions 1000073939",
       "conditions": {
         "image": "ubuntu:26.04",
-        "emulated": true,
+        "emulated": false,
         "container": true,
         "packages": [
           "adduser",
