@@ -54,6 +54,7 @@ try:
         HostIdentityInterface,
         PublisherInterface,
         SchedulerRendererInterface,
+        ToolCatalogInterface,
     )
     from scripts.interfaces.minimum_specs_interface import (
         ClockInterface,
@@ -85,6 +86,7 @@ except ModuleNotFoundError:  # Direct execution keeps the script directory on sy
         HostIdentityInterface,
         PublisherInterface,
         SchedulerRendererInterface,
+        ToolCatalogInterface,
     )
     from interfaces.minimum_specs_interface import (  # type: ignore[import-not-found,no-redef]
         ClockInterface,
@@ -181,6 +183,7 @@ class ProbeContext:
     root: Path = Path("/")
     home: Path = field(default_factory=Path.home)
     wall: Callable[[], float] = time.time
+    which: Callable[[str], str | None] = shutil.which
 
     @property
     def timeout(self) -> float:
@@ -206,6 +209,101 @@ class ProbeContext:
     @property
     def mac(self) -> bool:
         return self.system == "Darwin"
+
+
+# ------------------------------------------------------------------------ tools
+
+
+class ToolCatalog(ToolCatalogInterface):
+    """The tools `[host_health.tools]` declares for this platform, which are missing, and the
+    package-manager command that installs each (the first manager present, in order)."""
+
+    def __init__(
+        self,
+        settings: HealthSettings,
+        system: str,
+        which: Callable[[str], str | None] = shutil.which,
+    ) -> None:
+        self._cfg = settings["tools"]
+        self._system = system
+        self._which = which
+
+    def tools(self) -> dict[str, Mapping[str, Any]]:
+        return {
+            name: spec
+            for name, spec in self._cfg.items()
+            if isinstance(spec, Mapping) and self._system in spec.get("platforms", [])
+        }
+
+    def managers(self) -> list[str]:
+        """The platform's package managers that are present, in the declared order."""
+        declared = self._cfg["managers"].get(self._system, [])
+        return [m for m in declared if self._which(str(self._cfg["detect"][m]))]
+
+    def missing(self) -> list[str]:
+        return [name for name, spec in self.tools().items() if not self._which(str(spec["binary"]))]
+
+    def command(self, tool: str) -> tuple[str, list[str]] | None:
+        """(manager, argv) of the first present manager that can install `tool`."""
+        install = self.tools()[tool]["install"]
+        for manager in self.managers():
+            if manager in install:
+                return manager, [str(part) for part in install[manager]]
+        return None
+
+    def hint(self, tool: str) -> str:
+        """How to install `tool` here, for a skipped figure's reason."""
+        found = self.command(tool)
+        if found is not None:
+            return f"install it with `{' '.join(found[1])}`"
+        install = self.tools()[tool]["install"]
+        options = [
+            f"`{' '.join(str(p) for p in install[m])}` ({m})"
+            for m in self._cfg["managers"].get(self._system, [])
+            if m in install
+        ]
+        return "install it with one of " + ", ".join(options) if options else "no install declared"
+
+
+class ToolInstaller:
+    """What `install` does about the declared tools: installs a missing one with a command
+    that needs no privileges, and prints the command for one that does (never runs sudo)."""
+
+    def __init__(
+        self, catalog: ToolCatalog, runner: CommandRunnerInterface, timeout: float
+    ) -> None:
+        self._catalog = catalog
+        self._runner = runner
+        self._timeout = timeout
+
+    def ensure(self) -> list[str]:
+        """One line per tool for this platform: present, installed, or what to run."""
+        lines: list[str] = []
+        missing = set(self._catalog.missing())
+        for name, spec in self._catalog.tools().items():
+            role = "required" if spec.get("required") else "optional"
+            if name not in missing:
+                lines.append(f"tool {name}: present ({role})")
+                continue
+            found = self._catalog.command(name)
+            if found is None:
+                lines.append(f"tool {name}: MISSING ({role}); {self._catalog.hint(name)}")
+                continue
+            manager, argv = found
+            if argv[0] == "sudo":
+                lines.append(
+                    f"tool {name}: MISSING ({role}); it needs privileges, so run it yourself:"
+                    f" {' '.join(argv)}"
+                )
+                continue
+            result = self._runner.run(argv, timeout=self._timeout)
+            if result.returncode == 0 and name not in self._catalog.missing():
+                lines.append(f"tool {name}: installed with {manager} ({' '.join(argv)})")
+            else:
+                lines.append(
+                    f"tool {name}: `{' '.join(argv)}` did not install it ({result.tail()})"
+                )
+        return lines
 
 
 # ------------------------------------------------------------------------ the host
@@ -262,23 +360,47 @@ class StorageProbe(ProbeInterface):
 
     @staticmethod
     def parse_smartctl(data: Mapping[str, Any]) -> dict[str, Any]:
-        """The fields the drivers use, from `smartctl --json -a`; absent ones are absent."""
+        """The fields the drivers use, from `smartctl --json -a`; absent ones are absent. The
+        serial number smartctl prints is never read."""
         out: dict[str, Any] = {}
+        if data.get("model_name"):
+            out["model"] = str(data["model_name"])
         status = data.get("smart_status")
         if isinstance(status, Mapping) and "passed" in status:
             out["smart_passed"] = bool(status["passed"])
         log = data.get("nvme_smart_health_information_log")
         if isinstance(log, Mapping):
-            for key in ("percentage_used", "available_spare", "available_spare_threshold"):
+            for key in (
+                "percentage_used",
+                "available_spare",
+                "available_spare_threshold",
+                "critical_warning",
+                "unsafe_shutdowns",
+                "media_errors",
+            ):
                 if key in log:
                     out[key] = int(log[key])
             if "data_units_written" in log:  # NVMe data units are 1000 x 512 bytes
-                out["tb_written"] = round(int(log["data_units_written"]) * 512_000 / 1e12, 2)
-            if "media_errors" in log:
-                out["media_errors"] = int(log["media_errors"])
+                out["bytes_written"] = int(log["data_units_written"]) * 512_000
+                out["tb_written"] = round(out["bytes_written"] / 1e12, 2)
+            if "num_err_log_entries" in log:
+                out["error_log_entries"] = int(log["num_err_log_entries"])
         hours = data.get("power_on_time", {})
         if isinstance(hours, Mapping) and "hours" in hours:
             out["power_on_hours"] = int(hours["hours"])
+        if out.get("bytes_written") and out.get("power_on_hours"):
+            out["write_gb_per_power_on_hour"] = round(
+                out["bytes_written"] / 1e9 / out["power_on_hours"], 1
+            )
+        smartctl = data.get("smartctl", {})
+        messages = smartctl.get("messages", []) if isinstance(smartctl, Mapping) else []
+        for message in messages:
+            text = str(message.get("string", "")) if isinstance(message, Mapping) else ""
+            if "Error Information Log" in text:
+                # The error-information page is unreadable (Apple's controller answers
+                # GetLogPage with code 745): its entries are unknown, not zero.
+                out.pop("error_log_entries", None)
+                out["error_log_failure"] = text
         return out
 
     @staticmethod
@@ -297,64 +419,107 @@ class StorageProbe(ProbeInterface):
         found = re.search(r"SMART Status:\s*(.+)", text)
         return found.group(1).strip() if found else None
 
-    def _device(self) -> tuple[str, str]:
+    def _device(self, smartctl: str, missing: str) -> tuple[str, str]:
         """(device, why there is none)."""
         if self._ctx.mac:
             return str(self._cfg["device_macos"]), ""
         declared = str(self._cfg["device_linux"])
         if declared:
             return declared, ""
-        scan = self._ctx.run([self._cfg["smartctl"], "--scan"])
+        scan = self._ctx.run([smartctl, "--scan"])
         if scan.returncode == 127:
-            return "", f"smartctl not found; {self._cfg['smartctl_install_hint']}"
+            return "", missing
         first = str(scan.stdout).strip().splitlines()
         if not first:
             return "", "smartctl --scan listed no device"
         return first[0].split()[0], ""
 
+    SMART_IDS: Mapping[str, tuple[str, str, str]] = {
+        "percentage_used": ("storage.percentage_used", "SSD wear: NVMe percentage used", "%"),
+        "spare_margin_pct": (
+            "storage.spare_margin_pct",
+            "SSD available spare above its threshold",
+            "percentage points",
+        ),
+        "available_spare": ("storage.available_spare_pct", "SSD available spare", "%"),
+        "tb_written": ("storage.tb_written", "SSD data written", "TB"),
+        "bytes_written": ("storage.bytes_written", "SSD data written, in bytes", "bytes"),
+        "media_errors": ("storage.media_errors", "SSD media and data integrity errors", "count"),
+        "critical_warning": ("storage.critical_warning", "SSD critical warning bits", "bits"),
+        "unsafe_shutdowns": ("storage.unsafe_shutdowns", "SSD unsafe shutdowns", "count"),
+        "power_on_hours": ("storage.power_on_hours", "SSD power-on hours", "h"),
+        "write_gb_per_power_on_hour": (
+            "storage.write_gb_per_power_on_hour",
+            "SSD writes per power-on hour (lifetime average)",
+            "GB/h",
+        ),
+        "error_log_entries": ("storage.error_log_entries", "SSD error-log entries", "count"),
+        "model": ("storage.model", "SSD model", "text"),
+    }
+
     def run(self) -> list[Figure]:
         f = self._ctx.figures
-        smart_ids = {
-            "percentage_used": ("storage.percentage_used", "SSD wear: NVMe percentage used", "%"),
-            "spare_margin_pct": (
-                "storage.spare_margin_pct",
-                "SSD available spare above its threshold",
-                "percentage points",
-            ),
-            "available_spare": ("storage.available_spare_pct", "SSD available spare", "%"),
-            "tb_written": ("storage.tb_written", "SSD data written", "TB"),
-            "media_errors": ("storage.media_errors", "SSD media errors", "count"),
-            "power_on_hours": ("storage.power_on_hours", "SSD power-on hours", "h"),
-        }
+        tools = ToolCatalog(self._ctx.settings, self._ctx.system, self._ctx.which)
+        smartctl = str(self._ctx.settings["tools"]["smartctl"]["binary"])
+        missing = f"smartctl not found; {tools.hint('smartctl')}"
         figures: list[Figure] = []
-        device, why = self._device()
+        device, why = self._device(smartctl, missing)
         values: dict[str, Any] = {}
-        method = f"{self._cfg['smartctl']} --json=c -a {device}"
+        method = f"{smartctl} --json=c -a {device}"
         if device:
-            result = self._ctx.run([self._cfg["smartctl"], "--json=c", "-a", device])
+            result = self._ctx.run([smartctl, "--json=c", "-a", device])
             if result.returncode == 127:
-                why = f"smartctl not found; {self._cfg['smartctl_install_hint']}"
+                why = missing
             else:
                 try:
                     values = self.parse_smartctl(json.loads(str(result.stdout) or "{}"))
                 except json.JSONDecodeError:
                     values = {}
-                # smartctl's exit status is a bit mask; bit 1 is "device open failed".
+                # smartctl's exit status is a bit mask; bit 1 is "device open failed". Bit 2
+                # ("a command failed") alone is the unreadable error-log page, kept below.
                 if result.returncode & 0b10 or not values:
                     why = f"smartctl could not read {device} without privileges ({result.tail()})"
         if "available_spare" in values and "available_spare_threshold" in values:
             values["spare_margin_pct"] = (
                 values["available_spare"] - values["available_spare_threshold"]
             )
-        for key, (fid, label, unit) in smart_ids.items():
+        notes = {
+            "write_gb_per_power_on_hour": "Data Units Written x 512,000 bytes / Power On Hours",
+            "bytes_written": "Data Units Written x 512,000 bytes (NVMe data unit)",
+        }
+        for key, (fid, label, unit) in self.SMART_IDS.items():
             if key in values:
-                figures.append(f.measured(fid, label, values[key], unit, method))
+                figures.append(
+                    f.measured(fid, label, values[key], unit, method, note=notes.get(key))
+                )
+            elif key == "error_log_entries" and "error_log_failure" in values:
+                reason = f"smartctl could not read the error-information log page: {values['error_log_failure']}"
+                figures.append(f.skipped(fid, label, unit, method, reason))
             else:
                 reason = why or f"{device} reported no {key.replace('_', ' ')} (not an NVMe log?)"
                 figures.append(f.skipped(fid, label, unit, method, reason))
+        figures.append(self._endurance(values.get("model")))
         figures.append(self._smart_status(values, device, method))
         figures.extend(self._free_space())
         return figures
+
+    def _endurance(self, model: str | None) -> Figure:
+        f = self._ctx.figures
+        fid, label = "storage.rated_endurance_tb", "SSD rated endurance (TBW)"
+        method = "[host_health.storage.endurance] in scripts/host_health.toml"
+        if not model:
+            return f.skipped(fid, label, "TB", method, "the drive's model was not read")
+        entry = self._cfg.get("endurance", {}).get(model)
+        if entry is None:
+            return f.skipped(
+                fid, label, "TB", method, f"no endurance entry is declared for {model!r}"
+            )
+        if not entry["tbw"]:
+            return f.skipped(
+                fid, label, "TB", method, f"{entry['reason']} (verified {entry['last_verified']})"
+            )
+        figure = f.declared(fid, label, float(entry["tbw"]), "TB", method, str(entry["source"]))
+        return replace(figure, note=f"{entry['reason']}; last verified {entry['last_verified']}")
 
     def _smart_status(self, values: Mapping[str, Any], device: str, method: str) -> Figure:
         f = self._ctx.figures
@@ -885,8 +1050,32 @@ class MemoryProbe(ProbeInterface):
                 )
             )
         boot = self.parse_boottime(str(self._ctx.run(["sysctl", "-n", "kern.boottime"]).stdout))
-        stats = self.parse_vm_stat(str(self._ctx.run(["vm_stat"]).stdout))
+        vm_stat = str(self._ctx.run(["vm_stat"]).stdout)
+        stats = self.parse_vm_stat(vm_stat)
         hours = (self._ctx.wall() - boot) / 3600 if boot else 0
+        page = re.search(r"page size of (\d+) bytes", vm_stat)
+        if "swapouts" in stats and hours > 0 and page:
+            figures.append(
+                f.measured(
+                    "memory.swapout_gb_per_hour",
+                    "Swap-out volume per hour",
+                    round(stats["swapouts"] * int(page.group(1)) / 1e9 / hours, 1),
+                    "GB/h",
+                    "vm_stat Swapouts x page size / hours since kern.boottime",
+                    conditions={"hours_since_boot": round(hours, 1)},
+                    note="pages swapped out times the page size; an upper bound on bytes written to swap if the swap files hold compressed pages (not verified)",
+                )
+            )
+        else:
+            figures.append(
+                f.skipped(
+                    "memory.swapout_gb_per_hour",
+                    "Swap-out volume per hour",
+                    "GB/h",
+                    "vm_stat",
+                    "no swapouts counter, page size or boot time",
+                )
+            )
         for key, fid, label in (
             ("compressions", "memory.compressions_per_hour", "Memory compressions per hour"),
             ("swapouts", "memory.swapouts_per_hour", "Swap-outs per hour"),
@@ -1669,6 +1858,8 @@ class Thresholds:
             return float(node), f"scripts/minimum_specs.toml {path}"
         local = str(driver.get("threshold_figure_local", ""))
         figure = newest.by_id().get(local)
+        if figure is not None and not figure.has_value and figure.reason:
+            return None, f"{local}: {figure.reason}"
         if figure is None or not figure.has_value:
             return None, f"{local or 'no threshold'} is not measured on this host"
         return float(figure.value), f"this host's {local} ({(figure.measured_at or '')[:10]})"
@@ -1714,6 +1905,15 @@ class Forecaster(ForecasterInterface):
         return sorted(p for p in points.values() if newest - p[0] <= lookback)
 
     def driver(self, key: str, history: Sequence[HealthRecord]) -> dict[str, Any]:
+        result = self._driver(key, history)
+        fallback = self._settings.drivers[key].get("fallback")
+        if result["state"] == "unknown" and fallback:
+            label = self._settings.drivers[str(fallback)]["label"]
+            result["reason"] = f"{result['reason']}; the forecast rests on {label} instead"
+            result["fallback"] = fallback
+        return result
+
+    def _driver(self, key: str, history: Sequence[HealthRecord]) -> dict[str, Any]:
         spec = self._settings.drivers[key]
         newest = history[-1]
         out: dict[str, Any] = {
@@ -1809,6 +2009,24 @@ class Forecaster(ForecasterInterface):
             "points": 1,
         }
 
+    def hypotheses(self, drivers: Sequence[Mapping[str, Any]], newest: HealthRecord) -> list[str]:
+        """The declared hypotheses whose drivers are past or nearing their threshold and
+        whose figures were all measured, with the values filled in. Offered, never concluded."""
+        states = {d["id"]: d["state"] for d in drivers}
+        figures = newest.by_id()
+        out: list[str] = []
+        for spec in self._settings.table.get("hypotheses", {}).values():
+            if not any(states.get(d) in ("exceeded", "unconfirmed") for d in spec["drivers"]):
+                continue
+            values = {fid: figures.get(fid) for fid in spec["figures"]}
+            if any(v is None or not v.has_value for v in values.values()):
+                continue
+            text = str(spec["text"])
+            for fid, figure in values.items():
+                text = text.replace("{" + fid + "}", f"{figure.value:g}")  # type: ignore[union-attr]
+            out.append(text)
+        return out
+
     def forecast(self, history: Sequence[HealthRecord]) -> dict[str, Any]:
         newest = history[-1]
         drivers = [self.driver(key, history) for key in self._settings.drivers]
@@ -1818,6 +2036,7 @@ class Forecaster(ForecasterInterface):
             "host": newest.fingerprint,
             "records": len(history),
             "drivers": drivers,
+            "hypotheses": self.hypotheses(drivers, newest),
         }
         if not dated:
             result.update(binding=None, replace_by=None, earliest=None, latest=None, warning=False)
@@ -1982,7 +2201,8 @@ class HealthRenderer(HealthRendererInterface):
                 f"{self._forecaster._cfg['min_points']} weekly points; dated drivers need a "
                 "vendor date. Each driver's reason is in the table below."
             )
-        return f"{verdict} As of {fc['as_of'][:10]}.\n\n" + "\n".join(rows)
+        notes = "".join(f"\n\n> {h}" for h in fc["hypotheses"])
+        return f"{verdict} As of {fc['as_of'][:10]}.{notes}\n\n" + "\n".join(rows)
 
     def blocks(self, records: Sequence[HealthRecord]) -> dict[str, str]:
         hosts = HealthLedger.by_host(records)
@@ -2381,6 +2601,58 @@ class MeasurementSession:
             CapacityProbe(ctx, specs, specs_settings.record),
         ]
 
+    @staticmethod
+    def weekly_writes(
+        history: Sequence[HealthRecord],
+        host: Mapping[str, Any],
+        figures: Sequence[Figure],
+        factory: FigureFactory,
+        stamp: str,
+    ) -> Figure:
+        """Bytes written per week since this host's previous record: the counter's difference
+        over the days between the two, times seven."""
+        fid, label = "storage.bytes_written_per_week", "SSD data written per week"
+        now = next((f for f in figures if f.id == "storage.bytes_written" and f.has_value), None)
+        before = next(
+            (
+                (r, r.by_id()["storage.bytes_written"])
+                for r in reversed(history)
+                if r.fingerprint == host["fingerprint"]
+                and "storage.bytes_written" in r.by_id()
+                and r.by_id()["storage.bytes_written"].has_value
+            ),
+            None,
+        )
+        method = "difference of storage.bytes_written between two records"
+        if now is None or before is None:
+            reason = (
+                "storage.bytes_written was not measured this time"
+                if now is None
+                else "needs an earlier record of this host with storage.bytes_written"
+            )
+            return factory.skipped(fid, label, "bytes/week", method, reason)
+        days = Stamp.days(stamp) - Stamp.days(before[0].measured_at)
+        if days <= 0:
+            return factory.skipped(fid, label, "bytes/week", method, "no time between records")
+        rate = round((float(now.value) - float(before[1].value)) / days * 7)
+        return Figure(
+            id=fid,
+            label=label,
+            value=rate,
+            unit="bytes/week",
+            status="derived",
+            method=method,
+            measured_at=stamp,
+            host=str(host["fingerprint"]),
+            formula="(bytes_now - bytes_before) / days_between * 7",
+            inputs={
+                "bytes_now": now.value,
+                "bytes_before": before[1].value,
+                "before_at": before[0].measured_at,
+                "days_between": round(days, 4),
+            },
+        )
+
     def run(self, history: Sequence[HealthRecord]) -> HealthRecord:
         stamp = self._clock.now()
         bare = ProbeContext(
@@ -2413,6 +2685,7 @@ class MeasurementSession:
                         f"the probe crashed: {type(exc).__name__}: {exc}",
                     )
                 )
+        figures.append(self.weekly_writes(history, host, figures, ctx.figures, stamp))
         record = HealthRecord(
             run_id=f"{host['fingerprint']}@{stamp}",
             measured_at=stamp,
@@ -2436,11 +2709,13 @@ class HostHealthCli:
         clock: ClockInterface | None = None,
         runner: CommandRunnerInterface | None = None,
         home: Path | None = None,
+        which: Callable[[str], str | None] = shutil.which,
     ) -> None:
         self._repo = repo
         self._clock = clock or SystemClock()
         self._runner = runner or SubprocessRunner()
         self._home = home or Path.home()
+        self._which = which
 
     def parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
@@ -2472,6 +2747,7 @@ class HostHealthCli:
         install.add_argument(
             "--platform", choices=("launchd", "systemd"), default=self._default_platform()
         )
+        sub.add_parser("tools", help="which declared tools this platform has and lacks")
         sub.add_parser("weekly", help="measure, then publish (what the unit runs)")
         return parser
 
@@ -2533,6 +2809,12 @@ class HostHealthCli:
                 committed.read(), now
             )
             print(json.dumps(result, indent=2))
+            return 0
+        if args.command == "tools":
+            catalog = ToolCatalog(settings, platform.system())
+            for name in catalog.tools():
+                state = "MISSING; " + catalog.hint(name) if name in catalog.missing() else "present"
+                print(f"tool {name}: {state}")
             return 0
         if args.command in ("render-unit", "install"):
             return self._unit(repo, settings, args)
@@ -2610,6 +2892,14 @@ class HostHealthCli:
                 print(f"{SCRIPT}: {refusal}; move it in scripts/host_health.toml", file=sys.stderr)
                 return 78
         if args.command == "install":
+            system = "Darwin" if mac else "Linux"
+            installer = ToolInstaller(
+                ToolCatalog(settings, system, self._which),
+                self._runner,
+                float(settings["tools"]["install_timeout_s"]),
+            )
+            for line in installer.ensure():
+                print(line)
             publisher = Publisher(
                 settings, self._runner, self._home, self.render_check(repo, settings)
             )

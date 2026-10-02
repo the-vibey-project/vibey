@@ -230,6 +230,8 @@ def test_smartctl_json_yields_wear_spare_writes_errors_and_hours() -> None:
         "available_spare": 100,
         "available_spare_threshold": 99,
         "tb_written": 20.48,
+        "bytes_written": 20_480_000_000_000,
+        "write_gb_per_power_on_hour": 16.6,
         "media_errors": 0,
         "power_on_hours": 1234,
     }
@@ -438,6 +440,7 @@ def test_macos_memory_figures() -> None:
     assert figures["memory.swap_used_ratio"].value == pytest.approx(14162.94 / 24576, abs=1e-3)
     assert figures["memory.free_pct"].value == 18
     assert figures["memory.compressions_per_hour"].value == round(1329384629 / 10)
+    assert figures["memory.swapout_gb_per_hour"].value == round(79714052 * 16384 / 1e9 / 10, 1)
 
 
 def test_macos_memory_when_nothing_answers() -> None:
@@ -1280,3 +1283,227 @@ def test_install_clones_and_writes_into_the_service_managers_directory(
     assert runner.calls[0][:2] == ["git", "clone"]
     assert (home / ".config/systemd/user/dev.vibey.host-health.timer").is_file()
     assert (home / ".local/state/vibey/logs").is_dir()
+
+
+# ------------------------------------------------------------------------ the SSD on Apple silicon
+
+# The shape `smartctl --json=c -a disk0` printed on Mac17,2 (smartctl 7.5, no sudo,
+# 2026-10-01), cut to the fields read; the serial number it also prints is left out here
+# and never read by the parser. Exit status 4: the error-information page failed.
+APPLE_SMARTCTL = {
+    "smartctl": {
+        "exit_status": 4,
+        "messages": [
+            {
+                "string": "Read 1 entries from Error Information Log failed: GetLogPage failed:"
+                " system=0x38, sub=0x0, code=745",
+                "severity": "error",
+            }
+        ],
+    },
+    "device": {"name": "disk0", "type": "nvme", "protocol": "NVMe"},
+    "model_name": "APPLE SSD AP1024Z",
+    "serial_number": "NEVER-READ",
+    "smart_status": {"passed": True, "nvme": {"value": 0}},
+    "nvme_smart_health_information_log": {
+        "critical_warning": 0,
+        "available_spare": 100,
+        "available_spare_threshold": 99,
+        "percentage_used": 1,
+        "data_units_written": 71380939,
+        "media_errors": 0,
+        "unsafe_shutdowns": 10,
+        "num_err_log_entries": 0,
+        "power_on_hours": 337,
+    },
+    "power_on_time": {"hours": 337},
+}
+
+
+def test_apple_ssd_is_read_without_sudo_and_its_error_log_failure_is_a_skip() -> None:
+    c = ctx("Darwin", {("smartctl",): ok(json.dumps(APPLE_SMARTCTL), code=4), ("df",): ok(DF)})
+    figures = by_id(hh.StorageProbe(c).run())
+    assert figures["storage.model"].value == "APPLE SSD AP1024Z"
+    assert figures["storage.percentage_used"].value == 1
+    assert figures["storage.spare_margin_pct"].value == 1
+    assert figures["storage.bytes_written"].value == 71380939 * 512_000
+    assert figures["storage.tb_written"].value == 36.55
+    assert figures["storage.write_gb_per_power_on_hour"].value == 108.4
+    assert figures["storage.unsafe_shutdowns"].value == 10
+    assert figures["storage.critical_warning"].value == 0
+    assert figures["storage.smart_status"].value == "passed"
+    error_log = figures["storage.error_log_entries"]
+    assert error_log.status == "skipped" and "code=745" in str(error_log.reason)
+    endurance = figures["storage.rated_endurance_tb"]
+    assert endurance.status == "skipped" and "Apple publishes no endurance" in str(endurance.reason)
+    assert "NEVER-READ" not in json.dumps([f.to_dict() for f in figures.values()])
+
+
+def test_a_declared_endurance_rating_is_a_declared_figure() -> None:
+    table = json.loads(json.dumps(SETTINGS.table))
+    table["storage"]["endurance"]["APPLE SSD AP1024Z"].update(tbw="600", source="https://x")
+    c = replace(
+        ctx("Darwin", {("smartctl",): ok(json.dumps(APPLE_SMARTCTL), code=4), ("df",): ok(DF)}),
+        settings=hh.HealthSettings(table),
+    )
+    endurance = by_id(hh.StorageProbe(c).run())["storage.rated_endurance_tb"]
+    assert endurance.status == "declared" and endurance.value == 600.0
+    other = json.loads(json.dumps(APPLE_SMARTCTL))
+    other["model_name"] = "SOME OTHER SSD"
+    c2 = ctx("Darwin", {("smartctl",): ok(json.dumps(other)), ("df",): ok(DF)})
+    reason = by_id(hh.StorageProbe(c2).run())["storage.rated_endurance_tb"].reason
+    assert "no endurance entry" in str(reason)
+
+
+# ------------------------------------------------------------------------ declared tools
+
+
+def which_of(*present: str) -> Any:
+    return lambda name: f"/bin/{name}" if name in present else None
+
+
+def test_the_catalog_knows_each_platforms_tools_and_install_commands() -> None:
+    mac = hh.ToolCatalog(SETTINGS, "Darwin", which_of("brew"))
+    assert list(mac.tools()) == ["smartctl"]
+    assert mac.missing() == ["smartctl"]
+    assert mac.command("smartctl") == ("brew", ["brew", "install", "smartmontools"])
+    assert mac.hint("smartctl") == "install it with `brew install smartmontools`"
+    assert hh.ToolCatalog(SETTINGS, "Darwin", which_of("brew", "smartctl")).missing() == []
+    bare = hh.ToolCatalog(SETTINGS, "Linux", which_of())
+    assert bare.command("smartctl") is None
+    assert "sudo apt-get install -y smartmontools` (apt)" in bare.hint("smartctl")
+    fedora = hh.ToolCatalog(SETTINGS, "Linux", which_of("dnf"))
+    assert fedora.command("smartctl") == ("dnf", ["sudo", "dnf", "install", "-y", "smartmontools"])
+    table = json.loads(json.dumps(SETTINGS.table))
+    table["tools"]["smartctl"]["install"] = {}
+    assert (
+        hh.ToolCatalog(hh.HealthSettings(table), "Linux").hint("smartctl") == "no install declared"
+    )
+    assert contracts.ToolCatalogInterface in hh.ToolCatalog.__mro__
+
+
+def test_install_runs_brew_but_only_prints_sudo() -> None:
+    class Installs(FakeRunner):
+        def __init__(self, present: set[str]) -> None:
+            super().__init__({("brew",): ok("")})
+            self.present = present
+
+        def run(self, argv: Sequence[str], **kwargs: Any) -> ms.CommandResult:
+            self.present.add("smartctl")
+            return super().run(argv, **kwargs)
+
+    present = {"brew"}
+    runner = Installs(present)
+    mac = hh.ToolCatalog(SETTINGS, "Darwin", lambda n: n if n in present else None)
+    assert hh.ToolInstaller(mac, runner, 9).ensure() == [
+        "tool smartctl: installed with brew (brew install smartmontools)"
+    ]
+    assert runner.calls == [["brew", "install", "smartmontools"]]
+    again = hh.ToolInstaller(mac, FakeRunner(), 9).ensure()
+    assert again == ["tool smartctl: present (optional)"]
+    ubuntu = hh.ToolCatalog(SETTINGS, "Linux", which_of("apt-get"))
+    sudo = FakeRunner()
+    lines = hh.ToolInstaller(ubuntu, sudo, 9).ensure()
+    assert lines == [
+        "tool smartctl: MISSING (optional); it needs privileges, so run it yourself:"
+        " sudo apt-get install -y smartmontools"
+    ]
+    assert sudo.calls == []
+    nothing = hh.ToolInstaller(hh.ToolCatalog(SETTINGS, "Linux", which_of()), FakeRunner(), 9)
+    assert "MISSING (optional); install it with one of" in nothing.ensure()[0]
+    broken = hh.ToolInstaller(
+        hh.ToolCatalog(SETTINGS, "Darwin", which_of("brew")), FakeRunner(), 9
+    ).ensure()
+    assert "did not install it" in broken[0]
+
+
+def test_the_tools_command_reports(
+    repo: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli = hh.HostHealthCli(repo, FixedClock(), FakeRunner(), home=tmp_path)
+    assert cli.run(["--repo", str(repo), "tools"]) == 0
+    assert "tool smartctl:" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------------ writes per week
+
+
+def test_weekly_writes_are_derived_from_the_previous_record() -> None:
+    factory = ms.FigureFactory(FixedClock(), "sha256:h")
+    before = make_record("2026-09-28T06:41:00.000Z", {"storage.bytes_written": 1_000})
+    now = [factory.measured("storage.bytes_written", "b", 8_000, "bytes", "m")]
+    host = {"fingerprint": "sha256:h"}
+    figure = hh.MeasurementSession.weekly_writes([before], host, now, factory, NOW)
+    assert figure.status == "derived" and figure.value == 7_000
+    assert figure.inputs is not None and figure.inputs["days_between"] == 7
+    first = hh.MeasurementSession.weekly_writes([], host, now, factory, NOW)
+    assert "needs an earlier record" in str(first.reason)
+    unmeasured = hh.MeasurementSession.weekly_writes([before], host, [], factory, NOW)
+    assert "not measured this time" in str(unmeasured.reason)
+    same = hh.MeasurementSession.weekly_writes(
+        [make_record(NOW, {"storage.bytes_written": 1})], host, now, factory, NOW
+    )
+    assert same.reason == "no time between records"
+
+
+# ------------------------------------------------------------------------ fallback and hypotheses
+
+
+def test_without_a_rating_the_endurance_driver_falls_back_to_wear() -> None:
+    newest = make_record(NOW, {"storage.tb_written": 36.55, "storage.percentage_used": 1})
+    rated = replace(
+        newest,
+        figures=newest.figures
+        + (
+            ms.Figure(
+                id="storage.rated_endurance_tb",
+                label="r",
+                value=None,
+                unit="TB",
+                status="skipped",
+                method="m",
+                measured_at=NOW,
+                reason="Apple publishes none",
+            ),
+        ),
+    )
+    fc = forecaster().forecast([rated])
+    d = driver(fc, "ssd_endurance")
+    assert d["state"] == "unknown" and d["fallback"] == "ssd_wear"
+    assert "Apple publishes none" in d["reason"]
+    assert "rests on SSD wear (NVMe percentage used) instead" in d["reason"]
+    assert driver(fc, "ssd_wear")["state"] == "insufficient-history"
+
+
+def test_a_hypothesis_is_offered_only_with_its_driver_and_every_figure() -> None:
+    values = {
+        "memory.swap_used_ratio": 0.6,
+        "memory.swap_used_gib": 14.39,
+        "memory.ram_gib": 24.0,
+        "memory.swapout_gb_per_hour": 59.0,
+        "storage.write_gb_per_power_on_hour": 108.4,
+    }
+    fc = forecaster().forecast(weekly([values]))
+    assert len(fc["hypotheses"]) == 1
+    text = fc["hypotheses"][0]
+    assert text.startswith("Hypothesis, not a conclusion:")
+    assert "14.39 GiB of swap" in text and "108.4 GB per power-on hour" in text
+    calm = forecaster().forecast(weekly([{**values, "memory.swap_used_ratio": 0.1}]))
+    assert calm["hypotheses"] == []
+    partial = dict(values)
+    partial.pop("memory.swapout_gb_per_hour")
+    assert forecaster().forecast(weekly([partial]))["hypotheses"] == []
+    page = (REPO / SETTINGS["docs_page"]).read_text(encoding="utf-8")
+    assert "> Hypothesis, not a conclusion" in hh.HealthRenderer(forecaster()).apply(
+        page, weekly([values])
+    )
+
+
+def test_install_reports_the_tools_first(
+    repo: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = repo.parent / "home"
+    monkeypatch.setattr(hh.UnitPlacement, "refusal", staticmethod(lambda path: None))
+    cli = hh.HostHealthCli(repo, FixedClock(), GitWorld(), home=home, which=which_of("apt-get"))
+    assert cli.run(["--repo", str(repo), "install", "--platform", "systemd"]) == 0
+    assert "sudo apt-get install -y smartmontools" in capsys.readouterr().out

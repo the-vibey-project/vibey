@@ -3,8 +3,8 @@
 
 The weekly host-health run appends one JSON line per week, each carrying the forecast as of
 that run. This reads the newest line and turns it into the doctor's lines: how old it is,
-what was measured and skipped, and when the machine is predicted to need replacing and
-which driver binds. A record that is missing or older than the declared age is said out
+what was measured and skipped, when the machine is predicted to need replacing and which
+driver binds, and any hypothesis the record offers -- printed as a note, never a finding. A record that is missing or older than the declared age is said out
 loud (a WARN, or a FAIL with `[host_health] required = true`), never passed over (12.e).
 Pure: the caller reads the file and passes the time.
 """
@@ -43,6 +43,7 @@ class HostHealthSummary:
     latest: str | None
     warning: bool
     drivers: tuple[dict[str, Any], ...]
+    hypotheses: tuple[str, ...] = ()
 
 
 class HostHealthReport(HostHealthReportInterface):
@@ -87,6 +88,7 @@ class HostHealthReport(HostHealthReportInterface):
             latest=forecast.get("latest"),
             warning=bool(forecast.get("warning", False)),
             drivers=tuple(d for d in forecast.get("drivers", []) if isinstance(d, dict)),
+            hypotheses=tuple(str(h) for h in forecast.get("hypotheses", [])),
         )
 
     def doctor_lines(
@@ -124,6 +126,9 @@ class HostHealthReport(HostHealthReportInterface):
                     f"WARN {'host-health-driver':<20} {driver.get('label')}: {driver.get('state')}"
                     f" ({detail})"
                 )
+        # Offered by the record as hypotheses, never as findings: printed as notes, and they
+        # never change the verdict.
+        lines.extend(f"NOTE {'host-health-hypothesis':<20} {text}" for text in summary.hypotheses)
         return lines, fresh or not required
 
     @staticmethod

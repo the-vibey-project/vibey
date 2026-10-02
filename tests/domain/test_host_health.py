@@ -88,6 +88,16 @@ def test_a_fresh_record_passes_and_says_no_date_is_projected_yet() -> None:
     assert "WARN host-health-driver   Memory: exceeded (16 against 24)" in lines
 
 
+def test_a_hypothesis_is_printed_as_a_note_and_never_changes_the_verdict() -> None:
+    report = HostHealthReport()
+    summary = report.newest(
+        line(binding=None, drivers=[], hypotheses=["Hypothesis, not a conclusion: x"])
+    )
+    lines, ok = report.doctor_lines(summary, source="rec", now=NOW, max_age_days=14, required=True)
+    assert ok
+    assert lines[-1] == "NOTE host-health-hypothesis Hypothesis, not a conclusion: x"
+
+
 def test_a_stale_record_and_a_near_replacement_are_both_said_out_loud() -> None:
     drivers = [{"id": "throughput", "label": "Generation rate", "state": "projected"}]
     report = HostHealthReport()

@@ -37,13 +37,34 @@ fingerprint_chars = 16
 # Key names whose values are never written, whatever a probe parses.
 never_record = ["Serial", "SerialNumber", "Serial Number", "IOPlatformSerialNumber", "IOPlatformUUID", "HostName", "ComputerName"]
 
-[host_health.storage]
+[host_health.tools]
+# The tools the probes use that the OS may not ship, and how each platform's package
+# managers install them (12.c: the dependency is declared, not a runbook step). `install`
+# checks every tool for this platform and installs the missing ones with the first package
+# manager present, in `managers` order -- but only a command that needs no privileges is
+# run: one that starts with `sudo` is printed for the operator, never run. A probe whose
+# tool is missing still runs and records `skipped`, with the install command in its reason.
+managers = { Darwin = ["brew"], Linux = ["apt", "pacman", "dnf"] }
+# The binary whose presence on PATH says a package manager is there.
+detect = { brew = "brew", apt = "apt-get", pacman = "pacman", dnf = "dnf" }
+install_timeout_s = 900
+
+[host_health.tools.smartctl]
 # smartmontools' smartctl reads NVMe health (percentage used, spare, data written, media
-# errors, power-on hours) without root on macOS; on Linux opening the device usually needs
-# root, and that is recorded as skipped, never worked around. It is not installed by vibey.
-smartctl = "smartctl"
-smartctl_install_hint = "install smartmontools (macOS: `brew install smartmontools`; Ubuntu/Debian: `apt install smartmontools`)"
-# The device smartctl reads. On macOS the internal SSD is disk0. On Linux, empty asks
+# errors, power-on hours). On macOS it reads the internal SSD without root (verified on
+# Mac17,2, smartctl 7.5, 2026-10-01); on Linux opening the device usually needs root, and
+# that is recorded as skipped, never worked around.
+binary = "smartctl"
+platforms = ["Darwin", "Linux"]
+# Optional: without it the storage probe records SSD wear and writes as skipped.
+required = false
+purpose = "SSD wear, spare, data written, media errors and power-on hours"
+install = { brew = ["brew", "install", "smartmontools"], apt = ["sudo", "apt-get", "install", "-y", "smartmontools"], pacman = ["sudo", "pacman", "-S", "--needed", "--noconfirm", "smartmontools"], dnf = ["sudo", "dnf", "install", "-y", "smartmontools"] }
+
+[host_health.storage]
+# The device smartctl reads. On macOS the internal SSD is `disk0`, which smartctl reads
+# without root; `smartctl --scan` lists the same drive by its IOService path, which works
+# too but is longer and tied to the controller's position. On Linux, empty asks
 # `smartctl --scan` and takes the first device it lists.
 device_macos = "disk0"
 device_linux = ""
@@ -51,6 +72,15 @@ device_linux = ""
 # sealed snapshot), the root file system on Linux.
 volume_macos = "/System/Volumes/Data"
 volume_linux = "/"
+
+# A drive's rated endurance (TBW, terabytes written), by the model name smartctl reports,
+# with its source and the date that was checked. Empty `tbw` means the vendor publishes
+# none; the endurance driver then says so and the forecast falls back to SSD wear.
+[host_health.storage.endurance."APPLE SSD AP1024Z"]
+tbw = ""
+reason = "Apple publishes no endurance (TBW) rating for its internal SSDs; a search on 2026-10-01 found only third-party estimates and forum figures, which are not a rating"
+source = ""
+last_verified = "2026-10-01"
 
 [host_health.battery]
 # macOS: the battery gauge's registry entry and system_profiler's condition string.
@@ -181,6 +211,20 @@ warn_within_days = 183
 # (`threshold_figure`), read from its configuration (`threshold_config`), or read from the
 # host's own newest record (`threshold_figure_local`). Reaching the threshold is past it,
 # unless `strict = true`, where only going beyond it is (a requirement met exactly is met).
+[host_health.drivers.ssd_endurance]
+# The primary SSD driver: data written grows week by week in fine steps, where the drive's
+# own wear estimate moves in whole percent and cannot be trended early. Its threshold is
+# the drive's rated endurance; with none published, this driver says so and `fallback`
+# names the driver the forecast rests on instead.
+label = "SSD data written vs rated endurance (TBW)"
+figure = "storage.tb_written"
+kind = "trend"
+direction = "rising"
+threshold_figure_local = "storage.rated_endurance_tb"
+threshold_source = "the drive's rated endurance, [host_health.storage.endurance] in scripts/host_health.toml"
+fallback = "ssd_wear"
+expected = ["Darwin", "Linux"]
+
 [host_health.drivers.ssd_wear]
 label = "SSD wear (NVMe percentage used)"
 figure = "storage.percentage_used"
@@ -294,6 +338,14 @@ label = "Hardware obsolete (vendor policy)"
 figure = "platform.hardware_obsolete_on"
 kind = "dated"
 expected = ["Darwin"]
+
+[host_health.hypotheses.swap_and_ssd_writes]
+# A hypothesis the forecast may print beside the drivers -- never as a finding. It is
+# offered when any of `drivers` is past or nearing its threshold (exceeded or unconfirmed)
+# and every figure in `figures` was measured; `{figure.id}` in the text is its value.
+drivers = ["swap"]
+figures = ["memory.swap_used_gib", "memory.ram_gib", "memory.swapout_gb_per_hour", "storage.write_gb_per_power_on_hour"]
+text = "Hypothesis, not a conclusion: {memory.swap_used_gib} GiB of swap in use on {memory.ram_gib} GiB of memory, with swap-outs of about {memory.swapout_gb_per_hour} GB/h since boot, may be a large part of the SSD's {storage.write_gb_per_power_on_hour} GB per power-on hour of writes. The record cannot attribute writes to swap; per-process disk I/O would test it."
 
 [host_health.conditions]
 # The ONE tracking issue (vibey-gh tracking-issue): raised while any condition holds,

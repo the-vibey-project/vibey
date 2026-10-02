@@ -24,6 +24,22 @@ class HostIdentityInterface(Protocol):
         ...
 
 
+class ToolCatalogInterface(Protocol):
+    """The tools a platform's probes use, and how its package managers install them."""
+
+    def missing(self) -> list[str]:
+        """The declared tools for this platform that are not on PATH."""
+        ...
+
+    def command(self, tool: str) -> tuple[str, list[str]] | None:
+        """(package manager, argv) that installs `tool` here, or None when none is present."""
+        ...
+
+    def hint(self, tool: str) -> str:
+        """How to install `tool`, for a skipped figure's reason."""
+        ...
+
+
 class HealthLedgerInterface(Protocol):
     """The JSON-lines record: read whole, appended to, never rewritten."""
 
