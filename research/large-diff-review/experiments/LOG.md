@@ -221,3 +221,9 @@ what was seen, and what it changed.
   `invalidations.jsonl`, as `analyze.py requests` computes it: 55 at 23:05; 56 in the
   #1341 snapshot; 54 standing after the 2 voided D4-T1 records. Every count reported from
   now on is that function's output at a stated time.
+- **00:25** EVIDENCE's analysis scripts got behaviour-preserving lint fixes so the
+  repository's pre-commit gate passes on them (renamed `l`, `zip(..., strict=False)`,
+  `.eq(True)` for an element-wise pandas comparison, a lambda made a def, file reads via
+  `read_text()`). They were **not re-executed** after the edit — this host has no
+  environment with their dependencies (pandas, matplotlib) on record — so the committed
+  `results.json`, summaries and figures are the original run's output, unchanged.
