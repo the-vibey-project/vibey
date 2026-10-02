@@ -62,6 +62,33 @@ class Etiquette:
                 found.append(command[:160])
         return found
 
+    def connections(self) -> list[str]:
+        """Clients other than this process holding a connection to Ollama's port. The
+        self-hosted CI runner lives in a Docker container, invisible to `ps`; its requests
+        reach Ollama through Docker's port forwarder, so they show here (`com.docke`)."""
+        done = subprocess.run(
+            ["lsof", "-nP", "-iTCP:11434", "-sTCP:ESTABLISHED"], capture_output=True, text=True
+        )
+        found = []
+        for line in done.stdout.splitlines()[1:]:
+            cols = line.split()
+            if len(cols) < 2 or cols[0] == "ollama" or cols[1] == str(self.me):
+                continue
+            found.append(f"{cols[0]} pid {cols[1]} {cols[-2]}")
+        return found
+
+    def live_review(self) -> list[str]:
+        """A live review in flight right now: a review process, or a connection from the
+        Docker-hosted runner seen twice, 4 s apart (a GET /api/ps poll is gone by then)."""
+        others = self.others()
+        if others:
+            return others
+        first = [c for c in self.connections() if c.startswith("com.docke")]
+        if not first:
+            return []
+        time.sleep(4)
+        return [c for c in self.connections() if c.startswith("com.docke")]
+
     def log_busy(self) -> str:
         """'' when the server log shows no request in flight, else why it looks busy."""
         try:
@@ -85,6 +112,9 @@ class Etiquette:
         others = self.others()
         if others:
             return "another review client is running: " + others[0]
+        connected = self.connections()
+        if connected:
+            return "another client is connected to the model: " + connected[0]
         return self.log_busy()
 
     def wait_clear(self) -> float:
@@ -153,7 +183,7 @@ class YieldingClient:
                 break
             if time.monotonic() - started > deadline_s:
                 why = "timeout"
-            elif watch and self.etiquette.others():
+            elif watch and self.etiquette.live_review():
                 why = "yielded"
             if why:
                 try:
@@ -182,6 +212,15 @@ class YieldingClient:
         return reply
 
 
+def invalid_keys() -> set[str]:
+    """Records the contention audit (`contention.py`) found queued behind another client's
+    request: kept in the append-only log, never used as a result."""
+    path = RESULTS / "invalidations.jsonl"
+    if not path.is_file():
+        return set()
+    return {json.loads(line)["key"] for line in path.read_text().splitlines() if line.strip()}
+
+
 class RequestStore:
     """Append-only record of every request answered; the resume and cache index."""
 
@@ -191,11 +230,13 @@ class RequestStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.thinking_dir.mkdir(parents=True, exist_ok=True)
         self._index: dict[str, dict[str, Any]] = {}
+        invalid = invalid_keys()
         if self.path.is_file():
             for line in self.path.read_text().splitlines():
                 if line.strip():
                     record = json.loads(line)
-                    self._index[record["key"]] = record
+                    if record["key"] not in invalid:
+                        self._index[record["key"]] = record
 
     def get(self, key: str) -> dict[str, Any] | None:
         return self._index.get(key)
