@@ -2421,6 +2421,67 @@ class AdvisoriesConfig:
 
 
 @dataclass(frozen=True)
+class ForgeRetryConfig:
+    """`[forge_retry]`: which forge failures a retrying `gh` call asks again after, and how.
+
+    The hourly issue triage failed twice in a day on a GitHub that had answered every other
+    call: `504 Gateway Timeout` on one label edit, and GraphQL's "Something went wrong
+    while executing your query" on another. Both are the forge saying "not now", and the
+    next attempt succeeds. Everything else -- a 404, a permission refusal, a validation
+    error, a rate limit with no `Retry-After` to say when -- fails exactly as it did.
+
+    `retries` further attempts, each `backoff_seconds` doubled per attempt already made and
+    capped at `max_backoff_seconds`. A secondary rate limit is retried only when the answer
+    carries `Retry-After`, after exactly that long -- and not at all when it asks for more
+    than `max_retry_after_seconds`. Only calls that are safe to repeat use it: a 504 does
+    not say whether the request landed.
+    """
+
+    retries: int = 3
+    backoff_seconds: float = 5
+    max_backoff_seconds: float = 60
+    max_retry_after_seconds: float = 300
+    transient_statuses: tuple[int, ...] = (502, 503, 504)
+    transient_messages: tuple[str, ...] = ("Something went wrong while executing your query",)
+    rate_limit_messages: tuple[str, ...] = ("secondary rate limit",)
+
+    def __post_init__(self) -> None:
+        if type(self.retries) is not int or not 0 <= self.retries <= 10:
+            raise ValueError("forge_retry.retries must be a whole number from 0 to 10")
+        for key in ("backoff_seconds", "max_backoff_seconds", "max_retry_after_seconds"):
+            value = getattr(self, key)
+            if type(value) not in (int, float) or not 0 <= value <= 3600:
+                raise ValueError(f"forge_retry.{key} must be a number of seconds from 0 to 3600")
+        if self.backoff_seconds > self.max_backoff_seconds:
+            raise ValueError("forge_retry.backoff_seconds must not exceed max_backoff_seconds")
+        statuses = self.transient_statuses
+        if not all(type(status) is int and 500 <= status <= 599 for status in statuses):
+            raise ValueError("forge_retry.transient_statuses must be 5xx status codes")
+        if len(set(statuses)) != len(statuses):
+            raise ValueError("forge_retry.transient_statuses entries must be unique")
+        for key in ("transient_messages", "rate_limit_messages"):
+            values = getattr(self, key)
+            if not all(isinstance(value, str) for value in values):
+                raise ValueError(f"forge_retry.{key} entries must be strings")
+            _unique_nonempty(f"forge_retry.{key}", values)
+
+    @classmethod
+    def from_table(cls, table: Mapping[str, object]) -> ForgeRetryConfig:
+        """`[forge_retry]` as written, every absent key falling back to the default."""
+        known = {f.name for f in dataclasses.fields(cls)}
+        unknown = sorted(set(table) - known)
+        if unknown:
+            raise ValueError(f"forge_retry: unknown key(s) {', '.join(unknown)}")
+        values = dict(table)
+        for key in ("transient_statuses", "transient_messages", "rate_limit_messages"):
+            if key in values:
+                if not isinstance(values[key], list):
+                    raise ValueError(f"forge_retry.{key} must be a list")
+                values[key] = tuple(values[key])  # type: ignore[arg-type]
+        return cls(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class BranchHealthConfig:
     """`[branch_health]`: a red permanent branch is announced, once, in one issue.
 
@@ -3005,6 +3066,7 @@ class GhConfig:
     skip_markers: SkipMarkersConfig = SkipMarkersConfig()
     changelog: ChangelogConfig = ChangelogConfig()
     advisories: AdvisoriesConfig = AdvisoriesConfig()
+    forge_retry: ForgeRetryConfig = ForgeRetryConfig()
     branch_health: BranchHealthConfig = BranchHealthConfig()
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
@@ -3477,6 +3539,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         ),
         changelog=ChangelogConfig.from_table(data.get("changelog", {})),
         advisories=AdvisoriesConfig.from_table(data.get("advisories", {})),
+        forge_retry=ForgeRetryConfig.from_table(data.get("forge_retry", {})),
         branch_health=BranchHealthConfig(
             enabled=branch_health.get("enabled", True),
             checks=tuple(branch_health.get("checks", ())),

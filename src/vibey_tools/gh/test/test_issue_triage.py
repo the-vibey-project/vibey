@@ -1,9 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import subprocess
 from argparse import Namespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from vibey_gh import cli, issue_triage as it
+from vibey_gh import cli, gh_transport, issue_triage as it
 
 
 def issue(number=1, title="A feature", labels=(), created="2026-01-01T00:00:00Z"):
@@ -52,22 +52,29 @@ def test_bump_and_unbump_are_explicit_reversible_operations():
 
 
 def test_fetch_open_issues_uses_the_whole_open_issue_set_and_excludes_pull_requests():
-    with patch.object(
-        it.github_state,
-        "gh_json",
-        return_value=[issue(1)],
-    ) as fetch:
-        assert [row["number"] for row in it.fetch_open_issues()] == [1]
-    assert fetch.call_args.args[-1] == "number,title,body,labels,createdAt"
+    transport = Mock()
+    transport.json.return_value = [issue(1), "not an issue"]
+    assert [row["number"] for row in it.fetch_open_issues(transport=transport)] == [1]
+    assert transport.json.call_args.args[0][-1] == "number,title,body,labels,createdAt"
+
+
+def test_a_sweep_reads_and_writes_through_the_transport_it_is_given():
+    transport = Mock()
+    transport.json.return_value = [issue(3, "bug")]
+    transport.run.return_value = subprocess.CompletedProcess([], 0, "", "")
+    assert [x.number for x in it.triage(transport=transport)] == [3]
+    argv = [call.args[0] for call in transport.run.call_args_list]
+    assert len(argv) == len(it.LABEL_DEFINITIONS) + 1
+    assert argv[-1][:3] == ("issue", "edit", "3")
 
 
 def test_ensure_labels_and_command_failures_are_reported():
     completed = subprocess.CompletedProcess([], 0, "", "")
-    with patch.object(it.subprocess, "run", return_value=completed) as run:
+    with patch.object(gh_transport.subprocess, "run", return_value=completed) as run:
         it.ensure_labels()
     assert run.call_count == len(it.LABEL_DEFINITIONS)
     failed = subprocess.CompletedProcess([], 1, "", "denied")
-    with patch.object(it.subprocess, "run", return_value=failed):
+    with patch.object(gh_transport.subprocess, "run", return_value=failed):
         try:
             it._run("issue", "edit", "1")
         except RuntimeError as error:
@@ -101,5 +108,5 @@ def test_cli_dispatches_triage_actions(capsys):
         assert cli._issue_triage(Namespace(action="ensure-labels", issue=None)) == 0
     assert set_bump.call_args_list[0].args == (7, True)
     assert set_bump.call_args_list[1].args == (7, False)
-    ensure_labels.assert_called_once_with()
+    ensure_labels.assert_called_once()
     assert "Issue triage order" in capsys.readouterr().out

@@ -38,6 +38,8 @@ from vibey_gh.branch_health import BranchHealth
 from vibey_gh.changelog import Changelog
 from vibey_gh.config import load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.gh_retry import GhRetry
+from vibey_gh.gh_transport import GhTransport
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
@@ -505,16 +507,19 @@ def _issue_automation(args) -> int:
 
 def _issue_triage(args) -> int:
     try:
+        # Every triage call is a read or a label edit, safe to repeat, so a transient forge
+        # failure is asked again (`[forge_retry]`) instead of failing the hourly sweep.
+        transport = GhTransport(retry=GhRetry(load_config().forge_retry))
         if args.action == "sweep":
-            items = issue_triage.triage()
+            items = issue_triage.triage(transport=transport)
             print(issue_triage.summary(items), end="")
         elif args.action in {"bump", "unbump"}:
-            issue_triage.set_bump(args.issue, args.action == "bump")
+            issue_triage.set_bump(args.issue, args.action == "bump", transport=transport)
             print(
                 f"vibey-gh: {'bumped' if args.action == 'bump' else 'unbumped'} issue #{args.issue}"
             )
         elif args.action == "ensure-labels":
-            issue_triage.ensure_labels()
+            issue_triage.ensure_labels(transport)
             print("vibey-gh: issue triage labels are ready")
         else:  # pragma: no cover
             raise ValueError(f"unknown action: {args.action}")
