@@ -177,3 +177,10 @@ what was seen, and what it changed.
   commits to `pass` before it writes a finding. Added before any outcome: **+FF**
   (findings-first: schema order findings → summary → pass, plus one rule line), a Stage 2
   modifier.
+- **23:05** Branch housekeeping: the operator squash-merged draft #1328 into develop at
+  23:27Z and reopened the work as #1340; the coordinator merged develop into the branch
+  (d12bb7978). Here: `git merge origin/research/large-diff-review` (fast-forward) and
+  `git merge origin/develop` (c4c8dfd9a); nothing under research/ changed. From now on
+  every push is preceded by both merges. Stage 1 host #1131 is done for 9 of 13 arms
+  (`analyze.py s1`): no verdict for A0, D8, D16 (all T=0, first part loops); verdicts for
+  A1, A2, D8-T1, D16-T1, D16-BF4096, D16-T1-BF8192. Interim status sent to the main session.
