@@ -525,7 +525,15 @@ class CanaryLedger(CanaryLedgerInterface):
     Not `vibey_gh.estimate_ledger.DeliveryEstimateLedger`, which the family would otherwise
     prefer: its `record` takes a delivery forecast and writes that ledger's own kind and
     format, so it cannot hold a measurement -- a capability gap. Its chain and its checks
-    are the ones copied here, so a reader of either verifies the same way."""
+    are the ones copied here, so a reader of either verifies the same way.
+
+    `record_format` and `kind` name what a line holds. They default to the review canary's;
+    another measurement that wants the same append-only chain (the autonomy scorecard,
+    `scripts/autonomy_scorecard.py`) names its own rather than reimplementing the chain."""
+
+    def __init__(self, *, record_format: str = LEDGER_FORMAT, kind: str = LEDGER_KIND) -> None:
+        self._format = record_format
+        self._kind = kind
 
     @staticmethod
     def digest(value: Mapping[str, Any]) -> str:
@@ -568,8 +576,8 @@ class CanaryLedger(CanaryLedgerInterface):
         records = self._records(path)
         previous = records[-1] if records else None
         envelope: dict[str, Any] = {
-            "format": LEDGER_FORMAT,
-            "kind": LEDGER_KIND,
+            "format": self._format,
+            "kind": self._kind,
             "seq": len(records) + 1,
             "previous_digest": str(previous["digest"]) if previous else _GENESIS,
             "payload": dict(payload),

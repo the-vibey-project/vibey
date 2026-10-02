@@ -611,6 +611,13 @@ def test_the_ledger_appends_a_digest_chain_and_reads_it_back(tmp_path):
     assert ledger.read(path) == ({"n": 1}, {"n": 2})
 
 
+def test_the_ledger_writes_the_format_and_kind_it_is_given(tmp_path):
+    ledger, path = CanaryLedger(record_format="x/y/1", kind="Other"), tmp_path / "l.jsonl"
+    envelope = ledger.append(path, {"n": 1})
+    assert (envelope["format"], envelope["kind"]) == ("x/y/1", "Other")
+    assert CanaryLedger().read(path) == ({"n": 1},)
+
+
 def tamper(path: Path, line: int, change) -> None:
     lines = path.read_text(encoding="utf-8").splitlines()
     record = json.loads(lines[line])
