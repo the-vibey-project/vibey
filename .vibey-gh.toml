@@ -104,6 +104,8 @@ protected_paths = [
   "tests/system/test_delivery_stage_set.py",
   "tests/live/**",
   ".github/CODEOWNERS",
+  # Each entry accepts a known security risk until it expires; see [advisories].
+  ".github/advisory-exceptions.toml",
 ]
 
 [install]
@@ -252,6 +254,22 @@ enabled = false
 [skip_markers]
 enabled = true
 exempt_authors = []
+
+# CI's dependency-advisory gate is `vibey-gh advisory-check`, run in place of
+# `npm audit --audit-level=high` for every npm lockfile (the root workspace, clients/app):
+# it fails on every advisory at `audit_level` or worse, exactly as npm audit does, except one
+# declared in `exceptions_file`. An exception is a reviewed, expiring decision that the
+# vulnerable code is not reached -- never a silent skip. Every run prints each exception it
+# honours and until when, and fails on one that has expired, matches nothing any more, or
+# whose package has a patched release. `max_exception_days` bounds how long one may be
+# declared for; `warn_days` before it expires the check says so. The exceptions file is a
+# protected path ([merge_train] protected_paths above, .github/CODEOWNERS), so accepting a
+# risk always takes the code owner's approval and a human merge.
+[advisories]
+audit_level = "high"
+exceptions_file = ".github/advisory-exceptions.toml"
+max_exception_days = 30
+warn_days = 7
 
 # The changelog is written as fragments: one new file per change, `<slug>.<type>.md` in the
 # `changelog.d/` beside the changelog it belongs to, holding the entry exactly as it should

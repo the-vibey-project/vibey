@@ -295,6 +295,21 @@ def _hermetic_supervisor(
     monkeypatch.setattr(SUPERVISOR, "_host_factory", unsupervised)
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_host_health(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """`vibey doctor` reads the machine's weekly host-health record. Every test sees a host
+    with none, so no outcome depends on this machine's own record or the checkout's
+    committed one. The section's own tests build their own."""
+    from vibey.cli.host_health import HOST_HEALTH
+
+    empty = tmp_path_factory.getbasetemp() / "no-host-health"
+    empty.mkdir(exist_ok=True)
+    monkeypatch.setattr(HOST_HEALTH, "_home", empty)
+    monkeypatch.setattr(HOST_HEALTH, "_root", empty)
+
+
 def pytest_unconfigure(config: pytest.Config) -> None:
     if _BASE_DSN is not None:
         with contextlib.suppress(Exception):

@@ -31,6 +31,7 @@ from vibey_gh import (
     surfaces,
     versioning,
 )
+from vibey_gh.advisories import AdvisoryGate
 from vibey_gh.announce import Announcer
 from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
@@ -2763,6 +2764,12 @@ def main(argv: list[str] | None = None) -> int:
         help="refuse a GitHub skip marker in a pull request's commits, title or body",
     )
     SkipMarkerGuard.declare(sm).set_defaults(func=SkipMarkerGuard.dispatch)
+
+    ac = sub.add_parser(
+        "advisory-check",
+        help="fail on npm advisories at [advisories] audit_level, less the declared exceptions",
+    )
+    AdvisoryGate.declare(ac).set_defaults(func=AdvisoryGate.dispatch)
 
     cl = sub.add_parser(
         "changelog",

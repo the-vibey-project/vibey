@@ -1,0 +1,86 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Host health
+
+# The machine vibey runs on records its own health once a week, ON THE HOST: a launchd agent
+# or systemd user timer that `scripts/host_health.py install` renders runs the probes there
+# and lands the record as a pull request. It cannot run here: the self-hosted runner is a
+# Linux container on that host and cannot see its SSD, battery, thermals or memory pressure.
+#
+# This workflow is the other half: it reads the committed record and keeps ONE tracking
+# issue (`vibey-gh tracking-issue`) open while any condition holds -- a host that stopped
+# recording, an expected probe missing from its last records, a driver past its threshold,
+# a replacement predicted within the warning horizon -- and closes it when none does. A host
+# that has gone quiet can only be noticed from somewhere else, so this runs on a schedule of
+# its own as well as whenever a new record lands.
+on:
+  schedule:
+    - cron: "17 9 * * 2"
+  push:
+    branches: [develop]
+    paths:
+      - docs/architecture/evidence/host-health.jsonl
+      - scripts/host_health.py
+      - scripts/host_health.toml
+      - scripts/host_health_forecast.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # 12.g-whole-state: every run re-reads the whole committed record and decides every
+  # condition from it afresh, so a cancelled run leaves nothing the next one does not decide.
+  group: host-health-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  track:
+    name: Keep the host-health tracking issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the repository-owned GitHub tooling
+        run: python -m pip install --quiet -e src/vibey_tools/gh
+
+      # The record parses, every line is a valid record, and the page matches it.
+      - name: Check the record and the page
+        run: python scripts/host_health.py check
+
+      - name: Raise or resolve the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python scripts/host_health.py conditions > conditions.json
+          key="$(jq -r .key conditions.json)"
+          if [ "$(jq -r .raise conditions.json)" = "true" ]; then
+            vibey-gh tracking-issue raise \
+              --key "$key" \
+              --title "$(jq -r .title conditions.json)" \
+              --body "$(jq -r .body conditions.json)"
+            {
+              echo "## Host health"
+              jq -r '.conditions[] | "- " + .' conditions.json
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            vibey-gh tracking-issue resolve \
+              --key "$key" \
+              --comment "No host-health condition holds as of $(date -u +%Y-%m-%d) (scripts/host_health.py conditions). Closing."
+            echo "No host-health condition holds." >> "$GITHUB_STEP_SUMMARY"
+          fi

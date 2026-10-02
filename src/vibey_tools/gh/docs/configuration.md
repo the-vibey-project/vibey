@@ -1201,6 +1201,38 @@ GitHub does not start a `pull_request` run at all when the pull request's HEAD c
 the marker, so in that one case the check never reports; as a required check, that blocks the
 merge until the commit is reworded.
 
+## `[advisories]`
+
+The dependency-advisory gate. `vibey-gh advisory-check` runs `npm audit --json` in each workspace
+it is given and fails on every advisory at `audit_level` or worse, exactly as
+`npm audit --audit-level=<level>` does, unless `exceptions_file` declares an exception for it.
+CI runs it in place of `npm audit`. Without the table, the gate is `npm audit --audit-level=high`
+with no exceptions.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `audit_level` | string / `"high"` | The lowest severity that fails: `low`, `moderate`, `high` or `critical`. |
+| `exceptions_file` | path / `".github/advisory-exceptions.toml"` | The repository-relative file of declared exceptions. Absent, nothing is excepted. Make it a protected path (`[merge_train] protected_paths` and CODEOWNERS), so accepting a risk takes a code owner and a human merge. |
+| `max_exception_days` | integer / `30` | The longest an exception may be declared for: `expires` at most this many days after `added`. |
+| `warn_days` | integer / `7` | How many days before an exception expires every run warns. At most `max_exception_days`. |
+
+Each exception is one `[[exception]]` table in `exceptions_file`. Every key is required except
+`upstream`:
+
+| Key | Meaning |
+|---|---|
+| `advisory` | The GitHub advisory id, `GHSA-xxxx-xxxx-xxxx`. An advisory npm reports without one cannot be excepted. |
+| `package` | The vulnerable package the advisory names. |
+| `workspace` | The repository-relative directory whose `package-lock.json` is audited. |
+| `reason` | Why the vulnerable code is not reached, with the evidence. |
+| `added`, `expires` | Unquoted TOML dates. The exception is honoured before `expires` and refused from that day on. |
+| `retire_when` | The condition that ends it early, such as a patched release. |
+| `upstream` | A list of links to where that condition is tracked. |
+
+The check also fails when an exception matches nothing at `audit_level` or worse, when its
+package has a patched release in the GitHub advisory database, and when it names a workspace
+with no lockfile. Each workspace is judged only against its own exceptions.
+
 ## `[changelog]`
 
 The changelog written as fragments: one new file per change, `<slug>.<type>.md`, in a

@@ -745,12 +745,24 @@ def _storm(tmp_path: Path, **keys: object) -> Path:
     return root
 
 
+def _isolated_env() -> dict[str, str]:
+    """This process's environment without the variables that point a gate at the machine's
+    real lock or storm home. `push_gate` takes `VIBEY_PUSH_LOCK` ahead of `storm.toml`, so a
+    test run inside a real push (the pre-push suite, under the gate) handed its subprocess
+    the machine's lock: on 2026-10-02 this test's sleeper took `~/git/vibey-storm/.push-lock`,
+    died, and left a stale owner the real push then waited 30 minutes behind."""
+    return {
+        k: v for k, v in os.environ.items() if k not in (push_gate.LOCK_ENV, "VIBEY_STORM_HOME")
+    }
+
+
 def _run(root: Path, *argv: str) -> subprocess.Popen[str]:
     return subprocess.Popen(
         [sys.executable, str(TOOLS / "push_gate.py"), "--root", str(root), "run", "--", *argv],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        env=_isolated_env(),
     )
 
 
@@ -898,7 +910,9 @@ def test_the_shell_recipe_acquires_and_releases_by_token(tmp_path: Path) -> None
         {" ".join(tool)} release "$token"
         """
     )
-    done = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60)
+    done = subprocess.run(
+        ["bash", "-c", script], capture_output=True, text=True, timeout=60, env=_isolated_env()
+    )
     assert done.returncode == 0, done.stdout + done.stderr
     assert not cfg.lock.exists()
 
@@ -1274,7 +1288,9 @@ def test_a_real_bare_mkdir_push_is_traced_and_reaped(tmp_path: Path) -> None:
     )
     cfg = PushGateConfig.declared(root)
     recipe = f"mkdir {cfg.lock} && git push origin HEAD:main; rmdir {cfg.lock}"
-    shell = subprocess.Popen(["bash", "-c", recipe], cwd=lane, start_new_session=True)
+    shell = subprocess.Popen(
+        ["bash", "-c", recipe], cwd=lane, start_new_session=True, env=_isolated_env()
+    )
     try:
         decision = _reap_until_acted(cfg)
         assert (decision.action, decision.condition) == ("killed", "idle"), decision

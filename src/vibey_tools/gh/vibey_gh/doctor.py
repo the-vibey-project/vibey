@@ -31,6 +31,7 @@ from pathlib import Path
 from vibey_gh import fingerprints
 from vibey_gh.config import (
     CONFIG_NAME,
+    AdvisoriesConfig,
     AiConfig,
     AnnounceConfig,
     AutonomyConfig,
@@ -101,6 +102,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "repository_profile": _fields(RepositoryProfileConfig),
     "skip_markers": _fields(SkipMarkersConfig),
     "changelog": _fields(ChangelogConfig),
+    "advisories": _fields(AdvisoriesConfig),
     "branch_health": _fields(BranchHealthConfig),
     "social_signals": _fields(SocialSignalsConfig) | {"entries"},
     "tidy": _fields(TidyConfig),

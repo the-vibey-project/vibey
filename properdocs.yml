@@ -78,6 +78,7 @@ nav:
       - Hub API: reference/hub-api.md
       - System requirements: reference/system-requirements.md
       - Distance from full autonomy: reference/autonomy.md
+      - Host health: reference/host-health.md
       - Context microslices: context-microslices.md
   - Design:
       - The design system: design/README.md

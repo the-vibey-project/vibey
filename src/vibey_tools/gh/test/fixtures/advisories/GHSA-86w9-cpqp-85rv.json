@@ -1,0 +1,20 @@
+{
+  "ghsa_id": "GHSA-86w9-cpqp-85rv",
+  "cve_id": "CVE-2026-85393",
+  "html_url": "https://github.com/advisories/GHSA-86w9-cpqp-85rv",
+  "summary": "node-forge RSA PKCS#1 v1.5 signature verification accepts extra nested DigestAlgorithm elements",
+  "severity": "high",
+  "published_at": "2026-09-03T21:31:15Z",
+  "updated_at": "2026-10-01T21:09:10Z",
+  "vulnerabilities": [
+    {
+      "package": {
+        "ecosystem": "npm",
+        "name": "node-forge"
+      },
+      "vulnerable_version_range": "<= 1.4.0",
+      "first_patched_version": null,
+      "vulnerable_functions": []
+    }
+  ]
+}
