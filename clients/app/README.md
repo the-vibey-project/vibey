@@ -19,7 +19,11 @@ npx expo start --web
 - `app/` — the routes only.
 
 Channels: `APP_VARIANT=nightly` builds "krypton nightly" (`org.vibey.krypton.nightly`);
-anything else is the stable "krypton" (`org.vibey.krypton`). EAS (`eas.json`) is declared only.
+anything else is the stable "krypton" (`org.vibey.krypton`). EAS (`eas.json`) is declared only:
+nothing builds or submits until the `EXPO_TOKEN` secret and the store credentials exist. The
+`stable` profile is built from `main` and is the default; `nightly` from `develop` with
+`APP_VARIANT=nightly`. Keep notes like this one here, not in `eas.json`: EAS validates that file
+strictly and refuses any key it does not know (a `"$comment"` key stopped `eas init`).
 
 Not built yet: pairing by QR or code (the hub has no pairing routes; the host token connects
 today), mDNS discovery, lane stop/prompt and run start, push notifications and sounds, the
