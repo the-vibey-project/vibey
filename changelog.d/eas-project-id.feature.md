@@ -1,0 +1,1 @@
+- **krypton app:** the stable identity carries its EAS project id (`extra.eas.projectId`, from `src/core/identities.json`), which `eas init` cannot write into a dynamic `app.config.ts` itself. Nightly has its own slug (`krypton-nightly`) and carries none until it has its own EAS project, so its config omits the key rather than naming the wrong project.
