@@ -65,8 +65,9 @@ manifest_dir = "~/.ollama/models/manifests"
 settings = "~/Library/Group Containers/group.com.docker/settings-store.json"
 
 [host_tuning.services.postgres]
-# psql's connection: the local socket, the maintenance database.
-psql = ["psql", "-h", "/tmp", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1"]
+# psql's connection: its own default local socket (PGHOST overrides it), the maintenance
+# database.
+psql = ["psql", "-d", "postgres", "-At", "-v", "ON_ERROR_STOP=1"]
 
 # ----------------------------------------------------------------------------- items
 
