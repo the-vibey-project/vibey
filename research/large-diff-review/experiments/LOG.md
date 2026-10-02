@@ -243,3 +243,11 @@ what was seen, and what it changed.
   a voided request are tombstoned by line number in `results/void_rows.jsonl` (the
   ledger stays append-only); the first D4-T1 #1131 row (line 9) is tombstoned, the re-run
   (line 10) stands. Stage 1 restarted to load the BF repair rule.
+- **03:27 (10-02)** develop was rebuilt for 3.3.0 (#1340/#1341 re-landed with new
+  SHAs), so branch -3 / #1344 could no longer merge; the work moved to
+  `research/large-diff-review-4` (one research/-only commit on the new develop; draft
+  #1352; #1344 closed with a pointer). The study's pinned inputs did not move:
+  `local_review.py`, `fit.py`, `review_contract.py` are unchanged since 3293528, and
+  `ReviewCanary.settings()` equals the registered production settings. To keep it so,
+  the production arms now refuse to build a request unless the settings read at run time
+  equal `corpus/hosts.json`'s `production_settings` (`review.pinned_settings`).

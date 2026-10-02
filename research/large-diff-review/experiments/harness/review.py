@@ -27,6 +27,20 @@ from vibey_gh import local_review as lr
 from vibey_gh import review_outcome as oc
 from vibey_gh.review_canary import CanaryScorer, ReviewCanary
 
+
+def pinned_settings() -> dict[str, Any]:
+    """Production's settings as read now, refused unless they equal the ones recorded at
+    registration (corpus/hosts.json): a branch merge must never move the study's baseline."""
+    from corpus import CORPUS
+    from vibey_gh.config import load_config
+
+    now = ReviewCanary.settings(load_config())
+    registered = json.loads((CORPUS / "hosts.json").read_text())["production_settings"]
+    if now != registered:
+        raise RuntimeError(f"production settings moved since registration: {now} != {registered}")
+    return now
+
+
 NUM_CTX = 65536  # constant, so no request of ours makes the runner reload (production varies it)
 ANSWER_CAP = 2048
 FORCE_NOTE = (
@@ -302,7 +316,7 @@ class ProductionArm:
         self.budget = budget
         self.offline = offline
         self.asker = Asker(model, offline)
-        self.settings = ReviewCanary.settings(__import__("vibey_gh.config").config.load_config())
+        self.settings = pinned_settings()
 
     def _post_factory(self, case: Case, keys: list[str], flags: dict[str, Any]):
         arm = self
@@ -758,10 +772,9 @@ class ProductionPart:
         self.model = model
         self.options = options or {}
         self.offline = offline
-        from vibey_gh.config import load_config
         from vibey_gh.fit import ContextSizer
 
-        self.settings = ReviewCanary.settings(load_config())
+        self.settings = pinned_settings()
         st = self.settings
         self.sizer = ContextSizer(
             ceiling_tokens=st["context_window"],
