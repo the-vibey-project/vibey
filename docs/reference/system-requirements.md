@@ -203,14 +203,31 @@ fails.
 - **krypton-app** (the `krypton` launcher) starts `vibey serve`, so it has vibey's own
   requirements and depends on `vibey-engine[hub]`. It needs PostgreSQL and `VIBEY_PG_URL`
   like vibey does.
-- **The VS Code extension** runs inside VS Code. Building it from source needs Node and
-  npm. It talks to the hub only when `vibey.hubUrl` is set; otherwise it polls Ollama on
-  loopback every 30 s, about 0.8 KB per refresh. It is not on Open VSX.
-- **The React Native app** (mobile and web) needs Node to build. Native iOS and Android
-  builds also need Xcode or the Android SDK (not verified).
+- **The VS Code extension** runs inside VS Code 1.90 or newer. Building it from source needs
+  Node and npm. It talks to the hub only when `vibey.hubUrl` is set; otherwise it polls
+  Ollama on loopback every 30 s, about 0.8 KB per refresh. It is published to Open VSX as
+  `the-vibey-project.krypton` (0.2.0, first published with 3.3.0), and every release attaches
+  its `.vsix`.
+- **The React Native app** (mobile and web) needs Node to build. The release builds the
+  Android package with Gradle and Java 17 on Ubuntu, and the iOS package with EAS on a
+  macOS runner with Xcode (`scripts/release_binaries.toml`). The iOS package of the
+  release-binaries dry run 36976031188 (`krypton-ios-0.1.0.ipa`) declares iOS 16.4 as its
+  minimum (`MinimumOSVersion`) and is signed for the App Store, so it reaches a phone
+  through TestFlight or the App Store; no device install has been recorded.
 - **The desktop client** is C17 on GTK 4 and libadwaita, built with meson. The core builds
-  without the GUI libraries. `libsoup-3.0` (hub transport) and avahi or `dns_sd` (discovery)
+  without the GUI libraries. `libsoup-3.0` (hub transport) and Avahi or `dns_sd` (discovery)
   are optional. Without discovery, you pair by typing the address and code.
+  - **On Linux**, the release's tarball needs the distribution's GTK 4, libadwaita,
+    libsoup 3, json-glib and Avahi; the Flatpak needs only Flatpak and fetches the GNOME
+    runtime from Flathub, which carries no Avahi, so it cannot discover hubs by itself.
+  - **On macOS**, from 3.3.1, the release's `.dmg` holds a self-contained `krypton.app` for
+    Apple silicon that carries its own GTK 4 runtime, so it needs no Homebrew. It runs on
+    macOS 15 Sequoia or newer: the app built by the dry run 36976031188 declares
+    `LSMinimumSystemVersion` 15.0, the macOS of the runner it is built on. It discovers hubs
+    over Bonjour (`dns_sd`) and asks once for local-network permission. It is ad-hoc signed
+    and not notarised until the Developer ID secrets are set, so the first launch needs a
+    confirmation ([Downloads](../guides/downloads.md)). Intel Macs are not supported:
+    Homebrew no longer bottles the GTK 4 stack for them.
 
 ## Linux: Ubuntu, Arch and Fedora on x86_64 and arm64
 

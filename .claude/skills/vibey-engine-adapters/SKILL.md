@@ -211,8 +211,8 @@ produces the command line — read the real function, it is short. As of
 5. `--cwd <worktree_path>`, only when `descriptor.supports_cwd_flag` (codexloop:
    `False`).
 
-35 golden files under `tests/infrastructure/engines/golden/` (7 engines × 5
-efforts; `test_argv.py` parametrizes over `ALL_DESCRIPTORS`) capture the
+42 golden files under `tests/infrastructure/engines/golden/` (7 engines × 6
+efforts, ULTRA included; `test_argv.py` parametrizes over `ALL_DESCRIPTORS`) capture the
 expected argv for each combination — the source of truth for the exact current
 shape.
 

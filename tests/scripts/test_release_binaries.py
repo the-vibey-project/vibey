@@ -335,9 +335,39 @@ def test_the_page_lists_built_waiting_and_unsupported_targets(tmp_path: Path) ->
         "| krypton desktop | Linux | aarch64 | `krypton-desktop-<version>-linux-aarch64.flatpak` |"
         in text
     )
-    assert "### Waiting for a credential" in text and "An Apple account." in text
+    assert "### Built only while a credential is set" in text and "An Apple account." in text
     assert "### Not supported" in text and "Never built on macOS." in text
     assert "1.2.3" not in text, "the page shows names, not one release's numbers"
+
+
+def test_a_target_waiting_for_a_credential_is_listed_with_what_it_depends_on(
+    tmp_path: Path,
+) -> None:
+    settings = _repo(tmp_path)
+    text = rb.DownloadsRenderer(rb.TargetCatalogue(settings), settings).render()
+    assert (
+        "| krypton app | iOS | any | `krypton-ios-<version>.ipa` | Unsigned "
+        "(built only while `EXPO_TOKEN` is set) |" in text
+    )
+    section = text.split("### Built only while a credential is set", 1)[1].split("###", 1)[0]
+    assert "built and attached by a release only while `EXPO_TOKEN` is set" in section
+    assert "(`ios-key`)" in section and "the release itself is unaffected" in section
+    assert "not built yet" not in text, "the page cannot know whether a secret is set today"
+    installing = text.split("### Installing each", 1)[1].split("###", 1)[0]
+    assert "krypton app, iOS" not in installing, "a target with no note adds no install line"
+
+
+def test_a_waiting_target_with_a_note_and_two_credentials_says_so(tmp_path: Path) -> None:
+    config = CONFIG.replace(
+        'credentials = ["EXPO_TOKEN"]',
+        'credentials = ["EXPO_TOKEN", "APPLE_KEY"]\nnote = "Through TestFlight."',
+    ).replace('signing = "unsigned"\ncredentials', 'signing = "apple-app-store"\ncredentials')
+    settings = _repo(tmp_path, config)
+    text = rb.DownloadsRenderer(rb.TargetCatalogue(settings), settings).render()
+    assert f"{rb.SIGNING['apple-app-store']} (built only while `EXPO_TOKEN` and" in text
+    assert "`APPLE_KEY` are set)" in text
+    installing = text.split("### Installing each", 1)[1].split("###", 1)[0]
+    assert "- **krypton app, iOS**: Through TestFlight." in installing
 
 
 def test_the_page_block_is_replaced_and_must_be_there_exactly_once(tmp_path: Path) -> None:
