@@ -1,0 +1,1 @@
+- **krypton app:** the EAS project is owned by the Expo organisation `the-vibey-project`, not a personal account; `easOwner` now says so, so `eas credentials` no longer refuses the project (`Owner of project … (the-vibey-project) does not match owner specified in the "owner" field`).
