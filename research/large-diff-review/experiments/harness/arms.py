@@ -46,6 +46,8 @@ def make_arm(name: str, model: Model, offline: bool = False):
             cfg.think = bit
         elif bit == "T1":
             cfg.options = {"temperature": 1.0, "top_p": 1.0, "seed": 42}
+        elif bit == "TD":  # the model's own Modelfile sampling defaults, fixed seed
+            cfg.options = {"seed": 42}
         else:
             raise ValueError(f"{name}: {bit}")
     for flag in flags:
@@ -63,6 +65,7 @@ def make_arm(name: str, model: Model, offline: bool = False):
             raise ValueError(f"{name}: {flag}")
     if llm:
         cfg.model = llm
+        cfg.num_predict = 8192
     return DecoupledArm(cfg, model, offline=offline)
 
 
