@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-about-the-source-93e88cfd47",
+    "purpose": "about the source",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/001-about-the-source.md",
+    "requires": [],
+    "links": [
+      "skill-how-to-read-a-pointer-64cbcf2b3a"
+    ]
+  },
+  {
+    "id": "skill-how-to-read-a-pointer-64cbcf2b3a",
+    "purpose": "how to read a pointer",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/002-how-to-read-a-pointer.md",
+    "requires": [
+      "skill-about-the-source-93e88cfd47"
+    ],
+    "links": [
+      "skill-how-to-use-this-document-bb2383c0e6"
+    ]
+  },
+  {
+    "id": "skill-how-to-use-this-document-bb2383c0e6",
+    "purpose": "how to use this document",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/003-how-to-use-this-document.md",
+    "requires": [
+      "skill-how-to-read-a-pointer-64cbcf2b3a"
+    ],
+    "links": [
+      "skill-35-learning-paths-1172257b6d"
+    ]
+  },
+  {
+    "id": "skill-35-learning-paths-1172257b6d",
+    "purpose": "35 learning paths",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/004-35-learning-paths.md",
+    "requires": [
+      "skill-how-to-use-this-document-bb2383c0e6"
+    ],
+    "links": [
+      "skill-36-free-and-digital-tools-c14a01fb76"
+    ]
+  },
+  {
+    "id": "skill-36-free-and-digital-tools-c14a01fb76",
+    "purpose": "36 free and digital tools",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/005-36-free-and-digital-tools.md",
+    "requires": [
+      "skill-35-learning-paths-1172257b6d"
+    ],
+    "links": [
+      "skill-37-glossary-72272baabd"
+    ]
+  },
+  {
+    "id": "skill-37-glossary-72272baabd",
+    "purpose": "37 glossary",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/006-37-glossary.md",
+    "requires": [
+      "skill-36-free-and-digital-tools-c14a01fb76"
+    ],
+    "links": [
+      "skill-38-what-remains-genuinely-open-as-of-2026-35c3f7c16a"
+    ]
+  },
+  {
+    "id": "skill-38-what-remains-genuinely-open-as-of-2026-35c3f7c16a",
+    "purpose": "38 what remains genuinely open as of 2026",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/007-38-what-remains-genuinely-open-as-of-2026.md",
+    "requires": [
+      "skill-37-glossary-72272baabd"
+    ],
+    "links": [
+      "skill-sources-consulted-live-september-2026-37bbf4e4cb"
+    ]
+  },
+  {
+    "id": "skill-sources-consulted-live-september-2026-37bbf4e4cb",
+    "purpose": "sources consulted live september 2026",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/008-sources-consulted-live-september-2026.md",
+    "requires": [
+      "skill-38-what-remains-genuinely-open-as-of-2026-35c3f7c16a"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-76ee71c8cb"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-76ee71c8cb",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference/009-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-sources-consulted-live-september-2026-37bbf4e4cb"
+    ],
+    "links": []
+  }
+]

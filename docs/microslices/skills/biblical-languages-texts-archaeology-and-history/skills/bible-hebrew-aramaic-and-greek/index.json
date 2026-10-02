@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-part-i-the-languages-787a3cf871",
+    "purpose": "part i the languages",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/001-part-i-the-languages.md",
+    "requires": [],
+    "links": [
+      "skill-1-biblical-hebrew-and-biblical-aramaic-f0da8ef5a2"
+    ]
+  },
+  {
+    "id": "skill-1-biblical-hebrew-and-biblical-aramaic-f0da8ef5a2",
+    "purpose": "1 biblical hebrew and biblical aramaic",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/002-1-biblical-hebrew-and-biblical-aramaic.md",
+    "requires": [
+      "skill-part-i-the-languages-787a3cf871"
+    ],
+    "links": [
+      "skill-2-biblical-greek-c0820da79a"
+    ]
+  },
+  {
+    "id": "skill-2-biblical-greek-c0820da79a",
+    "purpose": "2 biblical greek",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/003-2-biblical-greek.md",
+    "requires": [
+      "skill-1-biblical-hebrew-and-biblical-aramaic-f0da8ef5a2"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-0f8b8a8ff0"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-0f8b8a8ff0",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/004-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-2-biblical-greek-c0820da79a"
+    ],
+    "links": []
+  }
+]

@@ -41,13 +41,22 @@ jobs:
           from pathlib import Path
           import subprocess
 
+          from vibey_gh.markdown_fences import MarkdownFences
+
+          # A fence is read the way CommonMark reads it (vibey_gh.markdown_fences), not by
+          # counting backticks: a ``` inside an inline code span, inside a fenced block's
+          # content, or under a longer fence is no delimiter, and the count failed a valid
+          # file every night from 2026-09-28. Every unclosed fence is named, not the first.
           roots = (Path("README.md"), Path("docs"), Path("src/vibey_tools/gh/docs"))
-          files = [p for root in roots for p in ([root] if root.is_file() else root.rglob("*.md"))]
+          files = [p for root in roots for p in ([root] if root.is_file() else sorted(root.rglob("*.md")))]
+          fences = MarkdownFences()
+          unclosed = []
           for path in files:
-              path.read_text(encoding="utf-8")
-              text = path.read_text(encoding="utf-8")
-              if text.count("```") % 2:
-                  raise SystemExit(f"unclosed fenced block: {path}")
+              fence = fences.unclosed(path.read_text(encoding="utf-8"))
+              if fence is not None:
+                  unclosed.append(f"{path}:{fence.line}: {fence.marker} fence never closes")
+          if unclosed:
+              raise SystemExit("unclosed fenced block(s):\n" + "\n".join(unclosed))
           tracked = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
           source_files = [Path(name) for name in tracked if Path(name).suffix == ".py"]
           for path in source_files:

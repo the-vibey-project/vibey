@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-3-biblical-latin-93a83fdca3",
+    "purpose": "3 biblical latin",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/001-3-biblical-latin.md",
+    "requires": [],
+    "links": [
+      "skill-4-biblical-german-c4b62582e7"
+    ]
+  },
+  {
+    "id": "skill-4-biblical-german-c4b62582e7",
+    "purpose": "4 biblical german",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/002-4-biblical-german.md",
+    "requires": [
+      "skill-3-biblical-latin-93a83fdca3"
+    ],
+    "links": [
+      "skill-5-biblical-english-791c7c06e9"
+    ]
+  },
+  {
+    "id": "skill-5-biblical-english-791c7c06e9",
+    "purpose": "5 biblical english",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/003-5-biblical-english.md",
+    "requires": [
+      "skill-4-biblical-german-c4b62582e7"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-d69f65ff00"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-d69f65ff00",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/004-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-5-biblical-english-791c7c06e9"
+    ],
+    "links": []
+  }
+]

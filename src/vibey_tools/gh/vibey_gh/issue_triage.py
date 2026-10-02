@@ -5,15 +5,20 @@ The forge has no portable issue-order field.  The managed labels below are there
 the durable order: bumped issues first, then critical/high/medium/low, then oldest
 first within a band.  Re-running the sweep derives the same result from the whole
 open issue set and never treats issue text as executable input.
+
+Every call goes through one `GhTransportInterface`. The CLI hands in one that retries a
+transient forge failure (`[forge_retry]`, `vibey_gh.gh_retry`): each call here is a read, a
+`label create --force` or a label edit, so asking again changes nothing that the first
+attempt did not. A sweep failed twice in a day on a single 504 or GraphQL error.
 """
 
 from __future__ import annotations
 
-import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from vibey_gh import github_state
+from vibey_gh.gh_transport import GhTransport
+from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 
 TRIAGED = "vibey-gh:triaged"
 BUMPED = "vibey-gh:priority-bumped"
@@ -65,27 +70,43 @@ def classify(issue: dict[str, Any]) -> str:
     return "low"
 
 
-def _run(*args: str) -> None:
-    result = subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
+# Module-level, like every function here (vibey ADR-0016): the triage is a facade that the
+# CLI and the tests call by name, and it moves onto a class with the rest of the module.
+def _run(*args: str, transport: GhTransportInterface | None = None) -> None:
+    result = (transport or GhTransport()).run(args)
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "GitHub command failed")
 
 
-def ensure_labels() -> None:
+def ensure_labels(transport: GhTransportInterface | None = None) -> None:
     for name, (colour, description) in LABEL_DEFINITIONS.items():
-        _run("label", "create", name, "--color", colour, "--description", description, "--force")
+        _run(
+            "label",
+            "create",
+            name,
+            "--color",
+            colour,
+            "--description",
+            description,
+            "--force",
+            transport=transport,
+        )
 
 
-def fetch_open_issues(limit: int = 1000) -> list[dict[str, Any]]:
-    value = github_state.gh_json(
-        "issue",
-        "list",
-        "--state",
-        "open",
-        "--limit",
-        str(limit),
-        "--json",
-        "number,title,body,labels,createdAt",
+def fetch_open_issues(
+    limit: int = 1000, transport: GhTransportInterface | None = None
+) -> list[dict[str, Any]]:
+    value = (transport or GhTransport()).json(
+        [
+            "issue",
+            "list",
+            "--state",
+            "open",
+            "--limit",
+            str(limit),
+            "--json",
+            "number,title,body,labels,createdAt",
+        ]
     )
     return [item for item in value or [] if isinstance(item, dict)]
 
@@ -100,13 +121,14 @@ def rank(issue: dict[str, Any]) -> RankedIssue:
     )
 
 
-def triage(issues: list[dict[str, Any]] | None = None) -> list[RankedIssue]:
+def triage(
+    issues: list[dict[str, Any]] | None = None, transport: GhTransportInterface | None = None
+) -> list[RankedIssue]:
     """Reconcile every open issue and return the complete ordered list."""
-    ensure_labels()
-    ranked = sorted(
-        (rank(issue) for issue in (issues if issues is not None else fetch_open_issues())),
-        key=lambda x: x.rank,
-    )
+    ensure_labels(transport)
+    if issues is None:
+        issues = fetch_open_issues(transport=transport)
+    ranked = sorted((rank(issue) for issue in issues), key=lambda x: x.rank)
     for item in ranked:
         desired = [TRIAGED, BUMPED if item.bumped else f"vibey-gh:priority-{item.priority}"]
         args = ["issue", "edit", str(item.number)]
@@ -115,19 +137,19 @@ def triage(issues: list[dict[str, Any]] | None = None) -> list[RankedIssue]:
                 args += ["--remove-label", label]
         for label in desired:
             args += ["--add-label", label]
-        _run(*args)
+        _run(*args, transport=transport)
     return ranked
 
 
-def set_bump(issue: int, bumped: bool) -> None:
+def set_bump(issue: int, bumped: bool, transport: GhTransportInterface | None = None) -> None:
     """Explicitly promote or remove promotion, then leave ordinary triage to the sweep."""
-    ensure_labels()
+    ensure_labels(transport)
     args = ["issue", "edit", str(issue)]
     if bumped:
         args += ["--add-label", BUMPED]
     else:
         args += ["--remove-label", BUMPED]
-    _run(*args)
+    _run(*args, transport=transport)
 
 
 def summary(items: list[RankedIssue]) -> str:

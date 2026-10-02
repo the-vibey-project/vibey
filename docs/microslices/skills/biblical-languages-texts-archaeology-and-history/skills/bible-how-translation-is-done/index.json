@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-part-ii-how-the-bible-is-actually-translated-0136b2c0ec",
+    "purpose": "part ii how the bible is actually translated",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/001-part-ii-how-the-bible-is-actually-translated.md",
+    "requires": [],
+    "links": [
+      "skill-6-major-language-committee-translation-the-real-workflow-3d03a190cc"
+    ]
+  },
+  {
+    "id": "skill-6-major-language-committee-translation-the-real-workflow-3d03a190cc",
+    "purpose": "6 major language committee translation the real workflow",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/002-6-major-language-committee-translation-the-real-workflow.md",
+    "requires": [
+      "skill-part-ii-how-the-bible-is-actually-translated-0136b2c0ec"
+    ],
+    "links": [
+      "skill-7-minority-language-field-translation-how-it-actually-works-in-2026-8d939c8bef"
+    ]
+  },
+  {
+    "id": "skill-7-minority-language-field-translation-how-it-actually-works-in-2026-8d939c8bef",
+    "purpose": "7 minority language field translation how it actually works in 2026",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/003-7-minority-language-field-translation-how-it-actually-works-in-2026.md",
+    "requires": [
+      "skill-6-major-language-committee-translation-the-real-workflow-3d03a190cc"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-fd45169fe5"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-fd45169fe5",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/004-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-7-minority-language-field-translation-how-it-actually-works-in-2026-8d939c8bef"
+    ],
+    "links": []
+  }
+]

@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from vibey_gh.interfaces.forge_transport_interface import ForgeTransportInterface
+from vibey_gh.interfaces.gh_retry_interface import GhRetryInterface
 from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface, WorkingDirectory
 
 
@@ -42,10 +43,17 @@ class GhTransport(GhTransportInterface, ForgeTransportInterface):
     this transport replaced did that, and a `GH_HOST` the caller exported keeps working.
     The forge adapter sets it from `[platform] host`, and only for a host other than the
     one `gh` assumes on its own.
+
+    `retry`, when given, asks again after a transient forge failure (`vibey_gh.gh_retry`,
+    `[forge_retry]`). `None`, the default, runs each call once, as every runner this
+    transport replaced did. Give it only to a transport whose calls are safe to repeat: a
+    504 does not say whether the request landed, so a retried `gh pr create` could open a
+    second pull request, while a retried label edit or read changes nothing.
     """
 
     executable: str = "gh"
     host: str | None = None
+    retry: GhRetryInterface | None = None
 
     def run(
         self,
@@ -54,15 +62,20 @@ class GhTransport(GhTransportInterface, ForgeTransportInterface):
         cwd: WorkingDirectory | None = None,
         stdin: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            [self.executable, *args],
-            cwd=cwd,
-            input=stdin,
-            env=None if self.host is None else {**os.environ, "GH_HOST": self.host},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        def once() -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                [self.executable, *args],
+                cwd=cwd,
+                input=stdin,
+                env=None if self.host is None else {**os.environ, "GH_HOST": self.host},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        if self.retry is None:
+            return once()
+        return self.retry.run(once, " ".join((self.executable, *args[:2])))
 
     def json(
         self,

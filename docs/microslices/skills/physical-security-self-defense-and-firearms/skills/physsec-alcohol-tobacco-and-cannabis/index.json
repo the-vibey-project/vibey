@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-19-the-framing-509001c16d",
+    "purpose": "19 the framing",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/001-19-the-framing.md",
+    "requires": [],
+    "links": [
+      "skill-20-cannabis-45eb94b6eb"
+    ]
+  },
+  {
+    "id": "skill-20-cannabis-45eb94b6eb",
+    "purpose": "20 cannabis",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/002-20-cannabis.md",
+    "requires": [
+      "skill-19-the-framing-509001c16d"
+    ],
+    "links": [
+      "skill-21-alcohol-ethanol-23bca96aa5"
+    ]
+  },
+  {
+    "id": "skill-21-alcohol-ethanol-23bca96aa5",
+    "purpose": "21 alcohol ethanol",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/003-21-alcohol-ethanol.md",
+    "requires": [
+      "skill-20-cannabis-45eb94b6eb"
+    ],
+    "links": [
+      "skill-22-tobacco-and-nicotine-f82870ddbe"
+    ]
+  },
+  {
+    "id": "skill-22-tobacco-and-nicotine-f82870ddbe",
+    "purpose": "22 tobacco and nicotine",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/004-22-tobacco-and-nicotine.md",
+    "requires": [
+      "skill-21-alcohol-ethanol-23bca96aa5"
+    ],
+    "links": [
+      "skill-23-the-self-medication-problem-all-three-substances-b7c58974f1"
+    ]
+  },
+  {
+    "id": "skill-23-the-self-medication-problem-all-three-substances-b7c58974f1",
+    "purpose": "23 the self medication problem all three substances",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/005-23-the-self-medication-problem-all-three-substances.md",
+    "requires": [
+      "skill-22-tobacco-and-nicotine-f82870ddbe"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-20f700094a"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-20f700094a",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/006-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-23-the-self-medication-problem-all-three-substances-b7c58974f1"
+    ],
+    "links": []
+  }
+]

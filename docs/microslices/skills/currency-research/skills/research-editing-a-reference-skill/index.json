@@ -6,76 +6,52 @@
     "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/001-anatomy-of-a-generated-skill-md.md",
     "requires": [],
     "links": [
-      "skill-13-section-title-47d2d08c7a"
+      "skill-the-cross-reference-rule-a7168b3a36"
     ]
   },
   {
-    "id": "skill-13-section-title-47d2d08c7a",
-    "purpose": "13 section title",
+    "id": "skill-the-cross-reference-rule-a7168b3a36",
+    "purpose": "the cross reference rule",
     "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
-    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/002-13-section-title.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/002-the-cross-reference-rule.md",
     "requires": [
       "skill-anatomy-of-a-generated-skill-md-d79fb44212"
     ],
     "links": [
-      "skill-14-section-title-57132cb7c3"
+      "skill-byte-discipline-325139ec26"
     ]
   },
   {
-    "id": "skill-14-section-title-57132cb7c3",
-    "purpose": "14 section title",
-    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
-    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/003-14-section-title.md",
-    "requires": [
-      "skill-13-section-title-47d2d08c7a"
-    ],
-    "links": [
-      "skill-the-cross-reference-rule-f60a198bc7"
-    ]
-  },
-  {
-    "id": "skill-the-cross-reference-rule-f60a198bc7",
-    "purpose": "the cross reference rule",
-    "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
-    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/004-the-cross-reference-rule.md",
-    "requires": [
-      "skill-14-section-title-57132cb7c3"
-    ],
-    "links": [
-      "skill-byte-discipline-18c60094fc"
-    ]
-  },
-  {
-    "id": "skill-byte-discipline-18c60094fc",
+    "id": "skill-byte-discipline-325139ec26",
     "purpose": "byte discipline",
     "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
-    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/005-byte-discipline.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/003-byte-discipline.md",
     "requires": [
-      "skill-the-cross-reference-rule-f60a198bc7"
+      "skill-the-cross-reference-rule-a7168b3a36"
     ],
     "links": [
-      "skill-what-else-must-change-when-you-edit-94e9563c31"
+      "skill-what-else-must-change-when-you-edit-a5ea2fb306"
     ]
   },
   {
-    "id": "skill-what-else-must-change-when-you-edit-94e9563c31",
+    "id": "skill-what-else-must-change-when-you-edit-a5ea2fb306",
     "purpose": "what else must change when you edit",
     "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
-    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/006-what-else-must-change-when-you-edit.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/004-what-else-must-change-when-you-edit.md",
     "requires": [
-      "skill-byte-discipline-18c60094fc"
+      "skill-byte-discipline-325139ec26"
     ],
     "links": [
-      "skill-before-opening-the-pull-request-8b22dcc065"
+      "skill-before-opening-the-pull-request-d1efbe0a47"
     ]
   },
   {
-    "id": "skill-before-opening-the-pull-request-8b22dcc065",
+    "id": "skill-before-opening-the-pull-request-d1efbe0a47",
     "purpose": "before opening the pull request",
     "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
-    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/007-before-opening-the-pull-request.md",
+    "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill/005-before-opening-the-pull-request.md",
     "requires": [
-      "skill-what-else-must-change-when-you-edit-94e9563c31"
+      "skill-what-else-must-change-when-you-edit-a5ea2fb306"
     ],
     "links": []
   }

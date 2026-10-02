@@ -1233,6 +1233,28 @@ The check also fails when an exception matches nothing at `audit_level` or worse
 package has a patched release in the GitHub advisory database, and when it names a workspace
 with no lockfile. Each workspace is judged only against its own exceptions.
 
+## `[forge_retry]`
+
+Which forge failures a `gh` call is asked again after, and how long it waits first. Only calls
+that are safe to repeat use it — today every call `vibey-gh issue-triage` makes, which are reads,
+`gh label create --force` and label edits — because a 504 does not say whether the request
+landed. A failure is transient when its status is in `transient_statuses`, its text holds one of
+`transient_messages`, or it is a secondary rate limit (`rate_limit_messages`) that carries
+`Retry-After`. Every other failure, and the last of a run of transient ones, fails exactly as it
+did without the table; the last one also says how many attempts it took. Each retry prints one
+line on stderr naming the command, the reason and the wait. Without the table, the defaults
+below apply.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `retries` | integer / `3` | Further attempts after the first, from 0 to 10. 0 runs each call once. |
+| `backoff_seconds` | number / `5` | The wait before the first retry, doubled before each one after it. |
+| `max_backoff_seconds` | number / `60` | The longest that doubling ever waits. At least `backoff_seconds`. |
+| `max_retry_after_seconds` | number / `300` | The longest `Retry-After` honoured. A rate limit asking for longer is not retried. |
+| `transient_statuses` | list of integers / `[502, 503, 504]` | HTTP statuses that mean "not now". Only 5xx codes are accepted. |
+| `transient_messages` | list of strings / `["Something went wrong while executing your query"]` | Text that marks a failure transient, matched without regard to case. The default is GitHub GraphQL's internal-error answer. |
+| `rate_limit_messages` | list of strings / `["secondary rate limit"]` | Text that marks a rate limit, retried only when the answer carries `Retry-After`, after exactly that long. |
+
 ## `[changelog]`
 
 The changelog written as fragments: one new file per change, `<slug>.<type>.md`, in a

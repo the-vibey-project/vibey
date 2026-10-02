@@ -144,9 +144,16 @@ small identified slices, explicit links, measured budgets, and no silent truncat
 - **Never implement on `main`.** Feature PRs squash into `develop` through the
   merge train (`vibey-gh merge-train`); `develop` is promoted to `main` by
   `vibey-gh promote` as a **rebase** merge, keeping history linear
-  (`.vibey-gh.toml [branches]`). A push to `develop` publishes `vibey-engine`
-  and `krypton-app` dev builds to TestPyPI; a push to `main` publishes both to PyPI,
-  each by its own workflow (`vibey-engine.yml`, `krypton-app.yml`). ADR-0028, ADR-0069.
+  (`.vibey-gh.toml [branches]`). A push to `develop` publishes a `vibey-engine`
+  dev build to TestPyPI and a push to `main` publishes it to PyPI (`vibey-engine.yml`,
+  the `Release` workflow); `krypton-app.yml` does the same for `krypton-app` on a push
+  that changes `clients/krypton-app/`. A successful `Release` on `main` is followed by
+  the `vibey-v<version>` tag and GitHub Release (`github-release.yml`), the client
+  binaries `release-binaries.yml` attaches to it (krypton desktop for Linux, and for
+  macOS as a `.dmg`, ad-hoc signed while the Developer ID signing and notarisation
+  secrets are absent; the krypton app for web, Android and iOS; the `.vsix`), and the
+  extension's publication to Open VSX (`openvsx.yml`). `clients/` is in `[version] code_paths`, so a
+  client-only change is releasable. ADR-0028, ADR-0069.
 - **Sovereign self-hosted free is the only default on every surface; paid is
   declared-only.** Each operational surface has one vibey-owned protocol and a
   sovereign default adapter that is always on: engine `gptossloop`,
@@ -279,7 +286,8 @@ CI (`.github/workflows/ci.yml`) also runs `noloss` (the no-loss property suite
 at 10,000 examples), `postgres-compatibility` (the database suite on PostgreSQL
 14–18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (krypton mobile and
 web), `vscode-extension` (Ubuntu and macOS), `desktop` (krypton desktop on
-Ubuntu and Arch), `image` (amd64 and arm64 builds; each `Image contract - …`
+Ubuntu, Arch and macOS; the macOS cell also bundles the app and images it in a `.dmg`,
+as `release-binaries.yml` does), `image` (amd64 and arm64 builds; each `Image contract - …`
 step asserts one claim the Dockerfile makes), `chart` (Helm lint and golden
 render of every profile) and `cluster-smoke` (Helm install on minikube; each
 `Contract - …` step asserts one cluster behaviour). `tools-lint` additionally

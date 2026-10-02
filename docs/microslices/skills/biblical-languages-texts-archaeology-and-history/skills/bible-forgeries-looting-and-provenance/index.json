@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-part-vi-the-ethics-layer-forgeries-looting-and-provenance-60f8e5b4ed",
+    "purpose": "part vi the ethics layer forgeries looting and provenance",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/001-part-vi-the-ethics-layer-forgeries-looting-and-provenance.md",
+    "requires": [],
+    "links": [
+      "skill-29-why-provenance-matters-0c1624164f"
+    ]
+  },
+  {
+    "id": "skill-29-why-provenance-matters-0c1624164f",
+    "purpose": "29 why provenance matters",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/002-29-why-provenance-matters.md",
+    "requires": [
+      "skill-part-vi-the-ethics-layer-forgeries-looting-and-provenance-60f8e5b4ed"
+    ],
+    "links": [
+      "skill-30-case-files-every-student-should-know-1f7ad2cdc7"
+    ]
+  },
+  {
+    "id": "skill-30-case-files-every-student-should-know-1f7ad2cdc7",
+    "purpose": "30 case files every student should know",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/003-30-case-files-every-student-should-know.md",
+    "requires": [
+      "skill-29-why-provenance-matters-0c1624164f"
+    ],
+    "links": [
+      "skill-31-archaeology-and-politics-in-the-holy-land-cb702fb665"
+    ]
+  },
+  {
+    "id": "skill-31-archaeology-and-politics-in-the-holy-land-cb702fb665",
+    "purpose": "31 archaeology and politics in the holy land",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/004-31-archaeology-and-politics-in-the-holy-land.md",
+    "requires": [
+      "skill-30-case-files-every-student-should-know-1f7ad2cdc7"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-a15aa5589e"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-a15aa5589e",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/005-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-31-archaeology-and-politics-in-the-holy-land-cb702fb665"
+    ],
+    "links": []
+  }
+]
