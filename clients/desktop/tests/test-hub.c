@@ -41,7 +41,53 @@ test_endpoint(void)
     g_autoptr(KrHubEndpoint) copy = kr_hub_endpoint_copy(original);
     g_assert_cmpstr(copy->token, ==, "secret");
     g_assert_cmpstr(copy->host, ==, "h");
+    g_assert_null(copy->device_id);
+    g_assert_null(copy->fingerprint);
     kr_hub_endpoint_free(NULL);
+
+    g_autoptr(KrHubEndpoint) device =
+        kr_hub_endpoint_new_device("https", "studio.local", 9000, "dev-1", "k3y", "ABCDEF");
+    g_autoptr(KrHubEndpoint) device_copy = kr_hub_endpoint_copy(device);
+    g_assert_cmpstr(device_copy->device_id, ==, "dev-1");
+    g_assert_cmpstr(device_copy->token, ==, "k3y");
+    g_assert_cmpstr(device_copy->fingerprint, ==, "abcdef");
+    g_autoptr(KrHubEndpoint) unpinned =
+        kr_hub_endpoint_new_device("http", "127.0.0.1", 0, "dev-1", "k3y", NULL);
+    g_assert_null(unpinned->fingerprint);
+    g_assert_cmpuint(unpinned->port, ==, KR_HUB_DEFAULT_PORT);
+}
+
+static void
+test_loopback(void)
+{
+    g_assert_true(kr_hub_host_is_loopback("127.0.0.1"));
+    g_assert_true(kr_hub_host_is_loopback("LOCALHOST"));
+    g_assert_true(kr_hub_host_is_loopback("::1"));
+    g_assert_true(kr_hub_host_is_loopback("[::1]"));
+    g_assert_false(kr_hub_host_is_loopback("studio.local"));
+    g_assert_false(kr_hub_host_is_loopback("192.168.1.2"));
+    g_assert_false(kr_hub_host_is_loopback(NULL));
+}
+
+/* The vector is the hub's own: hmac.new(b"k3y", "\n".join(fields).encode(), sha256), the
+ * fields in HubPairingPolicy.canonical's order (src/vibey/domain/hub_pairing.py). */
+#define EMPTY_SHA256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+static void
+test_signature(void)
+{
+    g_autofree char *canonical = kr_hub_canonical("dev-1", "get", "/api/v1/projects", "",
+                                                  "1700000000", "nonce-1", EMPTY_SHA256);
+    g_assert_cmpstr(canonical, ==,
+                    "dev-1\nGET\n/api/v1/projects\n\n1700000000\nnonce-1\n" EMPTY_SHA256);
+    g_autofree char *signature = kr_hub_signature("k3y", canonical);
+    g_assert_cmpstr(signature, ==,
+                    "80829804b459989f1701e479095a1f7bd2a36db2a0ead3fa63d12df643039e45");
+
+    g_assert_null(kr_hub_canonical("dev\n1", "GET", "/", "", "1", "n", EMPTY_SHA256));
+    g_assert_null(kr_hub_canonical("dev", "GET", "/", NULL, "1", "n", EMPTY_SHA256));
+    g_assert_cmpstr(kr_hub_device_headers[0], ==, "x-vibey-device");
+    g_assert_cmpstr(kr_hub_device_headers[3], ==, "x-vibey-signature");
 }
 
 static void
@@ -72,10 +118,12 @@ test_paths(void)
     path_is(KR_HUB_ROUTE_LANES, NULL, NULL, "/api/v1/lanes");
     path_is(KR_HUB_ROUTE_LOOPS, NULL, NULL, "/api/v1/loops");
     path_is(KR_HUB_ROUTE_DOCTOR, NULL, NULL, "/api/v1/doctor");
+    path_is(KR_HUB_ROUTE_PAIRING_CLAIM, NULL, NULL, "/api/v1/pairing/claim");
     path_is((KrHubRoute) 999, NULL, NULL, NULL);
 
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_GATE_ANSWER));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_JOB_BUMP));
+    g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PAIRING_CLAIM));
     g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_PROJECTS));
 }
 
@@ -162,6 +210,8 @@ main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
     g_test_add_func("/hub/endpoint", test_endpoint);
+    g_test_add_func("/hub/loopback", test_loopback);
+    g_test_add_func("/hub/signature", test_signature);
     g_test_add_func("/hub/paths", test_paths);
     g_test_add_func("/hub/token", test_token);
     g_test_add_func("/hub/token-path", test_token_path);

@@ -1,5 +1,13 @@
 # Runbook: clients — mobile, web, desktop, and a finished TUI
 
+> **Status (2026-10-02):** device pairing has landed on the hub
+> ([ADR-0071](../../architecture/decisions/0071-hub-pairing-and-trust.md); `vibey hub pair`
+> and `/api/v1/pairing/*`), though neither the app nor the desktop client calls it yet. The
+> clients exist under `clients/`: the Expo app (web, Android, iOS), the C/GTK 4 desktop app
+> (Linux, and macOS on Apple silicon from 3.3.1), the VS Code extension and the `krypton`
+> launcher, and every release attaches their builds ([Downloads](../../guides/downloads.md)).
+> The "Current state" section below is the 2026-09-15 reading.
+>
 > **Status (2026-09-25):** the server side has started. The hard dependency on 12 is met
 > for reads, gate answers and bumps: the hub, `vibey serve`
 > ([ADR-0068](../../architecture/decisions/0068-the-hub.md)), serves the CLI's own `--json`
