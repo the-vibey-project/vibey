@@ -28,6 +28,7 @@ Windows is not a supported platform, so nothing here is built for it.
 | krypton desktop | Linux: any distribution with Flatpak (Ubuntu, Arch, Fedora) | aarch64 | `krypton-desktop-<version>-linux-aarch64.flatpak` | Unsigned |
 | krypton desktop | Linux: Ubuntu 24.04 LTS and newer | x86_64 | `krypton-desktop-<version>-linux-x86_64.tar.gz` | Unsigned |
 | krypton desktop | Linux: Ubuntu 24.04 LTS and newer | aarch64 | `krypton-desktop-<version>-linux-aarch64.tar.gz` | Unsigned |
+| krypton desktop | macOS 15 Sequoia and newer, Apple silicon | arm64 | `krypton-desktop-<version>-macos-arm64.dmg` | Ad-hoc signed, not notarised: macOS asks you to confirm the first launch |
 | krypton app | Web: any current browser, served as static files | any | `krypton-web-<version>.tar.gz` | Unsigned |
 | krypton app | Android | any | `krypton-android-<version>.apk` | Android debug key: sideload only, not a store build |
 | krypton for VS Code | VS Code 1.90 or newer, on Linux and macOS | any | `krypton-vscode-<version>.vsix` | Unsigned |
@@ -42,11 +43,16 @@ Every file is listed in `SHA256SUMS` beside it, with its SHA-256, and carries a 
 - **krypton desktop, Linux: any distribution with Flatpak (Ubuntu, Arch, Fedora), aarch64**: A single-file Flatpak bundle of the declared manifest (clients/desktop/packaging/flatpak), built from the released commit. It needs the GNOME runtime from Flathub, which `flatpak install` fetches. The GNOME runtime carries no Avahi, so this build cannot find hubs on the network by itself: pair by typing the hub's address and code. `flatpak install --user krypton-desktop-<version>-linux-aarch64.flatpak`
 - **krypton desktop, Linux: Ubuntu 24.04 LTS and newer, x86_64**: `meson install` of the app into /usr, built on Ubuntu 24.04. It links against the system's GTK 4, libadwaita, libsoup 3, json-glib and Avahi, so it needs those installed; on another distribution, prefer the Flatpak. `sudo tar -xzf krypton-desktop-<version>-linux-x86_64.tar.gz -C /`
 - **krypton desktop, Linux: Ubuntu 24.04 LTS and newer, aarch64**: `meson install` of the app into /usr, built on Ubuntu 24.04. It links against the system's GTK 4, libadwaita, libsoup 3, json-glib and Avahi, so it needs those installed; on another distribution, prefer the Flatpak. `sudo tar -xzf krypton-desktop-<version>-linux-aarch64.tar.gz -C /`
+- **krypton desktop, macOS 15 Sequoia and newer, Apple silicon, arm64**: An app bundle that carries its own GTK 4, libadwaita and every library they load, so it needs nothing else installed (no Homebrew). Open the .dmg and drag krypton to Applications. It is not notarised yet, so macOS refuses the first launch: open it once, then choose Open Anyway in System Settings, Privacy & Security; or clear the download's quarantine flag with the command here. It finds hubs on the network over Bonjour, and macOS asks once for permission to look on the local network. `xattr -dr com.apple.quarantine /Applications/krypton.app`
 - **krypton app, Web: any current browser, served as static files**: The `expo export --platform web` bundle (react-native-web), the same build CI proves bundles: static files any web server can serve. `mkdir krypton-web && tar -xzf krypton-web-<version>.tar.gz -C krypton-web && python3 -m http.server -d krypton-web`
 - **krypton app, Android**: `expo prebuild` and Gradle `assembleRelease`, signed with the Android debug key because the repository holds no release keystore: for sideloading and testing, not a Play Store build. On the device itself, allow installs from unknown sources and open the file. `adb install krypton-android-<version>.apk`
 - **krypton for VS Code, VS Code 1.90 or newer, on Linux and macOS**: The same `vsce package` CI builds and smoke-tests in a real VS Code. `code --install-extension krypton-vscode-<version>.vsix`
 - **krypton launcher, Linux and macOS, any architecture (Python 3.12+)**: The wheel and sdist PyPI serves, fetched and checked against PyPI's own SHA-256 digests. A pure-Python package: one wheel is every platform. `uv tool install ./krypton_app-<version>-py3-none-any.whl`
 - **vibey CLI and TUI, Linux and macOS, any architecture (Python 3.12+)**: The wheel and sdist PyPI serves, fetched and checked against PyPI's own SHA-256 digests. `vibey` and its TUI, every engine and every tool are in this one wheel (ADR-0037). `uv tool install ./vibey_engine-<version>-py3-none-any.whl`
+
+### Signing that waits for a credential
+
+- **krypton desktop, macOS 15 Sequoia and newer, Apple silicon**: built and attached on every release, ad-hoc signed, not notarised: macOS asks you to confirm the first launch. Signing it with a Developer ID and having Apple notarise it needs an Apple Developer Program membership and these repository secrets: `MACOS_SIGNING_CERTIFICATE_P12` (the Developer ID Application certificate and its key, as a base64 .p12), `MACOS_SIGNING_CERTIFICATE_PASSWORD` and `APPLE_TEAM_ID`; and, for notarytool, either an App Store Connect API key (`APPLE_NOTARY_API_KEY_P8`, `APPLE_NOTARY_API_KEY_ID`, `APPLE_NOTARY_API_ISSUER_ID`) or an Apple ID with an app-specific password (`APPLE_NOTARY_APPLE_ID`, `APPLE_NOTARY_APP_PASSWORD`). Until every one of them is set, it is ad-hoc signed, and the release itself is unaffected. The release workflow keeps one tracking issue open until they are set (`release-binaries-macos-signing`).
 
 ### Waiting for a credential
 
@@ -54,7 +60,7 @@ Every file is listed in `SHA256SUMS` beside it, with its SHA-256, and carries a 
 
 ### Not supported
 
-- **krypton desktop, macOS**: The GTK 4 build has never run on macOS in CI (the `desktop` job builds on Ubuntu and Arch only), and a usable macOS app needs the GTK runtime bundled (gtk-mac-bundler) plus an Apple Developer ID to sign and notarise it (clients/desktop/PACKAGING.md).
+- **krypton desktop, macOS, Intel**: Homebrew no longer publishes Intel macOS bottles of the GTK 4 stack: gtk4 4.24, glib 2.90, libadwaita 1.10, librsvg, cairo and pango offer Apple-silicon bottles only. An Intel build would compile all of it from source, on a platform Homebrew no longer supports, and GitHub's last Intel macOS runner (`macos-15-intel`) retires in August 2027. Apple-silicon Macs run the arm64 build; Intel Macs cannot, because Rosetta translates Intel code to Apple silicon and not the other way.
 <!-- END GENERATED release:downloads -->
 
 ## Checking a download

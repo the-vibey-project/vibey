@@ -939,19 +939,30 @@ jobs:
     # krypton desktop (clients/desktop): C17 on GTK 4 + libadwaita, built with Meson. The
     # pure-C core (libkryptondesktop) is tested with GLib's test framework under ASan and
     # UBSan, and its coverage is gated with gcovr; the GTK views are compiled with
-    # -Werror on every distribution here. Not a required check yet: it becomes one once it
-    # has run green on develop (the same rule as vscode-extension).
+    # -Werror on every platform here. On macOS (Apple silicon, against Homebrew's GTK 4)
+    # the same build and tests run, and the app is then bundled with its GTK runtime,
+    # verified to name nothing outside itself, run with Homebrew unreadable, and imaged in
+    # a .dmg: the steps release-binaries.yml's `desktop-macos` takes, so a release never
+    # meets a macOS failure first. Not a required check yet: it becomes one once it has run
+    # green on develop (the same rule as vscode-extension).
     name: krypton desktop (${{ matrix.distro }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - distro: ubuntu
+            runner: ubuntu-latest
             container: ''
           - distro: arch
+            runner: ubuntu-latest
             container: archlinux:latest
+          # macos-15, not macos-latest: the runner's macOS is the oldest the bundle runs on
+          # (Homebrew bottles are built for it), the same runner the release builds on.
+          - distro: macos
+            runner: macos-15
+            container: ''
     defaults:
       run:
         working-directory: clients/desktop
@@ -987,6 +998,18 @@ jobs:
           done
           exit 1
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        if: matrix.distro == 'macos'
+        with:
+          python-version: "3.12"
+      - name: Toolchain and libraries (macOS)
+        if: matrix.distro == 'macos'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: |
+          read -r -a formulae <<<"$(python ../../scripts/macos_app_bundle.py brew-packages)"
+          brew install "${formulae[@]}"
       - name: Build everything under ASan and UBSan, warnings as errors
         run: |
           meson setup build -Db_sanitize=address,undefined -Dgui=enabled \
@@ -994,7 +1017,9 @@ jobs:
           meson compile -C build
       - name: The core's GLib tests, under the sanitizers
         env:
-          # LeakSanitizer needs ptrace, which a container job does not get.
+          # LeakSanitizer needs ptrace, which a container job does not get, and Apple's
+          # AddressSanitizer has none on macOS ("detect_leaks is not supported on this
+          # platform"): leaks are checked on Ubuntu only.
           ASAN_OPTIONS: detect_leaks=${{ matrix.distro == 'ubuntu' && '1' || '0' }}:abort_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
         run: meson test -C build --print-errorlogs
@@ -1003,7 +1028,10 @@ jobs:
           meson setup build-nightly -Dchannel=nightly -Dgui=enabled
           meson compile -C build-nightly
           grep -q 'io.github.the_vibey_project.krypton.nightly' build-nightly/src/app/*.desktop
+      # Freedesktop files, generated from the same templates on every platform; the macOS
+      # app does not install them, so the Linux cells, which ship them, validate them.
       - name: The desktop entry and AppStream metadata validate
+        if: matrix.distro != 'macos'
         run: |
           desktop-file-validate build/src/app/io.github.the_vibey_project.krypton.desktop
           appstreamcli validate --no-net --explain build/src/app/io.github.the_vibey_project.krypton.metainfo.xml
@@ -1017,6 +1045,21 @@ jobs:
           # warning-free above, and left out of the measured core.
           gcovr --root . --filter 'src/core/' --exclude 'src/core/kr-discovery-(avahi|dnssd)\.c' \
             --fail-under-line 95 --fail-under-branch 80 --print-summary build-coverage
+      - name: The macOS app bundles with its GTK runtime, stands alone, and runs without Homebrew
+        if: matrix.distro == 'macos'
+        run: |
+          set -euo pipefail
+          bundler=../../scripts/macos_app_bundle.py
+          # Room in every load command for the bundler's @rpath rewrites.
+          meson setup build-app --prefix="$PWD/build-app/prefix" -Dgui=enabled \
+            -Dhub_transport=enabled -Ddiscovery=enabled -Dc_link_args=-Wl,-headerpad_max_install_names
+          meson compile -C build-app
+          meson install -C build-app
+          app=$(python "$bundler" bundle --prefix build-app/prefix --build-dir build-app \
+            --homebrew "$(brew --prefix)" --out build-app/out)
+          python "$bundler" verify --app "$app"
+          python "$bundler" smoke --app "$app"
+          python "$bundler" package --app "$app" --dmg build-app/dist/krypton-desktop.dmg
 
   image:
     name: Container image (amd64 + arm64)

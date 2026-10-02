@@ -84,7 +84,12 @@ version_pattern = '(?m)^version = "([^"]+)"$'
 # asset names becomes the architecture, and its runner is that architecture's own. `with`
 # is handed to the builder's matrix row as it stands. `signing` says what a person can rely
 # on: `unsigned`; `debug-key` (signed with the public Android debug key: installable by
-# sideloading, never a store build); `pypi` (the very bytes PyPI serves, digest-checked).
+# sideloading, never a store build); `pypi` (the very bytes PyPI serves, digest-checked);
+# `apple-ad-hoc` (ad-hoc code signature, not notarised). A built target whose signing can
+# be raised by a credential the repository lacks names it in `signing_credentials`, with a
+# `signing_tracking_key` and `signing_needs`: it is built either way, and without the
+# credential the release says so and keeps one tracking issue open, as a `credential`
+# target does.
 
 [[release_binaries.targets]]
 id = "desktop-flatpak-{arch}"
@@ -113,15 +118,50 @@ signing = "unsigned"
 install = "sudo tar -xzf krypton-desktop-{version}-linux-{arch}.tar.gz -C /"
 note = "`meson install` of the app into /usr, built on Ubuntu 24.04. It links against the system's GTK 4, libadwaita, libsoup 3, json-glib and Avahi, so it needs those installed; on another distribution, prefer the Flatpak."
 
+# macOS: built on a runner of the architecture, against Homebrew's GTK 4, then bundled with
+# that runtime by scripts/macos_app_bundle.py (its TOML declares what goes in). The runner's
+# macOS sets the oldest macOS the app runs on, because Homebrew's bottles for it are built
+# for it: macos-15 makes it macOS 15, and the app's Info.plist states the exact minimum the
+# bundler read from the libraries. It is ad-hoc signed until the Developer ID credentials
+# exist; then it is signed, notarised and stapled (`signing_credentials`), and until then
+# the release keeps one tracking issue open.
 [[release_binaries.targets]]
-id = "desktop-macos"
+id = "desktop-macos-arm64"
+ui = "desktop"
+builder = "desktop-macos"
+status = "build"
+platform = "macOS 15 Sequoia and newer, Apple silicon"
+arch = "arm64"
+runner = "macos-15"
+assets = ["krypton-desktop-{version}-macos-arm64.dmg"]
+signing = "apple-ad-hoc"
+install = "xattr -dr com.apple.quarantine /Applications/krypton.app"
+note = "An app bundle that carries its own GTK 4, libadwaita and every library they load, so it needs nothing else installed (no Homebrew). Open the .dmg and drag krypton to Applications. It is not notarised yet, so macOS refuses the first launch: open it once, then choose Open Anyway in System Settings, Privacy & Security; or clear the download's quarantine flag with the command here. It finds hubs on the network over Bonjour, and macOS asks once for permission to look on the local network."
+signing_credentials = [
+  "MACOS_SIGNING_CERTIFICATE_P12",
+  "MACOS_SIGNING_CERTIFICATE_PASSWORD",
+  "APPLE_TEAM_ID",
+  "APPLE_NOTARY_API_KEY_P8",
+  "APPLE_NOTARY_API_KEY_ID",
+  "APPLE_NOTARY_API_ISSUER_ID",
+  "APPLE_NOTARY_APPLE_ID",
+  "APPLE_NOTARY_APP_PASSWORD",
+]
+signing_tracking_key = "release-binaries-macos-signing"
+signing_needs = "Signing it with a Developer ID and having Apple notarise it needs an Apple Developer Program membership and these repository secrets: `MACOS_SIGNING_CERTIFICATE_P12` (the Developer ID Application certificate and its key, as a base64 .p12), `MACOS_SIGNING_CERTIFICATE_PASSWORD` and `APPLE_TEAM_ID`; and, for notarytool, either an App Store Connect API key (`APPLE_NOTARY_API_KEY_P8`, `APPLE_NOTARY_API_KEY_ID`, `APPLE_NOTARY_API_ISSUER_ID`) or an Apple ID with an app-specific password (`APPLE_NOTARY_APPLE_ID`, `APPLE_NOTARY_APP_PASSWORD`). Until every one of them is set, it is ad-hoc signed, and the release itself is unaffected."
+# The channel the app is built as (clients/desktop/meson_options.txt).
+with = { channel = "stable" }
+
+[[release_binaries.targets]]
+id = "desktop-macos-x86_64"
 ui = "desktop"
 builder = "desktop-macos"
 status = "unsupported"
-platform = "macOS"
+platform = "macOS, Intel"
+arch = "x86_64"
 assets = []
 signing = "unsigned"
-reason = "The GTK 4 build has never run on macOS in CI (the `desktop` job builds on Ubuntu and Arch only), and a usable macOS app needs the GTK runtime bundled (gtk-mac-bundler) plus an Apple Developer ID to sign and notarise it (clients/desktop/PACKAGING.md)."
+reason = "Homebrew no longer publishes Intel macOS bottles of the GTK 4 stack: gtk4 4.24, glib 2.90, libadwaita 1.10, librsvg, cairo and pango offer Apple-silicon bottles only. An Intel build would compile all of it from source, on a platform Homebrew no longer supports, and GitHub's last Intel macOS runner (`macos-15-intel`) retires in August 2027. Apple-silicon Macs run the arm64 build; Intel Macs cannot, because Rosetta translates Intel code to Apple silicon and not the other way."
 
 [[release_binaries.targets]]
 id = "app-web"
