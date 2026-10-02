@@ -1,0 +1,132 @@
+{
+ "snapshot_at_utc": "2026-10-01T21:45:14Z",
+ "files": [
+  "server-5.log",
+  "server-4.log",
+  "server-3.log",
+  "server-2.log",
+  "server-1.log",
+  "server.log"
+ ],
+ "line_families": {
+  "time=": 4524,
+  "GIN": 9421,
+  "other": 71020,
+  "slot/srv": 64645
+ },
+ "file_time_spans_local": {
+  "server-5.log": [
+   "2026-09-27T02:13:59.359-04:00",
+   "2026-09-27T02:14:35-04:00"
+  ],
+  "server-4.log": [
+   "2026-09-27T02:15:51.263-04:00",
+   "2026-09-27T02:23:32-04:00"
+  ],
+  "server-3.log": [
+   "2026-09-27T07:01:23.026-04:00",
+   "2026-09-28T10:51:58-04:00"
+  ],
+  "server-2.log": [
+   "2026-09-28T12:23:10.600-04:00",
+   "2026-09-30T16:26:14.414-04:00"
+  ],
+  "server-1.log": [
+   "2026-09-30T19:54:03.730-04:00",
+   "2026-09-30T19:54:05-04:00"
+  ],
+  "server.log": [
+   "2026-09-30T19:54:18.025-04:00",
+   "2026-10-01T17:41:02-04:00"
+  ]
+ },
+ "tasks": 691,
+ "tasks_with_access_line": 688,
+ "inference_access_lines_without_task": 2163,
+ "orphan_status_paths": [
+  [
+   "200 /api/codex/v1/responses",
+   2066
+  ],
+  [
+   "200 /api/generate",
+   67
+  ],
+  [
+   "200 /v1/chat/completions",
+   10
+  ],
+  [
+   "429 /v1/responses",
+   6
+  ],
+  [
+   "499 /api/chat",
+   5
+  ],
+  [
+   "200 /api/chat",
+   3
+  ],
+  [
+   "429 /api/codex/v1/responses",
+   3
+  ],
+  [
+   "502 /api/codex/v1/responses",
+   1
+  ],
+  [
+   "400 /api/codex/v1/responses",
+   1
+  ],
+  [
+   "400 /api/chat",
+   1
+  ]
+ ],
+ "end_kinds": [
+  [
+   "no_task",
+   2163
+  ],
+  [
+   "stop",
+   550
+  ],
+  [
+   "cancelled",
+   68
+  ],
+  [
+   "length",
+   47
+  ],
+  [
+   "abandoned",
+   17
+  ],
+  [
+   "length_ctx",
+   8
+  ],
+  [
+   "running_at_snapshot",
+   1
+  ]
+ ],
+ "models": [
+  [
+   null,
+   2163
+  ],
+  [
+   "gpt-oss:20b",
+   678
+  ],
+  [
+   "qwen3:14b",
+   13
+  ]
+ ]
+}

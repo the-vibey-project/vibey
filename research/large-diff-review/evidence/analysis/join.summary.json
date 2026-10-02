@@ -1,0 +1,141 @@
+{
+ "log_coverage_utc": {
+  "server-5.log": [
+   "2026-09-27T02:13:59.359000-04:00",
+   "2026-09-27T02:14:35-04:00"
+  ],
+  "server-4.log": [
+   "2026-09-27T02:15:51.263000-04:00",
+   "2026-09-27T02:23:32-04:00"
+  ],
+  "server-3.log": [
+   "2026-09-27T07:01:23.026000-04:00",
+   "2026-09-28T10:51:58-04:00"
+  ],
+  "server-2.log": [
+   "2026-09-28T12:23:10.600000-04:00",
+   "2026-09-30T16:26:14.414000-04:00"
+  ],
+  "server-1.log": [
+   "2026-09-30T19:54:03.730000-04:00",
+   "2026-09-30T19:54:05-04:00"
+  ],
+  "server.log": [
+   "2026-09-30T19:54:18.025000-04:00",
+   "2026-10-01T17:41:02-04:00"
+  ]
+ },
+ "workloads": [
+  [
+   "no_task",
+   2163
+  ],
+  [
+   "other",
+   439
+  ],
+  [
+   "ci_review",
+   125
+  ],
+  [
+   "other_review_shaped",
+   65
+  ],
+  [
+   "other_probe",
+   22
+  ],
+  [
+   "study_source",
+   12
+  ],
+  [
+   "ci_probe",
+   9
+  ],
+  [
+   "study_think_low",
+   8
+  ],
+  [
+   "study_think_medium",
+   8
+  ],
+  [
+   "unjoined",
+   3
+  ]
+ ],
+ "ci_request_clients": [
+  [
+   "::1",
+   134
+  ]
+ ],
+ "ci_unmatched_v6": [
+  [
+   "other_probe",
+   1
+  ]
+ ],
+ "review_shaped_unmatched_clients": [
+  [
+   "127.0.0.1",
+   65
+  ]
+ ],
+ "reviews_in_log_span": 105,
+ "reviews_in_log_span_with_requests": 82,
+ "reviews_in_log_span_by_code_and_joined": [
+  [
+   [
+    "reviewed",
+    true
+   ],
+   42
+  ],
+  [
+   [
+    "model_timeout",
+    true
+   ],
+   29
+  ],
+  [
+   [
+    "diff_exceeds_window",
+    false
+   ],
+   13
+  ],
+  [
+   [
+    "cancelled",
+    true
+   ],
+   9
+  ],
+  [
+   [
+    "cancelled",
+    false
+   ],
+   5
+  ],
+  [
+   [
+    "chunk_budget_exceeded",
+    false
+   ],
+   5
+  ],
+  [
+   [
+    "answer_incomplete",
+    true
+   ],
+   2
+  ]
+ ]
+}

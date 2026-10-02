@@ -203,3 +203,21 @@ what was seen, and what it changed.
      D4-T1 #1131 diff row is void and re-runs. The audit runs again before every stage
      boundary and before any number is reported.
   Stage 1 was stopped while a CI review was in flight and restarted (resumes from cache).
+- **00:10 (10-02)** Two drafts merged by the operator (#1340 at 03:17Z, #1341 at 03:42Z);
+  work continues on `research/large-diff-review-3` from develop (ca9e47452). Committed the
+  sibling tracks' outputs so they can be cited: `prior-art/` (findings, sources,
+  search-log; cutoffs in their headers; the "taken from memory" flags in sources.md left
+  as they are) and `evidence/` (findings, analysis code and summaries, figures,
+  `dataset-reviews.jsonl`, and `dataset-ollama.jsonl` after review: per-request metrics
+  only — no prompts, no paths, no tokens; client addresses are loopback). `evidence/raw/`
+  (28 MB of Ollama/GitHub logs, artifacts, diffs) stays on the host, gitignored, with its
+  12-line sha256 `MANIFEST` and `SNAPSHOT_AT_UTC` tracked. One edit to EVIDENCE's code:
+  `analysis/analyze.py` read a document by an absolute home path; it now resolves it from
+  the repository root.
+- **00:12** **Count reconciliation.** My 23:05 status said "63 requests, ~3.0 model-hours";
+  that was my arithmetic error (Stage 0's 8 requests added a second time — `analyze.py
+  requests` printed 55, which already includes them). Authoritative count: the records in
+  `results/requests.jsonl` (snapshot `data/requests.jsonl`) minus the keys in
+  `invalidations.jsonl`, as `analyze.py requests` computes it: 55 at 23:05; 56 in the
+  #1341 snapshot; 54 standing after the 2 voided D4-T1 records. Every count reported from
+  now on is that function's output at a stated time.
