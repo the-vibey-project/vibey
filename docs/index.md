@@ -456,6 +456,8 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Configuration reference](reference/configuration.md) | The full `vibey.toml` schema, with defaults and an example file |
 | [System requirements](reference/system-requirements.md) | Hardware, software, network and per-client requirements, re-measured weekly, with what is measured, derived or stale |
 | [How far vibey is from full autonomy](reference/autonomy.md) | The delivery loop's stages, each measured weekly from the forge, the review canary, the code and the local queue, with what would close each gap |
+| [Host health](reference/host-health.md) | The machine vibey runs on, measured weekly on the host itself (SSD, battery, memory and swap, thermals, generation rate), with a forecast of when it needs replacing |
+| [Host optimization](runbooks/host-optimization.md) | The host's measured memory and SSD-write budget, and its declared, gated and reversible tuning plan in three classes |
 | [How vibey survives a crashed agent](case-studies/how-vibey-survives-a-crashed-agent.md) | A case study: the problem, the fixes that fail, the lease-and-ledger design, the chaos test that checks it, and what it costs |
 | [Convergence-Driven Development](guides/convergence-driven-development.md) | The CDD loop above SDD and TDD, convergence/divergence checks at four scopes, the atom model, and delivery evidence |
 | [Kubernetes guide](guides/kubernetes.md) | Container, Helm chart, KEDA autoscaling, and its own troubleshooting section |
