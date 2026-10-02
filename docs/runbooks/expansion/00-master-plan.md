@@ -53,7 +53,7 @@ set (`scripts/release_binaries.toml`, target `app-ios`), though nothing submits 
 **08** has started, with the hub's API (ADR-0068) and device pairing (ADR-0071) on the server
 side, and the clients under `clients/` (`app`, `desktop`, `vscode`, `krypton-app`); **09**
 attaches Linux desktop bundles (Flatpak and a tarball) to every GitHub Release since 3.3.0,
-and a macOS `.dmg` from 3.3.1 ([Downloads](../../guides/downloads.md)). The other rows were
+and a macOS `.dmg` from 3.4.0 ([Downloads](../../guides/downloads.md)). The other rows were
 not re-checked for this note.
 
 House rule: every runbook carries a `> **Status (YYYY-MM-DD):** …` line

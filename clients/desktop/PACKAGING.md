@@ -50,7 +50,7 @@ CI already proves the parts every recipe relies on, on Ubuntu, on Arch and on ma
 
 ## Order of work
 
-1. **Release assets.** Done for the Flatpak bundle, the Ubuntu tarball and, from 3.3.1,
+1. **Release assets.** Done for the Flatpak bundle, the Ubuntu tarball and, from 3.4.0,
    the macOS `.dmg`: `release-binaries.yml` builds each from the released commit and
    attaches it to the vibey GitHub Release (3.3.0 was the first to carry the Linux files). Still to come: `krypton-desktop-vX.Y.Z` tags for the recipes to
    fetch, and the Arch package as an asset. None of this is a store upload.

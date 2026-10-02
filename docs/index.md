@@ -105,8 +105,8 @@ For the sovereign default (a local model), memory is the binding constraint.
 
 Prefer a ready-built file? Every release on GitHub also carries the user interfaces built
 for each supported platform: krypton desktop for Linux (a Flatpak bundle and an Ubuntu
-build, x86_64 and arm64) and, from 3.3.1, for macOS on Apple silicon (a self-contained
-`.dmg`), the krypton app for Android, the web and, from 3.3.1, iOS (signed for TestFlight
+build, x86_64 and arm64) and, from 3.4.0, for macOS on Apple silicon (a self-contained
+`.dmg`), the krypton app for Android, the web and, from 3.4.0, iOS (signed for TestFlight
 and the App Store), krypton for VS Code (also on Open VSX), and the Python wheels below,
 with checksums and build provenance. The
 [downloads page](guides/downloads.md) lists each file, what it runs on and whether it is signed.
