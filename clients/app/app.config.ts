@@ -20,6 +20,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: identity.name,
   slug: identity.slug,
+  // The Expo account that owns the EAS project (`eas init` asks for it; a fork changes it).
+  ...(identity.easOwner ? { owner: identity.easOwner } : {}),
   scheme: identity.scheme,
   version: '0.1.0',
   orientation: 'default',
