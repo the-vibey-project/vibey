@@ -124,3 +124,107 @@ json.decoder.JSONDecodeError: Expecting value: line 1 column 2 (char 1)
 {"arm": "D16-T1", "case_id": "host-1282", "code": "answer_incomplete", "wall_s": 775.5, "parts": 5, "forced": 0, "elapsed_s": 816.6}
 [stage1] D16-T1 dropped: no verdict on host 1282 (answer_incomplete)
 {"arm": "D16-BF4096", "case_id": "host-1282", "code": "reviewed", "wall_s": 1254.6, "parts": 5, "forced": 6, "elapsed_s": 1353.1}
+{"arm": "A2", "case_id": "host-1282", "code": "reviewed", "wall_s": 1614.12, "parts": 4, "forced": 0, "elapsed_s": 1647.0}
+{"arm": "A1", "case_id": "host-1282", "code": "reviewed", "wall_s": 1254.84, "parts": 8, "forced": 1, "elapsed_s": 1320.8}
+{"arm": "D16-T1-BF8192", "case_id": "host-1282", "code": "reviewed", "wall_s": 1141.0, "parts": 5, "forced": 1, "elapsed_s": 1198.5}
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part1'} after 106s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56706->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56775->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56850->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56901->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56972->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57031->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57110->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57159->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57217->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57308->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57412->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57521->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:57558->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58005->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58202->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58494->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58649->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58803->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58904->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58971->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:59051->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:59096->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:59277->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:59355->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:59406->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:59540->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part1'} after 82s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:61788->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:62359->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:63550->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:63815->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64069->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64110->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:50770->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51637->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51674->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51970->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:53677->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56115->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58808->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:58951->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:60245->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:62726->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64202->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64426->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64460->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64662->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64697->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:64879->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:65024->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:65207->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:65241->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:65425->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:65459->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:49233->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:49251->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:49459->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:49682->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:49982->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:50152->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:50326->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:50531->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:50703->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:50864->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:50896->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51091->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51279->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51407->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51579->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51768->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:51936->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:52097->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:52313->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:52758->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:52852->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:53042->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:53278->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:53482->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:53663->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part1'} after 98s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:60916->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:60982->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:62601->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:49954->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part1'} after 150s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:60958->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:61064->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part2'} after 14s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:55721->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:55759->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part2'} after 45s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56526->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:56562->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part2'} after 50s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:61108->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:61152->[::1]:11434
+[etiquette] yielded {'arm': 'D32-T1', 'case': 'host-1282', 'part': 'part2'} after 254s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:61752->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:61797->[::1]:11434
+{"arm": "D32-T1", "case_id": "host-1282", "code": "reviewed", "wall_s": 1190.3, "parts": 2, "forced": 0, "elapsed_s": 12274.6}

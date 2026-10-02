@@ -41,7 +41,18 @@ def pinned_settings() -> dict[str, Any]:
     return now
 
 
-NUM_CTX = 65536  # constant, so no request of ours makes the runner reload (production varies it)
+NUM_CTX = 65536
+# Alternative reviewers run at their native window (qwen3 and qwen2.5-coder: 40,960), so
+# their reserve is cut to 8,192 to leave the parts room (`DecoupledConfig.num_predict`).
+ALT_NUM_CTX = 40960
+
+
+def num_ctx_for(model: str) -> int:
+    return (
+        NUM_CTX if model.startswith("gpt-oss") else ALT_NUM_CTX
+    )  # constant, so no request of ours makes the runner reload (production varies it)
+
+
 ANSWER_CAP = 2048
 FORCE_NOTE = (
     "\n\n[Reasoning budget reached. Stop analysing now and give the final verdict JSON, based"
@@ -129,7 +140,7 @@ class Asker:
     def sealed(self, payload: dict[str, Any]) -> tuple[dict[str, Any], tuple[str, str]]:
         codes = seeded_codes(payload)
         body = lr.SIZED_CHAT.seal(payload, *codes)
-        body["options"]["num_ctx"] = NUM_CTX
+        body["options"]["num_ctx"] = num_ctx_for(str(payload.get("model", "")))
         return body, codes
 
     def ask(
@@ -268,7 +279,12 @@ class Asker:
             },
         }
         try:
-            verdict = lr.SIZED_CHAT.answer(body, num_ctx=NUM_CTX, reserve=num_predict, codes=codes)
+            verdict = lr.SIZED_CHAT.answer(
+                body,
+                num_ctx=num_ctx_for(str(rec.get("model", ""))),
+                reserve=num_predict,
+                codes=codes,
+            )
         except lr.ReviewRefused as refused:
             return None, refused.code, str(refused)[:300]
         except (TypeError, ValueError) as error:

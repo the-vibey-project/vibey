@@ -262,3 +262,29 @@ what was seen, and what it changed.
   the analysis channel and never opened the final one. A third failure mode (after the
   T=0 loop and the T=1 grammar escape); like the escape, the forcing arms' phase 2 repairs
   it (an empty answer counts as stopped in thought). Contention audit: 0 contended.
+- **08:04 (10-02)** **Stage 2 plan, fixed before any Stage 2 outcome.** Stage 1's
+  rule passes the D_k that reached a verdict on all four hosts; at k = 8 and k = 16 the
+  unforced T=1 arms each failed one host on an unusable answer, while every forced arm
+  passed, so the two k that go on are **16 and 32, both with forcing**. Round 1 (9 dev
+  needle parts on #1131/#1155/#1161 at early/middle/late, plus 3 seeded clean parts per
+  host), in this order (most decision-relevant first):
+  1. D16-T1-BF8192 (base) 2. D32-T1-BF8192 3. D16-BF4096 (T=0 forced) 4. A2 (production
+  at T=1) 5. A1 (production, forced at 4,096) 6. +FF 7. +VER 8. +SA 9. +CTXnone
+  10. +CTXfile 11. +TRI (all on the base) 12. D16-T1-high-BF8192 13. D16-T1-BF4096 and
+  D16-T1-BF12288 (the R sweep) 14. D16-T1-low-BF8192 (negative control only)
+  15. D16-TD@qwen3:14b and D16-TD@qwen2.5-coder:14b (alternative reviewers at their own
+  sampling defaults, seed 42, native 40,960 window, reserve 8,192).
+  Not run, for time: SM (small-model triage) and gemma4:26b (a 17.7 GB swap on a 24 GB
+  host shared with live reviews) — declared here, so their absence is not a silent gap.
+  Halving score = part recall − composed diff-level FP (Hm4, m = the arm's mean parts per
+  S2 host), ties by mean minutes per request; +CONS is scored on every arm at no cost.
+- **11:10 (10-02)** **Stage 1 complete** (4 dev hosts; `analyze.py s1`; 198 requests,
+  10.13 model-hours of requests in the store at this time). Verdict on every host — kept:
+  A1 (production + forcing, 4/4, p50 18.4 min), A2 (production at T=1, 4/4, 19.2),
+  D16-BF4096 (T=0 forced, 4/4, 20.2), D16-T1-BF8192 (4/4, 18.1), D32-T1 (4/4, 18.6).
+  Dropped at their first failure: A0 (production, #1131), D4/D8/D16/D32 at T=0 (#1131,
+  reasoning ran to the cap), D4-T1 (#1131, grammar escape), D8-T1 (#1282, empty answer),
+  D16-T1 (#1282, grammar escape). Every arm's time is far under T_cap (max 28 min).
+  Four hosts can only prune: a 4/4 arm's Wilson interval is [0.51, 1.00]. The CI review
+  load held the model from ~07:50 to 11:05 (the last cell waited 3 h); the harness waited
+  as registered. Stage 2 round 1 starts from the chain in `harness/round1.sh`.
