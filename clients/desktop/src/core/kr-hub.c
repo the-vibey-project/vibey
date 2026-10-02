@@ -35,6 +35,16 @@ kr_hub_endpoint_new(const char *scheme, const char *host, guint16 port, const ch
 }
 
 KrHubEndpoint *
+kr_hub_endpoint_new_device(const char *scheme, const char *host, guint16 port,
+                           const char *device_id, const char *key, const char *fingerprint)
+{
+    KrHubEndpoint *endpoint = kr_hub_endpoint_new(scheme, host, port, key);
+    endpoint->device_id = g_strdup(device_id);
+    endpoint->fingerprint = fingerprint != NULL ? g_ascii_strdown(fingerprint, -1) : NULL;
+    return endpoint;
+}
+
+KrHubEndpoint *
 kr_hub_endpoint_new_local(const char *token)
 {
     return kr_hub_endpoint_new("http", KR_HUB_DEFAULT_HOST, KR_HUB_DEFAULT_PORT, token);
@@ -43,8 +53,9 @@ kr_hub_endpoint_new_local(const char *token)
 KrHubEndpoint *
 kr_hub_endpoint_copy(const KrHubEndpoint *endpoint)
 {
-    return kr_hub_endpoint_new(endpoint->scheme, endpoint->host, endpoint->port,
-                               endpoint->token);
+    return kr_hub_endpoint_new_device(endpoint->scheme, endpoint->host, endpoint->port,
+                                      endpoint->device_id, endpoint->token,
+                                      endpoint->fingerprint);
 }
 
 void
@@ -57,6 +68,8 @@ kr_hub_endpoint_free(KrHubEndpoint *endpoint)
     if (endpoint->token != NULL)
         wipe(endpoint->token, strlen(endpoint->token));
     g_free(endpoint->token);
+    g_free(endpoint->device_id);
+    g_free(endpoint->fingerprint);
     g_free(endpoint);
 }
 
@@ -121,6 +134,8 @@ kr_hub_path(KrHubRoute route, const char *project_id, const char *id)
         return g_strdup("/api/v1/loops");
     case KR_HUB_ROUTE_DOCTOR:
         return g_strdup("/api/v1/doctor");
+    case KR_HUB_ROUTE_PAIRING_CLAIM:
+        return g_strdup("/api/v1/pairing/claim");
     }
     return NULL;
 }
@@ -128,7 +143,48 @@ kr_hub_path(KrHubRoute route, const char *project_id, const char *id)
 gboolean
 kr_hub_route_writes(KrHubRoute route)
 {
-    return route == KR_HUB_ROUTE_JOB_BUMP || route == KR_HUB_ROUTE_GATE_ANSWER;
+    return route == KR_HUB_ROUTE_JOB_BUMP || route == KR_HUB_ROUTE_GATE_ANSWER ||
+           route == KR_HUB_ROUTE_PAIRING_CLAIM;
+}
+
+gboolean
+kr_hub_host_is_loopback(const char *host)
+{
+    if (host == NULL)
+        return FALSE;
+    static const char *const loopback[] = {"127.0.0.1", "localhost", "::1", "[::1]"};
+    for (size_t i = 0; i < G_N_ELEMENTS(loopback); i++) {
+        if (g_ascii_strcasecmp(host, loopback[i]) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+const char *const kr_hub_device_headers[4] = {
+    "x-vibey-device",
+    "x-vibey-timestamp",
+    "x-vibey-nonce",
+    "x-vibey-signature",
+};
+
+char *
+kr_hub_canonical(const char *device_id, const char *method, const char *path, const char *query,
+                 const char *timestamp, const char *nonce, const char *body_sha256)
+{
+    const char *fields[] = {device_id, method, path, query, timestamp, nonce, body_sha256};
+    for (size_t i = 0; i < G_N_ELEMENTS(fields); i++) {
+        if (fields[i] == NULL || strchr(fields[i], '\n') != NULL)
+            return NULL;
+    }
+    g_autofree char *upper = g_ascii_strup(method, -1);
+    return g_strjoin("\n", device_id, upper, path, query, timestamp, nonce, body_sha256, NULL);
+}
+
+char *
+kr_hub_signature(const char *key, const char *canonical)
+{
+    return g_compute_hmac_for_data(G_CHECKSUM_SHA256, (const guchar *) key, strlen(key),
+                                   (const guchar *) canonical, strlen(canonical));
 }
 
 static gboolean

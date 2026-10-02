@@ -2,9 +2,15 @@
 /* kr-hub: where the hub is, what to ask it, and what its refusals mean.
  *
  * The pure half of the hub client (ADR-0068, docs/reference/hub-api.md): an endpoint, the
- * route paths with every id escaped, the host token read the way the hub writes it, and
- * each refusal status said in words. The transport that actually speaks HTTP is
- * kr-hub-client.h, over libsoup 3. */
+ * route paths with every id escaped, the host token read the way the hub writes it, the
+ * signature a paired device puts on each request, and each refusal status said in words.
+ * The transport that actually speaks HTTP is kr-hub-client.h, over libsoup 3.
+ *
+ * Two kinds of caller reach a hub. The host, on the hub's own computer, presents the
+ * hub's token as a bearer. A paired device holds a per-device key instead and never
+ * sends it: it signs every request with HMAC-SHA256 over the canonical form the hub
+ * checks (src/vibey/domain/hub_pairing.py, `canonical`; src/vibey/infrastructure/hub/
+ * devices.py, `DeviceAuthenticator`). */
 
 #ifndef KR_HUB_H
 #define KR_HUB_H
@@ -25,17 +31,26 @@ typedef enum {
     KR_HUB_ERROR_ENDPOINT,  /* the endpoint cannot be said as a URL */
     KR_HUB_ERROR_REFUSED,   /* the hub answered with a refusal status */
     KR_HUB_ERROR_TRANSPORT, /* the request never got an answer */
+    KR_HUB_ERROR_FINGERPRINT, /* the hub's certificate is not the one pinned at pairing */
 } KrHubError;
 
 typedef struct {
-    char *scheme; /* "http" on loopback; "https" once pairing lands */
+    char *scheme; /* "http" on loopback; "https" for a hub on the LAN, which serves TLS */
     char *host;
     guint16 port;
-    char *token; /* the bearer token; NULL until known */
+    char *token;       /* the host's bearer token, or a paired device's key; NULL until known */
+    char *device_id;   /* set for a paired device: `token` is then its key, used only to sign */
+    char *fingerprint; /* the SHA-256 (lowercase hex) of the one certificate this hub may show,
+                        * pinned at pairing; NULL when nothing is pinned */
 } KrHubEndpoint;
 
 KrHubEndpoint *kr_hub_endpoint_new(const char *scheme, const char *host, guint16 port,
                                    const char *token);
+/* A paired device's endpoint: it signs with `key` as `device_id`, and accepts only the
+ * certificate whose fingerprint is `fingerprint` (NULL: no certificate is pinned). */
+KrHubEndpoint *kr_hub_endpoint_new_device(const char *scheme, const char *host, guint16 port,
+                                          const char *device_id, const char *key,
+                                          const char *fingerprint);
 KrHubEndpoint *kr_hub_endpoint_new_local(const char *token);
 KrHubEndpoint *kr_hub_endpoint_copy(const KrHubEndpoint *endpoint);
 void kr_hub_endpoint_free(KrHubEndpoint *endpoint);
@@ -59,6 +74,7 @@ typedef enum {
     KR_HUB_ROUTE_LANES,
     KR_HUB_ROUTE_LOOPS,
     KR_HUB_ROUTE_DOCTOR,
+    KR_HUB_ROUTE_PAIRING_CLAIM, /* a device, before it holds a key: the only unsigned write */
 } KrHubRoute;
 
 /* The path (and query) of a route, every id percent-escaped. NULL when a needed id is
@@ -77,6 +93,24 @@ char *kr_hub_read_token(const char *path, GError **error);
  * or empty `state_dir` means the hub's default, platformdirs' user_state_dir("vibey")/hub:
  * ~/Library/Application Support/vibey/hub on macOS, $XDG_STATE_HOME/vibey/hub elsewhere. */
 char *kr_hub_token_path(const char *state_dir);
+
+/* Whether `host` names this computer's loopback: nothing sent to it crosses a network. */
+gboolean kr_hub_host_is_loopback(const char *host);
+
+/* What a paired device signs: one field per line, the method upper-cased, `path` as the
+ * hub reads it (percent-decoded) and `query` as sent. NULL when a field holds a newline,
+ * since no two requests may share a canonical form. */
+char *kr_hub_canonical(const char *device_id, const char *method, const char *path,
+                       const char *query, const char *timestamp, const char *nonce,
+                       const char *body_sha256);
+
+/* HMAC-SHA256 of `canonical` under `key` (its UTF-8 bytes), as lowercase hex: the value of
+ * the x-vibey-signature header, after "sha256=". */
+char *kr_hub_signature(const char *key, const char *canonical);
+
+/* The four headers a paired device sends, in order: x-vibey-device, x-vibey-timestamp,
+ * x-vibey-nonce, x-vibey-signature. */
+extern const char *const kr_hub_device_headers[4];
 
 /* A refusal status in words a person can act on (hub-api.md, "Refusals"). Static. */
 const char *kr_hub_status_text(guint status);
