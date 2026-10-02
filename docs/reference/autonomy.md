@@ -280,7 +280,7 @@ and appends the result), or when any generated block is out of date.
 To measure by hand:
 
 ```bash
-VIBEY_AUTONOMY_QUEUE_DSN='postgresql:///vibey?host=/tmp' \
+VIBEY_AUTONOMY_QUEUE_DSN='postgresql:///vibey' \
   uv run python scripts/autonomy_scorecard.py measure
 uv run python scripts/autonomy_scorecard.py check
 ```
