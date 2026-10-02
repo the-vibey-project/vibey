@@ -1,1 +1,0 @@
-- **krypton app:** each identity names the Expo account that owns its EAS project (`owner`, from `easOwner` in `src/core/identities.json`), which `eas init` asks for and cannot write into a dynamic `app.config.ts` itself.

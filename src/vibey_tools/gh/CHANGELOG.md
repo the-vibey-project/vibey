@@ -1405,6 +1405,11 @@ This file follows Keep a Changelog and semantic versioning conventions.
   bound, its age, the whole corpus, and the settings in force -- and exits 0, 1 or 3. A 2026-09-30
   audit found `think = "low"` passing every pull request the gate had blocked; no study had
   carried a known-true defect, so recall was never measured.
+- **Feature:** `vibey_gh.markdown_fences.MarkdownFences` finds a Markdown fenced code block that
+  never closes, read the way CommonMark reads it: backtick and tilde fences, a closer of the same
+  character at least as long as the opener, and fences inside block quotes, list items and HTML
+  blocks. The documentation deep scan uses it instead of counting backticks, which failed a
+  correct file every night from 2026-09-28, and names every unclosed fence instead of the first.
 
 ### Bug Fixes
 
@@ -1444,6 +1449,12 @@ This file follows Keep a Changelog and semantic versioning conventions.
   retried, while a request that started on a free model and still ran past its deadline is
   `model_timeout`, says why, and is not retried. All three are `[pr_automation.fallback]`
   keys, rendered into `pr-review.yml`; `0` for them restores the old behaviour.
+- **Fix:** `vibey-gh issue-triage` asks GitHub again after a transient failure instead of failing
+  the hourly sweep: a `502`, `503` or `504`, GraphQL's "Something went wrong while executing your
+  query", or a secondary rate limit that carries `Retry-After`. Up to three retries, backing off
+  from 5 seconds; each one is announced on stderr, and every other failure fails exactly as it
+  did. The new `[forge_retry]` table configures all of it. `GhTransport` takes the policy as an
+  opt-in `retry`, for calls that are safe to repeat; without one it runs each call once, as before.
 
 ## Historical releases
 

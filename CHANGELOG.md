@@ -15,6 +15,37 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [3.4.0] (2026-10-02)
+
+### Features
+
+- **krypton desktop:** pairs with a hub by its code, the half of ADR-0068's pairing the desktop lacked. On the Devices page, type the 6-digit code `vibey hub pair` shows (for a hub krypton found, whose advertised certificate it shows for you to compare) or paste the whole `vibey-pair://` address. krypton claims it from `POST /api/v1/pairing/claim`, pins the hub's certificate fingerprint (any other certificate is refused before the code is sent), keeps the device key owner-only (mode 0600) beside its settings, and from then on signs every request with it as the hub's `DeviceAuthenticator` checks. A wrong, spent or expired code, pairing not enabled, too many attempts, no hub answering and a certificate mismatch are each said plainly. The "cannot pair devices yet" message is gone.
+- **krypton app:** each identity names the Expo account that owns its EAS project (`owner`, from `easOwner` in `src/core/identities.json`), which `eas init` asks for and cannot write into a dynamic `app.config.ts` itself.
+- **krypton app:** the stable identity carries its EAS project id (`extra.eas.projectId`, from `src/core/identities.json`), which `eas init` cannot write into a dynamic `app.config.ts` itself. Nightly has its own slug (`krypton-nightly`) and carries none until it has its own EAS project, so its config omits the key rather than naming the wrong project.
+- **krypton desktop:** now built for macOS (Apple silicon). Every release attaches `krypton-desktop-<version>-macos-arm64.dmg`: a self-contained `krypton.app` that carries its own GTK 4 runtime and needs no Homebrew. It is made by `scripts/macos_app_bundle.py`, finds hubs on the network over Bonjour, and is ad-hoc signed until the Developer ID secrets are set. Once they are, the release signs and notarises it. CI's `desktop` job gains a macOS cell that builds, tests, bundles and launches it. Intel Macs are not supported: Homebrew no longer bottles the GTK 4 stack for them.
+
+### Bug Fixes
+
+- **Documentation deep scan:** reads fenced code blocks the way CommonMark does instead of
+  counting backticks, which had failed the scan every night since 2026-09-28 on a correct file.
+  It now names every Markdown file whose fence really never closes.
+- **Context microslices:** the converter (`src/vibey_tools/skills/tools/slice_markdown.py`) no
+  longer splits a document at a `## ` line inside fenced code. Four skills that show a heading
+  inside a code block had been cut mid-fence into eight slices that opened a block they never
+  closed. Their slice sets are regenerated, and the deep scan now finds no unclosed fence.
+- **krypton app:** `clients/app/eas.json` no longer carries a `"$comment"` key, which EAS's strict schema rejected (`eas init` failed with `"$comment" is not allowed`); the note now lives in the app's README.
+- **krypton app:** the EAS projects are owned by the Expo organisation `the-vibey-project`, not a personal account; `easOwner` now says so, so `eas credentials` no longer refuses the project. The nightly identity is linked to its own EAS project (`@the-vibey-project/krypton-nightly`), since EAS links a project id to one slug.
+- **krypton app (iOS):** EAS keeps the build number (`appVersionSource: "remote"`), so `autoIncrement` works with the dynamic `app.config.ts`. With `"local"`, EAS must write the incremented number back into the app config, which it cannot do for a dynamic config, and the release's iOS build stopped with `autoIncrement option is not supported when using app.config.js` (release-binaries dry run 36973159467, after the credentials had loaded).
+- **Delivery estimate:** the hourly issue triage no longer fails on a transient GitHub error. A
+  `504 Gateway Timeout` or GraphQL "Something went wrong" on one label edit is asked again, up to
+  three times with backoff (`[forge_retry]` in `.vibey-gh.toml`); any other error still fails the
+  job, as it did.
+- **Release:** a change to the client apps (`clients/`) now derives a patch release. Since every release attaches the clients' binaries (#1317), a client-only change is releasable; before, it derived "nothing to release", so no version, no Release run and no binaries.
+
+### Documentation
+
+- **Paper and documentation for 3.3.1:** the paper reads the 3.3.0 release as evidence (eighteen assets, eleven client files each matching its checksum and carrying a per-file provenance attestation, `vibey-engine` 3.3.0 with all twelve console scripts, and the first Open VSX listing of the VS Code extension) and states what 3.3.1 adds: the macOS desktop app, the iOS build signed for the App Store, and a release path a client-only change reaches. Its large-diff study section moves to the study's committed Stage 1 record (#1354): every unforced temperature-1 arm that reached all four screening diffs failed on #1282, by an empty answer or by an answer outside the response grammar, and only the arm that bounds its reasoning and then forces a verdict answered on all four; still mechanism and screening only, and production is unchanged. The autonomy scorecard is re-measured (1 of 11 stages, unchanged). The downloads page now lists the iOS package with its signing and says on what it depends instead of claiming it is not built (`scripts/release_binaries.py`, a new `apple-app-store` signing kind); the system requirements cover the macOS app and the iOS minimum; the README, the VS Code, app and desktop client docs, the expansion runbooks, `docs/project.mmd` and the releasing, quality-gates and engine-adapter skills (all four trees) drop claims 3.3.0 made stale; and the triaged-delivery runbook joins the navigation.
+
 ## [3.3.0] (2026-10-02)
 
 ### Features

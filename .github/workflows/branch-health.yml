@@ -61,7 +61,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey-engine==3.3.0"
+            python -m pip install --quiet "vibey-engine==3.4.0"
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Open, update or close the branch's tracking issue

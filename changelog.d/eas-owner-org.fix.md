@@ -1,1 +1,0 @@
-- **krypton app:** the EAS projects are owned by the Expo organisation `the-vibey-project`, not a personal account; `easOwner` now says so, so `eas credentials` no longer refuses the project. The nightly identity is linked to its own EAS project (`@the-vibey-project/krypton-nightly`), since EAS links a project id to one slug.
