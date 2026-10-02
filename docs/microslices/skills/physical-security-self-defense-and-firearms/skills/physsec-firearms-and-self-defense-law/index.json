@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-17-federal-firearms-law-2026-state-of-play-law-2026-95861b29df",
+    "purpose": "17 federal firearms law 2026 state of play law 2026",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law/001-17-federal-firearms-law-2026-state-of-play-law-2026.md",
+    "requires": [],
+    "links": [
+      "skill-18-south-carolina-firearms-and-self-defense-law-law-2026-d8c0dfc9b3"
+    ]
+  },
+  {
+    "id": "skill-18-south-carolina-firearms-and-self-defense-law-law-2026-d8c0dfc9b3",
+    "purpose": "18 south carolina firearms and self defense law law 2026",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law/002-18-south-carolina-firearms-and-self-defense-law-law-2026.md",
+    "requires": [
+      "skill-17-federal-firearms-law-2026-state-of-play-law-2026-95861b29df"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-1181027b39"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-1181027b39",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law/003-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-18-south-carolina-firearms-and-self-defense-law-law-2026-d8c0dfc9b3"
+    ],
+    "links": []
+  }
+]

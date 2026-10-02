@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-5-homes-what-burglars-say-and-what-that-implies-d96501dd8e",
+    "purpose": "5 homes what burglars say and what that implies",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/001-5-homes-what-burglars-say-and-what-that-implies.md",
+    "requires": [],
+    "links": [
+      "skill-6-home-hardening-prioritized-by-cost-effectiveness-14e4a31162"
+    ]
+  },
+  {
+    "id": "skill-6-home-hardening-prioritized-by-cost-effectiveness-14e4a31162",
+    "purpose": "6 home hardening prioritized by cost effectiveness",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/002-6-home-hardening-prioritized-by-cost-effectiveness.md",
+    "requires": [
+      "skill-5-homes-what-burglars-say-and-what-that-implies-d96501dd8e"
+    ],
+    "links": [
+      "skill-7-organizations-and-commercial-buildings-4c9b2e23f9"
+    ]
+  },
+  {
+    "id": "skill-7-organizations-and-commercial-buildings-4c9b2e23f9",
+    "purpose": "7 organizations and commercial buildings",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/003-7-organizations-and-commercial-buildings.md",
+    "requires": [
+      "skill-6-home-hardening-prioritized-by-cost-effectiveness-14e4a31162"
+    ],
+    "links": [
+      "skill-8-targeted-violence-and-active-assailants-a48c387564"
+    ]
+  },
+  {
+    "id": "skill-8-targeted-violence-and-active-assailants-a48c387564",
+    "purpose": "8 targeted violence and active assailants",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/004-8-targeted-violence-and-active-assailants.md",
+    "requires": [
+      "skill-7-organizations-and-commercial-buildings-4c9b2e23f9"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-eb5a09d87b"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-eb5a09d87b",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/005-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-8-targeted-violence-and-active-assailants-a48c387564"
+    ],
+    "links": []
+  }
+]

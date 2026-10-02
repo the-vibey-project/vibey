@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-8-the-basic-problem-46677257b9",
+    "purpose": "8 the basic problem",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/001-8-the-basic-problem.md",
+    "requires": [],
+    "links": [
+      "skill-9-how-copying-errors-happen-d19d8cb4c6"
+    ]
+  },
+  {
+    "id": "skill-9-how-copying-errors-happen-d19d8cb4c6",
+    "purpose": "9 how copying errors happen",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/002-9-how-copying-errors-happen.md",
+    "requires": [
+      "skill-8-the-basic-problem-46677257b9"
+    ],
+    "links": [
+      "skill-10-the-reasoning-external-and-internal-evidence-09313a602d"
+    ]
+  },
+  {
+    "id": "skill-10-the-reasoning-external-and-internal-evidence-09313a602d",
+    "purpose": "10 the reasoning external and internal evidence",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/003-10-the-reasoning-external-and-internal-evidence.md",
+    "requires": [
+      "skill-9-how-copying-errors-happen-d19d8cb4c6"
+    ],
+    "links": [
+      "skill-11-new-testament-textual-criticism-the-story-0b4a50e284"
+    ]
+  },
+  {
+    "id": "skill-11-new-testament-textual-criticism-the-story-0b4a50e284",
+    "purpose": "11 new testament textual criticism the story",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/004-11-new-testament-textual-criticism-the-story.md",
+    "requires": [
+      "skill-10-the-reasoning-external-and-internal-evidence-09313a602d"
+    ],
+    "links": [
+      "skill-12-hebrew-bible-textual-criticism-cb29afce5e"
+    ]
+  },
+  {
+    "id": "skill-12-hebrew-bible-textual-criticism-cb29afce5e",
+    "purpose": "12 hebrew bible textual criticism",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/005-12-hebrew-bible-textual-criticism.md",
+    "requires": [
+      "skill-11-new-testament-textual-criticism-the-story-0b4a50e284"
+    ],
+    "links": [
+      "skill-13-digital-tools-and-new-science-6d5a071b64"
+    ]
+  },
+  {
+    "id": "skill-13-digital-tools-and-new-science-6d5a071b64",
+    "purpose": "13 digital tools and new science",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/006-13-digital-tools-and-new-science.md",
+    "requires": [
+      "skill-12-hebrew-bible-textual-criticism-cb29afce5e"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-384e62ebb5"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-384e62ebb5",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/007-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-13-digital-tools-and-new-science-6d5a071b64"
+    ],
+    "links": []
+  }
+]

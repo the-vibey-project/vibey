@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-how-to-read-a-pointer-929c4122be",
+    "purpose": "how to read a pointer",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-reference/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-reference/001-how-to-read-a-pointer.md",
+    "requires": [],
+    "links": [
+      "skill-27-free-low-cost-training-and-references-42f5342144"
+    ]
+  },
+  {
+    "id": "skill-27-free-low-cost-training-and-references-42f5342144",
+    "purpose": "27 free low cost training and references",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-reference/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-reference/002-27-free-low-cost-training-and-references.md",
+    "requires": [
+      "skill-how-to-read-a-pointer-929c4122be"
+    ],
+    "links": [
+      "skill-28-glossary-08fd91639e"
+    ]
+  },
+  {
+    "id": "skill-28-glossary-08fd91639e",
+    "purpose": "28 glossary",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-reference/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-reference/003-28-glossary.md",
+    "requires": [
+      "skill-27-free-low-cost-training-and-references-42f5342144"
+    ],
+    "links": [
+      "skill-29-currency-notes-what-will-go-stale-first-c8efbd0023"
+    ]
+  },
+  {
+    "id": "skill-29-currency-notes-what-will-go-stale-first-c8efbd0023",
+    "purpose": "29 currency notes what will go stale first",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-reference/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-reference/004-29-currency-notes-what-will-go-stale-first.md",
+    "requires": [
+      "skill-28-glossary-08fd91639e"
+    ],
+    "links": [
+      "skill-30-sources-primary-and-high-quality-secondary-7dd75ec96a"
+    ]
+  },
+  {
+    "id": "skill-30-sources-primary-and-high-quality-secondary-7dd75ec96a",
+    "purpose": "30 sources primary and high quality secondary",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-reference/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-reference/005-30-sources-primary-and-high-quality-secondary.md",
+    "requires": [
+      "skill-29-currency-notes-what-will-go-stale-first-c8efbd0023"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-d32c5dcb35"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-d32c5dcb35",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-reference/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-reference/006-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-30-sources-primary-and-high-quality-secondary-7dd75ec96a"
+    ],
+    "links": []
+  }
+]

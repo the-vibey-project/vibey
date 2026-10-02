@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-23-what-history-is-b108601973",
+    "purpose": "23 what history is",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/001-23-what-history-is.md",
+    "requires": [],
+    "links": [
+      "skill-24-how-the-discipline-developed-the-ideas-that-still-matter-e30945bb0b"
+    ]
+  },
+  {
+    "id": "skill-24-how-the-discipline-developed-the-ideas-that-still-matter-e30945bb0b",
+    "purpose": "24 how the discipline developed the ideas that still matter",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/002-24-how-the-discipline-developed-the-ideas-that-still-matter.md",
+    "requires": [
+      "skill-23-what-history-is-b108601973"
+    ],
+    "links": [
+      "skill-25-the-historian-s-method-step-by-step-9945b398bc"
+    ]
+  },
+  {
+    "id": "skill-25-the-historian-s-method-step-by-step-9945b398bc",
+    "purpose": "25 the historian s method step by step",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/003-25-the-historian-s-method-step-by-step.md",
+    "requires": [
+      "skill-24-how-the-discipline-developed-the-ideas-that-still-matter-e30945bb0b"
+    ],
+    "links": [
+      "skill-26-the-special-problems-of-ancient-history-1b9ed10ab8"
+    ]
+  },
+  {
+    "id": "skill-26-the-special-problems-of-ancient-history-1b9ed10ab8",
+    "purpose": "26 the special problems of ancient history",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/004-26-the-special-problems-of-ancient-history.md",
+    "requires": [
+      "skill-25-the-historian-s-method-step-by-step-9945b398bc"
+    ],
+    "links": [
+      "skill-27-history-applied-to-the-bible-the-historical-critical-toolkit-41c58e99c5"
+    ]
+  },
+  {
+    "id": "skill-27-history-applied-to-the-bible-the-historical-critical-toolkit-41c58e99c5",
+    "purpose": "27 history applied to the bible the historical critical toolkit",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/005-27-history-applied-to-the-bible-the-historical-critical-toolkit.md",
+    "requires": [
+      "skill-26-the-special-problems-of-ancient-history-1b9ed10ab8"
+    ],
+    "links": [
+      "skill-28-how-scholarly-consensus-is-formed-and-how-to-read-it-c9f3da1820"
+    ]
+  },
+  {
+    "id": "skill-28-how-scholarly-consensus-is-formed-and-how-to-read-it-c9f3da1820",
+    "purpose": "28 how scholarly consensus is formed and how to read it",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/006-28-how-scholarly-consensus-is-formed-and-how-to-read-it.md",
+    "requires": [
+      "skill-27-history-applied-to-the-bible-the-historical-critical-toolkit-41c58e99c5"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-88d6f7e005"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-88d6f7e005",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/007-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-28-how-scholarly-consensus-is-formed-and-how-to-read-it-c9f3da1820"
+    ],
+    "links": []
+  }
+]

@@ -37,7 +37,7 @@
   {
     "source": "src/vibey_tools/skills/plugins/agile-delivery/skills/security-first-agile/SKILL.md",
     "output": "docs/microslices/skills/agile-delivery/skills/security-first-agile",
-    "count": 17
+    "count": 16
   },
   {
     "source": "src/vibey_tools/skills/plugins/ai-and-data/skills/ai-ml-landscape/SKILL.md",
@@ -272,6 +272,51 @@
   {
     "source": "src/vibey_tools/skills/plugins/banking-swift-and-payment-networks/skills/banking-ripple-xrp-ledger-and-honest-assessment/SKILL.md",
     "output": "docs/microslices/skills/banking-swift-and-payment-networks/skills/banking-ripple-xrp-ledger-and-honest-assessment",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-forgeries-looting-and-provenance",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-hebrew-aramaic-and-greek",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-history-and-historical-method",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-how-translation-is-done",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-latin-german-and-english",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-reference/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-reference",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-textual-criticism",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-three-verses-through-the-pipeline/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-three-verses-through-the-pipeline",
     "count": 5
   },
   {
@@ -757,7 +802,7 @@
   {
     "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-editing-a-reference-skill/SKILL.md",
     "output": "docs/microslices/skills/currency-research/skills/research-editing-a-reference-skill",
-    "count": 7
+    "count": 5
   },
   {
     "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-search-and-source-quality/SKILL.md",
@@ -767,7 +812,7 @@
   {
     "source": "src/vibey_tools/skills/plugins/currency-research/skills/research-weekly-pull-request/SKILL.md",
     "output": "docs/microslices/skills/currency-research/skills/research-weekly-pull-request",
-    "count": 7
+    "count": 6
   },
   {
     "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-architectural/SKILL.md",
@@ -2490,6 +2535,46 @@
     "count": 6
   },
   {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-alcohol-tobacco-and-cannabis",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-decision-tools-and-contested-questions/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-decision-tools-and-contested-questions",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-and-self-defense-law",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-foundations-and-threat-modeling/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-foundations-and-threat-modeling",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-reference/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-reference",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-securing-buildings",
+    "count": 5
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization/SKILL.md",
     "output": "docs/microslices/skills/political-science-human-systems-governance/skills/polisci-bureaucracy-parties-voter-behaviour-and-polarization",
     "count": 5
@@ -2977,7 +3062,7 @@
   {
     "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/codebase-modernization/SKILL.md",
     "output": "docs/microslices/skills/security-first-dev/skills/codebase-modernization",
-    "count": 17
+    "count": 16
   },
   {
     "source": "src/vibey_tools/skills/plugins/security-first-dev/skills/cybersecurity-implementation/SKILL.md",

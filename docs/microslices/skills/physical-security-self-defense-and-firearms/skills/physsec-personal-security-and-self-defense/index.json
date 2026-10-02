@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-9-personal-security-3f32e49841",
+    "purpose": "9 personal security",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/001-9-personal-security.md",
+    "requires": [],
+    "links": [
+      "skill-10-the-hierarchy-c28c6a0c23"
+    ]
+  },
+  {
+    "id": "skill-10-the-hierarchy-c28c6a0c23",
+    "purpose": "10 the hierarchy",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/002-10-the-hierarchy.md",
+    "requires": [
+      "skill-9-personal-security-3f32e49841"
+    ],
+    "links": [
+      "skill-11-what-the-evidence-says-about-training-ed0489a964"
+    ]
+  },
+  {
+    "id": "skill-11-what-the-evidence-says-about-training-ed0489a964",
+    "purpose": "11 what the evidence says about training",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/003-11-what-the-evidence-says-about-training.md",
+    "requires": [
+      "skill-10-the-hierarchy-c28c6a0c23"
+    ],
+    "links": [
+      "skill-12-less-lethal-tools-0a13f90f6f"
+    ]
+  },
+  {
+    "id": "skill-12-less-lethal-tools-0a13f90f6f",
+    "purpose": "12 less lethal tools",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/004-12-less-lethal-tools.md",
+    "requires": [
+      "skill-11-what-the-evidence-says-about-training-ed0489a964"
+    ],
+    "links": [
+      "skill-13-medical-self-defense-stop-the-bleed-2e051723ef"
+    ]
+  },
+  {
+    "id": "skill-13-medical-self-defense-stop-the-bleed-2e051723ef",
+    "purpose": "13 medical self defense stop the bleed",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/005-13-medical-self-defense-stop-the-bleed.md",
+    "requires": [
+      "skill-12-less-lethal-tools-0a13f90f6f"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-6584ef88a0"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-6584ef88a0",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-personal-security-and-self-defense/006-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-13-medical-self-defense-stop-the-bleed-2e051723ef"
+    ],
+    "links": []
+  }
+]

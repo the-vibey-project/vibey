@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-14-how-firearms-work-conceptual-48c717319e",
+    "purpose": "14 how firearms work conceptual",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/001-14-how-firearms-work-conceptual.md",
+    "requires": [],
+    "links": [
+      "skill-15-safety-storage-and-the-honest-risk-ledger-604feaf510"
+    ]
+  },
+  {
+    "id": "skill-15-safety-storage-and-the-honest-risk-ledger-604feaf510",
+    "purpose": "15 safety storage and the honest risk ledger",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/002-15-safety-storage-and-the-honest-risk-ledger.md",
+    "requires": [
+      "skill-14-how-firearms-work-conceptual-48c717319e"
+    ],
+    "links": [
+      "skill-16-choosing-training-carrying-9b29227758"
+    ]
+  },
+  {
+    "id": "skill-16-choosing-training-carrying-9b29227758",
+    "purpose": "16 choosing training carrying",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/003-16-choosing-training-carrying.md",
+    "requires": [
+      "skill-15-safety-storage-and-the-honest-risk-ledger-604feaf510"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-4f9a7ea5ef"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-4f9a7ea5ef",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/SKILL.md",
+    "output": "docs/microslices/skills/physical-security-self-defense-and-firearms/skills/physsec-firearms-mechanics-safety-and-carry/004-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-16-choosing-training-carrying-9b29227758"
+    ],
+    "links": []
+  }
+]

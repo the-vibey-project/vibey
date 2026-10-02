@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-14-what-archaeology-is-and-isn-t-a4cdae8632",
+    "purpose": "14 what archaeology is and isn t",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/001-14-what-archaeology-is-and-isn-t.md",
+    "requires": [],
+    "links": [
+      "skill-15-a-short-history-of-biblical-archaeology-3d39f599bd"
+    ]
+  },
+  {
+    "id": "skill-15-a-short-history-of-biblical-archaeology-3d39f599bd",
+    "purpose": "15 a short history of biblical archaeology",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/002-15-a-short-history-of-biblical-archaeology.md",
+    "requires": [
+      "skill-14-what-archaeology-is-and-isn-t-a4cdae8632"
+    ],
+    "links": [
+      "skill-16-the-fieldwork-cycle-858bc7047b"
+    ]
+  },
+  {
+    "id": "skill-16-the-fieldwork-cycle-858bc7047b",
+    "purpose": "16 the fieldwork cycle",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/003-16-the-fieldwork-cycle.md",
+    "requires": [
+      "skill-15-a-short-history-of-biblical-archaeology-3d39f599bd"
+    ],
+    "links": [
+      "skill-17-dating-how-archaeologists-know-when-070c84a356"
+    ]
+  },
+  {
+    "id": "skill-17-dating-how-archaeologists-know-when-070c84a356",
+    "purpose": "17 dating how archaeologists know when",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/004-17-dating-how-archaeologists-know-when.md",
+    "requires": [
+      "skill-16-the-fieldwork-cycle-858bc7047b"
+    ],
+    "links": [
+      "skill-18-the-science-toolbox-aa4df1a000"
+    ]
+  },
+  {
+    "id": "skill-18-the-science-toolbox-aa4df1a000",
+    "purpose": "18 the science toolbox",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/005-18-the-science-toolbox.md",
+    "requires": [
+      "skill-17-dating-how-archaeologists-know-when-070c84a356"
+    ],
+    "links": [
+      "skill-19-epigraphy-when-the-dirt-talks-e26354f350"
+    ]
+  },
+  {
+    "id": "skill-19-epigraphy-when-the-dirt-talks-e26354f350",
+    "purpose": "19 epigraphy when the dirt talks",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/006-19-epigraphy-when-the-dirt-talks.md",
+    "requires": [
+      "skill-18-the-science-toolbox-aa4df1a000"
+    ],
+    "links": [
+      "skill-20-the-big-interpretive-debates-5b448e7b4f"
+    ]
+  },
+  {
+    "id": "skill-20-the-big-interpretive-debates-5b448e7b4f",
+    "purpose": "20 the big interpretive debates",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/007-20-the-big-interpretive-debates.md",
+    "requires": [
+      "skill-19-epigraphy-when-the-dirt-talks-e26354f350"
+    ],
+    "links": [
+      "skill-21-what-s-new-in-2026-a-snapshot-as-of-2026-134b38ca15"
+    ]
+  },
+  {
+    "id": "skill-21-what-s-new-in-2026-a-snapshot-as-of-2026-134b38ca15",
+    "purpose": "21 what s new in 2026 a snapshot as of 2026",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/008-21-what-s-new-in-2026-a-snapshot-as-of-2026.md",
+    "requires": [
+      "skill-20-the-big-interpretive-debates-5b448e7b4f"
+    ],
+    "links": [
+      "skill-22-how-to-read-an-archaeology-headline-checklist-62007ce294"
+    ]
+  },
+  {
+    "id": "skill-22-how-to-read-an-archaeology-headline-checklist-62007ce294",
+    "purpose": "22 how to read an archaeology headline checklist",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/009-22-how-to-read-an-archaeology-headline-checklist.md",
+    "requires": [
+      "skill-21-what-s-new-in-2026-a-snapshot-as-of-2026-134b38ca15"
+    ],
+    "links": [
+      "skill-where-to-go-next-pack-navigation-not-source-text-da76e4c966"
+    ]
+  },
+  {
+    "id": "skill-where-to-go-next-pack-navigation-not-source-text-da76e4c966",
+    "purpose": "where to go next pack navigation not source text",
+    "source": "src/vibey_tools/skills/plugins/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/SKILL.md",
+    "output": "docs/microslices/skills/biblical-languages-texts-archaeology-and-history/skills/bible-archaeology/010-where-to-go-next-pack-navigation-not-source-text.md",
+    "requires": [
+      "skill-22-how-to-read-an-archaeology-headline-checklist-62007ce294"
+    ],
+    "links": []
+  }
+]
