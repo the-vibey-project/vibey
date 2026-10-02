@@ -537,3 +537,114 @@ def test_the_cli_collects_and_localizes(tmp_path: Path, capsys: pytest.CaptureFi
     assert cli.run([*args, "--source", str(tmp_path), "--out", str(out)]) == 0
     assert json.loads(out.read_text(encoding="utf-8"))["modules"][0]["sources"][0]["type"] == "dir"
     assert "wrote" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------ signing a credential raises
+
+SIGNED = (
+    CONFIG
+    + """
+[[release_binaries.targets]]
+id = "desktop-mac-arm64"
+ui = "desktop"
+builder = "desktop-mac"
+status = "build"
+platform = "macOS"
+arch = "arm64"
+runner = "macos-15"
+assets = ["krypton-desktop-{version}-macos-arm64.dmg"]
+signing = "apple-ad-hoc"
+note = "An app."
+signing_credentials = ["CERT", "NOTARY"]
+signing_tracking_key = "mac-signing"
+signing_needs = "A Developer ID."
+"""
+)
+
+
+def _signed_workflow(steps: list[dict[str, Any]]) -> dict[str, Any]:
+    workflow = _workflow()
+    jobs = workflow["jobs"]
+    jobs["plan"]["outputs"]["desktop-mac"] = "${{ steps.plan.outputs.desktop-mac }}"
+    jobs["desktop-mac"] = {
+        "needs": "plan",
+        "runs-on": "${{ matrix.runner }}",
+        "strategy": {"matrix": "${{ fromJSON(needs.plan.outputs.desktop-mac) }}"},
+        "steps": steps,
+    }
+    jobs["collect"]["needs"].append("desktop-mac")
+    return workflow
+
+
+MAC_STEPS = [
+    {"env": {"CERT": "${{ secrets.CERT }}", "NOTARY": "${{ secrets.NOTARY }}"}},
+    {"run": 'vibey-gh tracking-issue raise --key "$K"'},
+    {"run": 'vibey-gh tracking-issue resolve --key "$K"'},
+    {"env": {"K": "${{ matrix.signing_tracking_key }}"}},
+]
+
+
+def test_a_built_target_whose_signing_waits_carries_its_key_in_its_row(tmp_path: Path) -> None:
+    target = {t.id: t for t in _catalogue(tmp_path, SIGNED).targets()}["desktop-mac-arm64"]
+    row = target.row()
+    assert row["signing_tracking_key"] == "mac-signing"
+    assert row["signing_credentials"] == "CERT NOTARY"
+    assert row["signing_needs"] == "A Developer ID."
+    assert target.status == "build", "it is built either way: only its signing waits"
+
+
+def test_a_job_that_reads_tracks_and_keys_its_signing_credentials_agrees(tmp_path: Path) -> None:
+    settings = _repo(tmp_path, SIGNED)
+    checker = rb.WorkflowChecker(rb.TargetCatalogue(settings), settings, CONTEXT)
+    assert checker.problems(_signed_workflow(MAC_STEPS)) == []
+
+
+@pytest.mark.parametrize(
+    ("drop", "message"),
+    [
+        (0, "never reads the credential `CERT`"),
+        (1, "never runs `vibey-gh tracking-issue raise`"),
+        (2, "never runs `vibey-gh tracking-issue resolve`"),
+        (3, "matrix.signing_tracking_key"),
+    ],
+)
+def test_a_signing_credential_is_held_to_the_credential_rules(
+    tmp_path: Path, drop: int, message: str
+) -> None:
+    settings = _repo(tmp_path, SIGNED)
+    checker = rb.WorkflowChecker(rb.TargetCatalogue(settings), settings, CONTEXT)
+    steps = [step for index, step in enumerate(MAC_STEPS) if index != drop]
+    problems = checker.problems(_signed_workflow(steps))
+    assert any(message in problem for problem in problems), problems
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (('signing_tracking_key = "mac-signing"\n', ""), "signing_tracking_key"),
+        (('signing_needs = "A Developer ID."\n', ""), "signing_needs"),
+        (
+            (
+                'builder = "desktop-mac"\nstatus = "build"',
+                'builder = "desktop-mac"\nstatus = "credential"',
+            ),
+            "status = build",
+        ),
+    ],
+)
+def test_signing_credentials_need_a_key_a_reason_and_a_built_target(
+    tmp_path: Path, change: tuple[str, str], message: str
+) -> None:
+    old, new = change
+    assert old in SIGNED
+    with pytest.raises(rb.ReleaseBinariesError, match=re.escape(message)):
+        _catalogue(tmp_path, SIGNED.replace(old, new, 1)).targets()
+
+
+def test_the_page_says_what_signing_waits_for(tmp_path: Path) -> None:
+    settings = _repo(tmp_path, SIGNED)
+    text = rb.DownloadsRenderer(rb.TargetCatalogue(settings), settings).render()
+    section = text.split("### Signing that waits for a credential", 1)[1].split("###", 1)[0]
+    assert "**krypton desktop, macOS**: built and attached on every release" in section
+    assert "A Developer ID." in section and "(`mac-signing`)" in section
+    assert rb.SIGNING["apple-ad-hoc"] in text, "the table says how the file is signed"

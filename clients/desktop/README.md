@@ -49,6 +49,12 @@ meson test -C build          # the core's GLib tests
 With no GTK installed (a bare macOS, say), `meson setup build -Dgui=disabled` still builds
 and tests the core. json-glib is fetched from its wrap when the system has none.
 
+On macOS, Homebrew provides everything:
+`brew install $(python3 ../../scripts/macos_app_bundle.py brew-packages)`. The app that
+build makes runs against Homebrew. A self-contained `krypton.app` in a `.dmg`, the one each
+release attaches, is made from it by `scripts/macos_app_bundle.py` (see
+[PACKAGING.md](PACKAGING.md#macos)). On macOS, discovery finds hubs over Bonjour.
+
 | Option | Default | Meaning |
 |---|---|---|
 | `-Dchannel=stable\|nightly` | `stable` | Nightly installs beside stable, as "krypton nightly" with its own app id and data directory. |
@@ -74,6 +80,9 @@ and tests the core. json-glib is fetched from its wrap when the system has none.
   app's `style.css` and `style-dark.css`.
 - **`tests/`: GLib tests over the core.** They include the hub client against a real
   loopback HTTP server. The CI job `desktop` builds everything with `-Werror` under ASan
-  and UBSan on Ubuntu and Arch, and gates the core's coverage with gcovr.
+  and UBSan on Ubuntu, Arch and macOS, and gates the core's coverage with gcovr. On macOS
+  it also bundles the app and runs it with Homebrew unreadable.
 
-Packaging is declared but not published. See [PACKAGING.md](PACKAGING.md).
+Every release attaches a Flatpak bundle, an Ubuntu build and a macOS `.dmg`
+([downloads](../../docs/guides/downloads.md)). No store carries krypton yet. See
+[PACKAGING.md](PACKAGING.md).

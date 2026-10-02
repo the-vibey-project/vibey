@@ -3,7 +3,7 @@ name: Release binaries
 
 # Binaries of every user interface, for every supported platform, attached to the GitHub
 # Release of each version: krypton desktop (Flatpak bundle and an Ubuntu build, x86_64 and
-# arm64), the krypton app (web bundle, Android APK; iOS once its credential exists), krypton
+# arm64; a macOS app in a .dmg, Apple silicon), the krypton app (web bundle, Android APK; iOS once its credential exists), krypton
 # for VS Code (.vsix), and the krypton launcher and vibey's CLI and TUI (the wheels and sdists
 # PyPI serves), with a SHA256SUMS file and a build-provenance attestation over all of them.
 #
@@ -47,6 +47,9 @@ on:
       - "scripts/release_binaries.py"
       - "scripts/release_binaries.toml"
       - "scripts/interfaces/release_binaries_interface.py"
+      - "scripts/macos_app_bundle.py"
+      - "scripts/macos_app_bundle.toml"
+      - "scripts/interfaces/macos_app_bundle_interface.py"
       - "clients/desktop/packaging/**"
 
 # Read-only by default; only `attach`, after every build and the checks, may write.
@@ -81,6 +84,7 @@ jobs:
       poll_s: ${{ steps.plan.outputs.poll_s }}
       desktop-flatpak: ${{ steps.plan.outputs.desktop-flatpak }}
       desktop-tarball: ${{ steps.plan.outputs.desktop-tarball }}
+      desktop-macos: ${{ steps.plan.outputs.desktop-macos }}
       app-web: ${{ steps.plan.outputs.app-web }}
       app-android: ${{ steps.plan.outputs.app-android }}
       app-ios: ${{ steps.plan.outputs.app-ios }}
@@ -261,6 +265,123 @@ jobs:
           mkdir -p out
           tar -C "$stage" --owner=0 --group=0 --numeric-owner -czf "out/$ASSETS" .
           tar -tzf "out/$ASSETS"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/
+          if-no-files-found: error
+
+  desktop-macos:
+    name: krypton desktop, macOS (${{ matrix.arch }})
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write              # the one tracking issue for missing signing credentials
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.desktop-macos) }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MODE: ${{ needs.plan.outputs.mode }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.target }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      # The toolchain and the GTK runtime the app is bundled with: the formulae
+      # scripts/macos_app_bundle.toml declares, the same ones CI's `desktop` (macos) builds with.
+      - name: Toolchain and GTK runtime, from Homebrew
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: |
+          set -euo pipefail
+          read -r -a formulae <<<"$(python scripts/macos_app_bundle.py brew-packages)"
+          brew install "${formulae[@]}"
+      - name: Build, test, and install under a staging prefix
+        env:
+          CHANNEL: ${{ matrix.channel }}
+        run: |
+          set -euo pipefail
+          build="$RUNNER_TEMP/build"
+          # Room in every load command for the bundler's @rpath rewrites.
+          meson setup "$build" clients/desktop --prefix="$RUNNER_TEMP/prefix" -Dchannel="$CHANNEL" \
+            -Dgui=enabled -Dhub_transport=enabled -Ddiscovery=enabled \
+            -Dc_link_args=-Wl,-headerpad_max_install_names
+          meson compile -C "$build"
+          meson test -C "$build" --print-errorlogs
+          meson install -C "$build"
+      # The bundle carries its GTK runtime; `verify` proves no load command, run path or
+      # text file in it names anything outside it, and `smoke` runs it for its declared
+      # seconds with every Homebrew prefix unreadable: alive, a window on screen, nothing
+      # mapped from outside the bundle.
+      - name: Bundle the app, prove it stands alone, and run it without Homebrew
+        run: |
+          set -euo pipefail
+          app=$(python scripts/macos_app_bundle.py bundle --prefix "$RUNNER_TEMP/prefix" \
+            --build-dir "$RUNNER_TEMP/build" --homebrew "$(brew --prefix)" --out "$RUNNER_TEMP/app")
+          python scripts/macos_app_bundle.py verify --app "$app"
+          smoke=$(python scripts/macos_app_bundle.py smoke --app "$app")
+          # shellcheck disable=SC2016  # the backticks are a Markdown code fence, not a command
+          printf '### The bundled app, run with Homebrew unreadable\n\n```json\n%s\n```\n' "$smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "APP=$app" >> "$GITHUB_ENV"
+      # With every Developer ID credential: signed, imaged, notarised and stapled, and a
+      # failure is a failure. Without them: ad-hoc signed and imaged, and said so below.
+      - id: package
+        name: Sign and image it
+        env:
+          ASSETS: ${{ matrix.assets }}
+          MACOS_SIGNING_CERTIFICATE_P12: ${{ secrets.MACOS_SIGNING_CERTIFICATE_P12 }}
+          MACOS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_SIGNING_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_NOTARY_API_KEY_P8: ${{ secrets.APPLE_NOTARY_API_KEY_P8 }}
+          APPLE_NOTARY_API_KEY_ID: ${{ secrets.APPLE_NOTARY_API_KEY_ID }}
+          APPLE_NOTARY_API_ISSUER_ID: ${{ secrets.APPLE_NOTARY_API_ISSUER_ID }}
+          APPLE_NOTARY_APPLE_ID: ${{ secrets.APPLE_NOTARY_APPLE_ID }}
+          APPLE_NOTARY_APP_PASSWORD: ${{ secrets.APPLE_NOTARY_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python scripts/macos_app_bundle.py package --app "$APP" --dmg "out/$ASSETS" \
+            --github-output "$GITHUB_OUTPUT"
+          test -s "out/$ASSETS"
+          ls -l "out/$ASSETS"
+      - name: Install the tree's own vibey-gh
+        if: env.MODE == 'publish'
+        run: python -m pip install --quiet -e src/vibey_tools/gh
+      - name: Without the signing credentials, say so and keep it tracked
+        if: steps.package.outputs.signing == 'ad-hoc'
+        env:
+          TRACKING_KEY: ${{ matrix.signing_tracking_key }}
+          NEEDS: ${{ matrix.signing_needs }}
+          MISSING: ${{ steps.package.outputs.missing }}
+        run: |
+          set -euo pipefail
+          echo "::warning::krypton desktop for macOS is ad-hoc signed and not notarised (missing: $MISSING). The release itself is unaffected."
+          echo "krypton desktop for macOS is **ad-hoc signed, not notarised**. Missing: $MISSING. $NEEDS" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$MODE" = publish ]; then
+            vibey-gh tracking-issue raise \
+              --key "$TRACKING_KEY" \
+              --title "Release binaries: krypton desktop for macOS is not notarised (Developer ID credentials are not set)" \
+              --body "Every release on \`main\` attaches an ad-hoc signed, un-notarised macOS build of krypton desktop. $NEEDS This issue closes itself after the first release built with them (release-binaries.yml)."
+          fi
+      - name: Close the missing-credential issue, if one is open
+        if: steps.package.outputs.signing == 'developer-id' && env.MODE == 'publish'
+        env:
+          TRACKING_KEY: ${{ matrix.signing_tracking_key }}
+          TARGET: ${{ needs.plan.outputs.target }}
+        run: |
+          set -euo pipefail
+          vibey-gh tracking-issue resolve \
+            --key "$TRACKING_KEY" \
+            --comment "Signed with the Developer ID and notarised from $TARGET. Closing."
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
@@ -523,7 +644,7 @@ jobs:
 
   collect:
     name: Gather, check and checksum
-    needs: [plan, desktop-flatpak, desktop-tarball, app-web, app-android, app-ios, vscode, python-dists]
+    needs: [plan, desktop-flatpak, desktop-tarball, desktop-macos, app-web, app-android, app-ios, vscode, python-dists]
     if: needs.plan.outputs.mode != 'skip'
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,105 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# krypton desktop as a macOS app: the one declared source for scripts/macos_app_bundle.py,
+# which turns a `meson install` of clients/desktop into a self-contained `.app` and a `.dmg`
+# (ADR-0051: configuration is declared in TOML, never written into a source file or a
+# workflow). CI's `desktop` job (macos cell) and release-binaries.yml's `desktop-macos` job
+# both run it, so the app a release ships is the app CI proves launches.
+#
+# Nothing about the app's identity is declared here: its app id and the name people see are
+# read from the desktop entry `meson install` writes (clients/desktop/meson.build declares
+# both, per channel), and its version from `meson introspect`. A nightly build therefore
+# bundles as "krypton nightly.app", with the nightly app id, from the same file.
+
+[macos_bundle]
+# The Homebrew formulae the build and the bundle take their toolchain and GTK runtime from.
+# `scripts/macos_app_bundle.py brew-packages` prints them; CI and the release install exactly
+# these. Homebrew pins nothing: the runtime is what Homebrew bottles on the day of the build.
+brew = [
+  "meson",
+  "ninja",
+  "pkgconf",
+  "glib",
+  "json-glib",
+  "libsoup",
+  "gtk4",
+  "libadwaita",
+  "adwaita-icon-theme",
+  "librsvg",
+  "glib-networking",
+]
+# The program `meson install` puts in <prefix>/bin. It keeps its name in Contents/MacOS.
+program = "krypton-desktop"
+# The bundle's main executable: a small C launcher that points GTK's runtime at the bundle,
+# then execs the program in place (one process, the bundle's own).
+launcher_source = "clients/desktop/packaging/macos/launcher.c"
+# A probe the smoke test compiles to ask the window server whether the app put a window on
+# screen (CoreGraphics; it needs no screen-recording permission).
+window_probe_source = "clients/desktop/packaging/macos/window_probe.swift"
+# The design system's generated macOS icon set (ADR-0066), never a copy: `iconutil` makes
+# the .icns from it at bundle time.
+iconset = "design/dist/icons/macos/vibey.iconset"
+category = "public.app-category.developer-tools"
+# macOS asks before an app browses the local network: the hub's DNS-SD service type (the
+# same `_vibey._tcp` src/core/kr-discovery.h browses) and the reason a person is shown.
+bonjour_services = ["_vibey._tcp"]
+local_network_usage = "krypton looks for vibey hubs on your network so that you can pair with one."
+# Install names under these prefixes are the operating system's own: never bundled.
+system_prefixes = ["/usr/lib/", "/System/Library/"]
+# A finished bundle names none of these anywhere, and the smoke test runs the app with every
+# one of them unreadable: a reference to one would fail on a Mac without Homebrew.
+forbidden_prefixes = ["/opt/homebrew/", "/usr/local/", "/opt/local/"]
+# How long the smoke test lets the app run before it must still be alive with a window.
+smoke_seconds = 10
+# The disk image: compressed, HFS+ so every supported macOS mounts it, with an Applications
+# link beside the app to drag it onto.
+dmg_format = "UDZO"
+dmg_filesystem = "HFS+"
+# hdiutil now and then reports "Resource busy" on a CI runner; it is retried this many times.
+dmg_attempts = 3
+
+# What GTK loads at run time beyond the libraries the program links, as paths relative to
+# the Homebrew prefix. Each Mach-O file among them is bundled with its own dependencies.
+[macos_bundle.runtime]
+# gdk-pixbuf's SVG loader (librsvg): the icon themes and the app's own icon are SVG. GTK 4
+# reads PNG, JPEG and TIFF itself. The loaders' cache names absolute paths, so the bundle
+# carries a template that the launcher fills in with wherever the app is.
+pixbuf_loader_dir = "lib/gdk-pixbuf-2.0/2.10.0/loaders"
+pixbuf_loaders = ["libpixbufloader_svg.so"]
+pixbuf_query = "bin/gdk-pixbuf-query-loaders"
+# glib-networking's TLS backend: the hub client accepts an https:// hub.
+gio_module_dir = "lib/gio/modules"
+gio_modules = ["libgiognutls.so"]
+# GTK opens these GSettings schemas itself (the emoji chooser in any text field, the
+# inspector); a missing one aborts the app. Compiled into the bundle with glib-compile-schemas.
+schema_dir = "share/glib-2.0/schemas"
+schemas = ["org.gtk.gtk4.Settings.*.gschema.xml"]
+compile_schemas = "bin/glib-compile-schemas"
+icon_dir = "share/icons"
+
+# The icon themes, by name: the files of each that are bundled. Adwaita's symbolic set is
+# what libadwaita draws its widgets with; the full theme's cursors and colour icons are not
+# needed, and are 13 MB.
+[macos_bundle.runtime.icons]
+Adwaita = ["index.theme", "symbolic/**/*"]
+hicolor = ["index.theme"]
+
+# Developer ID signing and notarisation, when the repository holds the credentials. Each
+# value is the environment variable (the workflow maps the secret of the same name) that
+# carries it. Without them the app is ad-hoc signed and says so; with them it is signed
+# with the Developer ID, notarised and stapled, and a failure is a failure.
+[macos_bundle.signing]
+# The Developer ID Application certificate and its private key, as a base64 .p12, and the
+# .p12's password.
+certificate = "MACOS_SIGNING_CERTIFICATE_P12"
+certificate_password = "MACOS_SIGNING_CERTIFICATE_PASSWORD"
+# The Apple Developer team the certificate belongs to.
+team_id = "APPLE_TEAM_ID"
+# notarytool authenticates with an App Store Connect API key (preferred) ...
+notary_api_key = ["APPLE_NOTARY_API_KEY_P8", "APPLE_NOTARY_API_KEY_ID", "APPLE_NOTARY_API_ISSUER_ID"]
+# ... or with an Apple ID and an app-specific password.
+notary_apple_id = ["APPLE_NOTARY_APPLE_ID", "APPLE_NOTARY_APP_PASSWORD"]
+# The certificate's common name starts with this; the identity is found in the keychain.
+identity_prefix = "Developer ID Application"
+# Hardened runtime, required for notarisation. The app needs no entitlements: it does not
+# JIT, and every library it loads is in the bundle and signed with the same identity.
