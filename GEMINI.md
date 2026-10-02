@@ -85,8 +85,14 @@ procedures live in `.agent/rules/`
 - Conventional Commits enforced by pre-commit hook.
 - Never implement on `main`. PRs squash into `develop` via the merge train
   (`vibey-gh merge-train`); `vibey-gh promote` rebase-merges `develop` into
-  `main` (linear history). `develop` → TestPyPI, `main` → PyPI, for `vibey-engine` and `krypton-app` (ADR-0069).
-  ADR-0028.
+  `main` (linear history). `develop` → TestPyPI, `main` → PyPI, for `vibey-engine`
+  (`vibey-engine.yml`, the `Release` workflow) and, on a push that changes
+  `clients/krypton-app/`, `krypton-app` (`krypton-app.yml`) (ADR-0069). A successful
+  `Release` on `main` is followed by the `vibey-v<version>` tag and GitHub Release
+  (`github-release.yml`), the client binaries `release-binaries.yml` attaches to it
+  (krypton desktop for Linux, and for macOS as a `.dmg`; the krypton app; the `.vsix`),
+  and Open VSX (`openvsx.yml`, declared-only until `OVSX_PAT` exists). `clients/` is in
+  `[version] code_paths`, so a client-only change is releasable. ADR-0028.
 
 ## Layer map
 
@@ -177,7 +183,8 @@ CI (`.github/workflows/ci.yml`) also runs `noloss` (the no-loss property suite
 at 10,000 examples), `postgres-compatibility` (the database suite on PostgreSQL
 14–18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (krypton mobile and
 web), `vscode-extension` (Ubuntu and macOS), `desktop` (krypton desktop on
-Ubuntu and Arch), `image` (amd64 and arm64 builds; each `Image contract - …`
+Ubuntu, Arch and macOS; the macOS cell also bundles the app and images it in a `.dmg`,
+as `release-binaries.yml` does), `image` (amd64 and arm64 builds; each `Image contract - …`
 step asserts one claim the Dockerfile makes), `chart` (Helm lint and golden
 render of every profile) and `cluster-smoke` (Helm install on minikube; each
 `Contract - …` step asserts one cluster behaviour). `tools-lint` additionally
