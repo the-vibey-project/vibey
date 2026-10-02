@@ -223,7 +223,7 @@ timeout_s = 900
 # on its own parent until the timeout. uv marks its children with this variable.
 not_under = "UV_RUN_RECURSION_DEPTH"
 why_regenerable = "uv rebuilds any pruned entry from the package index on the next sync; `prune` removes only entries no environment reaches and waits for (never breaks) a uv process holding the cache."
-expected = "Disk only. 76 GB on 2026-10-01."
+expected = "Disk only. 82 GB (76 GiB) on 2026-10-01."
 risk = "None to the model. A lane's next `uv sync` may download again."
 evidence = "du -sh ~/.cache/uv, 2026-10-01."
 judged_by = ["storage.free_gb"]

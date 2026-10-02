@@ -182,7 +182,19 @@ Noted but not declared, because nothing measured them here:
 
 ## Class A: applied on 2026-10-02
 
-<!-- filled from the journal below -->
+`python3 scripts/host_health.py tune apply --only uv_cache --only npm_cache --only
+docker_build_cache` ran from 01:19 to 01:29 UTC. Before it ran, each target was listed with
+its size and the reason it is regenerable. The journal holds each before and after.
+
+| Item | Before | After | Outcome |
+|---|---|---|---|
+| `npm_cache` (`npm cache verify`) | 11.90 GB | 5.73 GB | **6.16 GB freed** |
+| `docker_build_cache` (`docker builder prune --filter until=168h`) | 6.81 GB | 6.81 GB | Nothing freed: every record was newer than the declared week, so the filter kept them all |
+| `uv_cache` (`uv cache prune`) | 82.02 GB | 82.02 GB | **Deferred.** uv waited 300 s for its cache lock and gave up (exit 2). Other uv processes were holding the cache: `uvx` MCP servers that live as long as their agent sessions. `--force` would route around that in-use check (12.d), so the tool does not use it. Run it again when no uv process is running |
+
+The logs were under their limits (Postgres 29.3 of 64 MiB), so nothing was rotated. No
+class-A item reaches memory, so none of this changes swap or the SSD's writes. That needs
+classes B and C.
 
 ## Class B: the adoption procedure
 
