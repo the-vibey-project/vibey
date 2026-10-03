@@ -71,6 +71,10 @@ jobs:
       - name: Check out the integration branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          # The push below must carry the automation token's identity, not the Actions
+          # token's: a pull_request event github-actions[bot] causes is held for approval
+          # (action_required), so every refresh after the first went untested (#1375).
+          persist-credentials: false
           ref: develop
           fetch-depth: 0
 
@@ -107,6 +111,8 @@ jobs:
           ESTIMATE_BRANCH: automation/delivery-estimate
         run: |
           set -euo pipefail
+          # Git authenticates as GH_TOKEN, as pr-review.yml's repair push does.
+          gh auth setup-git
           if git ls-remote --exit-code --heads origin "$ESTIMATE_BRANCH" >/dev/null 2>&1; then
             git fetch origin "$ESTIMATE_BRANCH"
           fi
