@@ -1,0 +1,307 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Continuation prompts
+
+# The lane that keeps vibey alive with nobody watching (sub-doctrine 10.l, ADR-0080, #1384).
+# Every week, on GitHub-hosted runners only, it:
+#   1. keeps every scheduled workflow enabled -- GitHub disables a public repository's
+#      scheduled workflows after 60 days without activity -- and reports any lane whose
+#      schedule has stopped firing (12.e: a missed run is said out loud);
+#   2. re-renders docs/continuation/ from the repository and checks every prompt, opening a
+#      pull request when anything moved;
+#   3. runs every prompt with an open-weights model on CPU: an `act` prompt may open ONE
+#      draft pull request; a `drill` prompt changes nothing and reports, as an issue, every
+#      instruction that no longer holds. Nothing here merges, approves, releases, deletes,
+#      or touches a ruleset or a secret (12.d).
+# `scripts/continuation_prompts.py check` fails on every pull request if this file loses its
+# schedule, its manual dispatch, or moves to a self-hosted runner.
+on:
+  schedule:
+    - cron: "41 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: continuation-prompts-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    name: Keep every scheduled lane alive
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: write
+    steps:
+      - name: Re-enable scheduled workflows and report overdue ones
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          overdue=0
+          while IFS=$'\t' read -r id path state; do
+            if [ "$state" = "disabled_inactivity" ]; then
+              echo "::warning::$path was disabled for inactivity; re-enabling it"
+            fi
+            case "$state" in
+              active|disabled_inactivity)
+                gh api -X PUT "repos/$GH_REPO/actions/workflows/$id/enable" >/dev/null ;;
+              *) echo "::notice::$path is $state (left as it is: a person chose that)" ;;
+            esac
+            # A scheduled lane whose newest scheduled run is older than 15 days has missed at
+            # least one weekly run: say so rather than assume it fired.
+            last=$(gh api "repos/$GH_REPO/actions/workflows/$id/runs?event=schedule&per_page=1" \
+              --jq '.workflow_runs[0].created_at // ""')
+            if [ -n "$last" ]; then
+              age=$(( ( $(date -u +%s) - $(date -u -d "$last" +%s) ) / 86400 ))
+              if [ "$age" -gt 15 ]; then
+                echo "::warning::$path last ran on its schedule $age days ago ($last)"
+                overdue=$((overdue + 1))
+              fi
+            fi
+          done < <(gh api "repos/$GH_REPO/actions/workflows" --paginate \
+            --jq '.workflows[] | [.id, .path, .state] | @tsv')
+          echo "Scheduled lanes overdue: $overdue" >> "$GITHUB_STEP_SUMMARY"
+
+  refresh:
+    name: Refresh and check the prompts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install the repository-owned tooling
+        run: python -m pip install --quiet -e src/vibey_tools/gh
+      - name: Render, then check every guarantee
+        run: |
+          set -euo pipefail
+          python scripts/continuation_prompts.py render
+          python scripts/continuation_prompts.py check
+      - name: The prompts, for the run
+        id: matrix
+        run: echo "matrix=$(python scripts/continuation_prompts.py matrix)" >> "$GITHUB_OUTPUT"
+      - name: Open a pull request when the pages moved
+        # The push carries the automation token's identity, so the pull request's own checks
+        # run (#1379); a fork without the secret falls back to the Actions token.
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/continuation; then
+            echo "the continuation prompts are current"
+            exit 0
+          fi
+          gh auth setup-git
+          branch="chore/continuation-prompts-$(date -u +%Y-%m-%d)"
+          git switch --force-create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/continuation
+          git commit -m "docs(continuation): refresh the continuation prompts" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
+          if [ -z "$(gh pr list --head "$branch" --base develop --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --base develop --head "$branch" --label no-changelog \
+              --title "docs(continuation): refresh the continuation prompts" \
+              --body "The weekly continuation lane re-rendered docs/continuation/ from the repository (sub-doctrine 10.l). \`scripts/continuation_prompts.py check\` passed on this head."
+          fi
+
+  run:
+    name: Run the prompt — ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }})
+    needs: refresh
+    strategy:
+      fail-fast: false
+      matrix:
+        prompt: ${{ fromJSON(needs.refresh.outputs.matrix) }}
+    runs-on: ${{ matrix.prompt.runs_on }}
+    timeout-minutes: 355
+    # The agent reads untrusted text (issue titles and bodies) and has sudo on this VM, so
+    # this job holds no write permission and no secret: it only hands over its log and its
+    # patch. A fresh runner, where no agent ran, acts on them (`report`).
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install vibey (the runner and its tools)
+        run: python -m pip install --quiet -e . -e src/vibey_tools/gh
+      - name: Start an open-weights model on this runner's CPU
+        env:
+          MODEL: ${{ matrix.prompt.model }}
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ollama.com/install.sh | sh
+          (ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &)
+          for _ in $(seq 1 60); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
+          ollama pull "$MODEL"
+      - name: Gather the evidence and build the plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main develop
+          python scripts/continuation_prompts.py plan "${{ matrix.prompt.id }}" > "$RUNNER_TEMP/plan.md"
+          wc -c "$RUNNER_TEMP/plan.md"
+      - name: Run the prompt with gptossloop
+        id: agent
+        env:
+          GPTOSSLOOP_MODEL: ${{ matrix.prompt.model }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          minutes=${{ matrix.prompt.timeout_minutes }}
+          timeout "${minutes}m" gptossloop run "$RUNNER_TEMP/plan.md" --cwd . \
+            --max-turns ${{ matrix.prompt.max_turns }} > "$RUNNER_TEMP/agent.log" 2>&1
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          {
+            echo "## ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }}) — exit $code"
+            echo '```'
+            tail -c 30000 "$RUNNER_TEMP/agent.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # A run that timed out or failed is reported, never mistaken for "all holds".
+          [ "$code" -eq 0 ] || echo "::warning::the agent run ended with exit $code"
+      - name: Hand over the log and the patch
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          cp "$RUNNER_TEMP/agent.log" "$RUNNER_TEMP/out/agent.log" 2>/dev/null || echo "no agent log" > "$RUNNER_TEMP/out/agent.log"
+          echo "${{ steps.agent.outputs.code }}" > "$RUNNER_TEMP/out/code"
+          git add -A
+          git diff --cached --binary > "$RUNNER_TEMP/out/change.patch"
+      # upload-artifact stores files relative to the paths' deepest common directory, so the
+      # download in `report` goes to the same place it came from (tests/meta/test_workflow_artifacts.py).
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: continuation-${{ matrix.prompt.id }}
+          path: ${{ runner.temp }}/out/
+          retention-days: 14
+
+  report:
+    name: Report — ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }})
+    needs: [refresh, run]
+    if: always() && needs.refresh.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        prompt: ${{ fromJSON(needs.refresh.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Take the agent's log and patch
+        id: take
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: continuation-${{ matrix.prompt.id }}
+          path: ${{ runner.temp }}/out/
+      - name: A run that handed nothing over is reported
+        if: steps.take.outcome != 'success'
+        run: |
+          echo "::error::the ${{ matrix.prompt.id }} run handed over no log: it did not run, or died before the end"
+          exit 1
+      - name: Drill — report what no longer holds
+        if: matrix.prompt.mode == 'drill'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "Continuation drill: ${{ matrix.prompt.title }} found instructions that no longer hold"
+          MARKER: "<!-- vibey:continuation-drill:${{ matrix.prompt.id }} -->"
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/out/agent.log"; code=$(cat "$RUNNER_TEMP/out/code" 2>/dev/null || echo unknown)
+          if [ "$code" = "0" ] && grep -q 'All holds\.' "$log" && ! grep -q 'Does not hold:' "$log"; then
+            echo "every instruction holds"
+            exit 0
+          fi
+          body="$RUNNER_TEMP/issue.md"
+          {
+            echo "$MARKER"
+            echo "The weekly continuation lane ran the **${{ matrix.prompt.title }}** prompt as a drill (run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). Its agent exited $code. What it reported, verbatim and unverified: a person checks each line."
+            echo
+            echo '```'
+            tail -c 20000 "$log"
+            echo '```'
+          } > "$body"
+          existing=$(gh issue list --state open --search "\"$MARKER\" in:body" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file "$body"
+          else
+            gh issue create --title "$TITLE" --body-file "$body"
+          fi
+      - name: Check out a clean copy, where no agent ran
+        if: matrix.prompt.mode == 'act'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          path: clean
+          persist-credentials: false
+      - name: Act — open one draft pull request with the checked patch
+        if: matrix.prompt.mode == 'act'
+        working-directory: clean
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          patch="$RUNNER_TEMP/out/change.patch"
+          if [ ! -s "$patch" ]; then
+            echo "the agent changed nothing"
+            exit 0
+          fi
+          # Never from an automated run: workflows, the canon, the advisory exceptions, the
+          # code owners, the declared state. A patch touching any of them is refused whole.
+          refused=$(git apply --numstat "$patch" | awk '{print $3}' | grep -E '^(\.github/|src/vibey_tools/gh/docs/(doctrines|constitution)\.md$|\.vibey-gh\.toml$)' || true)
+          if [ -n "$refused" ]; then
+            echo "::error::the agent's patch touches paths an automated run may not change; refused whole:"
+            echo "$refused"
+            exit 1
+          fi
+          git apply --index "$patch"
+          gh auth setup-git
+          branch="continuation/${{ matrix.prompt.id }}-$(date -u +%Y-%m-%d)"
+          git switch --force-create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(continuation): ${{ matrix.prompt.id }} — weekly agent run" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
+          if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --draft --base develop --head "$branch" \
+              --title "chore(continuation): ${{ matrix.prompt.title }} — weekly agent run" \
+              --body "Opened by the weekly continuation lane (sub-doctrine 10.l): the **${{ matrix.prompt.title }}** prompt, run by gptossloop on ${{ matrix.prompt.model }} on a GitHub-hosted CPU runner (run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). The patch was applied to a clean checkout on a fresh runner. A draft: a person reviews it before it is ready."
+          fi
