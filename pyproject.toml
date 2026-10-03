@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vibey-engine"
-version = "3.4.0"
+version = "4.0.0"
 # The line PyPI shows in search results and on the package page, and the summary of the
 # root llms.txt the documentation site publishes: what vibey is, in a stranger's words
 # (sub-doctrine 7.d, ADR-0076).
