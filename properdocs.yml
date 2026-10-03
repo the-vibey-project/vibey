@@ -50,6 +50,7 @@ validation:
 nav:
   - Home: index.md
   - Guides:
+      - Install, copy, reinstall, uninstall: guides/install.md
       - Downloads: guides/downloads.md
       - VS Code extension: guides/vscode-extension.md
       - Kubernetes: guides/kubernetes.md
@@ -179,4 +180,5 @@ nav:
           - "0079 — Hybrid engine dispatch: paid engines in tandem with sovereign ones, measured and capped": architecture/decisions/0079-hybrid-engine-dispatch.md
           - "0080 — Continuation prompts, kept current and run on GitHub every week": architecture/decisions/0080-continuation-prompts.md
           - "0081 — vibey's chat, inside GitHub, resilient to the parts around it failing": architecture/decisions/0081-vibey-chat-on-github.md
+          - "0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays": architecture/decisions/0082-install-copy-reinstall-and-a-core-that-stays.md
   - Research paper: paper.md
