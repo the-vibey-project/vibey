@@ -65,6 +65,7 @@ class Gh:
 
     def __init__(self, repo: str | None = None) -> None:
         self.repo = repo
+        self._texts: dict[int, tuple[str, str]] = {}
 
     def _run(self, *args: str, mutation: bool = False) -> subprocess.CompletedProcess[str]:
         cmd = ["gh", *args]
@@ -105,8 +106,23 @@ class Gh:
         proc.check_returncode()
         return True
 
-    def close(self, number: int, body: str) -> bool:
-        proc = self._run("issue", "close", str(number), "--comment", body, mutation=True)
+    def issue_text(self, number: int) -> tuple[str, str]:
+        """An issue's title and body, stripped; read once per run and kept."""
+        if number not in self._texts:
+            proc = self._run("issue", "view", str(number), "--json", "title,body")
+            proc.check_returncode()
+            data = json.loads(proc.stdout or "{}")
+            title = str(data.get("title", "")).strip()
+            self._texts[number] = (title, str(data.get("body", "")).strip())
+        return self._texts[number]
+
+    def close(self, number: int, body: str, duplicate_of: int | None = None) -> bool:
+        args = ["issue", "close", str(number), "--comment", body]
+        mark = ["--duplicate-of", str(duplicate_of)] if duplicate_of is not None else []
+        proc = self._run(*args, *mark, mutation=True)
+        if mark and proc.returncode != 0 and "unknown flag" in proc.stderr:
+            # A gh older than --duplicate-of still records why: not planned, not completed.
+            proc = self._run(*args, "--reason", "not planned", mutation=True)
         if proc.returncode != 0 and "too quickly" in proc.stderr:
             print("throttled; stopping cleanly", flush=True)
             raise _ThrottleStop
@@ -224,7 +240,33 @@ class LabelDrainedProbe:
             return False
 
 
-def build_probes(spec: dict[str, object], gh: Gh) -> list[ProbeInterface]:
+class DuplicateOfProbe:
+    """The issue repeats an older one exactly: same title, byte-identical body.
+
+    A copy whose text has drifted from the original is not a duplicate by this probe, and
+    stays open for a person; only an exact repeat (the QwenStorm filer ran three times,
+    2026-09-22) is closed against the issue it copies.
+    """
+
+    def __init__(self, canonical: int, number: int, gh: Gh) -> None:
+        self.canonical = canonical
+        self.number = number
+        self.gh = gh
+
+    def name(self) -> str:
+        return f"duplicate_of:#{self.canonical}"
+
+    def holds(self, context: dict[str, object]) -> bool:
+        try:
+            if self.canonical >= self.number:
+                return False
+            original = self.gh.issue_text(self.canonical)
+            return bool(original[0]) and original == self.gh.issue_text(self.number)
+        except Exception:
+            return False
+
+
+def build_probes(spec: dict[str, object], gh: Gh, number: int = 0) -> list[ProbeInterface]:
     """Compile one issue's probe specs. Unknown specs raise: the check says so."""
     probes: list[ProbeInterface] = []
     raw = spec.get("probes", [])
@@ -246,6 +288,10 @@ def build_probes(spec: dict[str, object], gh: Gh) -> list[ProbeInterface]:
             label = item["label_drained"]
             assert isinstance(label, str)
             probes.append(LabelDrainedProbe(label, gh))
+        elif "duplicate_of" in item:
+            canonical = item["duplicate_of"]
+            assert isinstance(canonical, int)
+            probes.append(DuplicateOfProbe(canonical, number, gh))
         else:
             raise ValueError(f"unknown probe: {sorted(item)}")
     return probes
@@ -328,7 +374,7 @@ class BacklogCleanup(BacklogCleanupInterface):
                 "act": False,
                 "entry": True,
             }
-        probes = build_probes(entry, self.gh)
+        probes = build_probes(entry, self.gh, number)
         held = [p.name() for p in probes if p.holds(context)]
         missing = [p.name() for p in probes if p.name() not in held]
         if not probes:
@@ -349,6 +395,9 @@ class BacklogCleanup(BacklogCleanupInterface):
             "act": True,
             "entry": True,
             "close_when_done": bool(entry.get("close_when_done", False)),
+            "duplicate_of": next(
+                (p.canonical for p in probes if isinstance(p, DuplicateOfProbe)), None
+            ),
         }
 
     def survey(self) -> list[dict[str, object]]:
@@ -410,7 +459,9 @@ class BacklogCleanup(BacklogCleanupInterface):
                 time.sleep(PAUSE_SECONDS)
             try:
                 if row["verdict"] == "DONE" and row.get("close_when_done"):
-                    self.gh.close(number, self._body(row))
+                    duplicate_of = row.get("duplicate_of")
+                    assert duplicate_of is None or isinstance(duplicate_of, int)
+                    self.gh.close(number, self._body(row), duplicate_of)
                     counts["closed"] += 1
                 elif row["verdict"] == "NEEDS-TRIAGE":
                     self.gh.comment(number, self._body(row))
