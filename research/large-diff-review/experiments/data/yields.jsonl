@@ -22,3 +22,5 @@
 {"key": "f3d122d9bc4649e7cd3f820a6cb784831380db54cd1f46fc04741fa2e9bb46ac", "tag": {"arm": "D16-T1-BF8192+FF", "case": "needle-1161-leak-estimate-ledger-handle-early", "part": "part1"}, "wall_s": 49.94753029200001, "t": 1791054112.3822982}
 {"key": "9c30e8509546a3e2dd63f540b46bd3a440e788e91c305e868e59515d9535dd54", "tag": {"arm": "D16-T1-BF8192+FF", "case": "host-1161", "part": "part2"}, "wall_s": 146.68134949999876, "t": 1791057236.123123}
 {"key": "9c30e8509546a3e2dd63f540b46bd3a440e788e91c305e868e59515d9535dd54", "tag": {"arm": "D16-T1-BF8192+FF", "case": "host-1161", "part": "part2"}, "wall_s": 80.46030695899935, "t": 1791057354.832864}
+{"key": "faf39914eed05e606b8f1ebb6fce960503b82cff723d264e91c70eed6ff6e912", "tag": {"arm": "D16-T1-BF8192+SA", "case": "needle-1131-inv-budget-plan-unchanged-middle", "part": "part3"}, "wall_s": 70.20950287500091, "t": 1791059197.253907}
+{"key": "faf39914eed05e606b8f1ebb6fce960503b82cff723d264e91c70eed6ff6e912", "tag": {"arm": "D16-T1-BF8192+SA", "case": "needle-1131-inv-budget-plan-unchanged-middle", "part": "part3"}, "wall_s": 39.70618795900009, "t": 1791060178.7241988}
