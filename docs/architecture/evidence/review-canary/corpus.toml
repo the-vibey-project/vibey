@@ -27,6 +27,9 @@
 # of two defects, to test that the review is not just flagging whatever changed there.
 #
 # The pin is an ancestor of origin/develop, so `git show` resolves it in any full clone.
+# Re-pinned 2026-10-03 from 2b17eb7 to 0f88412, the same tree: realigning develop onto
+# main's rebased copies gave #1319 a new commit and left 2b17eb7 in no clone's history.
+# The ledger's earlier rows name 2b17eb7 and stay as recorded.
 #
 # The class keywords are a lexical heuristic, and every finding's words are kept in the
 # ledger so a match can be re-adjudicated by hand. They were widened once, before the first
@@ -36,7 +39,7 @@
 # added to `off_by_one`, and "error" and "fail" to `wrong_error_return`; nothing since.
 
 schema = "vibey-gh/review-canary-corpus/1"
-pin = "2b17eb714016650be57342236d8d2fa467c3582b"
+pin = "0f88412d508364fbc42c6c9a413235899e7859cd"
 
 [classes.off_by_one]
 summary = "a bound, count or starting value one away from what the code beside it requires"

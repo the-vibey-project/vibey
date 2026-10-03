@@ -2311,7 +2311,8 @@ prompt passes about 40,000 tokens (`research/large-diff-review/experiments/LOG.m
 **Recall, measured offline.** Until 2026-10-01 nothing had measured the reviewer's
 recall: every study above measured agreement on pull requests that carried no known
 defect. `vibey-gh review-canary` (#1325) measures it on a fixed corpus pinned at
-`2b17eb7` (`docs/architecture/evidence/review-canary/corpus.toml`): 41 small single-file
+`0f88412` (`docs/architecture/evidence/review-canary/corpus.toml`; first pinned as `2b17eb7`,
+the same tree before the 2026-10-03 realignment of `develop` gave #1319 a new commit): 41 small single-file
 diffs against this repository's own code, 27 of them planted defects, three in each of
 nine classes (off by one, inverted condition, swallowed exception, missing `await`, SQL
 built by string formatting, removed guard, resource leak, wrong return on the error path,
@@ -4191,7 +4192,7 @@ swallowed the failure (#1310, #1314, under *Enforcement, and what it does not co
 CI, not a review, found both. The third was the review lane's, whose timeouts had a cause
 the measurement above did not reach (#1316, under *Exact-head evaluation*). The forge's
 record of who merges did not change. The fourteen pull requests merged into `develop`
-after `4acb9be5c`, up to #1319 at `2b17eb71`, were all merged by the operator's account and
+after `4acb9be5c`, up to #1319 at `0f88412d`, were all merged by the operator's account and
 none carries a review (read on 2026-10-01 at 20:41Z), so each went in through the bypass,
 the revision of this paper before the last (#1307) among them. So did the twenty-one after
 them, #1321 to #1341, up to `ca9e47452` (read on 2026-10-02 at about 03:50Z), the
