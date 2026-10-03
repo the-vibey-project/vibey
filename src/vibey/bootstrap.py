@@ -14,6 +14,7 @@ from typing import Final
 import asyncpg
 from platformdirs import user_cache_path
 
+from vibey import __version__
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
 from vibey.application.build_implement_handler import BuildImplementHandler
@@ -41,6 +42,7 @@ from vibey.application.design_handler import DesignInterviewHandler
 from vibey.application.design_research_handler import DesignResearchHandler
 from vibey.application.design_synthesis_handler import DesignSpecHandler, DesignSynthesizeHandler
 from vibey.application.dto import JobRecord, ProjectRecord
+from vibey.application.engine_dispatch_service import EngineDispatchService
 from vibey.application.engine_health_service import EngineHealthService
 from vibey.application.engine_selection import (
     RotationRecordingHandler,
@@ -64,6 +66,7 @@ from vibey.application.interfaces import (
     DocsPort,
     EmailPort,
     EngineAdapter,
+    EngineDispatchStorePort,
     FilesPort,
     GateAnswerServiceInterface,
     IssueTrackerPort,
@@ -127,12 +130,17 @@ from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
-from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG, QUEUE_CONFIG
+from vibey.infrastructure.config_loader import (
+    ENGINE_DISPATCH_CONFIG,
+    ENVIRONMENT_CONFIG,
+    QUEUE_CONFIG,
+)
 from vibey.infrastructure.db.advisory_lock import PostgresAdvisoryLock
 from vibey.infrastructure.db.build_ledger import PostgresBuildLedger
 from vibey.infrastructure.db.database_setup import SchemaPreparer
 from vibey.infrastructure.db.design_ledger import PostgresDesignLedger
 from vibey.infrastructure.db.design_spec_repository import FileDesignSpecRepository
+from vibey.infrastructure.db.engine_dispatch_store import PostgresEngineDispatchStore
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.gate_notice_store import PostgresGateNoticeStore
 from vibey.infrastructure.db.handoff_repository import PostgresHandoffRepository
@@ -272,6 +280,10 @@ class AppResources:
     # its provider can obtain no evidence -- park for a person (the default) or record the
     # topic as not researched.
     design_research: DesignResearchConfigInterface = field(default_factory=DesignResearchConfig)
+    # Hybrid engine dispatch (ADR-0079): the slots in use, the daily paid-overflow cap and
+    # `auto`'s measurements, all from the queue and the ledger. None -- a resources object
+    # built without a database -- is today's selection.
+    engine_dispatch_store: EngineDispatchStorePort | None = None
 
 
 class SystemClock:
@@ -460,6 +472,36 @@ DEFAULT_ENGINE_RUN_MINUTES = 240
 ENGINE_RUN_MINUTES_ENV = "VIBEY_ENGINE_MAX_RUN_MINUTES"
 
 
+def _engine_dispatch(
+    resources: AppResources,
+    project: ProjectRecord,
+    local_engines: tuple[EngineId, ...],
+    adapters: Mapping[EngineId, EngineAdapter],
+    allow_list: frozenset[EngineId] | None,
+    environ: Mapping[str, str] = os.environ,
+) -> EngineDispatchService | None:
+    """The project's hybrid engine dispatch (ADR-0079), or None for today's selection.
+
+    None when the resources carry no dispatch store -- a resources object the faked harness
+    built without a database. The local engines are the ones this worker can dispatch to:
+    switched on, configured, and inside the `--engines` allow-list, exactly the pool the
+    provider computes. Module-level, as `_engine_run_deadline` is, for the reason given
+    there (ADR-0016's last resort, stated).
+    """
+    store = getattr(resources, "engine_dispatch_store", None)
+    if store is None:
+        return None
+    pool = frozenset(adapters) if allow_list is None else frozenset(adapters) & allow_list
+    return EngineDispatchService(
+        store=store,
+        config=ENGINE_DISPATCH_CONFIG.load(project.config, environ),
+        local_engines=tuple(engine for engine in local_engines if engine in pool),
+        clock=resources.clock,
+        implementation=f"vibey-engine {__version__}",
+        logger=StructlogAppLogger(owner="engine-dispatch"),
+    )
+
+
 def _engine_run_deadline(
     config: Mapping[str, object], environ: Mapping[str, str] = os.environ
 ) -> timedelta:
@@ -584,6 +626,7 @@ def build_full_worker(
         allow_list=allow_list,
         local_engines=local.enabled_engines,
         metrics=metrics,
+        dispatch=_engine_dispatch(resources, project, local.enabled_engines, adapters, allow_list),
     )
     # The runaway brake: caps come from the project's own config
     # (max_cycle_dollars / max_cycle_turns, set at `vibey new` and changed by
@@ -1312,6 +1355,7 @@ async def build_app(
             ),
             queue_defect=defect_settings,
             design_research=design_research_settings,
+            engine_dispatch_store=PostgresEngineDispatchStore(pool),
         )
     finally:
         if bus_recomputer_task is not None:

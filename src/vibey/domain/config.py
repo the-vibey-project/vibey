@@ -670,6 +670,116 @@ class DesignConfig:
         )
 
 
+ENGINE_DISPATCH_MODES = ("singleton", "hybrid", "auto")
+"""`[engines] mode` (ADR-0079): today's tier-first selection, paid overflow onto a saturated
+local tier, or a choice between the two from a recorded measurement."""
+
+DEFAULT_ENGINE_DISPATCH_MODE = "auto"
+DEFAULT_LOCAL_ENGINE_SLOTS = 1
+"""A local engine's concurrent slots when none are declared: Ollama serves one request at
+a time unless `OLLAMA_NUM_PARALLEL` says otherwise, so one is what the default host has."""
+DEFAULT_PAID_ENGINE_SLOTS = 2
+DEFAULT_OVERFLOW_AFTER_SECONDS = 600
+DEFAULT_PAID_DAILY_CAP = 10
+DEFAULT_SLOT_POLL_SECONDS = 30
+DEFAULT_AUTO_WINDOW_HOURS = 168
+DEFAULT_AUTO_MIN_SESSIONS = 20
+DEFAULT_AUTO_MIN_CONTENTION = 0.25
+DEFAULT_AUTO_MAX_AGE_HOURS = 24
+
+ENGINE_DISPATCH_KEYS = (
+    "mode",
+    "overflow_after_seconds",
+    "paid_daily_cap",
+    "slot_poll_seconds",
+    "slots",
+    "auto_window_hours",
+    "auto_min_sessions",
+    "auto_min_contention",
+    "auto_max_age_hours",
+)
+"""The `[engines]` keys hybrid dispatch reads. The rest of `[engines]` -- the pool, its
+weights, claudeloop-local's profile -- is not dispatch's, and is never read here."""
+
+
+@dataclass(frozen=True, slots=True)
+class EngineDispatchConfig:
+    """`[engines]`'s dispatch keys (ADR-0079).
+
+    `mode` is `singleton` (today's selection: the local tier whenever it has weight),
+    `hybrid` (local engines fill their declared `slots` first; a paid engine takes a BUILD
+    job only once every eligible local slot is occupied, the job has waited
+    `overflow_after_seconds`, and fewer than `paid_daily_cap` overflows were recorded for
+    the project this UTC day) or `auto` (one of the two, from the recorded measurement;
+    `singleton` whenever there is none that is current).
+
+    `paid_daily_cap` is a count and never a switch-off of the cap: there is no value that
+    means "uncapped", because a paid declaration without a cap is lawful by one path only
+    (sub-doctrine 8.b) and it is not this key. Zero means no paid overflow at all.
+    """
+
+    mode: str = DEFAULT_ENGINE_DISPATCH_MODE
+    overflow_after_seconds: int = DEFAULT_OVERFLOW_AFTER_SECONDS
+    paid_daily_cap: int = DEFAULT_PAID_DAILY_CAP
+    slot_poll_seconds: int = DEFAULT_SLOT_POLL_SECONDS
+    slots: Mapping[str, int] = field(default_factory=dict)
+    auto_window_hours: int = DEFAULT_AUTO_WINDOW_HOURS
+    auto_min_sessions: int = DEFAULT_AUTO_MIN_SESSIONS
+    auto_min_contention: float = DEFAULT_AUTO_MIN_CONTENTION
+    auto_max_age_hours: int = DEFAULT_AUTO_MAX_AGE_HOURS
+
+    @classmethod
+    def from_data(cls, data: Mapping[str, Any]) -> "EngineDispatchConfig":
+        """Read the dispatch keys of `[engines]` from a whole parsed document or a project's
+        stored config. A stored `engines` that is a list -- the Kubernetes resource's
+        allow-list -- configures no dispatch, and reads as every default."""
+        raw = data.get("engines")
+        if raw is None or isinstance(raw, list):
+            return cls()
+        if not isinstance(raw, Mapping):
+            raise ConfigError("engines", "must be a table")
+        table = dict(raw)
+        mode = _optional(table, "mode", "engines.mode", str, DEFAULT_ENGINE_DISPATCH_MODE)
+        if mode not in ENGINE_DISPATCH_MODES:
+            raise ConfigError("engines.mode", f"must be one of {ENGINE_DISPATCH_MODES}")
+        contention = table.get("auto_min_contention", DEFAULT_AUTO_MIN_CONTENTION)
+        if (
+            isinstance(contention, bool)
+            or not isinstance(contention, int | float)
+            or not 0 <= contention <= 1
+        ):
+            raise ConfigError("engines.auto_min_contention", "must be a number from 0 to 1")
+        slots = _optional(table, "slots", "engines.slots", dict, {})
+        for engine, count in slots.items():
+            if engine not in KNOWN_ENGINES:
+                raise ConfigError("engines.slots", f"unknown engine {engine!r}")
+            if type(count) is not int or count < 1:
+                raise ConfigError(f"engines.slots.{engine}", "must be a positive integer")
+        return cls(
+            mode=mode,
+            overflow_after_seconds=cls._whole(
+                table, "overflow_after_seconds", DEFAULT_OVERFLOW_AFTER_SECONDS, 0
+            ),
+            paid_daily_cap=cls._whole(table, "paid_daily_cap", DEFAULT_PAID_DAILY_CAP, 0),
+            slot_poll_seconds=cls._whole(table, "slot_poll_seconds", DEFAULT_SLOT_POLL_SECONDS, 1),
+            slots=dict(slots),
+            auto_window_hours=cls._whole(table, "auto_window_hours", DEFAULT_AUTO_WINDOW_HOURS, 1),
+            auto_min_sessions=cls._whole(table, "auto_min_sessions", DEFAULT_AUTO_MIN_SESSIONS, 1),
+            auto_min_contention=float(contention),
+            auto_max_age_hours=cls._whole(
+                table, "auto_max_age_hours", DEFAULT_AUTO_MAX_AGE_HOURS, 1
+            ),
+        )
+
+    @staticmethod
+    def _whole(table: dict[str, Any], key: str, default: int, minimum: int) -> int:
+        value = table.get(key, default)
+        # bool is an int to isinstance; a count written `true` is a mistake.
+        if type(value) is not int or value < minimum:
+            raise ConfigError(f"engines.{key}", f"must be an integer of at least {minimum}")
+        return value
+
+
 @dataclass(frozen=True, slots=True)
 class VibeyConfig:
     project: ProjectConfig
@@ -697,6 +807,7 @@ class VibeyConfig:
     siem: SiemConfig = field(default_factory=SiemConfig)
     queue: QueueConfig = field(default_factory=QueueConfig)
     design: DesignConfig = field(default_factory=DesignConfig)
+    engine_dispatch: EngineDispatchConfig = field(default_factory=EngineDispatchConfig)
 
 
 def parse_toml_string(text: str) -> dict[str, Any]:
@@ -1122,6 +1233,7 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         siem=_parse_siem(data),
         queue=QueueConfig.from_data(data),
         design=DesignConfig.from_data(data),
+        engine_dispatch=EngineDispatchConfig.from_data(data),
     )
 
 

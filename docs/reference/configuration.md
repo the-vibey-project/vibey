@@ -32,7 +32,8 @@ The project record is written once, at creation, by one of two paths:
   are stored in the `config` JSON as `max_cycle_dollars`, `max_cycle_turns`
   and `skills_context` (the last only when the mode is not `off`). When the repo
   contains `vibey.toml`, its `[notifications]`, `[telemetry]`, `[gates]`,
-  `[engine_environment]` and `[design]` tables are copied into that same JSON record;
+  `[engine_environment]` and `[design]` tables, and `[engines]`'s
+  [dispatch keys](#engine-dispatch), are copied into that same JSON record;
   `--design-default-scope` then overrides `design.interview.default_scope`.
 - **The Kubernetes operator** ([ADR-0025](../architecture/decisions/0025-kubernetes-operator-crd-keda.md)):
   a `VibeyProject` spec's `maxCycles` sets the column (default `10`);
@@ -90,6 +91,7 @@ worker finds no stored switch and each local engine sits at its default —
 | `VIBEY_FEATURE_QWENLOOP` | as `VIBEY_FEATURE_GPTOSSLOOP` | Overrides `features.qwenloop`, with the same values. Off when nothing sets it. Enabling it adds a qwenloop adapter — the same runner on a Qwen model — to the LOCAL tier beside gptossloop, and makes the worker and `vibey doctor` print a `note:` that qwenloop runs a Qwen model since ADR-0064. |
 | `VIBEY_EVIDENCE_DIR` | `vibey work --provider gptossloop`, `vibey worker --provider gptossloop` (the default) | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source; what the research job does then is [`[design.research] on_unavailable`](#designresearch) — by default it parks for a person. |
 | `VIBEY_ENGINE_MAX_RUN_MINUTES` | `vibey worker`, for every `build.implement` and `build.verify` session (`bootstrap._engine_run_deadline`) | Overrides [`[engines] max_run_minutes`](#engines): the wall-clock limit on one BUILD engine session, in whole minutes. Set, it beats the project's stored config. A value that is not a positive whole number is ignored, never read as "no limit"; the default is `240`. |
+| `VIBEY_ENGINES_MODE`, `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS`, `VIBEY_ENGINES_PAID_DAILY_CAP` | `vibey worker` (`bootstrap._engine_dispatch`, through `EngineDispatchConfigLoader`), and every whole-`vibey.toml` load | Override [`[engines] mode`, `overflow_after_seconds` and `paid_daily_cap`](#engine-dispatch). Set, they beat the project's stored config; empty counts as unset; a value that is not valid for its key fails building that project's worker. No value of `VIBEY_ENGINES_PAID_DAILY_CAP` means "uncapped". |
 | `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `bootstrap.build_app` (every worker), through the environment overlay | Overrides [`[design.research] on_unavailable`](#designresearch): `gate` or `record_gap`, exactly. Set, it beats `./vibey.toml`; empty counts as unset; any other value fails the start. How an unattended driver (`scripts/triaged_delivery.py --record-research-gaps`) opts a worker in without writing a file. |
 
 ### Database roles { #database-roles }
@@ -303,8 +305,16 @@ Unlike `[budget]` above, this key **is** read at runtime, by
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `enabled` | array of strings | `["gptossloop"]`, plus every other local engine whose switch is on | Must be a subset of the known engines below. `gptossloop`, the sovereign default (sub-doctrine 8.b, `DEFAULT_ENGINES`), is on without declaration: an explicit list that leaves it out is extended with it. It leaves the pool only by `features.gptossloop = false` (ADR-0064). If the list is omitted, each switched-on local engine (`qwenloop`, `claudeloop-local`) is appended too. |
-| `max_run_minutes` | positive integer | `240` | The wall-clock limit on one BUILD engine session (`build.implement` or `build.verify`). Past it the session is stopped and the job fails as `ENGINE`: three in a row open that engine's circuit so the retry rotates away, and the job's bounded attempts still end in a park, never a loop. A hung session used to keep its job's lease alive forever. There is no "off": a value that is not a positive whole number is ignored. Read by the worker from the project's stored config, which `vibey new` does not copy `[engines]` into today, so set it with `VIBEY_ENGINE_MAX_RUN_MINUTES` unless your project record was written another way. |
+| `max_run_minutes` | positive integer | `240` | The wall-clock limit on one BUILD engine session (`build.implement` or `build.verify`). Past it the session is stopped and the job fails as `ENGINE`: three in a row open that engine's circuit so the retry rotates away, and the job's bounded attempts still end in a park, never a loop. A hung session used to keep its job's lease alive forever. There is no "off": a value that is not a positive whole number is ignored. Read by the worker from the project's stored config, into which `vibey new` copies only `[engines]`'s [dispatch keys](#engine-dispatch), so set it with `VIBEY_ENGINE_MAX_RUN_MINUTES` unless your project record was written another way. |
 | `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
+| `mode` | `"singleton"`, `"hybrid"` or `"auto"` | `"auto"` | How BUILD jobs are dispatched across the tiers ([hybrid engine dispatch](#engine-dispatch), [ADR-0079](../architecture/decisions/0079-hybrid-engine-dispatch.md)). `VIBEY_ENGINES_MODE` overrides it. |
+| `overflow_after_seconds` | integer ≥ 0 | `600` | How long a BUILD job must have been held for a local slot before a paid engine may take it as overflow. `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS` overrides it. |
+| `paid_daily_cap` | integer ≥ 0 | `10` | The most paid overflows one project may take per UTC day, counted from the ledger. `0` means no overflow; there is no value that means "uncapped" (sub-doctrine 8.b). `VIBEY_ENGINES_PAID_DAILY_CAP` overrides it. |
+| `slot_poll_seconds` | integer ≥ 1 | `30` | How soon a job held for a local slot is looked at again (never later than its remaining wait). |
+| `auto_window_hours` | integer ≥ 1 | `168` | How much of the project's BUILD history `auto` measures. |
+| `auto_min_sessions` | integer ≥ 1 | `20` | Fewer local sessions than this in the window and `auto` chooses `singleton`. |
+| `auto_min_contention` | number 0–1 | `0.25` | The share of local sessions that must have found every local slot occupied before `auto` may choose `hybrid`. |
+| `auto_max_age_hours` | integer ≥ 1 | `24` | How long a recorded measurement decides before it is taken again. |
 
 Known engine ids: `claudeloop`, `codexloop`,
 `gptossloop` (valid unless `features.gptossloop = false`), `qwenloop` (valid in
@@ -314,6 +324,46 @@ longer an engine: its engine and runner were deleted, and a `vibey.toml` that na
 it is refused as an unknown engine. `cursorloop` and `agyloop` were retired by
 ADR-0078: a `vibey.toml` that names either — in `[engines]`, `[phases.*].engines` or
 `[engine_environment]` — is refused with an error that names the ADR.
+
+### `[engines.slots]`
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| *engine id* | integer ≥ 1 | `1` for a local engine, `2` for a paid one | The engine's concurrent slots under `hybrid`: how many leased BUILD jobs it may hold at once. Keys must be known engines. One is what a default Ollama serves; declare more where the host measured it can carry them (sub-doctrine 8.j). |
+
+### Hybrid engine dispatch { #engine-dispatch }
+
+Sub-doctrine 8.a makes the local tier the preference, and under `singleton` that is all
+selection knows: any local engine that can take a job gets it, however many jobs it is
+already running, and BUILD queues behind the one local model slot. `hybrid` adds one
+narrow path, sub-doctrine 8.k's **overflow**
+([ADR-0079](../architecture/decisions/0079-hybrid-engine-dispatch.md)):
+
+1. A local engine with a free slot always takes the job.
+2. When every eligible local slot is occupied and a paid engine with a free slot exists
+   and the cap allows one, a job that has waited less than `overflow_after_seconds` is
+   **held** in the queue (a capacity defer: no attempt is spent) and looked at again
+   after `slot_poll_seconds`. Its first hold on each attempt is an `EngineSlotWaitStarted`
+   ledger event.
+3. Once it has waited long enough, a paid engine takes it as **overflow**, reserved against
+   `paid_daily_cap` under the project row's lock and recorded as an
+   `EngineOverflowSelected` event naming the occupied slots, the wait and what is left of
+   the cap.
+4. When overflow cannot happen — no paid engine free, or the cap reached — the job is
+   assigned to local and waits there, exactly as under `singleton`.
+
+Slots in use are the queue's unexpired leases with an assigned engine, across every
+project. `auto` (the default) chooses `hybrid` only from an `EngineDispatchMeasured`
+event: over the last `auto_window_hours`, at least `auto_min_sessions` local BUILD
+sessions, at least `auto_min_contention` of them begun with every local slot occupied,
+and a median wait for a slot of at least `overflow_after_seconds`. A measurement for
+other engines, slots, thresholds or vibey version, or older than `auto_max_age_hours`, is
+taken again; one that cannot be taken means `singleton`. `vibey ledger` shows every
+measurement, hold and overflow.
+
+The worker reads these keys from the project's stored config: `vibey new` copies
+`[engines]`'s dispatch keys (and only those) from `vibey.toml`, and the
+`VIBEY_ENGINES_*` variables overlay them.
 
 ### `[engines.claudeloop_local]` { #enginesclaudeloop_local }
 

@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any, Final
 
 from vibey.domain.config import (
+    ENGINE_DISPATCH_KEYS,
     ConfigError,
+    EngineDispatchConfig,
     QueueConfig,
     VibeyConfig,
     parse_config,
@@ -17,6 +19,7 @@ from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import LOCAL_ENGINE_SWITCHES
 from vibey.infrastructure.interfaces.class_contracts import (
+    EngineDispatchConfigLoaderInterface,
     EnvironmentConfigLoaderInterface,
     QueueConfigLoaderInterface,
 )
@@ -116,20 +119,34 @@ _DESIGN_RESEARCH_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
     ("design.research", "on_unavailable", "VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE", str),
 )
 
+# `[engines]`'s dispatch keys (ADR-0079): the mode, the overflow threshold and the daily
+# paid-overflow cap. A cluster pod has no vibey.toml, and an operator lowers the cap for a
+# day without editing one.
+_ENGINE_DISPATCH_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
+    ("engines", "mode", "VIBEY_ENGINES_MODE", str),
+    ("engines", "overflow_after_seconds", "VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS", int),
+    ("engines", "paid_daily_cap", "VIBEY_ENGINES_PAID_DAILY_CAP", int),
+)
+
 _TRUE: Final = frozenset({"1", "true", "yes", "on"})
 _FALSE: Final = frozenset({"0", "false", "no", "off"})
 
 
 def apply_env_overrides(
-    data: dict[str, Any], environ: Mapping[str, str] = os.environ
+    data: dict[str, Any],
+    environ: Mapping[str, str] = os.environ,
+    *,
+    variables: tuple[tuple[str, str, str, type], ...] | None = None,
 ) -> dict[str, Any]:
-    """Overlay surface, `[queue.reap]`, `[queue.defect]` and `[design.research]` environment
-    variables onto parsed TOML data, in place. A dotted table name is a nested table."""
-    for table, key, variable, cast in (
+    """Overlay surface, `[queue.reap]`, `[queue.defect]`, `[design.research]` and
+    `[engines]` dispatch environment variables onto parsed TOML data, in place. A dotted
+    table name is a nested table. `variables` narrows the overlay to those entries."""
+    for table, key, variable, cast in variables or (
         *_SURFACE_ENV_VARS,
         *_QUEUE_REAP_ENV_VARS,
         *_QUEUE_DEFECT_ENV_VARS,
         *_DESIGN_RESEARCH_ENV_VARS,
+        *_ENGINE_DISPATCH_ENV_VARS,
     ):
         raw = environ.get(variable)
         if raw is None or not raw.strip():
@@ -189,6 +206,13 @@ def load_runtime_config_from_path(path: Path) -> dict[str, object]:
         return {}
     data = parse_toml_string(path.read_text())
     runtime = {key: data[key] for key in RUNTIME_CONFIG_KEYS if key in data}
+    engines = data.get("engines")
+    if isinstance(engines, dict):
+        # Only `[engines]`'s dispatch keys (ADR-0079) are the worker's to read from the
+        # record; the pool and its weights stay vibey.toml's, as they always have.
+        dispatch = {key: engines[key] for key in ENGINE_DISPATCH_KEYS if key in engines}
+        if dispatch:
+            runtime["engines"] = dispatch
     if runtime:
         # Validate the same tables with the domain parser before copying them
         # into the project's stored JSON.  A synthetic project name lets this
@@ -256,3 +280,22 @@ class EnvironmentConfigLoader:
 
 
 ENVIRONMENT_CONFIG: Final[EnvironmentConfigLoaderInterface] = EnvironmentConfigLoader()
+
+
+class EngineDispatchConfigLoader:
+    """`[engines]`'s dispatch keys as a worker runs them (ADR-0079): the project's stored
+    config, with `VIBEY_ENGINES_*` overlaid -- and only those, so an unrelated malformed
+    variable never stops a worker selecting an engine. A stored `engines` that is a list
+    (the Kubernetes resource's allow-list) declares no dispatch keys; the environment still
+    may."""
+
+    def load(
+        self, stored: Mapping[str, object], environ: Mapping[str, str] = os.environ
+    ) -> EngineDispatchConfig:
+        engines = stored.get("engines")
+        data: dict[str, Any] = {"engines": dict(engines) if isinstance(engines, Mapping) else {}}
+        apply_env_overrides(data, environ, variables=_ENGINE_DISPATCH_ENV_VARS)
+        return EngineDispatchConfig.from_data(data)
+
+
+ENGINE_DISPATCH_CONFIG: Final[EngineDispatchConfigLoaderInterface] = EngineDispatchConfigLoader()

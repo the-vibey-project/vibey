@@ -7,6 +7,10 @@ to select the next engine using SWRR. Updates the rotation cursor atomically.
 Tiers come first: the eligible engines of the most-preferred tier (LOCAL before
 PAID, sub-doctrine 8.a) are the only ones offered to SWRR, so a paid engine is
 the fallback when no local engine can take the job (ADR-0038).
+
+`select_dispatched` runs the same candidates through a hybrid dispatch plan
+(`domain/engine_dispatch.py`, ADR-0079): local slots first, and a paid engine as
+overflow only when every eligible local slot is occupied and the job has waited.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -20,7 +24,16 @@ from vibey.application.interfaces.engines import (
 from vibey.domain.capacity import Available
 from vibey.domain.circuit import CIRCUIT_STATE_PARSER, Circuit, CircuitState
 from vibey.domain.engine import EngineDescriptor, EngineId, JobRequirement
+from vibey.domain.engine_dispatch import (
+    ENGINE_DISPATCHER,
+    DispatchedSelection,
+    DispatchLoad,
+    EngineDispatchPolicy,
+    SlotHeld,
+    SlotHold,
+)
 from vibey.domain.errors import NoEligibleEngine
+from vibey.domain.interfaces.engine_dispatch_interface import EngineDispatcherInterface
 from vibey.domain.rotation import (
     Candidate,
     EngineRuntime,
@@ -51,10 +64,12 @@ class EngineSelector:
         health_service: EngineHealthServiceInterface,
         cursor_repository: RotationCursorRepository,
         descriptors: dict[EngineId, EngineDescriptor],
+        dispatcher: EngineDispatcherInterface = ENGINE_DISPATCHER,
     ) -> None:
         self._health_service = health_service
         self._cursor_repository = cursor_repository
         self._descriptors = descriptors
+        self._dispatcher = dispatcher
 
     def _circuit_state(self, record: EngineHealthRecord, *, now: datetime) -> CircuitState | None:
         """The stored circuit, half-opened once its probe time has arrived; None
@@ -112,6 +127,63 @@ class EngineSelector:
         Returns (engine_id, Selection with updated cursor state).
         Raises NoEligibleEngine if no engines meet requirements.
         """
+        candidates = await self._candidates(project_id, requirement, allow_list, affinity_engine)
+        # Sovereign before paid (sub-doctrine 8.a, ADR-0038): SWRR runs within the
+        # most-preferred tier that can win a round. This replaced a hard-coded
+        # "qwenloop only when nothing paid is eligible" filter -- the standby rule
+        # ADR-0015 recorded as an open tension with 8.a.
+        selection = select(preferred_tier(candidates))
+        await self._commit(project_id, selection)
+        return selection.engine_id, selection
+
+    async def select_dispatched(
+        self,
+        project_id: UUID,
+        requirement: JobRequirement,
+        *,
+        policy: EngineDispatchPolicy,
+        load: DispatchLoad,
+        allow_list: frozenset[EngineId] | None = None,
+        affinity_engine: EngineId | None = None,
+    ) -> DispatchedSelection:
+        """Select under a hybrid dispatch policy (ADR-0079).
+
+        The same candidates `select_engine` builds, offered to SWRR as the dispatcher
+        plans: a free local slot first, paid overflow only on its grounds. Raises
+        `SlotHeld` when the plan is to hold the job for a local slot -- before any cursor
+        moves -- and `NoEligibleEngine` as `select_engine` does.
+        """
+        candidates = await self._candidates(project_id, requirement, allow_list, affinity_engine)
+        plan = self._dispatcher.plan(candidates, policy, load)
+        if isinstance(plan, SlotHold):
+            raise SlotHeld(plan)
+        selection = select(plan.candidates)
+        await self._commit(project_id, selection)
+        return DispatchedSelection(
+            engine_id=selection.engine_id, selection=selection, overflow=plan.overflow
+        )
+
+    async def _commit(self, project_id: UUID, selection: Selection) -> None:
+        """Write back the SWRR state of every candidate the round was offered."""
+        updated_cursors = tuple(
+            RotationCursor(
+                project_id=project_id,
+                engine_id=c.engine_id,
+                current=c.current,
+                order=c.order,
+            )
+            for c in selection.candidates
+        )
+        await self._cursor_repository.update_many(project_id, updated_cursors)
+
+    async def _candidates(
+        self,
+        project_id: UUID,
+        requirement: JobRequirement,
+        allow_list: frozenset[EngineId] | None,
+        affinity_engine: EngineId | None,
+    ) -> list[Candidate]:
+        """One SWRR candidate per eligible engine. Raises NoEligibleEngine when none is."""
         # Get health records
         health_records = await self._health_service.list_for_project(project_id)
 
@@ -204,26 +276,7 @@ class EngineSelector:
                     tier=runtime.descriptor.tier,
                 )
             )
-
-        # Sovereign before paid (sub-doctrine 8.a, ADR-0038): SWRR runs within the
-        # most-preferred tier that can win a round. This replaced a hard-coded
-        # "qwenloop only when nothing paid is eligible" filter -- the standby rule
-        # ADR-0015 recorded as an open tension with 8.a.
-        selection = select(preferred_tier(candidates))
-
-        # Update rotation cursors
-        updated_cursors = tuple(
-            RotationCursor(
-                project_id=project_id,
-                engine_id=c.engine_id,
-                current=c.current,
-                order=c.order,
-            )
-            for c in selection.candidates
-        )
-        await self._cursor_repository.update_many(project_id, updated_cursors)
-
-        return selection.engine_id, selection
+        return candidates
 
 
 __all__ = ["EngineSelector"]

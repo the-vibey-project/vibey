@@ -123,6 +123,14 @@ class EventKind(StrEnum):
     ENGINE_FAILED_OVER = "EngineFailedOver"
     ENGINE_PROBED = "EngineProbed"
     ENGINE_HANDED_BACK = "EngineHandedBack"
+    # Hybrid engine dispatch (ADR-0079). A BUILD job was held in the queue for a local
+    # slot (once per job and attempt: the wait's start, the slots it found occupied); a
+    # paid engine took a job as overflow (the slots, how long the job waited, the cap and
+    # what was left of it -- the cap is counted from these events); `auto` recorded a
+    # measurement of local-slot contention and the mode it chose. Trusted only.
+    ENGINE_SLOT_WAIT_STARTED = "EngineSlotWaitStarted"
+    ENGINE_OVERFLOW_SELECTED = "EngineOverflowSelected"
+    ENGINE_DISPATCH_MEASURED = "EngineDispatchMeasured"
     # Gate notices. "A person was told" is evidence, never assumed: every notice about a
     # gate -- the one when it is raised (`notice` 0) and each reminder while it waits
     # (1, 2, ...) -- is recorded as delivered on at least one channel, or as undeliverable

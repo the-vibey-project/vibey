@@ -20,6 +20,7 @@ from vibey.application.dto import (
 )
 from vibey.domain.capacity import CapacityState
 from vibey.domain.engine import EngineDescriptor, EngineId, JobRequirement
+from vibey.domain.engine_dispatch import DispatchedSelection, DispatchLoad, EngineDispatchPolicy
 from vibey.domain.job import FailureClass
 from vibey.domain.rotation import Selection
 
@@ -209,4 +210,19 @@ class EngineSelectorInterface(Protocol):
 
         Raises `domain.errors.NoEligibleEngine` when none qualify.
         """
+        ...
+
+    async def select_dispatched(
+        self,
+        project_id: UUID,
+        requirement: JobRequirement,
+        *,
+        policy: EngineDispatchPolicy,
+        load: DispatchLoad,
+        allow_list: frozenset[EngineId] | None = None,
+        affinity_engine: EngineId | None = None,
+    ) -> DispatchedSelection:
+        """Picks under a hybrid dispatch plan (ADR-0079): local slots first, paid only as
+        overflow. Raises `domain.engine_dispatch.SlotHeld` when the job is to wait for a
+        local slot, and `NoEligibleEngine` when no engine qualifies."""
         ...
