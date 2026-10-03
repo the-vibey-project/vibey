@@ -493,6 +493,29 @@
         }
       ]
     },
+    "1371": {
+      "close_when_done": false,
+      "hold_reason": "release-binaries.yml opened this tracking issue and owns it; it closes when the Developer ID and notarisation credentials are set",
+      "kind": "hold",
+      "last_verdict": "OPERATOR-HOLD",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "1374": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator priority order",
+      "probes": []
+    },
+    "1376": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "land the hybrid engine dispatch (ADR-0079); the engine retirement landed in #1377",
+      "probes": []
+    },
     "138": {
       "close_when_done": false,
       "kind": "standalone",
