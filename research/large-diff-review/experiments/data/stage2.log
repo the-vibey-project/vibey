@@ -98,3 +98,17 @@
 {"arm": "A1", "case_id": "host-1131#part3", "code": "reviewed", "wall_s": 560.8299999999999, "outcome": "false_positive"}
 {"arm": "A1", "case_id": "host-1131#part1", "code": "reviewed", "wall_s": 220.0, "outcome": "clean"}
 {"arm": "A1", "case_id": "host-1155#part2", "code": "reviewed", "wall_s": 322.55, "outcome": "false_positive"}
+{"arm": "A1", "case_id": "host-1155#part1", "code": "reviewed", "wall_s": 322.68, "outcome": "false_positive"}
+{"arm": "A1", "case_id": "host-1155#part3", "code": "reviewed", "wall_s": 303.02, "outcome": "clean"}
+{"arm": "A1", "case_id": "host-1161#part1", "code": "reviewed", "wall_s": 301.52, "outcome": "clean"}
+{"arm": "A1", "case_id": "host-1161#part3", "code": "reviewed", "wall_s": 299.69, "outcome": "clean"}
+{"arm": "A1", "case_id": "host-1161#part2", "code": "reviewed", "wall_s": 300.19, "outcome": "clean"}
+{"arm": "D16-T1-BF8192+FF", "case_id": "needle-1131-obo-budget-zero-dollar-cap-early#part", "code": "reviewed", "wall_s": 88.53, "outcome": "caught"}
+[etiquette] yielded {'arm': 'D16-T1-BF8192+FF', 'case': 'needle-1131-inv-budget-plan-unchanged-middle', 'part': 'part3'} after 65s; re-queued
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:63412->[::1]:11434
+[etiquette] waiting: another client is connected to the model: com.docke pid 957 [::1]:63456->[::1]:11434
+{"arm": "D16-T1-BF8192+FF", "case_id": "needle-1131-inv-budget-plan-unchanged-middle#part", "code": "reviewed", "wall_s": 127.77, "outcome": "caught"}
+{"arm": "D16-T1-BF8192+FF", "case_id": "needle-1131-swallow-skip-markers-unreadable-range-late#part", "code": "reviewed", "wall_s": 366.75, "outcome": "missed"}
+{"arm": "D16-T1-BF8192+FF", "case_id": "needle-1155-await-ledger-append-early#part", "code": "reviewed", "wall_s": 106.14, "outcome": "caught"}
+{"arm": "D16-T1-BF8192+FF", "case_id": "needle-1155-sql-ledger-range-order-middle#part", "code": "model_unreachable", "wall_s": 82.78, "outcome": "no_verdict"}
+{"arm": "D16-T1-BF8192+FF", "case_id": "needle-1155-sql-ledger-range-order-middle#part", "code": "model_unreachable", "wall_s": 82.78, "outcome": "no_verdict"}
