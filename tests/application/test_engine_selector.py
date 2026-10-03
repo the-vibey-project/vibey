@@ -172,16 +172,16 @@ async def test_select_engine_respects_excluded() -> None:
 
 async def test_select_engine_respects_allow_list() -> None:
     selector, project_id = await _setup(
-        engines=[EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP]
+        engines=[EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.GPTOSSLOOP]
     )
 
     engine_id, _ = await selector.select_engine(
         project_id,
         JobRequirement(effort=Effort.STANDARD),
-        allow_list=frozenset({EngineId.AGYLOOP}),
+        allow_list=frozenset({EngineId.CODEXLOOP}),
     )
 
-    assert engine_id == EngineId.AGYLOOP
+    assert engine_id == EngineId.CODEXLOOP
 
 
 async def test_select_engine_affinity_boosts_preferred_engine() -> None:
@@ -610,7 +610,7 @@ async def test_a_local_tier_decayed_to_zero_weight_does_not_strand_the_job() -> 
     engine takes the job instead of `select` refusing the whole round."""
     repo = FakeEngineHealthRepository()
     project_id = uuid4()
-    await repo.upsert(_healthy_record(project_id, EngineId.AGYLOOP))
+    await repo.upsert(_healthy_record(project_id, EngineId.CODEXLOOP))
     await repo.upsert(_healthy_record(project_id, EngineId.QWENLOOP, ewma_failure=1.0))
     selector = EngineSelector(
         health_service=EngineHealthService(repo),
@@ -620,4 +620,4 @@ async def test_a_local_tier_decayed_to_zero_weight_does_not_strand_the_job() -> 
 
     engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
 
-    assert engine_id is EngineId.AGYLOOP
+    assert engine_id is EngineId.CODEXLOOP

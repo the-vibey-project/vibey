@@ -1,6 +1,6 @@
 # 0015 — qwenloop is an opt-in local engine: a standby tier for BUILD, the sovereign provider for DESIGN
 
-**Status:** accepted; one clause superseded in part by ADR-0037; the BUILD standby rule amended by ADR-0038 · **Date:** 2026-08-23 (PR #83) · **Rewritten:** 2026-09-15 · **Extended by:** PR #117 (doctor visibility, 2026-08-30) and ADR-0027 (the sovereign DESIGN provider, PR #120, 2026-08-30) · **Amended:** 2026-09-18 by ADR-0038 — the tension with sub-doctrine 8.a below is closed
+**Status:** accepted; one clause superseded in part by ADR-0037; the BUILD standby rule amended by ADR-0038 · **Date:** 2026-08-23 (PR #83) · **Rewritten:** 2026-09-15 · **Extended by:** PR #117 (doctor visibility, 2026-08-30) and ADR-0027 (the sovereign DESIGN provider, PR #120, 2026-08-30) · **Amended:** 2026-09-18 by ADR-0038 — the tension with sub-doctrine 8.a below is closed · **Superseded in part by:** ADR-0078 (the engines it names as current that ADR-0078 retired)
 
 > **2026-09-18 — amended by [ADR-0038](0038-local-engines-are-preferred-first.md).**
 > Decision 3, the standby, no longer holds: local engines are **preferred first**.

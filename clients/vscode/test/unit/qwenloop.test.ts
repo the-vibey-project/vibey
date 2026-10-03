@@ -100,8 +100,16 @@ describe('EngineCommand', () => {
     // The degraded catalogue's template carries {plan_flag?}; the runner takes no plan flag.
     const degraded = new EngineCommand(DegradedCatalogue.sovereign('gpt-oss:20b', 'n').loops[0]?.engines[0] as CatalogueEngine, '/bin/gptossloop');
     expect(degraded.run({ plan: '/p.md', runId: 'r1', cwd: '/w', effortArgv: [] }).args).toEqual(['run', '/p.md', '--run-id', 'r1', '--cwd', '/w']);
-    const cursor = new EngineCommand(engine('cursorloop'), '/bin/cursorloop');
-    expect(cursor.run({ plan: '/p.md', runId: 'r1', cwd: '/w', effortArgv: [] }).args).toEqual(['run', '--plan', '/p.md', '--run-id', 'r1', '--cwd', '/w']);
+    // An engine whose `run` takes the plan as a flag; none vibey ships does today.
+    const flagged = new EngineCommand(
+      {
+        ...engine('claudeloop'),
+        plan_flag: '--plan',
+        run: ['{binary}', 'run', '{plan_flag?}', '{plan}', '--run-id', '{run_id}', '{effort_argv...}', '--cwd', '{cwd}'],
+      },
+      '/bin/claudeloop',
+    );
+    expect(flagged.run({ plan: '/p.md', runId: 'r1', cwd: '/w', effortArgv: [] }).args).toEqual(['run', '--plan', '/p.md', '--run-id', 'r1', '--cwd', '/w']);
   });
 
   it('drops the --cwd pair where the engine takes none, even if a template carries it', () => {
@@ -118,8 +126,8 @@ describe('EngineCommand', () => {
       expect(runner.prompt('r1', '-a dash', '/w')?.args).toEqual(['prompt', '--cwd', '/w', '--', 'r1', '-a dash']);
     }
     // vibey declares no prompt for an engine that ignores one: no follow-up is ever sent to it.
-    const cursor = new EngineCommand(engine('cursorloop'), '/bin/cursorloop');
-    expect(cursor.prompt('r1', 'x', '/w')).toBeUndefined();
+    const deaf = new EngineCommand({ ...engine('claudeloop'), controls: { ...engine('claudeloop').controls, prompt: null } }, '/bin/claudeloop');
+    expect(deaf.prompt('r1', 'x', '/w')).toBeUndefined();
     const codex = new EngineCommand(engine('codexloop'), '/bin/codexloop');
     expect(codex.stop('r1', '/w')?.args).toEqual(['stop', '--run-id', 'r1']);
     const claude = new EngineCommand(engine('claudeloop'), '/bin/claudeloop');

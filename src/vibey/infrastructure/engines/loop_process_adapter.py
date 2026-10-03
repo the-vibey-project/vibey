@@ -7,8 +7,8 @@ loop processes, streams their events.jsonl with proper translation, detects
 completion via descriptor.done_marker, recognizes exit code 75 (wind-down), and
 classifies capacity states using the existing classify.py machinery.
 
-Built to work with claudeloop, codexloop, cursorloop, and agyloop via their
-descriptors, not four separate classes.
+Built to work with every *loop runner via its descriptor, not one class per
+engine.
 """
 
 import asyncio
@@ -351,8 +351,8 @@ class LoopProcessAdapter:
     async def start(self, spec: RunSpec) -> RunHandle:
         """Build argv, write plan, spawn process, return handle."""
         run_dir = spec.worktree_path / self.descriptor.state_dir / "runs" / str(spec.run_id)
-        # Don't create run_dir here - let the engine create it (some engines
-        # like agyloop use exist_ok=False and will fail if it already exists)
+        # Don't create run_dir here - let the engine create it (an engine may
+        # create it with exist_ok=False and fail if it already exists)
 
         # Write the plan file if this is a new run
         if spec.session_id is None:
@@ -465,7 +465,7 @@ class LoopProcessAdapter:
                         continue
                     try:
                         raw = json.loads(line)
-                        # claudeloop/agyloop write {"event_type": ..., "payload": {...}}.
+                        # claudeloop writes {"event_type": ..., "payload": {...}}.
                         # codexloop passes the wrapped codex CLI's own stream
                         # through nearly verbatim, where the key is "type" and
                         # the fields sit at the top level with no payload
@@ -499,7 +499,7 @@ class LoopProcessAdapter:
                         at = datetime.fromisoformat(at_str) if at_str else datetime.now(UTC)
 
                         # Enrich payload for verdict events with done_marker.
-                        # agyloop's own "finished" event_type covers both
+                        # claudeloop's own "finished" event_type covers both
                         # success and failure (see application/runner.py),
                         # distinguished only by payload["success"] -- require
                         # it explicitly True rather than defaulting when
@@ -526,7 +526,7 @@ class LoopProcessAdapter:
                             and payload.get("success") is True
                         ):
                             payload["done_marker"] = self.descriptor.done_marker
-                        # Normalize the completion key: claudeloop/agyloop
+                        # Normalize the completion key: claudeloop's
                         # verdict payloads say {"success": bool} while every
                         # vibey consumer (run_and_record, the brief builder)
                         # reads {"complete": bool}. Caught live: a real

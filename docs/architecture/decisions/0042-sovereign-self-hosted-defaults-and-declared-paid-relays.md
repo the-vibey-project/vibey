@@ -1,6 +1,7 @@
 # 0042 — Sovereign self-hosted defaults, paid declared-only relays
 
 **Status:** proposed · **Date:** 2026-09-21 · **Cites:** sub-doctrine 8.b ·
+**Superseded in part by:** ADR-0078 (the engines it names as current that ADR-0078 retired) ·
 **Related:** ADR-0015, ADR-0016, ADR-0027, ADR-0038, ADR-0037 ·
 **Evidence:** the engine-pool, deploy, forge and tracker surfaces; sub-doctrine
 8.b; the corpus index

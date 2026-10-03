@@ -128,6 +128,27 @@ async def test_a_deliberately_broken_descriptor_is_detected_not_crashed_on(
     assert "--effort" in flags_check.detail
 
 
+async def test_a_plan_flag_is_a_claimed_flag_the_help_must_show(tmp_path: Path) -> None:
+    """A runner that takes its plan as a flag claims that flag like any other. No shipped
+    descriptor sets one since ADR-0078, so one is made here: the scripted double's own help
+    lists it, and a help text without it fails the check naming it."""
+    from dataclasses import replace
+
+    flagged = replace(CLAUDELOOP, plan_flag="--plan")
+
+    shown = await run_conformance(ScriptedEngine(descriptor=flagged, base_dir=tmp_path / "a"))
+    assert next(c for c in shown.checks if c.name == "flags").ok is True
+
+    without = ScriptedEngine(
+        descriptor=flagged,
+        base_dir=tmp_path / "b",
+        help_text=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "c").help_text,
+    )
+    flags = next(c for c in (await run_conformance(without)).checks if c.name == "flags")
+    assert flags.ok is False
+    assert "--plan" in flags.detail
+
+
 async def test_wrong_capacity_mapping_is_caught_by_capacity_map_check(tmp_path: Path) -> None:
     engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path)
     # Deliberately assert the wrong expected type for a real credits fixture.
@@ -281,11 +302,12 @@ async def test_structured_verdict_claimed_but_missing_fails_that_check(tmp_path:
     assert "no VerdictRendered" in check.detail
 
 
-async def test_agyloop_structured_verdict_not_claimed_is_ok(tmp_path: Path) -> None:
-    from vibey.infrastructure.engines.descriptors import CURSORLOOP
+async def test_structured_verdict_not_claimed_is_ok(tmp_path: Path) -> None:
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
 
-    # cursorloop's descriptor omits STRUCTURED_VERDICT (§1: "partial").
-    engine = ScriptedEngine(descriptor=CURSORLOOP, base_dir=tmp_path)
+    # claudeloop-local's descriptor omits STRUCTURED_VERDICT until conformance proves it
+    # for the configured local model (§1: "partial").
+    engine = ScriptedEngine(descriptor=CLAUDELOOP_LOCAL, base_dir=tmp_path)
 
     report = await run_conformance(engine)
 

@@ -159,11 +159,6 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "generated mirrors of authoritative skills; volatile-path examples are source content",
     ),
     (
-        "src/vibey_runners/agy/docs/plans/research-notes.md",
-        r"/tmp/",
-        "a reproduction of a sandbox escape: the files are the probe, not work",
-    ),
-    (
         "src/vibey_tools/bootstrap/examples/07_local_settings.py",
         r"/tmp/nonexistent\.json",
         "a path chosen because it does not exist",

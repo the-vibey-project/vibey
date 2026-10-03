@@ -24,11 +24,27 @@ EXIT_CODE_WIND_DOWN = 75
 EXIT_CODE_BACKEND_MISCONFIGURED = 78
 
 
+RETIRED_ENGINES: Final[Mapping[str, str]] = MappingProxyType(
+    {
+        "cursorloop": (
+            " -- cursorloop was retired by ADR-0078 (#1376) and deleted with its runner; "
+            "claudeloop and codexloop are the paid engines"
+        ),
+        "agyloop": (
+            " -- agyloop was retired by ADR-0078 (#1376) and deleted with its runner; "
+            "claudeloop and codexloop are the paid engines"
+        ),
+    }
+)
+"""Engine ids the family once shipped and has since deleted, each with the clause a refusal
+appends to say so. A configuration, flag or allow-list that still names one is refused out
+loud, naming the decision -- never read as a typo and never dropped quietly (12.e). A stored
+row that names one stays valid history and reads as an `UnrecognizedEngineId`."""
+
+
 class EngineId(StrEnum):
     CLAUDELOOP = "claudeloop"
     CODEXLOOP = "codexloop"
-    CURSORLOOP = "cursorloop"
-    AGYLOOP = "agyloop"
     # The sovereign default engine (8.b, 8.d): the local runner on GPT-OSS, on unless a
     # project switches it off. What was called qwenloop until ADR-0064, when qwenloop
     # became the same runner on the Qwen model its name promises -- opt-in, below.
@@ -39,6 +55,17 @@ class EngineId(StrEnum):
     # separate engine, not a flag on claudeloop: it has its own health row,
     # its own circuit, its own cost (zero) and its own tier (ADR-0038).
     CLAUDELOOP_LOCAL = "claudeloop-local"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "EngineId | None":
+        # A retired id gets the enum's own ValueError with the retirement said beside it,
+        # so every `EngineId(name)` taking an operator's word -- a flag, an allow-list, a
+        # project's engine environment -- refuses it naming ADR-0078. Anything else falls
+        # through to the enum's default refusal.
+        hint = RETIRED_ENGINES.get(value) if isinstance(value, str) else None
+        if hint is None:
+            return None
+        raise ValueError(f"{value!r} is not a valid {cls.__name__}{hint}")
 
 
 class EngineTier(StrEnum):
@@ -231,8 +258,8 @@ class EngineDescriptor:
     # a chance to run.
     supports_cwd_flag: bool = True
     # How the engine's `run` verb takes the plan file. None means a bare
-    # positional path (claudeloop, codexloop, agyloop); a string is the flag
-    # the binary requires instead (cursorloop: `--plan`). Verified against
+    # positional path (claudeloop, codexloop); a string is the flag the binary
+    # requires instead (one engine ADR-0078 retired took `--plan`). Verified against
     # each installed binary's own --help, never assumed -- passing a
     # positional to a binary that wants a flag fails at argument parsing,
     # before the session ever starts.

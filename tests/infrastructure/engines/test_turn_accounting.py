@@ -5,12 +5,12 @@ brake (LedgerBudgetSource) that counts TurnCompleted against
 ``max_cycle_turns``.
 
 Until this was fixed, ``chatter.assistant`` mapped to TurnCompleted beside
-``turn.completed``, so claudeloop and agyloop under their default
+``turn.completed``, so claudeloop and claudeloop-local under their default
 ``log_chatter=summary`` counted every turn twice and the cap tripped at half
 the configured turns; every qwenloop ``text_delta`` counted as a turn.
 
-The streams below mirror what each runner actually writes: claudeloop's and
-agyloop's ``application/runner.py`` (turn.starting, chatter.prompt,
+The streams below mirror what each runner actually writes: claudeloop's
+``application/runner.py`` (turn.starting, chatter.prompt,
 chatter.assistant, turn.completed, with ``chatter_event_payload``'s summary
 shape), codexloop's ``infrastructure/agent/gateway.py::_event_to_dict`` (flat
 ``type`` records), and qwenloop's ``application/runner.py`` (a text_delta per
@@ -28,7 +28,12 @@ from vibey.application.dto import EngineEvent, RunHandle
 from vibey.domain.engine import EngineDescriptor, EngineId
 from vibey.domain.ledger import EventKind, LedgerEvent
 from vibey.domain.phase import Phase
-from vibey.infrastructure.engines.descriptors import AGYLOOP, CLAUDELOOP, CODEXLOOP, QWENLOOP
+from vibey.infrastructure.engines.descriptors import (
+    CLAUDELOOP,
+    CLAUDELOOP_LOCAL,
+    CODEXLOOP,
+    QWENLOOP,
+)
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.engines.tailer import translate_event
 
@@ -36,7 +41,7 @@ Record = dict[str, object]
 
 
 def _summary_chatter(event_type: str, text: str) -> Record:
-    """The payload claudeloop/agyloop's ``chatter_event_payload`` builds in
+    """The payload claudeloop's ``chatter_event_payload`` builds in
     summary mode: the full text plus a console preview."""
     return {
         "event_type": event_type,
@@ -127,7 +132,9 @@ async def _tail(tmp_path: Path, descriptor: EngineDescriptor, records: list[Reco
     return [event.kind for event in await _tail_events(tmp_path, descriptor, records)]
 
 
-@pytest.mark.parametrize("descriptor", [CLAUDELOOP, AGYLOOP], ids=lambda d: d.engine_id.value)
+@pytest.mark.parametrize(
+    "descriptor", [CLAUDELOOP, CLAUDELOOP_LOCAL], ids=lambda d: d.engine_id.value
+)
 @pytest.mark.parametrize("turns", [1, 3, 7])
 async def test_claude_family_summary_chatter_yields_one_turn_per_turn(
     tmp_path: Path, descriptor: EngineDescriptor, turns: int
@@ -218,7 +225,9 @@ async def _brake(
     return budget.turns_spent, budget.dollars_spent, budget.any_exhausted
 
 
-@pytest.mark.parametrize("descriptor", [CLAUDELOOP, AGYLOOP], ids=lambda d: d.engine_id.value)
+@pytest.mark.parametrize(
+    "descriptor", [CLAUDELOOP, CLAUDELOOP_LOCAL], ids=lambda d: d.engine_id.value
+)
 async def test_turn_cap_trips_at_the_configured_turn_not_half_of_it(
     tmp_path: Path, descriptor: EngineDescriptor
 ) -> None:
@@ -233,7 +242,9 @@ async def test_turn_cap_trips_at_the_configured_turn_not_half_of_it(
     assert not exhausted
 
 
-@pytest.mark.parametrize("descriptor", [CLAUDELOOP, AGYLOOP], ids=lambda d: d.engine_id.value)
+@pytest.mark.parametrize(
+    "descriptor", [CLAUDELOOP, CLAUDELOOP_LOCAL], ids=lambda d: d.engine_id.value
+)
 async def test_turn_cap_trips_once_the_configured_turns_are_spent(
     tmp_path: Path, descriptor: EngineDescriptor
 ) -> None:

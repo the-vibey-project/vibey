@@ -11,7 +11,7 @@ export type LoopName = 'sovereignloop' | 'paidloop';
 
 /**
  * How an engine writes its events: a top-level `type` (codexloop, gptossloop, qwenloop), `event_type`
- * with a `payload` (claudeloop, agyloop), or `event_type` beside flat fields (no engine
+ * with a `payload` (claudeloop), or `event_type` beside flat fields (no engine
  * today; the deleted opencodeloop wrote it, and `vibey loops` still names the shape).
  */
 export type EventEnvelope = 'type' | 'event_type+payload' | 'event_type';

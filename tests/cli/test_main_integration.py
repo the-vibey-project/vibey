@@ -439,7 +439,7 @@ def test_new_project_stores_the_declared_gate_and_engine_environments(tmp_path: 
         '[engine_environment]\nallow = ["JAVA_HOME"]\n\n'
         "[engine_environment.engines]\n"
         'codexloop = ["OPENROUTER_API_KEY"]\n'
-        'agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]\n'
+        'claudeloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]\n'
     )
 
     result = runner.invoke(app, ["new", "declared-env-proj", "--repo", str(tmp_path)])
@@ -458,7 +458,7 @@ def test_new_project_stores_the_declared_gate_and_engine_environments(tmp_path: 
         "allow": ["JAVA_HOME"],
         "engines": {
             "codexloop": ["OPENROUTER_API_KEY"],
-            "agyloop": ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"],
+            "claudeloop": ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"],
         },
     }
 

@@ -114,10 +114,10 @@ def test_full_envelope_constructs_and_round_trips_via_replace() -> None:
         gate=GateResult(ok=True, mode=GateMode.STRICT, attempts=1, violations=(), rules_run=()),
     )
 
-    rotated = dataclasses.replace(envelope, to_engine=EngineId.CURSORLOOP)
+    rotated = dataclasses.replace(envelope, to_engine=EngineId.CLAUDELOOP)
 
     assert envelope.to_engine is EngineId.CODEXLOOP
-    assert rotated.to_engine is EngineId.CURSORLOOP
+    assert rotated.to_engine is EngineId.CLAUDELOOP
     assert rotated.brief == envelope.brief  # unaffected fields survive the replace
 
 

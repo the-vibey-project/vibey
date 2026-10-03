@@ -94,8 +94,8 @@ See `domain/job.py` (`JobState`, `FailureClass`, `backoff()`,
 ## Ledger
 
 The **append-only event log** in Postgres, written in a vendor-neutral schema.
-Vendor transcripts (`~/.claude/projects/**/*.jsonl`, codex rollouts, cursor
-bridge logs) are copied in as *attachments* referenced by events — they are
+Vendor transcripts (`~/.claude/projects/**/*.jsonl`, codex rollouts) are
+copied in as *attachments* referenced by events — they are
 evidence, not state.
 
 **Event kinds (26 total, `domain/ledger.py::EventKind`):** `SessionSeeded`,

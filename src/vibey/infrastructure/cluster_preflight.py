@@ -56,8 +56,6 @@ class ClusterCheck:
 ENGINE_API_KEY_ENVS: Mapping[EngineId, tuple[str, ...]] = {
     EngineId.CLAUDELOOP: ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"),
     EngineId.CODEXLOOP: ("OPENAI_API_KEY", "AZURE_OPENAI_API_KEY", "CODEX_API_KEY"),
-    EngineId.CURSORLOOP: ("CURSOR_API_KEY",),
-    EngineId.AGYLOOP: ("GOOGLE_API_KEY", "GEMINI_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS"),
 }
 
 # Which engine each `vibey worker --provider` drives for DESIGN/decompose. Only

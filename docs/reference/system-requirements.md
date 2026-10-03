@@ -168,9 +168,7 @@ From the network pass of 2026-09-29. *Observed* means seen on the wire or by the
 |---|---|---|---|---|
 | `api.github.com`, `github.com` | 443 (22 for ssh) | GitHub API through `gh`; `git push` | The triaged-delivery bridge, claudeloop issue import, `vibey-gh` | observed / code |
 | Anthropic (`api.anthropic.com`) | 443 | claudeloop sessions through the bundled CLI | claudeloop | observed |
-| `api2.cursor.sh`, `api.cursor.com` | 443 | The Cursor SDK bridge | cursorloop (its `doctor` is live) | observed |
 | `api.openai.com` (or a configured base URL) | 443 | The codex CLI | codexloop | code |
-| `generativelanguage.googleapis.com`, `aiplatform.googleapis.com` | 443 | The Antigravity SDK | agyloop | code |
 | Azure Resource Manager, through `az` | 443 | Deployment stages ④–⑥ | Only `vibey worker --azure az` | code |
 | The Kubernetes API | 443 or 6443 | `vibey operator` | Only the `operator` extra | code |
 | Webhook URLs (global addresses only) | 443 or 80 | Gate notifications, HMAC-signed | Only when `[notifications]` webhooks are set | code |
@@ -184,8 +182,6 @@ provider (against a model-free stub), `answer`, `worker --once`, `status`, `proj
 `gates`, `engines`, `cost`, `budget`, `serve`, `hub pair`, and the `krypton` launcher.
 What needs the internet: installing packages, pulling models, the paid engines, the
 triaged-delivery bridge, webhooks, `--azure az`, the operator and the opt-in integrations.
-`vibey doctor` offline differs in one verdict: cursorloop's live authentication check
-fails.
 
 ## krypton clients
 

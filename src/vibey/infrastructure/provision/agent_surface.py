@@ -55,8 +55,6 @@ _ARTIFACT_PATTERNS = (
     ".vibey/",
     ".claudeloop/",
     ".codexloop/",
-    ".cursorloop/",
-    ".agyloop/",
     ".qwenloop/",
 )
 

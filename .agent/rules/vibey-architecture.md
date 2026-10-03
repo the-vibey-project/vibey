@@ -117,8 +117,6 @@ directory in this repository instead.
 |---|---|---|---|
 | `src/vibey_runners/claude` | `claudeloop` | 3.12 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/codex` | `codexloop` | 3.12 | pytest, ruff, mypy, import-linter |
-| `src/vibey_runners/cursor` | `cursorloop` | 3.12 | pytest, ruff, mypy, import-linter |
-| `src/vibey_runners/agy` | `agyloop` | 3.12 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/qwen` | `qwenloop` | 3.12 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/common` | `vibey-runners-common` | 3.12 | ruff, mypy, import-linter (no test directory yet) |
 | `src/vibey_tools/gh` | `vibey-gh` | 3.12 | pytest (100% branch), black, isort, mypy, bandit |

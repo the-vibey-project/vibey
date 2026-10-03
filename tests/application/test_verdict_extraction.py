@@ -159,7 +159,7 @@ CODEXLOOP_TURN = {
     "artifacts": [{"kind": "diff", "path": "relay.py"}],
 }
 
-CURSORLOOP_TURN = {
+QUESTION_TURN = {
     "complete": False,
     "remaining_work": ["unflake the CI test"],
     "summary": "Investigated CI flake.",
@@ -169,7 +169,7 @@ CURSORLOOP_TURN = {
     "artifacts": [],
 }
 
-AGYLOOP_TURN = {
+ARTIFACT_ONLY_TURN = {
     "complete": True,
     "remaining_work": [],
     "summary": "Added web search citation for the API doc link.",
@@ -191,14 +191,14 @@ def test_codexloop_style_turn_extracts_cleanly() -> None:
     assert kinds == ["DecisionRecorded", "ArtifactProduced", "VerdictRendered"]
 
 
-def test_cursorloop_style_turn_extracts_cleanly() -> None:
-    result = extract_events(CURSORLOOP_TURN, open_items=(), now=NOW)
+def test_a_turn_that_asks_and_assumes_extracts_cleanly() -> None:
+    result = extract_events(QUESTION_TURN, open_items=(), now=NOW)
     kinds = [e.kind for e in result.events]
     assert kinds == ["QuestionAsked", "AssumptionStated", "VerdictRendered"]
 
 
-def test_agyloop_style_turn_extracts_cleanly() -> None:
-    result = extract_events(AGYLOOP_TURN, open_items=(), now=NOW)
+def test_a_turn_that_only_produces_an_artifact_extracts_cleanly() -> None:
+    result = extract_events(ARTIFACT_ONLY_TURN, open_items=(), now=NOW)
     kinds = [e.kind for e in result.events]
     assert kinds == ["ArtifactProduced", "VerdictRendered"]
 

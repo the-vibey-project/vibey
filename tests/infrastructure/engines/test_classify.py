@@ -133,31 +133,11 @@ def test_codexloop_fallback_available_on_unrecognized_error_code() -> None:
     assert isinstance(result, Available)
 
 
-def test_cursorloop_window_without_retry_after_seconds() -> None:
-    result = classify_capacity(EngineId.CURSORLOOP, {"status": 429, "type": "rate_limited"})
-    assert isinstance(result, WindowExhausted)
-    assert result.resets_at is None
-
-
 def test_parse_dt_returns_none_for_non_string() -> None:
     from vibey.infrastructure.engines.classify import _parse_dt
 
     assert _parse_dt(None) is None
     assert _parse_dt(12345) is None
-
-
-def test_parse_duration_from_now_returns_none_for_non_string() -> None:
-    from vibey.infrastructure.engines.classify import _parse_duration_from_now
-
-    assert _parse_duration_from_now(None) is None
-    assert _parse_duration_from_now(30) is None
-
-
-def test_parse_duration_from_now_returns_none_for_non_matching_pattern() -> None:
-    from vibey.infrastructure.engines.classify import _parse_duration_from_now
-
-    assert _parse_duration_from_now("30m") is None
-    assert _parse_duration_from_now("abc") is None
 
 
 # ── claudeloop's real capacity shape, and its backend misconfiguration ───────

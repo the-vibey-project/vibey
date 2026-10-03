@@ -180,7 +180,7 @@ for the threat model and how to report a vulnerability.
 
 ## Related projects
 
-Same contract, different vendor. The four `*loop` runners share one domain
+Same contract, different vendor. The two paid `*loop` runners share one domain
 state machine, one set of application ports, and one `.<name>loop/runs/<id>/`
 layout — pick the one that matches the agent you pay for:
 
@@ -188,10 +188,8 @@ layout — pick the one that matches the agent you pay for:
 |---|---|---|
 | [claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) | Claude Code (Anthropic) | `claudeloop` |
 | **codexloop** (this package) | OpenAI Codex / GPT | `codexloop` |
-| [cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | Cursor Agent (Composer-first; Grok as a model profile) | `cursorloop` |
-| [agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | Google Antigravity / Gemini | `agyloop` |
 
-All four ship inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package: one
+Both ship inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package: one
 `pip install vibey-engine` puts every command above on `PATH` (vibey ADR-0037).
 
 Around them:

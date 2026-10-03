@@ -98,7 +98,7 @@ def _healthy_record(project_id: object, engine_id: EngineId) -> EngineHealthReco
 async def _make_handoff_service(
     engines: list[EngineId] | None = None,
 ) -> tuple[RotationHandoffService, object]:
-    engines = engines or [EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP]
+    engines = engines or [EngineId.CLAUDELOOP, EngineId.CODEXLOOP]
     repo = FakeEngineHealthRepository()
     cursor_repo = FakeRotationCursorRepository()
     project_id = uuid4()
@@ -269,7 +269,7 @@ async def test_wind_down_without_a_brief_leaves_verified_brief_none() -> None:
 async def test_allow_list_restricts_wind_down_selection() -> None:
     repo = FakeEngineHealthRepository()
     project_id = uuid4()
-    for eid in (EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP):
+    for eid in (EngineId.CLAUDELOOP, EngineId.CODEXLOOP):
         await repo.upsert(_healthy_record(project_id, eid))
     selector = EngineSelector(
         health_service=EngineHealthService(repo),

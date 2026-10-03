@@ -160,7 +160,9 @@ and what 10.b already settled for money. 8.a settles it for everything else.
 merge that carried this entry; its list clarified and extended by the merge that
 carried 8.c; its paid defaults set, and OpenCode repealed in favour of VS Code, by
 the merge that carried them; its cap, and the one path to no cap, set by the merge
-that carried that paragraph)*: every operational surface of vibey defaults to
+that carried that paragraph; two paid adapters retired by the merge that carries
+ADR-0078 — under Article II.3 a ratification-ready draft until the operator's merge
+carries it)*: every operational surface of vibey defaults to
 the freest, most sovereign, self-hosted, free option — and never, ever, to a paid
 platform. This is specific and enumerated, because a preference without a
 concrete default is a platitude:
@@ -169,7 +171,7 @@ concrete default is a platitude:
   tools that run on the operator's own hardware and need no subscription — this
   era's default model (8.d), and **VS Code** when its provider is local — always
   on, never needing declaration, for every phase. **`paidloop`** and its adapters — `claudeloop`,
-  `codexloop`, `cursorloop`, `agyloop`, and VS Code on a paid provider — are
+  `codexloop`, and VS Code on a paid provider — are
   declared-only. OpenCode is repealed as an engine of either loop; VS Code takes
   its place in both, and the runner that drove OpenCode is retired once the VS Code
   adapter carries its work.
@@ -265,11 +267,12 @@ add protection and take none away (Constitution, Article IV).
 carried this entry; its two loops and two layers, and its one instance per model,
 set by the merge that carried them; its capacity on the operator's own hardware made
 the number measured on each device by the merge that carried that sentence; its
-sovereign runners named by the merge that carries ADR-0064 — under Article II.3 a
+sovereign runners named by the merge that carries ADR-0064, and its paid adapters
+narrowed by the merge that carries ADR-0078 — under Article II.3 each a
 ratification-ready draft until the operator's merge carries it)*: the family runs **exactly two loops**. **`sovereignloop`** — what `gptossloop`
 and `qwenloop` become — drives the models and tools that run on the operator's own hardware;
-**`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
-`cursorloop` and `agyloop` as its adapters. Each loop runs as
+**`paidloop`** drives every paid engine, with `claudeloop` and `codexloop`
+as its adapters. Each loop runs as
 **a single instance per model**, and that
 instance takes its work from **a queue** on the bus surface (8.b). Nothing starts
 a second instance of a loop to go faster, and nothing spawns a loop directly:

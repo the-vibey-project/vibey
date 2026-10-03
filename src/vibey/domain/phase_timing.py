@@ -86,8 +86,8 @@ from vibey.domain.phase import StoredPhase
 TURN_EVENT_CAVEAT: Final = (
     "turn_completed_events counts TurnCompleted ledger events, not turns. "
     "Engine translation (infrastructure/engines/loop_events.py) maps both "
-    "chatter.assistant and turn.completed to TurnCompleted for claudeloop and "
-    "agyloop, codexloop's turn.failed as well as turn.completed, and every "
+    "chatter.assistant and turn.completed to TurnCompleted for claudeloop, "
+    "codexloop's turn.failed as well as turn.completed, and every "
     "qwenloop text_delta, so the count overstates real turns by an "
     "engine-dependent factor. Do not present it, or a rate derived from it, "
     "as a number of turns."

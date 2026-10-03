@@ -45,7 +45,7 @@ async def run_conformance(
 
     # Real engines are autonomous software-development session runners that
     # check for a git repository during their own startup (visible directly
-    # in claudeloop/cursorloop's own `doctor` preflight output) -- against a
+    # in claudeloop's own `doctor` preflight output) -- against a
     # bare scratch directory a real run can silently produce no output at
     # all, which then reads as a run_dir_shape/done_marker failure with
     # nothing pointing at the actual cause. ScriptedEngine ignores this
@@ -125,7 +125,7 @@ async def run_conformance(
         # Only flag NAMES are checkable against --help. Values are not: an
         # option declared `--model <str>` accepts anything and enumerates
         # nothing, so requiring its values to appear in help text failed
-        # cursorloop for model names that were never going to be listed
+        # an engine for model names that were never going to be listed
         # (while passing others only by the accident of their values being
         # words that appear elsewhere in the text). A wrong value is caught
         # by the scripted run below; a wrong flag name is caught here.

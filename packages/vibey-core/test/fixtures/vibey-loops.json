@@ -843,305 +843,10 @@
             ]
           },
           "notes": []
-        },
-        {
-          "engine_id": "cursorloop",
-          "binary": "cursorloop",
-          "state_dir": ".cursorloop",
-          "enabled": true,
-          "switch": null,
-          "on_by_default": false,
-          "repealed": false,
-          "cost_per_mtok_in": 2.5,
-          "cost_per_mtok_out": 10.0,
-          "default_model": null,
-          "efforts": [
-            {
-              "effort": "TRIVIAL",
-              "argv": [
-                "--model",
-                "composer-fast"
-              ],
-              "achieved": "TRIVIAL",
-              "model": "composer-fast",
-              "notes": ""
-            },
-            {
-              "effort": "LOW",
-              "argv": [
-                "--model",
-                "composer"
-              ],
-              "achieved": "LOW",
-              "model": "composer",
-              "notes": ""
-            },
-            {
-              "effort": "STANDARD",
-              "argv": [
-                "--model",
-                "grok-4.5"
-              ],
-              "achieved": "STANDARD",
-              "model": "grok-4.5",
-              "notes": ""
-            },
-            {
-              "effort": "HIGH",
-              "argv": [
-                "--model",
-                "grok"
-              ],
-              "achieved": "HIGH",
-              "model": "grok",
-              "notes": ""
-            },
-            {
-              "effort": "MAX",
-              "argv": [
-                "--model",
-                "grok-xhigh"
-              ],
-              "achieved": "MAX",
-              "model": "grok-xhigh",
-              "notes": ""
-            },
-            {
-              "effort": "ULTRA",
-              "argv": [
-                "--model",
-                "grok-xhigh"
-              ],
-              "achieved": "MAX",
-              "model": "grok-xhigh",
-              "notes": "cursorloop has no unbounded tier; runs its top model"
-            }
-          ],
-          "capabilities": {
-            "images": null,
-            "files": true,
-            "paste_text": true,
-            "paste_images": null,
-            "plugins": "skills-context",
-            "mcp": null,
-            "evidence": {
-              "files": "it runs in the worktree (`run --cwd`, cursorloop cli/commands/run.py)",
-              "paste_text": "the plan is text (`run --plan`, cursorloop cli/commands/run.py), and it is the run's first message",
-              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it"
-            }
-          },
-          "done_marker": "CURSORLOOP_TASK_FULLY_COMPLETE",
-          "plan_flag": "--plan",
-          "supports_cwd_flag": true,
-          "base_weight": 2,
-          "run": [
-            "{binary}",
-            "run",
-            "{plan_flag?}",
-            "{plan}",
-            "--run-id",
-            "{run_id}",
-            "{effort_argv...}",
-            "--cwd",
-            "{cwd}"
-          ],
-          "controls": {
-            "stop": [
-              "stop",
-              "--run-id",
-              "{run_id}",
-              "--cwd",
-              "{cwd}"
-            ],
-            "wind_down": [
-              "wind-down",
-              "--run-id",
-              "{run_id}",
-              "--cwd",
-              "{cwd}"
-            ],
-            "prompt": null
-          },
-          "events": {
-            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
-            "envelope": "event_type+payload"
-          },
-          "env": {
-            "auth": [
-              "CURSOR_API_KEY"
-            ],
-            "passthrough": [
-              "CURSORLOOP_*",
-              "CURSOR_*"
-            ]
-          },
-          "notes": []
-        },
-        {
-          "engine_id": "agyloop",
-          "binary": "agyloop",
-          "state_dir": ".agyloop",
-          "enabled": true,
-          "switch": null,
-          "on_by_default": false,
-          "repealed": false,
-          "cost_per_mtok_in": 0.5,
-          "cost_per_mtok_out": 2.0,
-          "default_model": null,
-          "efforts": [
-            {
-              "effort": "TRIVIAL",
-              "argv": [
-                "--preset",
-                "low",
-                "--effort",
-                "low"
-              ],
-              "achieved": "TRIVIAL",
-              "model": null,
-              "notes": "agyloop preset low"
-            },
-            {
-              "effort": "LOW",
-              "argv": [
-                "--preset",
-                "low",
-                "--effort",
-                "medium"
-              ],
-              "achieved": "LOW",
-              "model": null,
-              "notes": "agyloop preset low"
-            },
-            {
-              "effort": "STANDARD",
-              "argv": [
-                "--preset",
-                "medium",
-                "--effort",
-                "high"
-              ],
-              "achieved": "STANDARD",
-              "model": null,
-              "notes": "agyloop preset medium"
-            },
-            {
-              "effort": "HIGH",
-              "argv": [
-                "--preset",
-                "high",
-                "--effort",
-                "high"
-              ],
-              "achieved": "HIGH",
-              "model": null,
-              "notes": "agyloop preset high"
-            },
-            {
-              "effort": "MAX",
-              "argv": [
-                "--preset",
-                "high",
-                "--effort",
-                "max"
-              ],
-              "achieved": "MAX",
-              "model": null,
-              "notes": "agyloop preset high"
-            },
-            {
-              "effort": "ULTRA",
-              "argv": [
-                "--preset",
-                "high",
-                "--effort",
-                "max"
-              ],
-              "achieved": "ULTRA",
-              "model": null,
-              "notes": "agyloop preset high"
-            }
-          ],
-          "capabilities": {
-            "images": null,
-            "files": true,
-            "paste_text": true,
-            "paste_images": null,
-            "plugins": "skills-context",
-            "mcp": false,
-            "evidence": {
-              "files": "it runs in the worktree (`run --cwd`), and `run --add-dir` and `attach PATH` take more (agyloop cli/commands/run.py, attach_cmd.py)",
-              "paste_text": "`prompt TEXT --now|--at-break` (agyloop cli/commands/prompt.py); the plan itself is text",
-              "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
-              "mcp": "its agent options are built with `mcp_servers=[]`, always (agyloop infrastructure/agent/options.py)"
-            }
-          },
-          "done_marker": "AGYLOOP_TASK_FULLY_COMPLETE",
-          "plan_flag": null,
-          "supports_cwd_flag": true,
-          "base_weight": 1,
-          "run": [
-            "{binary}",
-            "run",
-            "{plan}",
-            "--run-id",
-            "{run_id}",
-            "{effort_argv...}",
-            "--cwd",
-            "{cwd}"
-          ],
-          "controls": {
-            "stop": [
-              "stop",
-              "--run-id",
-              "{run_id}",
-              "--cwd",
-              "{cwd}"
-            ],
-            "wind_down": null,
-            "prompt": [
-              "prompt",
-              "{text}",
-              "--now",
-              "--run-id",
-              "{run_id}",
-              "--cwd",
-              "{cwd}"
-            ]
-          },
-          "events": {
-            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
-            "envelope": "event_type+payload"
-          },
-          "env": {
-            "auth": [
-              "GOOGLE_API_KEY"
-            ],
-            "passthrough": [
-              "AGYLOOP_*",
-              "ANTIGRAVITY_*",
-              "GEMINI_API_KEY",
-              "GOOGLE_GENAI_USE_VERTEXAI",
-              "GOOGLE_GENAI_USE_ENTERPRISE",
-              "GOOGLE_CLOUD_PROJECT",
-              "GOOGLE_CLOUD_LOCATION"
-            ]
-          },
-          "notes": []
         }
       ],
       "by_effort": {
         "TRIVIAL": [
-          {
-            "engine_id": "agyloop",
-            "model": null,
-            "achieved": "TRIVIAL"
-          },
-          {
-            "engine_id": "cursorloop",
-            "model": "composer-fast",
-            "achieved": "TRIVIAL"
-          },
           {
             "engine_id": "claudeloop",
             "model": null,
@@ -1155,16 +860,6 @@
         ],
         "LOW": [
           {
-            "engine_id": "agyloop",
-            "model": null,
-            "achieved": "LOW"
-          },
-          {
-            "engine_id": "cursorloop",
-            "model": "composer",
-            "achieved": "LOW"
-          },
-          {
             "engine_id": "claudeloop",
             "model": null,
             "achieved": "LOW"
@@ -1177,18 +872,8 @@
         ],
         "STANDARD": [
           {
-            "engine_id": "agyloop",
-            "model": null,
-            "achieved": "STANDARD"
-          },
-          {
             "engine_id": "codexloop",
             "model": null,
-            "achieved": "STANDARD"
-          },
-          {
-            "engine_id": "cursorloop",
-            "model": "grok-4.5",
             "achieved": "STANDARD"
           },
           {
@@ -1198,16 +883,6 @@
           }
         ],
         "HIGH": [
-          {
-            "engine_id": "agyloop",
-            "model": null,
-            "achieved": "HIGH"
-          },
-          {
-            "engine_id": "cursorloop",
-            "model": "grok",
-            "achieved": "HIGH"
-          },
           {
             "engine_id": "claudeloop",
             "model": null,
@@ -1221,16 +896,6 @@
         ],
         "MAX": [
           {
-            "engine_id": "agyloop",
-            "model": null,
-            "achieved": "MAX"
-          },
-          {
-            "engine_id": "cursorloop",
-            "model": "grok-xhigh",
-            "achieved": "MAX"
-          },
-          {
             "engine_id": "claudeloop",
             "model": null,
             "achieved": "MAX"
@@ -1243,11 +908,6 @@
         ],
         "ULTRA": [
           {
-            "engine_id": "agyloop",
-            "model": null,
-            "achieved": "ULTRA"
-          },
-          {
             "engine_id": "claudeloop",
             "model": null,
             "achieved": "ULTRA"
@@ -1256,11 +916,6 @@
             "engine_id": "codexloop",
             "model": null,
             "achieved": "STANDARD"
-          },
-          {
-            "engine_id": "cursorloop",
-            "model": "grok-xhigh",
-            "achieved": "MAX"
           }
         ]
       }

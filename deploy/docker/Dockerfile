@@ -119,8 +119,8 @@ RUN uv sync --frozen --no-install-project --no-dev --extra operator --extra skil
 # `uv sync` below builds the project and hatchling demands every path
 # `[tool.hatch.build.targets.wheel]` names -- a missing one fails the build outright
 # ("Forced include not found: .../gh/docs/javascripts/channel.js"), which is how this
-# was found. So the list grew to exactly those paths and no further: ten package roots,
-# five force-include sources, and the nine tenant manifests uv's workspace globs
+# was found. So the list grew to exactly those paths and no further: eight package roots,
+# five force-include sources, and the seven tenant manifests uv's workspace globs
 # (`src/vibey_runners/*`, `src/vibey_tools/*`) require of any member directory that
 # exists in the context at all. Each tenant's tests/, docs/ and README still stay out.
 #
@@ -130,8 +130,6 @@ RUN uv sync --frozen --no-install-project --no-dev --extra operator --extra skil
 COPY src/vibey/ ./src/vibey/
 COPY src/vibey_runners/claude/pyproject.toml ./src/vibey_runners/claude/
 COPY src/vibey_runners/codex/pyproject.toml ./src/vibey_runners/codex/
-COPY src/vibey_runners/cursor/pyproject.toml ./src/vibey_runners/cursor/
-COPY src/vibey_runners/agy/pyproject.toml ./src/vibey_runners/agy/
 COPY src/vibey_runners/qwen/pyproject.toml ./src/vibey_runners/qwen/
 COPY src/vibey_runners/common/pyproject.toml ./src/vibey_runners/common/
 COPY src/vibey_tools/gh/pyproject.toml ./src/vibey_tools/gh/
@@ -139,8 +137,6 @@ COPY src/vibey_tools/bootstrap/pyproject.toml ./src/vibey_tools/bootstrap/
 COPY src/vibey_tools/skills/pyproject.toml ./src/vibey_tools/skills/
 COPY src/vibey_runners/claude/src/claudeloop/ ./src/vibey_runners/claude/src/claudeloop/
 COPY src/vibey_runners/codex/src/codexloop/ ./src/vibey_runners/codex/src/codexloop/
-COPY src/vibey_runners/cursor/src/cursorloop/ ./src/vibey_runners/cursor/src/cursorloop/
-COPY src/vibey_runners/agy/src/agyloop/ ./src/vibey_runners/agy/src/agyloop/
 COPY src/vibey_runners/qwen/src/qwenloop/ ./src/vibey_runners/qwen/src/qwenloop/
 COPY src/vibey_runners/common/src/vibey_runners/ ./src/vibey_runners/common/src/vibey_runners/
 COPY src/vibey_tools/gh/vibey_gh/ ./src/vibey_tools/gh/vibey_gh/

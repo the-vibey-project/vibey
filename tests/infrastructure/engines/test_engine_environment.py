@@ -13,11 +13,9 @@ import pytest
 
 from vibey.domain.engine import EngineDescriptor, EngineId
 from vibey.infrastructure.engines.descriptors import (
-    AGYLOOP,
     ALL_DESCRIPTORS,
     CLAUDELOOP,
     CODEXLOOP,
-    CURSORLOOP,
     QWENLOOP,
 )
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
@@ -96,17 +94,6 @@ _DECLARED: dict[EngineId, tuple[str, ...]] = {
         "CODEX_*",
         "OPENAI_*",
     ),
-    EngineId.CURSORLOOP: ("CURSOR_API_KEY", "CURSORLOOP_*", "CURSOR_*"),
-    EngineId.AGYLOOP: (
-        "GOOGLE_API_KEY",
-        "GEMINI_API_KEY",
-        "GOOGLE_GENAI_USE_VERTEXAI",
-        "GOOGLE_GENAI_USE_ENTERPRISE",
-        "GOOGLE_CLOUD_PROJECT",
-        "GOOGLE_CLOUD_LOCATION",
-        "AGYLOOP_*",
-        "ANTIGRAVITY_*",
-    ),
     EngineId.GPTOSSLOOP: ("GPTOSSLOOP_*",),
     EngineId.QWENLOOP: ("QWENLOOP_*",),
 }
@@ -128,8 +115,7 @@ def test_each_engines_declared_variables_admit_what_the_engine_reads() -> None:
     assert policy.allow_list(CLAUDELOOP).admits("ANTHROPIC_BASE_URL")
     assert policy.allow_list(CLAUDELOOP).admits("CLAUDELOOP_MAX_TURNS")
     assert policy.allow_list(CODEXLOOP).admits("CODEX_HOME")
-    assert policy.allow_list(CURSORLOOP).admits("CURSOR_API_KEY")
-    assert policy.allow_list(AGYLOOP).admits("GEMINI_API_KEY")
+    assert policy.allow_list(CODEXLOOP).admits("OPENAI_API_KEY")
     assert policy.allow_list(QWENLOOP).admits("QWENLOOP_BASE_URL")
     # ...and not what another engine reads.
     assert not policy.allow_list(QWENLOOP).admits("ANTHROPIC_API_KEY")
@@ -140,19 +126,19 @@ def test_the_project_config_adds_to_every_engine_and_to_one_engine() -> None:
         {
             "engine_environment": {
                 "allow": ["CORP_CA_BUNDLE", "CORP_*"],
-                "engines": {"agyloop": ["GOOGLE_APPLICATION_CREDENTIALS"], "claudeloop": []},
+                "engines": {"codexloop": ["GOOGLE_APPLICATION_CREDENTIALS"], "claudeloop": []},
             }
         }
     )
 
-    agy = _build(policy, AGYLOOP)
+    codex = _build(policy, CODEXLOOP)
     claude = _build(policy, CLAUDELOOP)
 
-    assert agy["GOOGLE_APPLICATION_CREDENTIALS"] == "/keys/sa.json"
+    assert codex["GOOGLE_APPLICATION_CREDENTIALS"] == "/keys/sa.json"
     assert "GOOGLE_APPLICATION_CREDENTIALS" not in claude
     assert policy.allow_list(CLAUDELOOP).admits("CORP_CA_BUNDLE")
     assert policy.allow_list(QWENLOOP).admits("CORP_PROXY_PAC")
-    for env in (agy, claude):
+    for env in (codex, claude):
         for name in _NEVER:
             assert name not in env
 
@@ -185,10 +171,13 @@ def test_without_an_engine_environment_object_the_defaults_apply(config: dict[st
         ({"allow": ["PGPASSWORD"]}, "can never be passed"),
         ({"allow": ["DATABASE_URL"]}, "can never be passed"),
         ({"allow": "GH_TOKEN"}, "engine_environment.allow must be a list of strings"),
-        ({"engines": ["agyloop"]}, "engine_environment.engines must be an object"),
-        ({"engines": {"nosuchloop": ["X"]}}, "unknown engine 'nosuchloop'"),
-        ({"engines": {"agyloop": ["VIBEY_PG_URL"]}}, "engine_environment.engines.agyloop"),
-        ({"engines": {"agyloop": "X"}}, "must be a list of strings"),
+        ({"engines": ["codexloop"]}, "engine_environment.engines must be an object"),
+        ({"engines": {"nosuchloop": ["X"]}}, "unknown engine 'nosuchloop'$"),
+        # A retired engine is refused naming the decision that retired it (ADR-0078).
+        ({"engines": {"cursorloop": ["X"]}}, "unknown engine 'cursorloop' -- .*ADR-0078"),
+        ({"engines": {"agyloop": ["X"]}}, "unknown engine 'agyloop' -- .*ADR-0078"),
+        ({"engines": {"codexloop": ["VIBEY_PG_URL"]}}, "engine_environment.engines.codexloop"),
+        ({"engines": {"codexloop": "X"}}, "must be a list of strings"),
         ({"alow": ["X"]}, "unknown key 'alow'"),
     ],
 )

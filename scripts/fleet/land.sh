@@ -11,7 +11,7 @@ REPO="${1:?usage: land.sh REPO PHASE}"
 PHASE="${2:?usage: land.sh REPO PHASE}"
 
 case "$REPO" in
-  vibey|claudeloop|agyloop|codexloop|cursorloop) ;;
+  vibey|claudeloop|codexloop) ;;
   *) echo "unknown repo: $REPO" >&2; exit 1 ;;
 esac
 

@@ -55,8 +55,6 @@ def _no_binary(_binary: str) -> None:
 _EVERY_KEY = {
     "ANTHROPIC_API_KEY": "x",
     "OPENAI_API_KEY": "x",
-    "CURSOR_API_KEY": "x",
-    "GOOGLE_API_KEY": "x",
 }
 
 
@@ -107,15 +105,15 @@ def test_workspace_unwritable_reports_the_reason(tmp_path: Path) -> None:
 
 
 def test_the_default_chart_install_passes_although_every_engine_ships() -> None:
-    """The regression this check had after ADR-0037: the one wheel puts all five
-    paid engines on PATH, so a default install (`--provider scripted`, no
+    """The regression this check had after ADR-0037: the one wheel puts every
+    paid engine on PATH, so a default install (`--provider scripted`, no
     `worker.engines`, no keys) -- the install CI deploys -- reported FAIL for
     engines the worker was never asked to use."""
     check = EngineAuthCheck(which=_every_binary).check({})
     assert check.ok, check.detail
     assert "nothing required" in check.detail
     assert "--provider scripted" in check.detail
-    assert "4 engine binaries on PATH, none with an API key" in check.detail
+    assert "2 engine binaries on PATH, none with an API key" in check.detail
     # The one fact a bare PASS would hide: nothing engine-driven can run.
     assert "no engine-driven (BUILD) job can run" in check.detail
 
@@ -130,26 +128,26 @@ def test_without_an_allow_list_the_verdict_names_what_can_and_cannot_authenticat
     check = EngineAuthCheck(which=_every_binary).check({"ANTHROPIC_API_KEY": "x"})
     assert check.ok
     assert "API key present: claudeloop" in check.detail
-    assert "without one: agyloop, codexloop, cursorloop" in check.detail
+    assert "without one: codexloop" in check.detail
     assert "--engines" in check.detail
 
 
 def test_without_an_allow_list_every_key_present_names_no_gap() -> None:
     check = EngineAuthCheck(which=_every_binary).check(_EVERY_KEY)
     assert check.ok
-    assert "API key present: agyloop, claudeloop, codexloop, cursorloop" in check.detail
+    assert "API key present: claudeloop, codexloop" in check.detail
     assert "without one" not in check.detail
 
 
 def test_without_an_allow_list_a_deployment_supplied_key_map_is_honoured() -> None:
     """The port stays generic: a deployment may name its own credential for an engine."""
-    api_key_envs = {**ENGINE_API_KEY_ENVS, EngineId.AGYLOOP: ("AGYLOOP_MOUNTED_KEY",)}
-    environ = {k: v for k, v in _EVERY_KEY.items() if not k.startswith(("GOOGLE", "GEMINI"))}
+    api_key_envs = {**ENGINE_API_KEY_ENVS, EngineId.CODEXLOOP: ("CODEX_MOUNTED_KEY",)}
+    environ = {k: v for k, v in _EVERY_KEY.items() if not k.startswith("OPENAI")}
     check = EngineAuthCheck(which=_every_binary, api_key_envs=api_key_envs).check(
-        {**environ, "AGYLOOP_MOUNTED_KEY": "mounted"}
+        {**environ, "CODEX_MOUNTED_KEY": "mounted"}
     )
     assert check.ok
-    assert "API key present: agyloop, claudeloop, codexloop, cursorloop" in check.detail
+    assert "API key present: claudeloop, codexloop" in check.detail
     assert "without one" not in check.detail
 
 
@@ -192,10 +190,10 @@ def test_missing_and_unauthenticated_are_reported_together() -> None:
 
 
 def test_every_allow_listed_engine_authenticated_passes() -> None:
-    engines = frozenset(EngineId(e) for e in ("claudeloop", "codexloop", "cursorloop", "agyloop"))
+    engines = frozenset(EngineId(e) for e in ("claudeloop", "codexloop"))
     check = EngineAuthCheck(which=_every_binary, allow_list=engines).check(_EVERY_KEY)
     assert check.ok
-    assert "4 engine(s) this worker uses" in check.detail
+    assert "2 engine(s) this worker uses" in check.detail
 
 
 def test_an_allow_listed_engine_that_takes_no_key_is_judged_on_presence_alone() -> None:
@@ -252,6 +250,14 @@ def test_an_empty_engines_flag_means_no_allow_list_as_it_does_for_the_worker() -
 def test_an_unknown_engine_in_the_flag_is_refused() -> None:
     with pytest.raises(ValueError, match="not a valid EngineId"):
         EngineAuthCheck.for_worker(engines="claudeloop,gpt", provider=None, which=_every_binary)
+
+
+@pytest.mark.parametrize("retired", ["cursorloop", "agyloop"])
+def test_a_retired_engine_in_the_flag_is_refused_naming_adr_0078(retired: str) -> None:
+    with pytest.raises(ValueError, match=rf"'{retired}' is not a valid EngineId -- .*ADR-0078"):
+        EngineAuthCheck.for_worker(
+            engines=f"claudeloop,{retired}", provider=None, which=_every_binary
+        )
 
 
 def test_the_classes_satisfy_their_declared_interfaces() -> None:

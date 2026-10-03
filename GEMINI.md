@@ -1,9 +1,9 @@
 # GEMINI.md
 
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
-Orchestrates claudeloop, codexloop, cursorloop, and agyloop (plus the local
+Orchestrates claudeloop and codexloop (plus the local
 runner's two engines: `gptossloop`, the sovereign default on GPT-OSS 20B, and opt-in
-`qwenloop` on Qwen) via PostgreSQL queue with lossless handoff. All five runners live in
+`qwenloop` on Qwen) via PostgreSQL queue with lossless handoff. All three runners live in
 this repository under `src/vibey_runners/`. Facts only —
 procedures live in `.agent/rules/`
 (mirrors of `.claude/skills/` and `.cursor/rules/`).
@@ -110,8 +110,8 @@ domain, application, infrastructure, cli. ADR-0023.
 
 Map covers `src/vibey` only. The repo is a uv workspace (ADR-0021) whose other
 tenants keep their own pyproject, version, Python floor, tests and gates
-(ADR-0022): `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
-(claudeloop, codexloop, cursorloop, agyloop, gptossloop and qwenloop — one
+(ADR-0022): `src/vibey_runners/{claude,codex,qwen,common}`
+(claudeloop, codexloop, gptossloop and qwenloop — one
 package, two engines, ADR-0064 — and vibey-runners-common) and
 `src/vibey_tools/{gh,skills,bootstrap}` (vibey-gh, vibey-skills,
 vibey-bootstrap). Sibling GitHub repos are gone and so are the separate PyPI
@@ -121,7 +121,8 @@ names — the tree ships as one `vibey-engine` package (ADR-0037, ADR-0069); the
 
 - **Queue:** PostgreSQL 14+, never SQLite (`FOR UPDATE SKIP LOCKED`, ADR-0002);
   CI exercises 14–18, the Helm chart defaults to 17.
-- **Engines:** claudeloop, codexloop, cursorloop, agyloop — the paid pool,
+- **Engines:** claudeloop, codexloop — the paid pool (cursorloop and agyloop
+  were retired by ADR-0078),
   rotated per BUILD job via smooth weighted round robin
   (`SelectingEngineProvider` → `EngineSelector` → `domain/rotation.select()`,
   ADR-0005). Three local engines — `gptossloop`, the sovereign default on GPT-OSS
@@ -211,7 +212,7 @@ own and the repository root's — have no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (77 ADRs: 0001–0077) |
+| ADRs | `docs/architecture/decisions/` (78 ADRs: 0001–0078) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

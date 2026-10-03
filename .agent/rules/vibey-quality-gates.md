@@ -164,7 +164,7 @@ images the app):
 |---|---|
 | `uv-lock` | `uv lock --check`. `gates`, `tools` and `tools-lint` depend on it. The lock carries vibey's own version, so a version bump without `uv lock` fails here first. |
 | `gates` | The seven gates above, against a `postgres:17` service. `postgres-compatibility` additionally runs the database suite on PostgreSQL 14, 15, 16, 17, and 18. |
-| `tools` | Each absorbed tenant's own suite on its own Python floors, plus, on its floor row, its own static gates from the row's `static` key: its mypy, `lint-imports` and bandit. agyloop, codexloop and vibey-skills also run their own strict docs builds (the `docs` key) (ADR-0022). |
+| `tools` | Each absorbed tenant's own suite on its own Python floors, plus, on its floor row, its own static gates from the row's `static` key: its mypy, `lint-imports` and bandit. codexloop and vibey-skills also run their own strict docs builds (the `docs` key) (ADR-0022). |
 | `tools-lint` | vibey-gh's own linters and its managed-automation drift check. |
 | `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts each `Image contract - …` step: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip, migrations ship in the image, and every console script is on PATH. |
 | `chart` | Render-only: `deploy/helm/golden/render.sh` runs `helm lint --strict` and `helm template` for each profile (defaults, `ollama.enabled`, the GPU + gptossloop wiring with qwenloop switched on beside it, and the KEDA query unbound and bound to a project) and diffs each render against its committed golden under `deploy/helm/golden/`, with helm pinned. After an intended chart change, regenerate with `deploy/helm/golden/render.sh --update`. |
@@ -215,9 +215,7 @@ pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=
 pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100
 pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
 
-# codexloop (CI: Python 3.12, 3.13). cursorloop and agyloop are the same with the package
-# name swapped, minus `pip install -e ../common` (neither depends on it) and with
-# `pytest tests` in place of `pytest -q`; agyloop then ends on `pytest -m system`.
+# codexloop (CI: Python 3.12, 3.13).
 cd src/vibey_runners/codex
 pip install -e ../common && pip install -e ".[dev]"
 pytest -q --cov=codexloop --cov-branch --cov-report=
@@ -253,15 +251,13 @@ VIBEY_GH_NETWORK_TESTS=1 python -m pytest -q -m network --no-cov
 CI runs that on one matrix row with `continue-on-error`: it reports on somebody
 else's service, so it must never gate a merge.
 
-The runners (`src/vibey_runners/{claude,codex,cursor,agy,qwen}`) carry their own
+The runners (`src/vibey_runners/{claude,codex,qwen}`) carry their own
 `tests/`, ruff, mypy and import-linter configuration in their `pyproject.toml`.
-Since 2026-09-15 the root `tools` matrix runs all five, one row per runner and Python
+Since 2026-09-15 the root `tools` matrix runs all three, one row per runner and Python
 version (read the rows in `ci.yml`), so a runner regression turns the `tools` job red. It reports rather than blocks: `tools`
 is not named in `required_checks` in `.vibey-gh.toml`, and no tools row ever has been.
-Read a runner's `[tool.pytest.ini_options]` before running anything by hand. agyloop's
-and cursorloop's addopts exclude `live` and `system` tests (agyloop's system harness is
-re-selected with `pytest -m system`, which is what the matrix does), and only qwenloop's
-addopts carry a coverage floor. The other four deliberately leave `--cov=` and
+Read a runner's `[tool.pytest.ini_options]` before running anything by hand. Only qwenloop's
+addopts carry a coverage floor. The other two deliberately leave `--cov=` and
 `--cov-fail-under` out, because pytest-cov unions every `--cov=` it sees and one baked
 in there would widen the explicitly-scoped per-layer runs back out to the whole package
 -- so for them a bare `pytest` runs the tests but enforces no floor. Use the commands

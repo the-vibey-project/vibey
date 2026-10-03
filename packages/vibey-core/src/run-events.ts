@@ -171,7 +171,7 @@ export class RunTranscript implements RunTranscriptInterface {
     return [type, { ...payload, ...(payload.turn === undefined && event.turn !== undefined ? { turn: event.turn } : {}) }];
   }
 
-  /** claudeloop and agyloop end with `finished` (payload.success); codexloop with `run.verdict` (complete). */
+  /** claudeloop ends with `finished` (payload.success); codexloop with `run.verdict` (complete). */
   private verdictEvent(record: EventRecord, turn: number | undefined): RunPatch {
     const success = record.success ?? record.complete;
     if (success === true) {

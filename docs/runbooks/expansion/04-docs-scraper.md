@@ -15,7 +15,7 @@ prove it → PR.
 
 | Surface | Source of truth |
 |---|---|
-| Vendor agent CLIs/SDKs the runners wrap (Claude Code, Codex CLI, Cursor SDK via `cursor-sdk-bridge`, Antigravity) | vendor changelogs + `<cli> --help` capture. The runners themselves are in-tree (`src/vibey_runners/`), so their docs are ours, not watched surfaces |
+| Vendor agent CLIs/SDKs the runners wrap (Claude Code, Codex CLI) | vendor changelogs + `<cli> --help` capture. The runners themselves are in-tree (`src/vibey_runners/`), so their docs are ours, not watched surfaces |
 | llama.cpp / vLLM (qwenloop backends) | GitHub releases |
 | GitHub Copilot CLI (only if 02 is revived) | github.blog changelog feed + `copilot --help` |
 | Jira Cloud REST v3 | developer.atlassian.com changelog |

@@ -15,7 +15,7 @@
 # a failing gate's log — see docs/plans/fleet-program-runbook.md.
 set -uo pipefail  # not -e: we want every gate to run so the summary is complete
 
-ALL_REPOS=(vibey claudeloop agyloop codexloop cursorloop)
+ALL_REPOS=(vibey claudeloop codexloop)
 REPOS=()
 RUN_LIVE=0
 SKIP_CONFORMANCE=0
@@ -102,8 +102,8 @@ if printf '%s\n' "${REPOS[@]}" | grep -qx vibey; then
   run_gate vibey "live-harness:faked" env VIBEY_LIVE_ENGINES= uv run pytest -q -m live
 
   if [ "$RUN_LIVE" -eq 1 ]; then
-    run_gate vibey "live-harness:live(claudeloop,agyloop)" \
-      env VIBEY_LIVE_ENGINES=claudeloop,agyloop uv run pytest -q -m live --max-dollars 5
+    run_gate vibey "live-harness:live(claudeloop)" \
+      env VIBEY_LIVE_ENGINES=claudeloop uv run pytest -q -m live --max-dollars 5
   fi
 
   if [ "$SKIP_CONFORMANCE" -eq 0 ]; then

@@ -165,16 +165,19 @@ def test_isolation_flags_included_for_container(descriptor) -> None:  # type: ig
 
 
 def test_plan_flag_engines_pass_the_plan_as_a_flag_not_a_positional() -> None:
-    """cursorloop's `run` requires `--plan <path>`; the other three take a
-    bare positional. Passing a positional to cursorloop killed every run at
-    argument parsing (live finding: no run dir, no events, no snapshot)."""
-    from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CURSORLOOP
+    """A runner whose `run` requires `--plan <path>` gets the flag; the others take a
+    bare positional. Passing a positional to such a runner killed every run at argument
+    parsing (live finding on an engine ADR-0078 later retired: no run dir, no events, no
+    snapshot). No shipped descriptor takes a plan flag today, so one is made here."""
+    from dataclasses import replace
+
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 
     spec = _spec(Effort.STANDARD)
 
-    cursor_argv = build_argv(CURSORLOOP, spec)
-    assert cursor_argv[1:3] == ("run", "--plan")
-    assert cursor_argv[3].endswith(".md")
+    flagged_argv = build_argv(replace(CLAUDELOOP, plan_flag="--plan"), spec)
+    assert flagged_argv[1:3] == ("run", "--plan")
+    assert flagged_argv[3].endswith(".md")
 
     claude_argv = build_argv(CLAUDELOOP, spec)
     assert claude_argv[1] == "run"
@@ -213,8 +216,14 @@ def test_the_run_template_filled_is_exactly_what_build_argv_runs(descriptor, eff
 
 
 def test_the_template_names_the_plan_flag_only_where_the_runner_takes_one() -> None:
+    from dataclasses import replace
+
     by_id = {d.engine_id.value: d for d in ALL_DESCRIPTORS}
-    assert RUN_ARGV_TEMPLATE.template(by_id["cursorloop"]) == (
+    flagged = replace(by_id["claudeloop"], plan_flag="--plan")
+    assert _filled(RUN_ARGV_TEMPLATE.template(flagged), flagged, Effort.STANDARD) == build_argv(
+        flagged, _spec(Effort.STANDARD)
+    )
+    assert RUN_ARGV_TEMPLATE.template(flagged) == (
         "{binary}", "run", "{plan_flag?}", "{plan}", "--run-id", "{run_id}",
         "{effort_argv...}", "--cwd", "{cwd}",
     )  # fmt: skip

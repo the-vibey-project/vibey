@@ -18,7 +18,7 @@ and neither implies the other — code can match its plan exactly and still
 allocate unboundedly, N+1 every request, and cost three times what it
 should.
 
-Runs in every package of this repository (vibey and the five runners,
+Runs in every package of this repository (vibey and the three runners,
 uv workspace members per ADR-0021) on the same reconcile machinery as 17, and vibey
 dogfoods it on itself, since vibey is built by vibey.
 
@@ -349,7 +349,7 @@ judgement rather than by measurement.
 11. kopf timer + `Fitness` condition + Events, at `record` only.
 12. Right-sizing recommendations for the chart's own resource requests.
 13. Ladder rungs behind `fitnessPolicy`, promoted one dimension at a time.
-14. The same loop in the five runners, at their own altitude.
+14. The same loop in the three runners, at their own altitude.
 15. `docs/guides/production-fitness.md`, plus a section in each runner's
     docs.
 

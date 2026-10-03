@@ -6,7 +6,7 @@ engine-selected sessions, REVIEW with real automated gates, and DONE(local).
 Along the way it demonstrates the two behaviors the whole design exists
 for: **per-job engine rotation** and **the no-loss wind-down handoff**.
 
-It costs real money (live claudeloop/agyloop sessions). The BUILD-phase
+It costs real money (live claudeloop/codexloop sessions). The BUILD-phase
 brake is the per-cycle cap you set at `vibey new` (`--max-cycle-dollars`,
 enforced from the ledger's recorded `cost_usd`); without it BUILD spend is
 uncapped. The worker's `--max-turns` / `--max-dollars` cap only the
@@ -19,7 +19,9 @@ the whole demo.
 - PostgreSQL running locally, and `VIBEY_PG_URL` pointing at a database you
   own (never SQLite; see ADR-0002).
 - At least two engines installed and authenticated — this runbook uses
-  `claudeloop` and `agyloop`. `vibey doctor` will tell you which are ready.
+  `claudeloop` and `codexloop`, the two paid engines. `vibey doctor` will tell
+  you which are ready. (The demo was last run live with claudeloop and
+  agyloop; agyloop has since been retired by ADR-0078.)
 - A clean working directory for the project repo.
 
 ## 1. Create the project
@@ -52,7 +54,7 @@ whenever an engine is updated.
 ## 3. Start the worker
 
 ```bash
-uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines claudeloop,agyloop
+uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines claudeloop,codexloop
 ```
 
 - `--provider claudeloop` makes the DESIGN interview and the BUILD
@@ -76,10 +78,10 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
 
   ```bash
   export VIBEY_EVIDENCE_DIR=~/demos/greeter-evidence
-  uv run --project <vibey-checkout> vibey worker --provider gptossloop --engines claudeloop,agyloop
+  uv run --project <vibey-checkout> vibey worker --provider gptossloop --engines claudeloop,codexloop
   ```
 
-- `--engines claudeloop,agyloop` is the allow-list: BUILD jobs select
+- `--engines claudeloop,codexloop` is the allow-list: BUILD jobs select
   between exactly these two via smooth-weighted round-robin, per job.
 - `gptossloop`, the sovereign local engine, is on by default but is not in
   this allow-list, so it runs no BUILD job here; drop `--engines` to let it
@@ -171,7 +173,7 @@ a session. The engine exits with code 75; vibey then:
    `accepted` must be true);
 4. enqueues a follow-up `build.implement` whose prompt is the rendered
    brief — every open question, decision, assumption, and finding id
-   verbatim — with claudeloop durably excluded, so agyloop picks it up.
+   verbatim — with claudeloop durably excluded, so codexloop picks it up.
 
 The wind-down job settles **Success**: rotation is not a failure and never
 burns the escalation ladder. An item may rotate three times; a fourth

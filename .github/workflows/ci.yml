@@ -430,9 +430,9 @@ jobs:
               pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
               pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
               pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
-          # codexloop, cursorloop and agyloop each replaced four instrumented runs with one,
-          # then filtered the single data file per layer -- `coverage report --include` keeps
-          # each floor's verdict independent, so this is their command, not a cheaper one.
+          # codexloop replaced four instrumented runs with one, then filters the single data
+          # file per layer -- `coverage report --include` keeps each floor's verdict
+          # independent, so this is its command, not a cheaper one.
           # codexloop's own matrix was {ubuntu, macos} x {3.12, 3.13}, with every gate in every
           # cell, so all four cells are here. The macOS pair was dropped at the absorption and
           # restored under #263; Python 3.14 is now included on both operating systems.
@@ -505,82 +505,6 @@ jobs:
               coverage report --include='src/codexloop/application/*' --fail-under=100 &&
               coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
               coverage report --include='src/codexloop/cli/*' --fail-under=100
-          - package: cursorloop
-            dir: src/vibey_runners/cursor
-            python: "3.12"
-            install: 'pip install -e ".[dev]"'
-            static: 'mypy --strict src/cursorloop && lint-imports && bandit -q -r src/cursorloop'
-            test: >-
-              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
-              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/cli/*' --fail-under=100
-          - package: cursorloop
-            dir: src/vibey_runners/cursor
-            python: "3.13"
-            install: 'pip install -e ".[dev]"'
-            test: >-
-              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
-              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/cli/*' --fail-under=100
-          - package: cursorloop
-            dir: src/vibey_runners/cursor
-            python: "3.14"
-            install: 'pip install -e ".[dev]"'
-            test: >-
-              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
-              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
-              coverage report --include='src/cursorloop/cli/*' --fail-under=100
-          # agyloop's suite ends with its deterministic system harness -- scripted agent over
-          # real FS/git/CLI adapters, no account and no network. Its own CI ran it on every
-          # interpreter in the matrix, and `-m system` on the command line overrides the
-          # `not system` in addopts, which is how that deselection is meant to be undone.
-          # The grep in `static` was agyloop's own, in the same job as its lint-imports: a
-          # second net under the "No Anthropic" contract that needs no import graph.
-          - package: agyloop
-            dir: src/vibey_runners/agy
-            python: "3.12"
-            install: 'pip install -e ".[dev]"'
-            static: >-
-              mypy --strict src/agyloop &&
-              lint-imports &&
-              bandit -q -r src/agyloop &&
-              ! grep -R -E '(^|[[:space:]])(from|import)[[:space:]]+(anthropic|claude_agent_sdk)' src
-            docs: "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict"
-            test: >-
-              pytest tests --cov=agyloop --cov-branch --cov-report= &&
-              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
-              pytest -m system
-          - package: agyloop
-            dir: src/vibey_runners/agy
-            python: "3.13"
-            install: 'pip install -e ".[dev]"'
-            test: >-
-              pytest tests --cov=agyloop --cov-branch --cov-report= &&
-              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
-              pytest -m system
-          - package: agyloop
-            dir: src/vibey_runners/agy
-            python: "3.14"
-            install: 'pip install -e ".[dev]"'
-            test: >-
-              pytest tests --cov=agyloop --cov-branch --cov-report= &&
-              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
-              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
-              pytest -m system
           # qwenloop is the standby runner (ADR-0015) and the only one whose floor is already
           # in its addopts: --cov=qwenloop --cov-branch --cov-fail-under=100, whole package,
           # so a bare `pytest -q` is the entire gate. Its own CI drove that through `uv run`;
@@ -704,8 +628,8 @@ jobs:
         if: matrix.test
         working-directory: ${{ matrix.dir }}
         run: ${{ matrix.test }}
-      # A tenant's own strict docs build, for the three whose CI had one: agyloop and
-      # codexloop (properdocs, pinned as they pinned it) and vibey-skills (mkdocs). It runs
+      # A tenant's own strict docs build, for the two whose CI had one: codexloop
+      # (properdocs, pinned as it pinned it) and vibey-skills (mkdocs). It runs
       # after the suite and installs its own toolchain, so the suite's environment is the
       # row's `install` and nothing else. One row per tenant, on ubuntu 3.12, as theirs did.
       - name: Its own docs build
@@ -1155,7 +1079,7 @@ jobs:
             *) echo "::error::codex --version printed '$out'; the Dockerfile pins $want"; exit 1 ;;
           esac
 
-      # One distribution, twelve console scripts (ADR-0037, ADR-0064). That is the new product
+      # One distribution, ten console scripts (ADR-0037, ADR-0064, ADR-0078). That is the new product
       # contract, and it is the one the Dockerfile's COPY list can break silently: a
       # package root that never reaches the build context does not fail the build, it
       # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
@@ -1165,7 +1089,7 @@ jobs:
           docker run --rm --entrypoint sh vibey:ci -c '
             status=0
             for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
-                        azbootstrap claudeloop codexloop cursorloop agyloop gptossloop qwenloop; do
+                        azbootstrap claudeloop codexloop gptossloop qwenloop; do
               if command -v "$tool" >/dev/null 2>&1; then
                 echo "ok      $tool"
               else

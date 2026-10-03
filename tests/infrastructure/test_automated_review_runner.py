@@ -132,7 +132,7 @@ def test_default_code_review_command_excludes_vibey_machinery() -> None:
     finding live and looped REVIEW back into BUILD."""
     (command,) = _DEFAULT_CODE_REVIEW
     assert command[:3] == ("ruff", "check", ".")
-    for name in (".vibey", ".claudeloop", ".codexloop", ".cursorloop", ".agyloop"):
+    for name in (".vibey", ".claudeloop", ".codexloop"):
         index = command.index(name)
         assert command[index - 1] == "--exclude"
 

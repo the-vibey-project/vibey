@@ -76,21 +76,32 @@ def test_tier_crossing_forces_rotation_away_from_the_previous_engine() -> None:
 
 
 def test_attempt_four_is_a_same_tier_retry_again() -> None:
-    job = _implement_job(attempts=4, assigned_engine="agyloop")
+    job = _implement_job(attempts=4, assigned_engine="codexloop")
 
     inputs = selection_inputs_for_job(job)
 
     assert inputs.requirement.effort is Effort.STANDARD
-    assert inputs.affinity is EngineId.AGYLOOP
+    assert inputs.affinity is EngineId.CODEXLOOP
 
 
 def test_attempt_five_crosses_to_high_and_rotates() -> None:
-    job = _implement_job(attempts=5, assigned_engine="agyloop")
+    job = _implement_job(attempts=5, assigned_engine="codexloop")
 
     inputs = selection_inputs_for_job(job)
 
     assert inputs.requirement.effort is Effort.HIGH
-    assert inputs.requirement.excluded == frozenset({EngineId.AGYLOOP})
+    assert inputs.requirement.excluded == frozenset({EngineId.CODEXLOOP})
+
+
+@pytest.mark.parametrize("retired", ["cursorloop", "agyloop"])
+@pytest.mark.parametrize("attempts", [4, 5])
+def test_a_job_last_run_on_a_retired_engine_selects_freely(retired: str, attempts: int) -> None:
+    """A job assigned before ADR-0078 retired its engine names an engine this vibey cannot
+    run: it gets no affinity and excludes nothing, so it moves to an engine that exists."""
+    inputs = selection_inputs_for_job(_implement_job(attempts=attempts, assigned_engine=retired))
+
+    assert inputs.affinity is None
+    assert inputs.requirement.excluded == frozenset()
 
 
 def test_exhausted_ladder_selects_as_high_without_raising() -> None:
@@ -186,9 +197,11 @@ def test_a_durable_exclusion_that_empties_the_pool_waives_independence_too() -> 
 def test_a_pool_that_does_not_contain_the_implementer_keeps_the_exclusion() -> None:
     """A stale implementer id (the engine has since been removed from the
     pool) leaves real reviewers available, so nothing is waived."""
-    inputs = selection_inputs_for_job(_verify_job("agyloop"), pool=frozenset({EngineId.CLAUDELOOP}))
+    inputs = selection_inputs_for_job(
+        _verify_job("codexloop"), pool=frozenset({EngineId.CLAUDELOOP})
+    )
 
-    assert inputs.requirement.excluded == frozenset({EngineId.AGYLOOP})
+    assert inputs.requirement.excluded == frozenset({EngineId.CODEXLOOP})
     assert inputs.independence_waived is False
 
 
@@ -342,7 +355,7 @@ class _SelectsAnEngineWithNoAdapter:
     exactly the selector that misbehaves, so only a misbehaving one can reach it."""
 
     async def select_engine(self, project_id, requirement, **_: object):  # type: ignore[no-untyped-def]
-        return EngineId.AGYLOOP, None
+        return EngineId.QWENLOOP, None
 
 
 async def test_selected_engine_without_a_configured_adapter_defers() -> None:

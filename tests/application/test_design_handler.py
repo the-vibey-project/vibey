@@ -128,7 +128,7 @@ async def test_nonblocking_default_is_recorded_when_batch_answer_omits_it() -> N
         gates=gates,
         questions=ScriptedQuestionProvider(),
         clock=FixedClock(),
-        interviewer=EngineId.CURSORLOOP,
+        interviewer=EngineId.CODEXLOOP,
     )
     first = await handler.handle(job)
     assert isinstance(first, Park)
@@ -154,7 +154,7 @@ async def test_blocking_question_reparks_when_answer_payload_is_missing() -> Non
         gates=gates,
         questions=ScriptedQuestionProvider(),
         clock=FixedClock(),
-        interviewer=EngineId.AGYLOOP,
+        interviewer=EngineId.QWENLOOP,
     )
     first = await handler.handle(job)
     assert isinstance(first, Park)

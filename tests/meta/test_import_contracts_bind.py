@@ -11,8 +11,8 @@ each is caught here without building an import graph:
    checked once.
 
 2. A forbidden module overlaps a source module. import-linter skips every pair where
-   one module is the other or contains it, so forbidding `agyloop.cli` from
-   `agyloop.cli.interfaces` searches nothing at all. The agy lane planted
+   one module is the other or contains it, so forbidding `<runner>.cli` from
+   `<runner>.cli.interfaces` searches nothing at all. A runner lane planted
    `interfaces -> run_outcome` and the contract still reported KEPT.
 
 3. A forbidden module inside the tree does not exist. import-linter filters forbidden

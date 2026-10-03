@@ -82,7 +82,7 @@ async def test_turn_completed_events_carry_the_real_spend() -> None:
     events = [
         _event(1, EventKind.TURN_COMPLETED, {"verdict": "Done", "cost_usd": 1.5}),
         _event(1, EventKind.TURN_COMPLETED, {"verdict": "Done", "cost_usd": 2.25}),
-        # A turn whose engine reports no cost (agyloop) still counts as a turn.
+        # A turn whose engine reports no cost still counts as a turn.
         _event(1, EventKind.TURN_COMPLETED, {"verdict": "Done"}),
         # A corrupt cost never counts as dollars, but the turn still does.
         _event(1, EventKind.TURN_COMPLETED, {"cost_usd": "bad"}),

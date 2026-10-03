@@ -19,18 +19,16 @@ from vibey.domain.engine import (
 )
 from vibey.infrastructure.engines.argv import EFFORT_ARGV, PLAN_FLAG, RUN_ARGV_TEMPLATE
 from vibey.infrastructure.engines.descriptors import (
-    AGYLOOP,
     ALL_DESCRIPTORS,
     BY_ENGINE_ID,
     CLAUDELOOP,
     CODEXLOOP,
-    CURSORLOOP,
     QWENLOOP,
 )
 
 ALL_EFFORTS = list(Effort)
 
-# claudeloop/agyloop/cursorloop all have a real, verified per-effort CLI
+# Every engine but codexloop has a real, verified per-effort CLI
 # flag (confirmed against real --help output, see descriptors.py's own
 # header comment) and so always produce non-empty argv. codexloop has no
 # CLI-level effort control at all -- see test_codexloop_has_no_cli_level_
@@ -65,10 +63,9 @@ def test_by_engine_id_matches_all_descriptors() -> None:
         assert BY_ENGINE_ID[descriptor.engine_id] is descriptor
 
 
-def test_claudeloop_and_agyloop_achieve_full_five_level_range() -> None:
+def test_claudeloop_achieves_the_full_five_level_range() -> None:
     for effort in ALL_EFFORTS:
         assert CLAUDELOOP.invoke(effort).achieved is effort
-        assert AGYLOOP.invoke(effort).achieved is effort
 
 
 def test_codexloop_has_no_cli_level_effort_control() -> None:
@@ -89,19 +86,6 @@ def test_codexloop_has_no_cli_level_effort_control() -> None:
     assert CODEXLOOP.saturates_at(Effort.STANDARD) is False
     assert CODEXLOOP.saturates_at(Effort.HIGH) is True
     assert CODEXLOOP.saturates_at(Effort.MAX) is True
-
-
-def test_agyloop_uses_real_five_level_effort_flag() -> None:
-    assert AGYLOOP.invoke(Effort.MAX).argv == ("--preset", "high", "--effort", "max")
-    assert AGYLOOP.saturates_at(Effort.MAX) is False
-
-
-def test_cursorloop_has_no_effort_flag_only_model_ids() -> None:
-    for effort in ALL_EFFORTS:
-        invocation = CURSORLOOP.invoke(effort)
-        assert invocation.argv[0] == "--model"
-        # No unbounded cursor tier: ULTRA runs its top model and says it achieves MAX.
-        assert invocation.achieved is min(effort, Effort.MAX)
 
 
 @pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
@@ -195,8 +179,6 @@ RUNNER_CLI = {
     EngineId.CLAUDELOOP: "claudeloop.cli.app",
     EngineId.CLAUDELOOP_LOCAL: "claudeloop.cli.app",
     EngineId.CODEXLOOP: "codexloop.cli.app",
-    EngineId.CURSORLOOP: "cursorloop.cli.app",
-    EngineId.AGYLOOP: "agyloop.cli.app",
     EngineId.GPTOSSLOOP: "qwenloop.cli.app",
     EngineId.QWENLOOP: "qwenloop.cli.app",
 }
@@ -310,13 +292,11 @@ def test_each_capability_claimed_agrees_with_the_facts_that_prove_it(descriptor)
 
 def test_no_runner_claims_what_its_own_code_does_not_back() -> None:
     """The claims the #1131 review found unbacked, withdrawn: qwenloop's `attach` and
-    `web-search` only echo, and nothing in agyloop searches the web. codexloop, agyloop and
-    qwenloop act on a prompt (qwenloop since #1133), and say so; cursorloop drops one."""
+    `web-search` only echo. codexloop and qwenloop act on a prompt (qwenloop since #1133),
+    and say so."""
     assert not {Capability.ATTACHMENTS, Capability.WEB_SEARCH} & QWENLOOP.capabilities
-    assert Capability.WEB_SEARCH not in AGYLOOP.capabilities
-    acting = CODEXLOOP.capabilities & AGYLOOP.capabilities & QWENLOOP.capabilities
+    acting = CODEXLOOP.capabilities & QWENLOOP.capabilities
     assert Capability.MID_RUN_PROMPT in acting
-    assert Capability.MID_RUN_PROMPT not in CURSORLOOP.capabilities
 
 
 def test_the_capabilities_each_runner_shows() -> None:
@@ -329,8 +309,6 @@ def test_the_capabilities_each_runner_shows() -> None:
     assert shown == {
         "claudeloop": claude,
         "codexloop": (None, True, True, None, skills, None),
-        "cursorloop": (None, True, True, None, skills, None),
-        "agyloop": (None, True, True, None, skills, False),
         "gptossloop": (False, True, True, False, skills, False),
         "qwenloop": (False, True, True, False, skills, False),
         "claudeloop-local": claude,
@@ -374,18 +352,6 @@ def test_the_run_template_and_every_effort_flag_are_ones_the_runner_takes(  # ty
         _read_as_click_would(run, words, f"{descriptor.engine_id} run at {effort.name}")
 
 
-def test_a_control_left_undeclared_is_one_the_runner_cannot_take() -> None:
-    """agyloop has no wind-down verb. cursorloop's
-    `prompt` verb exists and is still not declared, because its runner never acts on what
-    the verb writes: it reads its inbox only while it waits, acts on stop and wind-down
-    alone, and deletes every command it parsed (cursorloop application/runner.py,
-    infrastructure/control.py)."""
-    assert "wind-down" not in _runner_commands(EngineId.AGYLOOP)
-    assert "prompt" in _runner_commands(EngineId.CURSORLOOP)
-    assert CURSORLOOP.controls.prompt is None
-    assert AGYLOOP.controls.wind_down is None
-
-
 def test_the_controls_each_runner_defines() -> None:
     assert CLAUDELOOP.controls == EngineControls(
         stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
@@ -396,14 +362,6 @@ def test_the_controls_each_runner_defines() -> None:
         stop=("stop", "--run-id", "{run_id}"),
         wind_down=("wind-down", "--run-id", "{run_id}"),
         prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}"),
-    )
-    assert CURSORLOOP.controls == EngineControls(
-        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
-        wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
-    )
-    assert AGYLOOP.controls == EngineControls(
-        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
-        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}", "--cwd", "{cwd}"),
     )
     assert QWENLOOP.controls == EngineControls(
         stop=("stop", "{run_id}", "--cwd", "{cwd}"),
@@ -437,8 +395,6 @@ def test_every_runner_writes_its_events_in_its_own_run_directory() -> None:
     assert envelopes == {
         "claudeloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
         "codexloop": EventLog(path, EventEnvelope.TYPE),
-        "cursorloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
-        "agyloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
         "gptossloop": EventLog(path, EventEnvelope.TYPE),
         "qwenloop": EventLog(path, EventEnvelope.TYPE),
         "claudeloop-local": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),

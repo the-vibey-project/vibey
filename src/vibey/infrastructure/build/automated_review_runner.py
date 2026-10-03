@@ -17,7 +17,7 @@ from vibey.domain.review import Ambiguity, Severity
 # and run transcripts, not the product: caught live when a stale cycle's
 # worktree raised a lint finding against code that no longer existed,
 # looping REVIEW back into BUILD.
-_MACHINERY_DIRS = (".vibey", ".claudeloop", ".codexloop", ".cursorloop", ".agyloop")
+_MACHINERY_DIRS = (".vibey", ".claudeloop", ".codexloop")
 
 _DEFAULT_CODE_REVIEW: tuple[tuple[str, ...], ...] = (
     ("ruff", "check", ".")

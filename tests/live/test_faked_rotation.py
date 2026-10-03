@@ -119,9 +119,7 @@ async def _build_stack(
 @pytest.mark.live
 async def test_forced_rotation_selects_different_engine() -> None:
     """When an engine winds down, rotation must select a DIFFERENT engine."""
-    handoff, _, project_id = await _build_stack(
-        [EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP]
-    )
+    handoff, _, project_id = await _build_stack([EngineId.CLAUDELOOP, EngineId.CODEXLOOP])
 
     decision = await handoff.handle_wind_down(
         project_id=project_id,
@@ -140,9 +138,7 @@ async def test_forced_rotation_selects_different_engine() -> None:
 @pytest.mark.live
 async def test_consecutive_wind_downs_rotate_through_engines() -> None:
     """Two consecutive wind-downs cycle through at least two different engines."""
-    handoff, _, project_id = await _build_stack(
-        [EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP]
-    )
+    handoff, _, project_id = await _build_stack([EngineId.CLAUDELOOP, EngineId.CODEXLOOP])
 
     d1 = await handoff.handle_wind_down(
         project_id=project_id,
@@ -169,9 +165,7 @@ async def test_consecutive_wind_downs_rotate_through_engines() -> None:
 @pytest.mark.live
 async def test_max_wind_downs_raises_too_many() -> None:
     """After max rotations (3), further wind-down attempts raise."""
-    handoff, _, project_id = await _build_stack(
-        [EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP]
-    )
+    handoff, _, project_id = await _build_stack([EngineId.CLAUDELOOP, EngineId.CODEXLOOP])
 
     with pytest.raises(TooManyWindDowns):
         await handoff.handle_wind_down(

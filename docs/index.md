@@ -23,7 +23,7 @@ team of those agents from your first description to deployed software, the
 way a project manager runs a team — asking you questions up front, checking
 the work, and only interrupting you when a decision is truly yours.
 
-**Who it is for:** developers who already use Claude Code, Codex, Cursor or a local model
+**Who it is for:** developers who already use Claude Code, Codex or a local model
 and want finished, reviewed work rather than one session at a time; people who run it for
 a team on their own hardware or on Kubernetes; and anyone who wants to study or extend a
 working design for durable, auditable agent orchestration.
@@ -34,7 +34,7 @@ working design for durable, auditable agent orchestration.
 - **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/domain/ledger_chain.py)).
 - **Local first, paid by choice.** The default engine runs GPT-OSS 20B on your own machine through Ollama ([ADR-0064](architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)); a paid engine runs only when no local one can ([ADR-0038](architecture/decisions/0038-local-engines-are-preferred-first.md)).
 - **You decide what matters.** Design, review and deployment wait for your recorded answer, and a waiting question parks its job instead of blocking a worker ([ADR-0009](architecture/decisions/0009-human-gates-are-parked-jobs.md)).
-- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](https://github.com/the-vibey-project/vibey/tree/develop/docs/architecture/decisions/) (77 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](https://github.com/the-vibey-project/vibey/blob/develop/.github/workflows/vibey-engine.yml)).
+- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](https://github.com/the-vibey-project/vibey/tree/develop/docs/architecture/decisions/) (78 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](https://github.com/the-vibey-project/vibey/blob/develop/.github/workflows/vibey-engine.yml)).
 
 **Try it** — Python 3.12+ and PostgreSQL 14+, on macOS or Linux:
 
@@ -86,7 +86,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude), [`codexloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex), [`cursorloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor), [`agyloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All five runners ship inside the `vibey-engine` package ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). |
+| Engines | [`claudeloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude), [`codexloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) — plus the local runner [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0064). All three runners ship inside the `vibey-engine` package ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
@@ -187,7 +187,7 @@ vibey new my-app --repo ~/src/my-app \
   --max-cycle-dollars 15                     # real budget brake, enforced from the ledger
 vibey doctor --conformance --record          # verify each engine's contract, persist health for the latest project
 vibey worker --provider claudeloop \
-  --engines claudeloop,agyloop -j 2          # live DESIGN provider; unattended build across the pool
+  --engines claudeloop,codexloop -j 2        # live DESIGN provider; unattended build across the pool
 
 # When vibey parks for your input (design gates, review, budget grants):
 vibey gates                                  # each open gate, its prompt, and the command that answers it
@@ -337,7 +337,7 @@ defect back to the appropriate delivery phase.
              │
              ▼ one engine per job, local engines first
    gptossloop · qwenloop · claudeloop-local        on your machine
-   claudeloop · codexloop · cursorloop · agyloop   paid, when you allow them
+   claudeloop · codexloop                          paid, when you allow them
              │
              ▼
    one git worktree per work item ──► your repository
@@ -425,7 +425,7 @@ missing an open question, decision, assumption or finding. A failing brief is re
 then replaced by the full transcript, then brought to you; it is never passed on with
 gaps ([ADR-0004](architecture/decisions/0004-no-loss-gate-on-handoff.md)).
 
-### Does vibey replace Claude Code, Codex or Cursor?
+### Does vibey replace Claude Code or Codex?
 
 No — it drives them. Each engine is a `*loop` runner around a vendor's own tool or a
 local model ([ADR-0001](architecture/decisions/0001-orchestrate-do-not-reimplement.md)).
@@ -474,7 +474,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (77 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (78 ADRs) |
 
 ## Status
 
@@ -484,7 +484,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 
 **Live-validated.** The full pipeline has conducted real paid deliveries end to
 end: multi-worker builds (`-j 2`) with cross-engine rotation (claudeloop
-implements, agyloop verifies), the bounded verify-repair ladder, budget caps
+implements, agyloop — since retired by ADR-0078 — verifies), the bounded verify-repair ladder, budget caps
 tripping and being granted live, and fully zero-touch DESIGN phases answered
 with nothing but `--defaults`. The validation campaign's findings — a blind
 budget brake, a repair-loop livelock, terminal gate-command failures — were
@@ -592,8 +592,6 @@ exist.
 |---|---|---|
 | claudeloop | [`src/vibey_runners/claude`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) | Autonomous Claude Code session runner — the design the family transplants |
 | codexloop | [`src/vibey_runners/codex`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
-| cursorloop | [`src/vibey_runners/cursor`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | The same design retargeted onto Cursor |
-| agyloop | [`src/vibey_runners/agy`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | The same design retargeted onto Google Antigravity / Gemini |
 | gptossloop, qwenloop | [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) | The same design on a local model, as two engines over Ollama, llama.cpp or vLLM: `gptossloop` on GPT-OSS 20B — the sovereign default, on by default, and the sovereign DESIGN provider — and the opt-in `qwenloop` on Qwen (`qwen3:14b`); both preferred first when switched on (ADR-0064) |
 | vibey-skills | [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) and its context packets |
 | vibey-gh | [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
