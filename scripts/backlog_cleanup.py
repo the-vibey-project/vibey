@@ -41,7 +41,16 @@ import sys
 import time
 from pathlib import Path
 
-from interfaces.backlog_cleanup_interface import BacklogCleanupInterface, ProbeInterface
+try:
+    from scripts.interfaces.backlog_cleanup_interface import (
+        BacklogCleanupInterface,
+        ProbeInterface,
+    )
+except ModuleNotFoundError:  # Direct execution keeps the script directory on sys.path.
+    from interfaces.backlog_cleanup_interface import (  # type: ignore[import-not-found,no-redef]
+        BacklogCleanupInterface,
+        ProbeInterface,
+    )
 
 REPO = Path(__file__).resolve().parents[1]
 DEFAULT_EXPECTATIONS = "scripts/backlog_expectations.json"

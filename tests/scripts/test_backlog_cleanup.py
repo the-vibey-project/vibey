@@ -12,16 +12,7 @@ pytest collects `test_*` functions, and the rule is about production code.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
-# The workflow runs `python scripts/backlog_cleanup.py`, which puts scripts/ on the path
-# for its `from interfaces...` import; the test reproduces that before importing.
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
-
-import backlog_cleanup as bc  # noqa: E402
+from scripts import backlog_cleanup as bc
 
 
 class FakeGh:
