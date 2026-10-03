@@ -288,6 +288,7 @@ own and the repository root's — have no drift.
 | The formal model: ledger invariant, queue semantics, gate soundness | The research paper — source `docs/paper.md`; published at https://the-vibey-project.github.io/vibey/main/paper/ and https://the-vibey-project.github.io/vibey/main/paper.pdf |
 | The whole documentation, offline, in reading order | The book — https://the-vibey-project.github.io/vibey/main/book.pdf · https://the-vibey-project.github.io/vibey/main/book.epub · https://the-vibey-project.github.io/vibey/main/book-print.html (built from `properdocs.yml` nav on every release) |
 | The governing law: the Twelve Doctrines, sub-doctrines, the Constitution | `src/vibey_tools/gh/docs/doctrines.md`, `constitution.md` (index: `src/vibey_tools/gh/corpus-index.json`) |
+| Picking the project up cold: self-contained prompts to resume, keep green, release, triage, research, hand over or rebuild it (sub-doctrine 10.l) | `docs/continuation/` |
 | Every CLI command, subcommand, flag, default | `docs/reference/cli.md` |
 | Full `vibey.toml` schema | `docs/reference/configuration.md` |
 | Full architecture | `docs/plans/architecture-and-roadmap.md` |
@@ -297,7 +298,7 @@ own and the repository root's — have no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (79 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (80 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

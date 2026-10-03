@@ -1,0 +1,153 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The continuation prompts (sub-doctrine 10.l, ADR-0080, #1384): the handful of prompts that
+# can keep this project alive with nobody who remembers it. `scripts/continuation_prompts.py`
+# renders each page's generated state block from the repository and `check` fails, on every
+# pull request, when a prompt names something that no longer exists, when a lane or a skill
+# is covered by no prompt, or when a block is stale. The weekly lane re-renders, runs the
+# check, and opens a pull request when anything moved (.github/workflows/continuation-prompts.yml).
+#
+# Every key here is declared, not compiled in (sub-doctrine 12.h).
+
+[pages]
+directory = "docs/continuation"
+index = "docs/continuation/index.md"
+
+# `mode` is what an automated run of the prompt may do (#1384, step 2):
+#   drill -- read and verify only; report every instruction that no longer holds.
+#   act   -- may change the repository, but only ever as a draft pull request through the
+#            merge train: never a merge, an approval, a release, a deletion, a ruleset or a
+#            secret (sub-doctrine 12.d).
+# Release, succession and rebuild are drills by declaration: acting them out is irreversible
+# or needs a person.
+#
+# `covers` lists the workflow files and agent skills the prompt is responsible for keeping
+# usable. Every workflow under .github/workflows/ and every skill under .claude/skills/ must
+# be covered by at least one prompt, or exempted below with its reason.
+
+[[prompt]]
+id = "resume"
+title = "Resume"
+page = "docs/continuation/resume.md"
+mode = "act"
+purpose = "Orient in the repository as it stands and continue delivery where it left off."
+gather = [
+  "git log --oneline -15 origin/develop",
+  "gh pr list --state open --limit 30",
+  "gh issue list --state open --limit 40",
+  "python scripts/backlog_cleanup.py --survey",
+]
+covers = [
+  "merge-train.yml", "pr-evaluate.yml", "pr-review.yml", "provenance.yml",
+  "conventional-commits.yml", "changelog.yml", "skip-markers.yml", "automation-bootstrap.yml",
+  "vibey-architecture", "vibey-domain-model", "vibey-engine-adapters", "vibey-testing",
+  "typesafe-ai",
+]
+
+[[prompt]]
+id = "keep-green"
+title = "Keep develop green"
+page = "docs/continuation/keep-green.md"
+mode = "act"
+purpose = "Find every failing workflow on the integration branch, fix its cause, and land the fix."
+gather = [
+  "for w in .github/workflows/*.yml; do gh run list --workflow \"$(basename \"$w\")\" --branch develop --limit 1 --json workflowName,conclusion,databaseId,createdAt,event --jq '.[] | select(.conclusion==\"failure\") | \"\\(.workflowName) \\(.databaseId) \\(.createdAt) \\(.event)\"'; done",
+]
+covers = [
+  "ci.yml", "branch-health.yml", "ruleset-drift.yml", "repository-profile.yml",
+  "documentation-deep-scan.yml", "vibey-quality-gates",
+]
+
+[[prompt]]
+id = "release"
+title = "Release"
+page = "docs/continuation/release.md"
+mode = "drill"
+purpose = "Derive the version, promote develop to main, and verify every channel and every asset."
+gather = [
+  "git log --oneline -1 origin/main",
+  "git log --oneline -1 origin/develop",
+  "python -m vibey_gh version --since origin/main --explain",
+  "git log origin/main..origin/develop --format=%B | grep -ciE \"skip ci|ci skip|no ci|skip actions|actions skip|skip-checks\" || true",
+  "gh release list --limit 3",
+]
+covers = [
+  "promote-to-main.yml", "vibey-engine.yml", "krypton-app.yml", "github-release.yml",
+  "release-binaries.yml", "release-surfaces.yml", "openvsx.yml", "vibey-releasing",
+]
+
+[[prompt]]
+id = "triage"
+title = "Triage"
+page = "docs/continuation/triage.md"
+mode = "act"
+purpose = "Keep the backlog, the tracker and the roadmap truthful."
+gather = [
+  "python scripts/backlog_cleanup.py --check",
+  "head -40 docs/estimate.md",
+]
+covers = ["backlog-cleanup.yml", "delivery-estimate.yml"]
+
+[[prompt]]
+id = "research"
+title = "Research and measurement"
+page = "docs/continuation/research.md"
+mode = "act"
+purpose = "Keep every weekly measurement and every registered study running without breaking its protocol."
+gather = [
+  "for w in review-canary minimum-specs host-health autonomy-scorecard; do gh run list --workflow \"$w.yml\" --limit 1 --json workflowName,conclusion,createdAt --jq '.[] | \"\\(.workflowName) \\(.conclusion) \\(.createdAt)\"'; done",
+  "tail -n 30 research/large-diff-review/experiments/LOG.md",
+]
+covers = [
+  "review-canary.yml", "minimum-specs.yml", "host-health.yml", "autonomy-scorecard.yml",
+  "continuation-prompts.yml",
+]
+
+[[prompt]]
+id = "succession"
+title = "Succession"
+page = "docs/continuation/succession.md"
+mode = "drill"
+purpose = "Hand the project to a new steward: what they must hold, where it is declared, and how to verify it."
+gather = [
+  "grep -ohE \"secrets\\.[A-Z0-9_]+\" .github/workflows/*.yml | sort | uniq -c",
+  "grep -lE \"runs-on:.*self-hosted\" .github/workflows/*.yml",
+  "cat .github/CODEOWNERS",
+]
+covers = []
+
+[[prompt]]
+id = "rebuild"
+title = "Rebuild"
+page = "docs/continuation/rebuild.md"
+mode = "drill"
+purpose = "Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone."
+gather = [
+  "python -m pip download --quiet --no-binary :all: --no-deps --dest \"$RUNNER_TEMP/vibey-sdist\" vibey-engine && ls -la \"$RUNNER_TEMP/vibey-sdist\"",
+  "git log --oneline | wc -l",
+]
+covers = []
+
+# Acting these out is irreversible or needs a person, so an automated run only drills them.
+[authority]
+drill_only = ["release", "succession", "rebuild"]
+
+# The lane that refreshes and runs the prompts. `check` fails if it is missing, unscheduled,
+# not dispatchable, or moved to a self-hosted runner: it must run on GitHub (#1384).
+[lane]
+workflow = ".github/workflows/continuation-prompts.yml"
+
+# How the lane runs each prompt (#1384): an open-weights model on a GitHub-hosted runner, on
+# CPU. The record measured gpt-oss:20b at 2.8 tokens/s generating and 44.5 tokens/s reading
+# on GitHub's aarch64 Ubuntu runner (docs/architecture/evidence/minimum-specs.json), so the
+# evidence handed to the model is bounded and the run is bounded by turns and by time.
+[run]
+runs_on = "ubuntu-24.04-arm"
+model = "gpt-oss:20b"
+max_turns = 12
+timeout_minutes = 340
+evidence_chars = 12000
+gather_timeout_s = 180
+
+# A workflow or skill no prompt covers, with the reason it needs none. Empty is the goal.
+[exempt]

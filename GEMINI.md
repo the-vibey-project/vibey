@@ -203,6 +203,7 @@ own and the repository root's — have no drift.
 | Formal model (research paper) | `docs/paper.md` — https://the-vibey-project.github.io/vibey/main/paper/ · https://the-vibey-project.github.io/vibey/main/paper.pdf |
 | Documentation as a book | https://the-vibey-project.github.io/vibey/main/book.pdf · https://the-vibey-project.github.io/vibey/main/book.epub · https://the-vibey-project.github.io/vibey/main/book-print.html |
 | Governing law (doctrines, constitution) | `src/vibey_tools/gh/docs/doctrines.md` |
+| Picking the project up cold (sub-doctrine 10.l) | `docs/continuation/` |
 | CLI reference | `docs/reference/cli.md` |
 | `vibey.toml` schema reference | `docs/reference/configuration.md` |
 | Architecture | `docs/plans/architecture-and-roadmap.md` |
@@ -212,7 +213,7 @@ own and the repository root's — have no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (79 ADRs: 0001–0079) |
+| ADRs | `docs/architecture/decisions/` (80 ADRs: 0001–0080) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

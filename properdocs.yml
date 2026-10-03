@@ -74,6 +74,15 @@ nav:
   - Case studies:
       - How vibey survives a crashed agent: case-studies/how-vibey-survives-a-crashed-agent.md
   - Current estimate: estimate.md
+  - Continuation prompts:
+      - continuation/index.md
+      - Resume: continuation/resume.md
+      - Keep develop green: continuation/keep-green.md
+      - Release: continuation/release.md
+      - Triage: continuation/triage.md
+      - Research and measurement: continuation/research.md
+      - Succession: continuation/succession.md
+      - Rebuild: continuation/rebuild.md
   - Reference:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
@@ -167,4 +176,5 @@ nav:
           - "0077 — Outcome guides: the project answers the questions its users search for": architecture/decisions/0077-outcome-guides-answer-the-questions-users-search-for.md
           - "0078 — Retire cursorloop and agyloop": architecture/decisions/0078-retire-cursorloop-and-agyloop.md
           - "0079 — Hybrid engine dispatch: paid engines in tandem with sovereign ones, measured and capped": architecture/decisions/0079-hybrid-engine-dispatch.md
+          - "0080 — Continuation prompts, kept current and run on GitHub every week": architecture/decisions/0080-continuation-prompts.md
   - Research paper: paper.md
