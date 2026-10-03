@@ -298,3 +298,14 @@ what was seen, and what it changed.
   Hand adjudication of blocking findings on clean parts starts in `results/adjudication.jsonl`:
   the first, D16-T1-BF8192 on #1161 part 1 ("UltraVerdict is not imported"), is FALSE —
   `build_implement_handler.py` line 75 imports it at the merge commit.
+- **14:58 (10-03)** **Harness stopped; one cell voided for an infrastructure failure, before
+  its re-run.** Stage 2 round 1 stopped at 17:13 EDT on 2026-10-02, 94 cells in, during arm
+  D16-T1-BF8192+FF. The local model server stopped answering, so the cell
+  needle-1155-sql-ledger-range-order-middle was recorded `model_unreachable` / `no_verdict`
+  (diffs.jsonl line 128). The request store never recorded it: the model never answered.
+  The preregistration does not cover a server outage, so this follows the precedent of the
+  contention void (00:21 on 10-02). A cell the infrastructure denied is not
+  evidence about the arm, so line 128 is tombstoned in `results/void_rows.jsonl` and the cell
+  re-runs with the round. Recorded now, before the re-run's outcome exists. Ollama answered
+  again at 14:45; nothing was loaded and nothing else was contending. Round 1 resumes from
+  `harness/round1.sh` with the arm order unchanged; the resume skips every finished triple.
