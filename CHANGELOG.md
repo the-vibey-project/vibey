@@ -15,6 +15,29 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [4.0.0] (2026-10-03)
+
+### BREAKING CHANGES
+
+- **Engines:** `cursorloop` and `agyloop` are retired and deleted with their runners, console
+  scripts and vendor SDK dependencies (ADR-0078, #1376); the paid loop is `claudeloop` and
+  `codexloop`. A `vibey.toml`, `--engines` allow-list, `engine_environment` or
+  `VibeyProject.spec.engines` that still names either is refused with an error naming
+  ADR-0078 -- remove the name. Ledger rows, health rows and rotation cursors that name them
+  stay valid history and keep loading.
+
+### Features
+
+- **Hybrid engine dispatch (ADR-0079):** paid engines can now run in tandem with the sovereign ones. `[engines] mode` chooses `singleton` (today's selection, exactly), `hybrid` (local engines fill their declared `[engines.slots]` first; a paid engine takes a BUILD job only once every eligible local slot is occupied, the job has waited `overflow_after_seconds`, and the project's `paid_daily_cap` for the UTC day is not yet reached) or `auto`, the default, which picks between them from a measurement of local-slot contention recorded on the ledger and falls back to `singleton` when that measurement is missing, stale, invalid or failed. Every overflow is an append-only `EngineOverflowSelected` event saying why; every hold for a local slot is an `EngineSlotWaitStarted` event; every measurement is an `EngineDispatchMeasured` event. The cap is counted from the ledger under the project row's lock, so it holds across restarts and workers. `VIBEY_ENGINES_MODE`, `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS` and `VIBEY_ENGINES_PAID_DAILY_CAP` override the file. Sub-doctrine 8.a gains the narrow overflow clause this needs, drafted for the operator's ratifying merge.
+* **install:** `scripts/install.sh` installs vibey in one command, repairs it when run again, and copies the whole codebase with `--from-source`; `scripts/uninstall-krypton.sh` removes every krypton interface (the `krypton` command, the editor extension, krypton desktop's Flatpak, Ubuntu and macOS forms) after showing what it would remove, never escalates, and never touches vibey-engine's core, which is never uninstalled (sub-doctrine 10.m, ADR-0082).
+
+### Bug Fixes
+
+- **Backlog loop:** the hourly cleanup compares an issue against the verdict it posted most
+  recently, not the first one it ever posted. While a changed verdict waited for its
+  expectations commit, the loop had re-posted the same status report every hour (#1204 got six
+  identical copies between 2026-09-27 and 2026-09-29). The guard now has tests.
+
 ## [3.4.0] (2026-10-02)
 
 ### Features
