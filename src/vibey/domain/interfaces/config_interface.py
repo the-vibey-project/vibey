@@ -6,6 +6,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from vibey.domain.design_default_scope import DefaultScope
     from vibey.domain.gate_notice import ReminderSchedule
     from vibey.domain.queue_reap import BrokerPolicy, ReapThresholds
@@ -137,3 +139,39 @@ class DesignConfigInterface(Protocol):
 
     @property
     def research(self) -> DesignResearchConfigInterface: ...
+
+
+@runtime_checkable
+class EngineDispatchConfigInterface(Protocol):
+    """`[engines]`'s dispatch keys (ADR-0079). A plain value: `from_data` builds it."""
+
+    @property
+    def mode(self) -> str:
+        """`singleton`, `hybrid` or `auto`."""
+        ...
+
+    @property
+    def overflow_after_seconds(self) -> int: ...
+
+    @property
+    def paid_daily_cap(self) -> int:
+        """Paid overflows a project may record per UTC day. Never a way to uncap."""
+        ...
+
+    @property
+    def slot_poll_seconds(self) -> int: ...
+
+    @property
+    def slots(self) -> Mapping[str, int]: ...
+
+    @property
+    def auto_window_hours(self) -> int: ...
+
+    @property
+    def auto_min_sessions(self) -> int: ...
+
+    @property
+    def auto_min_contention(self) -> float: ...
+
+    @property
+    def auto_max_age_hours(self) -> int: ...

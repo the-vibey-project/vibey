@@ -35,7 +35,7 @@ from vibey.application.interfaces import (
 from vibey.domain.interfaces.config_interface import QueueConfigInterface
 
 if TYPE_CHECKING:
-    from vibey.domain.config import VibeyConfig
+    from vibey.domain.config import EngineDispatchConfig, VibeyConfig
 from vibey.infrastructure.build.interfaces import (
     ConfigurableAutomatedReviewRunnerInterface,
     ConfigurableGateRunnerInterface,
@@ -100,6 +100,16 @@ class EnvironmentConfigLoaderInterface(Protocol):
     def load(self, environ: Mapping[str, str] = ...) -> VibeyConfig:
         """The environment overlay parsed on its own; raises on a malformed value."""
         ...
+
+
+@runtime_checkable
+class EngineDispatchConfigLoaderInterface(Protocol):
+    """`[engines]`'s dispatch keys from a project's stored config, with `VIBEY_ENGINES_*`
+    overlaid and nothing else (ADR-0079)."""
+
+    def load(
+        self, stored: Mapping[str, object], environ: Mapping[str, str] = ...
+    ) -> EngineDispatchConfig: ...
 
 
 @runtime_checkable

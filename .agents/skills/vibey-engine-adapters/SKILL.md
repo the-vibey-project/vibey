@@ -112,6 +112,20 @@ and refreshes every enabled local engine's health from its `doctor` before each
 selection. Selection requires populated `engine_health` rows, so an engine with
 no recorded conformance is never selected.
 
+Hybrid dispatch (ADR-0079, sub-doctrine 8.k) sits on top: `[engines] mode` is
+`singleton` (exactly the above), `hybrid` or `auto` (the default: `hybrid` only from a
+current `EngineDispatchMeasured` ledger event, else `singleton`). Under `hybrid`,
+`domain/engine_dispatch.py::EngineDispatcher` plans over the same candidates: local
+engines fill their `[engines.slots]` first (1 local, 2 paid by default); with every
+eligible local slot occupied a job is held (`SlotHeld` → `CapacityDeferred`, recorded once
+per attempt as `EngineSlotWaitStarted`) until it has waited `overflow_after_seconds`, then
+a paid engine with a free slot takes it as overflow — reserved under the project row's
+lock against `paid_daily_cap`, counted from `EngineOverflowSelected` events for the UTC
+day. Slots in use are the job table's unexpired leases per `assigned_engine`. The provider
+takes `dispatch=` (`application/engine_dispatch_service.py::EngineDispatchService`, wired
+by `bootstrap._engine_dispatch`); `dispatch=None` is today's selection, unconditionally.
+Counts reach the domain as data; never read the queue or a clock from `domain/`.
+
 Before `build.implement` seeds a fresh run, it can ask the `vibey-skills` CLI for
 a skills-context packet (`infrastructure/skills_context.py::VibeySkillsContextCompiler`,
 modes `off`/`shadow`/`inject`, budget 1,000–32,000 with a 6,000 default;

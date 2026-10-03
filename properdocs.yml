@@ -166,4 +166,5 @@ nav:
           - "0076 — Discoverability and the first hour are deliverables": architecture/decisions/0076-discoverability-and-the-first-hour-are-deliverables.md
           - "0077 — Outcome guides: the project answers the questions its users search for": architecture/decisions/0077-outcome-guides-answer-the-questions-users-search-for.md
           - "0078 — Retire cursorloop and agyloop": architecture/decisions/0078-retire-cursorloop-and-agyloop.md
+          - "0079 — Hybrid engine dispatch: paid engines in tandem with sovereign ones, measured and capped": architecture/decisions/0079-hybrid-engine-dispatch.md
   - Research paper: paper.md

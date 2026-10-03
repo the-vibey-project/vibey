@@ -13,7 +13,8 @@ Three pieces:
 - ``SelectingEngineProvider`` -- selects via SWRR, records the selection,
   and durably assigns the engine to the job; ``NoEligibleEngine`` becomes
   ``CapacityDeferred`` so an empty/unhealthy engine table defers the job
-  instead of burning an attempt.
+  instead of burning an attempt. With hybrid dispatch (ADR-0079) it may also
+  hold a job for a local slot, or give it to a paid engine as overflow.
 - ``SpendMeteringLedger`` -- wraps the BUILD ledger a job's handler writes
   through, forwards every event unchanged, and meters the spend by the one
   ledger spend rule, so what the engine cost is known when the job settles.
@@ -38,6 +39,7 @@ from vibey.application.interfaces import (
     BuildLedger,
     Clock,
     EngineAdapter,
+    EngineDispatchServiceInterface,
     JobHandler,
     SpendMeteringLedgerInterface,
     TelemetryMetrics,
@@ -58,6 +60,7 @@ from vibey.domain.effort import (
     forces_rotation,
 )
 from vibey.domain.engine import ENGINE_ID_PARSER, EngineId, JobRequirement
+from vibey.domain.engine_dispatch import DispatchMode, EngineDispatchPolicy, SlotHeld
 from vibey.domain.errors import EscalationExhausted, NoEligibleEngine
 from vibey.domain.interfaces.phase_timing_interface import LedgerSpendRuleInterface
 from vibey.domain.job import FailureClass
@@ -182,8 +185,11 @@ class SelectingEngineProvider:
         metrics: TelemetryMetrics | None = None,
         auth_refresh_after: timedelta = AUTH_TTL / 2,
         auth_recheck_every: timedelta = timedelta(minutes=15),
+        dispatch: EngineDispatchServiceInterface | None = None,
     ) -> None:
         self._selector = selector
+        # Hybrid engine dispatch (ADR-0079). None is today's selection, unconditionally.
+        self._dispatch = dispatch
         self._health = health
         self._adapters = adapters
         self._jobs = jobs
@@ -230,16 +236,7 @@ class SelectingEngineProvider:
             )
         await self._refresh_ageing_logins(job.project_id)
         try:
-            # The pool, never None: the selector reads every health row the project
-            # has, and a row outlives the switch that created it. Offered an engine
-            # this worker has no adapter for -- a local engine switched off since,
-            # now *preferred* by tier -- it would defer the job forever.
-            engine_id, _selection = await self._selector.select_engine(
-                job.project_id,
-                inputs.requirement,
-                allow_list=self._pool,
-                affinity_engine=inputs.affinity,
-            )
+            engine_id = await self._select(job, inputs)
         except NoEligibleEngine as exc:
             raise CapacityDeferred(self._clock.now() + self._backoff, str(exc)) from exc
         adapter = self._adapters.get(engine_id)
@@ -257,6 +254,62 @@ class SelectingEngineProvider:
                 self._metrics.record_engine_selection(job.project_id, engine_id)
         await self._jobs.assign_engine(job.id, owner=self._owner, engine_id=engine_id)
         return adapter
+
+    async def _select(self, job: JobRecord, inputs: SelectionInputs) -> EngineId:
+        """The engine this job runs on.
+
+        The pool, never None: the selector reads every health row the project has, and a
+        row outlives the switch that created it. Offered an engine this worker has no
+        adapter for -- a local engine switched off since, now *preferred* by tier -- it
+        would defer the job forever.
+
+        Without dispatch, or when it resolves to `singleton`, this is today's selection
+        exactly. Under `hybrid` (ADR-0079) the selection may instead hold the job for a
+        local slot -- a capacity defer that burns no attempt -- or take a paid engine as
+        overflow, which counts only once the reservation against the daily cap is written.
+        """
+        if self._dispatch is not None:
+            policy = await self._dispatch.policy(job.project_id)
+            if policy.mode is DispatchMode.HYBRID:
+                return await self._select_hybrid(job, inputs, self._dispatch, policy)
+        engine_id, _selection = await self._selector.select_engine(
+            job.project_id,
+            inputs.requirement,
+            allow_list=self._pool,
+            affinity_engine=inputs.affinity,
+        )
+        return engine_id
+
+    async def _select_hybrid(
+        self,
+        job: JobRecord,
+        inputs: SelectionInputs,
+        dispatch: EngineDispatchServiceInterface,
+        policy: EngineDispatchPolicy,
+    ) -> EngineId:
+        load = await dispatch.load(job)
+        try:
+            chosen = await self._selector.select_dispatched(
+                job.project_id,
+                inputs.requirement,
+                policy=policy,
+                load=load,
+                allow_list=self._pool,
+                affinity_engine=inputs.affinity,
+            )
+        except SlotHeld as held:
+            retry_at = await dispatch.hold(job, held.hold, policy)
+            raise CapacityDeferred(retry_at, held.hold.detail) from held
+        if chosen.overflow is not None and not await dispatch.reserve_overflow(
+            job, chosen.engine_id, chosen.overflow, policy
+        ):
+            # Another worker took today's last overflow between this one's count and its
+            # reservation. The cap holds; the job looks again for a local slot.
+            raise CapacityDeferred(
+                self._clock.now() + timedelta(seconds=policy.slot_poll_seconds),
+                f"today's paid overflow cap of {policy.paid_daily_cap} was reached first",
+            )
+        return chosen.engine_id
 
     async def _refresh_ageing_logins(self, project_id: UUID) -> None:
         now = self._clock.now()

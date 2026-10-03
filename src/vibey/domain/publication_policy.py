@@ -161,6 +161,10 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         EventKind.ENGINE_FAILED_OVER,
         EventKind.ENGINE_PROBED,
         EventKind.ENGINE_HANDED_BACK,
+        # Hybrid dispatch names the operator's engines, their slots and the paid cap.
+        EventKind.ENGINE_SLOT_WAIT_STARTED,
+        EventKind.ENGINE_OVERFLOW_SELECTED,
+        EventKind.ENGINE_DISPATCH_MEASURED,
         # Who answered a gate, from which account, and what they answered: the answer
         # can carry anything a person typed, and the account is the operator's.
         EventKind.GATE_ANSWERED,

@@ -90,6 +90,10 @@ from vibey.application.interfaces.driver import (
     ProcessPort,
 )
 from vibey.application.interfaces.email import EmailPort
+from vibey.application.interfaces.engine_dispatch import (
+    EngineDispatchServiceInterface,
+    EngineDispatchStorePort,
+)
 from vibey.application.interfaces.engines import (
     EngineAdapter,
     EngineHealthRepository,
@@ -275,6 +279,8 @@ __all__ = [
     "DesignSpecReader",
     "DesignSpecRepository",
     "EngineAdapter",
+    "EngineDispatchServiceInterface",
+    "EngineDispatchStorePort",
     "EngineHealthRepository",
     "EngineHealthServiceInterface",
     "EngineHealthRecordInterface",

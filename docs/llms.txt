@@ -136,6 +136,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0076 — Discoverability and the first hour are deliverables](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0076-discoverability-and-the-first-hour-are-deliverables/)
 - [0077 — Outcome guides: the project answers the questions its users search for](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0077-outcome-guides-answer-the-questions-users-search-for/)
 - [0078 — Retire cursorloop and agyloop](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0078-retire-cursorloop-and-agyloop/)
+- [0079 — Hybrid engine dispatch: paid engines in tandem with sovereign ones, measured and capped](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0079-hybrid-engine-dispatch/)
 
 ## Governance
 

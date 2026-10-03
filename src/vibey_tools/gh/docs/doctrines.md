@@ -452,6 +452,37 @@ claim precedes every other (12). The operator's declared value always wins (12.c
 measured default is a default, never a decision taken away from the person whose
 machine it is. Hardware nobody measured is hardware nobody fitted.
 
+**8.k — overflow, never preference** *(ratified by the merge that carried this entry)*:
+a sovereign path that is working at its full capacity is, for the job waiting behind it,
+a path that cannot carry that job *now* — the one narrow sense in which 8.a lets a paid
+engine take work while the sovereign path stands. A paid engine may take such a job as
+**overflow**, and only while all four bounds hold; when any one fails, the job waits for
+local:
+
+1. **Saturated, as counted.** Every local engine that could take the job has every one of
+   its declared concurrent slots occupied, counted from the queue's own live leases at the
+   moment of selection. A free local slot always wins, and a local engine that can start
+   the job is never passed over.
+2. **Waited, as declared.** The job has already been held in the queue for a local slot
+   for at least a declared threshold. Saturation that passes is waited out, never bought
+   out.
+3. **Capped, as recorded.** The overflows a project takes in one UTC day never exceed a
+   declared, finite cap, counted from the ledger rather than from any process's memory, so
+   no restart and no second worker can widen it. At the cap, paid is ineligible and the job
+   waits for local. A cap of zero means no overflow, and there is no value that means no
+   cap: an uncapped paid declaration stays lawful by 8.b's one path alone.
+4. **Said, every time.** Each overflow is a ledger event stating the slots it found
+   occupied, how long the job waited, the cap and what was left of it (7.c, 10.f). An
+   overflow without its record did not lawfully happen.
+
+Overflow is relief for a sovereign path at its limit and never a preference for paid: it
+reorders no tier, makes paid the default for nothing, and is never offered for a job a
+local engine could start. A default that turns overflow on does so only from a recorded
+measurement showing that jobs on this machine and workload actually waited past the
+threshold (12.l), and falls back to sovereign-only whenever that measurement is missing,
+stale or in doubt. The operator's declaration switches overflow off at once (12.c), and it
+binds paid engines a project already declares (8.b) — it never declares one.
+
 ## 9 — The vibe
 
 Never a drag. Full steam ahead: baffling momentum with green code.

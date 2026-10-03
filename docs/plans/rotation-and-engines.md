@@ -459,7 +459,8 @@ Selection then prefers the LOCAL tier (sub-doctrine 8.a): `EngineSelector`
 builds a candidate for every eligible engine, and `domain/rotation.py::
 preferred_tier` offers SWRR only the candidates of the first tier in
 `TIER_PREFERENCE = (LOCAL, PAID)` that holds one with a positive effective
-weight. A paid engine is selected only when no local engine is eligible. The
+weight. A paid engine is selected only when no local engine is eligible — or, under
+hybrid dispatch, as capped overflow onto a saturated local tier (§5.6). The
 provider passes its pool as the allow-list, so a stale health row for a local
 engine switched off since can never be preferred.
 
@@ -467,6 +468,40 @@ Separately, gptossloop's model is the sovereign DESIGN and DECOMPOSE provider
 (ADR-0027, ADR-0064): `vibey work` and `vibey worker` use it when no `--provider`
 is given (sub-doctrine 8.b, #322) or `--provider gptossloop` is; `--provider
 qwenloop` is read as gptossloop.
+
+### 5.6 Hybrid dispatch: paid overflow onto a saturated local tier
+
+*Added 2026-10-03 by ADR-0079, under sub-doctrine 8.k (drafted for the operator's
+ratifying merge).*
+
+§5.5 has no notion of how busy an engine is: a local engine already running a job stays
+eligible, so every BUILD job is assigned to it and queues inside Ollama. `[engines] mode`
+chooses what happens then:
+
+| Mode | Selection |
+|---|---|
+| `singleton` | §5.5 exactly. |
+| `hybrid` | Local engines fill their declared `[engines.slots]` first (default 1 local, 2 paid). With every eligible local slot occupied, a job is **held** in the queue (a capacity defer) until it has waited `overflow_after_seconds`; then a paid engine with a free slot takes it as **overflow**, while the project's `EngineOverflowSelected` events for the UTC day are below `paid_daily_cap`. When overflow cannot happen, the job goes to local as under `singleton`. |
+| `auto` (default) | `hybrid` when the latest current `EngineDispatchMeasured` event chose it, else `singleton`. |
+
+The plan is `domain/engine_dispatch.py::EngineDispatcher.plan`, pure, over the same
+candidates `EngineSelector` builds; `EngineSelector.select_dispatched` runs it and raises
+`SlotHeld` for a hold before any cursor moves. `application/engine_dispatch_service.py`
+supplies the counts — slots in use from the job table's unexpired leases across every
+project, the job's wait from its first `EngineSlotWaitStarted` event on this attempt,
+today's overflows from the ledger — and records holds, reservations and measurements
+through `infrastructure/db/engine_dispatch_store.py`. A reservation recounts under the
+project row's lock, so the cap is exact across workers and restarts.
+
+`auto`'s measurement is passive (ADR-0074 applied; a live experiment would buy paid
+sessions): over `auto_window_hours` of the project's BUILD history, each job's first and
+last event on each local engine is a session; a session that began with every local slot
+occupied is contended, and its would-wait is how long until a slot freed. `hybrid` wins
+only with at least `auto_min_sessions` sessions, a contended share of at least
+`auto_min_contention`, and a median contended wait of at least `overflow_after_seconds`.
+The measurement is fingerprinted by the local engines and slots, the thresholds, the
+algorithm and the `vibey-engine` version, and re-taken after `auto_max_age_hours`; one
+that cannot be taken means `singleton`.
 
 ---
 

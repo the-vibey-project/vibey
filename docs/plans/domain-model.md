@@ -539,6 +539,12 @@ class EventKind(StrEnum):
     ENGINE_FAILED_OVER = "EngineFailedOver"    # ADR-0070
     ENGINE_PROBED = "EngineProbed"
     ENGINE_HANDED_BACK = "EngineHandedBack"
+    # Hybrid dispatch (ADR-0079): a job held for a local slot (once per job and attempt),
+    # a paid overflow (slots, wait, cap and what was left -- the cap counts these), and
+    # `auto`'s measurement of local-slot contention with the mode it chose
+    ENGINE_SLOT_WAIT_STARTED = "EngineSlotWaitStarted"
+    ENGINE_OVERFLOW_SELECTED = "EngineOverflowSelected"
+    ENGINE_DISPATCH_MEASURED = "EngineDispatchMeasured"
     # A gate notice: gate, kind, job, notice number (0 raised, 1.. reminders), and the
     # channels that took it -- or the reason nobody could be told. Once per gate and number.
     GATE_NOTIFIED = "GateNotified"

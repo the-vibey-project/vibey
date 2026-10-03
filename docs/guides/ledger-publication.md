@@ -77,6 +77,8 @@ export until the policy can withhold it (see [Widening or narrowing](#widening-o
   - `CapacityRejected`, `SavePointCreated` and the handoff kinds;
   - the failover kinds `EngineFailedOver`, `EngineProbed` and `EngineHandedBack`
     (which engines and accounts ran out, and when they were probed; ADR-0070);
+  - the hybrid dispatch kinds `EngineSlotWaitStarted`, `EngineOverflowSelected` and
+    `EngineDispatchMeasured` (your engines, their slots and your paid cap; ADR-0079);
   - the queue's `JobPriorityBumped`, `JobPriorityUnbumped`, `JobPriorityRefused`
     and `QueueReaped`.
 
