@@ -41,7 +41,7 @@ and the break cost real time.
    tombstoning its line number in `void_rows.jsonl`. A transport failure is cached like
    any other answer, so voiding one takes **both** files (LOG 14:59, 10-03).
 5. **Work outlives the machine (10.h).** Work in progress stays under
-   `~/git/vibey-storm`, never `/tmp`. `harness/push_snapshot.sh` snapshots `results/` →
+   `~/git/vibey-storm`, never on volatile storage (the storm tools refuse it with exit 78). `harness/push_snapshot.sh` snapshots `results/` →
    `data/`, commits `research/` only, merges `origin/develop`, and pushes through the
    storm push gate. Run it every 30–45 minutes while anything runs. It opens the next
    numbered `research/large-diff-review-N` branch and draft PR when the previous one has
