@@ -8,10 +8,8 @@
       "docs/stylesheets/vibey.css",
       "src/vibey_tools/gh/docs/stylesheets/vibey.css",
       "src/vibey_tools/bootstrap/docs/stylesheets/vibey.css",
-      "src/vibey_runners/agy/docs/stylesheets/vibey.css",
       "src/vibey_runners/claude/docs/stylesheets/vibey.css",
       "src/vibey_runners/codex/docs/stylesheets/vibey.css",
-      "src/vibey_runners/cursor/docs/stylesheets/vibey.css",
       "src/vibey_runners/qwen/docs/stylesheets/vibey.css",
       ".github/vibey-gh/release/vibey.css",
       "src/vibey_tools/gh/.github/vibey-gh/release/vibey.css"
@@ -23,10 +21,8 @@
       "docs/javascripts/channel.js",
       "src/vibey_tools/gh/docs/javascripts/channel.js",
       "src/vibey_tools/bootstrap/docs/javascripts/channel.js",
-      "src/vibey_runners/agy/docs/javascripts/channel.js",
       "src/vibey_runners/claude/docs/javascripts/channel.js",
       "src/vibey_runners/codex/docs/javascripts/channel.js",
-      "src/vibey_runners/cursor/docs/javascripts/channel.js",
       "src/vibey_runners/qwen/docs/javascripts/channel.js",
       ".github/vibey-gh/release/channel.js",
       "src/vibey_tools/gh/.github/vibey-gh/release/channel.js"

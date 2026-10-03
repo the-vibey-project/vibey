@@ -173,12 +173,12 @@ def test_an_engine_whose_name_changed_meaning_says_what_it_became() -> None:
 
 
 def test_a_model_flag_names_the_model() -> None:
-    cursor = _descriptor(EngineId.CURSORLOOP, projection=_every(("--model", "grok-4.5")))
+    codex = _descriptor(EngineId.CODEXLOOP, projection=_every(("--model", "gpt-5.5")))
 
-    (engine,) = LoopCatalog().report([_context(cursor)]).loops[1].engines
+    (engine,) = LoopCatalog().report([_context(codex)]).loops[1].engines
 
     run = engine.efforts[0]
-    assert (run.model, run.chosen_by, run.notes) == ("grok-4.5", None, "")
+    assert (run.model, run.chosen_by, run.notes) == ("gpt-5.5", None, "")
 
 
 def test_the_model_vibey_chooses_is_used_where_no_flag_names_one() -> None:
@@ -207,7 +207,7 @@ def test_when_nothing_names_the_model_the_notes_say_what_chooses_it() -> None:
             tier=EngineTier.LOCAL,
             projection=_every(("--profile", "local", "--preset", "low")),
         ),
-        _descriptor(EngineId.AGYLOOP, projection=_every(("--model",))),
+        _descriptor(EngineId.GPTOSSLOOP, projection=_every(("--model",))),
     ]
 
     report = LoopCatalog().report([_context(d) for d in engines])
@@ -226,7 +226,7 @@ def test_when_nothing_names_the_model_the_notes_say_what_chooses_it() -> None:
         "claudeloop-local-bin profile local, preset low"
     )
     # A flag that ends the argv names nothing.
-    assert runs[EngineId.AGYLOOP].model is None
+    assert runs[EngineId.GPTOSSLOOP].model is None
 
 
 def test_by_effort_puts_exact_then_higher_then_lower_and_breaks_ties_by_price_then_id() -> None:
@@ -234,9 +234,9 @@ def test_by_effort_puts_exact_then_higher_then_lower_and_breaks_ties_by_price_th
         return {effort: EngineInvocation((), achieved=achieved) for effort in Effort}
 
     engines = [
-        _descriptor(EngineId.AGYLOOP, cost_out=5.0, projection=achieving(Effort.STANDARD)),
+        _descriptor(EngineId.GPTOSSLOOP, cost_out=5.0, projection=achieving(Effort.STANDARD)),
         _descriptor(EngineId.CODEXLOOP, cost_out=0.5, projection=achieving(Effort.MAX)),
-        _descriptor(EngineId.CURSORLOOP, cost_out=0.1, projection=achieving(Effort.LOW)),
+        _descriptor(EngineId.CLAUDELOOP_LOCAL, cost_out=0.1, projection=achieving(Effort.LOW)),
         _descriptor(EngineId.CLAUDELOOP, cost_out=1.0, projection=achieving(Effort.STANDARD)),
         _descriptor(EngineId.QWENLOOP, cost_out=1.0, projection=achieving(Effort.STANDARD)),
     ]
@@ -246,9 +246,9 @@ def test_by_effort_puts_exact_then_higher_then_lower_and_breaks_ties_by_price_th
     assert paidloop.by_effort[Effort.STANDARD] == (
         EffortChoice(EngineId.CLAUDELOOP, None, Effort.STANDARD),
         EffortChoice(EngineId.QWENLOOP, None, Effort.STANDARD),
-        EffortChoice(EngineId.AGYLOOP, None, Effort.STANDARD),
+        EffortChoice(EngineId.GPTOSSLOOP, None, Effort.STANDARD),
         EffortChoice(EngineId.CODEXLOOP, None, Effort.MAX),
-        EffortChoice(EngineId.CURSORLOOP, None, Effort.LOW),
+        EffortChoice(EngineId.CLAUDELOOP_LOCAL, None, Effort.LOW),
     )
 
 

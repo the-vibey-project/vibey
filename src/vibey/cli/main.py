@@ -1477,12 +1477,12 @@ def doctor(
             typer.echo(f"note: {notice}")
         endpoint = LocalEndpointEnvironment(os.environ)
         if engine is not None:
-            from vibey.domain.engine import EngineId
+            from vibey.domain.engine import RETIRED_ENGINES, EngineId
 
             try:
                 eids = [EngineId(engine)]
             except ValueError as exc:
-                typer.echo(f"Unknown engine: {engine}")
+                typer.echo(f"Unknown engine: {engine}{RETIRED_ENGINES.get(engine, '')}")
                 raise typer.Exit(1) from exc
         else:
             eids = [d.engine_id for d in DEFAULT_DESCRIPTORS] + list(local.enabled_engines)
@@ -1523,7 +1523,7 @@ def doctor(
         # project to declare anything, so the defaults; with --record, the target
         # project's `engine_environment`, because the health written to that project must
         # be measured with what its sessions will receive -- a credential it declares
-        # for agyloop included.
+        # for one engine included.
         engine_environment = EngineEnvironmentPolicy()
         if record:
             async with build_app() as resources:
@@ -2037,7 +2037,7 @@ def worker(
                 # The sweep probes each engine's auth, so it must probe with what the
                 # engine's sessions will actually receive: the project's
                 # `engine_environment` on top of the defaults. Without it a credential the
-                # project declares (agyloop's Vertex credentials, say) was invisible to the
+                # project declares (a vendor's service-account file, say) was invisible to the
                 # auth check, and the engine read "auth FAIL" although its sessions would
                 # authenticate.
                 engine_environment = EngineEnvironmentPolicy.from_config(project.config)

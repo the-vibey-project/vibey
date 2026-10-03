@@ -23,13 +23,11 @@ max_dollars_total     = 250.0
 max_turns_per_item    = 60
 
 [engines]
-enabled = ["claudeloop", "codexloop", "cursorloop", "agyloop"]
+enabled = ["claudeloop", "codexloop"]
 
 [engines.weights]                # base rotation weights
 claudeloop = 3
 codexloop  = 2
-cursorloop = 2
-agyloop    = 1
 
 [phases.design]
 effort   = "high"
@@ -75,19 +73,8 @@ def test_architecture_doc_example_parses_every_field() -> None:
     assert config.budget.max_dollars_total == 250.0
     assert config.budget.max_turns_per_item == 60
 
-    assert config.engines.enabled == (
-        "claudeloop",
-        "codexloop",
-        "cursorloop",
-        "agyloop",
-        "gptossloop",
-    )
-    assert config.engines.weights == {
-        "claudeloop": 3,
-        "codexloop": 2,
-        "cursorloop": 2,
-        "agyloop": 1,
-    }
+    assert config.engines.enabled == ("claudeloop", "codexloop", "gptossloop")
+    assert config.engines.weights == {"claudeloop": 3, "codexloop": 2}
 
     assert config.phases.design.effort == "high"
     assert config.phases.design.engines == ("claudeloop", "codexloop")
@@ -254,8 +241,38 @@ def test_unknown_engine_in_enabled_list_is_rejected() -> None:
 
 def test_unknown_engine_in_weights_is_rejected() -> None:
     text = '[project]\nname = "x"\n\n[engines.weights]\nchatgpt = 1\n'
-    with pytest.raises(ConfigError):
+    with pytest.raises(ConfigError, match=r"unknown engine 'chatgpt'$"):
         load_config_from_string(text)
+
+
+@pytest.mark.parametrize("retired", ["cursorloop", "agyloop"])
+@pytest.mark.parametrize(
+    ("table", "path"),
+    [
+        ('[engines]\nenabled = ["claudeloop", "{engine}"]\n', "engines.enabled"),
+        ("[engines.weights]\n{engine} = 1\n", "engines.weights"),
+        ('[phases.design]\nengines = ["{engine}"]\n', "phases.design.engines"),
+        ('[phases.build]\nengines = ["codexloop", "{engine}"]\n', "phases.build.engines"),
+        ('[phases.review]\nengines = ["{engine}"]\n', "phases.review.engines"),
+    ],
+)
+def test_a_vibey_toml_naming_a_retired_engine_is_refused_naming_adr_0078(
+    retired: str, table: str, path: str
+) -> None:
+    """ADR-0078 retired cursorloop and agyloop. A project file still naming one fails
+    loudly, at the key that names it and naming the decision -- a phase's engine list
+    included, which is otherwise not checked and would drop it without a word (12.e)."""
+    text = '[project]\nname = "x"\n\n' + table.format(engine=retired)
+    with pytest.raises(ConfigError) as caught:
+        load_config_from_string(text)
+    assert caught.value.path == path
+    assert f"unknown engine {retired!r} -- " in caught.value.message
+    assert "ADR-0078" in caught.value.message
+
+
+def test_a_phase_engine_list_of_known_engines_still_parses() -> None:
+    text = '[project]\nname = "x"\n\n[phases.build]\nengines = ["claudeloop", "codexloop"]\n'
+    assert load_config_from_string(text).phases.build.engines == ("claudeloop", "codexloop")
 
 
 def test_wrong_type_for_optional_field_is_rejected() -> None:

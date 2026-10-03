@@ -1408,15 +1408,13 @@ async def test_stop_handles_corrupt_snapshot_gracefully(tmp_path: Path) -> None:
 
 async def test_tail_enriches_verdict_with_done_marker(tmp_path: Path) -> None:
     """VerdictRendered events get done_marker injected into payload when missing."""
-    from vibey.infrastructure.engines.descriptors import AGYLOOP
-
-    adapter = LoopProcessAdapter(descriptor=AGYLOOP)
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     run_dir = tmp_path / "test-run"
     run_dir.mkdir(parents=True)
     handle = _make_handle(run_dir)
 
     events_path = run_dir / "events.jsonl"
-    # agyloop's "finished" event maps to VerdictRendered but doesn't have done_marker in payload
+    # claudeloop's "finished" event maps to VerdictRendered but doesn't have done_marker in payload
     events_path.write_text(
         '{"event_type":"finished","ts":"2026-01-01T00:00:00+00:00","payload":{"success":true,"reason":"Done"}}\n'
     )
@@ -1431,17 +1429,15 @@ async def test_tail_enriches_verdict_with_done_marker(tmp_path: Path) -> None:
     assert len(events) == 1
     assert events[0].kind == "VerdictRendered"
     # The adapter should inject the done_marker from the descriptor
-    assert events[0].payload.get("done_marker") == "AGYLOOP_TASK_FULLY_COMPLETE"
+    assert events[0].payload.get("done_marker") == "CLAUDELOOP_TASK_FULLY_COMPLETE"
 
 
 async def test_tail_does_not_enrich_failed_verdict_with_done_marker(tmp_path: Path) -> None:
-    """agyloop's "finished" event_type covers both success and failure,
+    """claudeloop's "finished" event_type covers both success and failure,
     distinguished only by payload["success"] -- a failed run must never get
     a done_marker injected, or conformance/production code would read a
     failed run as having completed successfully."""
-    from vibey.infrastructure.engines.descriptors import AGYLOOP
-
-    adapter = LoopProcessAdapter(descriptor=AGYLOOP)
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     run_dir = tmp_path / "test-run"
     run_dir.mkdir(parents=True)
     handle = _make_handle(run_dir)
@@ -1541,7 +1537,7 @@ async def test_run_exit_code_reads_the_live_process_registry(tmp_path: Path) -> 
 
 
 async def test_tail_normalizes_vendor_success_into_vibey_complete(tmp_path: Path) -> None:
-    """claudeloop/agyloop verdicts say {"success": bool}; every vibey
+    """claudeloop's verdicts say {"success": bool}; every vibey
     consumer reads {"complete": bool}. Caught live: a real claudeloop run
     finished its item, rendered success=true, and the implement handler
     still failed it as "did not report completion"."""

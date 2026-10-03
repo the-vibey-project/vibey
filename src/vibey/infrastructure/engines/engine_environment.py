@@ -24,7 +24,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 
 from vibey.application.interfaces import EngineAdapter
-from vibey.domain.engine import EngineDescriptor, EngineId
+from vibey.domain.engine import RETIRED_ENGINES, EngineDescriptor, EngineId
 from vibey.infrastructure.process import (
     MODEL_SESSION_FORBIDDEN,
     SYSTEM_ENVIRONMENT,
@@ -91,7 +91,8 @@ class EngineEnvironmentPolicy:
             try:
                 engine = EngineId(name)
             except ValueError:
-                raise ValueError(f"{_KEY}.engines: unknown engine {name!r}") from None
+                hint = RETIRED_ENGINES.get(name, "")
+                raise ValueError(f"{_KEY}.engines: unknown engine {name!r}{hint}") from None
             per_engine[engine] = cls._entries(entries, where=f"{_KEY}.engines.{name}")
         return cls(allow=allow, per_engine=per_engine)
 

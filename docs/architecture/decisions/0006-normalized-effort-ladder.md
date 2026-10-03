@@ -1,6 +1,6 @@
 # 0006 — A normalized effort ladder with saturating per-engine projection
 
-**Status:** accepted · **Date:** 2026-08-14
+**Status:** accepted · **Date:** 2026-08-14 · **Superseded in part by:** ADR-0078 (the engines it names as current that ADR-0078 retired)
 
 **Owes:** nothing — mechanism (ADR-0020)
 

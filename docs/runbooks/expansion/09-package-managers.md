@@ -79,7 +79,7 @@ artifact, not ten, and `vibey doctor` works from a single install in each of the
 7. Docs: the README Quickstart install block and `docs/index.md` gain a
    per-channel install matrix generated from the same channel list the
    release automation publishes.
-8. The same automation covers the five runners and `vibey-gh` as
+8. The same automation covers the three runners and `vibey-gh` as
    workspace members of this repository; npm wrapper + SDK last.
 
 ## Verification

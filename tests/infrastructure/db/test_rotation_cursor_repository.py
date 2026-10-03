@@ -74,7 +74,7 @@ async def test_list_for_project_returns_ordered(
         RotationCursor(project_id=project_id, engine_id=EngineId.CLAUDELOOP, current=0, order=0)
     )
     await repo.upsert(
-        RotationCursor(project_id=project_id, engine_id=EngineId.AGYLOOP, current=0, order=1)
+        RotationCursor(project_id=project_id, engine_id=EngineId.GPTOSSLOOP, current=0, order=1)
     )
 
     cursors = await repo.list_for_project(project_id)
@@ -82,7 +82,7 @@ async def test_list_for_project_returns_ordered(
     assert len(cursors) == 3
     assert [c.order for c in cursors] == [0, 1, 2]
     assert cursors[0].engine_id == EngineId.CLAUDELOOP
-    assert cursors[1].engine_id == EngineId.AGYLOOP
+    assert cursors[1].engine_id == EngineId.GPTOSSLOOP
     assert cursors[2].engine_id == EngineId.CODEXLOOP
 
 
@@ -128,7 +128,7 @@ async def test_initialize_for_project_creates_cursors(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
     repo = PostgresRotationCursorRepository(migrated_pool)
-    engines = (EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP)
+    engines = (EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.GPTOSSLOOP)
 
     cursors = await repo.initialize_for_project(project_id, engines)
 

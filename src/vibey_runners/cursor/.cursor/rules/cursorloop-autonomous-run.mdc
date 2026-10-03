@@ -1,7 +1,0 @@
----
-description: cursorloop-autonomous-run
-globs:
-alwaysApply: false
----
-
-Run `cursorloop run --plan` for unattended completion. Never wait on stdin.

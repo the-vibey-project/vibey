@@ -401,7 +401,7 @@ async def test_assign_engine_refuses_wrong_owner(
     job = await repo.claim(project_id, owner="w1", lease=LEASE)
     assert job is not None
 
-    ok = await repo.assign_engine(job.id, owner="somebody-else", engine_id=EngineId.AGYLOOP)
+    ok = await repo.assign_engine(job.id, owner="somebody-else", engine_id=EngineId.GPTOSSLOOP)
 
     assert ok is False
     fetched = await repo.get(job.id)

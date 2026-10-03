@@ -1,6 +1,6 @@
 # 0021 — One tree, history preserved: the family is absorbed as subtrees in a uv workspace
 
-**Status:** superseded in part by ADR-0037 · **Date:** 2026-09-15 · **Supersedes:** the submodule design in runbook 19
+**Status:** superseded in part by ADR-0037 · **Date:** 2026-09-15 · **Supersedes:** the submodule design in runbook 19 · **Superseded in part by:** ADR-0078 (the engines it names as current that ADR-0078 retired)
 
 > The subtree import, the uv workspace and the per-package projects stand
 > unchanged. [ADR-0037](0037-one-distribution-one-version.md) supersedes only

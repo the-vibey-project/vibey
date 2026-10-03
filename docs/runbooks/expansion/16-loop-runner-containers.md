@@ -1,7 +1,12 @@
 # Runbook: loop-runner containers — every *loop runs headless in the vibey image
 
+> **Update:** cursorloop and agyloop were retired by ADR-0078 (#1376) and their
+> runners deleted. Everything below that plans work for them, or leans on
+> agyloop's `--gateway` lane as the reference, no longer applies; the hosted-model
+> runners left are claudeloop and codexloop.
+>
 > **Status (2026-09-18):** open, and narrower than written. ADR-0037 (PR #234)
-> made the one `vibey` wheel carry all five runners, and the vibey image
+> made the one `vibey` wheel carry all of its runners, and the vibey image
 > copies every package root, so each runner's console script is already on
 > `PATH` in the vibey image (CI's `image` job asserts it). The separate
 > `vibey-engines` image this runbook designed is therefore moot. What is
@@ -16,8 +21,8 @@
 
 ## Goal
 
-Each of the four session runners — `claudeloop`, `codexloop`,
-`cursorloop`, `agyloop` — runs a real session on Kubernetes. Two consumers:
+Each hosted-model session runner — `claudeloop`, `codexloop` — runs a real
+session on Kubernetes. Two consumers:
 
 1. **The vibey worker.** It runs the runners as subprocesses from its own
    image, which since ADR-0037 already contains them. This consumer needs
@@ -37,11 +42,9 @@ Each of the four session runners — `claudeloop`, `codexloop`,
 |---|---|---|---|---|---|
 | `claudeloop` | `src/vibey_runners/claude` | 0.8.0 | >=3.12 | `claudeloop` | `claude` |
 | `codexloop` | `src/vibey_runners/codex` | 0.4.0 | >=3.12 | `codexloop` | `codex` |
-| `cursorloop` | `src/vibey_runners/cursor` | 0.7.0 | >=3.12 | `cursorloop` | `cursor-sdk-bridge` |
-| `agyloop` | `src/vibey_runners/agy` | 0.5.0 | >=3.12 | `agyloop` | `agy` |
 | `qwenloop` | `src/vibey_runners/qwen` | 0.3.0 | >=3.12 | `gptossloop`, `qwenloop` | none (local Ollama / llama.cpp / vLLM model) |
 
-- All five are workspace members of this repository, share vibey's onion
+- All three are workspace members of this repository, share vibey's onion
   layout (`domain/application/infrastructure/cli`), and ship inside the one
   `vibey-engine` package rather than publishing as their own projects (ADR-0037).
 - **No runner has a `deploy/` directory.** qwenloop's
@@ -56,10 +59,9 @@ Each of the four session runners — `claudeloop`, `codexloop`,
   runner image job. Releases are cut by `vibey-gh promote`
   (`chore(release): x.y.z` commits); release-please is retired
   (ADR-0028).
-- **API-key auth already exists in the four hosted-model runners** —
-  `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN`, `OPENAI_API_KEY` /
-  `AZURE_OPENAI_API_KEY` / `CODEX_API_KEY`, `CURSOR_API_KEY`,
-  `GOOGLE_API_KEY` / `GEMINI_API_KEY` / ADC (the same map
+- **API-key auth already exists in the two hosted-model runners** —
+  `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` and `OPENAI_API_KEY` /
+  `AZURE_OPENAI_API_KEY` / `CODEX_API_KEY` (the same map
   `infrastructure/cluster_preflight.py` checks) — each with
   a `doctor_env` check behind it. Runbook 05's work item 1 is closer to a
   verification job than an implementation job. **This is the single
@@ -72,7 +74,8 @@ Each of the four session runners — `claudeloop`, `codexloop`,
 
 ### The fact that shapes everything
 
-Only `agyloop` selects its lane at runtime (`--gateway sdk|cli`, with
+(Written before ADR-0078 retired cursorloop and agyloop; read it as history
+for those two.) Only `agyloop` selected its lane at runtime (`--gateway sdk|cli`, with
 `gateway: str = "sdk"` as the default). In `claudeloop` and `cursorloop`,
 `bootstrap.py` hardwires the **agent** gateway — `ClaudeAgentGateway`,
 `CursorAgentGateway` from `infrastructure/agent/gateway` — for the
@@ -99,13 +102,7 @@ What the vibey image holds for each, measured against the tree on
 - **codexloop** — drives an external `codex` binary (`codex exec`,
   `codex app-server --stdio`). It is not in any wheel, so the image does
   not have it.
-- **cursorloop** — `cursor-sdk-bridge` arrives with the `cursor-sdk`
-  dependency (manylinux wheels for both arches) and lands in the venv's
-  `bin/`, which is on `PATH`. Whether it runs headless in a pod is the
-  spike's question.
-- **agyloop** — no `agy` binary is installed by any wheel; its
-  `--gateway sdk` lane may not need one, which is what its spike should
-  confirm.
+- **cursorloop, agyloop** — retired by ADR-0078; no longer in the image.
 
 gptossloop and qwenloop need no vendor binary or API key, but they need
 model weights in the image, on a volume or behind a model server (the chart's
@@ -122,11 +119,11 @@ For each runner, answer with a running process, not a code read: *can the
 autonomous loop complete a real session with no vendor binary on PATH,
 authenticated only by an API key from the environment?*
 
-- **agyloop** — likely already yes (`--gateway sdk`). Confirm, then it is
-  the reference implementation the other three copy.
-- **claudeloop / cursorloop / codexloop** — if no, the deliverable is a
+- **agyloop** — no longer applicable: retired by ADR-0078. It was to be the
+  reference implementation (`--gateway sdk`) the others copied.
+- **claudeloop / codexloop** — if no, the deliverable is a
   runner-side work item in that runner's package: promote the API gateway
-  to a lane the loop can select, mirroring agyloop's `--gateway`. That is
+  to a lane the loop can select, as agyloop's `--gateway` did. That is
   a genuine feature, sized separately, and it must land
   before that runner is worth enabling in-cluster.
 
@@ -137,8 +134,8 @@ runner's docs:
   vendor CLI, no TTY problem. This is the container-native path and the
   one to fight for.
 - **CLI lane only** → the vibey image must carry the vendor binary. `claude`
-  and `cursor-sdk-bridge` already arrive inside their SDK wheels; `codex`
-  needs Node and an npm install, and `agy` a proprietary installer. Headless
+  already arrives inside its SDK wheel; `codex` needs Node and an npm
+  install. Headless
   API-key auth for that binary must be proven before anything else is
   built. Vendor licensing for redistribution inside an image is a real
   question here, not a formality — answer it in the spike, not after
@@ -178,15 +175,15 @@ multi-arch by the `image` job. So:
   - **Workspace.** A PVC for the repo under work, cloned via a deploy key
     mounted as a Secret. Reuse vibey's worktree PVC conventions.
 
-What Phase 0 finds may still put something into the image — `codex`, or a
-vendor CLI for cursorloop or agyloop. That goes into
+What Phase 0 finds may still put something into the image — `codex` most
+likely. That goes into
 `deploy/docker/Dockerfile`'s runtime stage, bound by the same contract as
 the rest of it (no compiler, no package manager, uid 10001), and only
 after the redistribution question below is answered.
 
 ## Work items
 
-1. Phase 0 lane spike × 4 hosted-model runners, run inside the vibey image,
+1. Phase 0 lane spike × 2 hosted-model runners, run inside the vibey image,
    plus a weights-and-GPU spike for qwenloop; record the verdict per runner
    (blocks 2–4).
 2. Runner-side `--gateway` work in whichever runners the spike says need it.
@@ -210,8 +207,7 @@ after the redistribution question below is answered.
 - A vibey worker selects a real engine and completes a BUILD job —
   verified against `vibey doctor --conformance` recording a real
   conformance, which today is empty in-cluster ("no recorded conformance
-  for agyloop, claudeloop, codexloop, cursorloop" is the live warning from
-  the running worker).
+  for ..." is the live warning from the running worker).
 
 ## Needs from operator
 

@@ -1,7 +1,0 @@
----
-description: cursorloop-capacity-taxonomy
-globs:
-alwaysApply: false
----
-
-WindowExhausted is waitable; CreditsExhausted is not. Bias ambiguity to credits.

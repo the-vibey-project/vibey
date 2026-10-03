@@ -26,8 +26,8 @@ repository holding ten packages:
 | `vibey` | `src/vibey` | 0.6.0 | the conductor |
 | `claudeloop` | `src/vibey_runners/claude` | 0.8.0 | session runner |
 | `codexloop` | `src/vibey_runners/codex` | 0.4.0 | session runner |
-| `cursorloop` | `src/vibey_runners/cursor` | 0.7.0 | session runner |
-| `agyloop` | `src/vibey_runners/agy` | 0.5.0 | session runner |
+| `cursorloop` | `src/vibey_runners/cursor` | 0.7.0 | session runner — since retired by ADR-0078 and deleted |
+| `agyloop` | `src/vibey_runners/agy` | 0.5.0 | session runner — since retired by ADR-0078 and deleted |
 | `qwenloop` | `src/vibey_runners/qwen` | 0.2.0 | local-model session runner (ADR-0015) |
 | `vibey-runners-common` | `src/vibey_runners/common` | 0.1.0 | shared runner application interfaces and use cases |
 | `vibey-gh` | `src/vibey_tools/gh` | 1.73.0 | provenance, versioning, merge train, release automation |
@@ -42,8 +42,7 @@ any runner. So this was not an upgrade — it was adoption. *Update
 2026-09-15:* vibey now declares `vibey-skills>=2.18,<3` (the `skills`
 extra, invoked as a process by `infrastructure/skills_context.py`, PR #82)
 and `vibey-gh>=1.2` (dev), both resolved from the workspace. claudeloop
-and codexloop consume `vibey-runners-common`; cursorloop, agyloop and
-qwenloop do not yet. `src/vibey` still imports no `vibey_bootstrap` code
+and codexloop consume `vibey-runners-common`; qwenloop does not yet. `src/vibey` still imports no `vibey_bootstrap` code
 (ADR-0017 records the gap).
 
 **2. The shared surface is far smaller than it looks.** All four runners
@@ -82,7 +81,7 @@ own docs scaffolding remains.
 ## The vibey-bootstrap scope question — decide this first
 
 `vibey-bootstrap` is, by its own description, **the Azure Functions
-cross-cutting layer**. vibey and the five runners are CLI tools. They do
+cross-cutting layer**. vibey and the three runners are CLI tools. They do
 not use App Configuration, Key Vault, Application Insights, or Service
 Bus.
 

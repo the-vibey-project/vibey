@@ -8,10 +8,8 @@ collapses them into differently named, differently shaped methods
 in place of ``record``, a ``title``+``body`` ``notify`` in place of a
 single ``message``) -- a genuine redesign, not a naming or precision
 difference, so they stay local to each runner. ``RunEventSink`` likewise
-stays local: codexloop's has no ``bind`` at all, and cursorloop's ``bind``
-takes a differently named keyword (``agent_id`` rather than ``session_id``)
-that reflects its own domain vocabulary. codexloop's ``StateBus`` also adds
-a ``subscribe`` method the other three runners' concrete adapters do not
+stays local: codexloop's has no ``bind`` at all. codexloop's ``StateBus``
+also adds a ``subscribe`` method claudeloop's concrete adapter does not
 implement; that stays as a local extension on codexloop's own ``StateBus``
 (see codexloop's `application/interfaces/observability.py`), which
 subclasses this module's ``StateBus`` rather than duplicating ``publish``.

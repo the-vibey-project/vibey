@@ -153,7 +153,6 @@ class FakeQueue:
         return {
             "claudeloop": "2026-10-01T23:00:00Z",
             "codexloop": "2026-09-28T00:00:00Z",
-            "cursorloop": None,
             "gptossloop": "2026-10-01T23:00:00Z",
         }
 
@@ -363,6 +362,18 @@ def test_the_review_gate_kinds_that_may_time_out_are_read_from_the_code(tmp_path
 # --------------------------------------------------------------------------- the queue
 
 
+class NeverCheckedQueue(FakeQueue):
+    def engine_auth(self) -> dict[str, str | None]:
+        return {"claudeloop": "2026-10-01T23:00:00Z", "codexloop": None}
+
+
+def test_a_paid_engine_never_checked_reads_as_lapsed_never() -> None:
+    figures = by_id(sc.QueueSource(SETTINGS, NeverCheckedQueue()).observe(CUTOFF))
+    engines = figures["queue.engines.paid_auth_fresh_share"]
+    assert (engines.numerator, engines.denominator) == (1, 2)
+    assert engines.reason == "lapsed: codexloop (last never)"
+
+
 def test_the_queue_figures_count_who_answered_and_what_finished() -> None:
     figures = by_id(sc.QueueSource(SETTINGS, FakeQueue()).observe(CUTOFF))
     design = figures["queue.design.unattended_share"]
@@ -372,8 +383,8 @@ def test_the_queue_figures_count_who_answered_and_what_finished() -> None:
     build = figures["queue.build.unattended_share"]
     assert (build.numerator, build.denominator) == (9, 10)
     engines = figures["queue.engines.paid_auth_fresh_share"]
-    assert (engines.numerator, engines.denominator) == (1, 4)
-    assert "codexloop (last 2026-09-28)" in engines.reason and "cursorloop (last never)" in engines.reason  # fmt: skip
+    assert (engines.numerator, engines.denominator) == (1, 2)
+    assert engines.reason == "lapsed: codexloop (last 2026-09-28)"
     assert figures["queue.done_projects"].value == 2
     assert figures["queue.last_event_hours"].value == 12.0
 

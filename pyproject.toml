@@ -65,13 +65,11 @@ dependencies = [
     "anthropic==1.2.0",
     # codexloop
     "openai==3.14.1",
-    # cursorloop
-    "cursor-sdk>=0.1",
+    # `vibey hub pair`'s client (cli/hub_pair.py)
     "httpx>=0.27",
+    # the test suite's workflow and chart contract checks
     "pyyaml>=6.0",
-    # agyloop
-    "google-antigravity>=0.1.10",
-    # cursorloop and agyloop
+    # claudeloop's sync-to-async bridge (claudeloop/cli/asyncio.py)
     "anyio>=4.4",
     # gptossloop and qwenloop
     "platformdirs>=4.0",
@@ -92,8 +90,8 @@ Governance = "https://the-vibey-project.github.io/vibey/main/governance/constitu
 Discord = "https://discord.gg/Qvu8aYnVS"
 "Join me" = "https://vibewithadam.matthewsteinberger.com/join-me"
 
-# Twelve console scripts, one install (ADR-0037). Each is the entry point its own tenant
-# declared while it was published separately; the name and target are unchanged, only the
+# Ten console scripts, one install (ADR-0037; ADR-0078 retired two paid engines' scripts).
+# Each is the entry point its own tenant declared while it was published separately; the name and target are unchanged, only the
 # distribution that carries them is. `azbootstrap` stays: it is vibey-bootstrap's
 # deprecated pre-4.0 alias, and dropping it here would be a second breaking change
 # smuggled in beside the first one. `gptossloop` is the one script no tenant published
@@ -102,8 +100,6 @@ Discord = "https://discord.gg/Qvu8aYnVS"
 vibey = "vibey.cli.main:app"
 claudeloop = "claudeloop.cli.app:main"
 codexloop = "codexloop.cli.app:main"
-cursorloop = "cursorloop.cli.app:main"
-agyloop = "agyloop.cli.app:main"
 gptossloop = "qwenloop.cli.app:gptoss_main"
 qwenloop = "qwenloop.cli.app:main"
 vibey-gh = "vibey_gh.cli:main"
@@ -234,14 +230,14 @@ dev = [
     "segno>=1.6",
 ]
 
-# Ten importable trees, one wheel (ADR-0037). `packages` rather than `force-include` for
+# Eight importable trees, one wheel (ADR-0037). `packages` rather than `force-include` for
 # every one of them, and the reason is not taste:
 #
 #   * `packages` maps a directory to the top-level name in its LAST path segment, so each
 #     tenant lands under the name it already publishes with no renaming, and every data
 #     file inside it (py.typed markers, vibey_gh's workflow templates, vibey_bootstrap's
-#     contrib/templates, agyloop's API baselines, cursorloop's OpenAPI spec) comes with
-#     it. A force-include would be ten hand-written path pairs that silently miss whatever
+#     contrib/templates, the runners' API baselines) comes with
+#     it. A force-include would be eight hand-written path pairs that silently miss whatever
 #     is added next.
 #   * Only a `packages` entry is exposed by an EDITABLE install. `.importlinter` names
 #     `vibey_gh` a root package, so `uv run lint-imports` needs `import vibey_gh` to work
@@ -258,8 +254,6 @@ packages = [
     "src/vibey",
     "src/vibey_runners/claude/src/claudeloop",
     "src/vibey_runners/codex/src/codexloop",
-    "src/vibey_runners/cursor/src/cursorloop",
-    "src/vibey_runners/agy/src/agyloop",
     "src/vibey_runners/qwen/src/qwenloop",
     "src/vibey_runners/common/src/vibey_runners",
     "src/vibey_tools/gh/vibey_gh",
@@ -269,21 +263,19 @@ packages = [
 
 # Every package root mapped explicitly, and this table is load-bearing rather than
 # redundant. `packages` alone would derive a source prefix from each entry's PARENT, giving
-# ten prefixes of which one -- plain `src`, from `src/vibey` -- is an ancestor of the other
-# nine. Hatchling sorts its sources and strips the first that matches, and `src/` sorts
+# eight prefixes of which one -- plain `src`, from `src/vibey` -- is an ancestor of the other
+# seven. Hatchling sorts its sources and strips the first that matches, and `src/` sorts
 # before every longer path beginning with it, so `src/vibey_tools/gh/vibey_gh/cli.py` was
 # landing in the wheel as `vibey_tools/gh/vibey_gh/cli.py` and the editable build failed
 # outright on "src/vibey_tools is not a valid Python package". Naming each package's own
 # directory here does two things: it maps the path to the exact distribution name, and it
 # satisfies the guard in hatchling's `sources` that stops `packages` adding the parent
 # prefix at all. `src/vibey/` is not a prefix of `src/vibey_runners/` or `src/vibey_tools/`
-# -- the next character is `_`, not `/` -- so the ten no longer overlap.
+# -- the next character is `_`, not `/` -- so the eight no longer overlap.
 [tool.hatch.build.targets.wheel.sources]
 "src/vibey" = "vibey"
 "src/vibey_runners/claude/src/claudeloop" = "claudeloop"
 "src/vibey_runners/codex/src/codexloop" = "codexloop"
-"src/vibey_runners/cursor/src/cursorloop" = "cursorloop"
-"src/vibey_runners/agy/src/agyloop" = "agyloop"
 "src/vibey_runners/qwen/src/qwenloop" = "qwenloop"
 "src/vibey_runners/common/src/vibey_runners" = "vibey_runners"
 "src/vibey_tools/gh/vibey_gh" = "vibey_gh"

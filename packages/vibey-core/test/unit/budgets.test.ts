@@ -171,7 +171,7 @@ describe('BudgetGuard', () => {
       spent: 3,
       message: 'The per-run budget b1 is used up: 3 turns of 3 turns.',
     });
-    expect(guard.exhausted({ ...context, engineId: 'cursorloop', runId: 'r9' })).toBeUndefined();
+    expect(guard.exhausted({ ...context, engineId: 'codexloop', runId: 'r9' })).toBeUndefined();
     expect(guard.usage(run)).toBeUndefined();
     expect(guard.usage(day)).toEqual({ spent: { dollars: 1.5, turns: 3, minutes: 2 } });
     spend.record(entry({ turns: 0, dollars: 1 }));

@@ -135,7 +135,7 @@ async def _orchestrator(
     metrics: TelemetryMetrics | None = None,
 ) -> tuple[WindDownOrchestrator, _FakeHandoffStore, FakeJobRepository, _RecordingLedgerWriter]:
     health_repo = FakeEngineHealthRepository()
-    for engine_id in (EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.AGYLOOP):
+    for engine_id in (EngineId.CLAUDELOOP, EngineId.CODEXLOOP):
         await health_repo.upsert(_healthy_record(project_id, engine_id))
     selector = EngineSelector(
         health_service=EngineHealthService(health_repo),

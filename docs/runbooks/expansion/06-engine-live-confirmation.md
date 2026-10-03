@@ -1,5 +1,9 @@
 # Runbook: every engine confirmed live
 
+> **Update:** cursorloop and agyloop were retired by ADR-0078 (#1376) and
+> their runners deleted; their rows and plan below are kept as history and no
+> longer apply. The paid engines are claudeloop and codexloop.
+>
 > **Status (2026-09-15):** open. claudeloop and agyloop are the only
 > live-proven engines. codexloop (silent `events.jsonl`) and cursorloop
 > (`CURSOR_API_KEY`) were still blocked at the last recorded check
@@ -11,9 +15,9 @@
 
 ## Goal
 
-All engines — claudeloop, agyloop, codexloop, cursorloop, gptossloop (the
+All engines — claudeloop, codexloop, gptossloop (the
 sovereign local default) and qwenloop (opt-in, ADR-0064) — hold green 9/9 conformance and at least one paid live work
-item each, so rotation runs across the full pool instead of the two
+item each, so rotation runs across the full pool instead of the one
 currently proven.
 
 ## Current state (verified the week of 2026-08-17)
@@ -21,9 +25,9 @@ currently proven.
 | Engine | State |
 |---|---|
 | claudeloop | Fully live-proven (greeter3/greeter4 runs, dozens of sessions) |
-| agyloop | Fully live-proven (implement + verify roles, cross-engine) |
+| agyloop | Retired by ADR-0078; no longer applies. Was fully live-proven (implement + verify roles, cross-engine) |
 | codexloop | **Broken live**: a real `codexloop run` produced 0 `events.jsonl` lines in ~12 minutes; probe killed; no health row → honestly excluded. Its vocabulary in `LOOP_EVENT_MAP` was source-verified (#34) but never validated against captured runtime output. |
-| cursorloop | **Blocked on auth**: `doctor` fails wanting `CURSOR_API_KEY`. Untested beyond that. |
+| cursorloop | Retired by ADR-0078; no longer applies. Was blocked on auth: `doctor` failed wanting `CURSOR_API_KEY`. |
 | gptossloop | On by default (ADR-0064); the local runner on `gpt-oss:20b` via Ollama (or llama.cpp / vLLM), zero marginal dollars. Its model is the sovereign DESIGN provider (`vibey worker --provider gptossloop`, the default, ADR-0027). No live BUILD row recorded. |
 | qwenloop | Opt-in (`[features] qwenloop = true`); the same runner on `qwen3:14b`. No live BUILD row recorded. |
 
@@ -47,6 +51,8 @@ currently proven.
 4. `vibey doctor --conformance` → 9/9; then one paid greeter work item.
 
 ### cursorloop
+
+No longer applicable: cursorloop was retired by ADR-0078. The plan was:
 
 1. Operator provides `CURSOR_API_KEY` (Cursor dashboard → API keys).
 2. `cursorloop doctor` green; capture a real run; reconcile event map
@@ -86,7 +92,6 @@ forced-rotation tier crossing picks a different engine.
 
 ## Needs from operator
 
-- `CURSOR_API_KEY` exported (or in the env file the worker loads).
 - Nothing for codexloop unless root-cause turns out to be its own expired
   auth (`codex login` may need a refresh).
 - gptossloop: a local Ollama serving `gpt-oss:20b`; qwenloop: `qwen3:14b`
@@ -96,7 +101,6 @@ forced-rotation tier crossing picks a different engine.
 
 - Vendor event vocabularies drift — captured-output reconciliation is the
   bar everywhere now, and workstream 04 watches the changelogs after.
-- agyloop emits no `cost_usd` today (36/72 TurnCompleted events in
-  greeter4 carried cost — the claudeloop half). Turns still count toward
-  turn caps, but dollar caps under-read on agyloop-heavy cycles until its
-  runner emits cost.
+- An engine whose events omit `cost_usd` under-reads dollar caps (agyloop,
+  retired by ADR-0078, was the case seen: 36/72 TurnCompleted events in
+  greeter4 carried cost). Turns still count toward turn caps.

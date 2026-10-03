@@ -33,15 +33,15 @@ subscription login doesn't exist in a cluster.
   in-cluster project is picked up, the `ScaledObject` reconciles against
   real Postgres, a worker drains promptly on SIGTERM).
 - The image carries every runner. ADR-0037 made the one `vibey` wheel
-  ship all five, and the Dockerfile copies each package root, so
-  `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop` and
+  ship all three, and the Dockerfile copies each package root, so
+  `claudeloop`, `codexloop`, `gptossloop` and
   `qwenloop` are on `PATH` in every pod (CI's `image` job asserts every
   console script). The chart still defaults to `--provider scripted` with no
   engine keys, and no runner has yet completed a session in-cluster: on a
   laptop they still authenticate via subscription login.
 - `infrastructure/container/runtime.py` holds container runtime helpers;
   `infrastructure/cluster_preflight.py` backs `vibey doctor --cluster` and
-  maps each of the four hosted-model engines (not gptossloop or qwenloop) to the API-key
+  maps each of the two hosted-model engines (not gptossloop or qwenloop) to the API-key
   environment variables it accepts. Its `engine-auth` check judges the
   engines the worker is told to use (`doctor --cluster --engines …
   --provider …`, the worker's own flags), not every binary on `PATH`.
@@ -52,7 +52,7 @@ subscription login doesn't exist in a cluster.
    The second `vibey-engines` image first designed here is moot since
    ADR-0037: the one wheel carries the loop runners, so the one image does
    too. Engine API-key mode: each runner must support
-   `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`/`GOOGLE_API_KEY` auth (runner-side
+   `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` auth (runner-side
    work item where missing — subscription login is a TTY flow).
 2. **Helm chart** (`deploy/helm/vibey/`): Deployments for `worker` (N
    replicas) and `server` (the FastAPI ingress from workstream 12 —
@@ -85,7 +85,7 @@ subscription login doesn't exist in a cluster.
 
 ## Work items
 
-1. Engine API-key auth across the five runners (per-runner work items).
+1. Engine API-key auth across the three runners (per-runner work items).
    Open: the runners ship in the image (ADR-0037), but none is proven
    headless there yet — see 16, Phase 0.
 2. Dockerfiles + CI image builds (multi-arch: arm64 + amd64). Done (#73);

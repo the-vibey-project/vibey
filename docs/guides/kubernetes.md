@@ -20,13 +20,13 @@ Be clear about this before you install anything:
 - **The worker runs, applies migrations, claims jobs, and autoscales.**
 - **Every engine ships in the image; none is configured by default.**
   Since [ADR-0037](../architecture/decisions/0037-one-distribution-one-version.md)
-  the one `vibey` wheel carries all five runners, so the image puts
-  `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop` and
+  the one `vibey` wheel carries all three runners, so the image puts
+  `claudeloop`, `codexloop`, `gptossloop` and
   `qwenloop` on `PATH` beside `vibey` (CI's `image` job asserts every console script
   resolves). The chart still defaults to `worker.provider: scripted` with
   no `worker.engines` and no keys, and that is the install CI deploys. Its
-  worker logs `no recorded conformance for agyloop, claudeloop, codexloop,
-  cursorloop`: correct, not a misconfiguration, because an engine without
+  worker logs `no recorded conformance for ...`, naming the engines that have
+  none: correct, not a misconfiguration, because an engine without
   a key can never pass conformance and is never selected. Engine-driven
   (BUILD) jobs therefore do not run on a default install.
 - **A binary on `PATH` is not yet a working engine.** Shipping the
@@ -46,9 +46,8 @@ Be clear about this before you install anything:
   `{name: ANTHROPIC_API_KEY, key: anthropic}`. They are injected into the
   worker Deployment only. The variables each engine looks for are
   `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` (claudeloop);
-  `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, or `CODEX_API_KEY`
-  (codexloop); `CURSOR_API_KEY` (cursorloop); and `GOOGLE_API_KEY`,
-  `GEMINI_API_KEY`, or `GOOGLE_APPLICATION_CREDENTIALS` (agyloop).
+  and `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, or `CODEX_API_KEY`
+  (codexloop).
   Declare the engines you mean to use in `worker.engines`:
   `vibey doctor --cluster --engines <the same list>` then reports
   `engine-auth` as `FAIL` for any of them without a key (see
@@ -390,8 +389,7 @@ as `vibey.toml`'s [`[gates]`](../reference/configuration.md#gates) and
 [`[engine_environment]`](../reference/configuration.md#engine_environment); a
 forbidden entry (`VIBEY_*`, `PG*`, a DSN) is refused before the project is created.
 `spec.engines` is restricted by the CRD schema to the known engine ids
-(`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop`,
-`qwenloop`, `claudeloop-local`). The worker accepts
+(`claudeloop`, `codexloop`, `gptossloop`, `qwenloop`, `claudeloop-local`). The worker accepts
 `--provider gptossloop` (chart value `worker.provider`; `qwenloop` is still
 read as gptossloop, ADR-0064) for the sovereign DESIGN provider. That
 provider talks to a local Ollama over HTTP rather than running the

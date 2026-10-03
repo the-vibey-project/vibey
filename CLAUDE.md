@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
-Built on PostgreSQL and five `*loop` autonomous session runners (claudeloop,
-codexloop, cursorloop, agyloop, and the local runner that ships as two engines:
+Built on PostgreSQL and three `*loop` autonomous session runners (claudeloop,
+codexloop, and the local runner that ships as two engines:
 `gptossloop`, the sovereign default on GPT-OSS 20B, and the opt-in `qwenloop` on
 Qwen), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
@@ -173,9 +173,9 @@ under 100%. `tui/` is outside the floor, a recorded exemption. ADR-0023.
 uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
 "src/vibey_tools/*"]`, ADR-0021) whose other members are absorbed with history:
 
-- `src/vibey_runners/{claude,codex,cursor,agy,qwen}` — claudeloop, codexloop,
-  cursorloop, agyloop, gptossloop and qwenloop (one package, two engines —
-  ADR-0064); `src/vibey_runners/common` — vibey-runners-common.
+- `src/vibey_runners/{claude,codex,qwen}` — claudeloop, codexloop,
+  gptossloop and qwenloop (one package, two engines — ADR-0064);
+  `src/vibey_runners/common` — vibey-runners-common.
 - `src/vibey_tools/gh` — vibey-gh (provenance, merge train, promotion, release,
   and the governance canon under `docs/`); `src/vibey_tools/skills` —
   vibey-skills; `src/vibey_tools/bootstrap` — vibey-bootstrap.
@@ -207,8 +207,8 @@ explicit opt-in; declining deployment records a successful local completion.
 - **Queue backend:** PostgreSQL 14+, never SQLite. CI exercises every currently
   supported major (14–18); the Helm chart defaults to PostgreSQL 17. `FOR UPDATE
   SKIP LOCKED` is the reason; see ADR-0002.
-- **Engines:** `claudeloop`, `codexloop`, `cursorloop`, and `agyloop` are the
-  default paid-engine pool (tier PAID).
+- **Engines:** `claudeloop` and `codexloop` are the default paid-engine pool
+  (tier PAID); cursorloop and agyloop were retired by ADR-0078.
   Three local engines (tier LOCAL) join them, each behind its own switch:
   `gptossloop` — the sovereign default on GPT-OSS 20B, **on by default**, switched
   off only by `VIBEY_FEATURE_GPTOSSLOOP=0` or `[features] gptossloop = false`;
@@ -297,7 +297,7 @@ own and the repository root's — have no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (77 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (78 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

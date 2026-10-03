@@ -81,7 +81,7 @@ timeout_seconds = 60
 unattended_answerers = ["gate-timeout", "automation:%"]
 # The engines vibey calls PAID (CLAUDE.md, "The queue and engines"), and how long a login
 # check stays good (`AUTH_TTL` in src/vibey/application/engine_selector.py, 24 hours).
-paid_engines = ["claudeloop", "codexloop", "cursorloop", "agyloop"]
+paid_engines = ["claudeloop", "codexloop"]
 auth_ttl_hours = 24
 
 [scorecard.repo]

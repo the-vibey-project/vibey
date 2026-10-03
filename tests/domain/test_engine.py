@@ -148,6 +148,37 @@ def test_a_stored_opencode_engine_id_still_reads_verbatim() -> None:
     assert ENGINE_ID_PARSER.parse("opencode") == UnrecognizedEngineId("opencode")
 
 
+@pytest.mark.parametrize("retired", ["cursorloop", "agyloop"])
+def test_an_engine_retired_by_adr_0078_is_gone_and_refused_by_name(retired: str) -> None:
+    """ADR-0078 deleted cursorloop and agyloop with their runners. Naming one where an
+    operator's word becomes an `EngineId` -- a flag, an allow-list, an engine environment --
+    is refused saying so, never read as a typo (12.e)."""
+    from vibey.domain.engine import RETIRED_ENGINES, EngineId
+
+    assert retired not in {engine.value for engine in EngineId}
+    assert "ADR-0078" in RETIRED_ENGINES[retired]
+    with pytest.raises(ValueError, match=rf"'{retired}' is not a valid EngineId -- .*ADR-0078"):
+        EngineId(retired)
+
+
+@pytest.mark.parametrize("retired", ["cursorloop", "agyloop"])
+def test_a_stored_row_naming_a_retired_engine_still_reads_verbatim(retired: str) -> None:
+    """The ledger is append-only: rows written while the engine existed stay valid history,
+    read as the text they hold rather than raising."""
+    from vibey.domain.engine import ENGINE_ID_PARSER, UnrecognizedEngineId
+
+    assert ENGINE_ID_PARSER.parse(retired) == UnrecognizedEngineId(retired)
+
+
+def test_an_engine_id_never_known_keeps_the_enums_own_refusal() -> None:
+    from vibey.domain.engine import EngineId
+
+    with pytest.raises(ValueError, match=r"^'nosuchloop' is not a valid EngineId$"):
+        EngineId("nosuchloop")
+    with pytest.raises(ValueError, match=r"is not a valid EngineId$"):
+        EngineId(7)  # type: ignore[arg-type]
+
+
 def test_a_descriptor_declares_nothing_it_has_not_shown() -> None:
     """Every new fact defaults to unknown, so an engine nobody has checked shows no menu,
     no control and no event log."""

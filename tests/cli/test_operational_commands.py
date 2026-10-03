@@ -1213,6 +1213,14 @@ def test_doctor_specific_engine() -> None:
 def test_doctor_unknown_engine() -> None:
     res = runner.invoke(app, ["doctor", "--engine", "nonexistent"])
     assert res.exit_code == 1
+    assert "Unknown engine: nonexistent\n" in res.output
+
+
+@pytest.mark.parametrize("retired", ["cursorloop", "agyloop"])
+def test_doctor_names_the_decision_that_retired_an_engine(retired: str) -> None:
+    res = runner.invoke(app, ["doctor", "--engine", retired])
+    assert res.exit_code == 1
+    assert f"Unknown engine: {retired} -- {retired} was retired by ADR-0078" in res.output
 
 
 def test_doctor_no_detail_skips_detail_line() -> None:
@@ -1611,7 +1619,7 @@ def test_worker_engines_allow_list_with_claudeloop(tmp_path: Path) -> None:
 
     with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
         mock_notifier_cls.return_value = AsyncMock()
-        res = runner.invoke(app, ["worker", "--once", "--engines", "claudeloop,agyloop"])
+        res = runner.invoke(app, ["worker", "--once", "--engines", "claudeloop,codexloop"])
     assert res.exit_code == 0, res.output
     assert "no ready job" in res.output
 
@@ -1630,9 +1638,20 @@ def test_worker_engines_allow_list_without_claudeloop(tmp_path: Path) -> None:
 
     with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
         mock_notifier_cls.return_value = AsyncMock()
-        res = runner.invoke(app, ["worker", "--once", "--engines", "agyloop"])
+        res = runner.invoke(app, ["worker", "--once", "--engines", "codexloop"])
     assert res.exit_code == 0, res.output
     assert "no ready job" in res.output
+
+
+@pytest.mark.parametrize("retired", ["cursorloop", "agyloop"])
+def test_worker_refuses_an_allow_list_naming_a_retired_engine(retired: str) -> None:
+    """ADR-0078 retired cursorloop and agyloop. A worker started with one in `--engines`
+    is refused before anything is built, and the refusal names the decision."""
+    res = runner.invoke(app, ["worker", "--once", "--engines", f"claudeloop,{retired}"])
+    assert res.exit_code == 2, res.output
+    assert f"Invalid engine: '{retired}' is not a valid EngineId -- " in res.output
+    assert "ADR-0078" in res.output
+    assert "worker started" not in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1937,7 +1956,7 @@ def test_worker_warns_about_engines_without_conformance(
 ) -> None:
     """The sweep records preflight but never grants conformance -- until
     doctor --conformance --record runs, engine-driven jobs can't select."""
-    # The sweep covers the four paid engines plus gptossloop, the local engine on
+    # The sweep covers the two paid engines plus gptossloop, the local engine on
     # by default: pin both switches so an ambient VIBEY_FEATURE_* cannot change
     # the swept set this count asserts on.
     monkeypatch.setenv("VIBEY_FEATURE_GPTOSSLOOP", "1")
@@ -1968,8 +1987,8 @@ def test_worker_warns_about_engines_without_conformance(
             assert all(not r.conformance_ok for r in records)
             return len(records)
 
-    # The four paid engines, and gptossloop, the local engine on by default (ADR-0064).
-    assert asyncio.run(check()) == 5
+    # The two paid engines, and gptossloop, the local engine on by default (ADR-0064).
+    assert asyncio.run(check()) == 3
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -2323,10 +2342,6 @@ _ENGINE_KEY_VARS = (
     "OPENAI_API_KEY",
     "AZURE_OPENAI_API_KEY",
     "CODEX_API_KEY",
-    "CURSOR_API_KEY",
-    "GOOGLE_API_KEY",
-    "GEMINI_API_KEY",
-    "GOOGLE_APPLICATION_CREDENTIALS",
 )
 
 
@@ -2508,15 +2523,15 @@ def test_recover_with_project(tmp_path: Path) -> None:
 # ── a project's declared engine environment reaches the probes ────────────────
 #
 # `engine_environment` in the project record is how a project hands an engine the
-# credential its own configuration reads -- a relay's provider key, agyloop's Vertex
-# credentials. `build_full_worker` applied it, but the startup preflight sweep and
+# credential its own configuration reads -- a relay's provider key, a service-account
+# file for a vendor's cloud lane. `build_full_worker` applied it, but the startup preflight sweep and
 # `vibey doctor --conformance --record --project X` still probed with the DEFAULT
 # policy, so the auth check and the conformance run could not see the credential the
 # real session would get: the engine read "auth FAIL" and never became eligible.
 
 _DECLARED_CREDENTIALS = [
     (EngineId.CODEXLOOP, "OPENROUTER_API_KEY"),
-    (EngineId.AGYLOOP, "GOOGLE_APPLICATION_CREDENTIALS"),
+    (EngineId.CLAUDELOOP, "GOOGLE_APPLICATION_CREDENTIALS"),
 ]
 
 

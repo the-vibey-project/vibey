@@ -13,6 +13,7 @@ from typing import Any, ClassVar
 
 from vibey.domain.defect import DEFAULT_IDENTICAL_FAILURES, MIN_IDENTICAL_FAILURES
 from vibey.domain.design_default_scope import DEFAULT_SCOPE, DefaultScope
+from vibey.domain.engine import RETIRED_ENGINES
 from vibey.domain.errors import VibeyError
 from vibey.domain.gate_notice import (
     DEFAULT_MAX_REMINDERS,
@@ -53,8 +54,6 @@ LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})
 KNOWN_ENGINES = (
     "claudeloop",
     "codexloop",
-    "cursorloop",
-    "agyloop",
     "gptossloop",
     "qwenloop",
     "claudeloop-local",
@@ -758,6 +757,12 @@ def _parse_budget(data: dict[str, Any]) -> BudgetConfig:
     )
 
 
+def _unknown_engine(engine: str) -> str:
+    # A function rather than a method: it is the one sentence three parsers share, and
+    # this module's parsers are all module-level functions over the raw TOML dict.
+    return f"unknown engine {engine!r}{RETIRED_ENGINES.get(engine, '')}"
+
+
 def _parse_engines(data: dict[str, Any], features: FeaturesConfig) -> EnginesConfig:
     table = _optional(data, "engines", "engines", dict, {})
     # The sovereign default is on without declaration. The one way it leaves the pool is
@@ -770,11 +775,11 @@ def _parse_engines(data: dict[str, Any], features: FeaturesConfig) -> EnginesCon
             enabled = (*enabled, default)
     for engine in enabled:
         if engine not in KNOWN_ENGINES:
-            raise ConfigError("engines.enabled", f"unknown engine {engine!r}")
+            raise ConfigError("engines.enabled", _unknown_engine(engine))
     weights = _optional(table, "weights", "engines.weights", dict, {})
     for engine in weights:
         if engine not in KNOWN_ENGINES:
-            raise ConfigError("engines.weights", f"unknown engine {engine!r}")
+            raise ConfigError("engines.weights", _unknown_engine(engine))
     local = _optional(table, "claudeloop_local", "engines.claudeloop_local", dict, {})
     return EnginesConfig(
         enabled=enabled,
@@ -789,6 +794,11 @@ def _parse_phase(table: dict[str, Any], path: str, default_effort: str) -> Phase
         raise ConfigError(f"{path}.effort", f"must be one of {VALID_EFFORTS}, got {effort!r}")
     engines_raw = table.get("engines")
     engines = tuple(engines_raw) if engines_raw is not None else None
+    # A phase's engine list is not otherwise checked against the known engines, so a
+    # retired one would be dropped without a word; it is refused instead (ADR-0078).
+    for engine in engines or ():
+        if engine in RETIRED_ENGINES:
+            raise ConfigError(f"{path}.engines", _unknown_engine(engine))
     parallelism = table.get("parallelism")
     return PhaseConfig(effort=effort, engines=engines, parallelism=parallelism)
 

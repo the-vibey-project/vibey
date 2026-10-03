@@ -104,7 +104,7 @@ describe('Doctor', () => {
     expect(detail.vibey).toBe('vibey 3.0.0 at /opt/bin/vibey (from PATH)');
     expect(detail['vibey-skills']).toBe('vibey-skills 1.2.0 at /opt/bin/vibey-skills (from PATH)');
     expect(detail['vibey commands']).toBe('vibey has projects, gates, loops, budget');
-    expect(detail.loops).toBe('vibey loops: sovereignloop (gptossloop); paidloop (claudeloop, codexloop, cursorloop, agyloop)');
+    expect(detail.loops).toBe('vibey loops: sovereignloop (gptossloop); paidloop (claudeloop, codexloop)');
     expect(detail.Ollama).toBe(`Ollama 0.12.3 at ${ROOT} (from the default)`);
     expect(detail.model).toBe('gpt-oss:20b is downloaded (/v1/models; from the default)');
     expect(detail['context window']).toBe('gpt-oss:20b is loaded with 32,768 tokens; tasks plan for 32,768');

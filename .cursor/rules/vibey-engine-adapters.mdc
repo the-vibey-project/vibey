@@ -1,5 +1,5 @@
 ---
-description: How vibey drives claudeloop, codexloop, cursorloop, agyloop, and the local engines — gptossloop (the sovereign default), and the opt-in qwenloop and claudeloop-local — the engine adapter pattern, tiers, argv building, and the conformance suite.
+description: How vibey drives claudeloop, codexloop, and the local engines — gptossloop (the sovereign default), and the opt-in qwenloop and claudeloop-local — the engine adapter pattern, tiers, argv building, and the conformance suite.
 alwaysApply: false
 ---
 
@@ -7,9 +7,10 @@ alwaysApply: false
 
 # vibey engine adapters
 
-Vibey drives five autonomous session runners through seven engine ids:
-`claudeloop`, `codexloop`, `cursorloop` and `agyloop` (tier PAID) make up the
-default pool, `DEFAULT_DESCRIPTORS`; three local engines (tier LOCAL,
+Vibey drives three autonomous session runners through five engine ids:
+`claudeloop` and `codexloop` (tier PAID) make up the default pool,
+`DEFAULT_DESCRIPTORS` (cursorloop and agyloop were retired by ADR-0078);
+three local engines (tier LOCAL,
 `LOCAL_DESCRIPTORS`) join them, each behind its own switch (ADR-0064):
 `gptossloop` — the local runner on GPT-OSS 20B, the sovereign default, **on**
 unless `VIBEY_FEATURE_GPTOSSLOOP=0` / `[features] gptossloop = false`; `qwenloop`
@@ -23,7 +24,7 @@ SWRR within the LOCAL tier and falls back to PAID only when no local engine is
 eligible. gptossloop's model is also the sovereign DESIGN/DECOMPOSE provider
 (`gptossloop_design.py`, `gptossloop_decompose.py`, ADR-0027), the default
 `--provider` (`--provider qwenloop` is read as gptossloop). The runners' source lives in this
-repository under `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
+repository under `src/vibey_runners/{claude,codex,qwen,common}`
 (ADR-0021); vibey drives the installed binaries, not those packages' Python
 APIs. Each has its own CLI surface, effort vocabulary,
 state directory, and done marker. Vibey abstracts these differences via
@@ -120,15 +121,15 @@ ADR-0031). The packet is recorded as a `vibey_skills_context_packet` artifact.
 ## Engine descriptors
 
 `infrastructure/engines/descriptors.py` defines `CLAUDELOOP`, `CODEXLOOP`,
-`CURSORLOOP`, `AGYLOOP`, `GPTOSSLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one
+`GPTOSSLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one
 `EngineDescriptor` per engine. claudeloop-local's is *built* from `[engines.claudeloop_local]`
 (`profile`, `context_window`, `structured_verdict`) by
 `ClaudeloopLocalDescriptors.build()`; the constant is the default profile `local`.
 `GPTOSSLOOP` is `QWENLOOP` with its own id, binary and `GPTOSSLOOP_*`
 passthrough: one runner, whose run layout (`.qwenloop/runs/`), done marker and
 events both engines share.
-`DEFAULT_DESCRIPTORS` is the default pool of four, `LOCAL_DESCRIPTORS` the three
-local ones, `ALL_DESCRIPTORS` all seven, and `BY_ENGINE_ID` maps every
+`DEFAULT_DESCRIPTORS` is the default pool of two, `LOCAL_DESCRIPTORS` the three
+local ones, `ALL_DESCRIPTORS` all five, and `BY_ENGINE_ID` maps every
 `EngineId`. The worker
 adds adapters for the local engines that are switched on through
 `local_engines.py::LocalEngineSettings` — the one resolver bootstrap, `worker`,
@@ -154,7 +155,7 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
 - `tier` (`EngineTier.PAID` default, `LOCAL` for gptossloop, qwenloop and claudeloop-local) and
   `doctor_args` (extra `doctor` arguments; claudeloop-local: `--profile NAME`)
 - `supports_cwd_flag` (default `True`; codexloop: `False`) and `plan_flag`
-  (default `None` = positional plan path; cursorloop: `"--plan"`)
+  (default `None` = positional plan path; no current engine sets one)
 - `affordances` — `EngineAffordances`: `images`, `files`, `paste_text`,
   `paste_images`, `plugins` (`PluginSystem`) and `mcp`, each `True`, `False` or
   `None` (unknown, the default). `evidence` names, for every value that is set,
@@ -162,8 +163,7 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
   test. Never set one from memory or a vendor's marketing
 - `controls` — `EngineControls`: `stop`, `wind_down` and `prompt` as argv
   templates after the binary (`{run_id}`, `{cwd}`, `{text}`), `None` where the
-  runner has no such verb or does not act on it (cursorloop takes no mid-run
-  prompt, though its CLI writes one). Tests read every template against
+  runner has no such verb or does not act on it. Tests read every template against
   the runner's own Typer app the way click parses it
 - `events` — `EventLog`: the `path` template of its `events.jsonl` and its
   `envelope` (`EventEnvelope`: `type`, `event_type+payload`, or `event_type`)
@@ -204,7 +204,7 @@ produces the command line — read the real function, it is short. As of
 
 1. `<binary> run`, or `<binary> resume <session_id>` when `spec.session_id` is set.
 2. For `run` only: the plan path `<worktree>/.vibey/plans/<run_id>.md`, prefixed
-   by `descriptor.plan_flag` when the engine wants a flag (cursorloop: `--plan`),
+   by `descriptor.plan_flag` when an engine sets one,
    then `--run-id <run_id>` (so the adapter finds the run directory the process
    writes to).
 3. `descriptor.invoke(effort).argv`.
@@ -212,7 +212,7 @@ produces the command line — read the real function, it is short. As of
 5. `--cwd <worktree_path>`, only when `descriptor.supports_cwd_flag` (codexloop:
    `False`).
 
-42 golden files under `tests/infrastructure/engines/golden/` (7 engines × 6
+30 golden files under `tests/infrastructure/engines/golden/` (5 engines × 6
 efforts, ULTRA included; `test_argv.py` parametrizes over `ALL_DESCRIPTORS`) capture the
 expected argv for each combination — the source of truth for the exact current
 shape.

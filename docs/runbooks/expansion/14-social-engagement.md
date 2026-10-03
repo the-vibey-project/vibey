@@ -11,8 +11,8 @@
 
 ## Goal
 
-The vibey repository — which now carries claudeloop, codexloop,
-cursorloop, agyloop and qwenloop as workspace members — is optimized for
+The vibey repository — which now carries claudeloop, codexloop
+and qwenloop as workspace members — is optimized for
 online discovery, first-impression conversion, and community growth: the
 repository itself as a landing page. Since ADR-0037 there is one PyPI page —
 `vibey` — and each runner's README is a secondary landing page inside the

@@ -179,7 +179,7 @@ def test_fidelity_factor_penalizes_saturation() -> None:
 def test_fidelity_factor_penalizes_a_two_tier_shortfall_harder() -> None:
     """An engine that saturates far below the request is a worse answer than
     one that just misses, so the penalty needs more than a single step."""
-    descriptor = _saturating_descriptor(EngineId.AGYLOOP, ceiling=Effort.STANDARD)
+    descriptor = _saturating_descriptor(EngineId.QWENLOOP, ceiling=Effort.STANDARD)
     assert fidelity_factor(descriptor, Effort.STANDARD) == 1.0
     assert fidelity_factor(descriptor, Effort.HIGH) == 0.7
     assert fidelity_factor(descriptor, Effort.MAX) == 0.5
@@ -243,7 +243,7 @@ def test_select_no_starvation_over_a_full_period() -> None:
     candidates = [
         _candidate(EngineId.CLAUDELOOP, order=0, base_weight=3),
         _candidate(EngineId.CODEXLOOP, order=1, base_weight=2),
-        _candidate(EngineId.CURSORLOOP, order=2, base_weight=1),
+        _candidate(EngineId.QWENLOOP, order=2, base_weight=1),
     ]
     total_weight = sum(c.effective_weight for c in candidates)
 
@@ -261,7 +261,7 @@ def test_select_no_starvation_over_a_full_period() -> None:
     # full period for integer weights (nginx's SWRR guarantee).
     assert counts[EngineId.CLAUDELOOP] == 3
     assert counts[EngineId.CODEXLOOP] == 2
-    assert counts[EngineId.CURSORLOOP] == 1
+    assert counts[EngineId.QWENLOOP] == 1
 
 
 def test_select_never_picks_same_candidate_twice_in_a_row_when_others_are_waiting() -> None:
@@ -284,7 +284,7 @@ def test_select_never_picks_same_candidate_twice_in_a_row_when_others_are_waitin
     assert consecutive_repeats < 20
 
 
-_ENGINE_POOL = [EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.CURSORLOOP, EngineId.AGYLOOP]
+_ENGINE_POOL = [EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.QWENLOOP, EngineId.GPTOSSLOOP]
 
 
 @given(
@@ -320,7 +320,7 @@ def test_a_positive_weight_never_rounds_down_to_zero() -> None:
     round() made it 0, so the probe could never fire and the engine
     stayed open forever -- caught by the unattended validation run."""
     probe = Candidate(
-        engine_id=EngineId.AGYLOOP,
+        engine_id=EngineId.CODEXLOOP,
         base_weight=1,
         current=0,
         order=0,
@@ -344,7 +344,7 @@ def test_a_positive_weight_never_rounds_down_to_zero() -> None:
     assert dead.effective_weight == 0
 
     selection = select([probe, dead])
-    assert selection.engine_id is EngineId.AGYLOOP
+    assert selection.engine_id is EngineId.CODEXLOOP
 
 
 # --- preferred_tier(): sovereign before paid (8.a, ADR-0038) ---------------
@@ -378,7 +378,7 @@ def test_preferred_tier_offers_only_the_local_candidates_when_any_can_win() -> N
 
 def test_preferred_tier_falls_back_to_paid_when_no_local_candidate_exists() -> None:
     paid = _tiered(EngineId.CLAUDELOOP, EngineTier.PAID, order=0)
-    other = _tiered(EngineId.AGYLOOP, EngineTier.PAID, order=1)
+    other = _tiered(EngineId.CODEXLOOP, EngineTier.PAID, order=1)
 
     assert preferred_tier([paid, other]) == (paid, other)
 

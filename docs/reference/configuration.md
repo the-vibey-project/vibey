@@ -306,12 +306,14 @@ Unlike `[budget]` above, this key **is** read at runtime, by
 | `max_run_minutes` | positive integer | `240` | The wall-clock limit on one BUILD engine session (`build.implement` or `build.verify`). Past it the session is stopped and the job fails as `ENGINE`: three in a row open that engine's circuit so the retry rotates away, and the job's bounded attempts still end in a park, never a loop. A hung session used to keep its job's lease alive forever. There is no "off": a value that is not a positive whole number is ignored. Read by the worker from the project's stored config, which `vibey new` does not copy `[engines]` into today, so set it with `VIBEY_ENGINE_MAX_RUN_MINUTES` unless your project record was written another way. |
 | `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
 
-Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
+Known engine ids: `claudeloop`, `codexloop`,
 `gptossloop` (valid unless `features.gptossloop = false`), `qwenloop` (valid in
 `enabled` and `[phases.*].engines` only once `features.qwenloop = true`), and
 `claudeloop-local` (only once `features.claudeloop_local = true`). `opencode` is no
 longer an engine: its engine and runner were deleted, and a `vibey.toml` that names
-it is refused as an unknown engine.
+it is refused as an unknown engine. `cursorloop` and `agyloop` were retired by
+ADR-0078: a `vibey.toml` that names either — in `[engines]`, `[phases.*].engines` or
+`[engine_environment]` — is refused with an error that names the ADR.
 
 ### `[engines.claudeloop_local]` { #enginesclaudeloop_local }
 
@@ -342,13 +344,13 @@ Each phase table accepts the same three fields:
 | Field | Type | Default (per phase) | Notes |
 |---|---|---|---|
 | `effort` | string | `design` = `high`, `build` = `low`, `review` = `high` | One of `trivial`, `low`, `standard`, `high`, `max`. |
-| `engines` | array of strings or unset | unset (falls back to `[engines].enabled`) | Engine ids this phase may use. Not validated against known engines or `[engines].enabled`, and not checked to be a list. |
+| `engines` | array of strings or unset | unset (falls back to `[engines].enabled`) | Engine ids this phase may use. Not validated against known engines or `[engines].enabled`, and not checked to be a list; only a retired engine id is refused (see above). |
 | `parallelism` | integer or unset | unset | Per-phase worker concurrency override. Not validated. |
 
 ```toml
 [phases.build]
 effort = "standard"
-engines = ["claudeloop", "agyloop"]
+engines = ["claudeloop", "codexloop"]
 parallelism = 4
 ```
 
@@ -920,7 +922,7 @@ vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `security_commands` | array of arrays of non-empty strings | `[]` (no security check runs) | Security checks. There is deliberately no default: any baked-in command names both a tool and a layout, and `bandit -q -r <path that does not exist>` exits 0 — a wrong default reports a passing security check that examined zero files. Configure this to get one. |
-| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
+| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
 
 A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than
@@ -975,8 +977,6 @@ allow-list has three parts:
    | `claudeloop` | `ANTHROPIC_API_KEY`, `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` |
    | `claudeloop-local` | `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` |
    | `codexloop` | `OPENAI_API_KEY`, `CODEXLOOP_*`, `CODEX_*`, `OPENAI_*`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
-   | `cursorloop` | `CURSOR_API_KEY`, `CURSORLOOP_*`, `CURSOR_*` |
-   | `agyloop` | `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `AGYLOOP_*`, `ANTIGRAVITY_*`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` |
    | `gptossloop` | `GPTOSSLOOP_*` (plus the `GPTOSSLOOP_BASE_URL`/`GPTOSSLOOP_MODEL` vibey derives from `VIBEY_OLLAMA_URL`) |
    | `qwenloop` | `QWENLOOP_*` (plus the `QWENLOOP_BASE_URL` vibey derives from `VIBEY_OLLAMA_URL`; vibey hands qwenloop no model) |
 
@@ -987,16 +987,11 @@ allow-list has three parts:
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `allow` | array of strings | `[]` | Added for every engine. A trailing `*` names a prefix. |
-| `engines` | object of engine id → array of strings | `{}` | Added for one engine only, for example `{"agyloop": ["GOOGLE_ACCESS_TOKEN"]}` or `{"claudeloop": ["GH_TOKEN"]}`. Keys must be known engine ids. |
+| `engines` | object of engine id → array of strings | `{}` | Added for one engine only, for example `{"claudeloop": ["GH_TOKEN"]}`. Keys must be known engine ids. |
 
 A GitHub token or a cloud credential is on no default list. It reaches only the
 engine it is declared for. Some things need declaring:
 
-- agyloop's Vertex lane needs `GOOGLE_ACCESS_TOKEN` or `CLOUDSDK_AUTH_ACCESS_TOKEN`,
-  and optionally `GOOGLE_APPLICATION_CREDENTIALS`. agyloop also finds application
-  default credentials under `CLOUDSDK_CONFIG` when the gcloud configuration lives
-  somewhere other than `~/.config/gcloud`; declare `CLOUDSDK_CONFIG` too in that
-  case.
 - claudeloop's GitHub issue import needs `GH_TOKEN` or `GITHUB_TOKEN` for a private
   repository.
 
@@ -1019,7 +1014,7 @@ project's.
 allow = ["JAVA_HOME"]
 
 [engine_environment.engines]
-agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]
+claudeloop = ["GH_TOKEN"]
 "claudeloop-local" = ["GH_TOKEN"]
 ```
 
@@ -1116,8 +1111,8 @@ max_dollars_per_cycle = 15.0
 max_dollars_total = 250.0
 
 [engines]
-enabled = ["claudeloop", "agyloop"]
-weights = { claudeloop = 3, agyloop = 1 }
+enabled = ["claudeloop", "codexloop"]
+weights = { claudeloop = 3, codexloop = 1 }
 
 [phases.design]
 effort = "high"
@@ -1160,7 +1155,7 @@ sources = ["storm"]
 env_allow = ["JAVA_HOME"]
 
 [engine_environment.engines]
-agyloop = ["GOOGLE_APPLICATION_CREDENTIALS"]
+claudeloop = ["GH_TOKEN"]
 
 [queue.reap]
 stale_ready_seconds = 900

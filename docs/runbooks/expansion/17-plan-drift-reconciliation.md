@@ -14,8 +14,8 @@ against **observed state** (what the bots actually did), names the
 divergence, and takes bounded corrective action to bring the system back
 to the plan.
 
-Delivered as a kopf loop in **all six packages of this repository**
-(vibey plus the five runners, now uv workspace members — ADR-0021), each at
+Delivered as a kopf loop in **all four packages of this repository**
+(vibey plus the three runners, now uv workspace members — ADR-0021), each at
 its own altitude:
 
 | Package | Desired state | Observed state | Altitude |
@@ -23,8 +23,6 @@ its own altitude:
 | `vibey` | accepted `DesignSpec` + `WorkPlan` + phase protocol | ledger, `job` table, worktree git history, artifacts | a project across six phases |
 | `claudeloop` | the plan file handed to the run + its run contract | own `events.jsonl`, `state.json`, rundir | one autonomous session |
 | `codexloop` | " | " | " |
-| `cursorloop` | " | " | " |
-| `agyloop` | " | " | " |
 | `qwenloop` | " | " | " |
 
 Two altitudes, one pattern. vibey answers "is this *project* still
@@ -150,9 +148,9 @@ model judgment, that is a *budgeted, rate-limited job* the loop enqueues
    snapshot, calls the pure detector, writes conditions, and applies at
    most one rung.
 3. **Conditions and Events.** A shared condition vocabulary across all
-   six packages — `PlanDrift`, with `reason` drawn from the taxonomy
+   four packages — `PlanDrift`, with `reason` drawn from the taxonomy
    above, extending the CRD's existing `Ready`/`Parked` conditions — so
-   one dashboard reads every package. Divergent vocabularies across six
+   one dashboard reads every package. Divergent vocabularies across four
    implementations is the predictable failure; a conformance suite pins
    it, the same way the engine conformance suite pins adapter behavior.
 4. **One write path.** Corrective actions call the same application
@@ -184,7 +182,7 @@ model judgment, that is a *budgeted, rate-limited job* the loop enqueues
 3. Observation snapshot assembler in `application/` (ledger + jobs + git).
 4. kopf timer on `VibeyProject`; conditions + Events; `observe` only.
 5. Action ladder rungs 2–5 behind `driftPolicy`, promoted one at a time.
-6. Runner-altitude detector in each of the five runners (their own
+6. Runner-altitude detector in each of the three runners (their own
    `domain/` under `src/vibey_runners/<runner>/`, their own coverage
    budget per ADR-0022).
 7. Shared condition vocabulary + a cross-package conformance suite.
@@ -203,7 +201,7 @@ model judgment, that is a *budgeted, rate-limited job* the loop enqueues
 - Measured false-positive rate per drift kind over a full greeter run,
   recorded as evidence before any kind is promoted past `observe`.
 - One runner-altitude drift (verdict drift: "done" with plan items
-  unaddressed) caught in a real session in each of the five runners.
+  unaddressed) caught in a real session in each of the three runners.
 
 ## Needs from operator
 

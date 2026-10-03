@@ -56,6 +56,18 @@ describe('CatalogueParser', () => {
     expect(fixture('vibey-loops.json')).toBe(fs.readFileSync(golden, 'utf8'));
   });
 
+  it('reads a control verb a runner does not define as null, whether null or absent', () => {
+    const catalogue = parse(
+      variant((value) => {
+        const codex = engineIn(value, 'codexloop', 1);
+        codex.controls.wind_down = null;
+        delete codex.controls.prompt;
+      }),
+    );
+    const codex = catalogue.loops[1]?.engines.find((engine) => engine.engine_id === 'codexloop');
+    expect(codex?.controls).toEqual({ stop: ['stop', '--run-id', '{run_id}'], wind_down: null, prompt: null });
+  });
+
   it('reads the fixture of `vibey loops --json`', () => {
     const catalogue = parse();
     expect(catalogue.source).toBe('vibey');
@@ -359,17 +371,15 @@ describe('LoopSelector', () => {
         value.loops[1].engines[0].enabled = false;
       }),
     );
-    const paid = new LoopSelector(catalogue).select(request({ loop: 'paidloop', paidDeclared: true, effort: 'LOW' }));
-    expect(paid.engine.engine_id).toBe('cursorloop');
-    expect(paid.reason).toContain('achieves LOW');
+    const paid = new LoopSelector(catalogue).select(request({ loop: 'paidloop', paidDeclared: true, effort: 'STANDARD' }));
+    expect(paid.engine.engine_id).toBe('codexloop');
+    expect(paid.reason).toContain('achieves STANDARD');
   });
 
   it('takes the nearest engine when none achieves the effort exactly', () => {
     const catalogue = parse(
       variant((value) => {
         value.loops[1].engines[0].enabled = false;
-        value.loops[1].engines[2].enabled = false;
-        value.loops[1].engines[3].enabled = false;
       }),
     );
     const paid = new LoopSelector(catalogue).select(request({ loop: 'paidloop', paidDeclared: true, effort: 'MAX' }));
@@ -450,12 +460,22 @@ describe('LoopSelector', () => {
     expect(() => gptossOff.select(request({ engine: 'gptossloop' }))).toThrow(
       /^gptossloop is switched off; it is on by default, so VIBEY_FEATURE_GPTOSSLOOP or vibey's \[features\] table switched it off$/,
     );
-    const cursor = selector.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'cursorloop/grok', effort: 'LOW' }));
-    expect(cursor.effort).toBe('HIGH');
-    expect(cursor.effortSource).toBe('model');
-    expect(cursor.reason).toContain('set by the model');
-    expect(() => selector.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'cursorloop/gpt-9' }))).toThrow(
-      'its models are composer-fast, composer, grok-4.5, grok, grok-xhigh',
+    // No paid engine vibey ships names a model per effort today, so one is given models here.
+    const named = new LoopSelector(
+      parse(
+        variant((value) => {
+          for (const entry of engineIn(value, 'codexloop', 1).efforts) {
+            entry.model = entry.effort === 'ULTRA' ? 'm-max' : `m-${String(entry.effort).toLowerCase()}`;
+          }
+        }),
+      ),
+    );
+    const byModel = named.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'codexloop/m-high', effort: 'LOW' }));
+    expect(byModel.effort).toBe('HIGH');
+    expect(byModel.effortSource).toBe('model');
+    expect(byModel.reason).toContain('set by the model');
+    expect(() => named.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'codexloop/gpt-9' }))).toThrow(
+      'its models are m-trivial, m-low, m-standard, m-high, m-max',
     );
     expect(() => selector.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'claudeloop/opus' }))).toThrow(
       'does not take a model by name',

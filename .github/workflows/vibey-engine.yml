@@ -147,12 +147,12 @@ jobs:
           # The package is vibey-engine; what it installs is the whole engine family
           # (ADR-0037, ADR-0069). This is the ONLY place the artifact is proven against a
           # real index before PyPI, so it exercises the contract the distribution now
-          # makes -- twelve console scripts -- rather than the one it used to make. A
+          # makes -- ten console scripts -- rather than the one it used to make. A
           # wheel that silently lost a tenant's `packages` entry passed the old
           # `vibey --version` unchanged.
           missing=""
           for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
-                      azbootstrap claudeloop codexloop cursorloop agyloop gptossloop qwenloop; do
+                      azbootstrap claudeloop codexloop gptossloop qwenloop; do
             if command -v "$tool" >/dev/null 2>&1; then
               echo "ok      $tool"
             else

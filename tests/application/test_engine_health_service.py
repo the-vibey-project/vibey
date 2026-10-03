@@ -523,14 +523,14 @@ async def test_record_preflight_keeps_prior_auth_timestamp_on_auth_failure() -> 
     project_id = uuid4()
     first = await service.record_preflight(
         project_id,
-        EngineId.AGYLOOP,
+        EngineId.CODEXLOOP,
         PreflightResult(installed=True, version="1.0.0", auth_ok=True),
     )
     assert first.auth_ok_at is not None
 
     second = await service.record_preflight(
         project_id,
-        EngineId.AGYLOOP,
+        EngineId.CODEXLOOP,
         PreflightResult(installed=True, version="1.0.0", auth_ok=False),
     )
 

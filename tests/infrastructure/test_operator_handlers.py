@@ -109,14 +109,16 @@ async def test_spec_carries_the_declared_gate_and_engine_environments(tmp_path: 
             spec={
                 "repo": str(tmp_path),
                 "gates": {"timeout_seconds": 900, "env_allow": ["JAVA_HOME"]},
-                "engineEnvironment": {"engines": {"agyloop": ["GOOGLE_ACCESS_TOKEN"]}},
+                "engineEnvironment": {"engines": {"claudeloop": ["GOOGLE_ACCESS_TOKEN"]}},
             },
             known_project_id=None,
         )
         stored = await resources.projects.get(project.project_id)
     assert stored is not None
     assert stored.config["gates"] == {"timeout_seconds": 900, "env_allow": ["JAVA_HOME"]}
-    assert stored.config["engine_environment"] == {"engines": {"agyloop": ["GOOGLE_ACCESS_TOKEN"]}}
+    assert stored.config["engine_environment"] == {
+        "engines": {"claudeloop": ["GOOGLE_ACCESS_TOKEN"]}
+    }
 
 
 @pytest.mark.parametrize(

@@ -169,8 +169,6 @@ def test_the_document_has_the_contracts_shape_without_a_database() -> None:
     assert [e["engine_id"] for e in paid["engines"]] == [
         "claudeloop",
         "codexloop",
-        "cursorloop",
-        "agyloop",
     ]
     for loop in document["loops"]:
         assert list(loop["by_effort"]) == EFFORTS
@@ -271,16 +269,13 @@ def test_a_paid_engine_is_listed_as_on_with_no_switch_and_its_model_chooser_note
         "notes": "claudeloop preset high",
     }
     assert claudeloop["capabilities"]["plugins"] == "claude-plugins"
-    assert _engine(document, "cursorloop")["efforts"][0]["model"] == "composer-fast"
-    assert _engine(document, "cursorloop")["plan_flag"] == "--plan"
+    assert claudeloop["plan_flag"] is None
     assert _engine(document, "codexloop")["supports_cwd_flag"] is False
-    assert _engine(document, "agyloop")["controls"]["wind_down"] is None
 
 
 def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -> None:
-    """cursorloop's CLI writes a `prompt` control, but its runner reads its inbox only while
-    it waits, acts on stop and wind-down alone, and drops the rest unread (amendment 3).
-    qwenloop's runner reads one at each turn boundary, since #1133."""
+    """A runner offers a `prompt` control only where its runner acts on what the verb writes
+    (amendment 3). qwenloop's runner reads one at each turn boundary, since #1133."""
     document = _document()
 
     prompts = {
@@ -294,12 +289,7 @@ def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -
         "claudeloop-local": True,
         "claudeloop": True,
         "codexloop": True,
-        "cursorloop": False,
-        "agyloop": True,
     }
-    cursorloop = _engine(document, "cursorloop")
-    assert cursorloop["controls"]["stop"] == ["stop", "--run-id", "{run_id}", "--cwd", "{cwd}"]
-    assert "prompt" not in cursorloop["capabilities"]["evidence"]["paste_text"]
 
 
 def test_no_engine_is_repealed_since_opencode_was_deleted() -> None:

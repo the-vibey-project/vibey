@@ -2,10 +2,10 @@
 """Use case: wrap a prompt with the done-marker instruction used to detect
 task completion across multi-turn autonomous runs.
 
-``done_marker`` has no default here (unlike claudeloop's and agyloop's own
-copies of this function): each runner's default marker string is a
-vendor-specific domain constant (e.g. ``CLAUDELOOP_TASK_FULLY_COMPLETE`` vs
-``AGYLOOP_TASK_FULLY_COMPLETE``), so a shared default would silently pick
+``done_marker`` has no default here (unlike claudeloop's own copy of this
+function): each runner's default marker string is a vendor-specific domain
+constant (e.g. ``CLAUDELOOP_TASK_FULLY_COMPLETE`` vs
+``CODEXLOOP_TASK_FULLY_COMPLETE``), so a shared default would silently pick
 one runner's vocabulary for all of them. Callers pass their own runner's
 ``domain.completion.DEFAULT_DONE_MARKER`` explicitly.
 """

@@ -52,7 +52,7 @@ from vibey.domain.phase import Phase
 MODEL_FLAG: Final = "--model"
 """The flag whose value names the model an effort runs."""
 PRESET_FLAG: Final = "--preset"
-"""claudeloop's and agyloop's model tier (`low`, `medium`, `high`)."""
+"""claudeloop's model tier (`low`, `medium`, `high`)."""
 PROFILE_FLAG: Final = "--profile"
 """claudeloop's backend profile, which maps each preset onto a model of its own."""
 

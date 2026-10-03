@@ -14,11 +14,11 @@ PHASE="${2:?usage: run.sh REPO PHASE [DRIVER]}"
 DRIVER="${3:-claudeloop}"
 
 case "$REPO" in
-  vibey|claudeloop|agyloop|codexloop|cursorloop) ;;
-  *) echo "unknown repo: $REPO (expected vibey|claudeloop|agyloop|codexloop|cursorloop)" >&2; exit 1 ;;
+  vibey|claudeloop|codexloop) ;;
+  *) echo "unknown repo: $REPO (expected vibey|claudeloop|codexloop)" >&2; exit 1 ;;
 esac
 case "$DRIVER" in
-  claudeloop|agyloop|codexloop|cursorloop) ;;
+  claudeloop|codexloop) ;;
   *) echo "unknown driver: $DRIVER" >&2; exit 1 ;;
 esac
 if ! command -v "$DRIVER" >/dev/null 2>&1; then
@@ -79,29 +79,6 @@ case "$DRIVER" in
       --log-level INFO --log-file "$LOG_DIR/run.log" \
       --stream-ui
     ;;
-  agyloop)
-    # KNOWN BROKEN as of 2026-08-17, tracked in
-    # docs/plans/fleet/c2-harness-fix-agyloop.md — do not launch an
-    # agyloop-driven run until that lands:
-    #   --gateway sdk (this default): the local Antigravity harness fails
-    #     to start ("Failed to read length from stdout").
-    #   --gateway cli: --scoped has no effect on the CLI gateway's exported
-    #     `agy` settings, so every tool call is silently auto-denied and the
-    #     run falsely reports AGYLOOP_TASK_FULLY_COMPLETE having done
-    #     nothing. Do NOT "fix" this here by switching to --gateway cli —
-    #     that's the worse of the two failure modes (silent false success,
-    #     not a loud crash).
-    exec agyloop -v --log-file "$LOG_DIR/run.log" \
-      run "$PLAN_FILE" \
-      --cwd "$WT" \
-      --run-id "$RUN_ID" \
-      --add-dir "$VIBEY_ROOT/docs/plans" \
-      --gateway sdk \
-      --preset high \
-      --scoped \
-      --ramp 3 \
-      --max-turns 800 --max-dollars 80 --max-wait 21600
-    ;;
   codexloop)
     # NOTE: codexloop's `run` has no --cwd today (Phase C tracks adding it).
     # Until then, correctness depends on actually being in $WT — cd there
@@ -112,12 +89,5 @@ case "$DRIVER" in
       --max-turns 800 --max-wait 21600 \
       --log-level INFO --log-file "$LOG_DIR/run.log" \
       --stream-ui
-    ;;
-  cursorloop)
-    exec cursorloop run --plan "$PLAN_FILE" \
-      --cwd "$WT" \
-      --run-id "$RUN_ID" \
-      --max-turns 800 --max-dollars 80 --max-wait 21600 \
-      --log-level INFO
     ;;
 esac
