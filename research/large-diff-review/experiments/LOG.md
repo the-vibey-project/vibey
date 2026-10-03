@@ -306,6 +306,12 @@ what was seen, and what it changed.
   The preregistration does not cover a server outage, so this follows the precedent of the
   contention void (00:21 on 10-02). A cell the infrastructure denied is not
   evidence about the arm, so line 128 is tombstoned in `results/void_rows.jsonl` and the cell
-  re-runs with the round. Recorded now, before the re-run's outcome exists. Ollama answered
-  again at 14:45; nothing was loaded and nothing else was contending. Round 1 resumes from
+  re-runs with the round. Recorded now, before the re-run's outcome exists. Ollama was answering when checked
+  at 14:45, with no model loaded and no other client connected. Round 1 resumes from
   `harness/round1.sh` with the arm order unchanged; the resume skips every finished triple.
+  **14:59 addendum.** The first resume replayed the same failure, because the request store
+  caches a `transport_error` record like any other. That row (diffs.jsonl line 129) is
+  tombstoned too, and the failed request record (key 9889ca0b…) is added to
+  `results/invalidations.jsonl`, completing the void the way the contention void did. Note
+  for the harness: a transport failure is cached as a result, so voiding one takes both
+  files. Round 1 restarted after both were written.
