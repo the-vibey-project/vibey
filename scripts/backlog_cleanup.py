@@ -253,9 +253,15 @@ def marker_for(verdict: str, evidence: str) -> str:
 
 
 def marker_in(text: str) -> str | None:
-    """The verdict hash a text already carries, if any."""
-    match = re.search(r"<!-- vibey-backlog-cleanup verdict:([0-9a-f]{12})-->", text)
-    return match.group(1) if match else None
+    """The verdict hash of the newest marker a text carries, if any.
+
+    `Gh.comments` joins an issue's comments oldest first, so the last marker is the
+    verdict most recently posted. Reading the first one compared every run against the
+    issue's oldest verdict, and while `last_verdict` was unpublished the loop re-posted
+    an unchanged report each hour (#1204 got six identical copies, 2026-09-27..29).
+    """
+    found = re.findall(r"<!-- vibey-backlog-cleanup verdict:([0-9a-f]{12})-->", text)
+    return found[-1] if found else None
 
 
 class BacklogCleanup(BacklogCleanupInterface):
