@@ -71,3 +71,75 @@ upstream = [
   "https://github.com/digitalbazaar/forge/issues/1149",
   "https://github.com/digitalbazaar/forge/pull/1152",
 ]
+
+[[exception]]
+advisory = "GHSA-vfj7-8cjw-p6xm"
+package = "braces"
+workspace = "."
+added = 2026-10-03
+# 30 days, the [advisories] maximum. No patched release exists (every braces release,
+# 3.0.1 to 3.0.3, is in range) and upstream has not answered micromatch/braces#70 or #73.
+expires = 2026-11-02
+reason = """
+CVE-2026-93687, CVSS 7.5: braces <= 3.0.3 recurses without a depth bound when it compiles or
+expands a deeply nested brace pattern, so a hostile pattern can exhaust the stack (denial of
+service). No patched release exists: 3.0.3 is the latest. The advisory was last updated on
+2026-10-02, and it reached this repository's CI on 2026-10-03.
+
+Not reached by anything we ship or run on input we do not write. Evidence, 2026-10-03:
+
+1. In the root workspace the only path is the VS Code extension's publishing tool:
+   clients/vscode -> ovsx 1.2.0 -> @vscode/vsce 3.9.2 -> secretlint 10.2.2 -> globby 14.1.0
+   -> fast-glob 3.3.3 -> micromatch 4.0.8 -> braces 3.0.3 (`npm ls braces --all
+   --package-lock-only`). ovsx and @vscode/vsce are devDependencies, and the extension
+   declares no runtime dependencies; with dev dependencies omitted the root tree holds no
+   braces (`npm ls braces --omit=dev` is empty).
+2. The shipped extension does not contain it: the released krypton-vscode-0.2.0.vsix
+   (98 files; its only bundled module is @vibey/core) has no file matching braces,
+   micromatch, expandRange or fill-range.
+3. The patterns braces expands there are this repository's own: vsce and secretlint glob
+   the extension's own files while packaging and scanning it. A pattern an outsider controls
+   never reaches them.
+"""
+retire_when = "braces publishes a release that fixes GHSA-vfj7-8cjw-p6xm (then refresh package-lock.json), or the publishing toolchain stops depending on it"
+upstream = [
+  "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+  "https://github.com/micromatch/braces/issues/70",
+  "https://github.com/micromatch/braces/issues/73",
+]
+
+[[exception]]
+advisory = "GHSA-vfj7-8cjw-p6xm"
+package = "braces"
+workspace = "clients/app"
+added = 2026-10-03
+# 30 days, the [advisories] maximum; the same upstream state as the root-workspace entry.
+expires = 2026-11-02
+reason = """
+CVE-2026-93687, CVSS 7.5: unbounded recursion in braces <= 3.0.3 on deeply nested brace
+patterns (stack-exhaustion denial of service). No patched release exists.
+
+Not reached by anything krypton ships or runs on input we do not write. Evidence, on expo
+57.0.25 (2026-10-03):
+
+1. Two paths reach it. jest 29.7.0 -> @jest/core -> micromatch 4.0.8 -> braces 3.0.3, a
+   devDependency (the test runner). And the one npm counts as production:
+   expo -> @expo/cli 57.0.27 -> @expo/metro-file-map 57.0.3 -> micromatch -> braces
+   (`npm ls braces --all --omit=dev --package-lock-only`). @expo/cli is the developer CLI
+   that bundles the app; metro-file-map watches the project's files while it does. No app
+   source imports it, micromatch or braces.
+2. The shipped bundles do not contain it. In the 3.4.0 release, the Android JS bundle
+   (assets/index.android.bundle, 2,529,668 bytes, in krypton-android-0.1.0.apk), the iOS
+   bundle (Payload/krypton.app/main.jsbundle, 2,789,928 bytes, in krypton-ios-0.1.0.ipa) and
+   the web export (krypton-web-0.1.0.tar.gz) have zero occurrences of micromatch,
+   fill-range, expandRange or braces/lib; the control string expo-router occurs 6 and 7
+   times in the two native bundles.
+3. The patterns braces expands are the project's own: jest's testMatch and Metro's
+   watch and ignore globs come from this repository's configuration, never from a user.
+"""
+retire_when = "braces publishes a release that fixes GHSA-vfj7-8cjw-p6xm (then refresh clients/app/package-lock.json), or expo and jest stop depending on it"
+upstream = [
+  "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+  "https://github.com/micromatch/braces/issues/70",
+  "https://github.com/micromatch/braces/issues/73",
+]
