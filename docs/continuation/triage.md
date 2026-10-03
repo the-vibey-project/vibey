@@ -11,7 +11,7 @@ closed one actually done, the forecast current.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep the backlog, the tracker and the roadmap truthful.
-- **Decision records:** 81, the newest 0081 — vibey's chat, inside GitHub, resilient to the parts around it failing.
+- **Decision records:** 82, the newest 0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays.
 - **Lanes it keeps usable:** [Backlog cleanup](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-cleanup.yml), [Delivery estimate](https://github.com/the-vibey-project/vibey/actions/workflows/delivery-estimate.yml).
 <!-- END GENERATED continuation:state -->
 

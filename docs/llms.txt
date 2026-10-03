@@ -12,6 +12,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 
 ## Guides
 
+- [Install, copy, reinstall, uninstall](https://the-vibey-project.github.io/vibey/main/guides/install/): Install vibey in one command, reinstall it by running the same command again, copy the whole codebase in one more, and remove the krypton interfaces cleanly — while vibey-engine's core is never uninstalled.
 - [Downloads](https://the-vibey-project.github.io/vibey/main/guides/downloads/): The ready-built files attached to every vibey release, for each user interface and platform, with what is signed and how to install each.
 - [VS Code extension](https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/): The extension is called krypton, the name every app carries (sub-doctrine 9.e), and its id is the-vibey-project.krypton; its commands and settings keep their vibey.* names.
 - [Kubernetes](https://the-vibey-project.github.io/vibey/main/guides/kubernetes/): This guide takes vibey from a laptop process to a long-lived deployment: a containerized worker, a Helm chart, an in-cluster PostgreSQL, and queue-depth autoscaling via KEDA.
@@ -150,6 +151,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0079 — Hybrid engine dispatch: paid engines in tandem with sovereign ones, measured and capped](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0079-hybrid-engine-dispatch/)
 - [0080 — Continuation prompts, kept current and run on GitHub every week](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0080-continuation-prompts/)
 - [0081 — vibey's chat, inside GitHub, resilient to the parts around it failing](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0081-vibey-chat-on-github/)
+- [0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0082-install-copy-reinstall-and-a-core-that-stays/)
 
 ## Governance
 

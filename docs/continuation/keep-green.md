@@ -11,7 +11,7 @@ and land the fix.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Find every failing workflow on the integration branch, fix its cause, and land the fix.
-- **Decision records:** 81, the newest 0081 — vibey's chat, inside GitHub, resilient to the parts around it failing.
+- **Decision records:** 82, the newest 0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays.
 - **Lanes it keeps usable:** [CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml), [Branch health](https://github.com/the-vibey-project/vibey/actions/workflows/branch-health.yml), [Ruleset drift](https://github.com/the-vibey-project/vibey/actions/workflows/ruleset-drift.yml), [Repository profile](https://github.com/the-vibey-project/vibey/actions/workflows/repository-profile.yml), [Documentation deep scan](https://github.com/the-vibey-project/vibey/actions/workflows/documentation-deep-scan.yml).
 - **Agent skills it relies on:** `.claude/skills/vibey-quality-gates/SKILL.md`.
 <!-- END GENERATED continuation:state -->

@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 81, the newest 0081 — vibey's chat, inside GitHub, resilient to the parts around it failing.
+- **Decision records:** 82, the newest 0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt
@@ -23,6 +23,8 @@ and every past session are gone. Work only in a scratch directory.
 
 1. Find the most complete surviving copy, in this order, and record which you used:
    a. a git clone (full history: `git log --oneline | wc -l` is in the thousands);
+      if the forge still stands, `sh scripts/install.sh --from-source DIR` makes one
+      and builds it in a single step;
    b. the source distribution of the newest vibey-engine release on PyPI
       (`pip download --no-binary :all: --no-deps vibey-engine`), which carries the whole tree
       that ships (ADR-0037);
