@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 80, the newest 0080 — Continuation prompts, kept current and run on GitHub every week.
+- **Decision records:** 81, the newest 0081 — vibey's chat, inside GitHub, resilient to the parts around it failing.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

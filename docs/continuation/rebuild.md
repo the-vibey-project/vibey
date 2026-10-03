@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 80, the newest 0080 — Continuation prompts, kept current and run on GitHub every week.
+- **Decision records:** 81, the newest 0081 — vibey's chat, inside GitHub, resilient to the parts around it failing.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

@@ -300,6 +300,7 @@ def test_the_matrix_carries_the_declared_run_settings(tmp_path: Path) -> None:
         "title": "Resume",
         "runs_on": "ubuntu-24.04-arm",
         "model": "gpt-oss:20b",
+        "models": "gpt-oss:20b",
         "max_turns": 7,
         "timeout_minutes": 99,
     }
@@ -349,3 +350,155 @@ def test_the_cli_renders_checks_and_hands_over(
     assert "Clone it" in capsys.readouterr().out
     assert cli.run(["plan", "rebuild"]) == 0
     assert "DRILL" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------ the chat (#1384)
+
+CHAT_LANE = """name: Chat
+on:
+  issue_comment:
+  pull_request_review_comment:
+  workflow_dispatch:
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo author_association
+  reply:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python3 scripts/continuation_prompts.py guard p && python3 scripts/continuation_prompts.py defuse r
+"""
+
+CHAT_TOML = """
+[[prompt]]
+id = "chat"
+title = "Chat"
+page = "docs/continuation/chat.md"
+mode = "chat"
+purpose = "Answer."
+covers = ["chat.yml"]
+"""
+
+CHAT_SECTION = """
+[chat]
+workflow = ".github/workflows/chat.yml"
+trigger = "/vibey"
+trusted = ["OWNER"]
+reply_file = ".reply.md"
+thread_chars = 30
+request_chars = 20
+"""
+
+
+def chat_world(tmp_path: Path) -> Path:
+    root = world(tmp_path)
+    toml = root / "scripts/continuation_prompts.toml"
+    text = toml.read_text().replace("[authority]", CHAT_TOML + "\n[authority]")
+    text = text.replace(
+        'drill_only = ["rebuild"]',
+        'drill_only = ["rebuild"]\nprotected = ["^\\\\.github/", "^secret\\\\.toml$"]',
+    )
+    text = text.replace('model = "gpt-oss:20b"', 'model = "gpt-oss:20b"\nmodels = ["big", "small"]')
+    toml.write_text(text + CHAT_SECTION)
+    (root / ".github/workflows/chat.yml").write_text(CHAT_LANE)
+    (root / "docs/continuation/chat.md").write_text(page("Read CLAUDE.md, then answer."))
+    prompts(root).render()
+    return root
+
+
+def test_a_sound_chat_lane_holds_and_the_weekly_matrix_leaves_it_out(tmp_path: Path) -> None:
+    root = chat_world(tmp_path)
+    assert prompts(root).problems() == []
+    matrix = prompts(root).matrix()
+    assert [m["id"] for m in matrix] == ["resume", "rebuild"]
+    assert matrix[0]["model"] == "big" and matrix[0]["models"] == "big small"
+
+
+def test_the_chat_lane_must_keep_every_guard(tmp_path: Path) -> None:
+    root = chat_world(tmp_path)
+    lane = root / ".github/workflows/chat.yml"
+    lane.write_text(CHAT_LANE.replace("author_association", "anyone").replace("guard p && ", ""))
+    found = prompts(root).problems()
+    assert "chat.yml: it no longer refuses strangers (12.j)" in found
+    assert "chat.yml: it applies a patch without the shared guard" in found
+    lane.write_text(CHAT_LANE + "      - run: git fetch origin refs/pull/1/head\n")
+    assert any("names refs/pull/" in p for p in prompts(root).problems())
+    lane.write_text(CHAT_LANE.replace("runs-on: ubuntu-latest", "runs-on: self-hosted", 1))
+    assert (
+        "chat.yml must run on GitHub-hosted runners, not a self-hosted one"
+        in prompts(root).problems()
+    )
+    lane.unlink()
+    assert "the chat lane (chat.yml) does not exist" in prompts(root).problems()
+
+
+def test_the_model_chain_falls_back_to_the_single_model(tmp_path: Path) -> None:
+    assert cp.Settings.load(chat_world(tmp_path)).models() == ["big", "small"]
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert cp.Settings.load(world(plain)).models() == ["gpt-oss:20b"]
+
+
+def test_the_guard_refuses_any_protected_path_and_passes_the_rest() -> None:
+    guard = cp.PatchGuard(["^\\.github/", "^secret\\.toml$"])
+    patch = (
+        "diff --git a/docs/x.md b/docs/x.md\n+ok\n"
+        "diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n+bad\n"
+        "diff --git a/old.toml b/secret.toml\nrename\n"
+    )
+    assert guard.refused(patch) == [".github/workflows/ci.yml", "secret.toml"]
+    assert guard.refused("diff --git a/docs/x.md b/docs/x.md\n") == []
+
+
+def test_a_reply_cannot_mention_anyone_or_trigger_the_chat_and_is_cut_loudly() -> None:
+    defuser = cp.ReplyDefuser("/vibey", cap=500)
+    out = defuser.defuse(
+        "Thanks @vibey and @someone-else; mail a@b.com; `@code`\n  /vibey act again"
+    )
+    assert "@​vibey" in out and "@​someone-else" in out
+    assert "a@b.com" in out and "`@code`" in out
+    assert "/​vibey act again" in out
+    long = cp.ReplyDefuser("/vibey", cap=60).defuse("x" * 100)
+    assert long.endswith("[... cut at 60 characters of 100 ...]")
+    assert cp.ReplyDefuser("").defuse("/vibey stays") == "/vibey stays"
+
+
+def test_a_chat_plan_fences_the_thread_and_states_its_authority(tmp_path: Path) -> None:
+    root = chat_world(tmp_path)
+    answer = prompts(root).chat("answer", "what is ADR-0001?", "a thread " * 10)
+    assert answer.startswith("Read CLAUDE.md, then answer.")
+    assert "ANSWER: change no file" in answer and ".reply.md" in answer
+    assert "````text\nwhat is ADR-0001?\n````" in answer
+    assert "[... cut at 30 characters of 90 ...]" in answer
+    act = prompts(root).chat("act", "change it", "")
+    assert "ONE draft pull request" in act
+
+
+def test_a_chat_plan_needs_a_chat_prompt(tmp_path: Path) -> None:
+    with pytest.raises(KeyError):
+        prompts(sound(tmp_path)).chat("answer", "hi", "")
+
+
+def test_the_cli_serves_the_chat(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    root = chat_world(tmp_path)
+    cli = cp.ContinuationCli(root)
+    assert cli.run(["models"]) == 0 and capsys.readouterr().out.strip() == "big small"
+    request, thread = root / "req.txt", root / "thread.txt"
+    request.write_text("hello")
+    thread.write_text("")
+    assert cli.run(["chat", "answer", str(request), str(thread)]) == 0
+    assert "hello" in capsys.readouterr().out
+    assert cli.run(["chat", "shout", str(request), str(thread)]) == 2
+    patch = root / "change.patch"
+    patch.write_text("diff --git a/docs/a.md b/docs/a.md\n")
+    assert cli.run(["guard", str(patch)]) == 0
+    patch.write_text("diff --git a/.github/x.yml b/.github/x.yml\n")
+    assert cli.run(["guard", str(patch)]) == 1
+    assert "may not change .github/x.yml" in capsys.readouterr().out
+    assert cli.run(["guard"]) == 2
+    reply = root / "reply.md"
+    reply.write_text("ping @vibey")
+    assert cli.run(["defuse", str(reply)]) == 0
+    assert "@​vibey" in capsys.readouterr().out
+    assert cli.run(["defuse"]) == 2

@@ -30,7 +30,7 @@ working design for durable, auditable agent orchestration.
 - **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](src/vibey/domain/ledger_chain.py)).
 - **Local first, paid by choice.** The default engine runs GPT-OSS 20B on your own machine through Ollama ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)); a paid engine runs only when no local one can ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md)).
 - **You decide what matters.** Design, review and deployment wait for your recorded answer, and a waiting question parks its job instead of blocking a worker ([ADR-0009](docs/architecture/decisions/0009-human-gates-are-parked-jobs.md)).
-- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](docs/architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](docs/architecture/decisions/) (80 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](.github/workflows/vibey-engine.yml)).
+- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](docs/architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](docs/architecture/decisions/) (81 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](.github/workflows/vibey-engine.yml)).
 
 **Try it** — Python 3.12+ and PostgreSQL 14+, on macOS or Linux:
 
@@ -490,7 +490,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (80 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (81 ADRs) |
 
 ## Status
 
