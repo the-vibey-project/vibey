@@ -83,6 +83,7 @@ nav:
       - Research and measurement: continuation/research.md
       - Succession: continuation/succession.md
       - Rebuild: continuation/rebuild.md
+      - Chat: continuation/chat.md
   - Reference:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
@@ -177,4 +178,5 @@ nav:
           - "0078 — Retire cursorloop and agyloop": architecture/decisions/0078-retire-cursorloop-and-agyloop.md
           - "0079 — Hybrid engine dispatch: paid engines in tandem with sovereign ones, measured and capped": architecture/decisions/0079-hybrid-engine-dispatch.md
           - "0080 — Continuation prompts, kept current and run on GitHub every week": architecture/decisions/0080-continuation-prompts.md
+          - "0081 — vibey's chat, inside GitHub, resilient to the parts around it failing": architecture/decisions/0081-vibey-chat-on-github.md
   - Research paper: paper.md

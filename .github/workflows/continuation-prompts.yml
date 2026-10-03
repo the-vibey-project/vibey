@@ -33,6 +33,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       actions: write
+      issues: write
     steps:
       - name: Re-enable scheduled workflows and report overdue ones
         env:
@@ -48,7 +49,10 @@ jobs:
             case "$state" in
               active|disabled_inactivity)
                 gh api -X PUT "repos/$GH_REPO/actions/workflows/$id/enable" >/dev/null ;;
-              *) echo "::notice::$path is $state (left as it is: a person chose that)" ;;
+              *) echo "::notice::$path is $state (left as it is: a person chose that)"
+                 case "$path" in
+                   */continuation-prompts.yml|*/chat.yml) echo "$path" >> "$RUNNER_TEMP/held" ;;
+                 esac ;;
             esac
             # A scheduled lane whose newest scheduled run is older than 15 days has missed at
             # least one weekly run: say so rather than assume it fired.
@@ -64,6 +68,17 @@ jobs:
           done < <(gh api "repos/$GH_REPO/actions/workflows" --paginate \
             --jq '.workflows[] | [.id, .path, .state] | @tsv')
           echo "Scheduled lanes overdue: $overdue" >> "$GITHUB_STEP_SUMMARY"
+          # The lanes that keep vibey alive and reachable are never re-enabled over a person's
+          # choice, but their being off is said out loud, as one tracking issue.
+          if [ -s "$RUNNER_TEMP/held" ]; then
+            marker="<!-- vibey:continuation-lane-disabled -->"
+            body="$marker
+          These lanes that keep vibey alive and reachable are disabled by hand, so they will not run until someone re-enables them (sub-doctrine 10.l): $(tr '\n' ' ' < "$RUNNER_TEMP/held")"
+            existing=$(gh issue list --state open --search "\"$marker\" in:body" --json number --jq '.[0].number')
+            if [ -z "$existing" ]; then
+              gh issue create --title "A lane that keeps vibey alive is disabled" --body "$body"
+            fi
+          fi
 
   refresh:
     name: Refresh and check the prompts
@@ -151,15 +166,27 @@ jobs:
           python-version: "3.12"
       - name: Install vibey (the runner and its tools)
         run: python -m pip install --quiet -e . -e src/vibey_tools/gh
-      - name: Start an open-weights model on this runner's CPU
+      - name: Start an open-weights model, with every declared fallback
+        id: model
         env:
-          MODEL: ${{ matrix.prompt.model }}
+          MODELS: ${{ matrix.prompt.models }}
         run: |
-          set -euo pipefail
-          curl -fsSL https://ollama.com/install.sh | sh
+          set -uo pipefail
+          # Ollama's installer first; its own GitHub release if the installer is unreachable.
+          if ! curl -fsSL https://ollama.com/install.sh | sh; then
+            echo "::warning::the Ollama installer failed; installing Ollama's GitHub release instead"
+            url=$(curl -fsSL https://api.github.com/repos/ollama/ollama/releases/latest \
+              | python3 -c "import json,sys; print(next(a['browser_download_url'] for a in json.load(sys.stdin)['assets'] if a['name']=='ollama-linux-arm64.tar.zst'))")
+            curl -fsSL "$url" | sudo tar --zstd -x -C /usr/local
+          fi
           (ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &)
           for _ in $(seq 1 60); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
-          ollama pull "$MODEL"
+          for m in $MODELS; do
+            if ollama pull "$m"; then echo "model=$m" >> "$GITHUB_OUTPUT"; echo "using $m"; exit 0; fi
+            echo "::warning::could not pull $m; trying the next declared model"
+          done
+          echo "::error::no declared model could be pulled"
+          exit 1
       - name: Gather the evidence and build the plan
         env:
           GH_TOKEN: ${{ github.token }}
@@ -172,7 +199,7 @@ jobs:
       - name: Run the prompt with gptossloop
         id: agent
         env:
-          GPTOSSLOOP_MODEL: ${{ matrix.prompt.model }}
+          GPTOSSLOOP_MODEL: ${{ steps.model.outputs.model }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
@@ -283,14 +310,8 @@ jobs:
             echo "the agent changed nothing"
             exit 0
           fi
-          # Never from an automated run: workflows, the canon, the advisory exceptions, the
-          # code owners, the declared state. A patch touching any of them is refused whole.
-          refused=$(git apply --numstat "$patch" | awk '{print $3}' | grep -E '^(\.github/|src/vibey_tools/gh/docs/(doctrines|constitution)\.md$|\.vibey-gh\.toml$)' || true)
-          if [ -n "$refused" ]; then
-            echo "::error::the agent's patch touches paths an automated run may not change; refused whole:"
-            echo "$refused"
-            exit 1
-          fi
+          # One guard for every lane that applies an agent's patch: [authority] protected.
+          python3 scripts/continuation_prompts.py guard "$patch"
           git apply --index "$patch"
           gh auth setup-git
           branch="continuation/${{ matrix.prompt.id }}-$(date -u +%Y-%m-%d)"

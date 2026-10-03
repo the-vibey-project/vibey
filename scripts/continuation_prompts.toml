@@ -128,9 +128,27 @@ gather = [
 ]
 covers = []
 
+[[prompt]]
+id = "chat"
+title = "Chat"
+page = "docs/continuation/chat.md"
+mode = "chat"
+purpose = "Answer a trusted person who writes /vibey in an issue, a pull request or the Actions tab."
+covers = ["chat.yml"]
+
 # Acting these out is irreversible or needs a person, so an automated run only drills them.
 [authority]
 drill_only = ["release", "succession", "rebuild"]
+# Paths a patch written by an automated run may never touch, as regular expressions over the
+# repository-relative path. One list for every lane that applies an agent's patch (the weekly
+# run and the chat), checked by `continuation_prompts.py guard` on a runner where no agent ran.
+protected = [
+  '^\.github/',
+  '^src/vibey_tools/gh/docs/(doctrines|constitution)\.md$',
+  '^src/vibey_tools/gh/corpus-index\.json$',
+  '^\.vibey-gh\.toml$',
+  '^scripts/continuation_prompts\.toml$',
+]
 
 # The lane that refreshes and runs the prompts. `check` fails if it is missing, unscheduled,
 # not dispatchable, or moved to a self-hosted runner: it must run on GitHub (#1384).
@@ -144,6 +162,9 @@ workflow = ".github/workflows/continuation-prompts.yml"
 [run]
 runs_on = "ubuntu-24.04-arm"
 model = "gpt-oss:20b"
+# Tried in order: if the first cannot be pulled (a registry outage, a removed tag), the next
+# one is, and the run says which it used. A smaller second model keeps the lane answering.
+models = ["gpt-oss:20b", "qwen3:4b"]
 max_turns = 12
 timeout_minutes = 340
 evidence_chars = 12000
@@ -151,3 +172,17 @@ gather_timeout_s = 180
 
 # A workflow or skill no prompt covers, with the reason it needs none. Empty is the goal.
 [exempt]
+
+# The chat (#1384): `/vibey <request>` in an issue or pull-request comment, or a run of
+# .github/workflows/chat.yml from the Actions tab. `/vibey act <request>` may answer with a
+# draft pull request. Only the people `trusted` names are answered (12.j); everyone else,
+# and every bot, is ignored without a reply.
+[chat]
+workflow = ".github/workflows/chat.yml"
+trigger = "/vibey"
+trusted = ["OWNER", "MEMBER", "COLLABORATOR"]
+reply_file = ".vibey-chat-reply.md"
+thread_chars = 16000
+request_chars = 4000
+max_turns = 10
+timeout_minutes = 120

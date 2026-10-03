@@ -61,6 +61,31 @@ def test_only_the_fresh_report_job_writes_and_it_refuses_protected_paths() -> No
     }
     assert writers == {"keepalive", "report"}, writers
     act = next(s for s in spec["jobs"]["report"]["steps"] if s["name"].startswith("Act"))
-    for guarded in (r"\.github/", "doctrines", "constitution", r"\.vibey-gh\.toml"):
-        assert guarded in act["run"], guarded
+    assert "continuation_prompts.py guard" in act["run"]  # the one shared guard
     assert "--draft" in act["run"]
+
+
+CHAT = REPO / ".github" / "workflows" / "chat.yml"
+
+
+def test_the_chat_answers_only_through_a_model_job_that_can_write_nothing() -> None:
+    """The chat holds the base repository's secrets on comment events: its model job may not
+    write, may not see a secret, and no job may check out a pull request's own code."""
+    text = CHAT.read_text(encoding="utf-8")
+    spec = yaml.safe_load(text)
+    think = spec["jobs"]["think"]
+    assert think["permissions"] == {"contents": "read"}
+    assert "secrets." not in yaml.safe_dump(think)
+    for forbidden in ("refs/pull/", "pull_request.head.sha", "pull_request.head.ref"):
+        assert forbidden not in text, forbidden
+    for name, job in spec["jobs"].items():
+        for step in job.get("steps", []):
+            run = str(step.get("run", ""))
+            # A person's words reach a shell only through env:, never interpolation.
+            for value in (
+                "github.event.comment.body",
+                "inputs.message",
+                "github.event.issue.title",
+            ):
+                assert "${{ " + value not in run, (name, step.get("name"), value)
+    assert spec["jobs"]["reply"]["if"].startswith("always()")

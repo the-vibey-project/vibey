@@ -42,3 +42,19 @@ class PageRendererInterface(Protocol):
     def blocks(self, prompt_id: str | None) -> Mapping[str, str]:
         """The blocks for one prompt's page, or for the index when `prompt_id` is None."""
         ...
+
+
+class PatchGuardInterface(Protocol):
+    """Says which paths a patch from an automated run may not touch."""
+
+    def refused(self, patch: str) -> Sequence[str]:
+        """Every path the patch changes that a declared protected pattern matches."""
+        ...
+
+
+class ReplyDefuserInterface(Protocol):
+    """Makes model output safe to post as a comment."""
+
+    def defuse(self, text: str) -> str:
+        """The text with mentions and chat triggers neutralised, cut loudly to the cap."""
+        ...
