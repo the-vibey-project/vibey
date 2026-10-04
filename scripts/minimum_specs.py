@@ -107,6 +107,7 @@ class SpecsSettings:
     record: str
     docs_page: str
     paper: str
+    host: Mapping[str, Any]
     install: Mapping[str, Any]
     postgres: Mapping[str, Any]
     ollama: Mapping[str, Any]
@@ -125,6 +126,7 @@ class SpecsSettings:
             record=table["record"],
             docs_page=table["docs_page"],
             paper=table["paper"],
+            host=table["host"],
             install=table["install"],
             postgres=table["postgres"],
             ollama=table["ollama"],
@@ -424,7 +426,7 @@ class HostDescriber:
             build = str(self._runner.run(["sw_vers", "-buildVersion"], timeout=10).stdout).strip()
             info["os"] = f"macOS {version} ({build})" if version else None
         else:
-            info["chip"] = self._linux_field("/proc/cpuinfo", r"model name\s*:\s*(.+)")
+            info["chip"] = self._linux_chip()
             mem = self._linux_field("/proc/meminfo", r"MemTotal:\s*(\d+)")
             info["ram_bytes"] = int(mem) * 1024 if mem else None
             # In a container these are the runner's: its idle memory and its kernel.
@@ -436,6 +438,17 @@ class HostDescriber:
             info["os"] = pretty
             info["model"] = None
         return info
+
+    def _linux_chip(self) -> str | None:
+        """x86 names its CPU in /proc/cpuinfo; arm64 lists only implementer and part numbers
+        there, so `lscpu`'s model name (a core name such as Neoverse-N2) names it."""
+        chip = self._linux_field("/proc/cpuinfo", r"model name\s*:\s*(.+)")
+        if chip:
+            return chip
+        listed = self._runner.run(["lscpu"], timeout=10)
+        found = re.search(r"^Model name:\s*(.+)$", str(listed.stdout), re.MULTILINE)
+        name = found.group(1).strip() if listed.ok and found else ""
+        return name if name and name != "-" else None
 
     @staticmethod
     def _linux_field(path: str, pattern: str) -> str | None:
@@ -1793,75 +1806,133 @@ class ModelBench(ProbeInterface):
             )
         return out
 
+    def _sweep(self, out: list[Figure], ctx: int, conditions: dict[str, Any]) -> None:
+        """Load at `ctx`, read llama-server's memory accounting, then time the default
+        offload there. Appends to `out` as it goes, so a failure keeps what was read."""
+        m, b = self._settings.sovereign_model, self._settings.bench
+        accounting = self._load(ctx, {})
+        method = "llama-server common_memory_breakdown_print and buffer lines in the Ollama log"
+        for key, label in (
+            ("device_mib", "on the device (weights + KV + compute)"),
+            ("kv_mib", "KV cache"),
+            ("host_model_mib", "host model buffer"),
+            ("host_compute_mib", "host compute buffer"),
+        ):
+            fid = f"bench.{m}.ctx{ctx}.{key}"
+            if key in accounting:
+                out.append(
+                    self._figures.measured(
+                        fid, f"{m} at {ctx}: {label}", accounting[key], "MiB", method, conditions
+                    )
+                )
+            else:
+                out.append(
+                    self._figures.skipped(
+                        fid,
+                        f"{m} at {ctx}: {label}",
+                        "MiB",
+                        method,
+                        "no accounting line in the log",
+                    )
+                )
+        if "working_set_limit_mib" in accounting and not any(
+            f.id == "gpu.working_set_limit_mib" for f in out
+        ):
+            out.append(
+                self._figures.measured(
+                    "gpu.working_set_limit_mib",
+                    "GPU working-set limit",
+                    accounting["working_set_limit_mib"],
+                    "MiB",
+                    "llama-server free device memory (Metal recommendedMaxWorkingSetSize)",
+                )
+            )
+        target = min(int(b["prompt_tokens"]), ctx - int(b["num_predict"]) - 256)
+        out += self._rate_figures("gpu", ctx, target, {}, conditions)
+
+    def _stages(
+        self, conditions: dict[str, Any]
+    ) -> list[tuple[str, tuple[str, ...], Callable[[list[Figure]], None]]]:
+        """Each stage of the bench, the figure ids it owns, and how to run it into a list.
+
+        A stage that fails (a context that does not fit the host's memory, say: 131072 on a
+        16 GB runner) skips only its own figures with the reason; the next stage still runs.
+        """
+        m, b = self._settings.sovereign_model, self._settings.bench
+        stages: list[tuple[str, tuple[str, ...], Callable[[list[Figure]], None]]] = []
+
+        def sweep(ctx: int) -> Callable[[list[Figure]], None]:
+            def stage(out: list[Figure]) -> None:
+                self._sweep(out, ctx, conditions)
+
+            return stage
+
+        for ctx in b["contexts"]:
+            stages.append(
+                (
+                    f"at num_ctx {ctx}",
+                    (f"bench.{m}.ctx{ctx}.", f"bench.{m}.gpu.ctx{ctx}."),
+                    sweep(int(ctx)),
+                )
+            )
+
+        def rates(
+            kind: str, ctx: int, fill: bool, options: Mapping[str, Any]
+        ) -> Callable[[list[Figure]], None]:
+            def stage(out: list[Figure]) -> None:
+                self._load(ctx, options)
+                if fill:
+                    target = int(float(b["fill"]) * ctx) - int(b["num_predict"]) - 256
+                else:
+                    target = min(int(b["prompt_tokens"]), ctx - int(b["num_predict"]) - 256)
+                out += self._rate_figures(kind, ctx, target, options, conditions)
+
+            return stage
+
+        for ctx in b["depth_contexts"]:
+            stages.append(
+                (
+                    f"at depth, num_ctx {ctx}",
+                    (f"bench.{m}.depth.ctx{ctx}.",),
+                    rates("depth", int(ctx), True, {}),
+                )
+            )
+        for ctx in b["cpu_contexts"]:
+            stages.append(
+                (
+                    f"on the CPU alone at num_ctx {ctx}",
+                    (f"bench.{m}.cpu.ctx{ctx}.",),
+                    rates("cpu", int(ctx), False, {"num_gpu": 0}),
+                )
+            )
+        stages.append(
+            (
+                "in the CPU scaling sweep",
+                tuple(fid for fid, _, _ in self.scaling_expected()),
+                lambda out: out.extend(self._scaling(conditions)),
+            )
+        )
+        return stages
+
     def run(self) -> list[Figure]:
         idle, reason, conditions = self._gate.wait()
         if not idle:
             return self._skip_all(reason)
-        m, b = self._settings.sovereign_model, self._settings.bench
         out: list[Figure] = []
         try:
-            for ctx in b["contexts"]:
-                accounting = self._load(int(ctx), {})
-                method = (
-                    "llama-server common_memory_breakdown_print and buffer lines in the Ollama log"
-                )
-                for key, label in (
-                    ("device_mib", "on the device (weights + KV + compute)"),
-                    ("kv_mib", "KV cache"),
-                    ("host_model_mib", "host model buffer"),
-                    ("host_compute_mib", "host compute buffer"),
-                ):
-                    fid = f"bench.{m}.ctx{ctx}.{key}"
-                    if key in accounting:
-                        out.append(
-                            self._figures.measured(
-                                fid,
-                                f"{m} at {ctx}: {label}",
-                                accounting[key],
-                                "MiB",
-                                method,
-                                conditions,
-                            )
-                        )
-                    else:
-                        out.append(
-                            self._figures.skipped(
-                                fid,
-                                f"{m} at {ctx}: {label}",
-                                "MiB",
-                                method,
-                                "no accounting line in the log",
-                            )
-                        )
-                if "working_set_limit_mib" in accounting and not any(
-                    f.id == "gpu.working_set_limit_mib" for f in out
-                ):
-                    out.append(
-                        self._figures.measured(
-                            "gpu.working_set_limit_mib",
-                            "GPU working-set limit",
-                            accounting["working_set_limit_mib"],
-                            "MiB",
-                            "llama-server free device memory (Metal recommendedMaxWorkingSetSize)",
-                        )
-                    )
-                target = min(int(b["prompt_tokens"]), int(ctx) - int(b["num_predict"]) - 256)
-                out += self._rate_figures("gpu", int(ctx), target, {}, conditions)
-            for ctx in b["depth_contexts"]:
-                self._load(int(ctx), {})
-                target = int(float(b["fill"]) * int(ctx)) - int(b["num_predict"]) - 256
-                out += self._rate_figures("depth", int(ctx), target, {}, conditions)
-            for ctx in b["cpu_contexts"]:
-                self._load(int(ctx), {"num_gpu": 0})
-                target = min(int(b["prompt_tokens"]), int(ctx) - int(b["num_predict"]) - 256)
-                out += self._rate_figures("cpu", int(ctx), target, {"num_gpu": 0}, conditions)
-            out += self._scaling(conditions)
-        except (OSError, ValueError) as exc:
-            done = {f.id for f in out}
-            out += [f for f in self._skip_all(f"Ollama failed mid-run: {exc}") if f.id not in done]
+            for what, owned, stage in self._stages(conditions):
+                try:
+                    stage(out)
+                except (OSError, ValueError) as exc:
+                    done = {f.id for f in out}
+                    out += [
+                        f
+                        for f in self._skip_all(f"Ollama failed {what}: {exc}")
+                        if f.id.startswith(owned) and f.id not in done
+                    ]
         finally:
             with contextlib.suppress(OSError, ValueError):
-                self._client.unload(m)
+                self._client.unload(self._settings.sovereign_model)
         if not any(f.id == "gpu.working_set_limit_mib" for f in out):
             out += [
                 f
@@ -4887,6 +4958,12 @@ class MinimumSpecsCli:
         measure.add_argument(
             "--only", action="append", default=[], help="run only this probe (repeatable)"
         )
+        host = sub.add_parser(
+            "host", help="what the measure job needs: runner, model, PostgreSQL floor, Ollama log"
+        )
+        host.add_argument(
+            "--github-output", action="store_true", help="as `key=value` lines for $GITHUB_OUTPUT"
+        )
         cells = sub.add_parser("cells", help="list the Linux matrix's cells")
         cells.add_argument("--json", action="store_true", help="as a GitHub Actions matrix")
         cell = sub.add_parser("cell", help="measure one Linux cell in its container")
@@ -4911,6 +4988,30 @@ class MinimumSpecsCli:
             "check", help="exit 1 if the record's derivations or the blocks are out of step"
         )
         return parser
+
+    def _host(self, repo: Path, settings: SpecsSettings, github_output: bool) -> int:
+        """The measure job's runner, the model it pulls, the PostgreSQL major it runs and the
+        file Ollama's server must log to (on this host), all from the declared sources, so
+        the workflow restates none of them."""
+        figures = FigureFactory(self._clock, "repository")
+        floor = next(
+            f
+            for f in DeclaredFloorsProbe(repo, settings, figures).run()
+            if f.id == "declared.postgres_min_major"
+        )
+        if not floor.has_value:
+            print(f"{SCRIPT}: the PostgreSQL floor: {floor.reason}", file=sys.stderr)
+            return 1
+        values = {
+            "runner": str(settings.host["runner"]),
+            "model": settings.sovereign_model,
+            "postgres_floor": str(floor.value),
+            "server_log": os.path.expanduser(str(settings.ollama["server_log"])),
+        }
+        separator = "=" if github_output else "\t"
+        for key, value in values.items():
+            print(f"{key}{separator}{value}")
+        return 0
 
     @staticmethod
     def _cells(settings: SpecsSettings, as_json: bool) -> int:
@@ -4946,6 +5047,8 @@ class MinimumSpecsCli:
             counts = {s: sum(1 for f in record.figures if f.status == s) for s in STATUSES}
             print(f"{SCRIPT}: wrote {out}: " + ", ".join(f"{n} {s}" for s, n in counts.items()))
             return 0
+        if args.command == "host":
+            return self._host(repo, settings, args.github_output)
         if args.command == "cells":
             return self._cells(settings, args.json)
         if args.command == "cell":
