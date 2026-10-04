@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import sys
@@ -434,6 +435,8 @@ def _pr_automation(args) -> int:
     try:
         if args.action == "evaluate":
             print(pr_automation.evaluate_pr(args.pr, args.head_sha, cfg).to_json())
+        elif args.action == "repair-budget":
+            print(json.dumps(pr_automation.repair_budget(args.pr, cfg), sort_keys=True))
         elif args.action == "ready-draft":
             result = pr_automation.ready_draft(args.pr, args.head_sha, cfg)
             print(json.dumps(result, sort_keys=True))
@@ -448,7 +451,10 @@ def _pr_automation(args) -> int:
             # lane returning nothing -- or, under `--half none`, no paid review declared.
             sovereign = _read_json(args.sovereign) if args.sovereign else None
             paid = _read_json(args.paid) if args.paid else None
-            envelope = REVIEW_COMPOSER.compose(
+            composer = dataclasses.replace(
+                REVIEW_COMPOSER, sovereign_repair=cfg.pr_automation.sovereign_repair.enabled
+            )
+            envelope = composer.compose(
                 paid, half=args.half, sovereign=sovereign, head_sha=args.head_sha
             )
             print(json.dumps(envelope, ensure_ascii=False))
@@ -922,11 +928,18 @@ def _sovereign(args) -> int:
                 handle.write("ready=false\n")
                 handle.write(f"reason={' '.join(result.reason.split())}\n")
     else:
-        result = sovereign.probe(
-            fallback.heartbeat_ref,
-            max_age_minutes=fallback.heartbeat_max_age_minutes,
-            remote=args.remote,
-        )
+        if fallback.runs_on:
+            # A GitHub-hosted runner cannot be offline, so the heartbeat -- which exists to
+            # say whether the operator's own machine is up -- has nothing to answer.
+            result = sovereign.Readiness(
+                True, f"the sovereign lane runs on a GitHub-hosted runner ({fallback.runs_on})"
+            )
+        else:
+            result = sovereign.probe(
+                fallback.heartbeat_ref,
+                max_age_minutes=fallback.heartbeat_max_age_minutes,
+                remote=args.remote,
+            )
         output = os.environ.get("GITHUB_OUTPUT")
         if output:
             with open(output, "a", encoding="utf-8") as handle:
@@ -1858,6 +1871,12 @@ def main(argv: list[str] | None = None) -> int:
     ready.add_argument("--pr", type=int, required=True)
     ready.add_argument("--head-sha", required=True)
     ready.set_defaults(func=_pr_automation)
+    budget = automation_sub.add_parser(
+        "repair-budget",
+        help="report how many of the bounded repair attempts this pull request has left",
+    )
+    budget.add_argument("--pr", type=int, required=True)
+    budget.set_defaults(func=_pr_automation)
     for command in ("record-review", "record-repair"):
         record = automation_sub.add_parser(command, help=f"persist a structured {command[7:]}")
         record.add_argument("--pr", type=int, required=True)

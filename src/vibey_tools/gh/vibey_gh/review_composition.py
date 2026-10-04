@@ -95,6 +95,9 @@ class ReviewComposer:
     verdict_field: str = "pass"
     summary_field: str = "summary"
     findings_field: str = "findings"
+    # Whether a sovereign-only failure may be handed to repair: true only where the
+    # repository declares `[pr_automation.sovereign_repair] enabled` (#1400).
+    sovereign_repair: bool = False
 
     def __post_init__(self) -> None:
         for role, name in (
@@ -288,9 +291,11 @@ class ReviewComposer:
         verdict["head_sha"] = head_sha
         carried = {name: SOVEREIGN_LANE for name in self.contract.fields}
         verdict["carried"] = carried
-        # Repair is a paid agent, and none is declared; a local finding is a lead for a
-        # human besides. So a sovereign-only failure is never handed to repair.
-        verdict["repairable"] = False
+        # A local model's finding is a lead, not a ruling, so a sovereign-only failure goes
+        # to repair only where the repository has declared an open-weights repair (#1400),
+        # and only when there is a finding to act on: a failure with none gives the repair
+        # nothing to address, and is a person's to read.
+        verdict["repairable"] = self.sovereign_repair and not passed and findings > 0
         return {
             "half": NO_PAID,
             "verdict": verdict,
@@ -298,7 +303,7 @@ class ReviewComposer:
             "carried": carried,
             "halves": {FULL: {"lane": SOVEREIGN_LANE, "passed": passed, "findings": findings}},
             "findings": findings,
-            "repairable": False,
+            "repairable": verdict["repairable"],
         }
 
 

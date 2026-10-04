@@ -553,7 +553,7 @@ jobs:
       always() && !cancelled() && inputs.dry_run != true &&
       needs.evaluate.outputs.state == 'solve' &&
       needs.solve.result == 'failure'
-    runs-on: [self-hosted, __VIBEY_GH_FALLBACK_RUNNER_LABEL__]
+    runs-on: __VIBEY_GH_FALLBACK_RUNS_ON__
     # issues: write to post the comment; nothing that could touch code. This path exists
     # precisely because the API key is unusable, so it holds no secrets at all.
     permissions:
@@ -590,6 +590,18 @@ jobs:
           fi
       # The issue text arrives through the API and reaches the model as text. Repository
       # code is never checked out here and never executed.
+      # A GitHub-hosted runner has no model endpoint of its own: start Ollama here and pull
+      # the review model. Self-hosted, the operator's endpoint already serves it.
+      - name: Start the model on this runner
+        if: __VIBEY_GH_FALLBACK_HOSTED__
+        env:
+          MODEL: __VIBEY_GH_FALLBACK_MODEL__
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ollama.com/install.sh | sh
+          (ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &)
+          for _ in $(seq 1 60); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
+          ollama pull "$MODEL"
       - name: Fetch the issue text
         env:
           GH_TOKEN: ${{ github.token }}

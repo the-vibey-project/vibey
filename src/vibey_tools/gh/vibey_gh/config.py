@@ -523,6 +523,13 @@ class PrAutomationFallbackConfig:
 
     enabled: bool = True
     runner_label: str = "vibey-local"
+    # Where the sovereign lane runs. Empty: a self-hosted runner carrying `runner_label`,
+    # its readiness read from the heartbeat. A GitHub-hosted runner label (e.g.
+    # "ubuntu-24.04-arm"): the job pulls `model` onto that runner and is always ready,
+    # because a hosted runner cannot be offline (the operator's decision, 2026-10-03:
+    # every CI job on GitHub-hosted runners). Slower than a local accelerator, so the
+    # deadline rates below must describe the hosted CPU, not the operator's machine.
+    runs_on: str = ""
     model: str = "gpt-oss:20b"
     base_url: str = "http://127.0.0.1:11434"
     trusted_only: bool = True
@@ -657,6 +664,13 @@ class PrAutomationFallbackConfig:
     )
 
     def __post_init__(self) -> None:
+        if not isinstance(self.runs_on, str) or (
+            self.runs_on and not _RUNNER_LABEL_RE.fullmatch(self.runs_on)
+        ):
+            raise ValueError(
+                "pr_automation.fallback.runs_on must be empty (self-hosted) or one GitHub-hosted"
+                f" runner label: {self.runs_on!r}"
+            )
         _unique_nonempty("pr_automation.fallback.source_exclude", self.source_exclude)
         for pattern in self.source_exclude:
             # Word-split and used as a `case` pattern in the workflow's shell, so held to
@@ -883,6 +897,10 @@ def _real(value: object) -> bool:
 _SOURCE_PATTERN_RE = re.compile(r"[A-Za-z0-9._/*?\[\]-]+")
 
 _RUNNER_SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+# One GitHub runner label, and one Ollama model name: both are rendered into workflow
+# YAML and shell, so neither may carry anything but the characters a name needs.
+_RUNNER_LABEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_OLLAMA_MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*(:[A-Za-z0-9._-]+)?$")
 _RUNNER_PREFIX_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 _RUNNER_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -1210,6 +1228,76 @@ def expand_authors(authors: tuple[str, ...], root: Path) -> tuple[str, ...]:
 
 
 @dataclass(frozen=True)
+class PrAutomationSovereignRepairConfig:
+    """Whether a failing review is corrected by an open-weights model, and how (#1400).
+
+    With `enabled`, a review whose findings make it fail is handed, findings and all, to
+    gptossloop on a GitHub-hosted runner with a declared open-weights model. The patch it
+    writes is published to the pull request's branch by the same guarded step the paid
+    repair uses, CI and the exact-head review run again on the new head, and the bounded
+    `max_repair_attempts` budget is spent one attempt per patch. A repair that produces no
+    patch, or a budget that is spent, hands the pull request to a person by label.
+
+    Off by default: a local model's finding can be wrong (the large-diff study measured
+    11-56% false positives per part), so letting one start an edit is a decision the
+    repository declares aloud. No paid counterparty is reached on this path (8.a).
+    """
+
+    enabled: bool = False
+    # A GitHub-hosted runner label: the model runs on the runner's CPU, so a repair never
+    # contends with live reviews for the self-hosted model slot.
+    runs_on: str = "ubuntu-24.04-arm"
+    # Ollama models, tried in order until one can be pulled.
+    models: tuple[str, ...] = ("gpt-oss:20b",)
+    max_turns: int = 30
+    # The agent step's limit. A hosted job stops at 360 minutes; this leaves room to set
+    # up and to hand the patch over.
+    timeout_minutes: int = 150
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise ValueError(  # noqa: TRY004
+                f"pr_automation.sovereign_repair.enabled must be true or false, not {self.enabled!r}"
+            )
+        if not isinstance(self.runs_on, str) or not _RUNNER_LABEL_RE.fullmatch(self.runs_on):
+            raise ValueError(
+                "pr_automation.sovereign_repair.runs_on must be one runner label of letters,"
+                f" digits, '.', '_' or '-': {self.runs_on!r}"
+            )
+        if not self.models:
+            raise ValueError("pr_automation.sovereign_repair.models must name at least one model")
+        for model in self.models:
+            if not isinstance(model, str) or not _OLLAMA_MODEL_RE.fullmatch(model):
+                raise ValueError(
+                    f"pr_automation.sovereign_repair.models entry is not an Ollama model: {model!r}"
+                )
+        if len(set(self.models)) != len(self.models):
+            raise ValueError("pr_automation.sovereign_repair.models must not repeat a model")
+        if type(self.max_turns) is not int or not 1 <= self.max_turns <= 200:
+            raise ValueError(
+                "pr_automation.sovereign_repair.max_turns must be a whole number from 1 to 200"
+            )
+        if type(self.timeout_minutes) is not int or not 10 <= self.timeout_minutes <= 330:
+            raise ValueError(
+                "pr_automation.sovereign_repair.timeout_minutes must be a whole number from 10 to 330"
+            )
+
+    @classmethod
+    def from_table(cls, table: Mapping[str, object]) -> PrAutomationSovereignRepairConfig:
+        """The configuration `[pr_automation.sovereign_repair]` declares, every key it leaves
+        out at its default. A key this table does not know is refused, never ignored."""
+        known = {field.name for field in dataclasses.fields(cls)}
+        unknown = sorted(set(table) - known)
+        if unknown:
+            raise ValueError(f"pr_automation.sovereign_repair does not know {', '.join(unknown)}")
+        values = dict(table)
+        models = values.get("models")
+        if isinstance(models, list):
+            values["models"] = tuple(models)
+        return cls(**values)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class PrAutomationConfig:
     enabled: bool = True
     scan_workflows: tuple[str, ...] = DEFAULT_SCAN_WORKFLOWS
@@ -1265,6 +1353,7 @@ class PrAutomationConfig:
     paid_conflict_resolution: bool = False
     observability: PrAutomationObservabilityConfig = PrAutomationObservabilityConfig()
     fallback: PrAutomationFallbackConfig = PrAutomationFallbackConfig()
+    sovereign_repair: PrAutomationSovereignRepairConfig = PrAutomationSovereignRepairConfig()
     review_canary: ReviewCanaryConfig = ReviewCanaryConfig()
 
     def __post_init__(self) -> None:
@@ -3338,6 +3427,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         fallback=PrAutomationFallbackConfig(
             enabled=fallback.get("enabled", True),
             runner_label=fallback.get("runner_label", "vibey-local"),
+            runs_on=fallback.get("runs_on", ""),
             model=fallback.get("model", "gpt-oss:20b"),
             base_url=fallback.get("base_url", "http://127.0.0.1:11434"),
             trusted_only=fallback.get("trusted_only", True),
@@ -3375,6 +3465,9 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             ),
         ),
         review_canary=ReviewCanaryConfig.from_table(auto.get("review_canary", {})),
+        sovereign_repair=PrAutomationSovereignRepairConfig.from_table(
+            auto.get("sovereign_repair", {})
+        ),
     )
     return GhConfig(
         root=root,

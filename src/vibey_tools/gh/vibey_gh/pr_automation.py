@@ -51,6 +51,9 @@ OWN_JOBS = (
     "Sovereign diff review",
     # Records the sovereign lane's whole review when no paid review is declared (8.b).
     "Record the sovereign whole review",
+    # The open-weights repair of a failing review and its publication (#1400).
+    "Correct the review's findings with an open-weights model",
+    "Publish the open-weights repair",
     # The sovereign job's name before it went first (#133). Kept so a check run a
     # pre-upgrade run of this workflow left on a head is still recognised as our own.
     "Local review fallback",
@@ -580,6 +583,19 @@ def record(number: int, payload: dict[str, Any], kind: str) -> AutomationState:
     summary = " ".join(said) or f"Recorded {kind} for `{state.current_sha}`."
     upsert_state(number, state, summary, list(pr.get("comments") or []))
     return state
+
+
+def repair_budget(number: int, cfg: GhConfig) -> dict[str, Any]:
+    """How many of the bounded repair attempts this pull request's lineage has left.
+
+    The same-run path -- a review that fails and is handed to repair inside one PR review
+    run -- never passes through `evaluate_pr`, which is where the budget is otherwise
+    checked; a repair job asks this before it spends an attempt (#1400).
+    """
+    state = parse_state(fetch_pr(number).get("comments") or [])
+    attempts = state.attempts if state else 0
+    limit = cfg.pr_automation.max_repair_attempts
+    return {"pr": number, "attempts": attempts, "max": limit, "remaining": max(0, limit - attempts)}
 
 
 def exhausted_pull_requests(cfg: GhConfig) -> list[int]:
