@@ -3159,6 +3159,27 @@ def test_the_merge_train_does_not_filter_on_the_triggering_runs_conclusion():
     assert "conclusion" not in str(spec["jobs"]["merge"].get("if", ""))
 
 
+def test_the_merge_train_hands_what_it_merged_to_promotion():
+    """Observed in production (#1400): main stopped receiving releases on its own.
+
+    The PR review gate dispatches the train with GITHUB_TOKEN, and GitHub fires no
+    `workflow_run` for the completion of a run that token started, so promote-to-main's
+    `workflow_run: Merge train` trigger never saw a train run after 2026-09-28: every
+    promotion since was dispatched by hand. The train must dispatch promotion itself,
+    after a merge and never on a dry run, with the permission that dispatch needs.
+    """
+    spec = yaml.safe_load((WORKFLOWS / "merge-train.yml").read_text(encoding="utf-8"))
+    assert spec["permissions"]["actions"] == "write"
+    steps = spec["jobs"]["merge"]["steps"]
+    train = next(s for s in steps if s.get("name") == "Merge what is ready")
+    handoff = next(s for s in steps if s.get("name") == "Hand merged work to promotion")
+    assert steps.index(handoff) > steps.index(train)
+    assert "merged=" in train["run"]
+    assert "steps.train.outputs.merged != '0'" in handoff["if"]
+    assert "inputs.dry_run != true" in handoff["if"]
+    assert "gh workflow run promote-to-main.yml" in handoff["run"]
+
+
 @pytest.mark.parametrize("name", sorted(p.name for p in WORKFLOWS.glob("*.yml")))
 def test_no_rendered_workflow_carries_trailing_whitespace(name, tmp_path):
     """Rendered, not just authored — the defect only appears after substitution.
