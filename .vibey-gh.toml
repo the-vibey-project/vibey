@@ -409,12 +409,15 @@ runner_label = "vibey-local-vibey"
 # using the operator's machine, so it no longer waits on a heartbeat. `runner_label` stays
 # for the heartbeat tools and any self-hosted fallback the operator declares later.
 runs_on = "ubuntu-24.04-arm"
-# PROVISIONAL deadline rates for that CPU, replacing the M5's 200/20 tokens a second, which
-# would expire every large request there. Conservative guesses, not measurements: replace
-# them with the hosted throughput `minimum-specs.yml` records once it runs on this runner
-# type. A slower deadline costs time; one too fast costs the verdict.
+# Deadline rates for that CPU, replacing the M5's 200/20 tokens a second, which would expire
+# every large request there. The closest measurement on record is gpt-oss:20b on CPU in
+# Docker on the M5 (docs/architecture/evidence/minimum-specs.json): 44.5 tok/s reading,
+# 2.94 tok/s generating at 4 threads -- and the hosted runner has 4 vCPUs, slower per core.
+# Replace these with what `minimum-specs.yml` measures on the hosted runner itself. A slower
+# deadline costs time; one too fast costs the verdict. At 2 tok/s a request that writes the
+# whole 16,384-token reasoning reserve takes over two hours.
 prompt_tokens_per_second = 40
-output_tokens_per_second = 8
+output_tokens_per_second = 2
 trusted_only = true
 # Hand the sovereign review the full head text of the files the diff changes, as reference
 # only. Measured 2026-10-01: 5 of 5 "blocking" findings checked were false positives about

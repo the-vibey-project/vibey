@@ -677,7 +677,7 @@ jobs:
                 --retries 1 \
                 --retry-backoff-seconds 30 \
                 --prompt-tokens-per-second 40 \
-                --output-tokens-per-second 8 \
+                --output-tokens-per-second 2 \
                 --slot-wait-seconds 900 \
                 --head-sha "$HEAD_SHA" \
                 --outcome "${RUNNER_TEMP}/outcome.json" \
