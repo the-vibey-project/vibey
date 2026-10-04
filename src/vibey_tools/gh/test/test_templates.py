@@ -2703,11 +2703,14 @@ def test_pr_automation_never_assumes_the_adopting_repos_own_package_is_vibey_gh(
     text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "pip install --quiet ./automation" not in text
     checks = re.findall(r'self="automation/__VIBEY_GH_SELF_SOURCE__"', text)
-    # review, repair, resolve-conflict, escalate, review-fallback, record-sovereign
-    assert len(checks) == 6
+    # review, repair, resolve-conflict, escalate, review-fallback, record-sovereign, and the
+    # open-weights repair's budget check and its publication (#1400)
+    assert len(checks) == 8
     lines = text.splitlines(keepends=True)
     installs = [line for line in lines if line.endswith(FALLBACK_INSTALL)]
-    assert len(installs) == 7  # the six guarded installs above plus the evaluate job's own
+    # the eight guarded installs above, the evaluate job's own, and the open-weights
+    # runner's own guarded vibey-engine install
+    assert len(installs) == 10
 
 
 def test_promotion_checks_provenance_without_rewriting_or_reauditing_history():

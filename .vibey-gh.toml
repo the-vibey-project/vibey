@@ -404,6 +404,20 @@ size_weights = { xs = 0.5, s = 1.0, m = 3.0, l = 6.0, xl = 12.0 }
 # and the verdict is labelled as the degraded path.
 enabled = true
 runner_label = "vibey-local-vibey"
+# Every CI job on a GitHub-hosted runner (the operator's decision, 2026-10-03): the review
+# pulls the model onto a hosted arm runner (4 vCPU, 16 GB; gpt-oss:20b is ~13 GB) instead of
+# using the operator's machine, so it no longer waits on a heartbeat. `runner_label` stays
+# for the heartbeat tools and any self-hosted fallback the operator declares later.
+runs_on = "ubuntu-24.04-arm"
+# Deadline rates for that CPU, replacing the M5's 200/20 tokens a second, which would expire
+# every large request there. The closest measurement on record is gpt-oss:20b on CPU in
+# Docker on the M5 (docs/architecture/evidence/minimum-specs.json): 44.5 tok/s reading,
+# 2.94 tok/s generating at 4 threads -- and the hosted runner has 4 vCPUs, slower per core.
+# Replace these with what `minimum-specs.yml` measures on the hosted runner itself. A slower
+# deadline costs time; one too fast costs the verdict. At 2 tok/s a request that writes the
+# whole 16,384-token reasoning reserve takes over two hours.
+prompt_tokens_per_second = 40
+output_tokens_per_second = 2
 trusted_only = true
 # Hand the sovereign review the full head text of the files the diff changes, as reference
 # only. Measured 2026-10-01: 5 of 5 "blocking" findings checked were false positives about
@@ -437,6 +451,21 @@ report = "docs/runbooks/sovereign-review-runner.md"
 min_recall_lower_bound = 0.5
 max_false_positive_upper_bound = 0.5
 max_age_days = 14
+
+# A review that fails on findings is corrected, not left for a person (#1400; the
+# operator's choice, 2026-10-03: sovereign gptossloop, not a paid repair). gptossloop on a
+# GitHub-hosted runner, with the open-weights model below, edits the branch from the
+# review's findings; the patch is published by the guarded repair step, CI and the
+# exact-head review run again, and each patch spends one of `max_repair_attempts`. A local
+# model's finding can be wrong (the large-diff study measured 11-56% false positives per
+# part), so the plan tells the agent to change nothing for a finding it judges wrong and
+# say why; a spent budget, or a patch that cannot apply, labels the PR for a person.
+[pr_automation.sovereign_repair]
+enabled = true
+runs_on = "ubuntu-24.04-arm"
+models = ["gpt-oss:20b", "qwen3:4b"]
+max_turns = 30
+timeout_minutes = 150
 
 [runners]
 # The machine that serves the sovereign lane above, declared (12.c): `vibey-gh runner install`
