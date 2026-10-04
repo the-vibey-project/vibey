@@ -3,8 +3,9 @@ name: Autonomy scorecard
 
 # How far vibey is from full autonomy is a measurement, repeated weekly, never a paragraph
 # written once (docs/reference/autonomy.md). Once a week, and by hand, the forge and the
-# review canary are observed on a GitHub-hosted runner and the local queue on the
-# self-hosted runner, read only (`scripts/autonomy_scorecard.py observe`). The publish job
+# review canary and the queue are observed on GitHub-hosted runners, read only
+# (`scripts/autonomy_scorecard.py observe`); the queue only where a reachable read-only DSN
+# is declared as the `VIBEY_AUTONOMY_QUEUE_DSN` secret, and unknown otherwise. The publish job
 # folds what each handed over into one new line of the append-only record (`record`): a
 # source that handed nothing over keeps its last values, marked stale with their date, and
 # shows as unknown after `max_stale_days`. The page, the README's summary, the landing page
@@ -75,12 +76,13 @@ jobs:
 
   queue:
     name: Observe the local queue (read only)
-    runs-on: [self-hosted, vibey-local-vibey]
+    # A GitHub-hosted runner, like every job in CI (the operator's decision, 2026-10-03). The
+    # queue's DSN is the `VIBEY_AUTONOMY_QUEUE_DSN` secret: a read-only role on a queue this
+    # runner can reach. Unset -- the case until such a queue is declared -- every queue figure
+    # is recorded unknown with that reason and carried forward, never observed as zero from
+    # an empty database. The session the scorecard opens has `default_transaction_read_only=on`.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
-    # No write token on the self-hosted runner. The queue's DSN comes from the runner's own
-    # environment (`VIBEY_AUTONOMY_QUEUE_DSN`), as `VIBEY_OLLAMA_URL` does for the review;
-    # unset, every queue figure is recorded unknown with that reason and carried forward.
-    # The session the scorecard opens has `default_transaction_read_only=on`.
     permissions:
       contents: read
     steps:
@@ -94,6 +96,8 @@ jobs:
       - uses: astral-sh/setup-uv@v7
 
       - name: Observe
+        env:
+          VIBEY_AUTONOMY_QUEUE_DSN: ${{ secrets.VIBEY_AUTONOMY_QUEUE_DSN }}
         run: |
           set -euo pipefail
           mkdir -p observed

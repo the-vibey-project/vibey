@@ -262,9 +262,10 @@ Answers to: ADR-0002, ADR-0044, sub-doctrine 9.c.
 
 ## How it is kept current
 
-A weekly workflow (`.github/workflows/autonomy-scorecard.yml`) observes the forge and the
-review canary on a GitHub-hosted runner and the local queue on the project's self-hosted
-runner, appends one line to the record, re-renders this page, the README's summary, the
+A weekly workflow (`.github/workflows/autonomy-scorecard.yml`) observes the forge, the
+review canary and the queue on GitHub-hosted runners -- the queue through a read-only DSN
+declared as the `VIBEY_AUTONOMY_QUEUE_DSN` secret, and as unknown while none is declared,
+never as zero from an empty database -- appends one line to the record, re-renders this page, the README's summary, the
 documentation's landing page and the research paper's table, and opens a pull request. It
 never pushes to `develop`; the change lands through the merge train like any other. A source
 a week's run cannot reach keeps its last value, marked stale with its date, and after two
