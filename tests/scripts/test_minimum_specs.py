@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
@@ -536,6 +537,33 @@ def test_check_fails_on_a_hand_edited_table_and_on_a_hand_edited_derivation(tmp_
     assert cli.run(["check"]) == 0
 
 
+def test_host_prints_the_measure_jobs_runner_model_floor_and_log_from_the_declared_sources(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for relative in (ms.DEFAULT_CONFIG, SETTINGS.postgres["floor_source"]):
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((REPO / relative).read_text(encoding="utf-8"), encoding="utf-8")
+    cli = ms.MinimumSpecsCli(tmp_path, FixedClock())
+    assert cli.run(["host", "--github-output"]) == 0
+    lines = dict(line.split("=", 1) for line in capsys.readouterr().out.splitlines())
+    assert lines["runner"] == SETTINGS.host["runner"] and "self-hosted" not in lines["runner"]
+    assert lines["model"] == M
+    floor = re.search(
+        rf"^{SETTINGS.postgres['floor_constant']}\b[^=]*=\s*(\d+)",
+        (REPO / SETTINGS.postgres["floor_source"]).read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    assert floor and lines["postgres_floor"] == floor.group(1)
+    assert lines["server_log"] == os.path.expanduser(str(SETTINGS.ollama["server_log"]))
+    assert cli.run(["host"]) == 0
+    assert capsys.readouterr().out.splitlines()[0] == f"runner\t{SETTINGS.host['runner']}"
+    # A floor that can no longer be read is said out loud, never guessed.
+    (tmp_path / SETTINGS.postgres["floor_source"]).write_text("nothing here\n", encoding="utf-8")
+    assert cli.run(["host"]) == 1
+    assert "PostgreSQL floor" in capsys.readouterr().err
+
+
 # ------------------------------------------------------------------ probes (faked host)
 
 
@@ -813,6 +841,24 @@ def test_the_host_id_names_model_chip_memory_and_os() -> None:
     assert ms.HostDescriber.host_id({}) == "unknown · unknown chip · unknown memory · unknown OS"
 
 
+def test_an_arm64_linux_host_is_named_by_lscpu_when_cpuinfo_names_no_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fields(path: str, pattern: str) -> str | None:
+        return {"/proc/meminfo": "16384000"}.get(path) if "model name" not in pattern else None
+
+    monkeypatch.setattr(ms.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(ms.HostDescriber, "_linux_field", staticmethod(fields))
+    named = FakeRunner({("lscpu",): ok("Architecture: aarch64\nModel name:  Neoverse-N2\n")})
+    info = ms.HostDescriber(named).describe()
+    assert info["chip"] == "Neoverse-N2" and named.calls == [["lscpu"]]
+    # lscpu's placeholder, or no lscpu at all, leaves the chip unknown rather than invented.
+    assert (
+        ms.HostDescriber(FakeRunner({("lscpu",): ok("Model name: -\n")})).describe()["chip"] is None
+    )
+    assert ms.HostDescriber(FakeRunner()).describe()["chip"] is None
+
+
 def test_the_subprocess_runner_reports_a_missing_tool_and_a_timeout() -> None:
     runner = ms.SubprocessRunner()
     missing = runner.run(["definitely-not-a-command-vibey"], timeout=5)
@@ -1002,7 +1048,7 @@ def test_a_run_that_overlapped_another_client_is_discarded(tmp_path: Path) -> No
     )
 
 
-def test_the_model_bench_skips_the_rest_when_ollama_fails_mid_run(tmp_path: Path) -> None:
+def test_the_model_bench_skips_every_stage_when_ollama_is_down(tmp_path: Path) -> None:
     path, log = empty_log(tmp_path)
 
     class Failing(FakeOllama):
@@ -1013,6 +1059,33 @@ def test_the_model_bench_skips_the_rest_when_ollama_fails_mid_run(tmp_path: Path
     figures = bench.run()
     assert figures and all(f.status == "skipped" for f in figures)
     assert "connection reset" in (figures[0].reason or "")
+    assert {f.id for f in figures} == {fid for fid, _, _ in bench.expected()}
+
+
+def test_a_context_that_fails_to_load_skips_only_its_own_figures(tmp_path: Path) -> None:
+    """131072 does not fit a 16 GB runner: that context is skipped with the reason, and the
+    depth, CPU and scaling stages after it still run."""
+    path, log = empty_log(tmp_path)
+
+    class TooBig(FakeOllama):
+        def call(self, path_: str, payload: Mapping[str, Any] | None = None) -> dict[str, Any]:
+            if dict((payload or {}).get("options", {})).get("num_ctx") == 131072:
+                raise OSError("model requires more system memory than is available")
+            return super().call(path_, payload)
+
+    settings = bench_settings(contexts=[8192, 131072], depth_contexts=[32768], cpu_contexts=[8192])
+    by = {
+        f.id: f for f in ms.ModelBench(settings, TooBig(path), QuietGate(log), log, factory()).run()
+    }  # type: ignore[arg-type]
+    big = [f for fid, f in by.items() if ".ctx131072." in fid]
+    assert big and all(f.status == "skipped" for f in big)
+    assert all("at num_ctx 131072" in (f.reason or "") for f in big)
+    assert "more system memory" in (big[0].reason or "")
+    assert by[f"bench.{M}.gpu.ctx8192.gen_tok_s"].status == "measured"
+    assert by[f"bench.{M}.depth.ctx32768.prompt_tok_s"].status == "measured"
+    assert by[f"bench.{M}.cpu.ctx8192.gen_tok_s"].status == "measured"
+    arch = ms.Arch.normalize(ms.platform.machine())
+    assert by[f"bench.{M}.cpu.{arch}.threads1.gen_tok_s"].status == "measured"
 
 
 def test_disk_probe_sizes_the_ollama_app_and_the_shared_objects(tmp_path: Path) -> None:

@@ -4,8 +4,9 @@
 `scripts/minimum_specs.py check` is the check that says out loud when a table and the record
 it is generated from have drifted apart, or when a derived requirement no longer follows
 from its inputs (sub-doctrine 12.e). CI runs it here. The rest holds the surfaces that make
-the page findable, and the workflow's contract: weekly, by hand, measured on the
-self-hosted runner without a write token, and landed only as a pull request.
+the page findable, and the workflow's contract: weekly, by hand, measured on a GitHub-hosted
+runner (never a self-hosted one) without a write token, with the model and PostgreSQL started
+on that runner, and landed only as a pull request.
 
 Module-level test functions rather than a class with an interface beside it (ADR-0016):
 pytest collects `test_*` functions, and the rule is about production code.
@@ -59,7 +60,7 @@ def test_the_paper_carries_one_generated_requirements_table() -> None:
     assert len(labels) == len(set(labels)), "a table label is used twice"
 
 
-def test_the_workflow_measures_weekly_on_the_sovereign_runner_and_lands_as_a_pull_request() -> None:
+def test_the_workflow_measures_weekly_on_a_hosted_runner_and_lands_as_a_pull_request() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
     spec = yaml.safe_load(text)
     on = spec.get("on", spec.get(True))
@@ -67,10 +68,7 @@ def test_the_workflow_measures_weekly_on_the_sovereign_runner_and_lands_as_a_pul
     assert on["schedule"][0]["cron"].split()[4] != "*", "the schedule is weekly"
     assert spec["permissions"] == {"contents": "read"}
     measure, publish = spec["jobs"]["measure"], spec["jobs"]["publish"]
-    assert measure["runs-on"] == ["self-hosted", "vibey-local-vibey"]
-    assert measure["permissions"] == {"contents": "read"}, (
-        "no write token on the self-hosted runner"
-    )
+    assert measure["permissions"] == {"contents": "read"}, "no write token where it measures"
     assert publish["runs-on"] == "ubuntu-latest" and publish["needs"] == ["measure", "linux"]
     assert publish["if"] == "${{ !cancelled() }}", "lands what did report; the rest goes stale"
     script = "\n".join(step.get("run", "") for step in publish["steps"])
@@ -88,6 +86,59 @@ def test_the_workflow_measures_weekly_on_the_sovereign_runner_and_lands_as_a_pul
     assert "skip-checks" not in text
 
 
+def test_no_job_runs_on_a_self_hosted_runner() -> None:
+    """Every CI workflow runs on GitHub-hosted runners only (operator, 2026-10-03)."""
+    text = WORKFLOW.read_text(encoding="utf-8")
+    spec = yaml.safe_load(text)
+    for name, job in spec["jobs"].items():
+        runs_on = job["runs-on"]
+        labels = runs_on if isinstance(runs_on, list) else [runs_on]
+        assert not any("self-hosted" in str(label) for label in labels), name
+    assert "self-hosted" not in text and "vibey-local" not in text
+    # The measuring runner is declared in the TOML and handed over by the plan job.
+    measure, plan = spec["jobs"]["measure"], spec["jobs"]["plan"]
+    assert measure["needs"] == "plan"
+    assert measure["runs-on"] == "${{ needs.plan.outputs.runner }}"
+    assert "minimum_specs.py host --github-output" in "\n".join(
+        s.get("run", "") for s in plan["steps"]
+    )
+    sys.path.insert(0, str(REPO))
+    from scripts import minimum_specs as ms
+
+    runner = str(ms.SpecsSettings.load(REPO / ms.DEFAULT_CONFIG).host["runner"])
+    assert runner == "ubuntu-24.04-arm", "the hosted arm64 runner the operator chose"
+    # GitHub's ceiling for a job on a hosted runner is 360 minutes.
+    assert 0 < measure["timeout-minutes"] <= 360
+
+
+def test_the_measure_job_starts_the_model_and_postgres_on_the_runner_itself() -> None:
+    spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    measure = spec["jobs"]["measure"]
+    steps = {step.get("name", ""): step for step in measure["steps"]}
+    start = steps["Start Ollama with the declared model"]
+    assert start["env"]["MODEL"] == "${{ needs.plan.outputs.model }}"
+    run = start["run"]
+    assert "https://ollama.com/install.sh" in run
+    # The installer's systemd service logs to the journal; the server runs as this user and
+    # logs where the probe reads llama-server's accounting and the idle gate reads requests.
+    assert "systemctl disable --now ollama" in run
+    assert "minimum_specs.py host" in run and "server_log" in run
+    assert re.search(r'ollama serve >> "\$log" 2>&1 &', run)
+    assert "/api/version" in run
+    assert 'ollama pull "$MODEL"' in run
+    # PostgreSQL at the declared floor, as a service container on the same runner.
+    postgres = measure["services"]["postgres"]
+    assert postgres["image"] == "postgres:${{ needs.plan.outputs.postgres_floor }}"
+    assert postgres["env"]["POSTGRES_HOST_AUTH_METHOD"] == "scram-sha-256"
+    env = steps["Measure, derive and render"]["env"]
+    assert env["VIBEY_SPECS_PG_ADMIN_URL"].startswith("postgresql://")
+    assert "@127.0.0.1:5432/" in env["VIBEY_SPECS_PG_ADMIN_URL"]
+    # The tables name the hosted runner, never the machine that used to measure.
+    assert env["VIBEY_SPECS_HOST_LABEL"] == "GitHub-hosted ${{ needs.plan.outputs.runner }}"
+    assert "specs measure" in steps["Measure, derive and render"]["run"]
+    assert any("postgresql-client" in s.get("run", "") for s in measure["steps"])
+
+
 def test_the_linux_matrix_comes_from_the_configuration_and_runs_natively_per_architecture() -> None:
     spec = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     plan, linux = spec["jobs"]["plan"], spec["jobs"]["linux"]
@@ -98,6 +149,10 @@ def test_the_linux_matrix_comes_from_the_configuration_and_runs_natively_per_arc
     assert linux["permissions"] == {"contents": "read"}
     run = "\n".join(step.get("run", "") for step in linux["steps"])
     assert "minimum_specs.py cell" in run
+    # GitHub sets RUNNER_NAME itself (the machine's name), so a step env of that name never
+    # reaches the script: the cells were labelled "GitHub Actions 1000073941".
+    assert not any("RUNNER_NAME" in step.get("env", {}) for step in linux["steps"])
+    assert '--runner-label "GitHub-hosted $RUNNER_LABEL"' in run
     # Each architecture's cells run on a runner of that architecture: no emulated timing.
     sys.path.insert(0, str(REPO))
     from scripts import minimum_specs as ms

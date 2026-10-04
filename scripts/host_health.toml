@@ -392,9 +392,10 @@ stale_after_days = 14
 missing_records = 2
 
 [host_health.schedule]
-# The host scheduler `install` renders: once a week, Monday 06:41 local time, an hour
-# before the minimum-specs measurement so the two never contend. launchd runs a missed
-# calendar slot at the next wake; systemd's Persistent= does the same after a power-off.
+# The host scheduler `install` renders: once a week, Monday 06:41 local time. (It was set an
+# hour before the minimum-specs measurement so the two would not contend; that measurement
+# now runs on a GitHub-hosted runner, not on this host.) launchd runs a missed calendar slot
+# at the next wake; systemd's Persistent= does the same after a power-off.
 weekday = 1
 hour = 6
 minute = 41

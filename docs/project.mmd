@@ -254,7 +254,7 @@ flowchart TB
         MergeTrain --> Promote["Promote (promote-to-main.yml)<br/>vibey-gh promote: develop → main PR"]
         Bootstrap0(["automation-bootstrap.yml — manual, one-shot<br/>verified merge of an automation-repair PR"])
         CanaryWF(["review-canary.yml — weekly + manual, sovereign runner<br/>vibey-gh review-canary run: planted defects + controls<br/>through local-review → append-only ledger → PR"]) -.->|"recall and false positives,<br/>measured; status for the approver"| PRAuto
-        SpecsWF(["minimum-specs.yml — weekly + manual, sovereign runner + Linux cell matrix<br/>measure → hand over under docs/ → merge cells → render the record,<br/>system-requirements, paper and host-health blocks → check → PR"]) -->|"minimum requirements, measured"| PR
+        SpecsWF(["minimum-specs.yml — weekly + manual, GitHub-hosted arm64 runner + Linux cell matrix<br/>measure → hand over under docs/ → merge cells → render the record,<br/>system-requirements, paper and host-health blocks → check → PR"]) -->|"minimum requirements, measured"| PR
         SourcePush(["git push: develop or main"]) --> ReleaseWF["Release workflow (vibey-engine.yml)<br/>vibey-gh owns versioning; release-please retired"]
         Promote --> SourcePush
         MergeTrain --> SourcePush
