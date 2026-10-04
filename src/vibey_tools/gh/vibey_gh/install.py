@@ -287,6 +287,14 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace(
         "__VIBEY_GH_FALLBACK_TRUSTED_ONLY__", "true" if fallback.trusted_only else "false"
     )
+    # Where the sovereign lane runs: the self-hosted label, or one GitHub-hosted runner
+    # (config refuses anything but a plain label), and whether the job must start its own
+    # model because no local endpoint exists there.
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_RUNS_ON__",
+        fallback.runs_on or f"[self-hosted, {fallback.runner_label}]",
+    )
+    wanted = wanted.replace("__VIBEY_GH_FALLBACK_HOSTED__", "true" if fallback.runs_on else "false")
     # The paid declarations (8.b), each a literal `true`/`false`: at the head of its paid
     # job's `if:` -- review, repair, conflict resolution -- so an undeclared repository's
     # workflow never schedules the paid call at all, and in the steps that report what
@@ -297,6 +305,18 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         ("__VIBEY_GH_PAID_CONFLICT_RESOLUTION__", cfg.pr_automation.paid_conflict_resolution),
     ):
         wanted = wanted.replace(marker, "true" if declared else "false")
+    # The open-weights repair (#1400): its declaration at the head of its jobs' `if:`, like
+    # the paid ones, and the values its job renders -- each already refused by config unless
+    # it is one runner label, model names, or a bounded whole number.
+    repair = cfg.pr_automation.sovereign_repair
+    for marker, value in (
+        ("__VIBEY_GH_SOVEREIGN_REPAIR__", "true" if repair.enabled else "false"),
+        ("__VIBEY_GH_SOVEREIGN_REPAIR_RUNS_ON__", repair.runs_on),
+        ("__VIBEY_GH_SOVEREIGN_REPAIR_MODELS__", " ".join(repair.models)),
+        ("__VIBEY_GH_SOVEREIGN_REPAIR_MAX_TURNS__", str(repair.max_turns)),
+        ("__VIBEY_GH_SOVEREIGN_REPAIR_TIMEOUT_MINUTES__", str(repair.timeout_minutes)),
+    ):
+        wanted = wanted.replace(marker, value)
     # One quoted scalar: the step word-splits it, and config has already refused any entry
     # that is not a plain repository-relative path.
     wanted = wanted.replace(

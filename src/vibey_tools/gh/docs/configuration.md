@@ -256,6 +256,7 @@ the lane while `trusted_only` is on.
 |---|---|---|
 | `enabled` | boolean / `true` | Whether the sovereign fallback job (`review-sovereign`) can run at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
 | `runner_label` | string / `"vibey-local"` | Label the sovereign job targets, alongside `self-hosted`. |
+| `runs_on` | string / `""` | Where the sovereign lane runs. Empty: a self-hosted runner carrying `runner_label`, ready only while its heartbeat is fresh. A GitHub-hosted runner label (for example `"ubuntu-24.04-arm"`): the review job runs there, starts Ollama and pulls `model` itself, and `vibey-gh sovereign` reports it ready without a heartbeat, because a hosted runner cannot be offline. A hosted CPU is far slower than a local accelerator, so set `prompt_tokens_per_second` and `output_tokens_per_second` to what that runner measures, or large requests reach their deadline with no verdict. Anything but one plain runner label is refused. |
 | `model` | string / `"gpt-oss:20b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
 | `trusted_only` | boolean / `true` | Never run the sovereign lane for a fork pull request. |
@@ -339,6 +340,33 @@ one.
 never be used for public repositories" because any user can open a pull request against
 them; excluding forks is what removes that. Leave it on, register the runner as ephemeral
 so it takes one job and exits, and run it in a container rather than on the host.
+
+### `[pr_automation.sovereign_repair]`
+
+Whether a review that fails on findings is corrected by an open-weights model rather than
+left for a person (#1400). Declared, the composer marks a sovereign-only failure with at
+least one finding `repairable`; the `repair-sovereign` job asks `vibey-gh pr-automation
+repair-budget` first -- a repair fired in the same run as its review never passes
+`evaluate`, where the budget is otherwise checked -- then runs gptossloop on a GitHub-hosted
+runner with the review's findings as its plan (told to change nothing for a finding it judges
+wrong, and to say why), and uploads the patch. `publish-sovereign-repair` applies it to a
+fresh checkout with the paid repair's guards (the head must still be the one reviewed,
+nothing under `.github/workflows/`, an empty or unappliable patch is never pushed), pushes it
+with the automation token so CI and the exact-head review run again, and records the attempt.
+A spent `max_repair_attempts` budget labels the pull request `vibey-gh:repair-exhausted`; a
+repair that cannot be applied labels it `vibey-gh:automation-blocked`. A declared
+`paid_repair` takes precedence: two engines never edit one branch for one review.
+
+| Key | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `false` | The declaration. Off by default: a local model's finding can be wrong, so letting one start an edit is said aloud. |
+| `runs_on` | string / `"ubuntu-24.04-arm"` | The GitHub-hosted runner the model runs on, so a repair never contends with live reviews for a self-hosted slot. |
+| `models` | list / `["gpt-oss:20b"]` | Ollama models, tried in order until one can be pulled. |
+| `max_turns` | integer / `30` | The agent's turn limit (1-200). |
+| `timeout_minutes` | integer / `150` | The agent step's limit (10-330), inside the hosted job's 360 minutes. |
+
+A key the table does not know is refused, as is any value that is not a plain runner label,
+an Ollama model name, or a bounded whole number: each is rendered into the workflow.
 
 ### `[pr_automation.review_canary]`
 

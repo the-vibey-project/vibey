@@ -12,6 +12,14 @@ record = "docs/architecture/evidence/minimum-specs.json"
 docs_page = "docs/reference/system-requirements.md"
 paper = "docs/paper.md"
 
+[minimum_specs.host]
+# The runner the weekly `measure` job runs on (.github/workflows/minimum-specs.yml). Every
+# CI workflow runs on GitHub-hosted runners only (operator, 2026-10-03), so this is a hosted
+# label, never a self-hosted one: GitHub's arm64 Ubuntu runner (4 vCPU, 16 GB, no GPU), where
+# the sovereign review is moving too. The job installs Ollama, pulls `sovereign_model`, runs
+# PostgreSQL at the declared floor beside it, and the tables then name this runner.
+runner = "ubuntu-24.04-arm"
+
 [minimum_specs.install]
 # Interpreters the Python floor probe tries, oldest first. A version below the declared
 # floor is expected to be refused; the probe records that as a measurement, not an error.

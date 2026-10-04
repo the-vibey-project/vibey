@@ -2703,11 +2703,14 @@ def test_pr_automation_never_assumes_the_adopting_repos_own_package_is_vibey_gh(
     text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "pip install --quiet ./automation" not in text
     checks = re.findall(r'self="automation/__VIBEY_GH_SELF_SOURCE__"', text)
-    # review, repair, resolve-conflict, escalate, review-fallback, record-sovereign
-    assert len(checks) == 6
+    # review, repair, resolve-conflict, escalate, review-fallback, record-sovereign, and the
+    # open-weights repair's budget check and its publication (#1400)
+    assert len(checks) == 8
     lines = text.splitlines(keepends=True)
     installs = [line for line in lines if line.endswith(FALLBACK_INSTALL)]
-    assert len(installs) == 7  # the six guarded installs above plus the evaluate job's own
+    # the eight guarded installs above, the evaluate job's own, and the open-weights
+    # runner's own guarded vibey-engine install
+    assert len(installs) == 10
 
 
 def test_promotion_checks_provenance_without_rewriting_or_reauditing_history():
@@ -3157,6 +3160,27 @@ def test_the_merge_train_does_not_filter_on_the_triggering_runs_conclusion():
     """
     spec = yaml.safe_load((WORKFLOWS / "merge-train.yml").read_text(encoding="utf-8"))
     assert "conclusion" not in str(spec["jobs"]["merge"].get("if", ""))
+
+
+def test_the_merge_train_hands_what_it_merged_to_promotion():
+    """Observed in production (#1400): main stopped receiving releases on its own.
+
+    The PR review gate dispatches the train with GITHUB_TOKEN, and GitHub fires no
+    `workflow_run` for the completion of a run that token started, so promote-to-main's
+    `workflow_run: Merge train` trigger never saw a train run after 2026-09-28: every
+    promotion since was dispatched by hand. The train must dispatch promotion itself,
+    after a merge and never on a dry run, with the permission that dispatch needs.
+    """
+    spec = yaml.safe_load((WORKFLOWS / "merge-train.yml").read_text(encoding="utf-8"))
+    assert spec["permissions"]["actions"] == "write"
+    steps = spec["jobs"]["merge"]["steps"]
+    train = next(s for s in steps if s.get("name") == "Merge what is ready")
+    handoff = next(s for s in steps if s.get("name") == "Hand merged work to promotion")
+    assert steps.index(handoff) > steps.index(train)
+    assert "merged=" in train["run"]
+    assert "steps.train.outputs.merged != '0'" in handoff["if"]
+    assert "inputs.dry_run != true" in handoff["if"]
+    assert "gh workflow run promote-to-main.yml" in handoff["run"]
 
 
 @pytest.mark.parametrize("name", sorted(p.name for p in WORKFLOWS.glob("*.yml")))

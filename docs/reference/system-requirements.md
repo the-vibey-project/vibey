@@ -9,8 +9,12 @@ and the text between the markers is never edited by hand. The prose around them 
 ## How these figures are kept current
 
 The requirements are **rolling**. A weekly workflow (`.github/workflows/minimum-specs.yml`)
-runs `python scripts/minimum_specs.py measure` on the project's self-hosted macOS runner,
-and measures the Linux matrix (below) on GitHub-hosted runners of each architecture. It
+runs `python scripts/minimum_specs.py measure` on a GitHub-hosted runner,
+`[minimum_specs.host] runner` (GitHub's arm64 Ubuntu runner: 4 vCPU, 16 GB, no GPU), and
+measures the Linux matrix (below) on GitHub-hosted runners of each architecture. Every job
+runs on GitHub-hosted runners; none needs the project's own machine. The measuring job
+installs Ollama and pulls the declared model itself, and runs PostgreSQL at the declared
+floor beside it. It
 re-derives the requirements, re-renders this page and the research paper's tables, and
 opens a pull request with the result. Nothing reaches `develop` except through that pull request
 and the normal merge train. The configuration it runs from (contexts, models, thresholds,
@@ -40,7 +44,9 @@ the previous values stay in the record, marked stale.
 **Scope of the evidence.** Every measured figure in the hardware, software, network and
 client tables comes from one machine, named in each table: an Apple M5 Mac with 24 GiB of
 unified memory. The seed values were measured on 2026-09-29 and 2026-09-30 by three
-passes (software, network and hardware). The [Linux](#linux-ubuntu-arch-and-fedora-on-x86_64-and-arm64)
+passes (software, network and hardware). From the first weekly run on, the weekly figures
+are re-measured on the GitHub-hosted runner above, a CPU-only machine, so its rates are
+CPU rates; each table names the host its figures came from. The [Linux](#linux-ubuntu-arch-and-fedora-on-x86_64-and-arm64)
 tables come from each distribution's container, named in each table. Anything about
 other hardware is either derived or listed under [Not verified](#not-verified).
 
@@ -524,4 +530,7 @@ then run `derive` and `render`. `check` runs in CI through
 `tests/meta/test_minimum_specs.py`. It fails when a derived figure disagrees with its inputs
 or a generated table disagrees with the record. The measurement itself needs PostgreSQL,
 reachable through the DSN named by `admin_url_env`, where it creates, migrates and drops a
-scratch database. It also needs Ollama and `uv`. It never touches any other database.
+scratch database. It also needs Ollama, logging to `[minimum_specs.ollama] server_log`, with
+the declared model pulled, and `uv`. It never touches any other database. In CI the
+measuring job provides all of them on the hosted runner; `python scripts/minimum_specs.py
+host` prints the runner, the model, the PostgreSQL floor and the log path it uses.

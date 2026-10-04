@@ -2,13 +2,20 @@
 name: Minimum specs
 
 # vibey's minimum system requirements are a measurement, repeated weekly, never a list
-# written once (docs/reference/system-requirements.md). Once a week, and by hand, the
-# self-hosted sovereign runner re-measures what is cheap and deterministic enough -- the
-# Python floor, cold installs and their downloads, PostgreSQL against the declared floor on a
-# scratch database, the model's memory against context and its throughput (idle-gated) --
-# re-derives the requirements and re-renders the page and the paper's table. The result
-# lands as a pull request through the normal merge train; nothing here pushes to develop.
-# A figure that could not be measured keeps its last value, marked stale, in the tables.
+# written once (docs/reference/system-requirements.md). Once a week, and by hand, a
+# GitHub-hosted runner re-measures what is cheap and deterministic enough -- the Python
+# floor, cold installs and their downloads, PostgreSQL at the declared floor on a scratch
+# database, the model's memory against context and its throughput (idle-gated) -- re-derives
+# the requirements and re-renders the page and the paper's table. The result lands as a pull
+# request through the normal merge train; nothing here pushes to develop. A figure that could
+# not be measured keeps its last value, marked stale, in the tables.
+#
+# Every job runs on GitHub-hosted runners only (operator, 2026-10-03). The measuring host is
+# `[minimum_specs.host] runner` (GitHub's arm64 Ubuntu runner: 4 vCPU, 16 GB, no GPU), so the
+# page describes that runner. What the operator's machine used to provide, the job provides
+# itself: Ollama, installed and serving with its log where the probe reads it, and the
+# declared model pulled; PostgreSQL at the declared floor as a service container; the
+# interpreters through uv; and the host label naming the hosted runner, never the old host.
 #
 # Beside it, the Linux matrix: every distribution `scripts/minimum_specs.toml` declares, on
 # every architecture it declares, each cell in that distribution's own container on a native
@@ -23,21 +30,23 @@ on:
 permissions:
   contents: read
 
-# One measurement at a time: two would contend for the one model slot and the GPU, and the
-# idle gate would record each other as foreign load. A queued run waits rather than cancels
-# a long measurement in flight.
+# One measurement at a time: two runs would race to open the same remeasure pull request. A
+# queued run waits rather than cancels a long measurement in flight.
 concurrency:
   group: minimum-specs-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
   plan:
-    name: Plan the Linux matrix
+    name: Plan the measurement
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
       cells: ${{ steps.cells.outputs.cells }}
+      runner: ${{ steps.host.outputs.runner }}
+      model: ${{ steps.host.outputs.model }}
+      postgres_floor: ${{ steps.host.outputs.postgres_floor }}
     steps:
       - name: Check out the integration branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -55,6 +64,11 @@ jobs:
       # architecture added to the TOML is measured from the next run on.
       - id: cells
         run: echo "cells=$(python scripts/minimum_specs.py cells --json)" >> "$GITHUB_OUTPUT"
+
+      # The measuring runner, the model and the PostgreSQL floor are declared once, in the
+      # TOML and in the code; this file restates none of them.
+      - id: host
+        run: python scripts/minimum_specs.py host --github-output >> "$GITHUB_OUTPUT"
 
   linux:
     name: Linux cell (${{ matrix.distro }}, ${{ matrix.arch }})
@@ -82,12 +96,14 @@ jobs:
         env:
           DISTRO: ${{ matrix.distro }}
           ARCH: ${{ matrix.arch }}
-          RUNNER_NAME: ${{ matrix.runner }}
+          # Not RUNNER_NAME: GitHub sets that one itself, to the machine's own name
+          # ("GitHub Actions 1000073941"), which then labelled every cell.
+          RUNNER_LABEL: ${{ matrix.runner }}
         run: |
           set -euo pipefail
           uv run --no-project --python 3.12 python scripts/minimum_specs.py cell \
             --distro "$DISTRO" --arch "$ARCH" --out "cells/$DISTRO-$ARCH.json" \
-            --runner-label "GitHub-hosted $RUNNER_NAME"
+            --runner-label "GitHub-hosted $RUNNER_LABEL"
 
       - name: Hand the cell's record over
         uses: actions/upload-artifact@v4
@@ -98,13 +114,36 @@ jobs:
           retention-days: 14
 
   measure:
-    name: Measure on the sovereign runner
-    runs-on: [self-hosted, vibey-local-vibey]
-    timeout-minutes: 150
-    # No write token on the self-hosted runner: it measures and hands the files over as an
-    # artifact. Committing and opening the pull request happen on a hosted runner below.
+    name: Measure on the GitHub-hosted runner
+    needs: plan
+    runs-on: ${{ needs.plan.outputs.runner }}
+    # Within GitHub's 360-minute ceiling for a hosted job. The model runs on four CPU cores
+    # and no GPU here, so the bench (the 24k-token depth prompt above all) takes hours, not
+    # the minutes it took on a GPU host.
+    timeout-minutes: 340
+    # No write token where the measurement runs: it measures and hands the files over as an
+    # artifact. Committing and opening the pull request happen in the publish job below.
     permissions:
       contents: read
+    # The scratch database's server, at the floor vibey declares (POSTGRES_MIN_MAJOR), so the
+    # migrations are measured on the oldest server vibey accepts. scram-sha-256 everywhere, as
+    # in ci.yml (sub-doctrine 10.j, ADR-0061); the password only ever meets this container.
+    services:
+      postgres:
+        image: postgres:${{ needs.plan.outputs.postgres_floor }}
+        env:
+          POSTGRES_USER: vibey
+          POSTGRES_PASSWORD: vibey
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Check out the integration branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -115,16 +154,55 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
 
-      - name: Measure, derive and render
-        env:
-          # A DSN that may create and drop the scratch database: from the repository secret
-          # when one is set, otherwise from the runner's own environment. Unset, the
-          # PostgreSQL figures are recorded as not measured and kept stale.
-          SPECS_PG_ADMIN_URL_SECRET: ${{ secrets.VIBEY_SPECS_PG_ADMIN_URL }}
+      # psql drives the scratch database; GNU time samples the commands' peak memory
+      # (`/usr/bin/time -v`); zstd unpacks Ollama's release if its installer is unreachable.
+      - name: Install the measuring tools
         run: |
           set -euo pipefail
-          export VIBEY_SPECS_PG_ADMIN_URL="${SPECS_PG_ADMIN_URL_SECRET:-${VIBEY_SPECS_PG_ADMIN_URL:-}}"
-          # The script is stdlib only; uv pins the interpreter so the host's own python3
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client time zstd
+
+      # Ollama's installer first; its own GitHub release if the installer is unreachable. The
+      # installer starts a systemd service that logs to the journal, so it is stopped and the
+      # server runs as this user instead, logging to `[minimum_specs.ollama] server_log`,
+      # where the probe reads llama-server's memory accounting and the idle gate reads other
+      # clients' requests. Only the declared model is pulled: the bench measures that one, and
+      # a substitute would measure something else. If it cannot be pulled the model figures
+      # are recorded as not measured and kept stale, and the rest is still measured.
+      - name: Start Ollama with the declared model
+        env:
+          MODEL: ${{ needs.plan.outputs.model }}
+        run: |
+          set -uo pipefail
+          if ! curl -fsSL https://ollama.com/install.sh | sh; then
+            echo "::warning::the Ollama installer failed; installing Ollama's GitHub release instead"
+            case "$(uname -m)" in aarch64|arm64) goarch=arm64 ;; *) goarch=amd64 ;; esac
+            url=$(curl -fsSL https://api.github.com/repos/ollama/ollama/releases/latest \
+              | python3 -c "import json,sys; print(next(a['browser_download_url'] for a in json.load(sys.stdin)['assets'] if a['name']=='ollama-linux-$goarch.tar.zst'))")
+            curl -fsSL "$url" | sudo tar --zstd -x -C /usr/local
+          fi
+          sudo systemctl disable --now ollama 2>/dev/null || true
+          log="$(python3 scripts/minimum_specs.py host | awk -F '\t' '$1 == "server_log" { print $2 }')"
+          mkdir -p "$(dirname "$log")"
+          (ollama serve >> "$log" 2>&1 &)
+          for _ in $(seq 1 60); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
+          if ! curl -sf http://127.0.0.1:11434/api/version; then
+            echo "::warning::Ollama did not start; the model figures will be kept stale"
+            exit 0
+          fi
+          ollama pull "$MODEL" || echo "::warning::could not pull $MODEL; the model figures will be kept stale"
+
+      - name: Measure, derive and render
+        env:
+          # The service container above: its superuser may create and drop the scratch
+          # database, and the probe never touches any database it did not create.
+          VIBEY_SPECS_PG_ADMIN_URL: postgresql://vibey:vibey@127.0.0.1:5432/postgres
+          # The hosted runner, by its label: the tables say where the figures came from, and
+          # the record keeps its chip, cores, memory and OS beside the label.
+          VIBEY_SPECS_HOST_LABEL: GitHub-hosted ${{ needs.plan.outputs.runner }}
+        run: |
+          set -euo pipefail
+          # The script is stdlib only; uv pins the interpreter so the runner's own python3
           # (whatever version it is) never runs it.
           specs() { uv run --no-project --python 3.12 python scripts/minimum_specs.py "$@"; }
           specs measure
@@ -222,12 +300,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/architecture/evidence/minimum-specs.json \
             docs/reference/system-requirements.md docs/paper.md docs/reference/host-health.md
-          # A macOS measurement always rewrites the record, so when it succeeded an unchanged
+          # A host measurement always rewrites the record, so when it succeeded an unchanged
           # record means the handover never reached the tracked files: say so and fail
           # (sub-doctrine 12.e). Without it, only the Linux cells can change the record.
           if git diff --cached --quiet; then
             if [ "$MEASURED" = "success" ]; then
-              echo "::error::the macOS measurement left the tracked record unchanged; the handed-over files did not land where they are committed from"
+              echo "::error::the host measurement left the tracked record unchanged; the handed-over files did not land where they are committed from"
               exit 1
             fi
             echo "the minimum-specs record is unchanged"
@@ -245,5 +323,5 @@ jobs:
               --base develop \
               --head "$branch" \
               --title "chore(specs): remeasure minimum requirements" \
-              --body "Weekly remeasurement of vibey's minimum system requirements on the self-hosted runner and of the Linux matrix on native GitHub-hosted runners (\`scripts/minimum_specs.py\`). The record, docs/reference/system-requirements.md and the paper's tables are regenerated together. Figures that could not be measured this week are kept and shown as stale, with the reason. Merge through the repository's normal train after the checks pass."
+              --body "Weekly remeasurement of vibey's minimum system requirements on a GitHub-hosted runner and of the Linux matrix on native GitHub-hosted runners (\`scripts/minimum_specs.py\`). The record, docs/reference/system-requirements.md and the paper's tables are regenerated together. Figures that could not be measured this week are kept and shown as stale, with the reason. Merge through the repository's normal train after the checks pass."
           fi

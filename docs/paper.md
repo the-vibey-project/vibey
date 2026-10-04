@@ -3430,13 +3430,14 @@ vibey's own limits change, and the list does not. vibey's minimum requirements a
 a measurement, repeated weekly, and the table below is regenerated from its record
 (`docs/architecture/evidence/minimum-specs.json`) by `scripts/minimum_specs.py`. It was
 seeded from three passes on one host on 2026-09-29 and 2026-09-30: software, network and
-hardware. Each week a workflow on the project's self-hosted macOS runner repeats the parts
-that are cheap and deterministic enough. It probes the Python floor on every candidate
-interpreter and measures a cold install, its download and its size. It checks the
-PostgreSQL server against the floor vibey declares, on a scratch database the run creates
-and drops. It reads the model sizes from the registry without pulling them. It measures the
-model's memory at each configured context and its throughput on the GPU and on the CPU
-alone, and the peak memory of the everyday commands, the hub and the launcher. The result
+hardware. Each week a workflow on a GitHub-hosted runner (GitHub's arm64 Ubuntu runner: 4
+vCPU, 16 GB, no GPU) repeats the parts that are cheap and deterministic enough. It probes
+the Python floor on every candidate interpreter and measures a cold install, its download
+and its size. It migrates a scratch database on a PostgreSQL server at the floor vibey
+declares, which the run creates and drops. It reads the model sizes from the registry, then
+pulls the sovereign model and measures its memory at each configured context and its
+throughput with the default offload and on the CPU alone (on that runner, both are the
+CPU), and the peak memory of the everyday commands, the hub and the launcher. The result
 arrives as a pull request, like any other change. That is the design. At our cutoff,
 2026-10-02, the workflow had still never run (its first scheduled run falls on 2026-10-05),
 so every figure below comes from the seed passes.
