@@ -842,6 +842,23 @@ class ReviewCanaryConfig:
     min_defects: int = 24
     min_classes: int = 8
     min_controls: int = 8
+    # How many parts `review-canary.yml` cuts a measurement into, each its own job on a
+    # GitHub-hosted runner (`vibey-gh review-canary run --shard I/N`), merged back into one
+    # ledger line by `vibey-gh review-canary merge`. A hosted job may run 360 minutes at
+    # most, and on a hosted runner's CPU one case takes ~10-30 minutes but may run to its
+    # deadline (below) -- over two hours. Size it so a job's cases fit even if every one
+    # runs to its deadline, or a slow week loses the whole measurement. 1 is one job; at
+    # most 256, a matrix's limit.
+    shards: int = 1
+    # The deadline rates (`[pr_automation.fallback] prompt_tokens_per_second` and
+    # `output_tokens_per_second`) the canary's reviews run with instead of the review's own,
+    # because the canary runs on other hardware than the review: the review's were measured
+    # on the operator's Apple M5, and a hosted runner's CPU reads and answers several times
+    # slower, so the M5's deadlines would cut its reviews off and count them as no verdict.
+    # They change only when a request gives up -- never what it judges, so `status` still
+    # compares the settings that do. 0 for both keeps the review's own.
+    prompt_tokens_per_second: int = 0
+    output_tokens_per_second: int = 0
 
     def __post_init__(self) -> None:
         for name in ("corpus", "ledger"):
@@ -871,6 +888,19 @@ class ReviewCanaryConfig:
             value = getattr(self, name)
             if type(value) is not int or value < 1:
                 raise ValueError(f"pr_automation.review_canary.{name} must be a whole number >= 1")
+        if type(self.shards) is not int or not 1 <= self.shards <= 256:
+            raise ValueError(
+                "pr_automation.review_canary.shards must be a whole number from 1 to 256"
+            )
+        for name in ("prompt_tokens_per_second", "output_tokens_per_second"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"pr_automation.review_canary.{name} must be a whole number >= 0")
+        if (self.prompt_tokens_per_second == 0) != (self.output_tokens_per_second == 0):
+            raise ValueError(
+                "pr_automation.review_canary.prompt_tokens_per_second and"
+                " output_tokens_per_second must both be set, or both be 0 for the review's own"
+            )
 
     @classmethod
     def from_table(cls, table: Mapping[str, object]) -> ReviewCanaryConfig:

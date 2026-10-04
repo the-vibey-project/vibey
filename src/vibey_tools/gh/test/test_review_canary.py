@@ -49,6 +49,7 @@ from vibey_gh.local_review import SOURCE_CONTEXT
 from vibey_gh.review_canary import (
     BEGIN,
     END,
+    SHARD_FORMAT,
     VERDICT_SETTINGS,
     CanaryLedger,
     CanaryReport,
@@ -1368,7 +1369,7 @@ def workflow() -> dict:
     )
 
 
-def test_the_canary_runs_weekly_and_by_hand_on_the_sovereign_runner():
+def test_the_canary_runs_weekly_and_by_hand_on_github_hosted_runners_only():
     loaded = workflow()
     triggers = loaded.get("on", loaded.get(True))
     assert set(triggers) == {"schedule", "workflow_dispatch"}
@@ -1376,28 +1377,66 @@ def test_the_canary_runs_weekly_and_by_hand_on_the_sovereign_runner():
     minute, hour, day, month, weekday = cron.split()
     assert minute.isdigit() and hour.isdigit() and (day, month) == ("*", "*")
     assert weekday.isdigit() and weekday not in ("5", "6"), "never on the Sabbath window"
-    label = load_config(REPO).pr_automation.fallback.runner_label
-    assert loaded["jobs"]["measure"]["runs-on"] == ["self-hosted", label]
+    for name, job in loaded["jobs"].items():
+        assert "self-hosted" not in str(job["runs-on"]), name
+    assert loaded["jobs"]["measure"]["runs-on"] == "ubuntu-24.04-arm"
     assert loaded["jobs"]["measure"]["permissions"] == {"contents": "read"}
+    assert loaded["jobs"]["merge"]["permissions"] == {"contents": "read"}
     assert loaded["concurrency"]["cancel-in-progress"] is False
+
+
+def test_the_canary_is_sharded_by_the_declared_count_and_merged_into_one_measurement():
+    loaded = workflow()
+    jobs = loaded["jobs"]
+    plan = "\n".join(step.get("run", "") for step in jobs["plan"]["steps"])
+    assert "vibey-gh review-canary plan" in plan and "git rev-parse HEAD" in plan
+    measure = jobs["measure"]
+    assert measure["needs"] == "plan"
+    assert measure["strategy"]["matrix"]["shard"] == "${{ fromJSON(needs.plan.outputs.shards) }}"
+    assert measure["strategy"]["fail-fast"] is False
+    assert measure["timeout-minutes"] < 360, "GitHub's hosted job limit"
+    checkout = measure["steps"][0]["with"]
+    assert checkout["fetch-depth"] == 0, "the corpus pin is read with git show"
+    assert checkout["ref"] == "${{ needs.plan.outputs.commit }}"
+    script = "\n".join(step.get("run", "") for step in measure["steps"])
+    assert 'vibey-gh review-canary "$@"' in script
+    assert 'canary run --shard "$SHARD" --out "$OUT"' in script
+    assert 'ollama pull "$MODEL"' in script
+    model = next(step for step in measure["steps"] if "ollama pull" in step.get("run", ""))
+    assert model["env"]["MODEL"] == "${{ needs.plan.outputs.model }}"
+    review = next(step for step in measure["steps"] if "canary run" in step.get("run", ""))
+    assert review["env"]["VIBEY_OLLAMA_URL"] == "http://127.0.0.1:11434"
+    merge = jobs["merge"]
+    assert set(merge["needs"]) == {"plan", "measure"}
+    assert merge["steps"][0]["with"]["ref"] == "${{ needs.plan.outputs.commit }}"
+    merged = "\n".join(step.get("run", "") for step in merge["steps"])
+    assert "vibey-gh review-canary merge" in merged and "review-canary render --check" in merged
+    # Sized so a job's cases fit even if each runs to its deadline (the declaration's sum).
+    declared = load_config(REPO)
+    canary = declared.pr_automation.review_canary
+    cases = len(CorpusLoader(REPO).load(REPO / canary.corpus).cases)
+    per_job = -(-cases // canary.shards)
+    fallback = declared.pr_automation.fallback
+    prompt = fallback.context_window - fallback.reasoning_reserve_tokens
+    deadline = (
+        prompt / canary.prompt_tokens_per_second
+        + fallback.reasoning_reserve_tokens / canary.output_tokens_per_second
+    )
+    assert per_job * deadline / 60 < measure["timeout-minutes"] - 15
 
 
 def test_the_canary_lands_through_a_pull_request_with_every_gate():
     loaded = workflow()
     canary = load_config(REPO).pr_automation.review_canary
-    measure = "\n".join(step.get("run", "") for step in loaded["jobs"]["measure"]["steps"])
-    assert 'vibey-gh review-canary "$@"' in measure
-    assert "canary run --work" in measure and "canary render --check" in measure
-    checkout = loaded["jobs"]["measure"]["steps"][0]["with"]
-    assert checkout["fetch-depth"] == 0, "the corpus pin is read with git show"
     upload = [
         step
-        for step in loaded["jobs"]["measure"]["steps"]
+        for step in loaded["jobs"]["merge"]["steps"]
         if "upload-artifact" in str(step.get("uses"))
     ]
     handed = upload[0]["with"]["path"].split()
     assert handed == [canary.ledger, canary.report]
     publish = loaded["jobs"]["publish"]
+    assert publish["needs"] == "merge"
     script = "\n".join(step.get("run", "") for step in publish["steps"])
     assert "review-canary render --check" in script
     assert f"git add {canary.ledger}" in " ".join(script.split())
@@ -1440,3 +1479,276 @@ def test_reviews_reused_without_a_time_leave_the_review_window_unknown(tmp_path)
     measured = canary.run(["ctl-rename"], work=work, record=False)
     assert reviewer.calls == [] and measured["reused_reviews"] == 1
     assert measured["reviewed_between"] is None
+
+
+# --------------------------------------------------------------------------- sharding
+
+
+def shards_of(cfg: GhConfig, tmp_path: Path, of: int, *, resident=None, runners=None) -> list[Path]:
+    """Every shard of one sharded run, each heard by its own canary, as its own job is."""
+    paths = []
+    for index in range(of):
+        environ = {"RUNNER_NAME": runners[index]} if runners else {}
+        canary, _ = canary_for(cfg, resident=resident, environ=environ)
+        out = tmp_path / "shards" / f"shard-{index}.json"
+        canary.shard(index, of, out=out)
+        paths.append(out)
+    return paths
+
+
+def heard_cases(path: Path) -> list[str]:
+    return [item["case"] for item in json.loads(path.read_text(encoding="utf-8"))["reviews"]]
+
+
+@pytest.mark.parametrize("of", [1, 2, 3, 4])
+def test_the_shards_partition_the_corpus_by_place_modulo_their_count(tmp_path, of):
+    cfg = repository(tmp_path)
+    paths = shards_of(cfg, tmp_path, of)
+    order = ["obo-total", "guard-gone", "ctl-rename"]
+    for index, path in enumerate(paths):
+        assert heard_cases(path) == [case for n, case in enumerate(order) if n % of == index]
+    every = [case for path in paths for case in heard_cases(path)]
+    assert sorted(every) == sorted(order), "every case once, in exactly one shard"
+
+
+def test_a_shard_writes_what_it_heard_and_records_nothing(tmp_path):
+    cfg = repository(tmp_path)
+    reviewer = FakeReviewer(answer_by_diff)
+    canary, said = canary_for(cfg, reviewer, environ={"RUNNER_NAME": "r1"})
+    out = tmp_path / "deep" / "shard.json"
+    written = canary.shard(1, 2, out=out, work=tmp_path / "work.jsonl")
+    assert json.loads(out.read_text(encoding="utf-8")) == written
+    assert written["format"] == SHARD_FORMAT and written["shard"] == {"index": 1, "of": 2}
+    assert written["corpus"]["cases"] == 3 and written["runner"] == "r1"
+    assert written["settings_digest"] == ReviewCanary.settings_digest(written["settings"])
+    (item,) = written["reviews"]
+    assert item["case"] == "guard-gone" and item["reused"] is False
+    assert item["review"]["code"] == "model_timeout"
+    assert said == [
+        "vibey-gh: review-canary shard 1/2 1/1 guard-gone: no_verdict (model_timeout, 30s)"
+    ]
+    assert len(reviewer.calls) == 1
+    assert not (tmp_path / "ledger.jsonl").exists()
+    # Cut short and run again, a shard resumes from its work file like a run does.
+    again = FakeReviewer(answer_by_diff)
+    canary, _ = canary_for(cfg, again)
+    assert canary.shard(1, 2, out=out, work=tmp_path / "work.jsonl")["reviews"][0]["reused"]
+    assert again.calls == []
+    with pytest.raises(ValueError, match="shard 2/2 does not exist"):
+        canary.shard(2, 2, out=out)
+
+
+def test_merging_the_shards_records_exactly_what_an_unsharded_run_does(tmp_path):
+    cfg = repository(tmp_path)
+    resident = [{"name": "gpt-oss:20b"}]
+    whole, _ = canary_for(cfg, resident=resident, environ={"RUNNER_NAME": "r1"})
+    unsharded = whole.run(record=False)
+    paths = shards_of(cfg, tmp_path, 2, resident=resident, runners=["r1", "r1"])
+    canary, said = canary_for(cfg)
+    merged = canary.merge(list(reversed(paths)))
+    assert merged == unsharded
+    assert said[0] == "vibey-gh: review-canary 1/3 obo-total: caught (reviewed, 30s)"
+    (recorded,) = CanaryLedger().read(tmp_path / "ledger.jsonl")
+    assert recorded == unsharded
+    assert canary.render(check=True) == 0
+    assert canary.merge(paths, record=False) == unsharded
+    assert len(CanaryLedger().read(tmp_path / "ledger.jsonl")) == 1
+
+
+def test_a_merge_names_every_runner_and_every_model_the_shards_found_loaded(tmp_path):
+    cfg = repository(tmp_path)
+    paths = []
+    for index, resident in enumerate([[{"name": "a"}], None, [{"name": "a"}, {"name": "b"}]]):
+        canary, _ = canary_for(cfg, resident=resident, environ={"RUNNER_NAME": f"r{index}"})
+        paths.append(tmp_path / f"{index}.json")
+        canary.shard(index, 3, out=paths[-1])
+    canary, _ = canary_for(cfg)
+    merged = canary.merge(paths, record=False)
+    assert merged["runner"] == "r0, r1, r2"
+    assert merged["conditions"]["loaded_at_start"] == ["a", "b"]
+    assert merged["host"] and ", " not in merged["host"]
+
+
+def edit(path: Path, change) -> None:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    change(value)
+    path.write_text(json.dumps(value), encoding="utf-8")
+
+
+def move_control_to_shard_one(paths: list[Path]) -> list[Path]:
+    taken: list[dict] = []
+    edit(paths[0], lambda v: taken.append(v["reviews"].pop()))
+    edit(paths[1], lambda v: v["reviews"].append(taken[0]))
+    return paths
+
+
+def review_a_case_not_in_the_corpus(paths: list[Path]) -> list[Path]:
+    edit(paths[1], lambda v: v["reviews"].append({**v["reviews"][0], "case": "nope"}))
+    return paths
+
+
+@pytest.mark.parametrize(
+    ("damage", "said"),
+    [
+        (lambda p: p[:1], "shard 1/2 is missing"),
+        (lambda p: [p[0], p[0], p[1]], "shard 0/2 is given 2 times"),
+        (lambda p: [p[0], p[0], p[1]], "case obo-total is reviewed 2 times"),
+        (
+            lambda p: edit(p[1], lambda v: v["settings"].update(think="high")) or p,
+            "shard 1/2 ran under other settings: think",
+        ),
+        (
+            lambda p: edit(p[1], lambda v: v["settings"].pop("retries")) or p,
+            "shard 1/2 ran under other settings: retries",
+        ),
+        (
+            lambda p: edit(p[1], lambda v: v["corpus"].update(digest="0" * 64)) or p,
+            "shard 1/2 measured another corpus",
+        ),
+        (
+            lambda p: edit(p[1], lambda v: v["conditions"].update(model_digest="x")) or p,
+            "shard 1/2 heard another model or documents: model_digest",
+        ),
+        (
+            lambda p: edit(p[1], lambda v: v.update(commit="c" * 40)) or p,
+            "shard 1/2 ran at commit cccccccccccc",
+        ),
+        (
+            lambda p: edit(p[1], lambda v: v["shard"].update(of=3)) or p,
+            "the shards were cut 2 and 3 ways",
+        ),
+        (move_control_to_shard_one, "case ctl-rename is in shard 1/2, but belongs to 0/2"),
+        (
+            lambda p: edit(p[0], lambda v: v["reviews"].pop()) or p,
+            "case ctl-rename is reviewed by no shard",
+        ),
+        (review_a_case_not_in_the_corpus, "case nope is not in the corpus"),
+        (
+            lambda p: edit(p[0], lambda v: v["reviews"][0].update(case_digest="d")) or p,
+            "case obo-total was reviewed as another diff",
+        ),
+    ],
+)
+def test_a_merge_refuses_shards_that_are_not_one_whole_measurement(tmp_path, damage, said):
+    cfg = repository(tmp_path)
+    paths = damage(shards_of(cfg, tmp_path, 2))
+    canary, _ = canary_for(cfg)
+    with pytest.raises(ValueError, match=re.escape(said)):
+        canary.merge(paths)
+    assert not (tmp_path / "ledger.jsonl").exists()
+
+
+def test_a_merge_refuses_what_is_not_a_shard_file(tmp_path):
+    cfg = repository(tmp_path)
+    canary, _ = canary_for(cfg)
+    with pytest.raises(ValueError, match="merge needs the shard files"):
+        canary.merge([])
+    broken = tmp_path / "broken.json"
+    broken.write_text("{", encoding="utf-8")
+    with pytest.raises(ValueError, match="broken.json is not JSON"):
+        canary.merge([broken])
+    other = tmp_path / "other.json"
+    other.write_text('{"format": "something/else"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="is not a review-canary shard"):
+        canary.merge([other])
+    other.write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError, match="is not a review-canary shard"):
+        canary.merge([other])
+
+
+@pytest.mark.parametrize("text", ["x", "1", "2/2", "0/0", "-1/2", "1/2/3"])
+def test_a_shard_is_named_i_of_n_counted_from_zero(text):
+    with pytest.raises(ValueError, match="--shard is I/N"):
+        ReviewCanary.parse_shard(text)
+
+
+def test_a_shard_name_parses_to_its_index_and_count():
+    assert ReviewCanary.parse_shard(" 3/21 ") == (3, 21)
+
+
+def test_the_plan_names_the_model_and_one_shard_per_declared_part(tmp_path):
+    canary, _ = canary_for(repository(tmp_path, shards=3))
+    assert canary.plan() == {"model": "gpt-oss:20b", "shards": ["0/3", "1/3", "2/3"]}
+    declared = load_config(REPO)
+    plan = ReviewCanary(config=lambda: declared).plan()
+    assert len(plan["shards"]) == declared.pr_automation.review_canary.shards
+    assert plan["model"] == declared.pr_automation.fallback.model
+
+
+def test_the_canary_runs_with_the_deadline_rates_declared_for_its_hardware(tmp_path):
+    cfg = repository(tmp_path, prompt_tokens_per_second=40, output_tokens_per_second=2)
+    reviewer = FakeReviewer(answer_by_diff)
+    canary, _ = canary_for(cfg, reviewer)
+    measured = canary.run(["ctl-rename"], record=False)
+    (argv,) = reviewer.calls
+    assert argv[argv.index("--prompt-tokens-per-second") + 1] == "40"
+    assert argv[argv.index("--output-tokens-per-second") + 1] == "2"
+    assert measured["settings"]["prompt_tokens_per_second"] == 40
+    # The review's own settings are untouched, and a timing setting is no verdict setting.
+    assert ReviewCanary.settings(cfg)["prompt_tokens_per_second"] == 200
+    assert measured["settings_digest"] == ReviewCanary.settings_digest(ReviewCanary.settings(cfg))
+    assert ReviewCanary.measured_settings(repository(tmp_path)) == ReviewCanary.settings(
+        repository(tmp_path)
+    )
+
+
+def test_the_command_runs_a_shard_merges_shards_and_prints_the_plan(tmp_path):
+    cfg = repository(tmp_path, shards=2)
+    canary, said = canary_for(cfg)
+    assert canary.command(parse("plan")) == 0
+    assert json.loads(said[-1]) == {"model": "gpt-oss:20b", "shards": ["0/2", "1/2"]}
+    first, second = tmp_path / "s0.json", tmp_path / "s1.json"
+    assert canary.command(parse("run", "--shard", "0/2", "--out", str(first))) == 0
+    assert said[-1] == f"vibey-gh: review-canary shard 0/2: 2 cases heard, written to {first}"
+    assert canary.command(parse("run", "--shard", "1/2", "--out", str(second), "--json")) == 0
+    assert json.loads(said[-1])["shard"] == {"index": 1, "of": 2}
+    assert canary.command(parse("merge", str(first), str(second), "--no-record")) == 0
+    assert said[-1].startswith("vibey-gh: recall 1 of 1")
+    assert not (tmp_path / "ledger.jsonl").exists()
+    assert canary.command(parse("merge", str(first), str(second), "--json")) == 0
+    assert json.loads(said[-1])["subset"] is False
+    assert len(CanaryLedger().read(tmp_path / "ledger.jsonl")) == 1
+    assert canary.command(parse("merge", str(first))) == 2
+    assert said[-1].startswith("vibey-gh: review-canary: the shards are not one measurement")
+
+
+@pytest.mark.parametrize(
+    ("argv", "said"),
+    [
+        (("run", "--shard", "0/2"), "--shard and --out go together"),
+        (("run", "--out", "x.json"), "--shard and --out go together"),
+        (("run", "--shard", "0/2", "--out", "x.json", "--case", "obo-total"), "drop --case"),
+        (("run", "--shard", "0/2", "--out", "x.json", "--no-record"), "drop --case"),
+        (("run", "--shard", "2/2", "--out", "x.json"), "--shard is I/N"),
+    ],
+)
+def test_the_command_refuses_a_shard_it_cannot_run(tmp_path, argv, said):
+    canary, out = canary_for(repository(tmp_path))
+    assert canary.command(parse(*argv)) == 2
+    assert said in out[-1]
+
+
+def test_the_shard_and_deadline_keys_default_to_one_job_at_the_reviews_rates():
+    default = ReviewCanaryConfig()
+    assert default.shards == 1
+    assert (default.prompt_tokens_per_second, default.output_tokens_per_second) == (0, 0)
+    declared = load_config(REPO).pr_automation.review_canary
+    assert declared.shards > 1 and declared.prompt_tokens_per_second > 0
+
+
+@pytest.mark.parametrize(
+    ("changes", "said"),
+    [
+        ({"shards": 0}, "shards must be a whole number from 1 to 256"),
+        ({"shards": 257}, "shards must be a whole number from 1 to 256"),
+        ({"shards": 2.0}, "shards must be a whole number from 1 to 256"),
+        ({"shards": True}, "shards must be a whole number from 1 to 256"),
+        ({"prompt_tokens_per_second": -1}, "prompt_tokens_per_second must be a whole number"),
+        ({"output_tokens_per_second": 1.5}, "output_tokens_per_second must be a whole number"),
+        ({"prompt_tokens_per_second": 40}, "must both be set, or both be 0"),
+        ({"output_tokens_per_second": 2}, "must both be set, or both be 0"),
+    ],
+)
+def test_a_shard_or_deadline_key_that_cannot_hold_is_refused(changes, said):
+    with pytest.raises(ValueError, match=said):
+        ReviewCanaryConfig(**changes)
