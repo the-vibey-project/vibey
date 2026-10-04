@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The sovereign lane on a GitHub-hosted runner (`[pr_automation.fallback] runs_on`).
 
 The operator's decision, 2026-10-03: every CI job runs on GitHub-hosted runners. Declared,

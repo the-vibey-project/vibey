@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The open-weights repair of a failing review (#1400).
 
 A review that fails on findings is corrected rather than left for a person, where the
