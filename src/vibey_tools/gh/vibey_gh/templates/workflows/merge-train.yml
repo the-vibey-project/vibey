@@ -23,7 +23,8 @@ on:
         type: boolean
 
 permissions:
-  actions: read
+  # write: the train dispatches promote-to-main itself (see the last step).
+  actions: write
   contents: write
   pull-requests: write
 
@@ -86,6 +87,7 @@ jobs:
           fi
           echo "pr=$number" >> "$GITHUB_OUTPUT"
       - name: Merge what is ready
+        id: train
         env:
           GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
           PR: ${{ steps.resolve.outputs.pr }}
@@ -94,4 +96,21 @@ jobs:
           args=()
           if [ -n "${PR:-}" ]; then args+=(--pr "$PR"); fi
           if [ "${{ inputs.dry_run || false }}" = true ]; then args+=(--dry-run); fi
-          vibey-gh merge-train "${args[@]}"
+          vibey-gh merge-train "${args[@]}" | tee "$RUNNER_TEMP/merge-train.log"
+          merged=$(sed -n 's/^vibey-gh: merged \([0-9][0-9]*\),.*/\1/p' "$RUNNER_TEMP/merge-train.log" | tail -1)
+          echo "merged=${merged:-0}" >> "$GITHUB_OUTPUT"
+      # The PR review gate dispatches this workflow with GITHUB_TOKEN, and GitHub fires no
+      # workflow_run for the completion of a run that token started. So promote-to-main's
+      # `workflow_run: Merge train` trigger never sees the train's own runs: promotion last
+      # ran by itself on 2026-09-28, and main has needed a hand dispatch since (#1400).
+      # Hand the merged work to promotion directly. Promotion compares develop and main by
+      # tree and stops when they match, so a run after a main merge is a no-op.
+      - name: Hand merged work to promotion
+        if: steps.train.outputs.merged != '0' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh workflow run promote-to-main.yml --repo "$REPO" \
+            --ref "${{ github.event.repository.default_branch }}"
