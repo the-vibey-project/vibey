@@ -380,6 +380,8 @@ and in neither denominator: in the pull-request review, no verdict is never a pa
 | `max_false_positive_upper_bound` | number / `0.5` (0–1) | The floor: the false-positive rate's Wilson **upper** bound must be at most this. A false positive costs a human review, not safety, so this bound is there to refuse a gate that earns its recall by blocking everything. |
 | `max_age_days` | integer / `14` (>= 1) | How old the latest measurement may be before `status` stops vouching for it. |
 | `min_defects`, `min_classes`, `min_controls` | integers / `24`, `8`, `8` | The smallest corpus `run` calls a measurement; a smaller one is refused. |
+| `shards` | integer / `1` (1–256) | How many jobs a workflow cuts one measurement into: `plan` names one `I/N` per shard, each job runs `run --shard I/N --out FILE` over the cases whose place in the corpus is `I` modulo `N`, and `merge` joins the files into the one ledger line an unsharded run would have written. Size it so a job's cases fit its time limit even if every one runs to its deadline. |
+| `prompt_tokens_per_second`, `output_tokens_per_second` | integers / `0`, `0` | The deadline rates the canary's reviews run with in place of `[pr_automation.fallback]`'s, for a canary that runs on other hardware than the review: both set, or both `0` for the review's own. They decide only when a request gives up, never what it judges, so `status` does not compare them. |
 
 A key this table does not know is refused when the configuration loads, so a misspelt floor
 is never read as its default. `vibey-gh review-canary status` holds the latest measurement to

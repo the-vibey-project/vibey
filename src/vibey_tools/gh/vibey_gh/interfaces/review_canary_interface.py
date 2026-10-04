@@ -306,6 +306,23 @@ class ReviewCanaryInterface(Protocol):
         measurement to the ledger and render it. Returns the measurement."""
         ...
 
+    def shard(self, index: int, of: int, *, out: Path, work: Path | None = None) -> dict[str, Any]:
+        """Review only the cases whose place in the corpus is `index` modulo `of`, and write
+        what each review said -- unscored, beside the settings, corpus and conditions they
+        were heard under -- to `out`. Records nothing. Returns what it wrote."""
+        ...
+
+    def merge(self, paths: Sequence[Path], *, record: bool = True) -> dict[str, Any]:
+        """The measurement the shard files at `paths` make together -- exactly the one an
+        unsharded `run` of every case would have made -- recorded as `run` records it.
+        `ValueError` unless they cover every case once, under one corpus, commit, model and
+        set of settings."""
+        ...
+
+    def plan(self) -> dict[str, Any]:
+        """What a sharded measurement needs: the model to serve, and one `I/N` per shard."""
+        ...
+
     def status(self) -> dict[str, Any]:
         """Whether the latest recorded measurement meets the floor now: `meets_floor` True,
         False, or None when there is none, with every reason it does not."""

@@ -87,6 +87,7 @@ from vibey_gh.interfaces.slots_interface import OllamaClientInterface
 __all__ = [
     "CORPUS_SCHEMA",
     "LEDGER_FORMAT",
+    "SHARD_FORMAT",
     "VERDICT_SETTINGS",
     "CanaryLedger",
     "CanaryReport",
@@ -99,6 +100,7 @@ __all__ = [
 
 CORPUS_SCHEMA: Final = "vibey-gh/review-canary-corpus/1"
 LEDGER_FORMAT: Final = "vibey-gh/review-canary-ledger/1"
+SHARD_FORMAT: Final = "vibey-gh/review-canary-shard/1"
 LEDGER_KIND: Final = "ReviewCanaryMeasured"
 _GENESIS: Final = "0" * 64
 _ID = re.compile(r"[a-z0-9][a-z0-9-]*")
@@ -927,15 +929,39 @@ class ReviewCanary(ReviewCanaryInterface):
                 done[f"{value['case']}@{value['case_digest']}"] = value["review"]
         return done
 
-    def run(
-        self,
-        case_ids: Sequence[str] = (),
-        *,
-        work: Path | None = None,
-        record: bool = True,
-    ) -> dict[str, Any]:
-        cfg = self._config()
+    @staticmethod
+    def measured_settings(cfg: GhConfig) -> dict[str, Any]:
+        """`settings`, with the deadline rates `[pr_automation.review_canary]` declares for the
+        hardware the canary runs on in place of the review's own, when it declares them."""
+        settings = ReviewCanary.settings(cfg)
         canary = cfg.pr_automation.review_canary
+        if canary.prompt_tokens_per_second:
+            settings["prompt_tokens_per_second"] = canary.prompt_tokens_per_second
+            settings["output_tokens_per_second"] = canary.output_tokens_per_second
+        return settings
+
+    @staticmethod
+    def case_digest(built: BuiltCase) -> str:
+        """What a review of `built` was a review of: the diff and everything it is scored by."""
+        return CanaryLedger.digest(
+            {
+                "diff": built.diff,
+                "lines": built.lines,
+                "anchors": list(built.case.anchors),
+                "class": built.case.defect_class,
+                "kind": built.case.kind,
+            }
+        )
+
+    def _scoring(self, cfg: GhConfig) -> CanaryScorerInterface:
+        return self._scorer or CanaryScorer(
+            FindingMatcher(cfg.pr_automation.review_canary.line_tolerance)
+        )
+
+    def _chosen(
+        self, cfg: GhConfig, case_ids: Sequence[str]
+    ) -> tuple[CorpusLoaderInterface, Corpus, list[CanaryCase]]:
+        """The corpus, refused unless it is a measurement, and the cases asked for."""
         loader, corpus, problems = self._corpus(cfg)
         if problems:
             raise ValueError("the corpus is not a measurement: " + "; ".join(problems))
@@ -943,9 +969,16 @@ class ReviewCanary(ReviewCanaryInterface):
         unknown = [case_id for case_id in case_ids if case_id not in known]
         if unknown:
             raise ValueError(f"no such case: {', '.join(unknown)}")
-        chosen = [case for case in corpus.cases if not case_ids or case.id in case_ids]
-        settings = self.settings(cfg)
-        digest = self.settings_digest(settings)
+        return (
+            loader,
+            corpus,
+            [case for case in corpus.cases if not case_ids or case.id in case_ids],
+        )
+
+    def _listen(
+        self, cfg: GhConfig, settings: Mapping[str, Any]
+    ) -> tuple[str, dict[str, Any], dict[str, str]]:
+        """The model's endpoint, the conditions it is heard under, and the documents shown."""
         base_url = self._environ.get("VIBEY_OLLAMA_URL") or cfg.pr_automation.fallback.base_url
         client = self._connect(base_url)
         resident = client.loaded()
@@ -966,26 +999,57 @@ class ReviewCanary(ReviewCanaryInterface):
         conditions["documents"] = {
             name: hashlib.sha256(text.encode()).hexdigest()[:16] for name, text in documents.items()
         }
-        scorer = self._scorer or CanaryScorer(FindingMatcher(canary.line_tolerance))
+        return base_url, conditions, documents
+
+    @staticmethod
+    def _score(
+        scorer: CanaryScorerInterface, corpus: Corpus, built: BuiltCase, review: Mapping[str, Any]
+    ) -> CaseResult:
+        case = built.case
+        keywords = corpus.classes[case.defect_class].keywords if case.is_defect else ()
+        return scorer.score(
+            built,
+            keywords,
+            review["verdict"],
+            code=str(review["code"]),
+            seconds=float(review["seconds"]),
+            attempts=int(review["attempts"]),
+            parts=int(review["parts"]),
+            reason=str(review["reason"]),
+        )
+
+    def _progress(self, label: str, number: int, of: int, result: CaseResult) -> None:
+        self._out(
+            f"vibey-gh: review-canary{label} {number}/{of} {result.case_id}: {result.outcome}"
+            f" ({result.code}, {result.seconds:.0f}s)"
+        )
+
+    def _hear(
+        self,
+        cfg: GhConfig,
+        loader: CorpusLoaderInterface,
+        corpus: Corpus,
+        chosen: Sequence[CanaryCase],
+        *,
+        work: Path | None,
+        label: str = "",
+    ) -> dict[str, Any]:
+        """Review each chosen case -- or take what `work` already heard of it under these
+        settings -- scoring and reporting each as it is heard."""
+        settings = self.measured_settings(cfg)
+        digest = self.settings_digest(settings)
+        base_url, conditions, documents = self._listen(cfg, settings)
+        scorer = self._scoring(cfg)
         done = self._resume(work, digest)
         started_at = self._now()
         results: list[CaseResult] = []
-        reused, moments = 0, []
+        reviews: list[dict[str, Any]] = []
         for number, case in enumerate(chosen, 1):
             built = loader.build(corpus, case)
-            case_digest = CanaryLedger.digest(
-                {
-                    "diff": built.diff,
-                    "lines": built.lines,
-                    "anchors": list(case.anchors),
-                    "class": case.defect_class,
-                    "kind": case.kind,
-                }
-            )
+            case_digest = self.case_digest(built)
             review = done.get(f"{case.id}@{case_digest}")
-            if review is not None:
-                reused += 1
-            else:
+            reused = review is not None
+            if review is None:
                 review = self.review_case(built, settings, base_url=base_url, documents=documents)
                 if work is not None:
                     work.parent.mkdir(parents=True, exist_ok=True)
@@ -997,37 +1061,57 @@ class ReviewCanary(ReviewCanaryInterface):
                             "review": review,
                         }
                         handle.write(json.dumps(line, sort_keys=True) + "\n")
-            keywords = corpus.classes[case.defect_class].keywords if case.is_defect else ()
-            result = scorer.score(
-                built,
-                keywords,
-                review["verdict"],
-                code=str(review["code"]),
-                seconds=float(review["seconds"]),
-                attempts=int(review["attempts"]),
-                parts=int(review["parts"]),
-                reason=str(review["reason"]),
-            )
+            result = self._score(scorer, corpus, built, review)
             results.append(result)
-            if review.get("reviewed_at"):
-                moments.append(str(review["reviewed_at"]))
-            self._out(
-                f"vibey-gh: review-canary {number}/{len(chosen)} {case.id}: {result.outcome}"
-                f" ({result.code}, {result.seconds:.0f}s)"
+            reviews.append(
+                {"case": case.id, "case_digest": case_digest, "review": review, "reused": reused}
             )
-        summary = scorer.summarize(results, list(corpus.classes), canary.confidence_z)
-        floor = self.floor(cfg)
-        meets, _ = scorer.meets(summary, floor)
-        subset = len(chosen) != len(corpus.cases)
-        payload: dict[str, Any] = {
-            "recorded_at": self._now().isoformat(),
+            self._progress(label, number, len(chosen), result)
+        return {
+            "settings": settings,
+            "settings_digest": digest,
+            "conditions": conditions,
             "started_at": started_at.isoformat(),
-            "finished_at": self._now().isoformat(),
+            "results": results,
+            "reviews": reviews,
+        }
+
+    def _provenance(self, cfg: GhConfig) -> dict[str, str]:
+        """Where a measurement ran: the commit, the host, and the runner."""
+        return {
             "commit": self._git(cfg.root, "rev-parse", "HEAD"),
             "host": platform.node(),
             "platform": platform.platform(),
             "python": platform.python_version(),
             "runner": self._environ.get("RUNNER_NAME", ""),
+        }
+
+    def _payload(
+        self,
+        cfg: GhConfig,
+        corpus: Corpus,
+        chosen: Sequence[CanaryCase],
+        heard: Mapping[str, Any],
+        provenance: Mapping[str, str],
+    ) -> dict[str, Any]:
+        """The ledger line for what was heard: one shape, whether one run heard it or shards."""
+        canary = cfg.pr_automation.review_canary
+        scorer = self._scoring(cfg)
+        results: list[CaseResult] = list(heard["results"])
+        moments = [
+            str(item["review"]["reviewed_at"])
+            for item in heard["reviews"]
+            if item["review"].get("reviewed_at")
+        ]
+        summary = scorer.summarize(results, list(corpus.classes), canary.confidence_z)
+        floor = self.floor(cfg)
+        meets, _ = scorer.meets(summary, floor)
+        subset = len(chosen) != len(corpus.cases)
+        return {
+            "recorded_at": self._now().isoformat(),
+            "started_at": heard["started_at"],
+            "finished_at": self._now().isoformat(),
+            **provenance,
             "corpus": {
                 "path": canary.corpus,
                 "digest": corpus.digest,
@@ -1041,11 +1125,11 @@ class ReviewCanary(ReviewCanaryInterface):
             "case_ids": [case.id for case in chosen] if subset else [],
             # The run's own times are when it scored and recorded. When reviews came from a
             # work file, these say how many, and when the reviews that carry a time ran.
-            "reused_reviews": reused,
+            "reused_reviews": sum(1 for item in heard["reviews"] if item["reused"]),
             "reviewed_between": [min(moments), max(moments)] if moments else None,
-            "settings": settings,
-            "settings_digest": digest,
-            "conditions": conditions,
+            "settings": heard["settings"],
+            "settings_digest": heard["settings_digest"],
+            "conditions": heard["conditions"],
             "matching": {"line_tolerance": canary.line_tolerance},
             "results": summary,
             "floor": {
@@ -1056,10 +1140,203 @@ class ReviewCanary(ReviewCanaryInterface):
             "meets_floor_as_measured": meets and not subset,
             "cases": [result.as_dict() for result in results],
         }
+
+    def _record(self, cfg: GhConfig, payload: Mapping[str, Any]) -> None:
+        canary = cfg.pr_automation.review_canary
+        self._ledger.append(cfg.root / canary.ledger, payload)
+        if canary.report:
+            self.render()
+
+    def run(
+        self,
+        case_ids: Sequence[str] = (),
+        *,
+        work: Path | None = None,
+        record: bool = True,
+    ) -> dict[str, Any]:
+        cfg = self._config()
+        loader, corpus, chosen = self._chosen(cfg, case_ids)
+        heard = self._hear(cfg, loader, corpus, chosen, work=work)
+        payload = self._payload(cfg, corpus, chosen, heard, self._provenance(cfg))
         if record:
-            self._ledger.append(cfg.root / canary.ledger, payload)
-            if canary.report:
-                self.render()
+            self._record(cfg, payload)
+        return payload
+
+    # ------------------------------------------------------------------ sharding
+
+    @staticmethod
+    def parse_shard(text: str) -> tuple[int, int]:
+        """`I/N` as `(I, N)`: the shard counted from 0, of `N`."""
+        found = re.fullmatch(r"(\d+)/(\d+)", text.strip())
+        if not found or not 0 <= int(found[1]) < int(found[2]):
+            raise ValueError(f"--shard is I/N with 0 <= I < N, not {text!r}")
+        return int(found[1]), int(found[2])
+
+    def plan(self) -> dict[str, Any]:
+        cfg = self._config()
+        shards = cfg.pr_automation.review_canary.shards
+        return {
+            "model": cfg.pr_automation.fallback.model,
+            "shards": [f"{index}/{shards}" for index in range(shards)],
+        }
+
+    def shard(self, index: int, of: int, *, out: Path, work: Path | None = None) -> dict[str, Any]:
+        if not 0 <= index < of:
+            raise ValueError(f"shard {index}/{of} does not exist: I is 0 to N-1")
+        cfg = self._config()
+        loader, corpus, cases = self._chosen(cfg, ())
+        chosen = [case for number, case in enumerate(cases) if number % of == index]
+        heard = self._hear(cfg, loader, corpus, chosen, work=work, label=f" shard {index}/{of}")
+        written: dict[str, Any] = {
+            "format": SHARD_FORMAT,
+            "shard": {"index": index, "of": of},
+            "corpus": {"digest": corpus.digest, "pin": corpus.pin, "cases": len(corpus.cases)},
+            "settings": heard["settings"],
+            "settings_digest": heard["settings_digest"],
+            "conditions": heard["conditions"],
+            "started_at": heard["started_at"],
+            "finished_at": self._now().isoformat(),
+            **self._provenance(cfg),
+            "reviews": heard["reviews"],
+        }
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(written, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        return written
+
+    @staticmethod
+    def _together(values: Sequence[str]) -> str:
+        """One value where the shards agree, or every value they gave, sorted."""
+        distinct = sorted(set(values))
+        return distinct[0] if len(distinct) == 1 else ", ".join(distinct)
+
+    @staticmethod
+    def _resident(shards: Sequence[Mapping[str, Any]]) -> list[str] | None:
+        """The models loaded when the shards started: the one answer they agree on, or every
+        model any of them found loaded."""
+        seen: list[list[str] | None] = [
+            shard["conditions"].get("loaded_at_start") for shard in shards
+        ]
+        if all(value == seen[0] for value in seen):
+            return seen[0]
+        return list(dict.fromkeys(name for value in seen for name in value or []))
+
+    @staticmethod
+    def _read_shard(path: Path) -> dict[str, Any]:
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path} is not JSON: {exc.msg}") from exc
+        if not isinstance(value, dict) or value.get("format") != SHARD_FORMAT:
+            raise ValueError(f"{path} is not a review-canary shard ({SHARD_FORMAT})")
+        return value
+
+    def _shard_problems(self, shards: Sequence[Mapping[str, Any]], corpus: Corpus) -> list[str]:
+        """Every way the shards are not one measurement of the whole corpus."""
+        problems: list[str] = []
+        first = shards[0]
+        ways = sorted({int(shard["shard"]["of"]) for shard in shards})
+        if len(ways) > 1:
+            problems.append(f"the shards were cut {' and '.join(map(str, ways))} ways")
+        of = int(first["shard"]["of"])
+        given = Counter(int(shard["shard"]["index"]) for shard in shards)
+        problems += [
+            f"shard {index}/{of} is given {count} times"
+            for index, count in sorted(given.items())
+            if count > 1
+        ]
+        problems += [f"shard {index}/{of} is missing" for index in range(of) if index not in given]
+        for shard in shards:
+            name = f"shard {shard['shard']['index']}/{shard['shard']['of']}"
+            if (shard["corpus"]["digest"], shard["corpus"]["pin"]) != (corpus.digest, corpus.pin):
+                problems.append(f"{name} measured another corpus than the one in force")
+            moved = sorted(
+                key
+                for key in set(shard["settings"]) | set(first["settings"])
+                if shard["settings"].get(key) != first["settings"].get(key)
+            )
+            if moved:
+                problems.append(f"{name} ran under other settings: {', '.join(moved)}")
+            heard = {
+                key: value for key, value in shard["conditions"].items() if key != "loaded_at_start"
+            }
+            expected = {
+                key: value for key, value in first["conditions"].items() if key != "loaded_at_start"
+            }
+            moved = sorted(
+                key for key in set(heard) | set(expected) if heard.get(key) != expected.get(key)
+            )
+            if moved:
+                problems.append(f"{name} heard another model or documents: {', '.join(moved)}")
+            if shard["commit"] != first["commit"]:
+                problems.append(
+                    f"{name} ran at commit {shard['commit'][:12]}, not {first['commit'][:12]}"
+                )
+        place = {case.id: number for number, case in enumerate(corpus.cases)}
+        heard_count = Counter(item["case"] for shard in shards for item in shard["reviews"])
+        for shard in shards:
+            index = int(shard["shard"]["index"])
+            for item in shard["reviews"]:
+                number = place.get(item["case"])
+                if number is None:
+                    problems.append(f"case {item['case']} is not in the corpus")
+                elif number % of != index:
+                    problems.append(
+                        f"case {item['case']} is in shard {index}/{of}, but belongs to"
+                        f" {number % of}/{of}"
+                    )
+        problems += [
+            f"case {case} is reviewed {count} times"
+            for case, count in sorted(heard_count.items())
+            if count > 1
+        ]
+        problems += [
+            f"case {case.id} is reviewed by no shard"
+            for case in corpus.cases
+            if case.id not in heard_count
+        ]
+        return problems
+
+    def merge(self, paths: Sequence[Path], *, record: bool = True) -> dict[str, Any]:
+        if not paths:
+            raise ValueError("merge needs the shard files")
+        shards = sorted(
+            (self._read_shard(path) for path in paths),
+            key=lambda shard: int(shard["shard"]["index"]),
+        )
+        cfg = self._config()
+        loader, corpus, chosen = self._chosen(cfg, ())
+        problems = self._shard_problems(shards, corpus)
+        by_case = {item["case"]: item for shard in shards for item in shard["reviews"]}
+        built = {case.id: loader.build(corpus, case) for case in chosen}
+        problems += [
+            f"case {case_id} was reviewed as another diff than the corpus builds"
+            for case_id, item in by_case.items()
+            if case_id in built and item["case_digest"] != self.case_digest(built[case_id])
+        ]
+        if problems:
+            raise ValueError("the shards are not one measurement: " + "; ".join(problems))
+        scorer = self._scoring(cfg)
+        results: list[CaseResult] = []
+        for number, case in enumerate(chosen, 1):
+            result = self._score(scorer, corpus, built[case.id], by_case[case.id]["review"])
+            results.append(result)
+            self._progress("", number, len(chosen), result)
+        first = shards[0]
+        heard = {
+            "settings": first["settings"],
+            "settings_digest": self.settings_digest(first["settings"]),
+            "conditions": {**first["conditions"], "loaded_at_start": self._resident(shards)},
+            "started_at": min(str(shard["started_at"]) for shard in shards),
+            "results": results,
+            "reviews": [by_case[case.id] for case in chosen],
+        }
+        provenance = {
+            key: self._together([str(shard[key]) for shard in shards])
+            for key in ("commit", "host", "platform", "python", "runner")
+        }
+        payload = self._payload(cfg, corpus, chosen, heard, provenance)
+        if record:
+            self._record(cfg, payload)
         return payload
 
     def render(self, *, check: bool = False) -> int:
@@ -1105,8 +1382,7 @@ class ReviewCanary(ReviewCanaryInterface):
                 **said,
             }
         latest = entries[-1]
-        scorer = self._scorer or CanaryScorer(FindingMatcher(canary.line_tolerance))
-        _, reasons = scorer.meets(latest["results"], floor)
+        _, reasons = self._scoring(cfg).meets(latest["results"], floor)
         if latest.get("subset"):
             reasons.append("the latest measurement reviewed a subset of the corpus, not all of it")
         corpus = cfg.root / canary.corpus
@@ -1162,6 +1438,28 @@ class ReviewCanary(ReviewCanaryInterface):
         )
         run.add_argument("--no-record", action="store_true", help="print the result, write nothing")
         run.add_argument("--json", action="store_true", help="print the measurement as JSON")
+        run.add_argument(
+            "--shard",
+            default=None,
+            metavar="I/N",
+            help="review only the cases whose place in the corpus is I modulo N (I from 0),"
+            " writing what was heard to --out for `merge`; records nothing",
+        )
+        run.add_argument(
+            "--out", type=Path, default=None, help="the file a --shard run writes its reviews to"
+        )
+        merge = actions.add_parser(
+            "merge",
+            help="score and record the shard files of one sharded run as one measurement",
+        )
+        merge.add_argument("files", type=Path, nargs="+", help="every shard's --out file")
+        merge.add_argument(
+            "--no-record", action="store_true", help="print the result, write nothing"
+        )
+        merge.add_argument("--json", action="store_true", help="print the measurement as JSON")
+        actions.add_parser(
+            "plan", help="print, as JSON, the model to serve and one I/N per declared shard"
+        )
         render = actions.add_parser(
             "render", help="write the latest measurement into the report page's block"
         )
@@ -1184,9 +1482,18 @@ class ReviewCanary(ReviewCanaryInterface):
                 return self._check()
             if args.canary_action == "show":
                 return self._show(args.case)
+            if args.canary_action == "run" and (args.shard or args.out):
+                return self._run_shard(args)
             if args.canary_action == "run":
                 measured = self.run(args.case, work=args.work, record=not args.no_record)
                 self._out(json.dumps(measured, indent=2) if args.json else self.summary(measured))
+                return 0
+            if args.canary_action == "merge":
+                measured = self.merge(args.files, record=not args.no_record)
+                self._out(json.dumps(measured, indent=2) if args.json else self.summary(measured))
+                return 0
+            if args.canary_action == "plan":
+                self._out(json.dumps(self.plan()))
                 return 0
             if args.canary_action == "render":
                 return self.render(check=args.check)
@@ -1202,6 +1509,24 @@ class ReviewCanary(ReviewCanaryInterface):
             for reason in answer["reasons"]:
                 self._out(f"  - {reason}")
         return {True: 0, False: 1, None: 3}[answer["meets_floor"]]
+
+    def _run_shard(self, args: argparse.Namespace) -> int:
+        if not (args.shard and args.out):
+            raise ValueError("--shard and --out go together")
+        if args.case or args.no_record:
+            raise ValueError(
+                "a shard reviews its own cases and records nothing: drop --case and --no-record"
+            )
+        index, of = self.parse_shard(args.shard)
+        written = self.shard(index, of, out=args.out, work=args.work)
+        if args.json:
+            self._out(json.dumps(written, indent=2, sort_keys=True))
+        else:
+            self._out(
+                f"vibey-gh: review-canary shard {index}/{of}: {len(written['reviews'])} cases"
+                f" heard, written to {args.out}"
+            )
+        return 0
 
     def _check(self) -> int:
         _, corpus, problems = self._corpus(self._config())

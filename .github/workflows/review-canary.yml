@@ -2,15 +2,21 @@
 name: Review canary
 
 # Whether the sovereign review catches real defects is a measurement, repeated weekly, never
-# a belief. Once a week, at a quiet hour, and by hand, the self-hosted sovereign runner hands
-# every case of the review canary's corpus -- diffs against this repository's own code, each
-# with one planted defect or none at all -- to the same `vibey-gh local-review`
-# the pull-request review runs, with every `[pr_automation.fallback]` setting
-# (`vibey-gh review-canary run`). Each request waits for a free model slot first (the
-# review's own `slot_wait_seconds`), so another client's work is queued behind, never
-# preempted. The measurement is appended to the ledger, the runbook's generated block is
-# re-rendered, and both land as a pull request through the normal merge train; nothing here
-# pushes to develop.
+# a belief. Once a week, at a quiet hour, and by hand, every case of the review canary's
+# corpus -- diffs against this repository's own code, each with one planted defect or none
+# at all -- goes to the same `vibey-gh local-review` the pull-request review runs, with every
+# `[pr_automation.fallback]` setting that decides a verdict (`vibey-gh review-canary run`).
+#
+# It runs on GitHub-hosted runners only (operator, 2026-10-03), serving the declared model
+# with Ollama on CPU. There one case takes ~10-30 minutes and a hosted job may run 360, so
+# the corpus is cut into `[pr_automation.review_canary] shards` jobs: `plan` reads how many,
+# each `measure` job reviews the cases whose place in the corpus is its index modulo that
+# number (`run --shard I/N`), and `merge` refuses unless the shards cover every case exactly
+# once under one corpus, commit, model and set of settings, then records the one ledger line
+# an unsharded run would have (`vibey-gh review-canary merge`). The deadline rates are the
+# hosted runner's, declared beside the shard count; the review's own are unchanged. The
+# ledger and the runbook's re-rendered block land as a pull request through the normal merge
+# train; nothing here pushes to develop.
 on:
   schedule:
     # Wednesday 06:41 UTC: before dawn in the operator's zone, clear of minimum-specs.yml
@@ -21,47 +27,157 @@ on:
 permissions:
   contents: read
 
-# One measurement at a time: two would contend for the one model slot and each would record
-# the other as load. A queued run waits rather than cancels a long measurement in flight.
+# One measurement at a time: two would race to open the same measurement pull request, and
+# a queued run waits rather than cancels a long measurement in flight.
 concurrency:
   group: review-canary-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
-  measure:
-    name: Measure on the sovereign runner
-    runs-on: [self-hosted, vibey-local-vibey]
-    # Dozens of reviews of several minutes each, any of which may first wait up to
-    # `slot_wait_seconds` for the model to come free.
-    timeout-minutes: 600
-    # No write token on the self-hosted runner: it measures and hands the files over as an
-    # artifact. Committing and opening the pull request happen on a hosted runner below.
+  plan:
+    name: Plan the shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
+    outputs:
+      commit: ${{ steps.plan.outputs.commit }}
+      model: ${{ steps.plan.outputs.model }}
+      shards: ${{ steps.plan.outputs.shards }}
     steps:
       - name: Check out the integration branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: develop
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      # Every shard and the merge check out this one commit, so develop moving mid-run cannot
+      # make the shards measure different trees; `merge` refuses shards from two commits.
+      - name: Read the model and the shard count from the configuration
+        id: plan
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet -e src/vibey_tools/gh
+          plan="$(vibey-gh review-canary plan)"
+          echo "$plan"
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            echo "model=$(jq -r .model <<<"$plan")"
+            echo "shards=$(jq -c .shards <<<"$plan")"
+          } >> "$GITHUB_OUTPUT"
+
+  measure:
+    name: Measure shard ${{ matrix.shard }}
+    needs: plan
+    runs-on: ubuntu-24.04-arm
+    # The declared shard count leaves a job few enough cases to fit even if each runs to its
+    # deadline; this is the hosted limit, less a margin to upload what was heard.
+    timeout-minutes: 355
+    permissions:
+      contents: read
+    strategy:
+      # A shard that fails leaves the measurement incomplete and `merge` refuses it, but the
+      # others still finish and hand their reviews over, so re-running only the failed jobs
+      # completes the measurement.
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - name: Check out the planned commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
           # The corpus's cases are edits to files at its pinned commit, read with `git show`.
           fetch-depth: 0
           persist-credentials: false
 
       - uses: astral-sh/setup-uv@v7
 
-      - name: Review the corpus and record the measurement
+      # As continuation-prompts.yml starts one, but only the declared model: a measurement
+      # under another model vouches for nothing, so there is no fallback to try.
+      - name: Start the declared open-weights model
+        env:
+          MODEL: ${{ needs.plan.outputs.model }}
+        run: |
+          set -euo pipefail
+          # Ollama's installer first; its own GitHub release if the installer is unreachable.
+          if ! curl -fsSL https://ollama.com/install.sh | sh; then
+            echo "::warning::the Ollama installer failed; installing Ollama's GitHub release instead"
+            url=$(curl -fsSL https://api.github.com/repos/ollama/ollama/releases/latest \
+              | python3 -c "import json,sys; print(next(a['browser_download_url'] for a in json.load(sys.stdin)['assets'] if a['name']=='ollama-linux-arm64.tar.zst'))")
+            curl -fsSL "$url" | sudo tar --zstd -x -C /usr/local
+          fi
+          (ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &)
+          for _ in $(seq 1 60); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
+          ollama pull "$MODEL"
+          free -g
+          df -h /
+
+      - name: Review this shard's cases
+        env:
+          SHARD: ${{ matrix.shard }}
+          VIBEY_OLLAMA_URL: http://127.0.0.1:11434
+          OUT: ${{ runner.temp }}/review-canary-shards/shard-${{ strategy.job-index }}.json
         run: |
           set -euo pipefail
           # The tree's own vibey-gh, so the review is exactly the one this commit's pull
-          # requests get. `VIBEY_OLLAMA_URL` comes from the runner's environment, as it does
-          # for the pull-request review.
+          # requests get.
           canary() {
             uv run --no-project --python 3.12 --with ./src/vibey_tools/gh \
               vibey-gh review-canary "$@"
           }
           canary check
-          canary run --work "${RUNNER_TEMP}/review-canary.work.jsonl"
-          canary render --check
+          canary run --shard "$SHARD" --out "$OUT" --work "${RUNNER_TEMP}/review-canary.work.jsonl"
+
+      - name: Hand this shard's reviews over
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-canary-shard-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/review-canary-shards/
+          if-no-files-found: error
+          retention-days: 14
+
+  merge:
+    name: Merge the shards into one measurement
+    needs: [plan, measure]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # No write token: it records the measurement and hands the files over as an artifact.
+    # Committing and opening the pull request happen in `publish` below.
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the planned commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.plan.outputs.commit }}
+          # `merge` rebuilds every case at the corpus pin to check each review was of it.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Take every shard's reviews
+        uses: actions/download-artifact@v4
+        with:
+          pattern: review-canary-shard-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/review-canary-shards
+
+      - name: Merge, record and render the measurement
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet -e src/vibey_tools/gh
+          vibey-gh review-canary merge "$RUNNER_TEMP"/review-canary-shards/*.json
+          vibey-gh review-canary render --check
           {
             echo "## Review canary"
             sed -n '/BEGIN GENERATED review-canary/,/END GENERATED review-canary/p' \
@@ -80,7 +196,7 @@ jobs:
 
   publish:
     name: Open the measurement pull request
-    needs: measure
+    needs: merge
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -148,5 +264,5 @@ jobs:
               --base develop \
               --head "$branch" \
               --title "chore(canary): record the weekly review-canary measurement" \
-              --body "Weekly measurement of the sovereign review's recall and false-positive rate against the review canary's corpus of planted defects and controls (\`vibey-gh review-canary run\` on the self-hosted runner, with every \`[pr_automation.fallback]\` setting). One line is appended to the append-only ledger and the runbook's generated block is re-rendered from it. Merge through the repository's normal train after the checks pass."
+              --body "Weekly measurement of the sovereign review's recall and false-positive rate against the review canary's corpus of planted defects and controls (\`vibey-gh review-canary run --shard\` on GitHub-hosted runners, joined by \`vibey-gh review-canary merge\`, with every \`[pr_automation.fallback]\` setting that decides a verdict). One line is appended to the append-only ledger and the runbook's generated block is re-rendered from it. Merge through the repository's normal train after the checks pass."
           fi

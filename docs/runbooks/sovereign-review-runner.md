@@ -167,8 +167,13 @@ A verdict from this runner is only worth what its recall is. The review canary m
 classes, and 14 clean controls — reviewed through `vibey-gh local-review` with every
 `[pr_automation.fallback]` setting the pull-request review uses
 (`docs/architecture/evidence/review-canary/corpus.toml` says how each was built).
-`review-canary.yml` runs it weekly on this runner, waiting for a free model slot, and lands
-the new measurement as a pull request. A defect counts as caught only when the verdict
+`review-canary.yml` runs it weekly on GitHub-hosted runners, not this one (operator,
+2026-10-03: every CI workflow on hosted runners): it serves the same model with Ollama on
+the runners' CPU, cut into `[pr_automation.review_canary] shards` jobs that
+`vibey-gh review-canary merge` joins into one measurement, and lands it as a pull request.
+Every setting that decides a verdict is the one this runner reviews with; the deadline
+rates are the hosted runners' own, declared beside the shard count. The silicon differs, so
+a weekly measurement is of this configuration on CPU, not of this machine. A defect counts as caught only when the verdict
 blocks and a finding is on the planted lines and names the defect's class. A review that
 gives no verdict is counted apart, never as caught or missed.
 

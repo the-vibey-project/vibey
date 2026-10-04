@@ -413,7 +413,7 @@ trusted_only = true
 source_context = true
 
 # Whether the review above catches real defects, measured (`vibey-gh review-canary run`,
-# weekly by review-canary.yml on the same runner): 27 planted defects in nine classes and 14
+# weekly by review-canary.yml on GitHub-hosted runners): 27 planted defects in nine classes and 14
 # controls, diffs against this repository's own code, each reviewed through `local-review`
 # with every setting above. The 2026-09-30 audit found `think = "low"` passing every pull
 # request the gate had blocked, and no study so far carried a known-true defect, so recall
@@ -437,6 +437,21 @@ report = "docs/runbooks/sovereign-review-runner.md"
 min_recall_lower_bound = 0.5
 max_false_positive_upper_bound = 0.5
 max_age_days = 14
+# Where it runs (operator, 2026-10-03: every CI workflow on GitHub-hosted runners only):
+# review-canary.yml measures on `ubuntu-24.04-arm` (4 vCPU, 16 GB), serving the model on
+# CPU, cut into `shards` jobs that `vibey-gh review-canary merge` joins into one ledger line.
+# - The deadline rates are that runner's, not the M5's 200/20 the review's deadlines use:
+#   gpt-oss:20b read 44.5 tokens/s and generated 2.8 there
+#   (docs/architecture/evidence/minimum-specs.json), rounded down as the review's were. They
+#   let a hosted review reason as far as the M5's deadline lets the real one; the review's
+#   own settings in [pr_automation.fallback] are unchanged.
+# - 21 shards leave at most two of the 41 cases to a job. A request's deadline here is at
+#   most ~157 minutes (a full 49,152-token prompt at 40/s, then the 16,384-token reasoning
+#   reserve at 2/s), so two cases fit the 355-minute job even if both run to it; typically a
+#   case takes ~10-30 minutes and a job under an hour.
+shards = 21
+prompt_tokens_per_second = 40
+output_tokens_per_second = 2
 
 [runners]
 # The machine that serves the sovereign lane above, declared (12.c): `vibey-gh runner install`
