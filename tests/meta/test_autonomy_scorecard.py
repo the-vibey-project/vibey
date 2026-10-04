@@ -74,8 +74,12 @@ def test_the_workflow_measures_weekly_and_lands_as_a_pull_request() -> None:
     assert spec["permissions"] == {"contents": "read"}
     forge, queue, publish = (spec["jobs"][j] for j in ("forge", "queue", "publish"))
     assert "write" not in forge["permissions"].values()
-    assert queue["runs-on"] == ["self-hosted", "vibey-local-vibey"]
-    assert queue["permissions"] == {"contents": "read"}, "no write token on the self-hosted runner"
+    # Every CI job runs on a GitHub-hosted runner (the operator's decision, 2026-10-03); the
+    # queue is reached only through the declared read-only DSN secret, unknown without it.
+    assert queue["runs-on"] == "ubuntu-latest"
+    assert queue["permissions"] == {"contents": "read"}, "no write token in the observing job"
+    observe = next(step for step in queue["steps"] if step.get("name") == "Observe")
+    assert observe["env"] == {"VIBEY_AUTONOMY_QUEUE_DSN": "${{ secrets.VIBEY_AUTONOMY_QUEUE_DSN }}"}
     assert publish["needs"] == ["forge", "queue"] and publish["if"] == "${{ !cancelled() }}"
     script = "\n".join(step.get("run", "") for step in publish["steps"])
     assert "autonomy_scorecard.py record" in script and "autonomy_scorecard.py check" in script
