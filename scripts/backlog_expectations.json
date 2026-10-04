@@ -1,6 +1,36 @@
 {
   "_comment": "Declared state for scripts/backlog_cleanup.py. Per-issue probes plus last applied verdict; the hourly loop commits this file when verdicts change. Everything-as-code (ADR-0018): a value that could be a key is a key.",
   "issues": {
+    "1000": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #855; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 855
+        }
+      ]
+    },
+    "1002": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #857; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 857
+        }
+      ]
+    },
+    "1003": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #968; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 968
+        }
+      ]
+    },
     "1024": {
       "close_when_done": true,
       "kind": "epic",
@@ -276,11 +306,20 @@
       "probes": []
     },
     "1180": {
-      "close_when_done": false,
+      "close_when_done": true,
       "kind": "standalone",
       "last_verdict": "OPEN",
-      "next": "refresh the 29-gate count against the tip",
-      "probes": []
+      "next": "3.0.0 shipped (PyPI 2026-09-29); the gate it tracked has nothing left to gate",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              "CHANGELOG.md"
+            ],
+            "pattern": "\\n## \\[3\\.0\\.0\\]"
+          }
+        }
+      ]
     },
     "1181": {
       "close_when_done": false,
@@ -510,11 +549,26 @@
       "probes": []
     },
     "1376": {
-      "close_when_done": false,
+      "close_when_done": true,
       "kind": "standalone",
       "last_verdict": "OPEN",
-      "next": "land the hybrid engine dispatch (ADR-0079); the engine retirement landed in #1377",
-      "probes": []
+      "next": "delivered: #1377 retired the engines (ADR-0078), #1385 added hybrid dispatch (ADR-0079)",
+      "probes": [
+        {
+          "path_exists": "docs/architecture/decisions/0078-retire-cursorloop-and-agyloop.md"
+        },
+        {
+          "path_exists": "docs/architecture/decisions/0079-hybrid-engine-dispatch.md"
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey/domain/engine_dispatch.py"
+            ],
+            "pattern": "EngineOverflowSelected"
+          }
+        }
+      ]
     },
     "138": {
       "close_when_done": false,
@@ -539,6 +593,32 @@
           }
         }
       ]
+    },
+    "1392": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "next": "the drill's agent exit status and report are both empty, yet the issue claims a finding; make the continuation lane report an empty drill as a lane failure, then re-run the drill",
+      "probes": []
+    },
+    "1393": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "next": "the drill's agent exit status and report are both empty, yet the issue claims a finding; make the continuation lane report an empty drill as a lane failure, then re-run the drill",
+      "probes": []
+    },
+    "1394": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "next": "the drill's agent exit status and report are both empty, yet the issue claims a finding; make the continuation lane report an empty drill as a lane failure, then re-run the drill",
+      "probes": []
+    },
+    "1397": {
+      "close_when_done": false,
+      "hold_reason": "branch-health.yml opened this tracking issue and owns it; it closes when develop's tip is green",
+      "kind": "hold",
+      "never_act": true,
+      "next": "",
+      "probes": []
     },
     "143": {
       "close_when_done": false,
@@ -970,6 +1050,566 @@
       "last_verdict": "OPEN",
       "next": "operator priority order",
       "probes": []
+    },
+    "935": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #825; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 825
+        }
+      ]
+    },
+    "936": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #826; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 826
+        }
+      ]
+    },
+    "937": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #827; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 827
+        }
+      ]
+    },
+    "938": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #828; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 828
+        }
+      ]
+    },
+    "939": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #829; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 829
+        }
+      ]
+    },
+    "940": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #830; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 830
+        }
+      ]
+    },
+    "941": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #831; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 831
+        }
+      ]
+    },
+    "942": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #832; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 832
+        }
+      ]
+    },
+    "943": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #833; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 833
+        }
+      ]
+    },
+    "944": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #834; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 834
+        }
+      ]
+    },
+    "945": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #835; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 835
+        }
+      ]
+    },
+    "946": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #836; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 836
+        }
+      ]
+    },
+    "947": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #837; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 837
+        }
+      ]
+    },
+    "948": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #838; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 838
+        }
+      ]
+    },
+    "949": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #839; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 839
+        }
+      ]
+    },
+    "950": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #840; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 840
+        }
+      ]
+    },
+    "951": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #841; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 841
+        }
+      ]
+    },
+    "952": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #842; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 842
+        }
+      ]
+    },
+    "953": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #843; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 843
+        }
+      ]
+    },
+    "954": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #844; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 844
+        }
+      ]
+    },
+    "955": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #845; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 845
+        }
+      ]
+    },
+    "956": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #846; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 846
+        }
+      ]
+    },
+    "957": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #847; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 847
+        }
+      ]
+    },
+    "958": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #848; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 848
+        }
+      ]
+    },
+    "959": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #849; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 849
+        }
+      ]
+    },
+    "960": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #850; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 850
+        }
+      ]
+    },
+    "961": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #851; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 851
+        }
+      ]
+    },
+    "962": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #852; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 852
+        }
+      ]
+    },
+    "963": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #853; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 853
+        }
+      ]
+    },
+    "964": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #854; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 854
+        }
+      ]
+    },
+    "965": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #855; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 855
+        }
+      ]
+    },
+    "967": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #857; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 857
+        }
+      ]
+    },
+    "976": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #831; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 831
+        }
+      ]
+    },
+    "977": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #832; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 832
+        }
+      ]
+    },
+    "978": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #833; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 833
+        }
+      ]
+    },
+    "979": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #834; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 834
+        }
+      ]
+    },
+    "980": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #835; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 835
+        }
+      ]
+    },
+    "981": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #836; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 836
+        }
+      ]
+    },
+    "982": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #837; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 837
+        }
+      ]
+    },
+    "983": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #838; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 838
+        }
+      ]
+    },
+    "984": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #839; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 839
+        }
+      ]
+    },
+    "985": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #840; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 840
+        }
+      ]
+    },
+    "986": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #841; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 841
+        }
+      ]
+    },
+    "987": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #842; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 842
+        }
+      ]
+    },
+    "988": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #843; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 843
+        }
+      ]
+    },
+    "989": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #844; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 844
+        }
+      ]
+    },
+    "990": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #845; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 845
+        }
+      ]
+    },
+    "991": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #846; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 846
+        }
+      ]
+    },
+    "992": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #847; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 847
+        }
+      ]
+    },
+    "993": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #848; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 848
+        }
+      ]
+    },
+    "994": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #849; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 849
+        }
+      ]
+    },
+    "995": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #850; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 850
+        }
+      ]
+    },
+    "996": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #851; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 851
+        }
+      ]
+    },
+    "997": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #852; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 852
+        }
+      ]
+    },
+    "998": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #853; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 853
+        }
+      ]
+    },
+    "999": {
+      "close_when_done": true,
+      "kind": "duplicate",
+      "next": "exact copy of #854; closed against it",
+      "probes": [
+        {
+          "duplicate_of": 854
+        }
+      ]
     }
   }
 }
