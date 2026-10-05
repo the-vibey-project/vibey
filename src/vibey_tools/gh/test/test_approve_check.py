@@ -1034,7 +1034,10 @@ def test_the_first_lane_naming_the_head_is_the_one_that_applies(tmp_path: Path) 
         lambda: ApprovalLaneConfig("l", "", (ApprovalTierConfig("t", ("a",)),)),
         lambda: ApprovalLaneConfig("l", "b/*", ()),
         lambda: ApprovalLaneConfig(
-            "l", "b/*", (ApprovalTierConfig("t", ("a",)),), accept_draft=1  # type: ignore[arg-type]
+            "l",
+            "b/*",
+            (ApprovalTierConfig("t", ("a",)),),
+            accept_draft=1,  # type: ignore[arg-type]
         ),
     ],
 )
