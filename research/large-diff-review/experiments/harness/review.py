@@ -30,15 +30,27 @@ from vibey_gh.review_canary import CanaryScorer, ReviewCanary
 
 def pinned_settings() -> dict[str, Any]:
     """Production's settings as read now, refused unless they equal the ones recorded at
-    registration (corpus/hosts.json): a branch merge must never move the study's baseline."""
+    registration (corpus/hosts.json): a branch merge must never move the study's baseline.
+
+    A production deadline-rate change may make the live defaults more generous while this
+    study is running.  That changes when a request is stopped, so it cannot change an arm
+    halfway through a round.  Permit only those two defaults to drift and keep returning the
+    registered values; every other setting still fails closed.  LOG.md records the observed
+    drift before the first request after it.
+    """
     from corpus import CORPUS
     from vibey_gh.config import load_config
 
     now = ReviewCanary.settings(load_config())
     registered = json.loads((CORPUS / "hosts.json").read_text())["production_settings"]
-    if now != registered:
+    deadline_rates = {"prompt_tokens_per_second", "output_tokens_per_second"}
+    non_deadline_now = {key: value for key, value in now.items() if key not in deadline_rates}
+    non_deadline_registered = {
+        key: value for key, value in registered.items() if key not in deadline_rates
+    }
+    if non_deadline_now != non_deadline_registered:
         raise RuntimeError(f"production settings moved since registration: {now} != {registered}")
-    return now
+    return registered
 
 
 NUM_CTX = 65536

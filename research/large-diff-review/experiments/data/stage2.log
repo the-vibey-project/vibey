@@ -259,3 +259,19 @@
 {"arm": "D16-T1-high-BF8192", "case_id": "needle-1155-guard-worktree-foreign-branch-late#part", "code": "reviewed", "wall_s": 392.79, "outcome": "caught"}
 {"arm": "D16-T1-high-BF8192", "case_id": "needle-1161-leak-estimate-ledger-handle-early#part", "code": "reviewed", "wall_s": 421.46000000000004, "outcome": "missed"}
 {"arm": "D16-T1-high-BF8192", "case_id": "needle-1161-errret-worktree-list-empty-middle#part", "code": "reviewed", "wall_s": 432.74, "outcome": "missed"}
+Traceback (most recent call last):
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/stage2.py", line 115, in <module>
+    sys.exit(main(sys.argv))
+             ~~~~^^^^^^^^^^
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/stage2.py", line 40, in main
+    arm = make_arm(name, model)
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/arms.py", line 33, in make_arm
+    return ProductionArm(
+        "A2", model, options={"temperature": 1.0, "top_p": 1.0, "seed": 42}, offline=offline
+    )
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/review.py", line 335, in __init__
+    self.settings = pinned_settings()
+                    ~~~~~~~~~~~~~~~^^
+  File "/Users/adam/git/vibey-storm/research-large-diff-review/research/large-diff-review/experiments/harness/review.py", line 40, in pinned_settings
+    raise RuntimeError(f"production settings moved since registration: {now} != {registered}")
+RuntimeError: production settings moved since registration: {'model': 'gpt-oss:20b', 'think': '', 'context_window': 65536, 'reasoning_reserve_tokens': 16384, 'chars_per_token': 3, 'max_diff_chars': 60000, 'max_document_chars': 120000, 'max_chunks': 6, 'split_added_hunks': True, 'source_context': True, 'max_source_chars': 60000, 'max_source_file_bytes': 1000000, 'context_paths': ['README.md', 'docs/index.md'], 'scope': 'full', 'role': 'sovereign', 'timeout_seconds': 600, 'retries': 1, 'retry_backoff_seconds': 30, 'prompt_tokens_per_second': 40, 'output_tokens_per_second': 2, 'slot_wait_seconds': 900} != {'model': 'gpt-oss:20b', 'think': '', 'context_window': 65536, 'reasoning_reserve_tokens': 16384, 'chars_per_token': 3, 'max_diff_chars': 60000, 'max_document_chars': 120000, 'max_chunks': 6, 'split_added_hunks': True, 'source_context': True, 'max_source_chars': 60000, 'max_source_file_bytes': 1000000, 'context_paths': ['README.md', 'docs/index.md'], 'scope': 'full', 'role': 'sovereign', 'timeout_seconds': 600, 'retries': 1, 'retry_backoff_seconds': 30, 'prompt_tokens_per_second': 200, 'output_tokens_per_second': 20, 'slot_wait_seconds': 900}
