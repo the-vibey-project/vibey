@@ -25,6 +25,8 @@ from vibey_gh import approval_check, cli, merge_train
 from vibey_gh.approval_check import ApprovalCheck, ApprovalVerdict
 from vibey_gh.config import (
     CODEOWNERS_SENTINEL,
+    ApprovalLaneConfig,
+    ApprovalTierConfig,
     GhConfig,
     PrAutomationConfig,
     UnattendedApprovalConfig,
@@ -904,3 +906,149 @@ def test_an_approval_the_forge_did_not_record_is_a_failure(
     assert check(tmp_path, transport=transport).run(7, HEAD, approve=True) == 1
     assert _submitted(transport) == [key]
     assert "was not recorded" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------------ lanes (continuation)
+
+
+def lane(**kw: Any) -> ApprovalLaneConfig:
+    base: dict[str, Any] = dict(
+        name="continuation",
+        branch="continuation/*",
+        accept_draft=True,
+        tiers=(
+            ApprovalTierConfig("code", ("src/**",), max_files=2, paired_tests=("tests/**",)),
+            ApprovalTierConfig("tests", ("tests/**",), max_files=3),
+            ApprovalTierConfig("docs", ("docs/**",)),
+        ),
+    )
+    base.update(kw)
+    return ApprovalLaneConfig(**base)
+
+
+def lane_pr(*paths: str, **kw: Any) -> dict[str, Any]:
+    fields: dict[str, Any] = {
+        "isDraft": True,
+        "headRefName": "continuation/resume-2026-10-05",
+        "changedFiles": len(paths),
+        CHANGED_PATHS_KEY: list(paths),
+        LISTED_FILES_KEY: len(paths),
+    }
+    fields.update(kw)
+    return pull_request(**fields)
+
+
+def laned(tmp_path: Path, pr: dict[str, Any], **lane_kw: Any) -> tuple[str, ...]:
+    return check(tmp_path, pr=pr, lanes=(lane(**lane_kw),)).evaluate(7).refusals
+
+
+def test_a_draft_is_refused_without_a_lane_and_admitted_inside_one(tmp_path: Path) -> None:
+    pr = lane_pr("docs/a.md")
+    assert refusals(tmp_path, pr=pr) == ("pull request: is a draft",)
+    assert laned(tmp_path, pr) == ()
+
+
+def test_a_lane_that_does_not_accept_drafts_leaves_the_draft_refused(tmp_path: Path) -> None:
+    assert laned(tmp_path, lane_pr("docs/a.md"), accept_draft=False) == (
+        "pull request: is a draft",
+    )
+
+
+def test_a_draft_on_another_branch_is_not_the_lanes_to_admit(tmp_path: Path) -> None:
+    pr = lane_pr("docs/a.md", headRefName="feature/x")
+    assert laned(tmp_path, pr) == ("pull request: is a draft",)
+
+
+def test_a_lane_never_replaces_the_general_grant(tmp_path: Path) -> None:
+    pr = lane_pr("docs/a.md", author={"login": "stranger"}, baseRefName="main")
+    found = laned(tmp_path, pr)
+    assert any(r.startswith("author:") for r in found)
+    assert any(r.startswith("branch:") for r in found)
+
+
+def test_the_forbidden_floor_holds_beneath_every_tier(tmp_path: Path) -> None:
+    pr = lane_pr("docs/a.md", ".github/workflows/ci.yml")
+    found = laned(tmp_path, pr)
+    assert any(r.startswith("forbidden path:") for r in found)
+    assert any("in no tier" in r for r in found)
+
+
+def test_a_file_in_no_tier_refuses_the_whole_pull_request(tmp_path: Path) -> None:
+    found = laned(tmp_path, lane_pr("docs/a.md", "pr_list.txt"))
+    assert found == ("lane continuation: pr_list.txt in no tier",)
+
+
+def test_each_tier_applies_its_own_file_limit(tmp_path: Path) -> None:
+    found = laned(tmp_path, lane_pr("src/a.py", "src/b.py", "src/c.py", "tests/t.py"))
+    assert found == ("lane continuation: tier code changes 3 files, more than its 2",)
+
+
+def test_code_lands_only_with_a_test_and_the_first_matching_tier_wins(tmp_path: Path) -> None:
+    found = laned(tmp_path, lane_pr("src/a.py"))
+    assert found == ("lane continuation: tier code changes src/a.py with no test beside it",)
+    assert laned(tmp_path, lane_pr("src/a.py", "tests/t.py")) == ()
+    # tests/t.py is in the tests tier, not code: a test file does not need a test of its own.
+    assert laned(tmp_path, lane_pr("tests/t.py")) == ()
+
+
+def test_a_tier_with_no_limit_and_no_pairing_asks_for_nothing(tmp_path: Path) -> None:
+    many = [f"docs/{n}.md" for n in range(40)]
+    assert laned(tmp_path, lane_pr(*many)) == ()
+
+
+def test_a_long_list_of_strays_is_shortened(tmp_path: Path) -> None:
+    found = laned(tmp_path, lane_pr("a", "b", "c", "d", "e"))
+    assert found == ("lane continuation: a, b, c and 2 more in no tier",)
+
+
+def test_a_fork_is_never_a_lane_pull_request(tmp_path: Path) -> None:
+    found = laned(tmp_path, lane_pr("docs/a.md", isCrossRepository=True))
+    assert found == ("lane continuation: the head is on a fork, which no lane admits",)
+
+
+def test_a_lane_cannot_rule_on_files_nobody_listed(tmp_path: Path) -> None:
+    pr = lane_pr("docs/a.md")
+    del pr[CHANGED_PATHS_KEY]
+    found = laned(tmp_path, pr)
+    assert "lane continuation: the changed files could not be listed" in found
+
+
+def test_the_first_lane_naming_the_head_is_the_one_that_applies(tmp_path: Path) -> None:
+    strict = lane(name="strict", tiers=(ApprovalTierConfig("docs", ("docs/**",), max_files=1),))
+    loose = lane(name="loose")
+    pr = lane_pr("docs/a.md", "docs/b.md")
+    found = check(tmp_path, pr=pr, lanes=(strict, loose)).evaluate(7).refusals
+    assert found == ("lane strict: tier docs changes 2 files, more than its 1",)
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda: ApprovalTierConfig("", ("a",)),
+        lambda: ApprovalTierConfig("t", ()),
+        lambda: ApprovalTierConfig("t", ("a", "a")),
+        lambda: ApprovalTierConfig("t", ("a",), max_files=-1),
+        lambda: ApprovalTierConfig("t", ("a",), max_files=True),
+        lambda: ApprovalTierConfig("t", ("a",), max_files="3"),  # type: ignore[arg-type]
+        lambda: ApprovalLaneConfig("", "b/*", (ApprovalTierConfig("t", ("a",)),)),
+        lambda: ApprovalLaneConfig("l", "", (ApprovalTierConfig("t", ("a",)),)),
+        lambda: ApprovalLaneConfig("l", "b/*", ()),
+        lambda: ApprovalLaneConfig(
+            "l", "b/*", (ApprovalTierConfig("t", ("a",)),), accept_draft=1  # type: ignore[arg-type]
+        ),
+    ],
+)
+def test_a_lane_or_tier_that_bounds_nothing_or_is_malformed_is_rejected(build: Any) -> None:
+    with pytest.raises((ValueError, TypeError)):
+        build()
+
+
+def test_the_declared_continuation_lane_loads_and_is_a_bound_not_a_pass() -> None:
+    declared = load_config(REPO_ROOT).unattended_approval
+    [continuation] = [candidate for candidate in declared.lanes if candidate.name == "continuation"]
+    assert continuation.accept_draft and continuation.branch == "continuation/*"
+    names = [tier.name for tier in continuation.tiers]
+    assert names[-1] == "everything-else" and continuation.tiers[-1].paths == ("**",)
+    # The catch-all is the last tier, so no earlier tier is shadowed by it, and it demands a test.
+    assert continuation.tiers[-1].paired_tests
+    assert ".vibey-gh.toml" in declared.forbidden_paths

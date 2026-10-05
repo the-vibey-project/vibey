@@ -123,11 +123,26 @@ malformed, still refuses: "not withdrawn" has to be seen, never assumed.
 | `switch_variable` | string / `"VIBEY_UNATTENDED_APPROVAL"` | The repository variable holding the live switch. Declared rather than compiled in (12.h); it must be a valid variable name — a switch nobody can set is a grant nobody can withdraw. |
 | `switch_value` | string / `"on"` | The exact value the switch must read. Compared byte for byte, so `On`, `on ` and an empty variable all refuse; surrounding whitespace is rejected when the configuration loads. |
 | `live_switch_required` | boolean / `true` | Whether the variable must also read `switch_value` for the grant to be on. `false`: `enabled` grants, and the variable only withdraws (unset or `switch_value` = in force, anything else = withdrawn, unreadable = refusal). Must be exactly `true` or `false`. |
+| `lanes` | array of tables / `[]` | Automation lanes whose pull requests the approver may also approve, drafts included, inside a bound each lane declares (see below). Empty is the grant without lanes. |
 
 `vibey-gh approve-check PR` is what reads both halves: it exits `0` only when every condition
 above holds for that pull request, and prints each one that does not
 ([CLI reference](cli.md)). The delegated approver runs it first and refuses on a non-zero exit,
 so none of these conditions rests on a model remembering to apply it.
+
+### Lanes
+
+A lane (`[[unattended_approval.lanes]]`) is how the operator lets the approver vouch for the
+pull requests an automated run opened, drafts included, without widening the grant. It names a
+`branch` glob over the head branch, `accept_draft`, and `[[...tiers]]`: a hierarchy of path
+tiers. Each changed file belongs to the **first** tier whose `paths` match it, so tiers are
+declared most sensitive first, and a file in no tier refuses the whole pull request. A tier's
+`max_files` bounds how many files of that kind one pull request may change (`0`, the default,
+is no limit), and `paired_tests` says a change there lands only with a test somewhere in the
+same pull request. A lane only ever adds refusals: `forbidden_paths`, the author bound, green
+gates and the approving account's independence all still apply, a head on a fork is refused,
+and withdrawing the grant (the live switch) withdraws every lane with it. A lane with no tiers
+is rejected when the configuration loads, because it would bound nothing.
 
 `authors` is the bound `branches` cannot express: a branch glob says nothing about who pushed
 to it. A repository with no `.github/CODEOWNERS` expands `@codeowners` to nothing rather than

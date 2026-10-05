@@ -748,6 +748,60 @@ forbidden_paths = [
   "tests/infrastructure/engines/test_engine_environment.py",
 ]
 
+# The continuation lane (sub-doctrine 10.l, ADR-0080): the pull requests the weekly lane opens
+# from an agent's work, as drafts. The operator asked on 2026-10-05 that another job may approve
+# them autonomously, under the operator's authority and inside a bound declared here, not one
+# judged at the time (12.f).
+#
+# What this adds is narrower than the grant above, never wider: `forbidden_paths` is still the
+# floor, and author, green gates and the approving account's independence still hold. A lane
+# lets the approver approve a DRAFT, and only when every changed file sits in a tier below and
+# each tier's own demands are met. Tiers are first-match-wins, so they run from the most
+# sensitive path to the least; a file in no tier refuses the whole pull request. A tier's
+# `max_files` bounds how much of that kind of path one pull request may change (0 is no
+# limit); `paired_tests` says a change there lands only with a test somewhere in the same
+# pull request. Withdrawal is the repository variable above: it withdraws this too.
+[[unattended_approval.lanes]]
+name = "continuation"
+branch = "continuation/*"
+accept_draft = true
+
+[[unattended_approval.lanes.tiers]]
+name = "engine"
+paths = ["src/vibey/**", "src/vibey_runners/**"]
+max_files = 5
+paired_tests = ["tests/**", "src/vibey_runners/*/tests/**"]
+
+[[unattended_approval.lanes.tiers]]
+name = "tools"
+paths = ["src/vibey_tools/**"]
+max_files = 5
+paired_tests = ["tests/**", "src/vibey_tools/*/test/**", "src/vibey_tools/*/tests/**"]
+
+[[unattended_approval.lanes.tiers]]
+name = "scripts-and-clients"
+paths = ["scripts/**", "clients/**"]
+max_files = 5
+paired_tests = ["tests/**", "clients/**/*test*", "clients/**/*spec*"]
+
+[[unattended_approval.lanes.tiers]]
+name = "tests"
+paths = ["tests/**"]
+max_files = 20
+
+[[unattended_approval.lanes.tiers]]
+name = "docs"
+paths = ["docs/**", "research/**", "changelog.d/**"]
+max_files = 30
+
+# Everything else, last: a root file or a path no tier above names. Three files at most, and a
+# test beside them, so a scratch file at the root can never ride through (#1416).
+[[unattended_approval.lanes.tiers]]
+name = "everything-else"
+paths = ["**"]
+max_files = 3
+paired_tests = ["tests/**", "src/vibey_tools/*/test/**"]
+
 # The operator's standing grant, given 2026-09-30 and ratified by the operator's merge of the
 # pull request that carries it (this file is on the approver's forbidden list above, so no
 # automation can land or widen it). In the operator's words: "do all of it fully

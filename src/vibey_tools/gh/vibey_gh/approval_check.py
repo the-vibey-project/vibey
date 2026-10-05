@@ -73,7 +73,14 @@ from fnmatch import fnmatchcase
 from typing import Any
 
 from vibey_gh import merge_train
-from vibey_gh.config import GhConfig, expand_authors, load_config, normalise_actor
+from vibey_gh.config import (
+    ApprovalLaneConfig,
+    GhConfig,
+    UnattendedApprovalConfig,
+    expand_authors,
+    load_config,
+    normalise_actor,
+)
 from vibey_gh.gh_transport import GhTransport
 from vibey_gh.interfaces.approval_check_interface import (
     ApprovalCheckInterface,
@@ -301,12 +308,14 @@ class ApprovalCheck(ApprovalCheckInterface):
         cfg: GhConfig,
     ) -> list[str]:
         grant = cfg.unattended_approval
-        refusals = self._state(pr)
+        lane = self._lane_for(pr, grant)
+        refusals = self._state(pr, draft_ok=lane is not None and lane.accept_draft)
         if head is not None and head != actual:
             refusals.append(f"head: is {actual}, not the pinned {head}")
         refusals += self._author(pr, cfg)
         refusals += self._branch(pr, grant.branches)
         refusals += self._forbidden(pr, grant.forbidden_paths)
+        refusals += self._lane(pr, lane)
         if grant.require_all_gates:
             refusals += self._gates(pr, cfg)
         refusals += self._authorship(number, pr, cfg)
@@ -347,13 +356,64 @@ class ApprovalCheck(ApprovalCheckInterface):
             ]
         return []
 
-    def _state(self, pr: Mapping[str, Any]) -> list[str]:
+    def _state(self, pr: Mapping[str, Any], draft_ok: bool = False) -> list[str]:
         state = str(pr.get("state") or "")
         if state != "OPEN":
             return [f"pull request: is {state or 'in an unknown state'}, not open"]
-        if pr.get("isDraft"):
+        if pr.get("isDraft") and not draft_ok:
             return ["pull request: is a draft"]
         return []
+
+    @staticmethod
+    def _lane_for(
+        pr: Mapping[str, Any], grant: UnattendedApprovalConfig
+    ) -> ApprovalLaneConfig | None:
+        """The first declared lane whose branch glob names this pull request's head."""
+        head = str(pr.get("headRefName") or "")
+        return next((lane for lane in grant.lanes if fnmatchcase(head, lane.branch)), None)
+
+    def _lane(self, pr: Mapping[str, Any], lane: ApprovalLaneConfig | None) -> list[str]:
+        """A lane's own bound: every changed file in a tier, and each tier's demands met.
+
+        Only ever an addition to the grant, so it returns refusals and never a pass: a pull
+        request outside every lane is judged by the general grant alone, as before.
+        """
+        if lane is None:
+            return []
+        if pr.get("isCrossRepository"):
+            return [f"lane {lane.name}: the head is on a fork, which no lane admits"]
+        paths = pr.get(CHANGED_PATHS_KEY)
+        if paths is None:
+            return [f"lane {lane.name}: the changed files could not be listed"]
+        placed: dict[str, list[str]] = {tier.name: [] for tier in lane.tiers}
+        stray: list[str] = []
+        for path in paths:
+            for tier in lane.tiers:
+                if self._guard.touched(_both_readings(tier.paths), [path]):
+                    placed[tier.name].append(path)
+                    break
+            else:
+                stray.append(path)
+        refusals: list[str] = []
+        if stray:
+            refusals.append(f"lane {lane.name}: {_listed(stray)} in no tier")
+        for tier in lane.tiers:
+            files = placed[tier.name]
+            if not files:
+                continue
+            if tier.max_files and len(files) > tier.max_files:
+                refusals.append(
+                    f"lane {lane.name}: tier {tier.name} changes {len(files)} files, "
+                    f"more than its {tier.max_files}"
+                )
+            if tier.paired_tests and not self._guard.touched(
+                _both_readings(tier.paired_tests), paths
+            ):
+                refusals.append(
+                    f"lane {lane.name}: tier {tier.name} changes {_listed(files)} "
+                    "with no test beside it"
+                )
+        return refusals
 
     def _author(self, pr: Mapping[str, Any], cfg: GhConfig) -> list[str]:
         try:
@@ -476,6 +536,11 @@ class ApprovalCheck(ApprovalCheckInterface):
 
 # Module-level rather than methods: both are pure helpers over plain values that no
 # collaborator needs to substitute (vibey ADR-0016's last resort, reason stated as required).
+def _listed(paths: Sequence[str]) -> str:
+    shown = ", ".join(paths[:_SHOWN])
+    return shown + (f" and {len(paths) - _SHOWN} more" if len(paths) > _SHOWN else "")
+
+
 def _login(value: Any) -> str:
     return str(value.get("login") or "") if isinstance(value, dict) else ""
 
