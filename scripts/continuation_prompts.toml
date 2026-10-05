@@ -149,6 +149,13 @@ protected = [
   '^\.vibey-gh\.toml$',
   '^scripts/continuation_prompts\.toml$',
 ]
+# Where a patch written by an automated run may ADD files, as regular expressions over the
+# repository-relative path. A new file anywhere else (a scratch list or script at the root)
+# is refused, because the hand-over stages the whole working tree (#1416). Changing a file
+# that already exists is not limited by this key. Empty allows any new file.
+allowed_new = [
+  '^(src|tests|docs|scripts|changelog\.d|research)/',
+]
 
 # The lane that refreshes and runs the prompts. `check` fails if it is missing, unscheduled,
 # not dispatchable, or moved to a self-hosted runner: it must run on GitHub (#1384).

@@ -221,7 +221,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/out"
-          cp "$RUNNER_TEMP/agent.log" "$RUNNER_TEMP/out/agent.log" 2>/dev/null || echo "no agent log" > "$RUNNER_TEMP/out/agent.log"
+          cp "$RUNNER_TEMP/agent.log" "$RUNNER_TEMP/out/agent.log" 2>/dev/null || : > "$RUNNER_TEMP/out/agent.log"
+          # gptossloop prints nothing when a run succeeds: what it said and did is in its run
+          # store under --cwd. Export that as the log, or an act run has no evidence to be
+          # believed by and a drill has no verdict to read (#1416).
+          python3 scripts/continuation_prompts.py transcript . >> "$RUNNER_TEMP/out/agent.log" || true
           echo "${{ steps.agent.outputs.code }}" > "$RUNNER_TEMP/out/code"
           git add -A
           git diff --cached --binary > "$RUNNER_TEMP/out/change.patch"
@@ -310,7 +314,11 @@ jobs:
             echo "the agent changed nothing"
             exit 0
           fi
-          # One guard for every lane that applies an agent's patch: [authority] protected.
+          # No evidence, no patch: an agent that exited non-zero, or said nothing, is reported
+          # and never turned into a pull request (#1416).
+          python3 scripts/continuation_prompts.py receipt "$RUNNER_TEMP/out"
+          # One guard for every lane that applies an agent's patch: [authority] protected and
+          # allowed_new (no scratch file at the root).
           python3 scripts/continuation_prompts.py guard "$patch"
           git apply --index "$patch"
           gh auth setup-git

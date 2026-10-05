@@ -39,6 +39,7 @@ try:
         PatchGuardInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
+        RunReceiptInterface,
     )
 except ImportError:  # run as `python scripts/continuation_prompts.py`
     from interfaces.continuation_prompts_interface import (  # type: ignore[import-not-found,no-redef]
@@ -48,6 +49,7 @@ except ImportError:  # run as `python scripts/continuation_prompts.py`
         PatchGuardInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
+        RunReceiptInterface,
     )
 
 REPO = Path(__file__).resolve().parents[1]
@@ -83,6 +85,7 @@ class Settings:
     lane: Mapping[str, Any]
     run: Mapping[str, Any]
     protected: tuple[str, ...]
+    allowed_new: tuple[str, ...]
     chat: Mapping[str, Any]
 
     @classmethod
@@ -109,6 +112,7 @@ class Settings:
             lane=dict(raw.get("lane", {})),
             run=dict(raw.get("run", {})),
             protected=tuple(raw.get("authority", {}).get("protected", ())),
+            allowed_new=tuple(raw.get("authority", {}).get("allowed_new", ())),
             chat=dict(raw.get("chat", {})),
         )
 
@@ -336,20 +340,71 @@ class PageRenderer(PageRendererInterface):
 
 
 class PatchGuard(PatchGuardInterface):
-    """Refuses a patch from an automated run that touches a declared protected path.
+    """Refuses a patch from an automated run that touches a declared protected path, or adds a
+    file outside the declared roots.
 
-    One guard, declared in `[authority] protected`, for every lane that applies a patch an
-    agent wrote (the weekly run and the chat), so the two can never disagree (12.h).
+    One guard, declared in `[authority]` (`protected`, `allowed_new`), for every lane that
+    applies a patch an agent wrote (the weekly run and the chat), so the two can never
+    disagree (12.h). The second rule exists because the hand-over stages the whole working
+    tree: a scratch file the agent left at the repository root (a list it fetched, a script
+    it tried) would otherwise ship as the change (#1416). An empty `allowed_new` allows any
+    new file, so a repository that declares none keeps the old behaviour.
     """
 
     HEADER = re.compile(r"^diff --git a/(\S+) b/(\S+)$", re.MULTILINE)
+    ADDED = re.compile(r"^diff --git a/\S+ b/(\S+)\nnew file mode ", re.MULTILINE)
 
-    def __init__(self, patterns: Sequence[str]) -> None:
+    def __init__(self, patterns: Sequence[str], allowed_new: Sequence[str] = ()) -> None:
         self._patterns = [re.compile(p) for p in patterns]
+        self._allowed_new = [re.compile(p) for p in allowed_new]
 
     def refused(self, patch: str) -> Sequence[str]:
         paths = {path for pair in self.HEADER.findall(patch) for path in pair}
-        return sorted(p for p in paths if any(rx.search(p) for rx in self._patterns))
+        protected = {p for p in paths if any(rx.search(p) for rx in self._patterns)}
+        stray: set[str] = set()
+        if self._allowed_new:
+            stray = {
+                p
+                for p in self.ADDED.findall(patch)
+                if not any(rx.search(p) for rx in self._allowed_new)
+            }
+        return sorted(protected | stray)
+
+
+class RunReceipt(RunReceiptInterface):
+    """What a run must leave behind before its patch is believed.
+
+    `gptossloop run` prints nothing when it succeeds: the evidence is the run store it writes
+    under the working directory. The hand-over exports that as the log, and this refuses a
+    run with no exit code of 0 or no log (an agent that said nothing proved nothing: 10.f).
+    """
+
+    def transcript(self, cwd: Path) -> str:
+        lines: list[str] = []
+        for events in sorted((cwd / ".qwenloop" / "runs").glob("*/events.jsonl")):
+            for raw in events.read_text(encoding="utf-8", errors="replace").splitlines():
+                try:
+                    event = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                kind = event.get("type")
+                if kind == "text_delta":
+                    lines.append(str(event.get("text", "")))
+                elif kind == "tool.call":
+                    lines.append(f"\n[tool] {event.get('name')} {event.get('arguments')}\n")
+                elif kind == "completed":
+                    lines.append("\n[completed]\n")
+        return "".join(lines)
+
+    def problems(self, out: Path) -> list[str]:
+        code = out / "code"
+        log = out / "agent.log"
+        found: list[str] = []
+        if not code.is_file() or code.read_text(encoding="utf-8").strip() != "0":
+            found.append("the agent did not exit 0")
+        if not log.is_file() or not log.read_text(encoding="utf-8", errors="replace").strip():
+            found.append("the agent left no log: a run with no evidence is not believed")
+        return found
 
 
 class ReplyDefuser(ReplyDefuserInterface):
@@ -631,6 +686,8 @@ class ContinuationCli:
             "chat",
             "guard",
             "defuse",
+            "transcript",
+            "receipt",
         }
         if not argv or argv[0] not in commands:
             print(__doc__, file=sys.stderr)
@@ -677,12 +734,23 @@ class ContinuationCli:
             if len(argv) != 2:
                 print(f"{SCRIPT}: guard PATCH_FILE", file=sys.stderr)
                 return 2
-            refused = PatchGuard(settings.protected).refused(
+            refused = PatchGuard(settings.protected, settings.allowed_new).refused(
                 Path(argv[1]).read_text(encoding="utf-8")
             )
             for path in refused:
                 print(f"::error::an automated run may not change {path}")
             return 1 if refused else 0
+        if command in {"transcript", "receipt"}:
+            if len(argv) != 2:
+                print(f"{SCRIPT}: {command} DIRECTORY", file=sys.stderr)
+                return 2
+            if command == "transcript":
+                print(RunReceipt().transcript(Path(argv[1])))
+                return 0
+            problems = RunReceipt().problems(Path(argv[1]))
+            for line in problems:
+                print(f"::error::{line}")
+            return 1 if problems else 0
         if command == "defuse":
             if len(argv) != 2:
                 print(f"{SCRIPT}: defuse FILE", file=sys.stderr)

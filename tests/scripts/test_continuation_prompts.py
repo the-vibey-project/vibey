@@ -502,3 +502,58 @@ def test_the_cli_serves_the_chat(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert cli.run(["defuse", str(reply)]) == 0
     assert "@​vibey" in capsys.readouterr().out
     assert cli.run(["defuse"]) == 2
+
+
+def test_the_guard_refuses_a_new_file_outside_the_declared_roots() -> None:
+    guard = cp.PatchGuard([], ["^(src|docs)/"])
+    scratch = "diff --git a/pr_list.txt b/pr_list.txt\nnew file mode 100644\n+x\n"
+    kept = "diff --git a/docs/a.md b/docs/a.md\nnew file mode 100644\n+x\n"
+    edit = "diff --git a/pr_list.txt b/pr_list.txt\nindex 1..2 100644\n+x\n"
+    assert guard.refused(scratch) == ["pr_list.txt"]
+    assert guard.refused(kept) == []
+    assert guard.refused(edit) == []
+    assert cp.PatchGuard([], []).refused(scratch) == []
+
+
+def test_a_run_is_believed_only_with_an_exit_of_zero_and_a_log(tmp_path: Path) -> None:
+    receipt = cp.RunReceipt()
+    assert len(receipt.problems(tmp_path)) == 2
+    (tmp_path / "code").write_text("0\n")
+    (tmp_path / "agent.log").write_text("  \n")
+    assert receipt.problems(tmp_path) == [
+        "the agent left no log: a run with no evidence is not believed"
+    ]
+    (tmp_path / "agent.log").write_text("did the thing")
+    assert receipt.problems(tmp_path) == []
+    (tmp_path / "code").write_text("1")
+    assert receipt.problems(tmp_path) == ["the agent did not exit 0"]
+
+
+def test_the_transcript_reads_the_run_store_the_runner_writes(tmp_path: Path) -> None:
+    run = tmp_path / ".qwenloop" / "runs" / "r1"
+    run.mkdir(parents=True)
+    (run / "events.jsonl").write_text(
+        '{"type": "text_delta", "text": "All holds."}\n'
+        "not json\n"
+        '{"type": "tool.call", "name": "shell", "arguments": {"cmd": "ls"}}\n'
+        '{"type": "tool_result", "name": "shell", "result": "x"}\n'
+        '{"type": "completed", "turn": 3}\n'
+    )
+    text = cp.RunReceipt().transcript(tmp_path)
+    assert "All holds." in text and "[tool] shell" in text and "[completed]" in text
+    assert cp.RunReceipt().transcript(tmp_path / "nowhere") == ""
+
+
+def test_the_cli_exports_the_transcript_and_checks_the_receipt(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli = cp.ContinuationCli(chat_world(tmp_path))
+    assert cli.run(["transcript"]) == 2 and cli.run(["receipt"]) == 2
+    assert cli.run(["transcript", str(tmp_path)]) == 0
+    out = tmp_path / "out"
+    out.mkdir()
+    assert cli.run(["receipt", str(out)]) == 1
+    assert "the agent did not exit 0" in capsys.readouterr().out
+    (out / "code").write_text("0")
+    (out / "agent.log").write_text("report")
+    assert cli.run(["receipt", str(out)]) == 0

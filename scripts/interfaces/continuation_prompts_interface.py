@@ -9,6 +9,7 @@ and returns its output. A *renderer* turns facts into the generated blocks of th
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any, Protocol
 
 
@@ -48,7 +49,20 @@ class PatchGuardInterface(Protocol):
     """Says which paths a patch from an automated run may not touch."""
 
     def refused(self, patch: str) -> Sequence[str]:
-        """Every path the patch changes that a declared protected pattern matches."""
+        """Every path the patch changes that a protected pattern matches, and every file it
+        adds outside the declared `allowed_new` roots."""
+        ...
+
+
+class RunReceiptInterface(Protocol):
+    """Says what a run left behind, and whether that is enough to believe its patch."""
+
+    def transcript(self, cwd: Path) -> str:
+        """The run's recorded words and tool calls, read from the run store under `cwd`."""
+        ...
+
+    def problems(self, out: Path) -> list[str]:
+        """Why the hand-over directory is not enough evidence; empty when it is."""
         ...
 
 
