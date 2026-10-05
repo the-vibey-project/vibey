@@ -620,6 +620,52 @@
       "next": "",
       "probes": []
     },
+    "1400": {
+      "close_when_done": true,
+      "kind": "standalone",
+      "next": "delivered: #1401 dispatches promotion after the merge train merges, and #1402 repairs failed sovereign reviews before rerunning the review",
+      "probes": [
+        {
+          "grep_hit": {
+            "paths": [
+              ".github/workflows/merge-train.yml"
+            ],
+            "pattern": "promote-to-main.yml"
+          }
+        },
+        {
+          "grep_hit": {
+            "paths": [
+              "src/vibey_tools/gh/vibey_gh/pr_automation.py"
+            ],
+            "pattern": "review repair budget is exhausted"
+          }
+        },
+        {
+          "path_exists": "src/vibey_tools/gh/test/test_sovereign_repair.py"
+        }
+      ]
+    },
+    "1409": {
+      "close_when_done": false,
+      "hold_reason": "custom operating-system work is outside the currently declared delivery scope",
+      "kind": "hold",
+      "never_act": true,
+      "next": "",
+      "probes": []
+    },
+    "1410": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "next": "specify the sovereign note, audio and screenshot ingestion adapters, relationship extraction, provenance, privacy boundary and ticket-confirmation gate before implementation",
+      "probes": []
+    },
+    "1413": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "next": "resume Stage 2 from the append-only live result store, complete the preregistered halving and holdout stages, then operationalize only the evidence-selected method",
+      "probes": []
+    },
     "143": {
       "close_when_done": false,
       "kind": "standalone",
