@@ -1110,6 +1110,73 @@ CODEOWNERS_SENTINEL = "@codeowners"
 
 
 @dataclass(frozen=True)
+class ApprovalTierConfig:
+    """One rung of a lane's path hierarchy: the paths it covers and what it demands.
+
+    A tier is how a lane says "this kind of path needs this much". The demands are only ever
+    additions to the grant (12.f): they can make a pull request harder to approve, never
+    easier, and `forbidden_paths` stays the floor beneath every tier.
+    """
+
+    name: str
+    # Globs over the changed paths, matched the way `forbidden_paths` is.
+    paths: tuple[str, ...]
+    # The most files a pull request may change in this tier. 0 means no limit, which a tier
+    # must say on purpose: a limit left out is a decision taken for the next adopter.
+    max_files: int = 0
+    # When the tier is touched, at least one changed path in the pull request (anywhere) must
+    # match one of these globs: code does not land without a test beside it. Empty asks for none.
+    paired_tests: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ValueError("an approval tier needs a name")
+        if not self.paths:
+            raise ValueError(f"approval tier {self.name!r} must name paths")
+        _unique_nonempty(f"approval tier {self.name!r} paths", self.paths)
+        _unique_nonempty(f"approval tier {self.name!r} paired_tests", self.paired_tests)
+        if isinstance(self.max_files, bool) or not isinstance(self.max_files, int):
+            raise TypeError(f"approval tier {self.name!r} max_files must be a whole number")
+        if self.max_files < 0:
+            raise ValueError(f"approval tier {self.name!r} max_files must not be negative")
+
+
+@dataclass(frozen=True)
+class ApprovalLaneConfig:
+    """One automation lane whose pull requests a delegated approver may vouch for (12.f).
+
+    The general grant approves a READY pull request by an admitted author. A lane is how the
+    operator also admits a DRAFT that an automated run opened, and only inside a bound the
+    lane declares: the head branch it opens, and a hierarchy of path tiers. Each changed file
+    belongs to the FIRST tier whose paths match it, so tiers are declared most sensitive
+    first, and a file in no tier refuses the whole pull request. Every tier a pull request
+    touches applies its own demands. A lane never replaces a gate: author, forbidden paths,
+    green gates and the approving account's independence are all still required.
+
+    Defaults refuse: a lane with no tiers admits nothing and is rejected.
+    """
+
+    name: str
+    # Glob over the pull request's head branch. A lane's pull requests are the ones it names.
+    branch: str
+    tiers: tuple[ApprovalTierConfig, ...]
+    # Whether the approver may approve a draft that matches this lane. False keeps the lane a
+    # pure path bound on pull requests the general grant already reaches.
+    accept_draft: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.name or not self.branch:
+            raise ValueError("an approval lane needs a name and a branch glob")
+        if not self.tiers:
+            raise ValueError(
+                f"unattended_approval lane {self.name!r} must declare tiers -- a lane that "
+                "bounds nothing would admit everything"
+            )
+        if not isinstance(self.accept_draft, bool):
+            raise TypeError(f"lane {self.name!r} accept_draft must be true or false")
+
+
+@dataclass(frozen=True)
 class UnattendedApprovalConfig:
     """The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049).
 
@@ -1160,6 +1227,8 @@ class UnattendedApprovalConfig:
     # unset or `switch_value` leaves the grant standing, anything else withdraws it at once,
     # with no merge (12.f: "withdrawal is immediate and unilateral"). Unreadable still refuses.
     live_switch_required: bool = True
+    # Lanes an approver may also vouch for (see `ApprovalLaneConfig`). Empty is the old grant.
+    lanes: tuple[ApprovalLaneConfig, ...] = ()
 
     def __post_init__(self) -> None:
         # The switch is validated whether or not the grant is on: a switch that could never
@@ -3539,6 +3608,23 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             switch_value=approval.get("switch_value", UnattendedApprovalConfig.switch_value),
             live_switch_required=approval.get(
                 "live_switch_required", UnattendedApprovalConfig.live_switch_required
+            ),
+            lanes=tuple(
+                ApprovalLaneConfig(
+                    name=str(lane.get("name", "")),
+                    branch=str(lane.get("branch", "")),
+                    accept_draft=lane.get("accept_draft", False),
+                    tiers=tuple(
+                        ApprovalTierConfig(
+                            name=str(tier.get("name", "")),
+                            paths=tuple(tier.get("paths", ())),
+                            max_files=tier.get("max_files", 0),
+                            paired_tests=tuple(tier.get("paired_tests", ())),
+                        )
+                        for tier in lane.get("tiers", ())
+                    ),
+                )
+                for lane in approval.get("lanes", ())
             ),
         ),
         issue_automation=IssueAutomationConfig(
