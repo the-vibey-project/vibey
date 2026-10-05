@@ -315,3 +315,13 @@ what was seen, and what it changed.
   `results/invalidations.jsonl`, completing the void the way the contention void did. Note
   for the harness: a transport failure is cached as a result, so voiding one takes both
   files. Round 1 restarted after both were written.
+- **04:37 (10-05)** **Resume refused before sending a request because production moved;
+  the registered treatment is retained.** After #1402, the live deadline-rate defaults are
+  40 prompt / 2 output tokens per second instead of the preregistered 200 / 20. The first
+  resumed arm constructor compared `ReviewCanary.settings()` with the registered settings
+  and exited before asking the model. Mixing the more generous deadlines into the remaining
+  cells would change the treatment halfway through Stage 2. `pinned_settings()` now permits
+  only these two live defaults to differ and returns the registered settings, so A1/A2 keep
+  their original deadlines; every non-deadline drift still fails closed. The D arms already
+  use the registered 200/20 formula explicitly. The new production defaults require a
+  separately identified post-selection baseline run; they do not rewrite this round.
