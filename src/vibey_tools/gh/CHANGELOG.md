@@ -1410,6 +1410,32 @@ This file follows Keep a Changelog and semantic versioning conventions.
   character at least as long as the opener, and fences inside block quotes, list items and HTML
   blocks. The documentation deep scan uses it instead of counting backticks, which failed a
   correct file every night from 2026-09-28, and names every unclosed fence instead of the first.
+* **delegated approver:** `[[unattended_approval.lanes]]` lets the approver also approve the
+  draft pull requests an automated lane opened (the weekly continuation lane), inside a bound
+  the lane declares: a head-branch glob and a hierarchy of path tiers, first match wins, each
+  with its own `max_files` and `paired_tests`. A file in no tier, or a head on a fork, refuses
+  the whole pull request, and a lane only adds refusals: forbidden paths, author, green gates
+  and the approver's independence still apply. No lanes, no change.
+* **sovereign review:** `[pr_automation.fallback] runs_on` runs the sovereign lane on a
+  GitHub-hosted runner: the review job starts Ollama and pulls its model there, and is ready
+  without a heartbeat, since a hosted runner cannot be offline. Empty, the lane stays on the
+  self-hosted runner exactly as before.
+- **Feature:** `vibey-gh review-canary` measures in shards, so the weekly canary runs on
+  GitHub-hosted runners only. `run --shard I/N --out FILE` reviews the cases whose place in
+  the corpus is `I` modulo `N` and writes what it heard; `merge FILE...` refuses unless the
+  shards cover every case exactly once under one corpus, commit, model and set of settings,
+  then records the same ledger line an unsharded run would; `plan` names the model and one
+  `I/N` per `[pr_automation.review_canary] shards`. `prompt_tokens_per_second` and
+  `output_tokens_per_second` in the same table set the canary's deadline rates for the
+  hardware it runs on, leaving `[pr_automation.fallback]` unchanged. An unsharded `run` is
+  unchanged.
+* **pr automation:** a review that fails on findings can be corrected by an open-weights
+  model instead of waiting for a person. Declared in `[pr_automation.sovereign_repair]`,
+  gptossloop on a GitHub-hosted runner edits the branch from the review's findings, the
+  guarded repair step publishes the patch, and CI and the exact-head review run again, within
+  the bounded `max_repair_attempts` budget, which a new `pr-automation repair-budget` action
+  now checks on the same-run path too. A spent budget or an unappliable patch labels the pull
+  request for a person ([#1400](https://github.com/the-vibey-project/vibey/issues/1400)).
 
 ### Bug Fixes
 
@@ -1455,6 +1481,12 @@ This file follows Keep a Changelog and semantic versioning conventions.
   from 5 seconds; each one is announced on stderr, and every other failure fails exactly as it
   did. The new `[forge_retry]` table configures all of it. `GhTransport` takes the policy as an
   opt-in `retry`, for calls that are safe to repeat; without one it runs each call once, as before.
+* **merge train:** the train dispatches `promote-to-main.yml` itself after it merges
+  something. The PR review gate starts the train with `GITHUB_TOKEN`, and GitHub fires no
+  `workflow_run` for the completion of a run that token started, so promotion's
+  `workflow_run: Merge train` trigger never saw the train's runs: from 2026-09-28 every
+  promotion to `main` needed a hand dispatch
+  ([#1400](https://github.com/the-vibey-project/vibey/issues/1400)).
 
 ## Historical releases
 

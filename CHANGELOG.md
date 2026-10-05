@@ -15,6 +15,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [4.1.0] (2026-10-05)
+
 ## [4.0.0] (2026-10-03)
 
 ### BREAKING CHANGES
