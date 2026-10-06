@@ -464,9 +464,31 @@ async def test_a_device_needs_the_workflows_scope() -> None:
         read = await client.get("/api/v1/workflows/runs/0123456789abcdef")
     assert refused.status_code == 403 and read.status_code == 403
     assert remote.started == [] and remote.polled == []
-    async with _client(_workflows_app(remote, Device("workflows"))) as client:
+    async with _client(_workflows_app(remote, Device("workflows", "view"))) as client:
         allowed = await client.post("/api/v1/workflows/runs", json={"argv": ["doctor"]})
     assert allowed.status_code == 202
+
+
+@pytest.mark.parametrize(
+    ("scopes", "argv", "needs"),
+    [
+        (("workflows",), ["status"], "view"),
+        (("workflows", "view", "answer"), ["answer", "g"], "spend"),
+        (("workflows", "view"), ["queue", "bump", "j"], "bump"),
+        (("workflows", "view", "run", "bump", "answer", "spend"), ["new", "x"], ""),
+    ],
+)
+async def test_workflows_alone_never_lets_a_device_do_what_its_other_scopes_do_not(
+    scopes: tuple[str, ...], argv: list[str], needs: str
+) -> None:
+    remote = Remote()
+    async with _client(_workflows_app(remote, Device(*scopes))) as client:
+        refused = await client.post("/api/v1/workflows/runs", json={"argv": argv})
+    if needs:
+        assert refused.status_code == 403 and needs in refused.json()["detail"]
+        assert remote.started == []
+    else:  # every scope the hub defines is held: an unclassified command may run
+        assert refused.status_code == 202
 
 
 @pytest.mark.parametrize(

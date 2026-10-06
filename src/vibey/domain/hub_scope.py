@@ -89,6 +89,42 @@ A command sent to the workflows through the hub (ADR-0085) runs where a reposito
 declared its real database, so the hub refuses these there exactly as it never routes them
 itself. Paid use, the DSN and the canon have no command: they are declared in files."""
 
+COMMAND_ACTIONS: Final[dict[tuple[str, ...], frozenset[HubAction]]] = {
+    **{
+        words: frozenset({HubAction.READ})
+        for words in (
+            (),  # global options alone: --version, --help
+            ("status",),
+            ("projects",),
+            ("gates",),
+            ("engines",),
+            ("loops",),
+            ("cost",),
+            ("doctor",),
+            ("ledger", "show"),
+            ("ledger", "search"),
+            ("queue", "list"),
+            ("budget", "show"),
+            ("ultra", "status"),
+            ("deploy", "status"),
+            ("deploy", "inspect"),
+        )
+    },
+    # The command line cannot say whether the gate spends money, so both are needed.
+    ("answer",): frozenset({HubAction.ANSWER_GATE, HubAction.ANSWER_SPEND_GATE}),
+    ("queue", "bump"): frozenset({HubAction.BUMP_JOB}),
+    ("queue", "unbump"): frozenset({HubAction.BUMP_JOB}),
+    ("work",): frozenset({HubAction.RUN_WORK}),
+    ("worker",): frozenset({HubAction.RUN_WORK}),
+    ("ultra", "start"): frozenset({HubAction.RUN_WORK}),
+    ("ultra", "stop"): frozenset({HubAction.RUN_WORK}),
+    ("abandon",): frozenset({HubAction.RUN_WORK}),
+}
+"""What a vibey command sent to the workflows through the hub does, as hub actions. On a
+repository that declares its real database the command acts on it, so the `workflows` scope
+alone must not let a device do what its other scopes do not: the caller needs the scope of
+each action too, and a command not named here needs every scope the hub defines (ADR-0085)."""
+
 SPEND_GATE_KINDS: Final[frozenset[str]] = frozenset(
     {
         "budget_exhausted",
@@ -122,9 +158,10 @@ class HubScopePolicy:
         """True when `capability` is one the hub never offers (`NEVER_FROM_THE_HUB`)."""
         return capability in NEVER_FROM_THE_HUB
 
-    def reserved_command(self, argv: tuple[str, ...]) -> str | None:
-        """The `NEVER_FROM_THE_HUB` capability a vibey command line reaches, or None. Its
-        command is read after vibey's leading global options, whose values are skipped."""
+    @staticmethod
+    def command_words(argv: tuple[str, ...]) -> tuple[str, ...]:
+        """A vibey command line's command, read after its leading global options (whose
+        values are skipped) and up to its first option."""
         words: list[str] = []
         skip = False
         for arg in argv:
@@ -136,10 +173,26 @@ class HubScopePolicy:
                 words.append(arg)
             elif words:
                 break
+        return tuple(words)
+
+    def reserved_command(self, argv: tuple[str, ...]) -> str | None:
+        """The `NEVER_FROM_THE_HUB` capability a vibey command line reaches, or None."""
+        words = self.command_words(argv)
         for prefix, capability in RESERVED_COMMANDS.items():
-            if tuple(words[: len(prefix)]) == prefix:
+            if words[: len(prefix)] == prefix:
                 return capability
         return None
+
+    def scopes_for_command(self, argv: tuple[str, ...]) -> frozenset[HubScope]:
+        """Every scope a caller must hold to send `argv` to the workflows: `workflows`, and
+        the scope of each action the command performs; every scope for a command
+        `COMMAND_ACTIONS` does not name. The longest matching prefix decides."""
+        words = self.command_words(argv)
+        matches = [p for p in COMMAND_ACTIONS if words[: len(p)] == p and (p or not words)]
+        if not matches:
+            return frozenset(HubScope)
+        actions = COMMAND_ACTIONS[max(matches, key=len)]
+        return frozenset({HubScope.WORKFLOWS} | {REQUIRED_SCOPE[a] for a in actions})
 
     def parse(self, values: frozenset[str]) -> frozenset[HubScope]:
         """The scopes `values` names. An unknown name raises `ValueError`: a grant that

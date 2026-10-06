@@ -36,8 +36,11 @@ into a thread.
    well-formed id) and runs it as an argument vector, never through a shell. The report (exit
    code, stdout and stderr, each capped and cut out loud) comes back as the `vibey-result`
    artifact. The job can write nothing. The runner starts from an empty PostgreSQL migrated
-   with an owner and an application role (ADR-0055), unless the repository declares
-   `VIBEY_WORKFLOWS_PG_URL`. No engine key and no model are present.
+   with an owner and an application role (ADR-0055). A **private** repository may declare
+   `VIBEY_WORKFLOWS_PG_URL` instead. A public one never uses it, because anyone can read its
+   runs' logs and reports, and the run says so. The command runs with the system basics vibey
+   hands any child plus its application DSN, never the runner's whole environment. The owner's
+   DSN reaches only a `vibey migrate`. No engine key and no model are present.
 3. **The service is stateless.** `RemoteCommandService.start` dispatches; `poll` finds the run
    by the name the id gives it and reads the report. A caller that waits, a hub restarted
    half-way and a phone asking later all read the same run, and nothing is stored. A run the
@@ -49,7 +52,12 @@ into a thread.
 5. **The hub offers the same path** at `POST /api/v1/workflows/runs` (202, the request id) and
    `GET /api/v1/workflows/runs/{request_id}`. They are guarded by a new deny-by-default
    `workflows` scope, which only the host token holds until the host grants it to a device
-   (12.j). A command that reaches a `NEVER_FROM_THE_HUB` capability is refused there:
+   (12.j). The scope alone never lets a device do what its other scopes do not. A command
+   needs the scope of each action it performs as well (`COMMAND_ACTIONS`): `status` needs
+   `view`; `answer` needs `answer` and `spend`, since a command line cannot say whether the
+   gate spends; `queue bump` needs `bump`; `work` needs `run`. A command the policy does not
+   name needs every scope. A command that reaches a `NEVER_FROM_THE_HUB` capability is refused
+   outright:
    `vibey migrate` and the `vibey budget` commands that change caps
    (`HubScopePolicy.reserved_command`). It would run where a repository may have declared its
    real database, so the hub refuses it there exactly as it never routes it itself.

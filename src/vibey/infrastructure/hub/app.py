@@ -453,12 +453,21 @@ class HubAppFactory:
         )
         async def run_on_workflows(caller: who, body: WorkflowRunBody) -> JSONResponse:
             service = remote(caller)
-            reserved = HUB_SCOPES.reserved_command(tuple(body.argv))
+            argv = tuple(body.argv)
+            reserved = HUB_SCOPES.reserved_command(argv)
             if reserved is not None:
                 # It would run where a repository may have declared its real database: the
                 # hub refuses it there exactly as it never routes it itself.
                 raise HubForbidden(
                     f"`{' '.join(body.argv[:2])}` reaches {reserved}, which the hub never offers"
+                )
+            # The command acts with whatever the runner's database is, so `workflows` alone
+            # never lets a device do what its other scopes do not (ADR-0085).
+            missing = HUB_SCOPES.scopes_for_command(argv) - caller.scopes
+            if missing:
+                needs = ", ".join(sorted(scope.value for scope in missing))
+                raise HubForbidden(
+                    f"{caller.name} may not run `{' '.join(argv[:2])}` there: it needs {needs}"
                 )
             command = await service.start(body.argv)
             started = RemoteStatus(command.request_id, RemoteState.QUEUED)

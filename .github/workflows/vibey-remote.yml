@@ -9,9 +9,10 @@ run-name: vibey ${{ inputs.request }}
 # what it printed come back as the `vibey-result` artifact.
 #
 # The runner starts from nothing: vibey from this checkout, and an empty PostgreSQL migrated
-# for the run, so a command that reads the queue reads an empty one. A repository that wants
-# its commands to reach a real queue declares `VIBEY_WORKFLOWS_PG_URL` (and, for migrations,
-# `VIBEY_WORKFLOWS_PG_MIGRATE_URL`) as secrets. No engine key, no model and no other secret is
+# for the run, so a command that reads the queue reads an empty one. A PRIVATE repository that
+# wants its commands to reach a real queue declares `VIBEY_WORKFLOWS_PG_URL` (and, for
+# migrations, `VIBEY_WORKFLOWS_PG_MIGRATE_URL`) as secrets; a public one never uses them,
+# because anyone can read its runs' logs and reports. No engine key, no model and no other secret is
 # here. Only someone with write access to the repository can dispatch a workflow at all.
 #
 # The command line arrives through `env:`, never interpolated into a script, and is run as an
@@ -68,6 +69,9 @@ jobs:
         env:
           ARGV: ${{ inputs.argv }}
           REQUEST: ${{ inputs.request }}
+          # A declared database is used only when this is true: a public repository's run
+          # logs and artifacts can be read by others.
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
           DECLARED_PG_URL: ${{ secrets.VIBEY_WORKFLOWS_PG_URL }}
           DECLARED_PG_MIGRATE_URL: ${{ secrets.VIBEY_WORKFLOWS_PG_MIGRATE_URL }}
         run: python scripts/vibey_remote.py run --out "$RUNNER_TEMP/out"

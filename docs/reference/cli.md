@@ -55,15 +55,18 @@ command's own code: `vibey -w status --json | jq .` reads exactly as `vibey stat
 
 The flag is read only among the global options before the command: `vibey status -w` passes
 `-w` to `status`. It needs the GitHub CLI (`gh`), logged in, with `actions: write` on the
-repository. The runner starts from an empty, freshly migrated PostgreSQL unless the repository
-declares `VIBEY_WORKFLOWS_PG_URL` as a secret, and holds no engine key or model, so a command
+repository. The runner starts from an empty, freshly migrated PostgreSQL unless a private
+repository declares `VIBEY_WORKFLOWS_PG_URL` as a secret (a public one never uses it: its runs
+can be read by others), and holds no engine key or model, so a command
 that needs either fails there as it would on a host without them. Its exit codes beyond the
 command's own: `2` for a command line that cannot be sent (a nested `-w`, a NUL, more than 4,000
 characters) or invalid `VIBEY_WORKFLOWS_*` settings; `1` when GitHub refused the dispatch or the
 run ended without a report; `124` when the wait ran out, with the run's address so it can be
 followed. Every krypton interface reaches the same path through the hub's
-`/api/v1/workflows/runs` routes, which need the `workflows` scope and refuse `vibey migrate` and
-the `vibey budget` commands that change caps.
+`/api/v1/workflows/runs` routes, which need the `workflows` scope and the scope of what the
+command does (`view` for `status`, `answer` and `spend` for `answer`, every scope for a command
+the policy does not name), and refuse `vibey migrate` and the `vibey budget` commands that change
+caps.
 
 ## Exit codes and errors
 

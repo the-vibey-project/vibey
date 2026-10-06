@@ -90,3 +90,31 @@ def test_running_on_the_workflows_needs_its_own_scope() -> None:
     assert not HUB_SCOPES.permits(
         frozenset({HubScope.RUN, HubScope.VIEW}), HubAction.RUN_ON_WORKFLOWS
     )
+
+
+@pytest.mark.parametrize(
+    ("argv", "needs"),
+    [
+        (("status", "--json"), {"workflows", "view"}),
+        (("--version",), {"workflows", "view"}),
+        (("-v", "ledger", "search", "x"), {"workflows", "view"}),
+        (("answer", "g", "--choice", "1"), {"workflows", "answer", "spend"}),
+        (("queue", "bump", "j"), {"workflows", "bump"}),
+        (("queue", "list"), {"workflows", "view"}),
+        (("ultra", "start"), {"workflows", "run"}),
+        (("new", "demo"), {s.value for s in HubScope}),
+        (("ledger", "export"), {s.value for s in HubScope}),
+        (("queue",), {s.value for s in HubScope}),
+    ],
+)
+def test_a_command_sent_to_the_workflows_needs_the_scopes_of_what_it_does(
+    argv: tuple[str, ...], needs: set[str]
+) -> None:
+    assert {s.value for s in HUB_SCOPES.scopes_for_command(argv)} == needs
+
+
+def test_the_command_words_skip_global_options_and_stop_at_the_first_option() -> None:
+    assert HUB_SCOPES.command_words(("--log-file", "f", "-v", "queue", "bump", "--x", "y")) == (
+        "queue",
+        "bump",
+    )

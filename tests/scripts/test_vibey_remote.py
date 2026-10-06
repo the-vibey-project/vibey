@@ -35,13 +35,17 @@ def report(out: Path) -> dict[str, object]:
 
 def test_the_runners_own_database_is_migrated_then_the_command_runs(tmp_path: Path) -> None:
     runner = FakeRunner((0, "", ""), (3, "out\n", "err\n"))
-    environ = {"ARGV": "x", "REQUEST": ID, "HOME": "/home/runner"}
+    environ = {"ARGV": "x", "REQUEST": ID, "HOME": "/home/runner", "ACTIONS_RUNTIME_TOKEN": "t"}
     vr.VibeyRemoteRunner(runner, environ).run('["status", "--json"]', ID, tmp_path)
     (migrate, migrate_env), (command, command_env) = runner.calls
     assert migrate == ["vibey", "migrate"] and command == ["vibey", "status", "--json"]
+    assert migrate_env["VIBEY_PG_MIGRATE_URL"] == vr.EPHEMERAL_OWNER_URL
+    # The owner's DSN reaches `vibey migrate` only, never another command (ADR-0055).
+    assert "VIBEY_PG_MIGRATE_URL" not in command_env
     assert command_env["VIBEY_PG_URL"] == vr.EPHEMERAL_APP_URL
-    assert command_env["VIBEY_PG_MIGRATE_URL"] == vr.EPHEMERAL_OWNER_URL
-    assert "ARGV" not in command_env and "REQUEST" not in command_env
+    # The command gets the system basics, never the runner's whole environment.
+    assert command_env["HOME"] == "/home/runner"
+    assert not {"ARGV", "REQUEST", "ACTIONS_RUNTIME_TOKEN"} & set(command_env)
     assert report(tmp_path) == {"exit_code": 3, "stdout": "out\n", "stderr": "err\n"}
 
 
@@ -53,25 +57,33 @@ def test_a_failed_migration_is_reported_and_the_command_still_runs(tmp_path: Pat
     assert "migrating the runner's database failed:\nno server" in str(got["stderr"])
 
 
-def test_a_declared_database_is_used_as_it_is_and_never_migrated_here(tmp_path: Path) -> None:
+DECLARED = {
+    "DECLARED_PG_URL": "postgresql://app@db/v",
+    "DECLARED_PG_MIGRATE_URL": "postgresql://own@db/v",
+}
+
+
+def test_a_private_repository_uses_its_declared_database_and_never_migrates_it_unasked(
+    tmp_path: Path,
+) -> None:
     runner = FakeRunner((0, "[]\n", ""))
-    environ = {
-        "DECLARED_PG_URL": "postgresql://app@db/v",
-        "DECLARED_PG_MIGRATE_URL": "postgresql://own@db/v",
-    }
+    environ = {**DECLARED, "REPOSITORY_PRIVATE": "true"}
     vr.VibeyRemoteRunner(runner, environ).run('["projects", "--json"]', ID, tmp_path)
     [(argv, env)] = runner.calls
     assert argv == ["vibey", "projects", "--json"]
-    assert (env["VIBEY_PG_URL"], env["VIBEY_PG_MIGRATE_URL"]) == (
-        "postgresql://app@db/v",
-        "postgresql://own@db/v",
-    )
+    assert env["VIBEY_PG_URL"] == "postgresql://app@db/v" and "VIBEY_PG_MIGRATE_URL" not in env
     assert "DECLARED_PG_URL" not in env
     runner = FakeRunner((0, "", ""))
-    vr.VibeyRemoteRunner(runner, {"DECLARED_PG_URL": "postgresql://app@db/v"}).run(
-        '["x"]', ID, tmp_path
-    )
-    assert "VIBEY_PG_MIGRATE_URL" not in runner.calls[0][1]
+    vr.VibeyRemoteRunner(runner, environ).run('["migrate"]', ID, tmp_path)
+    assert runner.calls[0][1]["VIBEY_PG_MIGRATE_URL"] == "postgresql://own@db/v"
+
+
+def test_a_public_repository_never_uses_its_declared_database(tmp_path: Path) -> None:
+    runner = FakeRunner((0, "", ""), (0, "[]\n", ""))
+    environ = {**DECLARED, "REPOSITORY_PRIVATE": "false"}
+    got = vr.VibeyRemoteRunner(runner, environ).run('["projects"]', ID, tmp_path)
+    assert runner.calls[1][1]["VIBEY_PG_URL"] == vr.EPHEMERAL_APP_URL
+    assert "not used on a public repository" in str(got["stderr"])
 
 
 def test_what_cannot_run_is_reported_with_exit_2_and_nothing_runs(tmp_path: Path) -> None:

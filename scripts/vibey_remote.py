@@ -10,8 +10,10 @@ code and what the command printed. Whatever goes wrong before the command runs i
 same way, with exit code 2 and the reason on stderr, so the caller always reads a report.
 
 The database is the one the repository declares (`DECLARED_PG_URL`, and `DECLARED_PG_MIGRATE_URL`
-to migrate it) or, when it declares none, the runner's own empty PostgreSQL service, migrated
-for the run with an owner and an application role (ADR-0055).
+to migrate it) when the repository is private, or else the runner's own empty PostgreSQL
+service, migrated for the run with an owner and an application role (ADR-0055). The command
+runs with the system basics vibey hands any child and its application DSN: never the runner's
+whole environment, and never the owner's DSN unless the command is `vibey migrate`.
 """
 
 from __future__ import annotations
@@ -72,21 +74,31 @@ class VibeyRemoteRunner(VibeyRemoteRunnerInterface):
         self._runner = runner
         self._environ = environ
 
-    def _environment(self) -> tuple[dict[str, str], bool]:
-        """vibey's environment for the run, and whether its database must be migrated first."""
-        env = dict(self._environ)
-        for name in ("ARGV", "REQUEST", "DECLARED_PG_URL", "DECLARED_PG_MIGRATE_URL"):
-            env.pop(name, None)
+    def _database(self) -> tuple[str, str, str]:
+        """The application DSN, the owner DSN, and a note for stderr. A declared database is
+        used only on a private repository: on a public one the run's logs and its report can
+        be read by others, so its contents would leave with them (ADR-0085)."""
         declared = self._environ.get("DECLARED_PG_URL", "").strip()
-        if declared:
-            env["VIBEY_PG_URL"] = declared
-            owner = self._environ.get("DECLARED_PG_MIGRATE_URL", "").strip()
-            if owner:
-                env["VIBEY_PG_MIGRATE_URL"] = owner
-            return env, False
-        env["VIBEY_PG_URL"] = EPHEMERAL_APP_URL
-        env["VIBEY_PG_MIGRATE_URL"] = EPHEMERAL_OWNER_URL
-        return env, True
+        if declared and self._environ.get("REPOSITORY_PRIVATE", "") == "true":
+            return declared, self._environ.get("DECLARED_PG_MIGRATE_URL", "").strip(), ""
+        note = (
+            "vibey-remote: the declared database is not used on a public repository; "
+            "this run used the runner's own, empty one\n"
+            if declared
+            else ""
+        )
+        return EPHEMERAL_APP_URL, EPHEMERAL_OWNER_URL, note
+
+    def _environment(self, app_url: str, owner_url: str, *, migrate: bool) -> dict[str, str]:
+        """vibey's environment: the system basics vibey hands any child, and its DSN. The
+        owner's DSN goes only to a `vibey migrate` (ADR-0055), never to another command."""
+        from vibey.infrastructure.process import SYSTEM_ENVIRONMENT
+
+        env = {k: v for k, v in self._environ.items() if SYSTEM_ENVIRONMENT.admits(k)}
+        env["VIBEY_PG_URL"] = app_url
+        if migrate and owner_url:
+            env["VIBEY_PG_MIGRATE_URL"] = owner_url
+        return env
 
     @staticmethod
     def _cut(text: str) -> str:
@@ -108,14 +120,20 @@ class VibeyRemoteRunner(VibeyRemoteRunnerInterface):
         except (json.JSONDecodeError, RemoteCommandRefused) as refused:
             report = {"exit_code": 2, "stdout": "", "stderr": f"vibey-remote: {refused}\n"}
         else:
-            env, migrate = self._environment()
-            notes = ""
-            if migrate:
-                code, _, err = self._runner.run(["vibey", "migrate"], env, MIGRATE_TIMEOUT_S)
+            app_url, owner_url, notes = self._database()
+            if owner_url == EPHEMERAL_OWNER_URL:
+                code, _, err = self._runner.run(
+                    ["vibey", "migrate"],
+                    self._environment(app_url, owner_url, migrate=True),
+                    MIGRATE_TIMEOUT_S,
+                )
                 if code:
-                    notes = f"vibey-remote: migrating the runner's database failed:\n{err}"
+                    notes += f"vibey-remote: migrating the runner's database failed:\n{err}"
+            is_migrate = command.argv[:1] == ("migrate",)
             code, stdout, stderr = self._runner.run(
-                ["vibey", *command.argv], env, COMMAND_TIMEOUT_S
+                ["vibey", *command.argv],
+                self._environment(app_url, owner_url, migrate=is_migrate),
+                COMMAND_TIMEOUT_S,
             )
             report = {
                 "exit_code": code,
