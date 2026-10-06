@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-0-when-chapter-7-is-the-chapter-to-ask-about-6dfbf448e8",
+    "purpose": "0 when chapter 7 is the chapter to ask about",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/001-0-when-chapter-7-is-the-chapter-to-ask-about.md",
+    "requires": [],
+    "links": [
+      "skill-1-do-i-qualify-the-means-test-7f073615fc"
+    ]
+  },
+  {
+    "id": "skill-1-do-i-qualify-the-means-test-7f073615fc",
+    "purpose": "1 do i qualify the means test",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/002-1-do-i-qualify-the-means-test.md",
+    "requires": [
+      "skill-0-when-chapter-7-is-the-chapter-to-ask-about-6dfbf448e8"
+    ],
+    "links": [
+      "skill-2-what-it-costs-b85a54621f"
+    ]
+  },
+  {
+    "id": "skill-2-what-it-costs-b85a54621f",
+    "purpose": "2 what it costs",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/003-2-what-it-costs.md",
+    "requires": [
+      "skill-1-do-i-qualify-the-means-test-7f073615fc"
+    ],
+    "links": [
+      "skill-3-how-bankruptcy-attorneys-get-paid-542a1d0597"
+    ]
+  },
+  {
+    "id": "skill-3-how-bankruptcy-attorneys-get-paid-542a1d0597",
+    "purpose": "3 how bankruptcy attorneys get paid",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/004-3-how-bankruptcy-attorneys-get-paid.md",
+    "requires": [
+      "skill-2-what-it-costs-b85a54621f"
+    ],
+    "links": [
+      "skill-4-timeline-c996b4beba"
+    ]
+  },
+  {
+    "id": "skill-4-timeline-c996b4beba",
+    "purpose": "4 timeline",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/005-4-timeline.md",
+    "requires": [
+      "skill-3-how-bankruptcy-attorneys-get-paid-542a1d0597"
+    ],
+    "links": [
+      "skill-5-surrendering-a-house-or-car-4abbad3ea8"
+    ]
+  },
+  {
+    "id": "skill-5-surrendering-a-house-or-car-4abbad3ea8",
+    "purpose": "5 surrendering a house or car",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/006-5-surrendering-a-house-or-car.md",
+    "requires": [
+      "skill-4-timeline-c996b4beba"
+    ],
+    "links": [
+      "skill-6-what-must-be-disclosed-or-could-be-exposed-85d22e45f8"
+    ]
+  },
+  {
+    "id": "skill-6-what-must-be-disclosed-or-could-be-exposed-85d22e45f8",
+    "purpose": "6 what must be disclosed or could be exposed",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/007-6-what-must-be-disclosed-or-could-be-exposed.md",
+    "requires": [
+      "skill-5-surrendering-a-house-or-car-4abbad3ea8"
+    ],
+    "links": [
+      "skill-7-property-the-filer-keeps-south-carolina-exemptions-c3c56952f3"
+    ]
+  },
+  {
+    "id": "skill-7-property-the-filer-keeps-south-carolina-exemptions-c3c56952f3",
+    "purpose": "7 property the filer keeps south carolina exemptions",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/008-7-property-the-filer-keeps-south-carolina-exemptions.md",
+    "requires": [
+      "skill-6-what-must-be-disclosed-or-could-be-exposed-85d22e45f8"
+    ],
+    "links": [
+      "skill-8-what-is-not-discharged-526137e844"
+    ]
+  },
+  {
+    "id": "skill-8-what-is-not-discharged-526137e844",
+    "purpose": "8 what is not discharged",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/009-8-what-is-not-discharged.md",
+    "requires": [
+      "skill-7-property-the-filer-keeps-south-carolina-exemptions-c3c56952f3"
+    ],
+    "links": [
+      "skill-9-before-filing-what-to-avoid-9e6e22db7a"
+    ]
+  },
+  {
+    "id": "skill-9-before-filing-what-to-avoid-9e6e22db7a",
+    "purpose": "9 before filing what to avoid",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/010-9-before-filing-what-to-avoid.md",
+    "requires": [
+      "skill-8-what-is-not-discharged-526137e844"
+    ],
+    "links": [
+      "skill-10-credit-and-long-term-effects-b95f0bc3f5"
+    ]
+  },
+  {
+    "id": "skill-10-credit-and-long-term-effects-b95f0bc3f5",
+    "purpose": "10 credit and long term effects",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/011-10-credit-and-long-term-effects.md",
+    "requires": [
+      "skill-9-before-filing-what-to-avoid-9e6e22db7a"
+    ],
+    "links": [
+      "skill-11-alternatives-7083dc69e1"
+    ]
+  },
+  {
+    "id": "skill-11-alternatives-7083dc69e1",
+    "purpose": "11 alternatives",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/012-11-alternatives.md",
+    "requires": [
+      "skill-10-credit-and-long-term-effects-b95f0bc3f5"
+    ],
+    "links": [
+      "skill-12-questions-that-decide-the-path-eb53d22e2f"
+    ]
+  },
+  {
+    "id": "skill-12-questions-that-decide-the-path-eb53d22e2f",
+    "purpose": "12 questions that decide the path",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/013-12-questions-that-decide-the-path.md",
+    "requires": [
+      "skill-11-alternatives-7083dc69e1"
+    ],
+    "links": [
+      "skill-sources-and-caveats-e3e71b0ac1"
+    ]
+  },
+  {
+    "id": "skill-sources-and-caveats-e3e71b0ac1",
+    "purpose": "sources and caveats",
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/014-sources-and-caveats.md",
+    "requires": [
+      "skill-12-questions-that-decide-the-path-eb53d22e2f"
+    ],
+    "links": []
+  }
+]

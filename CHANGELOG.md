@@ -26,6 +26,11 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   five-spoke campaign, and distribution. It opens by asking each user to state their own
   governing postulates, and dates its vendor, platform and KDP specifics as volatile.
   vibey-skills 2.24.0; 142 plugins, 774 skills.
+* **skills:** `consumer-bankruptcy` (one skill): Chapter 7 in South Carolina — the means test
+  and its six-month look-back, costs and fee waivers, how attorneys are paid, the timeline and
+  the automatic stay, surrendering a house or car, SC exemptions, what is not discharged and what
+  to avoid before filing. Dollar figures dated October 2026; a research reference, not legal
+  advice. vibey-skills 2.25.0; 143 plugins, 775 skills.
 
 ## [4.1.0] (2026-10-05)
 

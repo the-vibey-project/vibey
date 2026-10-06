@@ -800,6 +800,11 @@
     "count": 6
   },
   {
+    "source": "src/vibey_tools/skills/plugins/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina/SKILL.md",
+    "output": "docs/microslices/skills/consumer-bankruptcy/skills/chapter-7-bankruptcy-south-carolina",
+    "count": 14
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
     "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production",
     "count": 7

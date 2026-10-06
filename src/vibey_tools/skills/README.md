@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **142 Claude Code plugins. 774 Agent Skills.** Long-form, source-cited practitioner
+> **143 Claude Code plugins. 775 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,7 +41,7 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 142 and vibey-gh's four. The
+That one address serves every plugin in the family: these 143 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 774 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 775 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -137,6 +137,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [compliance-frameworks](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/compliance-frameworks) | 0.1.0 | security | 5 | NIST 800-171, PCI-DSS v4, SOC 2, CMMC/CUI, OWASP SAMM |
 | [computer-hardware-and-data-centers](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/computer-hardware-and-data-centers) | 0.1.0 | hardware | 6 | Where the bottleneck actually lives, CPU architecture, the memory hierarchy, GPUs & accelerators, storage & NVMe, PCIe lanes & bifurcation, PSU sizing & transients, thermals & sustained clocks, specifying a build, assembly, UEFI & boot, overclocking honestly, troubleshooting, benchmarking, facility tiers, UPS/PDU & power distribution, air containment & liquid cooling, PUE & efficiency metrics, racks, leaf-spine networking, storage at scale, failure at scale, operations, AI infrastructure power density |
 | [computer-peripherals-design-and-standards](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/computer-peripherals-design-and-standards) | 0.1.0 | hardware | 6 | The peripheral stack, USB descriptors, endpoints & transfer types, USB-C & Power Delivery, Thunderbolt & alt modes, wireless peripherals, I2C/SPI/UART, PCIe peripherals, HID & report descriptors, keyboard matrix scanning, debounce & rollover, mouse sensors & polling, displays, audio latency & buffers, printers & scanners, controllers & haptics, designing a custom peripheral, USB firmware stacks, PCB & mechanical design, enumeration debugging, driver & OS integration, measuring latency, USB-IF/CE/FCC certification, accessibility, BadUSB & DMA exposure |
+| [consumer-bankruptcy](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/consumer-bankruptcy) | 0.1.0 | finance | 1 | Chapter 7 in South Carolina: the means test & six-month look-back, filing costs, fee waivers & installments, attorney flat fees, the timeline & automatic stay, the 341 meeting, surrendering a house or car, disclosure of lawsuits & business interests, SC exemptions, non-dischargeable debts, preferences & what to avoid before filing, credit effects, Chapter 13 & other alternatives; dollar figures dated October 2026; research reference, not legal advice |
 | [content-engineering-pipeline](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/content-engineering-pipeline) | 0.1.0 | content | 6 | A sequential 14-phase method: your own governing postulates first, then falsifiable thesis, terrain mapping & verified argument investigation, book assembly & six-pass revision, novel conversion, screenplay architecture, AI hub film & five-spoke campaign, Amazon KDP & in-person distribution; volatile vendor, platform & KDP facts dated |
 | [cooking-cleaning-waste-sciences](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences) | 0.1.0 | food-and-environment | 5 | Heat transfer, protein denaturation & collagen, Maillard browning, starch/gluten/gels, emulsions, brining, pH, fermentation, leavening, pathogens & temperature control, HACCP, allergens, kitchen organization, restaurant economics, surfactants & soil types, water hardness, cleaning vs sanitizing vs disinfecting & the mixing dangers, wastewater treatment, landfills, recycling honestly, composting |
 | [cryptocurrency-development](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/cryptocurrency-development) | 0.1.0 | blockchain | 4 | Protocol layer, clients, EIPs, EVM, Solidity, contract architecture, ERC standards, DeFi/MEV, testing, security, L2s, cross-chain, deployment |

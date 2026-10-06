@@ -6,12 +6,12 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 146 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 147 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
         "name": "vibey-skills",
-        "version": "2.24.0"
+        "version": "2.25.0"
       },
       {
         "path": "src/vibey_tools/gh",
@@ -335,6 +335,17 @@
       "description": "Computer Peripherals — Design, Building, Standards and Programming: the peripheral stack, USB architecture, USB-C and Power Delivery, Thunderbolt and alternate modes, wireless peripherals, embedded buses, PCIe peripherals, HID, keyboards, mice and pointing devices, displays, audio interfaces, printers and scanners, storage and capture, controllers and haptics, designing a custom peripheral, firmware, PCB and mechanical design, enumeration and debugging, drivers and OS integration, measuring latency, compliance and certification, accessibility, and peripheral security.",
       "version": "0.1.0",
       "category": "hardware",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "consumer-bankruptcy",
+      "source": "./src/vibey_tools/skills/plugins/consumer-bankruptcy",
+      "description": "Consumer Bankruptcy: Chapter 7 in South Carolina — the means test and its six-month look-back, costs and fee waivers, how attorneys are paid, the timeline and the automatic stay, surrendering a house or car, disclosure, SC exemptions, what is not discharged, what to avoid before filing, credit effects and alternatives. A research reference, not legal advice.",
+      "version": "0.1.0",
+      "category": "finance",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
