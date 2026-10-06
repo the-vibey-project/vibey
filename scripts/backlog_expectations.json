@@ -308,7 +308,7 @@
     "1180": {
       "close_when_done": true,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "3.0.0 shipped (PyPI 2026-09-29); the gate it tracked has nothing left to gate",
       "probes": [
         {
@@ -551,7 +551,7 @@
     "1376": {
       "close_when_done": true,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "delivered: #1377 retired the engines (ADR-0078), #1385 added hybrid dispatch (ADR-0079)",
       "probes": [
         {
@@ -597,18 +597,21 @@
     "1392": {
       "close_when_done": false,
       "kind": "standalone",
+      "last_verdict": "OPEN",
       "next": "the drill's agent exit status and report are both empty, yet the issue claims a finding; make the continuation lane report an empty drill as a lane failure, then re-run the drill",
       "probes": []
     },
     "1393": {
       "close_when_done": false,
       "kind": "standalone",
+      "last_verdict": "OPEN",
       "next": "the drill's agent exit status and report are both empty, yet the issue claims a finding; make the continuation lane report an empty drill as a lane failure, then re-run the drill",
       "probes": []
     },
     "1394": {
       "close_when_done": false,
       "kind": "standalone",
+      "last_verdict": "OPEN",
       "next": "the drill's agent exit status and report are both empty, yet the issue claims a finding; make the continuation lane report an empty drill as a lane failure, then re-run the drill",
       "probes": []
     },
@@ -623,6 +626,7 @@
     "1400": {
       "close_when_done": true,
       "kind": "standalone",
+      "last_verdict": "DONE",
       "next": "delivered: #1401 dispatches promotion after the merge train merges, and #1402 repairs failed sovereign reviews before rerunning the review",
       "probes": [
         {
@@ -657,12 +661,14 @@
     "1410": {
       "close_when_done": false,
       "kind": "standalone",
+      "last_verdict": "OPEN",
       "next": "specify the sovereign note, audio and screenshot ingestion adapters, relationship extraction, provenance, privacy boundary and ticket-confirmation gate before implementation",
       "probes": []
     },
     "1413": {
       "close_when_done": false,
       "kind": "standalone",
+      "last_verdict": "OPEN",
       "next": "resume Stage 2 from the append-only live result store, complete the preregistered halving and holdout stages, then operationalize only the evidence-selected method",
       "probes": []
     },
