@@ -124,8 +124,8 @@ its record, and the minimum generation rate from `scripts/minimum_specs.toml`.
 | Battery full-charge capacity vs design | 1.0162 ratio | 0.8 (declared in scripts/host_health.toml) | insufficient-history | 2 of the 4 weekly points a trend needs | 2 |
 | Battery cycles vs the design cycle count | 18 count | 1000 (this host's battery.design_cycle_count (2026-10-02)) | insufficient-history | 2 of the 4 weekly points a trend needs | 2 |
 | Sovereign-model generation rate | 25.51 tokens/s | 10 (scripts/minimum_specs.toml minimum_specs.assumptions.minimum_gen_tok_s) | insufficient-history | 2 of the 4 weekly points a trend needs | 2 |
-| Free disk vs vibey's minimum | 492.3 GB | 20 (minimum-specs record disk.minimum_gb (stale, 2026-10-02)) | insufficient-history | 2 of the 4 weekly points a trend needs | 2 |
-| Memory vs vibey's minimum | 24 GB | 24 (minimum-specs record ram.minimum_gb (stale, 2026-09-30)) | within | — | 2 |
+| Free disk vs vibey's minimum | 492.3 GB | 20 (minimum-specs record disk.minimum_gb (stale, 2026-10-05)) | insufficient-history | 2 of the 4 weekly points a trend needs | 2 |
+| Memory vs vibey's minimum | 24 GB | 24 (minimum-specs record ram.minimum_gb (stale, 2026-10-05)) | within | — | 2 |
 | Swap in use vs memory (sustained) | 0.682 ratio | 0.5 (declared in scripts/host_health.toml) | unconfirmed | past the threshold in 2 of the 3 records that confirm it | 2 |
 | Kernel panics in the trailing window | 1 count | 3 (declared in scripts/host_health.toml) | within | — | 2 |
 | Thermal CPU speed limit (sustained) | 100 % | 99 (declared in scripts/host_health.toml) | within | — | 2 |
