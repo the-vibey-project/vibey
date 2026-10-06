@@ -169,7 +169,7 @@ title = "Chat"
 page = "docs/continuation/chat.md"
 mode = "chat"
 purpose = "Answer a trusted person who writes /vibey in an issue, a pull request or the Actions tab."
-covers = ["chat.yml", "vibey-remote.yml"]
+covers = ["chat.yml", "vibey-remote.yml", "vibey-state-write.yml"]
 
 # Acting these out is irreversible or needs a person, so an automated run only drills them.
 [authority]
@@ -201,7 +201,7 @@ workflow = ".github/workflows/continuation-prompts.yml"
 # a job anywhere `cpu_runners` does not name.
 hosted_cpu_only = [
   "continuation-prompts.yml", "chat.yml", "self-healer.yml", "backlog-killer.yml",
-  "docs-updater.yml", "vibey-remote.yml",
+  "docs-updater.yml", "vibey-remote.yml", "vibey-state-write.yml",
 ]
 cpu_runners = ["ubuntu-latest", "ubuntu-24.04", "ubuntu-24.04-arm", "ubuntu-22.04"]
 # The lanes that must fire every day on their own, and run by hand: `check` fails if one

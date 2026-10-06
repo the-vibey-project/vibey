@@ -6,19 +6,13 @@ caller dispatched, holds it to the domain's rules, prepares the database, runs t
 writes the report the caller reads back.
 """
 
-from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Protocol
 
+# One process runner for both scripts: `vibey -w` uses the state action's (ADR-0086).
+from .vibey_state_action_interface import ProcessRunnerInterface
 
-class ProcessRunnerInterface(Protocol):
-    """Runs one argument vector, never through a shell."""
-
-    def run(
-        self, argv: Sequence[str], env: Mapping[str, str], timeout_s: float
-    ) -> tuple[int, str, str]:
-        """Exit code, stdout, stderr. A timeout is exit 124 with the reason on stderr."""
-        ...
+__all__ = ["ProcessRunnerInterface", "VibeyRemoteRunnerInterface"]
 
 
 class VibeyRemoteRunnerInterface(Protocol):
@@ -33,5 +27,5 @@ class VibeyRemoteRunnerInterface(Protocol):
 
     def sync_back(self, state: Path) -> tuple[int, str]:
         """Import the run's sealed export into an empty database and sync it with the
-        branch: the exit code, and what was said."""
+        branch: the exit code, and what was said. The state action's `write_back`."""
         ...

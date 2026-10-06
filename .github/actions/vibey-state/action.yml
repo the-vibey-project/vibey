@@ -1,0 +1,126 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: vibey state
+description: >-
+  Open the repository's synced vibey state (ADR-0086) in a PostgreSQL for this job, close it
+  again as a sealed export for a write job, or write such an export back to the vibey-state
+  branch.
+
+# Any workflow may use the synced state:
+#
+#   - uses: ./.github/actions/vibey-state      # step: open
+#     with: { step: open, key: "${{ secrets.VIBEY_STATE_KEY }}" }
+#   - run: vibey status                        # VIBEY_PG_URL now names the restored database
+#   - uses: ./.github/actions/vibey-state      # step: close, which uploads the export
+#     id: close
+#     with: { step: close, key: "${{ secrets.VIBEY_STATE_KEY }}" }
+#
+# and a later job, the only one with `contents: write`, calls .github/workflows/vibey-state-write.yml
+# with the artifact `close` names. A job that already holds `contents: write` may instead close
+# with `push: "true"`, which syncs the branch directly.
+#
+# Who may open it is `StateGate` in scripts/vibey_state_action.py: the key, and a private
+# repository or `public = true` in .github/vibey-state.toml. On a public repository whatever a
+# job prints from the decrypted state is public. Without the key, or on a public repository
+# that did not declare it, `open` opens nothing and says why, and the job goes on.
+#
+# Every input reaches the script through `env:`, never interpolated into a script, and the
+# state commands run with a filtered environment: the system basics, `VIBEY_STATE_*`, the key,
+# the repository and the token.
+
+inputs:
+  step:
+    description: "open, close or write-back"
+    required: true
+  key:
+    description: "The state key: pass secrets.VIBEY_STATE_KEY. Empty, nothing is opened."
+    required: true
+  token:
+    description: "The token `gh` reads (and, for a push or write-back, writes) the branch with"
+    required: false
+    default: ${{ github.token }}
+  pg-url:
+    description: >-
+      An owner's DSN for a database this job declared (`services: postgres`). Empty: the
+      runner's preinstalled PostgreSQL, started for the job.
+    required: false
+    default: ""
+  app-pg-url:
+    description: "The application role's DSN on that database. Empty: derived from pg-url."
+    required: false
+    default: ""
+  push:
+    description: "close only: \"true\" syncs the branch directly instead of exporting"
+    required: false
+    default: "false"
+  file:
+    description: "write-back only: the sealed export to write back"
+    required: false
+    default: ""
+  artifact:
+    description: "close only: the export's artifact name. Empty: unique to this run and job."
+    required: false
+    default: ""
+  python-version:
+    description: "The Python vibey runs on"
+    required: false
+    default: "3.12"
+
+outputs:
+  opened:
+    description: "open: \"true\" when the state was restored into this job's database"
+    value: ${{ steps.state.outputs.opened }}
+  state:
+    description: "close: \"true\" when a sealed export was written and uploaded"
+    value: ${{ steps.state.outputs.state }}
+  pushed:
+    description: "close with push: \"true\" when the branch was synced"
+    value: ${{ steps.state.outputs.pushed }}
+  artifact:
+    description: "close: the artifact the export was uploaded as, for vibey-state-write.yml"
+    value: ${{ steps.state.outputs.artifact }}
+  path:
+    description: "close: where the sealed export was written"
+    value: ${{ steps.state.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install vibey from this checkout, unless it is already importable
+      shell: bash
+      run: python -c "import vibey" 2>/dev/null || python -m pip install --quiet -e .
+    - name: Run the state step
+      id: state
+      shell: bash
+      env:
+        STEP: ${{ inputs.step }}
+        STATE_KEY: ${{ inputs.key }}
+        GH_TOKEN: ${{ inputs.token }}
+        PG_URL: ${{ inputs.pg-url }}
+        APP_PG_URL: ${{ inputs.app-pg-url }}
+        PUSH: ${{ inputs.push }}
+        FILE: ${{ inputs.file }}
+        ARTIFACT: ${{ inputs.artifact }}
+        # Empty on an event whose payload names no repository (a schedule); the gate then
+        # asks GitHub. Anything it cannot learn counts as public.
+        REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+      run: |
+        script="$GITHUB_ACTION_PATH/../../../scripts/vibey_state_action.py"
+        case "$STEP" in
+          close) python "$script" close --out "$RUNNER_TEMP/vibey-state" --push "$PUSH" ;;
+          write-back) python "$script" write-back "$FILE" ;;
+          *) python "$script" "$STEP" ;;
+        esac
+    # upload-artifact stores files relative to the paths' deepest common directory, so the
+    # write job finds state.vibey-export at the artifact's root.
+    - name: Hand the sealed state to the write job
+      if: inputs.step == 'close' && steps.state.outputs.state == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.state.outputs.artifact }}
+        path: ${{ steps.state.outputs.dir }}/
+        retention-days: 1
+        if-no-files-found: error

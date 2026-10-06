@@ -181,6 +181,80 @@ at the other are conflicts. `mine` keeps this database's row and `theirs` the br
 deletion included. Any conflict stops the sync, which then writes nothing at either end.
 `schema_migration`, `event_seq` and `state_sync` are never synced.
 
+#### From any workflow { #state-sync-from-any-workflow }
+
+Any GitHub workflow can open the state, use it with `vibey`, and hand it back, with the
+composite action `.github/actions/vibey-state` and the reusable workflow
+`.github/workflows/vibey-state-write.yml`. The action runs `scripts/vibey_state_action.py`.
+
+Whether a run may open it at all is decided by one gate (`StateGate`). It needs the
+`VIBEY_STATE_KEY` secret, and either a private repository or a public one that declares so
+in `.github/vibey-state.toml`:
+
+```toml
+[state]
+public = true
+```
+
+Without the file, or with `public = false`, a public repository never decrypts the state:
+`open` says why, opens nothing, and the job goes on. Any other table or key, or a `public`
+that is not `true` or `false`, is refused by name (exit 2). **On a public repository,
+whatever a workflow prints from the decrypted state is public.** This repository declares
+`public = true`; its operator accepted that ([ADR-0086](../architecture/decisions/0086-state-sync.md)).
+
+| Step | What it does | Outputs |
+|---|---|---|
+| `open` | Gives the job a database: `pg-url` (an owner's DSN, as from `services: postgres`), or else the runner's preinstalled PostgreSQL, started for the job. Migrates it, fills it with `vibey state sync --no-push`, and sets `VIBEY_PG_URL` (the application role) and `VIBEY_STATE_PG_URL` (the owner) for the job's later steps. | `opened` |
+| `close` | Exports the state, sealed, and uploads it as an artifact unique to the run and job (`artifact` names another), kept one day. With `push: "true"`, in a job that already holds `contents: write`, syncs the branch directly instead. | `state`, `artifact`, `path`, `pushed` |
+| `write-back` | What the reusable workflow runs: a fresh database, `vibey state import`, then `vibey state sync`. | none |
+
+The action's inputs are `step`, `key` (pass `${{ secrets.VIBEY_STATE_KEY }}`), `token`
+(default `github.token`), `pg-url`, `app-pg-url` (default: derived from `pg-url`), `push`,
+`file`, `artifact` and `python-version` (`3.12`). They reach the script through `env:`, and
+every state command runs with the system basics, `VIBEY_STATE_*`, the key, the repository and
+the token, never the runner's whole environment. A workflow that keeps its own jobs read-only
+lets the reusable workflow, whose one job holds `contents: write`, write the state back:
+
+```yaml
+jobs:
+  work:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      state: ${{ steps.close.outputs.state }}
+      artifact: ${{ steps.close.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/vibey-state
+        with:
+          step: open
+          key: ${{ secrets.VIBEY_STATE_KEY }}
+      - run: vibey status            # reads and writes the restored database
+      - id: close
+        uses: ./.github/actions/vibey-state
+        with:
+          step: close
+          key: ${{ secrets.VIBEY_STATE_KEY }}
+
+  write:
+    needs: work
+    if: needs.work.outputs.state == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/vibey-state-write.yml
+    with:
+      artifact: ${{ needs.work.outputs.artifact }}
+    secrets:
+      VIBEY_STATE_KEY: ${{ secrets.VIBEY_STATE_KEY }}
+```
+
+`vibey -w` (`vibey-remote.yml`) uses the same gate and commands, and its `sync-back` job
+calls the same reusable workflow. The AI-driven daily lanes do not open the state; any of
+them may, by calling the action.
+
 ### Operational surface environment variable overlay
 
 Every operational surface setting can be configured or overridden via environment variables.

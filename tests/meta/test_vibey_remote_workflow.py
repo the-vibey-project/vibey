@@ -85,14 +85,19 @@ def test_only_sync_back_may_write_and_it_runs_no_dispatched_command() -> None:
     assert back["needs"] == "run" and back["if"] == "needs.run.outputs.state == 'true'"
     assert back["permissions"] == {"contents": "write"}
     assert back["concurrency"]["cancel-in-progress"] is False
-    taken = next(
-        s for s in back["steps"] if str(s.get("uses", "")).startswith("actions/download-artifact")
-    )
-    assert taken["with"]["name"] == handed["with"]["name"]
-    commands = [s["run"] for s in back["steps"] if "run" in s]
-    assert commands[-1].startswith("python scripts/vibey_remote.py sync-back --state")
-    assert not any("ARGV" in str(s.get("env", {})) or "inputs." in str(s) for s in back["steps"])
-    checkout = next(
-        s for s in back["steps"] if str(s.get("uses", "")).startswith("actions/checkout")
-    )
-    assert checkout["with"]["persist-credentials"] is False
+    # It runs the reusable write workflow, handed the run's artifact by name, and nothing of
+    # the dispatched command's.
+    assert back["uses"] == "./.github/workflows/vibey-state-write.yml"
+    assert back["with"] == {"artifact": handed["with"]["name"]}
+    assert back["secrets"] == {"VIBEY_STATE_KEY": "${{ secrets.VIBEY_STATE_KEY }}"}
+    assert "steps" not in back and "inputs." not in str(back)
+
+
+def test_only_sync_back_holds_contents_write() -> None:
+    """Every other job is read-only: the run job's token can read the branch, never write it."""
+    writers = [
+        name
+        for name, job in spec()["jobs"].items()
+        if "write" in (job.get("permissions") or {}).values()
+    ]
+    assert writers == ["sync-back"]

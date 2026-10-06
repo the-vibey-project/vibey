@@ -1,6 +1,6 @@
 # 0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways
 
-**Status:** accepted · **Date:** 2026-10-06 · **Cites:** sub-doctrines 10.f, 10.g, 10.h, 12.c, 12.d and 12.h · **Related:** ADR-0002, ADR-0003, ADR-0016, ADR-0048, ADR-0055, ADR-0057, ADR-0068, ADR-0085 · **Evidence:** `vibey.domain.state_sync`, `vibey.application.state_sync`, `vibey.infrastructure.state`, `vibey.cli.state`, migration `0022_state_sync.sql`, `scripts/vibey_remote.py`
+**Status:** accepted · **Date:** 2026-10-06 · **Cites:** sub-doctrines 10.f, 10.g, 10.h, 12.c, 12.d and 12.h · **Related:** ADR-0002, ADR-0003, ADR-0016, ADR-0048, ADR-0055, ADR-0057, ADR-0068, ADR-0083, ADR-0085 · **Evidence:** `vibey.domain.state_sync`, `vibey.application.state_sync`, `vibey.infrastructure.state`, `vibey.cli.state`, migration `0022_state_sync.sql`, `scripts/vibey_remote.py`, `scripts/vibey_state_action.py`, `.github/actions/vibey-state`, `.github/workflows/vibey-state-write.yml`, `.github/vibey-state.toml`
 
 **Owes:** the advertised ADR count in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `README.md`
 and `docs/index.md`; a `properdocs.yml` nav entry for this record; `docs/llms.txt`
@@ -116,18 +116,36 @@ whatever is on the branch can be read by anyone.
     `vibey state sync --every <state_sync_interval_seconds>` through
     `vibey supervisor exec`, with its own environment file, `state-sync.env`, created from a
     commented template readable by its owner alone. The worker's file never holds that DSN.
-12. **Never from the hub, never on a public runner.** `state_sync` is in
+12. **Never from the hub; on a runner, only through the gate.** `state_sync` is in
     `NEVER_FROM_THE_HUB`, and `vibey state` is in `RESERVED_COMMANDS`. The hub routes none
-    of it, and refuses it as a command sent to the workflows. On the runner (ADR-0085), the
-    state is restored only on a **private** repository that holds a `VIBEY_STATE_KEY`
-    secret and declares no database. The runner's empty database is filled first with
-    `vibey state sync --no-push`, and exported, sealed, after the command. A separate
-    job, `sync-back` in `vibey-remote.yml` (`scripts/vibey_remote.py sync-back`), the only
-    one with `contents: write`, imports that export into a fresh
-    database and runs `vibey state sync` to push the run's changes back. The command itself
-    never holds the key, the owner's DSN or a token. On a public repository the state is
-    never restored, because anyone can read its runs' logs and artifacts. This is the same
-    rule ADR-0085 applies to a declared database, and the run says so.
+    of it, and refuses it as a command sent to the workflows. On a GitHub runner, every
+    workflow may open the state, and one gate decides whether it may: `StateGate` in
+    `scripts/vibey_state_action.py`. It needs the repository's `VIBEY_STATE_KEY` secret and
+    either a **private** repository or a public one whose `.github/vibey-state.toml`
+    declares `[state] public = true`. Absent, or `public = false`, a public repository never
+    decrypts the state, because anyone can read its runs' logs and artifacts; that stays the
+    default for every adopter. An unknown key, or a `public` that is not a boolean, is
+    refused by name. An event whose payload does not say whether the repository is private
+    (a `schedule`) is asked of GitHub, and an answer the gate cannot get counts as public.
+    The operator was told the exposure and decided that this repository declares it
+    (2026-10-06), so here anything a workflow prints from the decrypted state is public.
+    - **Any workflow** uses the composite action `.github/actions/vibey-state`. `open` gives
+      the job a database (the one it declared with `services: postgres`, or the runner's
+      preinstalled PostgreSQL, started for the job), migrates it, fills it with
+      `vibey state sync --no-push`, and hands later steps `VIBEY_PG_URL` and
+      `VIBEY_STATE_PG_URL`. `close` exports the state, sealed, as an artifact unique to the
+      run and job, or with `push` syncs the branch directly from a job that already holds
+      `contents: write`. The reusable `.github/workflows/vibey-state-write.yml`, whose one
+      job alone holds `contents: write` and runs no command of the caller's, imports that
+      export into a fresh database and runs `vibey state sync`. Writers queue on one
+      concurrency group and are never cancelled.
+    - **`vibey -w`** (ADR-0085) uses the same gate and commands. The state is restored only
+      into the runner's own database, never a declared one. It is filled first and exported,
+      sealed, after the command. A separate job, `sync-back` in `vibey-remote.yml`, the only
+      one with `contents: write`, calls the reusable write workflow with that export.
+    - The command a caller dispatched never holds the key, the owner's DSN or a token. Every
+      state command runs with the system basics, `VIBEY_STATE_*`, the key, the repository
+      and `GH_TOKEN`, never the runner's whole environment.
 
 ## Consequences
 
@@ -135,7 +153,12 @@ whatever is on the branch can be read by anyone.
   others with one command, and `vibey supervisor` can keep it level unattended. A disk that
   dies loses at most what changed since the last sync.
 - On this public repository the `vibey-state` branch is public. Its contents are
-  ciphertext, and confidentiality rests on the key alone. The branch's commit times, its
+  ciphertext, and confidentiality rests on the key alone. That is no longer true of the runs:
+  this repository declares `public = true`, so a workflow that opens the state and prints a
+  row from it, in a log, a report or an artifact, publishes that row. The operator accepted
+  that. The AI-driven daily lanes (ADR-0083) are not wired to open it; any of them may, by
+  calling the action, and from then on what it prints from the state is public too. Another
+  adopter keeps the safe default until it writes the same declaration. The branch's commit times, its
   number of commits and the size of each sealed file are visible to anyone. The commit
   message is fixed and says nothing about the rows.
 - Losing the key loses the branch's state: nothing can open it. Every machine and the

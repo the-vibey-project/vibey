@@ -12,6 +12,8 @@ import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+import pytest
+
 from scripts import vibey_remote as vr
 
 ID = "0123456789abcdef"
@@ -152,14 +154,55 @@ def test_a_private_repository_with_a_state_key_restores_runs_and_exports(tmp_pat
     assert got["state_exported"] is True and got["stdout"] == "ran\n"
 
 
-def test_a_public_repository_never_restores_the_state_and_says_so(tmp_path: Path) -> None:
-    runner = FakeRunner((0, "", ""), (0, "", ""))
-    got = vr.VibeyRemoteRunner(runner, {**STATE, "REPOSITORY_PRIVATE": "false"}).run(
+def test_a_public_repository_never_restores_the_state_undeclared_and_says_so(
+    tmp_path: Path,
+) -> None:
+    for declared in (None, "[state]\npublic = false\n"):
+        declaration = tmp_path / "vibey-state.toml"
+        declaration.unlink(missing_ok=True)
+        if declared is not None:
+            declaration.write_text(declared)
+        runner = FakeRunner((0, "", ""), (0, "", ""))
+        got = vr.VibeyRemoteRunner(
+            runner, {**STATE, "REPOSITORY_PRIVATE": "false"}, declaration
+        ).run('["status"]', ID, tmp_path, tmp_path / "s")
+        assert [argv for argv, _ in runner.calls] == [["vibey", "migrate"], ["vibey", "status"]]
+        assert (
+            "not restored: a public repository needs `public = true` in .github/vibey-state.toml"
+            in str(got["stderr"])
+        )
+        assert got["state_exported"] is False
+
+
+def test_a_public_repository_that_declares_it_restores_the_state(tmp_path: Path) -> None:
+    """The operator's declaration (ADR-0086): `public = true` lets a public run decrypt it."""
+    declaration = tmp_path / "vibey-state.toml"
+    declaration.write_text("[state]\npublic = true\n")
+    runner = FakeRunner((0, "", ""), (0, "", ""), (0, "ran\n", ""), (0, "", ""))
+    got = vr.VibeyRemoteRunner(runner, {**STATE, "REPOSITORY_PRIVATE": "false"}, declaration).run(
         '["status"]', ID, tmp_path, tmp_path / "s"
     )
-    assert [argv for argv, _ in runner.calls] == [["vibey", "migrate"], ["vibey", "status"]]
-    assert "not restored on a public repository" in str(got["stderr"])
-    assert got["state_exported"] is False
+    assert [argv for argv, _ in runner.calls][1] == ["vibey", "state", "sync", "--no-push"]
+    assert got["state_exported"] is True and got["stderr"] == ""
+
+
+def test_a_broken_declaration_restores_nothing_and_names_what_is_wrong(tmp_path: Path) -> None:
+    declaration = tmp_path / "vibey-state.toml"
+    declaration.write_text("[state]\npublic = 1\n")
+    runner = FakeRunner((0, "", ""), (0, "", ""))
+    got = vr.VibeyRemoteRunner(runner, {**STATE, "REPOSITORY_PRIVATE": "true"}, declaration).run(
+        '["status"]', ID, tmp_path, tmp_path / "s"
+    )
+    assert len(runner.calls) == 2
+    assert "not restored" in str(got["stderr"]) and "state.public" in str(got["stderr"])
+
+
+def test_this_repository_declares_its_state_public() -> None:
+    """The operator's decision of 2026-10-06, as code (ADR-0086, decision 12)."""
+    from scripts.vibey_state_action import StateDeclaration
+
+    repo = Path(__file__).resolve().parents[2]
+    assert StateDeclaration(repo / ".github" / "vibey-state.toml").public() is True
 
 
 def test_without_a_state_key_or_with_a_declared_database_nothing_is_restored(
@@ -245,3 +288,29 @@ def test_main_runs_sync_back_and_tells_the_workflow_the_state_was_exported(
     )
     assert vr.main(["run", "--out", str(tmp_path)]) == 0
     assert output.read_text() == "state=true\n"
+
+
+def test_run_directly_it_finds_its_neighbours_beside_it(monkeypatch, tmp_path: Path) -> None:
+    """The workflow runs the file, not the module: `scripts.` is not importable there."""
+    import runpy
+
+    script = Path(vr.__file__)
+    monkeypatch.syspath_prepend(str(script.parent))
+    for blocked in ("vibey_remote_interface", "vibey_state_action_interface"):
+        monkeypatch.setitem(sys.modules, f"scripts.interfaces.{blocked}", None)
+    monkeypatch.setattr(sys, "argv", [str(script), "run", "--out", str(tmp_path)])
+    monkeypatch.setenv("ARGV", '["-w"]')
+    monkeypatch.setenv("REQUEST", ID)
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+    # Another script run directly may have left its own `interfaces` behind: start clean.
+    for name in [n for n in sys.modules if n.split(".")[0] in {"interfaces", "vibey_state_action"}]:
+        monkeypatch.delitem(sys.modules, name)
+    before = set(sys.modules)
+    try:
+        with pytest.raises(SystemExit) as exited:
+            runpy.run_path(str(script), run_name="__main__")
+    finally:
+        for name in set(sys.modules) - before:
+            if name.split(".")[0] in {"interfaces", "vibey_state_action"}:
+                del sys.modules[name]
+    assert exited.value.code == 0 and report(tmp_path)["exit_code"] == 2
