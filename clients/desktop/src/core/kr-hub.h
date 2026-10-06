@@ -75,6 +75,8 @@ typedef enum {
     KR_HUB_ROUTE_LOOPS,
     KR_HUB_ROUTE_DOCTOR,
     KR_HUB_ROUTE_PAIRING_CLAIM, /* a device, before it holds a key: the only unsigned write */
+    KR_HUB_ROUTE_WORKFLOW_RUNS, /* POST a command line to the repository's GitHub runners */
+    KR_HUB_ROUTE_WORKFLOW_RUN,  /* needs id (the request id): where that command is */
 } KrHubRoute;
 
 /* The path (and query) of a route, every id percent-escaped. NULL when a needed id is

@@ -213,7 +213,7 @@ own and the repository root's — have no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (84 ADRs: 0001–0084) |
+| ADRs | `docs/architecture/decisions/` (85 ADRs: 0001–0085) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

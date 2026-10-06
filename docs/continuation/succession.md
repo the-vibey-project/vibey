@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 84, the newest 0084 — A rolling nightly of every krypton interface, from the release builders.
+- **Decision records:** 85, the newest 0085 — `vibey -w`: any vibey command, run on the repository's GitHub-hosted runners.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

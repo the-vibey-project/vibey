@@ -60,6 +60,7 @@ export class Defaults {
     environmentAllow: [],
     theme: 'system',
     hubUrl: '',
+    workflows: false,
   };
 
   /** The declared minimum of each numeric setting; a smaller value is raised to it. */
@@ -130,6 +131,7 @@ export class SettingsResolver implements SettingsResolverInterface {
       environmentAllow: raw.environmentAllow.map((entry) => entry.trim()).filter((entry) => entry !== ''),
       theme: SettingsResolver.theme(raw.theme),
       hubUrl: raw.hubUrl.trim(),
+      workflows: raw.workflows,
     };
   }
 

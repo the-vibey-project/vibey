@@ -58,6 +58,8 @@ describe('HubClient', () => {
       ['get', '/api/v1/loops'],
       ['get', '/api/v1/lanes'],
       ['get', '/api/v1/doctor'],
+      ['post', '/api/v1/workflows/runs'],
+      ['get', '/api/v1/workflows/runs/{request_id}'],
     ];
     for (const [method, path] of used) {
       expect(document.paths[path as string]?.[method as string]).toBeDefined();
@@ -306,6 +308,87 @@ describe('HubClient', () => {
     expect(HubClient.normaliseBaseUrl('https://mac.local:8765')).toBe('https://mac.local:8765');
     expect(HubClient.normaliseBaseUrl('ftp://x')).toHaveProperty('error');
     expect(HubClient.normaliseBaseUrl('http://x/path')).toHaveProperty('error');
+  });
+
+  it('starts a workflows run with the argv alone, and takes the 202', async () => {
+    const queued = { request_id: 'r1', state: 'queued', url: '', exit_code: null, stdout: '', stderr: '', detail: '' };
+    const { client, calls } = fakeHub({ 'POST /api/v1/workflows/runs': { status: 202, body: queued } });
+    await expect(client.startWorkflowRun(['status', '--json'])).resolves.toEqual(queued);
+    expect(calls[0]?.init.method).toBe('POST');
+    expect(calls[0]?.init.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(calls[0]?.init.body ?? '')).toEqual({ argv: ['status', '--json'] });
+  });
+
+  it('refuses an empty or over-long command line before anything is sent', async () => {
+    const { client, calls } = fakeHub({});
+    await expect(client.startWorkflowRun([])).rejects.toMatchObject({ refusal: 'invalid' });
+    await expect(client.startWorkflowRun(Array.from({ length: 201 }, () => 'x'))).rejects.toThrow(/1 to 200 words/);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('reads a workflows run, filling what the hub leaves out', async () => {
+    const done = { request_id: 'r 1', state: 'done', url: 'https://github.com/o/r/actions/runs/9', exit_code: 0, stdout: '{}', stderr: 'warn', detail: '' };
+    const { client, calls } = fakeHub({
+      'GET /api/v1/workflows/runs/r%201': { status: 200, body: done },
+      'GET /api/v1/workflows/runs/r2': { status: 200, body: { request_id: 'r2', state: 'running', exit_code: '0', url: 7 } },
+    });
+    await expect(client.workflowRun('r 1')).resolves.toEqual(done);
+    expect(calls[0]?.init.headers.Authorization).toBe('Bearer s3cret');
+    await expect(client.workflowRun('r2')).resolves.toEqual({
+      request_id: 'r2',
+      state: 'running',
+      url: '',
+      exit_code: null,
+      stdout: '',
+      stderr: '',
+      detail: '',
+    });
+  });
+
+  it('refuses a workflows run that is not one', async () => {
+    const { client } = fakeHub({
+      'GET /api/v1/workflows/runs/a': { status: 200, body: [] },
+      'GET /api/v1/workflows/runs/b': { status: 200, body: { state: 'done' } },
+      'GET /api/v1/workflows/runs/c': { status: 200, body: { request_id: 'c', state: 'lost' } },
+      'POST /api/v1/workflows/runs': { status: 200, body: { request_id: 'c', state: 'queued' } },
+    });
+    for (const id of ['a', 'b', 'c']) {
+      await expect(client.workflowRun(id)).rejects.toMatchObject({ refusal: 'bad-answer' });
+    }
+    // The start answers 202; a 200 there is not the contract.
+    await expect(client.startWorkflowRun(['status'])).rejects.toMatchObject({ refusal: 'bad-answer', status: 200 });
+  });
+
+  it('says what each workflows refusal means, with the hub’s own reason', async () => {
+    for (const status of [403, 404, 422, 502, 503]) {
+      const { client } = fakeHub({ 'POST /api/v1/workflows/runs': { status, body: { detail: ' why ' } } });
+      const error = (await client.startWorkflowRun(['status']).catch((caught: unknown) => caught)) as HubError;
+      expect(error.status).toBe(status);
+      expect(error.refusal).toBe(HubClient.WORKFLOW_REFUSALS[status]?.[0]);
+      expect(error.message).toBe(`${HubClient.WORKFLOW_REFUSALS[status]?.[1]} The hub said: why`);
+    }
+    const scope = fakeHub({ 'POST /api/v1/workflows/runs': { status: 403, body: { detail: 'phone may not run commands on the workflows' } } });
+    await expect(scope.client.startWorkflowRun(['status'])).rejects.toThrow(/needs the `workflows` scope.*phone may not/);
+    const off = fakeHub({ 'GET /api/v1/workflows/runs/r': { status: 503, body: 'not json' } });
+    await expect(off.client.workflowRun('r')).rejects.toThrow(/^This hub does not run commands on GitHub: workflows are not enabled on it\.$/);
+    // FastAPI's validation detail is a list, not a sentence: the plain message stands alone.
+    const invalid = fakeHub({ 'POST /api/v1/workflows/runs': { status: 422, body: { detail: [{ msg: 'too long' }] } } });
+    await expect(invalid.client.startWorkflowRun(['x'])).rejects.toThrow(/^The hub refused that command line\.$/);
+    // Refusals the workflows routes share with every route keep the shared words.
+    const busy = fakeHub({ 'POST /api/v1/workflows/runs': { status: 429, body: { detail: 'slow down' } } });
+    await expect(busy.client.startWorkflowRun(['x'])).rejects.toMatchObject({ refusal: 'too-many', message: HubClient.REFUSALS[429]?.[1] });
+  });
+
+  it('keeps a run link only when it is https, so no other scheme reaches the URL handler', () => {
+    expect(HubClient.httpsUrl('https://github.com/o/r/actions/runs/7')).toBe('https://github.com/o/r/actions/runs/7');
+    for (const refused of ['javascript:alert(1)', 'intent://x#Intent;end', 'tel:123', 'http://github.com/x', 'not a url', '']) {
+      expect(HubClient.httpsUrl(refused)).toBe('');
+    }
+  });
+
+  it('describes every scope the host may grant, workflows among them', () => {
+    expect(Object.keys(HubClient.SCOPES)).toEqual(['view', 'answer', 'spend', 'run', 'bump', 'workflows']);
+    expect(HubClient.SCOPES.workflows).toBe("Run vibey commands on the repository's GitHub-hosted runners");
   });
 
   it('names each request uniquely by default', async () => {

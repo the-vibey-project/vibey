@@ -139,6 +139,43 @@ def test_a_token_others_can_read_is_refused(tmp_path: Path) -> None:
         store.token()
 
 
+def test_the_run_key_is_made_once_owner_only_and_then_reused(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path / "hub")
+    key = store.run_key()
+    assert len(key) == 32
+    assert store.run_key() == key
+    assert (tmp_path / "hub" / "run.key").stat().st_mode & 0o777 == 0o600
+    assert (tmp_path / "hub").stat().st_mode & 0o777 == 0o700
+    assert key != store.token().encode()
+
+
+def test_a_run_key_others_can_read_is_refused(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path)
+    store.run_key()
+    (tmp_path / "run.key").chmod(0o644)
+    with pytest.raises(PermissionError, match="open to other accounts"):
+        store.run_key()
+
+
+def test_a_symlinked_run_key_is_never_followed(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path / "hub")
+    store.run_key()
+    (tmp_path / "hub" / "run.key").unlink()
+    (tmp_path / "planted").write_bytes(b"k" * 32)
+    (tmp_path / "planted").chmod(0o600)
+    (tmp_path / "hub" / "run.key").symlink_to(tmp_path / "planted")
+    with pytest.raises(OSError):
+        store.run_key()
+
+
+def test_a_run_key_of_another_length_is_refused(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path)
+    store.run_key()
+    (tmp_path / "run.key").write_bytes(b"short")
+    with pytest.raises(ValueError, match="32-byte key"):
+        store.run_key()
+
+
 def test_the_runtime_record_round_trips_and_clears(tmp_path: Path) -> None:
     store = LocalTokenStore(tmp_path)
     assert store.serving() is None

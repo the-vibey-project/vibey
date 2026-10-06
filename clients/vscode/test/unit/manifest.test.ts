@@ -44,3 +44,14 @@ describe('the one command table, as this extension contributes it', () => {
     }
   });
 });
+
+describe('settings a workspace may not set', () => {
+  it('keeps vibey.workflows out of reach of a cloned folder: it sends commands to the folder\'s repository', () => {
+    const raw = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as {
+      contributes: { configuration: { properties: Record<string, { scope?: string }> } | Array<{ properties: Record<string, { scope?: string }> }> };
+    };
+    const blocks = Array.isArray(raw.contributes.configuration) ? raw.contributes.configuration : [raw.contributes.configuration];
+    const setting = blocks.map((block) => block.properties['vibey.workflows']).find((found) => found !== undefined);
+    expect(setting?.scope).toBe('application');
+  });
+});

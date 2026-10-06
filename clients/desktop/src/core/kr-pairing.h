@@ -96,6 +96,16 @@ char *kr_pairing_claim_body(const char *code, const char *name);
 /* A refusal of a claim in words a person can act on; `detail` is the hub's own, or NULL. */
 char *kr_pairing_refusal_message(guint status, const char *detail);
 
+/* What a scope the host grants lets this device do, in words, as the hub defines it
+ * (src/vibey/domain/hub_scope.py, HubScope): view, answer, spend, run, bump, workflows.
+ * NULL for a scope krypton does not know. Static. */
+const char *kr_pairing_scope_description(const char *scope);
+
+/* What a paired device may do, one scope to a line ("workflows: Run vibey commands on the
+ * repository's GitHub-hosted runners"); a scope krypton does not know is said as itself, and
+ * no scopes at all as "nothing yet". */
+char *kr_pairing_scopes_said(const char *const *scopes);
+
 /* ---- the key a pairing gives ---------------------------------------------------------- */
 
 typedef struct {

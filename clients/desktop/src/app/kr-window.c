@@ -5,9 +5,11 @@
 #include "kr-format.h"
 #include "kr-mark.h"
 #include "kr-pairing.h"
+#include "kr-workflows-page.h"
 
 const char *const kr_window_page_names[KR_WINDOW_PAGES] = {
-    "projects", "gates", "lanes", "loops", "budgets", "doctor", "devices", "settings",
+    "projects", "gates", "lanes", "loops", "budgets", "doctor", "workflows", "devices",
+    "settings",
 };
 
 typedef struct {
@@ -22,6 +24,7 @@ static const Place PLACES[KR_WINDOW_PAGES] = {
     {"Loops and effort", "view-refresh-symbolic"},
     {"Budgets", "wallet-symbolic"},
     {"Doctor", "emblem-ok-symbolic"},
+    {"Run on GitHub", "utilities-terminal-symbolic"},
     {"Devices", "network-wireless-symbolic"},
     {"Settings", "emblem-system-symbolic"},
 };
@@ -39,11 +42,12 @@ typedef struct {
     AdwStatusPage *empty[KR_WINDOW_PAGES];
     GtkStack *page_stacks[KR_WINDOW_PAGES];
     GtkWidget *gates_badge;
+    GtkWidget *workflows; /* the Run on GitHub page (kr-workflows-page.h) */
     guint listener;
 } KrWindow;
 
 enum { PAGE_PROJECTS, PAGE_GATES, PAGE_LANES, PAGE_LOOPS, PAGE_BUDGETS, PAGE_DOCTOR,
-       PAGE_DEVICES, PAGE_SETTINGS };
+       PAGE_WORKFLOWS, PAGE_DEVICES, PAGE_SETTINGS };
 
 static KrWindow *
 window_of(GtkWidget *window)
@@ -552,14 +556,15 @@ render_devices(KrWindow *self)
 
     const KrDeviceCredential *paired = self->app->paired;
     if (paired != NULL) {
-        g_autofree char *scopes = g_strjoinv(", ", paired->scopes);
+        /* Each scope the host granted, with what it lets this device do (workflows included:
+         * the Run on GitHub page needs it). */
+        g_autofree char *scopes = kr_pairing_scopes_said((const char *const *) paired->scopes);
         g_autofree char *certificate =
             paired->fingerprint != NULL ? kr_pairing_fingerprint_display(paired->fingerprint)
                                         : g_strdup("none: the hub is on this computer");
         g_autofree char *title = g_strdup_printf("Paired as \"%s\"", paired->name);
-        g_autofree char *about = g_strdup_printf(
-            "device %s · may %s\ncertificate %s", paired->device_id,
-            *scopes != '\0' ? scopes : "nothing yet", certificate);
+        g_autofree char *about = g_strdup_printf("device %s · certificate %s\nmay:\n%s",
+                                                 paired->device_id, certificate, scopes);
         gtk_list_box_append(list, row(title, about));
     }
 
@@ -657,6 +662,7 @@ render_connection(KrWindow *self)
     adw_banner_set_title(self->banner, message != NULL ? message : "");
     adw_banner_set_revealed(self->banner, trouble);
     render_devices(self);
+    kr_workflows_page_refresh(self->workflows);
 }
 
 static void
@@ -806,6 +812,7 @@ kr_window_new(KrApp *app)
         "Loops are not known yet",
         "Choose a project",
         "The doctor has not been asked",
+        "Run on GitHub",
         "Devices",
         "Settings",
     };
@@ -818,10 +825,15 @@ kr_window_new(KrApp *app)
         "Refresh to run the checks the hub can run itself.",
         "",
         "",
+        "",
     };
+    /* Every place is a list of rows but Run on GitHub, which is a form and what it printed. */
+    self->workflows = kr_workflows_page_new(app);
     for (int i = 0; i < KR_WINDOW_PAGES; i++)
         gtk_stack_add_named(GTK_STACK(stack),
-                            list_page(self, i, empty_titles[i], empty_descriptions[i]),
+                            i == PAGE_WORKFLOWS
+                                ? self->workflows
+                                : list_page(self, i, empty_titles[i], empty_descriptions[i]),
                             kr_window_page_names[i]);
 
     GtkWidget *refresh = gtk_button_new_from_icon_name("view-refresh-symbolic");

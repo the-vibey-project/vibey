@@ -189,6 +189,31 @@ not_a_pairing(const KrHubEndpoint *target, const char *json)
 }
 
 static void
+test_scope_descriptions(void)
+{
+    g_assert_cmpstr(kr_pairing_scope_description("workflows"), ==,
+                    "Run vibey commands on the repository's GitHub-hosted runners");
+    for (const char *const *scope = (const char *const[]){"view", "answer", "spend", "run",
+                                                          "bump", NULL};
+         *scope != NULL; scope++)
+        g_assert_nonnull(kr_pairing_scope_description(*scope));
+    g_assert_null(kr_pairing_scope_description("admin"));
+    g_assert_null(kr_pairing_scope_description(NULL));
+
+    g_autofree char *said =
+        kr_pairing_scopes_said((const char *const[]){"view", "workflows", "admin", NULL});
+    g_assert_cmpstr(said, ==,
+                    "view: See projects, status, gates, budgets, the queue, loops, lanes and "
+                    "doctor\n"
+                    "workflows: Run vibey commands on the repository's GitHub-hosted runners\n"
+                    "admin");
+    g_autofree char *none = kr_pairing_scopes_said((const char *const[]){NULL});
+    g_assert_cmpstr(none, ==, "nothing yet");
+    g_autofree char *missing = kr_pairing_scopes_said(NULL);
+    g_assert_cmpstr(missing, ==, "nothing yet");
+}
+
+static void
 test_from_claim(void)
 {
     g_autoptr(KrHubEndpoint) target = kr_pairing_target("studio.local", 8765, FP, NULL);
@@ -370,6 +395,7 @@ main(int argc, char **argv)
     g_test_add_func("/pairing/target", test_target);
     g_test_add_func("/pairing/name-and-body", test_name_and_body);
     g_test_add_func("/pairing/refusal-messages", test_refusal_messages);
+    g_test_add_func("/pairing/scope-descriptions", test_scope_descriptions);
     g_test_add_func("/pairing/from-claim", test_from_claim);
     g_test_add_func("/pairing/store", test_store);
     return g_test_run();

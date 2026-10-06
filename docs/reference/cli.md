@@ -33,6 +33,7 @@ These apply to every command; they must come before the subcommand name.
 | `--quiet` / `-q` | off | Warnings and errors only. |
 | `--log-level LEVEL` | unset | `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` (case-insensitive). Overrides the level `-v` or `-q` would pick. |
 | `--log-file PATH` | unset | Also write redacted JSON lines to this file. |
+| `--workflows` / `-w` | off | Run the command on this repository's GitHub-hosted runners instead of here ([below](#running-a-command-on-the-workflows)). |
 | `--install-completion` | — | Install shell completion for the current shell. |
 | `--show-completion` | — | Print the completion script for the current shell. |
 | `--help` | — | Show help and exit. |
@@ -43,6 +44,31 @@ These apply to every command; they must come before the subcommand name.
 fixes the level, but the `-v` count still widens scope, so
 `--log-level WARNING -vvv` means warnings from third-party libraries too,
 with payloads.
+
+### Running a command on the workflows { #running-a-command-on-the-workflows }
+
+`vibey -w <command>` (or `--workflows`) sends the command line, without the flag, to
+`.github/workflows/vibey-remote.yml`, which runs it with vibey on a GitHub-hosted runner and
+hands back what it printed and its exit code (ADR-0085). `vibey -w` prints them as the command
+would have (stdout to stdout, stderr to stderr), says where it ran on stderr, and exits with the
+command's own code: `vibey -w status --json | jq .` reads exactly as `vibey status --json | jq .`.
+
+The flag is read only among the global options before the command: `vibey status -w` passes
+`-w` to `status`. It needs the GitHub CLI (`gh`), logged in, with `actions: write` on the
+repository. The runner starts from an empty, freshly migrated PostgreSQL unless a private
+repository declares `VIBEY_WORKFLOWS_PG_URL` as a secret (a public one never uses it: its runs
+can be read by others), and holds no engine key or model, so a command
+that needs either fails there as it would on a host without them. Its exit codes beyond the
+command's own: `2` for a command line that cannot be sent (a nested `-w`, a NUL, more than 4,000
+characters) or invalid `VIBEY_WORKFLOWS_*` settings; `1` when GitHub refused the dispatch or the
+run ended without a report; `124` when the wait ran out, with the run's address so it can be
+followed. Every krypton interface reaches the same path through the hub's
+`/api/v1/workflows/runs` routes, which need the `workflows` scope and the scope of what the
+command does (`view` for `status`, `answer` and `spend` for `answer`, every scope for a command
+the policy does not name), and refuse `vibey migrate` and the `vibey budget` commands that change
+caps. A device reads back only the runs it started: the hub binds each request id it mints to
+the device that asked, and answers any other id 404, as it answers an unknown one. The host
+reads any run.
 
 ## Exit codes and errors
 

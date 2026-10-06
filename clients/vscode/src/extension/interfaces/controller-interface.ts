@@ -18,6 +18,8 @@ export interface VibeyControllerInterface {
   readonly runs: ReadonlyMap<string, TaskRunInterface>;
   readonly next: NextTask;
   readonly output: vscode.OutputChannel;
+  /** What commands sent to the repository's GitHub workflows printed, each with its run and exit code. */
+  readonly workflowsOutput: vscode.OutputChannel;
   /** Fires whenever a view should show something new. */
   readonly onDidChange: vscode.Event<void>;
   changed(): void;

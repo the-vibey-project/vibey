@@ -9,7 +9,7 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { CommandTable, Efforts, HubDiscovery, HubTransport, NoCapPath, SlashArguments, SlashCommands } from '@vibey/core';
+import { CommandTable, Efforts, HubDiscovery, HubTransport, NoCapPath, SlashArguments, SlashCommands, WorkflowsCommandLine } from '@vibey/core';
 import { Doctor } from '@vibey/core';
 import type { Budget, BudgetCaps, BudgetLoop, BudgetScope } from '@vibey/core';
 import type { EffortSetting, LoopName } from '@vibey/core';
@@ -30,6 +30,7 @@ export class CommandActions implements CommandActionsInterface {
   private readonly panels = new Map<string, TaskPanel>();
   private readonly slash = new SlashCommands();
   private readonly words = new SlashArguments();
+  private readonly workflowsLine = new WorkflowsCommandLine();
 
   constructor(
     private readonly controller: VibeyController,
@@ -72,6 +73,7 @@ export class CommandActions implements CommandActionsInterface {
       'vibey.endNoCap': (i) => this.endNoCap(i),
       'vibey.connectHub': (i) => this.connectHub(i),
       'vibey.disconnectHub': (i) => this.disconnectHub(i),
+      'vibey.runOnWorkflows': (i) => this.runOnWorkflows(i),
       'vibey.chooseTheme': (i) => this.chooseTheme(i),
       'vibey.startOllama': (i) => this.startOllama(i),
       'vibey.pullModel': (i) => this.pullModel(i),
@@ -700,6 +702,57 @@ export class CommandActions implements CommandActionsInterface {
   }
 
   // --- Projects & gates ------------------------------------------------------------------
+
+  /**
+   * `vibey -w <command line>`: through the paired hub when there is one, else the vibey
+   * command line here, which needs `gh` logged in. Whatever it printed, its exit code and its
+   * run go to their own output view; the reply is one sentence.
+   */
+  private async runOnWorkflows(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    if (vibey === undefined) {
+      return;
+    }
+    const typed =
+      invocation.args?.trim() ||
+      (await vscode.window.showInputBox({
+        title: 'Run a vibey command on GitHub',
+        prompt: "A vibey command line, without vibey: it runs on the repository's GitHub-hosted runners (vibey -w).",
+        placeHolder: 'status --json',
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+          const parsed = this.workflowsLine.parse(value);
+          return typeof parsed === 'string' && value.trim() !== '' ? parsed : undefined;
+        },
+      }));
+    if (!typed?.trim()) {
+      return;
+    }
+    const argv = this.workflowsLine.parse(typed);
+    if (typeof argv === 'string') {
+      invocation.say(argv);
+      return;
+    }
+    const folder = this.controller.folder();
+    const shown = WorkflowsCommandLine.shown(argv);
+    const result = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `krypton: vibey -w ${shown}` },
+      (progress) => {
+        progress.report({ message: vibey.kind === 'hub' ? `sending it through ${this.controller.hubUrl ?? 'the hub'}…` : 'waiting for its run on GitHub…' });
+        return vibey.runOnWorkflows(argv, {
+          ...(folder === undefined ? {} : { cwd: folder }),
+          onUpdate: (update) => progress.report({ message: update.url === '' ? update.state : `${update.state}: ${update.url}` }),
+        });
+      },
+    );
+    const output = this.controller.workflowsOutput;
+    for (const line of this.workflowsLine.report(argv, result)) {
+      output.appendLine(line);
+    }
+    output.appendLine('');
+    output.show(true);
+    invocation.say(this.workflowsLine.summary(argv, result));
+  }
 
   private async showStatus(invocation: Invocation): Promise<void> {
     const vibey = this.vibey(invocation);

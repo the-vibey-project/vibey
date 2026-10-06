@@ -1,6 +1,8 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
+import { Linking } from 'react-native';
+import { WorkflowRuns } from '../../src/core/workflow-runs';
 import { BudgetsScreen } from '../../src/screens/budgets';
 import { DoctorScreen } from '../../src/screens/doctor';
 import { EffortScreen } from '../../src/screens/effort';
@@ -9,6 +11,7 @@ import { HomeScreen } from '../../src/screens/home';
 import { LanesScreen } from '../../src/screens/lanes';
 import { PairScreen } from '../../src/screens/pair';
 import { SettingsScreen } from '../../src/screens/settings';
+import { WorkflowsScreen } from '../../src/screens/workflows';
 import { AppStateProvider, MemoryStore } from '../../src/ui/app-state';
 
 jest.mock('expo-router', () => ({
@@ -141,8 +144,128 @@ describe('screens', () => {
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
   });
 
+  it('Run on GitHub says when no hub is connected', async () => {
+    await renderWith(<WorkflowsScreen />, {}, false);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'status');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText('Not connected to a hub yet.')).toBeTruthy();
+  });
+
   it('says when no hub is connected', async () => {
     await renderWith(<HomeScreen />, {}, false);
     expect(await screen.findByText('Not connected to a hub yet.')).toBeTruthy();
+  });
+});
+
+type Answer = { readonly status: number; readonly body: unknown };
+
+/** The workflows routes: the start answers 202, then each read takes the next answer. */
+async function renderWorkflows(start: Answer, reads: readonly Answer[], runs?: WorkflowRuns) {
+  const queue = [...reads];
+  const sent: string[] = [];
+  const fetchLike = (async (url: string, init: { method: string; body?: string }) => {
+    const answer = init.method === 'POST' ? start : (queue.shift() as Answer);
+    if (init.method === 'POST') sent.push(init.body ?? '');
+    else sent.push(url.replace('http://hub:8765', ''));
+    return { status: answer.status, text: async () => JSON.stringify(answer.body) };
+  }) as unknown as typeof fetch;
+  await render(
+    <AppStateProvider store={new MemoryStore()} fetchLike={fetchLike} initial={{ connection: { baseUrl: 'http://hub:8765', token: 't' } }}>
+      <WorkflowsScreen runs={runs ?? new WorkflowRuns({ sleep: async () => undefined })} />
+    </AppStateProvider>,
+  );
+  return sent;
+}
+
+const queued = { request_id: 'r1', state: 'queued', url: '', exit_code: null, stdout: '', stderr: '', detail: '' };
+const url = 'https://github.com/o/r/actions/runs/7';
+
+describe('Run on GitHub', () => {
+  it('runs a command line, holds Run while it is in flight, and shows the output and the link', async () => {
+    let release: () => void = () => undefined;
+    const runs = new WorkflowRuns({ sleep: () => new Promise<void>((resolve) => (release = resolve)) });
+    const sent = await renderWorkflows(
+      { status: 202, body: queued },
+      [{ status: 200, body: { ...queued, state: 'done', url, exit_code: 0, stdout: '{"phase": "BUILD"}', stderr: '' } }],
+      runs,
+    );
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'vibey -w status "--json"');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText('Queued')).toBeTruthy();
+    expect(screen.getByText('vibey -w status --json')).toBeTruthy();
+    expect(screen.getByText(/link appears once/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Running…' }).props.accessibilityState).toMatchObject({ disabled: true });
+    await waitFor(() => release());
+    expect(await screen.findByText('Done · exit 0')).toBeTruthy();
+    expect(screen.getByText('{"phase": "BUILD"}')).toBeTruthy();
+    expect(screen.getByText('(nothing)')).toBeTruthy();
+    expect(screen.getByText('Exit code 0')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Run' }).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(JSON.parse(sent[0]!)).toEqual({ argv: ['status', '--json'] });
+    expect(sent[1]).toBe('/api/v1/workflows/runs/r1');
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    await fireEvent.press(screen.getByText('Open the run on GitHub ↗'));
+    expect(open).toHaveBeenCalledWith(url);
+  });
+
+  it('says why a run failed', async () => {
+    await renderWorkflows({ status: 202, body: queued }, [{ status: 200, body: { ...queued, state: 'failed', detail: 'the dispatch was cancelled' } }]);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'status');
+    await fireEvent(screen.getByLabelText('Command line'), 'submitEditing');
+    expect(await screen.findByText('the dispatch was cancelled')).toBeTruthy();
+    expect(screen.getByText('Failed')).toBeTruthy();
+  });
+
+  it('says a failed run failed when the hub gives no reason', async () => {
+    await renderWorkflows({ status: 202, body: queued }, [{ status: 200, body: { ...queued, state: 'failed' } }]);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'status');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText('The run failed on GitHub.')).toBeTruthy();
+  });
+
+  it('says a device without the workflows scope may not run it', async () => {
+    await renderWorkflows({ status: 403, body: { detail: 'phone may not run commands on the workflows' } }, []);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'status');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText(/needs the `workflows` scope.*phone may not run commands/)).toBeTruthy();
+    expect(screen.queryByTestId('workflow-run')).toBeNull();
+  });
+
+  it('says when the hub has no workflows enabled', async () => {
+    await renderWorkflows({ status: 503, body: { detail: 'workflows are not enabled on this hub' } }, []);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'status');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText(/workflows are not enabled on it/)).toBeTruthy();
+  });
+
+  it('refuses a command line it cannot split, before anything is sent', async () => {
+    const sent = await renderWorkflows({ status: 202, body: queued }, []);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'new "half');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText('A double quote is not closed.')).toBeTruthy();
+    expect(sent).toEqual([]);
+  });
+
+  it('says plainly when it stopped waiting, and where the run carries on', async () => {
+    let clock = 0;
+    const runs = new WorkflowRuns({ now: () => clock, sleep: async (ms) => void (clock += ms), everyMs: 1000, giveUpMs: 1000 });
+    await renderWorkflows({ status: 202, body: queued }, [{ status: 200, body: { ...queued, state: 'running', url, stdout: 'partial' } }], runs);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'status');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText(`Still running at ${url}. Stopped waiting after 0 min; the run carries on.`)).toBeTruthy();
+    expect(screen.getByText('Running')).toBeTruthy();
+    expect(screen.getByText('partial')).toBeTruthy();
+  });
+
+  it('stops reading when the screen goes away', async () => {
+    let release: () => void = () => undefined;
+    const runs = new WorkflowRuns({ sleep: () => new Promise<void>((resolve) => (release = resolve)) });
+    const sent = await renderWorkflows({ status: 202, body: queued }, [], runs);
+    await fireEvent.changeText(screen.getByLabelText('Command line'), 'status');
+    await fireEvent.press(screen.getByText('Run'));
+    expect(await screen.findByText('Queued')).toBeTruthy();
+    await screen.unmount();
+    await waitFor(() => release());
+    expect(sent).toHaveLength(1);
   });
 });

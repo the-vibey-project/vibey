@@ -2,7 +2,7 @@
 # krypton desktop: the vibey desktop app, in C17 on GTK 4 and libadwaita (clients/desktop).
 #
 #   libkryptondesktop  the pure-C core: models, the hub client, state, formatting,
-#                      pairing, discovery. Each module is a header (its interface) and a .c.
+#                      pairing, discovery, commands run on GitHub's runners. Each module is a header (its interface) and a .c.
 #   krypton-desktop    the thin GTK views over the core (-Dgui).
 #
 # Tests are GLib tests over the core. CI builds with -Db_sanitize=address,undefined and
@@ -74,12 +74,17 @@ core_sources = files(
   'src/core/kr-pairing.c',
   'src/core/kr-settings.c',
   'src/core/kr-state.c',
+  'src/core/kr-workflows.c',
 )
 core_deps = [glib_dep, gio_dep, json_dep, math_dep]
 core_args = []
 
 if soup_dep.found()
-  core_sources += files('src/core/kr-hub-client.c', 'src/core/kr-pairing-client.c')
+  core_sources += files(
+    'src/core/kr-hub-client.c',
+    'src/core/kr-pairing-client.c',
+    'src/core/kr-workflows-client.c',
+  )
   core_deps += soup_dep
   core_args += '-DKR_HAVE_HUB_CLIENT'
 endif
