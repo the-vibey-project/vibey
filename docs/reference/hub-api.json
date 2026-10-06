@@ -1393,6 +1393,7 @@
     },
     "/api/v1/workflows/runs/{request_id}": {
       "get": {
+        "description": "A device reads back only a run it started: the request id the hub minted for it is bound to that device. Any other id is answered 404, whether or not such a run exists. The host reads any run.",
         "operationId": "workflow_run_api_v1_workflows_runs__request_id__get",
         "parameters": [
           {
@@ -1419,6 +1420,9 @@
           },
           "403": {
             "description": "The principal's scopes do not permit this."
+          },
+          "404": {
+            "description": "No run this principal started has that id."
           },
           "411": {
             "description": "A body was sent without a Content-Length."

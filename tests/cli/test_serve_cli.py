@@ -437,6 +437,27 @@ def test_a_config_or_token_that_cannot_be_used_exits_cleanly(tmp_path: Path) -> 
     assert getattr(bad.value, "exit_code", None) == 2
 
 
+def test_a_run_key_that_cannot_be_used_exits_cleanly(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def refuse() -> Any:
+        raise AssertionError("nothing may open")
+
+    state = tmp_path / "state"
+    LocalTokenStore(state).run_key()
+    (state / "run.key").write_bytes(b"truncated")
+    (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{state}'\n")
+    command = ServeCommand(
+        open_app=refuse,
+        server=Driven(lambda *_: asyncio.sleep(0)),
+        config_path=lambda: tmp_path / "vibey.toml",
+    )
+    with pytest.raises(Exception) as caught:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(caught.value, "exit_code", None) == 1
+    assert "32-byte key" in capsys.readouterr().err
+
+
 async def test_the_openapi_only_app_never_listens() -> None:
     with pytest.raises(RuntimeError):
         await ServeCommand._never_connect()

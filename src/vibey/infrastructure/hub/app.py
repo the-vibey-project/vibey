@@ -32,6 +32,7 @@ the two differ.
 """
 
 import asyncio
+import secrets
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Annotated, Any, Final
 from urllib.parse import urlsplit
@@ -72,8 +73,10 @@ from vibey.domain.hub_binding import HUB_BINDING
 from vibey.domain.hub_pairing import CODE_DIGITS, PairingRefused
 from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden, HubScope
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
+from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
 from vibey.domain.ledger_query import DEFAULT_SEARCH_LIMIT, InvalidLedgerQuery
 from vibey.domain.remote_command import RemoteCommandRefused, RemoteState, RemoteStatus
+from vibey.domain.run_ownership import NONCE_CHARS
 from vibey.infrastructure.hub.authenticator import HOST_PRINCIPAL, HubRequest
 from vibey.infrastructure.hub.interfaces.authenticator_interface import (
     HubAuthenticatorInterface,
@@ -140,6 +143,10 @@ ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
 """How each refusal the service raises reads over HTTP. The first match wins, so a
 subclass comes before its base: `PriorityRefused` (the host's queue grant does not admit
 the hub) is a 403, every other `ReorderRefused` a 409."""
+
+UNKNOWN_RUN: Final = "no such run"
+"""What a device asking for a run it did not start is told: the same words whether or not
+such a run exists, decided before the forge is asked (ADR-0085)."""
 
 REFUSED: Final[dict[int | str, dict[str, Any]]] = {
     401: {"description": "The request proves no principal."},
@@ -222,6 +229,7 @@ class HubAppFactory:
         live: LedgerAnnouncementsInterface,
         pairing: HubPairingInterface | None = None,
         workflows: RemoteCommandServiceInterface | None = None,
+        runs: RunOwnershipInterface | None = None,
     ) -> FastAPI:
         buckets: dict[str, TokenBucket] = {}
 
@@ -437,12 +445,16 @@ class HubAppFactory:
         ) -> JSONResponse:
             return JSONResponse(service.lane_tail(caller, path, after))
 
-        def remote(caller: HubPrincipal) -> RemoteCommandServiceInterface:
-            if workflows is None:
+        def remote(
+            caller: HubPrincipal,
+        ) -> tuple[RemoteCommandServiceInterface, RunOwnershipInterface]:
+            # Both or neither: without the run key, a run's output could not be kept to the
+            # principal that started it, so the routes are not offered at all.
+            if workflows is None or runs is None:
                 raise HTTPException(status_code=503, detail="workflows are not enabled on this hub")
             if not HUB_SCOPES.permits(caller.scopes, HubAction.RUN_ON_WORKFLOWS):
                 raise HubForbidden(f"{caller.name} may not run commands on the workflows")
-            return workflows
+            return workflows, runs
 
         @app.post(
             f"{v1}/workflows/runs",
@@ -452,7 +464,7 @@ class HubAppFactory:
             responses={**REFUSED, 502: {"description": "GitHub refused the dispatch."}},
         )
         async def run_on_workflows(caller: who, body: WorkflowRunBody) -> JSONResponse:
-            service = remote(caller)
+            service, ownership = remote(caller)
             argv = tuple(body.argv)
             reserved = HUB_SCOPES.reserved_command(argv)
             if reserved is not None:
@@ -469,7 +481,10 @@ class HubAppFactory:
                 raise HubForbidden(
                     f"{caller.name} may not run `{' '.join(argv[:2])}` there: it needs {needs}"
                 )
-            command = await service.start(body.argv)
+            # The id names its starter as well as the run, so only the starter (or the
+            # host) reads the run back: the id itself is public in the run's name.
+            request_id = ownership.mint(caller.name, secrets.token_hex(NONCE_CHARS // 2))
+            command = await service.start(body.argv, request_id=request_id)
             started = RemoteStatus(command.request_id, RemoteState.QUEUED)
             return JSONResponse(started.as_dict(), status_code=202)
 
@@ -477,10 +492,24 @@ class HubAppFactory:
             f"{v1}/workflows/runs/{{request_id}}",
             tags=["workflows"],
             summary="Where a command sent to the workflows is, and its output once it ran.",
-            responses={**REFUSED, 502: {"description": "GitHub could not be read."}},
+            description=(
+                "A device reads back only a run it started: the request id the hub minted for "
+                "it is bound to that device. Any other id is answered 404, whether or not "
+                "such a run exists. The host reads any run."
+            ),
+            responses={
+                **REFUSED,
+                404: {"description": "No run this principal started has that id."},
+                502: {"description": "GitHub could not be read."},
+            },
         )
         async def workflow_run(caller: who, request_id: str) -> JSONResponse:
-            return JSONResponse((await remote(caller).poll(request_id)).as_dict())
+            service, ownership = remote(caller)
+            # The host is the operator, who can read every run on GitHub anyway; a device
+            # reads only what it started (ADR-0085).
+            if caller.name != HOST_PRINCIPAL.name and not ownership.owns(caller.name, request_id):
+                raise HTTPException(status_code=404, detail=UNKNOWN_RUN)
+            return JSONResponse((await service.poll(request_id)).as_dict())
 
         def paired() -> HubPairingInterface:
             if pairing is None:

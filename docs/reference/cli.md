@@ -66,7 +66,9 @@ followed. Every krypton interface reaches the same path through the hub's
 `/api/v1/workflows/runs` routes, which need the `workflows` scope and the scope of what the
 command does (`view` for `status`, `answer` and `spend` for `answer`, every scope for a command
 the policy does not name), and refuse `vibey migrate` and the `vibey budget` commands that change
-caps.
+caps. A device reads back only the runs it started: the hub binds each request id it mints to
+the device that asked, and answers any other id 404, as it answers an unknown one. The host
+reads any run.
 
 ## Exit codes and errors
 

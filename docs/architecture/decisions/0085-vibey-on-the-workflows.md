@@ -64,6 +64,18 @@ into a thread.
    `vibey migrate` and the `vibey budget` commands that change caps
    (`HubScopePolicy.reserved_command`). It would run where a repository may have declared its
    real database, so the hub refuses it there exactly as it never routes it itself.
+   **A run is bound to its starter.** A request id is not a secret: the run carries it in
+   its name, which anyone can read on a public repository. So the hub mints the ids it
+   dispatches as `<nonce>-<tag>`: 24 hex characters of random nonce and the first 32 hex
+   characters of HMAC-SHA256 over the starter's principal name and the nonce, under a
+   32-byte key created once, owner-only, in the hub's state directory (`run.key`, made and
+   checked as the host token is). `RunOwnership` mints and verifies; the poll compares the tag
+   in constant time. The host may read any run, since the operator can read every run on
+   GitHub anyway. A device reads only a run whose id verifies for its own name. Any other
+   id, including one the host's own `vibey -w` made, gets the 404 an unknown run gets, and
+   the forge is never asked. The id carries its owner and the key is on disk, so nothing is
+   stored and a restarted hub still knows whose run each one is. Without the key, the
+   routes answer 503.
 6. **Configurable, not compiled in** (12.c): `VIBEY_WORKFLOWS_REPOSITORY`, `_WORKFLOW`, `_REF`,
    `_POLL_SECONDS` and `_TIMEOUT_SECONDS`, each with a declared default.
 
