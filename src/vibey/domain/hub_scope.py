@@ -40,6 +40,8 @@ class HubScope(StrEnum):
     """Start, stop or wind down work."""
     BUMP = "bump"
     """Move a queued job to the front of its project's queue."""
+    WORKFLOWS = "workflows"
+    """Run a vibey command on the repository's GitHub-hosted runners (`vibey -w`, ADR-0085)."""
 
 
 class HubAction(StrEnum):
@@ -50,6 +52,7 @@ class HubAction(StrEnum):
     ANSWER_SPEND_GATE = "answer_spend_gate"
     RUN_WORK = "run_work"
     BUMP_JOB = "bump_job"
+    RUN_ON_WORKFLOWS = "run_on_workflows"
 
 
 REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
@@ -58,6 +61,7 @@ REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
     HubAction.ANSWER_SPEND_GATE: HubScope.SPEND,
     HubAction.RUN_WORK: HubScope.RUN,
     HubAction.BUMP_JOB: HubScope.BUMP,
+    HubAction.RUN_ON_WORKFLOWS: HubScope.WORKFLOWS,
 }
 """The one scope each action needs. Total over `HubAction`; a test holds it so."""
 
@@ -72,6 +76,18 @@ NEVER_FROM_THE_HUB: Final[frozenset[str]] = frozenset(
     }
 )
 """Capabilities no scope grants and no hub route offers. They stay on the host."""
+
+RESERVED_COMMANDS: Final[dict[tuple[str, ...], str]] = {
+    ("migrate",): "migrations",
+    ("budget", "set"): "change_caps",
+    ("budget", "clear"): "change_caps",
+    ("budget", "cap"): "change_caps",
+    ("budget", "no-cap"): "no_cap",
+}
+"""The vibey commands that reach a `NEVER_FROM_THE_HUB` capability, by their leading words.
+A command sent to the workflows through the hub (ADR-0085) runs where a repository may have
+declared its real database, so the hub refuses these there exactly as it never routes them
+itself. Paid use, the DSN and the canon have no command: they are declared in files."""
 
 SPEND_GATE_KINDS: Final[frozenset[str]] = frozenset(
     {
@@ -105,6 +121,25 @@ class HubScopePolicy:
     def reserved(self, capability: str) -> bool:
         """True when `capability` is one the hub never offers (`NEVER_FROM_THE_HUB`)."""
         return capability in NEVER_FROM_THE_HUB
+
+    def reserved_command(self, argv: tuple[str, ...]) -> str | None:
+        """The `NEVER_FROM_THE_HUB` capability a vibey command line reaches, or None. Its
+        command is read after vibey's leading global options, whose values are skipped."""
+        words: list[str] = []
+        skip = False
+        for arg in argv:
+            if skip:
+                skip = False
+            elif arg in ("--log-level", "--log-file"):
+                skip = True
+            elif not arg.startswith("-"):
+                words.append(arg)
+            elif words:
+                break
+        for prefix, capability in RESERVED_COMMANDS.items():
+            if tuple(words[: len(prefix)]) == prefix:
+                return capability
+        return None
 
     def parse(self, values: frozenset[str]) -> frozenset[HubScope]:
         """The scopes `values` names. An unknown name raises `ValueError`: a grant that

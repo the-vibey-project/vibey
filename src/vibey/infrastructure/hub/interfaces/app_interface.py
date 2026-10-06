@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
     from vibey.application.hub.interfaces.hub_service_interface import HubServiceInterface
+    from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
     from vibey.infrastructure.hub.interfaces.authenticator_interface import (
         HubAuthenticatorInterface,
     )
@@ -37,6 +38,7 @@ class HubAppFactoryInterface(Protocol):
         ready: Callable[[], Awaitable[bool]],
         live: LedgerAnnouncementsInterface,
         pairing: HubPairingInterface | None = None,
+        workflows: RemoteCommandServiceInterface | None = None,
     ) -> FastAPI:
         """The app: Host allowlist, security headers, no CORS, principal before route."""
         ...

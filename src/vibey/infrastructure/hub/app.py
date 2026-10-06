@@ -56,6 +56,7 @@ from vibey_bootstrap.ratelimit import TokenBucket
 
 from vibey.application.dto import HubPrincipal
 from vibey.application.hub.interfaces.hub_service_interface import HubServiceInterface
+from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
 from vibey.domain.errors import (
     GateAlreadyAnswered,
     InvalidActorLabel,
@@ -72,12 +73,14 @@ from vibey.domain.hub_pairing import CODE_DIGITS, PairingRefused
 from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden, HubScope
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
 from vibey.domain.ledger_query import DEFAULT_SEARCH_LIMIT, InvalidLedgerQuery
+from vibey.domain.remote_command import RemoteCommandRefused, RemoteState, RemoteStatus
 from vibey.infrastructure.hub.authenticator import HOST_PRINCIPAL, HubRequest
 from vibey.infrastructure.hub.interfaces.authenticator_interface import (
     HubAuthenticatorInterface,
 )
 from vibey.infrastructure.hub.interfaces.live_interface import LedgerAnnouncementsInterface
 from vibey.infrastructure.hub.interfaces.pairing_interface import HubPairingInterface
+from vibey.infrastructure.workflows.gh_workflows import GhWorkflowsError
 
 MAX_BODY_BYTES: Final = 64 * 1024
 """The largest request body the hub reads. A gate answer is a few hundred bytes."""
@@ -131,6 +134,8 @@ ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (InvalidAnswer, 422),
     (InvalidActorLabel, 422),
     (InvalidLedgerQuery, 422),
+    (RemoteCommandRefused, 422),
+    (GhWorkflowsError, 502),
 )
 """How each refusal the service raises reads over HTTP. The first match wins, so a
 subclass comes before its base: `PriorityRefused` (the host's queue grant does not admit
@@ -170,6 +175,16 @@ class OfferBody(BaseModel):
     )
 
 
+class WorkflowRunBody(BaseModel):
+    """A vibey command line to run on the repository's GitHub-hosted runners (ADR-0085)."""
+
+    argv: list[str] = Field(
+        min_length=1,
+        max_length=200,
+        description='The command line, without `vibey` or -w: for example ["status", "--json"].',
+    )
+
+
 class ClaimBody(BaseModel):
     """The body of `POST /api/v1/pairing/claim` (a device, before it holds a key)."""
 
@@ -206,6 +221,7 @@ class HubAppFactory:
         ready: Callable[[], Awaitable[bool]],
         live: LedgerAnnouncementsInterface,
         pairing: HubPairingInterface | None = None,
+        workflows: RemoteCommandServiceInterface | None = None,
     ) -> FastAPI:
         buckets: dict[str, TokenBucket] = {}
 
@@ -420,6 +436,42 @@ class HubAppFactory:
             caller: who, path: str, after: Annotated[int, Query(ge=0)] = 0
         ) -> JSONResponse:
             return JSONResponse(service.lane_tail(caller, path, after))
+
+        def remote(caller: HubPrincipal) -> RemoteCommandServiceInterface:
+            if workflows is None:
+                raise HTTPException(status_code=503, detail="workflows are not enabled on this hub")
+            if not HUB_SCOPES.permits(caller.scopes, HubAction.RUN_ON_WORKFLOWS):
+                raise HubForbidden(f"{caller.name} may not run commands on the workflows")
+            return workflows
+
+        @app.post(
+            f"{v1}/workflows/runs",
+            tags=["workflows"],
+            summary="Run a vibey command on the repository's GitHub-hosted runners (vibey -w).",
+            status_code=202,
+            responses={**REFUSED, 502: {"description": "GitHub refused the dispatch."}},
+        )
+        async def run_on_workflows(caller: who, body: WorkflowRunBody) -> JSONResponse:
+            service = remote(caller)
+            reserved = HUB_SCOPES.reserved_command(tuple(body.argv))
+            if reserved is not None:
+                # It would run where a repository may have declared its real database: the
+                # hub refuses it there exactly as it never routes it itself.
+                raise HubForbidden(
+                    f"`{' '.join(body.argv[:2])}` reaches {reserved}, which the hub never offers"
+                )
+            command = await service.start(body.argv)
+            started = RemoteStatus(command.request_id, RemoteState.QUEUED)
+            return JSONResponse(started.as_dict(), status_code=202)
+
+        @app.get(
+            f"{v1}/workflows/runs/{{request_id}}",
+            tags=["workflows"],
+            summary="Where a command sent to the workflows is, and its output once it ran.",
+            responses={**REFUSED, 502: {"description": "GitHub could not be read."}},
+        )
+        async def workflow_run(caller: who, request_id: str) -> JSONResponse:
+            return JSONResponse((await remote(caller).poll(request_id)).as_dict())
 
         def paired() -> HubPairingInterface:
             if pairing is None:

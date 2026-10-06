@@ -59,3 +59,34 @@ def test_a_grant_naming_an_unknown_scope_is_refused() -> None:
     assert HUB_SCOPES.parse(frozenset({"view", "bump"})) == {HubScope.VIEW, HubScope.BUMP}
     with pytest.raises(ValueError):
         HUB_SCOPES.parse(frozenset({"admin"}))
+
+
+@pytest.mark.parametrize(
+    ("argv", "capability"),
+    [
+        (("migrate",), "migrations"),
+        (("budget", "no-cap"), "no_cap"),
+        (("budget", "cap", "p"), "change_caps"),
+        (("-v", "budget", "set", "p", "--usd", "5"), "change_caps"),
+        (("--log-level", "DEBUG", "budget", "clear", "p"), "change_caps"),
+        (("--log-file", "migrate", "status"), None),  # the option's value is no command
+        (("budget", "show"), None),
+        (("status", "--json"), None),
+        (("queue", "bump", "migrate"), None),
+        (("ledger", "--json", "migrate"), None),
+        ((), None),
+    ],
+)
+def test_a_command_line_names_the_reserved_capability_it_reaches(
+    argv: tuple[str, ...], capability: str | None
+) -> None:
+    assert HUB_SCOPES.reserved_command(argv) == capability
+    if capability is not None:
+        assert HUB_SCOPES.reserved(capability)
+
+
+def test_running_on_the_workflows_needs_its_own_scope() -> None:
+    assert HUB_SCOPES.permits(frozenset({HubScope.WORKFLOWS}), HubAction.RUN_ON_WORKFLOWS)
+    assert not HUB_SCOPES.permits(
+        frozenset({HubScope.RUN, HubScope.VIEW}), HubAction.RUN_ON_WORKFLOWS
+    )

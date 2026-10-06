@@ -156,6 +156,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0082-install-copy-reinstall-and-a-core-that-stays/)
 - [0083 — A daily self-healer, backlog killer and documentation updater, scripted first, on GitHub's CPU runners only](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0083-daily-self-healer-and-backlog-killer/)
 - [0084 — A rolling nightly of every krypton interface, from the release builders](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0084-krypton-nightly/)
+- [0085 — vibey -w: any vibey command, run on the repository's GitHub-hosted runners](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0085-vibey-on-the-workflows/)
 
 ## Governance
 

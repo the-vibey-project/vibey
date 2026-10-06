@@ -383,3 +383,143 @@ def test_no_route_offers_what_the_hub_never_offers() -> None:
             )
         if "budget" in path:
             assert getattr(route, "methods", set()) == {"GET"}
+
+
+# --------------------------------------------------------------------------- workflows
+
+
+class Remote:
+    """A workflows service that records what it was asked."""
+
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
+        self.started: list[tuple[str, ...]] = []
+        self.polled: list[str] = []
+
+    async def start(self, argv: Any) -> Any:
+        from vibey.domain.remote_command import RemoteCommand
+
+        if self.error is not None:
+            raise self.error
+        self.started.append(tuple(argv))
+        return RemoteCommand(tuple(argv), "0123456789abcdef")
+
+    async def poll(self, request_id: str) -> Any:
+        from vibey.domain.remote_command import RemoteState, RemoteStatus
+
+        self.polled.append(request_id)
+        return RemoteStatus(request_id, RemoteState.DONE, url="u", exit_code=0, stdout="ok\n")
+
+    async def run(self, argv: Any) -> Any:  # pragma: no cover - the hub never waits
+        raise AssertionError
+
+
+class Device:
+    """Names a paired device holding exactly `scopes`."""
+
+    def __init__(self, *scopes: str) -> None:
+        self.scopes = HUB_SCOPES.parse(frozenset(scopes))
+
+    async def authenticate(self, request: HubRequest) -> HubPrincipal | None:
+        return HubPrincipal(name="phone", scopes=self.scopes)
+
+
+def _workflows_app(remote: Remote | None, authenticator: Any = None) -> FastAPI:
+    async def readiness() -> bool:
+        return True
+
+    return HubAppFactory().build(
+        Service(),  # type: ignore[arg-type]
+        authenticator=authenticator or LocalTokenAuthenticator(TOKEN),
+        allowed_hosts=HUB_BINDING.allowed_hosts(8765, frozenset()),
+        ready=readiness,
+        live=Quiet(),
+        workflows=remote,  # type: ignore[arg-type]
+    )
+
+
+AUTH = {"Authorization": f"Bearer {TOKEN}"}
+
+
+async def test_the_host_sends_a_command_to_the_workflows_and_reads_it_back() -> None:
+    remote = Remote()
+    async with _client(_workflows_app(remote)) as client:
+        started = await client.post(
+            "/api/v1/workflows/runs", json={"argv": ["status", "--json"]}, headers=AUTH
+        )
+        assert started.status_code == 202
+        assert (
+            started.json()["request_id"] == "0123456789abcdef"
+            and started.json()["state"] == "queued"
+        )
+        polled = await client.get("/api/v1/workflows/runs/0123456789abcdef", headers=AUTH)
+    assert polled.status_code == 200 and polled.json()["stdout"] == "ok\n"
+    assert remote.started == [("status", "--json")] and remote.polled == ["0123456789abcdef"]
+
+
+async def test_a_device_needs_the_workflows_scope() -> None:
+    remote = Remote()
+    async with _client(_workflows_app(remote, Device("view", "run"))) as client:
+        refused = await client.post("/api/v1/workflows/runs", json={"argv": ["doctor"]})
+        read = await client.get("/api/v1/workflows/runs/0123456789abcdef")
+    assert refused.status_code == 403 and read.status_code == 403
+    assert remote.started == [] and remote.polled == []
+    async with _client(_workflows_app(remote, Device("workflows"))) as client:
+        allowed = await client.post("/api/v1/workflows/runs", json={"argv": ["doctor"]})
+    assert allowed.status_code == 202
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["migrate"],
+        ["budget", "no-cap"],
+        ["-v", "budget", "set", "p", "--usd", "5"],
+        ["budget", "cap"],
+    ],
+)
+async def test_a_command_reaching_what_the_hub_never_offers_is_refused(argv: list[str]) -> None:
+    remote = Remote()
+    async with _client(_workflows_app(remote)) as client:
+        refused = await client.post("/api/v1/workflows/runs", json={"argv": argv}, headers=AUTH)
+    assert refused.status_code == 403 and "which the hub never offers" in refused.json()["detail"]
+    assert remote.started == []
+
+
+async def test_without_a_workflows_service_the_routes_say_503() -> None:
+    async with _client(_workflows_app(None)) as client:
+        posted = await client.post(
+            "/api/v1/workflows/runs", json={"argv": ["doctor"]}, headers=AUTH
+        )
+    assert posted.status_code == 503 and "not enabled" in posted.json()["detail"]
+
+
+async def test_an_empty_command_line_is_refused_before_the_service() -> None:
+    async with _client(_workflows_app(Remote())) as client:
+        empty = await client.post("/api/v1/workflows/runs", json={"argv": []}, headers=AUTH)
+    assert empty.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("error", "status"),
+    [
+        ("refused", 422),
+        ("github", 502),
+    ],
+)
+async def test_a_refused_command_or_a_github_failure_reads_as_its_status(
+    error: str, status: int
+) -> None:
+    from vibey.domain.remote_command import RemoteCommandRefused
+    from vibey.infrastructure.workflows.gh_workflows import GhWorkflowsError
+
+    raised = (
+        RemoteCommandRefused("cannot itself carry -w")
+        if error == "refused"
+        else GhWorkflowsError("HTTP 403")
+    )
+    async with _client(_workflows_app(Remote(raised))) as client:
+        answered = await client.post(
+            "/api/v1/workflows/runs", json={"argv": ["doctor"]}, headers=AUTH
+        )
+    assert answered.status_code == status and answered.json()["detail"] == str(raised)

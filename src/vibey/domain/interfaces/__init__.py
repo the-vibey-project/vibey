@@ -116,6 +116,10 @@ from vibey.domain.interfaces.queue_reap_interface import (
     QueueReapPolicyInterface,
     ReapThresholdsInterface,
 )
+from vibey.domain.interfaces.remote_command_interface import (
+    RemoteCommandInterface,
+    WorkflowsInvocationInterface,
+)
 from vibey.domain.interfaces.research_gap_interface import ResearchGapInterface
 from vibey.domain.interfaces.stored_value_interface import (
     StoredValueParserInterface,
@@ -156,6 +160,8 @@ from vibey.domain.interfaces.value_objects_interface import (
 )
 
 __all__ = [
+    "RemoteCommandInterface",
+    "WorkflowsInvocationInterface",
     "AbandonmentPolicyInterface",
     "ActorLabelPolicyInterface",
     "GateAnswerRequestIdsInterface",

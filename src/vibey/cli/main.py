@@ -15,7 +15,7 @@ import os
 import signal
 import subprocess  # nosec B404 - fixed argv, never shell=True
 import sys
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, cast
@@ -56,6 +56,7 @@ from vibey.cli.serve import serve as serve_command
 from vibey.cli.status import STATUS_PRESENTER
 from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
+from vibey.cli.workflows import WORKFLOWS
 from vibey.domain.design_default_scope import DefaultScope
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -69,6 +70,7 @@ from vibey.domain.job import JobState
 from vibey.domain.ledger import EventKind, LedgerEventKind, Provenance
 from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
 from vibey.domain.phase import Phase, StoredPhase, VisualDecision
+from vibey.domain.remote_command import WORKFLOWS_INVOCATION
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -145,9 +147,21 @@ def main(
         Path | None,
         typer.Option("--log-file", help="Also write redacted JSON lines to this file."),
     ] = None,
+    workflows: bool = typer.Option(
+        False,
+        "--workflows",
+        "-w",
+        help="Run the command on this repository's GitHub-hosted runners "
+        "(.github/workflows/vibey-remote.yml) instead of here, and print what it printed "
+        "there. Needs `gh`; VIBEY_WORKFLOWS_* choose the repository, branch and wait.",
+    ),
 ) -> None:
     """vibey: a queue-based, six-phase conductor for autonomous software delivery."""
     del version
+    if workflows:
+        # `run` reads the flag before parsing; reaching here means it was bypassed.
+        typer.echo("Error: -w/--workflows is read by the `vibey` command itself", err=True)
+        raise typer.Exit(code=2)
     try:
         plan = resolve_log_plan(verbose=verbose, quiet=quiet, log_level=log_level)
     except ValueError as exc:
@@ -2275,3 +2289,15 @@ def worker(
 
     with guard():
         asyncio.run(run_worker())
+
+
+def run(argv: Sequence[str] | None = None) -> None:
+    """The `vibey` command. `-w`/`--workflows` among the leading global options sends the
+    command line to GitHub's runners (ADR-0085); anything else is this app, as it always was.
+
+    Module-level as a console entry point must be: `[project.scripts]` names a callable."""
+    tokens = list(sys.argv[1:] if argv is None else argv)
+    remote, forwarded = WORKFLOWS_INVOCATION.split(tokens)
+    if remote:
+        raise SystemExit(WORKFLOWS.run(forwarded))
+    app(args=tokens, prog_name="vibey")

@@ -28,6 +28,10 @@ class HubScopePolicyInterface(Protocol):
         """True when `capability` is one no scope grants and no route offers."""
         ...
 
+    def reserved_command(self, argv: tuple[str, ...]) -> str | None:
+        """The reserved capability a vibey command line reaches, or None."""
+        ...
+
     def parse(self, values: frozenset[str]) -> frozenset[HubScope]:
         """The scopes `values` names; `ValueError` for any name this version lacks."""
         ...
