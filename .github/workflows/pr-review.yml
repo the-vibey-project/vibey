@@ -754,6 +754,12 @@ jobs:
         run: |
           set -euo pipefail
           echo "code=${WHY:-${RESULT:-job_failed}}" >> "$GITHUB_OUTPUT"
+      # Always, a cancelled run included: the outcome record carries every request the
+      # review made of the model -- what it sent, its deadline and how that was derived, how
+      # long it took, Ollama's own counters -- and the runner's RUNNER_* statement of
+      # itself, and it is kept on disk while a request runs, so a run stopped mid-request
+      # still names the request it was waiting on. `vibey-gh review-timings` reads these
+      # artifacts back as the rates the model sustained on this runner.
       - name: Archive the sovereign verdict
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

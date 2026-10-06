@@ -1536,6 +1536,16 @@ def _outcome(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# The fields the record carried before it carried the model, the runner and each request's
+# timings. Fields are only ever added to the schema, so these read exactly as they did.
+_FIRST_FIELDS = ("schema", "code", "reason", "scope", "role", "head_sha", "parts", "attempts")
+
+
+def _first_fields(path: pathlib.Path) -> dict:
+    said = _outcome(path)
+    return {name: said[name] for name in _FIRST_FIELDS}
+
+
 def _parts_answering(monkeypatch, answer_for) -> list[dict]:
     """Every request as it was sent, each answered by `answer_for(index, user_prompt)`."""
     sent: list[dict] = []
@@ -1927,7 +1937,7 @@ def test_a_diff_too_large_for_one_request_is_reviewed_in_parts(monkeypatch, caps
     assert out["reviewed_head_sha"] == "abc123"
     assert [part["paths"] for part in out["review_parts"]] == [["f0.py"], ["f1.py"], ["f2.py"]]
     assert all(part["passed"] for part in out["review_parts"])
-    assert _outcome(record) | {"reason": ""} == {
+    assert _first_fields(record) | {"reason": ""} == {
         "schema": "vibey-gh.local-review/1",
         "code": "reviewed",
         "reason": "",
@@ -2409,7 +2419,7 @@ def test_a_part_that_timed_out_on_every_attempt_keeps_the_count_of_what_was_trie
     argv = ["--diff", str(diff), "--max-chars", str(len(files[0]) + 10), "--slot-wait-seconds"]
     assert local_review.review([*argv, "0", "--outcome", str(record)]) == 1
 
-    assert _outcome(record) | {"reason": ""} == {
+    assert _first_fields(record) | {"reason": ""} == {
         "schema": "vibey-gh.local-review/1",
         "code": "model_timeout",
         "reason": "",
@@ -2420,3 +2430,8 @@ def test_a_part_that_timed_out_on_every_attempt_keeps_the_count_of_what_was_trie
         "attempts": 3,
     }
     assert _outcome(record)["reason"].startswith("part 2 of 2 (f1.py): local model unreachable")
+    # And each of the three requests, by part and attempt, with how it ended.
+    assert [
+        (entry["part"], entry["of"], entry["attempt"], entry["code"])
+        for entry in _outcome(record)["requests"]
+    ] == [(1, 2, 1, "reviewed"), (2, 2, 1, "model_timeout"), (2, 2, 2, "model_timeout")]

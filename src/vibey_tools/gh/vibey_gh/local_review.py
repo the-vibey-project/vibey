@@ -35,6 +35,7 @@ import http.client
 import itertools
 import json
 import math
+import os
 import pathlib
 import re
 import secrets
@@ -62,6 +63,7 @@ from vibey_gh.interfaces.local_review_interface import (
     WholeReviewInterface,
 )
 from vibey_gh.interfaces.review_contract_interface import ReviewContractPort
+from vibey_gh.interfaces.review_timings_interface import RequestLogInterface
 from vibey_gh.interfaces.slots_interface import OllamaClientInterface
 from vibey_gh.review_contract import (
     DIFF_GROUNDABLE,
@@ -69,6 +71,7 @@ from vibey_gh.review_contract import (
     REVIEW_CONTRACT,
     REVIEWED_HEAD_FIELD,
 )
+from vibey_gh.review_timings import REQUEST, SLOT_PROBE, RequestLog, RunnerLabel
 
 # What the model is actually asked to decide. Kept small on purpose: every field here is
 # one the model can ground in the diff it was given -- `REVIEW_CONTRACT.diff_groundable`
@@ -711,6 +714,16 @@ class RequestDeadline:
             f" timeout_seconds ({self.floor_seconds}s)"
         )
 
+    def basis(self, prompt_tokens: int, output_tokens: int) -> dict[str, Any]:
+        return {
+            "scaled": self.scaled,
+            "floor_seconds": self.floor_seconds,
+            "prompt_tokens_per_second": self.prompt_tokens_per_second,
+            "output_tokens_per_second": self.output_tokens_per_second,
+            "prompt_tokens": prompt_tokens,
+            "output_tokens": output_tokens,
+        }
+
 
 # What the slot probe asks: one token of anything. Its answer is never read -- only that,
 # and when, the model answered at all.
@@ -733,6 +746,9 @@ class SlotWait(SlotWaitInterface):
     transport failure, retried as one); one that answers it but not the probe within
     `seconds` is busy (`ModelBusy`, retried); one that refuses the probe is refused. The
     probe speaks through the family's `vibey_gh.slots.OllamaClient`, injectable for tests.
+    With `log`, each probe is recorded there as a `slot_probe` entry -- how long it took,
+    how it ended, and Ollama's counters when it answered (the time to load the model among
+    them) -- which changes nothing it decides.
     """
 
     def __init__(
@@ -741,12 +757,14 @@ class SlotWait(SlotWaitInterface):
         *,
         client: Callable[[str], OllamaClientInterface] | None = None,
         clock: Callable[[], float] = time.monotonic,
+        log: RequestLogInterface | None = None,
     ) -> None:
         if type(seconds) is not int or seconds < 0:
             raise ValueError("slot_wait_seconds must be a whole number, never negative")
         self._seconds = seconds
         self._client = client
         self._clock = clock
+        self._log = log
 
     @property
     def seconds(self) -> int:
@@ -766,39 +784,65 @@ class SlotWait(SlotWaitInterface):
         # configuration, and a typo must not read a local file as if it were a model.
         if urllib.parse.urlsplit(base_url).scheme not in ("http", "https"):
             raise ValueError(f"refusing a non-HTTP model endpoint: {base_url!r}")
-        client = self._connect(base_url)
-        if not client.version():
-            raise urllib.error.URLError(f"the model server at {base_url} did not answer")
-        probe = {
-            "model": model,
-            "messages": [{"role": "user", "content": SLOT_PROBE_PROMPT}],
-            "stream": False,
-            "options": {"num_ctx": num_ctx, "num_predict": 1, "temperature": 0},
-        }
-        started = self._clock()
-        status, body = client.chat(probe, timeout_s=self._seconds)
-        waited = self._clock() - started
-        if status == 200:
-            return waited
-        if status == 0:
-            # Nothing answered. After the whole wait, the runner was there (it answered
-            # /api/version) and was serving something else; before it, the connection
-            # failed, which is the runner going away -- a transport failure. The second
-            # of grace is the clock's, not a judgement.
-            if waited + 1 >= self._seconds:
-                raise ModelBusy(
-                    f"the local model did not come free within slot_wait_seconds"
-                    f" ({self._seconds}s): its server answered, but a one-token request"
-                    " queued behind other work the whole time, so the review was never sent"
-                )
-            raise urllib.error.URLError(
-                f"the model server stopped answering {waited:.0f}s into a one-token request"
+        entry = (
+            None
+            if self._log is None
+            else self._log.open(
+                SLOT_PROBE, num_ctx=num_ctx, num_predict=1, deadline_seconds=self._seconds
             )
-        said = str(body.get("error") or "no reason given")[:500]
-        raise ReviewRefused(
-            f"the model server refused a one-token request for {model} (HTTP {status}): {said}",
-            code=outcome.MODEL_REFUSED,
         )
+        # How the probe ended, for its entry: set before every way out of the `try`, and
+        # `unknown` for anything that escapes it unnamed.
+        code: str | None = outcome.UNKNOWN
+        body: Mapping[str, Any] | None = None
+        try:
+            client = self._connect(base_url)
+            if not client.version():
+                code = outcome.MODEL_UNREACHABLE
+                raise urllib.error.URLError(f"the model server at {base_url} did not answer")
+            probe = {
+                "model": model,
+                "messages": [{"role": "user", "content": SLOT_PROBE_PROMPT}],
+                "stream": False,
+                "options": {"num_ctx": num_ctx, "num_predict": 1, "temperature": 0},
+            }
+            started = self._clock()
+            status, said_back = client.chat(probe, timeout_s=self._seconds)
+            waited = self._clock() - started
+            if status == 200:
+                code, body = None, said_back
+                return waited
+            if status == 0:
+                # Nothing answered. After the whole wait, the runner was there (it answered
+                # /api/version) and was serving something else; before it, the connection
+                # failed, which is the runner going away -- a transport failure. The second
+                # of grace is the clock's, not a judgement.
+                if waited + 1 >= self._seconds:
+                    code = outcome.MODEL_BUSY
+                    raise ModelBusy(
+                        f"the local model did not come free within slot_wait_seconds"
+                        f" ({self._seconds}s): its server answered, but a one-token request"
+                        " queued behind other work the whole time, so the review was never"
+                        " sent"
+                    )
+                code = outcome.MODEL_UNREACHABLE
+                raise urllib.error.URLError(
+                    f"the model server stopped answering {waited:.0f}s into a one-token request"
+                )
+            code = outcome.MODEL_REFUSED
+            said = str(said_back.get("error") or "no reason given")[:500]
+            raise ReviewRefused(
+                f"the model server refused a one-token request for {model} (HTTP {status}): {said}",
+                code=outcome.MODEL_REFUSED,
+            )
+        finally:
+            if self._log is not None and entry is not None:
+                self._log.close(
+                    entry,
+                    code=code,
+                    answered=body is not None,
+                    ollama=self._log.figures(body),
+                )
 
 
 @dataclass(frozen=True)
@@ -879,6 +923,7 @@ class SizedChat:
         shown_chars: int,
         deadline: RequestDeadlineInterface | None = None,
         slot: SlotWaitInterface | None = None,
+        log: RequestLogInterface | None = None,
     ) -> dict[str, Any]:
         head, tail = secrets.token_hex(self.code_bytes), secrets.token_hex(self.code_bytes)
         sealed = self.seal(payload, head, tail)
@@ -902,6 +947,9 @@ class SizedChat:
             sealed["options"]["num_predict"] = sizer.reserve
         prompt_tokens = sizer.tokens(total)
         seconds = timeout if deadline is None else deadline.seconds(prompt_tokens, sizer.reserve)
+        if log is not None:
+            # One attempt: the slot probe below, if any, and the request after it.
+            log.attempt()
         # After sizing, so the model is asked to come free for the window this request needs.
         waited = (
             None
@@ -913,32 +961,76 @@ class SizedChat:
             data=json.dumps(sealed).encode(),
             headers={"Content-Type": "application/json"},
         )
-        try:
-            with _post(request, seconds) as response:
-                body = json.loads(response.read())
-        except urllib.error.HTTPError as error:
-            # Caught here, before anything reads it as a `URLError` (its base class): the
-            # server answered, so it is not "unreachable". With truncation off, a prompt
-            # over the window is exactly this -- a 400 saying so.
-            raise ReviewRefused(
-                f"the model server refused the request (HTTP {error.code}): {self.said(error)}",
-                code=outcome.MODEL_REFUSED,
-            ) from error
-        except TRANSPORT_ERRORS as error:
-            # Without a slot wait nothing says the model was free when the clock started, so
-            # a timeout may have been a queue: it stays a transport failure and is retried.
-            if waited is None or TransportRetry.code(error) != outcome.MODEL_TIMEOUT:
-                raise
-            how = (deadline or RequestDeadline(floor_seconds=seconds)).explain(
-                prompt_tokens, sizer.reserve
+        entry = (
+            None
+            if log is None
+            else log.open(
+                REQUEST,
+                chars=total,
+                prompt_tokens_estimated=prompt_tokens,
+                num_ctx=num_ctx,
+                num_predict=sealed["options"].get("num_predict"),
+                slot_waited_seconds=None if waited is None else round(waited, 3),
+                deadline_seconds=seconds,
+                deadline=(deadline or RequestDeadline(floor_seconds=seconds)).basis(
+                    prompt_tokens, sizer.reserve
+                ),
             )
-            raise ModelTooSlow(
-                f"the model came free {waited:.0f}s after asking and then did not finish this"
-                f" request within its {seconds}s deadline ({how}): slow on this input, not"
-                " unreachable or busy, and at temperature 0 the same request would run the"
-                " same way again, so it is not retried"
-            ) from error
-        return self.answer(body, num_ctx=num_ctx, reserve=sizer.reserve, codes=(head, tail))
+        )
+        # How the request ended, for its entry: `reviewed` once its answer is read as a
+        # verdict, else the code of whatever stopped it -- and `unknown` for anything that
+        # escapes unnamed, such as the process being interrupted while it waits.
+        code = outcome.UNKNOWN
+        body: Any = None
+        try:
+            try:
+                with _post(request, seconds) as response:
+                    body = json.loads(response.read())
+            except urllib.error.HTTPError as error:
+                # Caught here, before anything reads it as a `URLError` (its base class): the
+                # server answered, so it is not "unreachable". With truncation off, a prompt
+                # over the window is exactly this -- a 400 saying so.
+                raise ReviewRefused(
+                    f"the model server refused the request (HTTP {error.code}): {self.said(error)}",
+                    code=outcome.MODEL_REFUSED,
+                ) from error
+            except TRANSPORT_ERRORS as error:
+                # Without a slot wait nothing says the model was free when the clock started,
+                # so a timeout may have been a queue: it stays a transport failure and is
+                # retried.
+                if waited is None or TransportRetry.code(error) != outcome.MODEL_TIMEOUT:
+                    raise
+                how = (deadline or RequestDeadline(floor_seconds=seconds)).explain(
+                    prompt_tokens, sizer.reserve
+                )
+                raise ModelTooSlow(
+                    f"the model came free {waited:.0f}s after asking and then did not finish"
+                    f" this request within its {seconds}s deadline ({how}): slow on this"
+                    " input, not unreachable or busy, and at temperature 0 the same request"
+                    " would run the same way again, so it is not retried"
+                ) from error
+            verdict = self.answer(body, num_ctx=num_ctx, reserve=sizer.reserve, codes=(head, tail))
+            code = outcome.REVIEWED
+            return verdict
+        except Exception as error:
+            code = self.code(error)
+            raise
+        finally:
+            if log is not None and entry is not None:
+                log.close(entry, code=code, answered=body is not None, ollama=log.figures(body))
+
+    @staticmethod
+    def code(error: BaseException) -> str:
+        """Why a request gave no verdict, in `vibey_gh.review_outcome`'s closed vocabulary:
+        a refusal's own code, a transport failure's (`TransportRetry.code`), an answer that
+        is not a verdict at all, or `unknown` -- never a new word."""
+        if isinstance(error, ReviewRefused):
+            return error.code
+        if isinstance(error, TRANSPORT_ERRORS):
+            return TransportRetry.code(error)
+        if isinstance(error, KeyError | TypeError | AttributeError | json.JSONDecodeError):
+            return outcome.ANSWER_UNUSABLE
+        return outcome.UNKNOWN
 
     def said(self, error: urllib.error.HTTPError) -> str:
         """The server's own reason for refusing, unwrapped.
@@ -1133,6 +1225,7 @@ def call_ollama(
     sources_dropped: Sequence[str] = (),
     deadline: RequestDeadlineInterface | None = None,
     slot: SlotWaitInterface | None = None,
+    log: RequestLogInterface | None = None,
 ) -> dict:
     """One review request. `sizer` sizes it and says whether it fits; the default is
     `vibey_gh.fit`'s `ContextSizer`, the same rule the triage call uses. `whole` asks the
@@ -1141,7 +1234,8 @@ def call_ollama(
     Ollama's reasoning effort, sent only when set; `part` marks one part of a chunked review;
     `sources` are the reference files, trimmed and named as `review_payload` says.
     `deadline` scales the request's timeout with its size (`timeout` without one), and
-    `slot` waits for the model to come free before it is sent (`SizedChat.ask`).
+    `slot` waits for the model to come free before it is sent (`SizedChat.ask`); `log`
+    records the request and how it ended, changing nothing it decides.
     Raises `ReviewRefused` for a diff past `max_chars` on the diff half, a request that does
     not fit, or a reply that is not a whole answer to all of it."""
     payload = review_payload(
@@ -1167,6 +1261,7 @@ def call_ollama(
         shown_chars=len(diff),
         deadline=deadline,
         slot=slot,
+        log=log,
     )
 
 
@@ -1510,7 +1605,9 @@ DIFF_CHUNKER: DiffChunkerInterface = DiffChunker()
 
 @dataclass(frozen=True)
 class ReviewReport:
-    """What one review did, for its outcome record: how many parts, how many attempts."""
+    """What one review did, for its outcome record: how many parts, how many attempts.
+    Each request it made, and how long it took, is the review's `RequestLog` (the record's
+    `requests`), kept apart because it must outlive a review that never returns one."""
 
     parts: int = 1
     attempts: int = 0
@@ -1562,6 +1659,9 @@ class SovereignReview:
     # at once, on the fixed `timeout`.
     deadline: RequestDeadlineInterface | None = None
     slot: SlotWaitInterface | None = None
+    # Where each request is recorded, by part and attempt, with how long it took; None
+    # records nothing. Either way, nothing it decides changes.
+    log: RequestLogInterface | None = None
 
     def fit_sources(
         self,
@@ -1661,6 +1761,8 @@ class SovereignReview:
         shown, shown_cut, shown_dropped = self.fit_sources(
             diff, sources, documents=kept, cut=cut, dropped=dropped
         )
+        if self.log is not None:
+            self.log.part(1, 1)
         verdict, attempts = self.retry.run(
             functools.partial(
                 call_ollama,
@@ -1680,6 +1782,7 @@ class SovereignReview:
                 sources_dropped=shown_dropped,
                 deadline=self.deadline,
                 slot=self.slot,
+                log=self.log,
             )
         )
         return (
@@ -1751,6 +1854,8 @@ class SovereignReview:
                 part.text, own, documents=documents, part=(index, count)
             )
             seen.append(self.seen(own, shown, shown_cut))
+            if self.log is not None:
+                self.log.part(index, count)
             ask = functools.partial(
                 call_ollama,
                 self.base_url,
@@ -1768,6 +1873,7 @@ class SovereignReview:
                 sources_dropped=shown_dropped,
                 deadline=self.deadline,
                 slot=self.slot,
+                log=self.log,
             )
             try:
                 answer, took = self.retry.run(ask)
@@ -1892,8 +1998,27 @@ def _sizer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Context
     )
 
 
-def review(argv: list[str] | None = None) -> int:
-    """Entry point for `vibey-gh local-review`."""
+# What a record written while the review is still running says, in case it is the last
+# one: a run cancelled or killed mid-request leaves the requests it made, and the one it was
+# waiting on, named rather than nothing at all. A review that ends writes over it.
+IN_PROGRESS_REASON = (
+    "the review had not finished when this record was written: if no later record replaced"
+    " it, the process was stopped -- cancelled or killed -- before it could say why, and"
+    " `requests` shows how far it got"
+)
+
+
+def review(
+    argv: list[str] | None = None,
+    *,
+    environ: Mapping[str, str] | None = None,
+    clock: Callable[[], float] | None = None,
+) -> int:
+    """Entry point for `vibey-gh local-review`.
+
+    `environ` is where the runner's own `RUNNER_*` statement of itself is read from
+    (`os.environ` without one), and `clock` the seam every request's elapsed time is read
+    from (`time.monotonic`); both only ever reach the outcome record."""
     from vibey_gh.config import PrAutomationFallbackConfig, load_config
 
     defaults = load_config().pr_automation.fallback
@@ -2041,25 +2166,49 @@ def review(argv: list[str] | None = None) -> int:
             f" {error}"
         )
 
+    runner = RunnerLabel.from_environ(os.environ if environ is None else environ)
+
+    def record(code: str, reason: str, report: ReviewReport, requests: list) -> None:
+        # Fields are only ever added to `outcome.LOCAL_SCHEMA`, never renamed or removed, so
+        # a reader of the first ones reads a later record unchanged. The model, the runner
+        # and every request with its timings are the latest (`vibey-gh review-timings`).
+        written = {
+            "schema": outcome.LOCAL_SCHEMA,
+            "code": code,
+            "reason": reason,
+            "scope": args.scope,
+            "role": args.role,
+            "head_sha": args.head_sha,
+            "parts": report.parts,
+            "attempts": report.attempts,
+            "model": args.model,
+            "runner": runner.as_json(),
+            "requests": requests,
+        }
+        # Written whole, then renamed over the record: a run killed mid-write leaves the
+        # previous record, never a truncated one.
+        target = pathlib.Path(args.outcome)
+        partial = target.with_name(target.name + ".partial")
+        partial.write_text(json.dumps(written, indent=2) + "\n", encoding="utf-8")
+        partial.replace(target)
+
+    def progress(requests: list) -> None:
+        # Best effort, and never the record a review that ends leaves: a write that fails
+        # here changes nothing, and the review's own last word is written in `said`.
+        try:
+            record(outcome.UNKNOWN, IN_PROGRESS_REASON, ReviewReport(0, 0), requests)
+        except OSError:
+            pass
+
+    log = RequestLog(clock=clock, on_change=progress if args.outcome else None)
+
     def said(code: str, reason: str, report: ReviewReport, *, status: int) -> int:
         # The same reason, twice: in words on standard error for the job log and the gate,
         # and as a code from the closed vocabulary in the outcome record, for a program.
         if status:
             print(reason, file=sys.stderr)
         if args.outcome:
-            record = {
-                "schema": outcome.LOCAL_SCHEMA,
-                "code": code,
-                "reason": reason,
-                "scope": args.scope,
-                "role": args.role,
-                "head_sha": args.head_sha,
-                "parts": report.parts,
-                "attempts": report.attempts,
-            }
-            pathlib.Path(args.outcome).write_text(
-                json.dumps(record, indent=2) + "\n", encoding="utf-8"
-            )
+            record(code, reason, report, log.entries())
         return status
 
     if args.diff:
@@ -2105,7 +2254,8 @@ def review(argv: list[str] | None = None) -> int:
         ),
         # 0 sends at once, exactly as before the wait existed -- and then a timeout stays a
         # transport failure, retried, since nothing says the model was free when it began.
-        slot=SlotWait(args.slot_wait_seconds) if args.slot_wait_seconds > 0 else None,
+        slot=SlotWait(args.slot_wait_seconds, log=log) if args.slot_wait_seconds > 0 else None,
+        log=log,
     )
     try:
         verdict, shown, report = sovereign.run(diff)

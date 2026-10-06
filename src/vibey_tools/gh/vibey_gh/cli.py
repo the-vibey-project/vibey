@@ -46,6 +46,7 @@ from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRender
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
 from vibey_gh.review_canary import ReviewCanary
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
+from vibey_gh.review_timings import ReviewTimings
 from vibey_gh.ruleset_drift import RulesetDrift
 from vibey_gh.skip_markers import SkipMarkerGuard
 from vibey_gh.tracking_issue import TrackingIssue
@@ -2233,6 +2234,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     outcomes.add_argument("--json", action="store_true", help="print the table as JSON")
     outcomes.set_defaults(func=_review_outcomes)
+
+    # Each sovereign review request's timings, read back from the outcome records the review
+    # job archives: the rates its runner sustained, and the rates a deadline could use.
+    timings = sub.add_parser(
+        "review-timings",
+        help=(
+            "report the model's observed rates and timeouts per model and runner from"
+            " local-review outcome records, and suggest deadline rates (read-only)"
+        ),
+    )
+    ReviewTimings.declare(timings).set_defaults(func=ReviewTimings.dispatch)
 
     doc = sub.add_parser(
         "doctor",
