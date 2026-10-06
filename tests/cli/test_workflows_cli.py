@@ -152,3 +152,31 @@ def test_the_hub_gets_the_same_service_or_says_why_it_is_off(
     assert isinstance(ServeCommand.workflows({}), RemoteCommandService)
     assert ServeCommand.workflows({"VIBEY_WORKFLOWS_TIMEOUT_SECONDS": "never"}) is None
     assert "workflows: off (VIBEY_WORKFLOWS_TIMEOUT_SECONDS must be" in capsys.readouterr().err
+
+
+def test_every_read_command_and_safe_option_the_hub_names_exists_on_the_cli() -> None:
+    """The allowlist names real commands and real options: a renamed command or flag fails
+    here instead of silently widening or narrowing what `view` may run (ADR-0085)."""
+    import typer
+
+    from vibey.domain.hub_scope import COMMAND_ACTIONS, READ_COMMANDS, RESERVED_COMMANDS
+
+    root = typer.main.get_command(cli_main.app)
+
+    def command(words: tuple[str, ...]) -> object:
+        found: object = root
+        for word in words:
+            found = found.commands[word]  # type: ignore[attr-defined]
+        return found
+
+    for words, safe in READ_COMMANDS.items():
+        if not words:
+            continue
+        params = command(words).params  # type: ignore[attr-defined]
+        options = {
+            o for p in params if p.param_type_name == "option" for o in (*p.opts, *p.secondary_opts)
+        }
+        assert safe <= options, (words, safe - options)
+    for words in (*COMMAND_ACTIONS, *RESERVED_COMMANDS):
+        if words:
+            command(words)

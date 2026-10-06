@@ -56,7 +56,10 @@ into a thread.
    needs the scope of each action it performs as well (`COMMAND_ACTIONS`): `status` needs
    `view`; `answer` needs `answer` and `spend`, since a command line cannot say whether the
    gate spends; `queue bump` needs `bump`; `work` needs `run`. A command the policy does not
-   name needs every scope. A command that reaches a `NEVER_FROM_THE_HUB` capability is refused
+   name needs every scope. A read command stays a read only with its declared safe options
+   (`READ_COMMANDS`). `gates --remind` notifies, and `doctor --record` or `--install-postgres`
+   writes or installs, so either needs every scope. A test against the CLI's own command tree
+   keeps that list honest. A command that reaches a `NEVER_FROM_THE_HUB` capability is refused
    outright:
    `vibey migrate` and the `vibey budget` commands that change caps
    (`HubScopePolicy.reserved_command`). It would run where a repository may have declared its

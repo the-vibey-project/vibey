@@ -118,3 +118,39 @@ def test_the_command_words_skip_global_options_and_stop_at_the_first_option() ->
         "queue",
         "bump",
     )
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("gates", "--remind"),
+        ("gates", "--remind", "--dry-run"),
+        ("doctor", "--record"),
+        ("doctor", "--install-postgres"),
+        ("doctor", "--conformance"),
+        ("doctor", "--fit-output=f.json"),
+        ("ledger", "show", "-n5"),
+        ("status", "--json", "--anything-new"),
+        ("--log-file", "status", "status", "--remind"),
+    ],
+)
+def test_a_read_command_carrying_an_option_that_is_not_a_read_needs_every_scope(
+    argv: tuple[str, ...],
+) -> None:
+    """A read command is matched by its words, but one option can make it write or install:
+    only its declared safe options keep it a read (security review of ADR-0085)."""
+    assert HUB_SCOPES.scopes_for_command(argv) == frozenset(HubScope)
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("gates", "--json"),
+        ("doctor", "--project", "p", "--engines"),
+        ("ledger", "search", "--text=x", "-n", "5"),
+        ("budget", "show", "--all", "--help"),
+        ("-v", "--version"),
+    ],
+)
+def test_a_read_command_with_only_its_safe_options_needs_view(argv: tuple[str, ...]) -> None:
+    assert HUB_SCOPES.scopes_for_command(argv) == frozenset({HubScope.WORKFLOWS, HubScope.VIEW})

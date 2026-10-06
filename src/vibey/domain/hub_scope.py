@@ -89,27 +89,44 @@ A command sent to the workflows through the hub (ADR-0085) runs where a reposito
 declared its real database, so the hub refuses these there exactly as it never routes them
 itself. Paid use, the DSN and the canon have no command: they are declared in files."""
 
+READ_COMMANDS: Final[dict[tuple[str, ...], frozenset[str]]] = {
+    (): frozenset(),  # global options alone: --version, --help
+    ("status",): frozenset({"--json"}),
+    ("projects",): frozenset({"--json"}),
+    ("gates",): frozenset({"--json"}),  # not --remind: it notifies
+    ("engines",): frozenset(),
+    ("loops",): frozenset({"--json"}),
+    ("cost",): frozenset(),
+    # Not --record, --fit-output, --install-postgres, --conformance or --sovereign-fit:
+    # they write, install, or run an engine.
+    ("doctor",): frozenset({"--project", "--engines", "--provider", "--engine", "--cluster"}),
+    ("ledger", "show"): frozenset({"--kind", "--limit", "--phase", "-n"}),
+    ("ledger", "search"): frozenset(
+        {
+            "--actor",
+            "--digest",
+            "--id",
+            "--json",
+            "--kind",
+            "--limit",
+            "--since",
+            "--text",
+            "--until",
+            "-n",
+        }
+    ),
+    ("queue", "list"): frozenset({"--json"}),
+    ("budget", "show"): frozenset({"--all", "--json"}),
+    ("ultra", "status"): frozenset({"--json"}),
+    ("deploy", "status"): frozenset(),
+    ("deploy", "inspect"): frozenset(),
+}
+"""The vibey commands that only read, each with the options that keep it a read. A read
+command that carries any other option -- `gates --remind`, `doctor --record` -- is not
+taken for a read: it needs every scope, so an option added to a command later fails closed."""
+
 COMMAND_ACTIONS: Final[dict[tuple[str, ...], frozenset[HubAction]]] = {
-    **{
-        words: frozenset({HubAction.READ})
-        for words in (
-            (),  # global options alone: --version, --help
-            ("status",),
-            ("projects",),
-            ("gates",),
-            ("engines",),
-            ("loops",),
-            ("cost",),
-            ("doctor",),
-            ("ledger", "show"),
-            ("ledger", "search"),
-            ("queue", "list"),
-            ("budget", "show"),
-            ("ultra", "status"),
-            ("deploy", "status"),
-            ("deploy", "inspect"),
-        )
-    },
+    **{words: frozenset({HubAction.READ}) for words in READ_COMMANDS},
     # The command line cannot say whether the gate spends money, so both are needed.
     ("answer",): frozenset({HubAction.ANSWER_GATE, HubAction.ANSWER_SPEND_GATE}),
     ("queue", "bump"): frozenset({HubAction.BUMP_JOB}),
@@ -191,8 +208,23 @@ class HubScopePolicy:
         matches = [p for p in COMMAND_ACTIONS if words[: len(p)] == p and (p or not words)]
         if not matches:
             return frozenset(HubScope)
-        actions = COMMAND_ACTIONS[max(matches, key=len)]
+        prefix = max(matches, key=len)
+        if prefix in READ_COMMANDS and not self._only_safe_options(argv, READ_COMMANDS[prefix]):
+            return frozenset(HubScope)
+        actions = COMMAND_ACTIONS[prefix]
         return frozenset({HubScope.WORKFLOWS} | {REQUIRED_SCOPE[a] for a in actions})
+
+    def _only_safe_options(self, argv: tuple[str, ...], safe: frozenset[str]) -> bool:
+        """True when every option after the command is `--help` or one of `safe`. An option's
+        `=value` is set aside; any token that is not exactly a declared option (`-n5`) is
+        not one of them."""
+        words = self.command_words(argv)
+        if not words:
+            return True
+        after = argv[argv.index(words[-1]) + 1 :]
+        return all(
+            arg.split("=", 1)[0] in safe | {"--help"} for arg in after if arg.startswith("-")
+        )
 
     def parse(self, values: frozenset[str]) -> frozenset[HubScope]:
         """The scopes `values` names. An unknown name raises `ValueError`: a grant that
