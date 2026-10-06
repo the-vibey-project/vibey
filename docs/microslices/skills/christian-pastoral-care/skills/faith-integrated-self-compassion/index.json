@@ -1,0 +1,166 @@
+[
+  {
+    "id": "skill-0-what-this-is-and-how-to-read-it-13a8fe1ad6",
+    "purpose": "0 what this is and how to read it",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/001-0-what-this-is-and-how-to-read-it.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-theology-of-grace-the-tradition-s-case-917a720dc5"
+    ]
+  },
+  {
+    "id": "skill-1-the-theology-of-grace-the-tradition-s-case-917a720dc5",
+    "purpose": "1 the theology of grace the tradition s case",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/002-1-the-theology-of-grace-the-tradition-s-case.md",
+    "requires": [
+      "skill-0-what-this-is-and-how-to-read-it-13a8fe1ad6"
+    ],
+    "links": [
+      "skill-2-gospel-self-grace-and-secular-self-compassion-618c116524"
+    ]
+  },
+  {
+    "id": "skill-2-gospel-self-grace-and-secular-self-compassion-618c116524",
+    "purpose": "2 gospel self grace and secular self compassion",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/003-2-gospel-self-grace-and-secular-self-compassion.md",
+    "requires": [
+      "skill-1-the-theology-of-grace-the-tradition-s-case-917a720dc5"
+    ],
+    "links": [
+      "skill-3-shame-guilt-conviction-and-condemnation-99e09eae42"
+    ]
+  },
+  {
+    "id": "skill-3-shame-guilt-conviction-and-condemnation-99e09eae42",
+    "purpose": "3 shame guilt conviction and condemnation",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/004-3-shame-guilt-conviction-and-condemnation.md",
+    "requires": [
+      "skill-2-gospel-self-grace-and-secular-self-compassion-618c116524"
+    ],
+    "links": [
+      "skill-4-identity-in-christ-as-a-counter-narrative-to-shame-685d9aae39"
+    ]
+  },
+  {
+    "id": "skill-4-identity-in-christ-as-a-counter-narrative-to-shame-685d9aae39",
+    "purpose": "4 identity in christ as a counter narrative to shame",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/005-4-identity-in-christ-as-a-counter-narrative-to-shame.md",
+    "requires": [
+      "skill-3-shame-guilt-conviction-and-condemnation-99e09eae42"
+    ],
+    "links": [
+      "skill-5-spiritual-disciplines-as-means-of-grace-3f6796fd88"
+    ]
+  },
+  {
+    "id": "skill-5-spiritual-disciplines-as-means-of-grace-3f6796fd88",
+    "purpose": "5 spiritual disciplines as means of grace",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/006-5-spiritual-disciplines-as-means-of-grace.md",
+    "requires": [
+      "skill-4-identity-in-christ-as-a-counter-narrative-to-shame-685d9aae39"
+    ],
+    "links": [
+      "skill-6-neurodivergent-believers-what-the-emerging-theology-says-b0a80e6875"
+    ]
+  },
+  {
+    "id": "skill-6-neurodivergent-believers-what-the-emerging-theology-says-b0a80e6875",
+    "purpose": "6 neurodivergent believers what the emerging theology says",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/007-6-neurodivergent-believers-what-the-emerging-theology-says.md",
+    "requires": [
+      "skill-5-spiritual-disciplines-as-means-of-grace-3f6796fd88"
+    ],
+    "links": [
+      "skill-7-what-the-clinical-evidence-shows-bc15f4ab46"
+    ]
+  },
+  {
+    "id": "skill-7-what-the-clinical-evidence-shows-bc15f4ab46",
+    "purpose": "7 what the clinical evidence shows",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/008-7-what-the-clinical-evidence-shows.md",
+    "requires": [
+      "skill-6-neurodivergent-believers-what-the-emerging-theology-says-b0a80e6875"
+    ],
+    "links": [
+      "skill-8-where-the-evidence-runs-out-b7de0fe741"
+    ]
+  },
+  {
+    "id": "skill-8-where-the-evidence-runs-out-b7de0fe741",
+    "purpose": "8 where the evidence runs out",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/009-8-where-the-evidence-runs-out.md",
+    "requires": [
+      "skill-7-what-the-clinical-evidence-shows-bc15f4ab46"
+    ],
+    "links": [
+      "skill-9-working-alongside-professional-care-051b90a7ee"
+    ]
+  },
+  {
+    "id": "skill-9-working-alongside-professional-care-051b90a7ee",
+    "purpose": "9 working alongside professional care",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/010-9-working-alongside-professional-care.md",
+    "requires": [
+      "skill-8-where-the-evidence-runs-out-b7de0fe741"
+    ],
+    "links": [
+      "skill-10-how-this-goes-wrong-pastoral-failure-modes-37bb9cf2d4"
+    ]
+  },
+  {
+    "id": "skill-10-how-this-goes-wrong-pastoral-failure-modes-37bb9cf2d4",
+    "purpose": "10 how this goes wrong pastoral failure modes",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/011-10-how-this-goes-wrong-pastoral-failure-modes.md",
+    "requires": [
+      "skill-9-working-alongside-professional-care-051b90a7ee"
+    ],
+    "links": [
+      "skill-11-an-optional-pacing-outline-d4ec83ebe2"
+    ]
+  },
+  {
+    "id": "skill-11-an-optional-pacing-outline-d4ec83ebe2",
+    "purpose": "11 an optional pacing outline",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/012-11-an-optional-pacing-outline.md",
+    "requires": [
+      "skill-10-how-this-goes-wrong-pastoral-failure-modes-37bb9cf2d4"
+    ],
+    "links": [
+      "skill-12-quick-reference-8084b532c6"
+    ]
+  },
+  {
+    "id": "skill-12-quick-reference-8084b532c6",
+    "purpose": "12 quick reference",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/013-12-quick-reference.md",
+    "requires": [
+      "skill-11-an-optional-pacing-outline-d4ec83ebe2"
+    ],
+    "links": [
+      "skill-sources-a360a1fd8a"
+    ]
+  },
+  {
+    "id": "skill-sources-a360a1fd8a",
+    "purpose": "sources",
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion/014-sources.md",
+    "requires": [
+      "skill-12-quick-reference-8084b532c6"
+    ],
+    "links": []
+  }
+]

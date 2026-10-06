@@ -1,0 +1,118 @@
+[
+  {
+    "id": "skill-1-what-the-evidence-says-5adba7bd14",
+    "purpose": "1 what the evidence says",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/001-1-what-the-evidence-says.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-jan-accommodation-menu-ec883b97ea"
+    ]
+  },
+  {
+    "id": "skill-2-the-jan-accommodation-menu-ec883b97ea",
+    "purpose": "2 the jan accommodation menu",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/002-2-the-jan-accommodation-menu.md",
+    "requires": [
+      "skill-1-what-the-evidence-says-5adba7bd14"
+    ],
+    "links": [
+      "skill-3-the-us-legal-framework-ada-in-brief-84df60aeeb"
+    ]
+  },
+  {
+    "id": "skill-3-the-us-legal-framework-ada-in-brief-84df60aeeb",
+    "purpose": "3 the us legal framework ada in brief",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/003-3-the-us-legal-framework-ada-in-brief.md",
+    "requires": [
+      "skill-2-the-jan-accommodation-menu-ec883b97ea"
+    ],
+    "links": [
+      "skill-4-scripts-from-no-disclosure-to-soft-disclosure-1d74dce78c"
+    ]
+  },
+  {
+    "id": "skill-4-scripts-from-no-disclosure-to-soft-disclosure-1d74dce78c",
+    "purpose": "4 scripts from no disclosure to soft disclosure",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/004-4-scripts-from-no-disclosure-to-soft-disclosure.md",
+    "requires": [
+      "skill-3-the-us-legal-framework-ada-in-brief-84df60aeeb"
+    ],
+    "links": [
+      "skill-5-staged-disclosure-on-the-job-f9a4b64aca"
+    ]
+  },
+  {
+    "id": "skill-5-staged-disclosure-on-the-job-f9a4b64aca",
+    "purpose": "5 staged disclosure on the job",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/005-5-staged-disclosure-on-the-job.md",
+    "requires": [
+      "skill-4-scripts-from-no-disclosure-to-soft-disclosure-1d74dce78c"
+    ],
+    "links": [
+      "skill-6-formal-letters-and-follow-ups-us-oriented-templates-0479421519"
+    ]
+  },
+  {
+    "id": "skill-6-formal-letters-and-follow-ups-us-oriented-templates-0479421519",
+    "purpose": "6 formal letters and follow ups us oriented templates",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/006-6-formal-letters-and-follow-ups-us-oriented-templates.md",
+    "requires": [
+      "skill-5-staged-disclosure-on-the-job-f9a4b64aca"
+    ],
+    "links": [
+      "skill-7-hiring-disclosure-and-interview-accommodations-us-aa8dbb07c0"
+    ]
+  },
+  {
+    "id": "skill-7-hiring-disclosure-and-interview-accommodations-us-aa8dbb07c0",
+    "purpose": "7 hiring disclosure and interview accommodations us",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/007-7-hiring-disclosure-and-interview-accommodations-us.md",
+    "requires": [
+      "skill-6-formal-letters-and-follow-ups-us-oriented-templates-0479421519"
+    ],
+    "links": [
+      "skill-8-for-managers-and-hr-receiving-a-request-ac4ff696e2"
+    ]
+  },
+  {
+    "id": "skill-8-for-managers-and-hr-receiving-a-request-ac4ff696e2",
+    "purpose": "8 for managers and hr receiving a request",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/008-8-for-managers-and-hr-receiving-a-request.md",
+    "requires": [
+      "skill-7-hiring-disclosure-and-interview-accommodations-us-aa8dbb07c0"
+    ],
+    "links": [
+      "skill-9-limits-and-caveats-ce6c06e01d"
+    ]
+  },
+  {
+    "id": "skill-9-limits-and-caveats-ce6c06e01d",
+    "purpose": "9 limits and caveats",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/009-9-limits-and-caveats.md",
+    "requires": [
+      "skill-8-for-managers-and-hr-receiving-a-request-ac4ff696e2"
+    ],
+    "links": [
+      "skill-10-sources-4cc9683d7f"
+    ]
+  },
+  {
+    "id": "skill-10-sources-4cc9683d7f",
+    "purpose": "10 sources",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/010-10-sources.md",
+    "requires": [
+      "skill-9-limits-and-caveats-ce6c06e01d"
+    ],
+    "links": []
+  }
+]

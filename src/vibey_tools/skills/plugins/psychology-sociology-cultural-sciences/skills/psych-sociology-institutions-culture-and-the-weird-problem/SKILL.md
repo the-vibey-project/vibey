@@ -5,7 +5,7 @@ description: "Use when the unit of analysis is social rather than individual: so
 
 # Psychology, Sociology and Cultural Sciences: Sociological Thinking, Stratification, Networks, Institutions, Culture, and the WEIRD Problem
 
-> **Part 4 of 5** of the *Psychology, Sociology and Cultural Sciences* reference (plugin `psychology-sociology-cultural-sciences`), covering §16–§24. Sibling skills: `psych-epistemic-situation-and-replication-reform` (§0–§3), `psych-perception-memory-learning-cognition-and-emotion` (§4–§8), `psych-development-personality-social-clinical-and-neurodiversity` (§9–§15), `psych-reference` (§25–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 4 of 6** of the *Psychology, Sociology and Cultural Sciences* reference (plugin `psychology-sociology-cultural-sciences`), covering §16–§24. Sibling skills: `psych-epistemic-situation-and-replication-reform` (§0–§3), `psych-perception-memory-learning-cognition-and-emotion` (§4–§8), `psych-development-personality-social-clinical-and-neurodiversity` (§9–§15), `psych-reference` (§25–§29), `psych-twice-exceptional-adults` (§30–§42). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The core findings are decades stable. Two areas are live. See §25 → `psych-reference` for where replication reform actually stands, and the social-media-and-adolescent-mental-health dispute presented as the dispute it is.
 

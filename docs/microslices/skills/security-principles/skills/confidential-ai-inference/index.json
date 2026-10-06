@@ -1,0 +1,190 @@
+[
+  {
+    "id": "skill-1-what-confidential-inference-is-and-what-it-is-not-eaa6c32a35",
+    "purpose": "1 what confidential inference is and what it is not",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/001-1-what-confidential-inference-is-and-what-it-is-not.md",
+    "requires": [],
+    "links": [
+      "skill-2-threat-model-parties-assets-and-the-trust-you-cannot-remove-41c68db807"
+    ]
+  },
+  {
+    "id": "skill-2-threat-model-parties-assets-and-the-trust-you-cannot-remove-41c68db807",
+    "purpose": "2 threat model parties assets and the trust you cannot remove",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/002-2-threat-model-parties-assets-and-the-trust-you-cannot-remove.md",
+    "requires": [
+      "skill-1-what-confidential-inference-is-and-what-it-is-not-eaa6c32a35"
+    ],
+    "links": [
+      "skill-3-trusted-execution-cpu-confidential-vms-and-enclaves-5ff5798053"
+    ]
+  },
+  {
+    "id": "skill-3-trusted-execution-cpu-confidential-vms-and-enclaves-5ff5798053",
+    "purpose": "3 trusted execution cpu confidential vms and enclaves",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/003-3-trusted-execution-cpu-confidential-vms-and-enclaves.md",
+    "requires": [
+      "skill-2-threat-model-parties-assets-and-the-trust-you-cannot-remove-41c68db807"
+    ],
+    "links": [
+      "skill-4-gpu-confidential-computing-and-the-cpu-gpu-path-40ad89339f"
+    ]
+  },
+  {
+    "id": "skill-4-gpu-confidential-computing-and-the-cpu-gpu-path-40ad89339f",
+    "purpose": "4 gpu confidential computing and the cpu gpu path",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/004-4-gpu-confidential-computing-and-the-cpu-gpu-path.md",
+    "requires": [
+      "skill-3-trusted-execution-cpu-confidential-vms-and-enclaves-5ff5798053"
+    ],
+    "links": [
+      "skill-5-remote-attestation-the-ietf-rats-model-rfc-9334-9d53a24197"
+    ]
+  },
+  {
+    "id": "skill-5-remote-attestation-the-ietf-rats-model-rfc-9334-9d53a24197",
+    "purpose": "5 remote attestation the ietf rats model rfc 9334",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/005-5-remote-attestation-the-ietf-rats-model-rfc-9334.md",
+    "requires": [
+      "skill-4-gpu-confidential-computing-and-the-cpu-gpu-path-40ad89339f"
+    ],
+    "links": [
+      "skill-6-binding-attestation-to-the-channel-and-what-the-client-must-check-9930a43cf7"
+    ]
+  },
+  {
+    "id": "skill-6-binding-attestation-to-the-channel-and-what-the-client-must-check-9930a43cf7",
+    "purpose": "6 binding attestation to the channel and what the client must check",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/006-6-binding-attestation-to-the-channel-and-what-the-client-must-check.md",
+    "requires": [
+      "skill-5-remote-attestation-the-ietf-rats-model-rfc-9334-9d53a24197"
+    ],
+    "links": [
+      "skill-7-oblivious-http-and-relays-separating-who-you-are-from-what-you-ask-db90ee5e2d"
+    ]
+  },
+  {
+    "id": "skill-7-oblivious-http-and-relays-separating-who-you-are-from-what-you-ask-db90ee5e2d",
+    "purpose": "7 oblivious http and relays separating who you are from what you ask",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/007-7-oblivious-http-and-relays-separating-who-you-are-from-what-you-ask.md",
+    "requires": [
+      "skill-6-binding-attestation-to-the-channel-and-what-the-client-must-check-9930a43cf7"
+    ],
+    "links": [
+      "skill-8-transparency-logs-reproducible-builds-and-binary-transparency-dadaab3f53"
+    ]
+  },
+  {
+    "id": "skill-8-transparency-logs-reproducible-builds-and-binary-transparency-dadaab3f53",
+    "purpose": "8 transparency logs reproducible builds and binary transparency",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/008-8-transparency-logs-reproducible-builds-and-binary-transparency.md",
+    "requires": [
+      "skill-7-oblivious-http-and-relays-separating-who-you-are-from-what-you-ask-db90ee5e2d"
+    ],
+    "links": [
+      "skill-9-verifiable-inference-beyond-tees-6972b55a95"
+    ]
+  },
+  {
+    "id": "skill-9-verifiable-inference-beyond-tees-6972b55a95",
+    "purpose": "9 verifiable inference beyond tees",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/009-9-verifiable-inference-beyond-tees.md",
+    "requires": [
+      "skill-8-transparency-logs-reproducible-builds-and-binary-transparency-dadaab3f53"
+    ],
+    "links": [
+      "skill-10-engineering-the-system-ea23bd2dd7"
+    ]
+  },
+  {
+    "id": "skill-10-engineering-the-system-ea23bd2dd7",
+    "purpose": "10 engineering the system",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/010-10-engineering-the-system.md",
+    "requires": [
+      "skill-9-verifiable-inference-beyond-tees-6972b55a95"
+    ],
+    "links": [
+      "skill-11-updates-rotation-and-incident-response-9783d82355"
+    ]
+  },
+  {
+    "id": "skill-11-updates-rotation-and-incident-response-9783d82355",
+    "purpose": "11 updates rotation and incident response",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/011-11-updates-rotation-and-incident-response.md",
+    "requires": [
+      "skill-10-engineering-the-system-ea23bd2dd7"
+    ],
+    "links": [
+      "skill-12-reference-architecture-830f2bc1f0"
+    ]
+  },
+  {
+    "id": "skill-12-reference-architecture-830f2bc1f0",
+    "purpose": "12 reference architecture",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/012-12-reference-architecture.md",
+    "requires": [
+      "skill-11-updates-rotation-and-incident-response-9783d82355"
+    ],
+    "links": [
+      "skill-13-public-systems-as-publicly-described-5316c45f34"
+    ]
+  },
+  {
+    "id": "skill-13-public-systems-as-publicly-described-5316c45f34",
+    "purpose": "13 public systems as publicly described",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/013-13-public-systems-as-publicly-described.md",
+    "requires": [
+      "skill-12-reference-architecture-830f2bc1f0"
+    ],
+    "links": [
+      "skill-14-deployment-checklist-28e4ad55eb"
+    ]
+  },
+  {
+    "id": "skill-14-deployment-checklist-28e4ad55eb",
+    "purpose": "14 deployment checklist",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/014-14-deployment-checklist.md",
+    "requires": [
+      "skill-13-public-systems-as-publicly-described-5316c45f34"
+    ],
+    "links": [
+      "skill-15-common-failure-modes-6ca8b1bb28"
+    ]
+  },
+  {
+    "id": "skill-15-common-failure-modes-6ca8b1bb28",
+    "purpose": "15 common failure modes",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/015-15-common-failure-modes.md",
+    "requires": [
+      "skill-14-deployment-checklist-28e4ad55eb"
+    ],
+    "links": [
+      "skill-16-sources-e5e5ef47f3"
+    ]
+  },
+  {
+    "id": "skill-16-sources-e5e5ef47f3",
+    "purpose": "16 sources",
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference/016-16-sources.md",
+    "requires": [
+      "skill-15-common-failure-modes-6ca8b1bb28"
+    ],
+    "links": []
+  }
+]

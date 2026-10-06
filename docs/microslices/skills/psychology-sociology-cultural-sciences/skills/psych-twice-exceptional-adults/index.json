@@ -1,0 +1,154 @@
+[
+  {
+    "id": "skill-30-routing-scope-and-how-to-read-this-part-2ef479b55b",
+    "purpose": "30 routing scope and how to read this part",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/001-30-routing-scope-and-how-to-read-this-part.md",
+    "requires": [],
+    "links": [
+      "skill-31-defining-giftedness-competing-definitions-and-why-it-matters-2795624ef3"
+    ]
+  },
+  {
+    "id": "skill-31-defining-giftedness-competing-definitions-and-why-it-matters-2795624ef3",
+    "purpose": "31 defining giftedness competing definitions and why it matters",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/002-31-defining-giftedness-competing-definitions-and-why-it-matters.md",
+    "requires": [
+      "skill-30-routing-scope-and-how-to-read-this-part-2ef479b55b"
+    ],
+    "links": [
+      "skill-32-what-iq-scores-show-and-hide-under-adversity-0b7d3d36c4"
+    ]
+  },
+  {
+    "id": "skill-32-what-iq-scores-show-and-hide-under-adversity-0b7d3d36c4",
+    "purpose": "32 what iq scores show and hide under adversity",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/003-32-what-iq-scores-show-and-hide-under-adversity.md",
+    "requires": [
+      "skill-31-defining-giftedness-competing-definitions-and-why-it-matters-2795624ef3"
+    ],
+    "links": [
+      "skill-33-the-neuroscience-of-high-ability-what-it-shows-and-how-far-it-reaches-c2425cb7f4"
+    ]
+  },
+  {
+    "id": "skill-33-the-neuroscience-of-high-ability-what-it-shows-and-how-far-it-reaches-c2425cb7f4",
+    "purpose": "33 the neuroscience of high ability what it shows and how far it reaches",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/004-33-the-neuroscience-of-high-ability-what-it-shows-and-how-far-it-reaches.md",
+    "requires": [
+      "skill-32-what-iq-scores-show-and-hide-under-adversity-0b7d3d36c4"
+    ],
+    "links": [
+      "skill-34-the-2e-concept-and-the-giftedness-autism-adhd-intersection-3640756a85"
+    ]
+  },
+  {
+    "id": "skill-34-the-2e-concept-and-the-giftedness-autism-adhd-intersection-3640756a85",
+    "purpose": "34 the 2e concept and the giftedness autism adhd intersection",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/005-34-the-2e-concept-and-the-giftedness-autism-adhd-intersection.md",
+    "requires": [
+      "skill-33-the-neuroscience-of-high-ability-what-it-shows-and-how-far-it-reaches-c2425cb7f4"
+    ],
+    "links": [
+      "skill-35-invisibility-masking-compensation-and-missed-diagnosis-b06fd2ff61"
+    ]
+  },
+  {
+    "id": "skill-35-invisibility-masking-compensation-and-missed-diagnosis-b06fd2ff61",
+    "purpose": "35 invisibility masking compensation and missed diagnosis",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/006-35-invisibility-masking-compensation-and-missed-diagnosis.md",
+    "requires": [
+      "skill-34-the-2e-concept-and-the-giftedness-autism-adhd-intersection-3640756a85"
+    ],
+    "links": [
+      "skill-36-dabrowski-s-overexcitabilities-and-the-overlap-problem-a5e47c9377"
+    ]
+  },
+  {
+    "id": "skill-36-dabrowski-s-overexcitabilities-and-the-overlap-problem-a5e47c9377",
+    "purpose": "36 dabrowski s overexcitabilities and the overlap problem",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/007-36-dabrowski-s-overexcitabilities-and-the-overlap-problem.md",
+    "requires": [
+      "skill-35-invisibility-masking-compensation-and-missed-diagnosis-b06fd2ff61"
+    ],
+    "links": [
+      "skill-37-the-psychological-landscape-existential-distress-perfectionism-impostor-feelings-burnout-f1cc434a24"
+    ]
+  },
+  {
+    "id": "skill-37-the-psychological-landscape-existential-distress-perfectionism-impostor-feelings-burnout-f1cc434a24",
+    "purpose": "37 the psychological landscape existential distress perfectionism impostor feelings burnout",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/008-37-the-psychological-landscape-existential-distress-perfectionism-impostor-feelings-burnout.md",
+    "requires": [
+      "skill-36-dabrowski-s-overexcitabilities-and-the-overlap-problem-a5e47c9377"
+    ],
+    "links": [
+      "skill-38-the-interpersonal-cost-of-cognitive-outliers-341d20e123"
+    ]
+  },
+  {
+    "id": "skill-38-the-interpersonal-cost-of-cognitive-outliers-341d20e123",
+    "purpose": "38 the interpersonal cost of cognitive outliers",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/009-38-the-interpersonal-cost-of-cognitive-outliers.md",
+    "requires": [
+      "skill-37-the-psychological-landscape-existential-distress-perfectionism-impostor-feelings-burnout-f1cc434a24"
+    ],
+    "links": [
+      "skill-39-societal-context-415150bf25"
+    ]
+  },
+  {
+    "id": "skill-39-societal-context-415150bf25",
+    "purpose": "39 societal context",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/010-39-societal-context.md",
+    "requires": [
+      "skill-38-the-interpersonal-cost-of-cognitive-outliers-341d20e123"
+    ],
+    "links": [
+      "skill-40-families-workplaces-and-what-the-evidence-supports-doing-395e0f6e17"
+    ]
+  },
+  {
+    "id": "skill-40-families-workplaces-and-what-the-evidence-supports-doing-395e0f6e17",
+    "purpose": "40 families workplaces and what the evidence supports doing",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/011-40-families-workplaces-and-what-the-evidence-supports-doing.md",
+    "requires": [
+      "skill-39-societal-context-415150bf25"
+    ],
+    "links": [
+      "skill-41-claim-ledger-every-flagged-claim-at-a-glance-9719f60829"
+    ]
+  },
+  {
+    "id": "skill-41-claim-ledger-every-flagged-claim-at-a-glance-9719f60829",
+    "purpose": "41 claim ledger every flagged claim at a glance",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/012-41-claim-ledger-every-flagged-claim-at-a-glance.md",
+    "requires": [
+      "skill-40-families-workplaces-and-what-the-evidence-supports-doing-395e0f6e17"
+    ],
+    "links": [
+      "skill-42-sources-and-method-de009fd09a"
+    ]
+  },
+  {
+    "id": "skill-42-sources-and-method-de009fd09a",
+    "purpose": "42 sources and method",
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/013-42-sources-and-method.md",
+    "requires": [
+      "skill-41-claim-ledger-every-flagged-claim-at-a-glance-9719f60829"
+    ],
+    "links": []
+  }
+]

@@ -38,5 +38,6 @@ links: ["skill-1-the-epistemic-situation-5f019647a2"]
 | Misconceptions | §26 → `psych-reference` |
 | Books | §27 → `psych-reference` |
 | Quick reference | §28 → `psych-reference` |
+| Twice-exceptional (2e) adults | §30–§42 → `psych-twice-exceptional-adults` |
 
 ---

@@ -6,12 +6,12 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 147 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 149 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
         "name": "vibey-skills",
-        "version": "2.25.0"
+        "version": "2.26.0"
       },
       {
         "path": "src/vibey_tools/gh",
@@ -269,6 +269,17 @@
       "description": "Chaos Theory: what chaos actually is and is not, the stretch-and-fold mechanism, dynamical systems, stability and linearization, bifurcations, the logistic map and Feigenbaum universality, Lyapunov exponents, strange attractors, the routes to chaos, fractals and dimension, Poincare sections and symbolic dynamics, Hamiltonian chaos and KAM, detecting chaos in real data, control and synchronization, where chaos actually appears, and computing chaotic systems numerically.",
       "version": "0.2.0",
       "category": "mathematics",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "christian-pastoral-care",
+      "source": "./src/vibey_tools/skills/plugins/christian-pastoral-care",
+      "description": "Christian Pastoral Care: faith-integrated self-compassion — an evangelical theology of grace, shame and identity in Christ, spiritual disciplines adapted for neurodivergent believers, and the clinical evidence for religiously adapted self-compassion, alongside professional care. Pastoral and educational, not therapy.",
+      "version": "0.1.0",
+      "category": "religion",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
@@ -1023,6 +1034,17 @@
       }
     },
     {
+      "name": "neurodiversity-at-work",
+      "source": "./src/vibey_tools/skills/plugins/neurodiversity-at-work",
+      "description": "Neurodiversity at Work: low-ambiguity workplace communication scripts, preference questions and a How-I-Work one-pager; accommodation, disclosure and interview language under the US ADA with JAN's guidance. Educational, not medical or legal advice.",
+      "version": "0.1.0",
+      "category": "social-sciences",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "newtonian-mechanics",
       "source": "./src/vibey_tools/skills/plugins/newtonian-mechanics",
       "description": "Newtonian Mechanics: kinematics, Newton's laws stated precisely and the misconceptions they generate, free-body diagrams, the forces (gravity, normal, friction, drag, spring and tension), work, energy and power and why conservation laws run deeper than Newton's laws, momentum and collisions, rotation, rigid bodies and gyroscopes, oscillations and resonance, central forces and orbits, non-inertial frames, Lagrangian and Hamiltonian mechanics, fluids, chaos and the limits of prediction, and numerical integration including why symplectic integrators matter.",
@@ -1179,8 +1201,8 @@
     {
       "name": "psychology-sociology-cultural-sciences",
       "source": "./src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences",
-      "description": "Psychology, Sociology and Cultural Sciences: the epistemic situation after the replication crisis and how to read a claim in these fields, why they are hard, what reform changed, perception and attention, memory, learning and conditioning, cognition, reasoning and bias, emotion, development, personality, motivation, social psychology, clinical psychology and what the evidence says actually works, intelligence, neurodiversity, sociological thinking and the theory traditions, stratification and mobility, networks, institutions and organizations, deviance and social control, religion and secularization, culture and anthropology, and the WEIRD problem.",
-      "version": "0.1.0",
+      "description": "Psychology, Sociology and Cultural Sciences: the epistemic situation after the replication crisis and how to read a claim in these fields, why they are hard, what reform changed, perception and attention, memory, learning and conditioning, cognition, reasoning and bias, emotion, development, personality, motivation, social psychology, clinical psychology and what the evidence says actually works, intelligence, neurodiversity, sociological thinking and the theory traditions, stratification and mobility, networks, institutions and organizations, deviance and social control, religion and secularization, culture and anthropology, the WEIRD problem, and twice-exceptional adults — giftedness with autism or ADHD, masking and missed diagnosis, overexcitabilities, perfectionism and burnout, each claim labelled by evidence strength.",
+      "version": "0.2.0",
       "category": "social-sciences",
       "author": {
         "name": "Adam Matthew Steinberger",
@@ -1322,8 +1344,8 @@
     {
       "name": "security-principles",
       "source": "./src/vibey_tools/skills/plugins/security-principles",
-      "description": "Security Principles: cybersecurity first principles, threat modeling playbook, AI-era security field guide, and AI safety and secure development practices for Python and TypeScript/Next.js.",
-      "version": "0.2.0",
+      "description": "Security Principles: cybersecurity first principles, threat modeling playbook, AI-era security field guide, AI safety and secure development practices for Python and TypeScript/Next.js, and confidential AI inference — TEEs, GPU confidential computing, remote attestation, Oblivious HTTP and transparency logs.",
+      "version": "0.3.0",
       "category": "security",
       "author": {
         "name": "Adam Matthew Steinberger",

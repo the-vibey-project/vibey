@@ -1,7 +1,7 @@
 {
   "name": "security-principles",
-  "version": "0.2.0",
-  "description": "Security Principles: cybersecurity first principles, threat modeling playbook, AI-era security field guide, and AI safety and secure development practices for Python and TypeScript/Next.js.",
+  "version": "0.3.0",
+  "description": "Security Principles: cybersecurity first principles, threat modeling playbook, AI-era security field guide, AI safety and secure development practices for Python and TypeScript/Next.js, and confidential AI inference — TEEs, GPU confidential computing, remote attestation, Oblivious HTTP and transparency logs.",
   "author": {
     "name": "Adam Matthew Steinberger",
     "email": "adam@matthewsteinberger.com"
