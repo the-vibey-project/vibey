@@ -1669,3 +1669,44 @@ def test_regenerate_is_read_as_argv_tuples(tmp_path):
         '[version]\nregenerate = [["python", "scripts/render.py", "render"]]\n'
     )
     assert load_config(tmp_path).version_regenerate == (("python", "scripts/render.py", "render"),)
+
+
+def test_promotion_schedules_default_to_the_weekly_backstop(tmp_path):
+    assert load_config(tmp_path).promotion_schedules == ("17 8 * * 1",)
+
+
+def test_promotion_schedules_are_read_and_deduplicated(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[promotion]\nschedules = ["17 8 * * 1", "17 8 1 * *", "17 8 1 * *"]\n'
+    )
+    assert load_config(tmp_path).promotion_schedules == ("17 8 * * 1", "17 8 1 * *")
+
+
+@pytest.mark.parametrize(
+    "raw", ['"17 8 * * 1"', '["17 8 * *"]', '["17 8 * * 1\\" ]"]', '["@monthly"]', "[3]"]
+)
+def test_a_promotion_schedule_must_be_a_five_field_cron(tmp_path, raw):
+    (tmp_path / ".vibey-gh.toml").write_text(f"[promotion]\nschedules = {raw}\n")
+    if raw == '"17 8 * * 1"':  # a bare string is one cron, read as a list of one
+        assert load_config(tmp_path).promotion_schedules == ("17 8 * * 1",)
+        return
+    with pytest.raises(ValueError, match="promotion.schedules"):
+        load_config(tmp_path)
+
+
+def test_the_promotion_template_carries_the_declared_schedules():
+    text = (
+        "on:\n  workflow_run:\n    types: [completed]\n"
+        + install.PROMOTION_SCHEDULE
+        + "  workflow_dispatch:\n"
+    )
+    assert install._promotion_schedules(text, ("17 8 * * 1",)) == text
+    monthly = install._promotion_schedules(text, ("17 8 * * 1", "17 8 1 * *"))
+    assert '    - cron: "17 8 * * 1"\n    - cron: "17 8 1 * *"\n  workflow_dispatch' in monthly
+    assert "schedule:" not in install._promotion_schedules(text, ())
+    assert install._promotion_schedules("no schedule here", ("1 1 1 1 1",)) == "no schedule here"
+
+
+def test_the_shipped_promotion_template_spells_the_default_it_rewrites():
+    template = Path(install.__file__).parent / "templates" / "workflows" / "promote-to-main.yml"
+    assert install.PROMOTION_SCHEDULE in template.read_text(encoding="utf-8")

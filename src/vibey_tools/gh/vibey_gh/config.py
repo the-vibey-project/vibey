@@ -3222,6 +3222,10 @@ class GhConfig:
     # Commands (argv, never a shell line) that re-derive files embedding the version. Run
     # after every release bump; whatever they rewrite joins the release commit.
     version_regenerate: tuple[tuple[str, ...], ...] = ()
+    # When the promotion workflow runs on a clock, beside following the merge train: its
+    # `schedule` crons. The default is the weekly backstop; a repository that also wants a
+    # monthly release adds one (`[promotion] schedules`).
+    promotion_schedules: tuple[str, ...] = ("17 8 * * 1",)
     integration_branch: str = "develop"
     release_branch: str = "main"
     owner: str = ""
@@ -3362,6 +3366,22 @@ def _fallback_package(raw: object) -> str:
     if not _DISTRIBUTION_RE.match(value):
         raise ValueError(f"install.fallback_package must be a PEP 508 distribution name: {value!r}")
     return value
+
+
+# Five fields of digits, `*`, `/`, `,` and `-`: everything a cron needs and nothing that
+# could close the rendered YAML string it is written into.
+_CRON_RE = re.compile(r"^[0-9*/,-]+( [0-9*/,-]+){4}$")
+
+
+def _schedules(raw: object) -> tuple[str, ...]:
+    """`[promotion] schedules`: a list of five-field cron expressions, rendered into the
+    promotion workflow's `on.schedule`. An empty list leaves it following the train alone."""
+    crons: list[str] = []
+    for item in list(raw) if isinstance(raw, (list, tuple)) else [raw]:
+        if not isinstance(item, str) or not _CRON_RE.match(item):
+            raise ValueError(f"promotion.schedules entries must be five-field crons: {item!r}")
+        crons.append(item)
+    return tuple(dict.fromkeys(crons))
 
 
 def _regenerate(raw: object) -> tuple[tuple[str, ...], ...]:
@@ -3604,6 +3624,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         content_paths=tuple(ver.get("content_paths", ())),
         code_paths=tuple(ver.get("code_paths", ("src/",))),
         version_regenerate=_regenerate(ver.get("regenerate", ())),
+        promotion_schedules=_schedules(data.get("promotion", {}).get("schedules", ("17 8 * * 1",))),
         managed_workflows=(tuple(inst["workflows"]) if "workflows" in inst else None),
         union_merge_paths=tuple(inst.get("union_merge_paths", DEFAULT_UNION_MERGE_PATHS)),
         fallback_package=_fallback_package(inst.get("fallback_package", "vibey-engine")),
