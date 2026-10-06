@@ -300,6 +300,19 @@ export class HubClient implements HubClientInterface {
    * resolved by the command line on the host from the gate's own defaults, so a device cannot
    * send it; it sends pairs instead.
    */
+  /**
+   * A run's link, kept only when it is `https:`. The screen opens it with the system's URL
+   * handler, so a hub that sent `javascript:`, `intent:` or `tel:` must not reach it: anything
+   * else reads as no link at all (security review of ADR-0085).
+   */
+  static httpsUrl(url: string): string {
+    try {
+      return new URL(url).protocol === 'https:' ? url : '';
+    } catch {
+      return '';
+    }
+  }
+
   static answerDocument(answer: GateAnswer): Json {
     switch (answer.mode) {
       case 'verdict':
@@ -363,7 +376,7 @@ export class HubClient implements HubClientInterface {
     return {
       request_id: parsed.request_id,
       state: parsed.state as WorkflowRunState,
-      url: text(parsed.url),
+      url: HubClient.httpsUrl(text(parsed.url)),
       exit_code: typeof parsed.exit_code === 'number' ? parsed.exit_code : null,
       stdout: text(parsed.stdout),
       stderr: text(parsed.stderr),

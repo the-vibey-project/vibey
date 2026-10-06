@@ -67,9 +67,9 @@ describe('the vibey.workflows setting', () => {
   it("waits for a hub's run on the editor's own clock", async () => {
     const { core, http, clock } = build({ hub: true });
     const route = 'http://studio.local:8765/api/v1/workflows/runs';
-    const looks = [json({ state: 'running', url: 'u' }), json({ state: 'done', url: 'u', exit_code: 0, stdout: 'ok', stderr: '' })];
+    const looks = [json({ state: 'running', url: 'https://github.com/o/r/actions/runs/9' }), json({ state: 'done', url: 'https://github.com/o/r/actions/runs/9', exit_code: 0, stdout: 'ok', stderr: '' })];
     http.route('POST', route, json({ request_id: 'r1', state: 'queued' }, 202)).route('GET', `${route}/r1`, () => looks.shift() ?? json({}));
-    expect(await core.vibey?.runOnWorkflows(['gates'])).toEqual({ exitCode: 0, stdout: 'ok', stderr: '', url: 'u' });
+    expect(await core.vibey?.runOnWorkflows(['gates'])).toEqual({ exitCode: 0, stdout: 'ok', stderr: '', url: 'https://github.com/o/r/actions/runs/9' });
     expect(clock.mono).toBe(2 * WorkflowsCommandLine.POLL_MS);
   });
 });

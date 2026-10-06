@@ -208,7 +208,12 @@ kr_workflow_run_parse(const char *json, gssize length, GError **error)
         run->has_exit_code = TRUE;
         run->exit_code = json_node_get_int(exit_code);
     }
+    /* A run's link is kept only when it is https: the page hands it to the system's URI
+     * handler, so a hub that sent another scheme must not reach it (security review of
+     * ADR-0085). Anything else reads as no link at all. */
     run->url = dup_text(object, "url");
+    if (run->url != NULL && g_strcmp0(g_uri_peek_scheme(run->url), "https") != 0)
+        g_clear_pointer(&run->url, g_free);
     run->output = dup_text(object, "stdout");
     run->errors = dup_text(object, "stderr");
     run->detail = dup_text(object, "detail");

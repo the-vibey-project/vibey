@@ -284,6 +284,26 @@ test_scope(void)
     g_assert_cmpstr(KR_WORKFLOWS_SCOPE, ==, "workflows");
 }
 
+/* A run's link reaches the system's URI handler, so only https is kept (security review
+ * of ADR-0085): javascript:, file: or a custom scheme from a hub reads as no link at all. */
+static void
+test_only_an_https_link_is_kept(void)
+{
+    const char *refused[] = {"javascript:alert(1)", "file:///etc/passwd", "intent://x#Intent;end",
+                             "http://github.com/o/r/actions/runs/7", "not a url"};
+    for (gsize i = 0; i < G_N_ELEMENTS(refused); i++) {
+        g_autofree char *json = g_strdup_printf(
+            "{\"request_id\": \"r-12345678\", \"state\": \"running\", \"url\": \"%s\"}",
+            refused[i]);
+        g_autoptr(KrWorkflowRun) run = parse(json);
+        g_assert_null(run->url);
+    }
+    g_autoptr(KrWorkflowRun) kept = parse(
+        "{\"request_id\": \"r-12345678\", \"state\": \"running\", "
+        "\"url\": \"HTTPS://github.com/o/r/actions/runs/7\"}");
+    g_assert_cmpstr(kept->url, ==, "HTTPS://github.com/o/r/actions/runs/7");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -291,6 +311,7 @@ main(int argc, char **argv)
     g_test_add_func("/workflows/split", test_split);
     g_test_add_func("/workflows/body", test_body);
     g_test_add_func("/workflows/parse-states", test_parse_states);
+    g_test_add_func("/workflows/only-https-links", test_only_an_https_link_is_kept);
     g_test_add_func("/workflows/parse-refused", test_parse_refused);
     g_test_add_func("/workflows/summary", test_summary);
     g_test_add_func("/workflows/refusals", test_refusals);

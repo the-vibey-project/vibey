@@ -62,20 +62,26 @@ export class WorkflowsCommandLine implements WorkflowsCommandLineInterface {
     return undefined;
   }
 
+  /** A run's link, kept only when it is `https:`; anything else reads as no link. A client may
+   *  hand it to the system's URL handler, where another scheme must never arrive. */
+  static httpsUrl(url: string): string {
+    return /^https:\/\/[^\s]+$/i.test(url) ? url : '';
+  }
+
   fromProcess(completed: Pick<CompletedProcess, 'code' | 'stdout' | 'stderr'>): WorkflowsRunResult {
     const found = WorkflowsCommandLine.RAN_ON.exec(completed.stderr);
     return {
       exitCode: completed.code ?? 1,
       stdout: completed.stdout,
       stderr: found === null ? completed.stderr : completed.stderr.replace(found[0], ''),
-      url: found?.[1] ?? '',
+      url: WorkflowsCommandLine.httpsUrl(found?.[1] ?? ''),
     };
   }
 
   fromHub(status: unknown): { readonly update: WorkflowsUpdate; readonly result?: WorkflowsRunResult } {
     const record = typeof status === 'object' && status !== null && !Array.isArray(status) ? (status as Record<string, unknown>) : {};
     const text = (key: string): string => (typeof record[key] === 'string' ? (record[key] as string) : '');
-    const update: WorkflowsUpdate = { state: text('state') || 'unknown', url: text('url') };
+    const update: WorkflowsUpdate = { state: text('state') || 'unknown', url: WorkflowsCommandLine.httpsUrl(text('url')) };
     if (update.state === 'done' && typeof record.exit_code === 'number') {
       return { update, result: { exitCode: record.exit_code, stdout: text('stdout'), stderr: text('stderr'), url: update.url } };
     }

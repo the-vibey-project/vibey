@@ -111,7 +111,7 @@ export function WorkflowsScreen(props: { readonly runs?: WorkflowRuns }) {
           {run.url === '' ? (
             <Label tone="tertiary">The GitHub link appears once the run is found.</Label>
           ) : (
-            <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(run.url)}>
+            <Pressable accessibilityRole="link" onPress={() => { const url = HubClient.httpsUrl(run.url); if (url !== '') void Linking.openURL(url); }}>
               <Text style={{ color: colors.text.link, fontSize: 15, fontWeight: '600' }}>Open the run on GitHub ↗</Text>
             </Pressable>
           )}

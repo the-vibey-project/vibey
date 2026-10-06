@@ -33,6 +33,15 @@ describe('WorkflowsCommandLine', () => {
     expect(line.check(['--workflows'])).toMatch(/Leave out --workflows/);
   });
 
+  it('keeps a run address only when it is https, whichever way it arrived', () => {
+    expect(WorkflowsCommandLine.httpsUrl('https://github.com/o/r/actions/runs/7')).toBe('https://github.com/o/r/actions/runs/7');
+    for (const refused of ['javascript:alert(1)', 'http://github.com/x', 'file:///etc/passwd', 'https://a b', '']) {
+      expect(WorkflowsCommandLine.httpsUrl(refused)).toBe('');
+    }
+    expect(line.fromHub({ state: 'running', url: 'javascript:alert(1)' }).update.url).toBe('');
+    expect(line.fromProcess({ code: 0, stdout: '', stderr: 'vibey -w: ran on GitHub: tel:123\n' }).url).toBe('');
+  });
+
   it("reads the run's address out of what vibey -w wrote to stderr, and leaves the rest", () => {
     expect(line.fromProcess({ code: 0, stdout: '{}\n', stderr: `warn: slow\n${RAN}more\n` })).toEqual({
       exitCode: 0,
@@ -47,15 +56,15 @@ describe('WorkflowsCommandLine', () => {
 
   it("reads the hub's status: a result once it is done or failed, and where it is meanwhile", () => {
     expect(line.fromHub({ state: 'queued', url: '' })).toEqual({ update: { state: 'queued', url: '' } });
-    expect(line.fromHub({ state: 'running', url: 'u' })).toEqual({ update: { state: 'running', url: 'u' } });
-    expect(line.fromHub({ state: 'done', url: 'u', exit_code: 0, stdout: 'out', stderr: 'err' }).result).toEqual({ exitCode: 0, stdout: 'out', stderr: 'err', url: 'u' });
-    expect(line.fromHub({ state: 'done', url: 'u', exit_code: null, stdout: 'out', stderr: '' }).result).toEqual({
+    expect(line.fromHub({ state: 'running', url: 'https://github.com/o/r/actions/runs/9' })).toEqual({ update: { state: 'running', url: 'https://github.com/o/r/actions/runs/9' } });
+    expect(line.fromHub({ state: 'done', url: 'https://github.com/o/r/actions/runs/9', exit_code: 0, stdout: 'out', stderr: 'err' }).result).toEqual({ exitCode: 0, stdout: 'out', stderr: 'err', url: 'https://github.com/o/r/actions/runs/9' });
+    expect(line.fromHub({ state: 'done', url: 'https://github.com/o/r/actions/runs/9', exit_code: null, stdout: 'out', stderr: '' }).result).toEqual({
       exitCode: 1,
       stdout: 'out',
       stderr: 'vibey -w: the run finished but handed back no exit code\n',
-      url: 'u',
+      url: 'https://github.com/o/r/actions/runs/9',
     });
-    expect(line.fromHub({ state: 'failed', detail: 'the run was cancelled', url: 'u' }).result?.stderr).toBe('vibey -w: the run was cancelled\n');
+    expect(line.fromHub({ state: 'failed', detail: 'the run was cancelled', url: 'https://github.com/o/r/actions/runs/9' }).result?.stderr).toBe('vibey -w: the run was cancelled\n');
     expect(line.fromHub({ state: 'failed' }).result).toEqual({ exitCode: 1, stdout: '', stderr: 'vibey -w: failed\n', url: '' });
     expect(line.fromHub([1])).toEqual({ update: { state: 'unknown', url: '' } });
     expect(line.fromHub(null)).toEqual({ update: { state: 'unknown', url: '' } });
@@ -214,16 +223,16 @@ describe('HubTransport on the workflows', () => {
   });
 
   it('hands back a failed run as vibey -w does: 1, with the reason on stderr', async () => {
-    const http = looks(new FakeHttp().route('POST', route, ok({ request_id: 'r 1', state: 'queued' })), [ok({ state: 'failed', detail: 'the runner was cancelled', url: 'u' })]);
-    expect(await hubWith(http).runOnWorkflows(['status'], { pollMs: 1000 })).toEqual({ exitCode: 1, stdout: '', stderr: 'vibey -w: the runner was cancelled\n', url: 'u' });
+    const http = looks(new FakeHttp().route('POST', route, ok({ request_id: 'r 1', state: 'queued' })), [ok({ state: 'failed', detail: 'the runner was cancelled', url: 'https://github.com/o/r/actions/runs/9' })]);
+    expect(await hubWith(http).runOnWorkflows(['status'], { pollMs: 1000 })).toEqual({ exitCode: 1, stdout: '', stderr: 'vibey -w: the runner was cancelled\n', url: 'https://github.com/o/r/actions/runs/9' });
   });
 
   it('stops waiting when the time runs out: 124, never a sleep past the deadline', async () => {
-    const http = looks(new FakeHttp().route('POST', route, queued), [ok({ state: 'running', url: 'u' })]);
+    const http = looks(new FakeHttp().route('POST', route, queued), [ok({ state: 'running', url: 'https://github.com/o/r/actions/runs/9' })]);
     const clock = new FakeClock();
     const result = await hubWith(http, clock).runOnWorkflows(['status'], { pollMs: 10_000, timeoutMs: 25_000 });
     expect(result.exitCode).toBe(124);
-    expect(result.stderr).toBe('vibey -w: no report from GitHub within 25 seconds; the run may still finish: u\n');
+    expect(result.stderr).toBe('vibey -w: no report from GitHub within 25 seconds; the run may still finish: https://github.com/o/r/actions/runs/9\n');
     expect(clock.mono).toBe(25_000);
   });
 

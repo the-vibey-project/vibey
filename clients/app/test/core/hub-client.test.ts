@@ -379,6 +379,13 @@ describe('HubClient', () => {
     await expect(busy.client.startWorkflowRun(['x'])).rejects.toMatchObject({ refusal: 'too-many', message: HubClient.REFUSALS[429]?.[1] });
   });
 
+  it('keeps a run link only when it is https, so no other scheme reaches the URL handler', () => {
+    expect(HubClient.httpsUrl('https://github.com/o/r/actions/runs/7')).toBe('https://github.com/o/r/actions/runs/7');
+    for (const refused of ['javascript:alert(1)', 'intent://x#Intent;end', 'tel:123', 'http://github.com/x', 'not a url', '']) {
+      expect(HubClient.httpsUrl(refused)).toBe('');
+    }
+  });
+
   it('describes every scope the host may grant, workflows among them', () => {
     expect(Object.keys(HubClient.SCOPES)).toEqual(['view', 'answer', 'spend', 'run', 'bump', 'workflows']);
     expect(HubClient.SCOPES.workflows).toBe("Run vibey commands on the repository's GitHub-hosted runners");

@@ -776,6 +776,7 @@
         "vibey.workflows": {
           "type": "boolean",
           "default": false,
+          "scope": "application",
           "markdownDescription": "Run every vibey call on the repository's GitHub workflows, as `vibey --workflows …` (ADR-0085), instead of on this computer. It needs the GitHub CLI (`gh`) installed and logged in, and the open folder's repository to carry `.github/workflows/vibey-remote.yml`. Each call waits for its run, so views are slow to fill. A paired hub (`vibey.hubUrl`) takes precedence. **krypton: Run a vibey command on GitHub** sends a single command either way."
         }
       }
