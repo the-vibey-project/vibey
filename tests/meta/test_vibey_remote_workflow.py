@@ -65,3 +65,34 @@ def test_the_command_line_arrives_through_env_and_nothing_can_write() -> None:
         s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/checkout")
     )
     assert checkout["with"]["persist-credentials"] is False
+
+
+def test_only_sync_back_may_write_and_it_runs_no_dispatched_command() -> None:
+    """The synced state (ADR-0086): the run reads the branch with a read-only token; the
+    write-back is its own job, the only one with `contents: write`, and it runs the state
+    commands alone, after the run handed it a sealed export."""
+    jobs = spec()["jobs"]
+    run = next(s for s in jobs["run"]["steps"] if s.get("name") == "Run the command")
+    assert run["env"]["STATE_KEY"] == "${{ secrets.VIBEY_STATE_KEY }}"
+    assert "--state-out" in run["run"]
+    assert jobs["run"]["outputs"]["state"] == "${{ steps.command.outputs.state }}"
+    handed = next(
+        s for s in jobs["run"]["steps"] if s.get("name") == "Hand the sealed state to sync-back"
+    )
+    assert handed["if"] == "steps.command.outputs.state == 'true'"
+
+    back = jobs["sync-back"]
+    assert back["needs"] == "run" and back["if"] == "needs.run.outputs.state == 'true'"
+    assert back["permissions"] == {"contents": "write"}
+    assert back["concurrency"]["cancel-in-progress"] is False
+    taken = next(
+        s for s in back["steps"] if str(s.get("uses", "")).startswith("actions/download-artifact")
+    )
+    assert taken["with"]["name"] == handed["with"]["name"]
+    commands = [s["run"] for s in back["steps"] if "run" in s]
+    assert commands[-1].startswith("python scripts/vibey_remote.py sync-back --state")
+    assert not any("ARGV" in str(s.get("env", {})) or "inputs." in str(s) for s in back["steps"])
+    checkout = next(
+        s for s in back["steps"] if str(s.get("uses", "")).startswith("actions/checkout")
+    )
+    assert checkout["with"]["persist-credentials"] is False

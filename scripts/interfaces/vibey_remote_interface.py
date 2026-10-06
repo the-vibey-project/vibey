@@ -24,6 +24,14 @@ class ProcessRunnerInterface(Protocol):
 class VibeyRemoteRunnerInterface(Protocol):
     """Runs one dispatched vibey command and writes its report."""
 
-    def run(self, raw_argv: str, request: str, out: Path) -> dict[str, object]:
-        """The report written to `out/result.json`: exit_code, stdout, stderr."""
+    def run(
+        self, raw_argv: str, request: str, out: Path, state_out: Path | None = None
+    ) -> dict[str, object]:
+        """The report written to `out/result.json`: exit_code, stdout, stderr, and whether
+        the synced state was exported to `state_out` for the `sync-back` job (ADR-0086)."""
+        ...
+
+    def sync_back(self, state: Path) -> tuple[int, str]:
+        """Import the run's sealed export into an empty database and sync it with the
+        branch: the exit code, and what was said."""
         ...
