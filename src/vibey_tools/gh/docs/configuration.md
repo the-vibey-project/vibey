@@ -20,6 +20,12 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `code_paths` | string list / `["src/"]` | Paths whose changes produce a patch bump. |
 | `regenerate` | list of argv lists / `[]` | Commands run after every release bump to re-derive files that embed the version; what they rewrite joins the release commit, and a failure stops the release. Dev builds skip them. |
 
+## `[promotion]`
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `schedules` | cron list / `["17 8 * * 1"]` | When the promotion workflow also runs on a clock, beside following every successful merge train. Each is a five-field cron (digits, `*`, `/`, `,`, `-`). Add `"17 8 1 * *"` for a release on the 1st of every month; `[]` leaves only the merge train and a manual dispatch. A run with nothing to promote is a no-op. |
+
 ## `[branches]`, `[merge_train]`, and `[install]`
 
 | Field | Type / default | Meaning |
