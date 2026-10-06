@@ -78,7 +78,7 @@ def test_only_attach_writes_and_it_runs_nothing_from_the_tree() -> None:
             for scope, value in (job.get("permissions") or {}).items()
         )
     }
-    assert writers == {"attach"}
+    assert writers == {"attach", "nightly"}
     attach = spec["jobs"]["attach"]
     assert attach["if"] == "needs.plan.outputs.mode == 'publish'"
     assert attach["needs"] == ["plan", "collect"]
@@ -131,6 +131,26 @@ def test_a_missing_credential_is_said_and_tracked_never_a_failure() -> None:
     build = next(step for step in job["steps"] if "eas-cli" in str(step.get("run", "")))
     assert build["if"] == "env.EXPO_TOKEN != ''"
     assert "|| true" not in build["run"], "with the credential, a failed build stays loud"
+
+
+def test_the_nightly_writes_only_its_own_rolling_prerelease_and_runs_nothing_from_the_tree() -> (
+    None
+):
+    nightly = _spec()["jobs"]["nightly"]
+    assert nightly["if"] == "needs.plan.outputs.mode == 'nightly'"
+    assert nightly["needs"] == ["plan", "collect"]
+    uses = [step.get("uses", "") for step in nightly["steps"]]
+    assert not any(use.startswith("actions/checkout@") for use in uses)
+    assert any(use.startswith("actions/attest-build-provenance@") for use in uses)
+    script = _run(nightly)
+    assert "--prerelease --latest=false" in script  # never the release people are pointed to
+    assert "git/refs/tags/${TAG}" in script  # the one tag it moves is the declared one
+    assert "not the commit these files were built from" in script
+    # Built from the integration branch only, and only when something it ships from changed.
+    plan = _run(_spec()["jobs"]["plan"])
+    assert "schedule) mode=nightly ;;" in plan
+    assert "the nightly is built from $integration only" in plan
+    assert "release_binaries.py nightly-due" in plan
 
 
 def test_nothing_is_swallowed_in_any_build() -> None:

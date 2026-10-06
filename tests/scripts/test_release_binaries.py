@@ -13,6 +13,7 @@ pytest collects `test_*` functions, and the rule is about production code.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 from pathlib import Path
@@ -678,3 +679,72 @@ def test_the_page_says_what_signing_waits_for(tmp_path: Path) -> None:
     assert "**krypton desktop, macOS**: built and attached on every release" in section
     assert "A Developer ID." in section and "(`mac-signing`)" in section
     assert rb.SIGNING["apple-ad-hoc"] in text, "the table says how the file is signed"
+
+
+# --------------------------------------------------------------------------- nightly
+
+NIGHTLY = CONFIG.replace(
+    "[release_binaries.uis.desktop]",
+    '[release_binaries.nightly]\ntag = "krypton-nightly"\ntitle = "krypton nightly"\n'
+    'paths = ["clients/", "packages/vibey-core/", "package.json"]\n\n'
+    "[release_binaries.uis.desktop]",
+)
+
+
+def test_the_nightly_is_due_only_when_a_path_it_ships_from_changed(tmp_path: Path) -> None:
+    schedule = rb.NightlySchedule(_repo(tmp_path, NIGHTLY))
+    assert schedule.due(["docs/a.md", "clients/app/src/x.ts"])
+    assert schedule.due(["package.json"])
+    assert not schedule.due(["docs/a.md", "src/vibey/cli/main.py", "packages/other/x"])
+    assert not schedule.due([])
+    assert schedule.due(None)  # no nightly yet: build the first one
+
+
+def test_without_a_declared_nightly_nothing_is_ever_due(tmp_path: Path) -> None:
+    assert not rb.NightlySchedule(_repo(tmp_path)).due(["clients/app/src/x.ts"])
+
+
+def test_the_nightly_plans_like_a_build_under_its_own_tag(tmp_path: Path) -> None:
+    settings = _repo(tmp_path, NIGHTLY)
+    plan = rb.MatrixPlanner(rb.TargetCatalogue(settings), settings).plan(
+        mode="nightly", target="abc", tag="krypton-nightly"
+    )
+    assert (plan["mode"], plan["tag"]) == ("nightly", "krypton-nightly")
+    assert set(plan["builders"]) == {"desktop-flatpak", "app-ios"}
+
+
+def test_a_declared_nightly_needs_a_schedule_in_the_workflow(tmp_path: Path) -> None:
+    settings = _repo(tmp_path, NIGHTLY)
+    checker = rb.WorkflowChecker(rb.TargetCatalogue(settings), settings, CONTEXT)
+    found = checker.problems(_workflow())
+    assert any("declares no" not in p and "no `schedule`" in p for p in found)
+    scheduled = _workflow()
+    scheduled["on"]["schedule"] = [{"cron": "33 2 * * *"}]
+    assert checker.problems(scheduled) == []
+
+
+def test_the_cli_names_the_nightly_and_says_when_it_is_due(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _repo(tmp_path, NIGHTLY)
+    cli = rb.Cli(tmp_path / "rb.toml", tmp_path)
+    assert cli.run(["nightly"]) == 0
+    assert capsys.readouterr().out == "tag=krypton-nightly\ntitle=krypton nightly\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO("docs/x.md\nclients/desktop/src/a.c\n"))
+    assert cli.run(["nightly-due"]) == 0
+    assert capsys.readouterr().out == "due=true\n"
+    monkeypatch.setattr("sys.stdin", io.StringIO("docs/x.md\n"))
+    assert cli.run(["nightly-due"]) == 0
+    assert capsys.readouterr().out == "due=false\n"
+    assert cli.run(["nightly-due", "--no-nightly"]) == 0
+    assert capsys.readouterr().out == "due=true\n"
+    assert cli.run(["plan", "--mode", "nightly", "--target", "abc"]) == 0
+    assert '"tag": "krypton-nightly"' in capsys.readouterr().out
+
+
+def test_the_cli_refuses_a_nightly_that_declares_no_tag(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _repo(tmp_path)
+    assert rb.Cli(tmp_path / "rb.toml", tmp_path).run(["nightly"]) == 1
+    assert "declares no tag" in capsys.readouterr().err

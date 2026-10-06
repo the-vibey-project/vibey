@@ -11,7 +11,7 @@ smallest slice that ships on its own: tested, reviewed, and honest about what is
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Take today's backlog item and land its smallest shippable, tested slice.
-- **Decision records:** 83, the newest 0083 — A daily self-healer, backlog killer and documentation updater, scripted first, on GitHub's CPU runners only.
+- **Decision records:** 84, the newest 0084 — A rolling nightly of every krypton interface, from the release builders.
 - **Lanes it keeps usable:** [Backlog killer](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-killer.yml).
 <!-- END GENERATED continuation:state -->
 

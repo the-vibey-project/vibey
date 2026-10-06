@@ -34,7 +34,7 @@ linux_arches_table = "minimum_specs.linux.arches"
 # The checksum file attached beside the binaries (`sha256sum --check` reads it).
 checksums_asset = "SHA256SUMS"
 # The workflow's jobs that are not builders: plan, gather and checksum, attach.
-infrastructure_jobs = ["plan", "collect", "attach"]
+infrastructure_jobs = ["plan", "collect", "attach", "nightly"]
 # github-release.yml runs beside this workflow, after the same Release run; the attach job
 # waits this long for the GitHub Release to exist before it fails, polling every `poll_s`.
 release_wait_s = 1800
@@ -43,6 +43,22 @@ poll_s = 20
 # workflow, which may finish after this one starts: wait this long for the version to show.
 pypi_wait_s = 1800
 pypi_json_url = "https://pypi.org/pypi/{project}/{version}/json"
+
+# The rolling nightly of every interface (ADR-0084): rebuilt daily from the integration branch
+# when anything under `paths` changed since the commit the nightly tag names, and published as
+# ONE prerelease whose tag moves to that commit. Never "latest", never a store, PyPI or Open
+# VSX: the versioned Release above stays the only release a person is pointed to by default.
+[release_binaries.nightly]
+tag = "krypton-nightly"
+title = "krypton nightly"
+paths = [
+  "clients/",
+  "packages/vibey-core/",
+  "package.json",
+  "package-lock.json",
+  "scripts/release_binaries.",
+  "scripts/macos_app_bundle.",
+]
 
 # --------------------------------------------------------------------------- interfaces
 # Each user interface, where its version is read (a file and a pattern whose first group is

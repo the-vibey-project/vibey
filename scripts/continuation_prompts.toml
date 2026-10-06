@@ -206,7 +206,7 @@ hosted_cpu_only = [
 cpu_runners = ["ubuntu-latest", "ubuntu-24.04", "ubuntu-24.04-arm", "ubuntu-22.04"]
 # The lanes that must fire every day on their own, and run by hand: `check` fails if one
 # loses its every-day schedule or its workflow_dispatch.
-daily = ["self-healer.yml", "backlog-killer.yml", "docs-updater.yml"]
+daily = ["self-healer.yml", "backlog-killer.yml", "docs-updater.yml", "release-binaries.yml"]
 
 # How the lane runs each prompt (#1384): an open-weights model on a GitHub-hosted runner, on
 # CPU. The record measured gpt-oss:20b at 2.8 tokens/s generating and 44.5 tokens/s reading

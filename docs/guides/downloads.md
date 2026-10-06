@@ -73,6 +73,21 @@ Every file is listed in `SHA256SUMS` beside it, with its SHA-256, and carries a 
 - **krypton desktop, macOS, Intel**: Homebrew no longer publishes Intel macOS bottles of the GTK 4 stack: gtk4 4.24, glib 2.90, libadwaita 1.10, librsvg, cairo and pango offer Apple-silicon bottles only. An Intel build would compile all of it from source, on a platform Homebrew no longer supports, and GitHub's last Intel macOS runner (`macos-15-intel`) retires in August 2027. Apple-silicon Macs run the arm64 build; Intel Macs cannot, because Rosetta translates Intel code to Apple silicon and not the other way.
 <!-- END GENERATED release:downloads -->
 
+## The nightly
+
+Every night something the interfaces ship from has changed on `develop` (anything under
+`clients/`, `packages/vibey-core/` or the root npm manifests), the same builders run on the
+integration branch and publish the files above to one rolling prerelease,
+[`krypton-nightly`](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly).
+Its tag moves to the commit it was built from. It is a prerelease and never the latest release,
+it reaches no store, PyPI or Open VSX, and it carries the same `SHA256SUMS` and
+build-provenance attestation as a versioned release, so it is checked the same way, and each
+file is signed exactly as a release's is, by whichever credentials the repository holds. A
+target that needs a credential the repository lacks is left out of the nightly without opening
+a tracking issue; the versioned release keeps that issue. A night when nothing changed builds
+nothing. To build one now, run
+**Release binaries** from the Actions tab on `develop` with *nightly* ticked (ADR-0084).
+
 ## Checking a download
 
 Each release carries `SHA256SUMS`, which lists every file with its SHA-256. In the folder you
