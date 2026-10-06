@@ -227,7 +227,7 @@ def _version(args) -> int:
     if args.dev is not None:
         dev = versioning.dev_version(cfg, args.dev)
         if args.apply:
-            versioning.apply_version(cfg, dev)
+            versioning.apply_version(cfg, dev, regenerate=False)
         print(dev)
         return 0
     new, why = versioning.decide(cfg, args.since)

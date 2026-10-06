@@ -325,12 +325,18 @@ def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str |
     return bump(working, level), why
 
 
-def apply_version(cfg: GhConfig, new: str, *, released: date | None = None) -> list[str]:
+def apply_version(
+    cfg: GhConfig, new: str, *, released: date | None = None, regenerate: bool = True
+) -> list[str]:
     """Write `new` into every configured version file. All of them, or the tree is
     inconsistent and its own validator will reject it.
 
     A citation file that states a `date-released:` gets `released` beside the new version
-    -- today in UTC unless a caller names the day -- so the two never disagree."""
+    -- today in UTC unless a caller names the day -- so the two never disagree.
+
+    With `regenerate` (the default), every `[version] regenerate` command then runs and
+    the files it rewrote are returned too, so they join the release commit. A dev build
+    passes False: its tree is published, never committed, so re-deriving it buys nothing."""
     released = released or datetime.now(UTC).date()
     written = []
     for rel in cfg.version_files:
@@ -392,7 +398,52 @@ def apply_version(cfg: GhConfig, new: str, *, released: date | None = None) -> l
 
     written.extend(rerender_version_pinned(cfg))
 
+    if regenerate:
+        written.extend(path for path in _regenerate(cfg) if path not in written)
+
     return written
+
+
+def _regenerate(cfg: GhConfig) -> list[str]:
+    """Run every `[version] regenerate` command and return the paths it changed.
+
+    The third artefact class derived from the number, after the lockfile and the pinned
+    workflows -- but one this package cannot know about, so the repository declares it.
+    4.1.0 shipped a release commit whose continuation prompts still read 4.0.0, and the
+    meta-test that renders them failed on that commit and on every pull request after it
+    (2026-10-05). A command that fails stops the release: a commit whose derived files
+    could not be re-derived is the stale commit this exists to prevent.
+
+    Module-level beside `apply_version`, its only caller, for the reason that function is.
+    """
+    if not cfg.version_regenerate:
+        return []
+    before = _dirty(cfg)
+    for argv in cfg.version_regenerate:
+        run = subprocess.run(list(argv), cwd=cfg.root, capture_output=True, text=True, check=False)
+        if run.returncode:
+            detail = " ".join(((run.stderr or run.stdout) or "").split())[:300]
+            raise RuntimeError(f"version.regenerate {' '.join(argv)!r} failed: {detail}")
+    return sorted(_dirty(cfg) - before)
+
+
+def _dirty(cfg: GhConfig) -> set[str]:
+    """Every changed or new path in the working tree. Diffed around the regenerators, so a
+    path already changed before they ran -- a version file the bump wrote, already in the
+    caller's list, or an edit that is nobody's release -- is never claimed by them.
+
+    Module-level for the reason `_regenerate` is."""
+    run = subprocess.run(
+        ["git", "status", "--porcelain=v1", "--untracked-files=all", "-z"],
+        cwd=cfg.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if run.returncode:
+        raise RuntimeError(f"version.regenerate needs a git work tree: {run.stderr.strip()}")
+    entries = [entry for entry in run.stdout.split("\0") if entry]
+    return {entry[3:] for entry in entries}
 
 
 def dev_version(cfg: GhConfig, build: str) -> str:

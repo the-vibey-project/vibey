@@ -1757,9 +1757,11 @@ jobs:
           GPTOSSLOOP_MODEL: ${{ steps.model.outputs.model }}
         run: |
           set -uo pipefail
+          # The runner's own shell is `bash -e`, which `set -uo` does not undo: capture the
+          # exit with `||`, or a failing agent ends the step before its code is recorded.
+          code=0
           timeout "150m" gptossloop run "$RUNNER_TEMP/plan.md" \
-            --cwd target --max-turns 30 > "$RUNNER_TEMP/agent.log" 2>&1
-          code=$?
+            --cwd target --max-turns 30 > "$RUNNER_TEMP/agent.log" 2>&1 || code=$?
           echo "code=$code" >> "$GITHUB_OUTPUT"
           {
             echo "## Open-weights repair — exit $code"
