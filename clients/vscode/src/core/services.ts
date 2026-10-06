@@ -40,8 +40,8 @@ import { ExecutableLocator, SettingsResolver } from './settings';
 import { DurabilityGate, PlatformStorage, VolatileLocations } from './storage';
 import { HtmlText, RandomIds, SystemClock, TaskNaming } from './support';
 import { TaskFolder } from './task-file';
-import { GateAnswerPlanner, HubTransport, LocalProcessTransport } from '@vibey/core';
-import type { VibeyTransportInterface } from '@vibey/core';
+import { GateAnswerPlanner, HubTransport, LocalProcessTransport, WorkflowsTransport } from '@vibey/core';
+import type { VibeyWorkflowsTransportInterface } from '@vibey/core';
 
 export class CoreServices implements ServicesInterface {
   readonly settings: ResolvedSettings;
@@ -65,10 +65,12 @@ export class CoreServices implements ServicesInterface {
   readonly startFacts: OllamaStartFactsReader;
   readonly git: GitClient;
   /**
-   * How vibey is reached: a paired hub when one is given (ADR-0068), else the local command
-   * line. Undefined when neither is there: the views say so.
+   * How vibey is reached: a paired hub when one is given (ADR-0068); else the local command
+   * line, with every call sent to the repository's GitHub workflows when `vibey.workflows` is
+   * on (`vibey --workflows …`, ADR-0085). Undefined when there is no vibey: the views say so.
+   * Each can also send one command line to the workflows (`runOnWorkflows`).
    */
-  readonly vibey: VibeyTransportInterface | undefined;
+  readonly vibey: VibeyWorkflowsTransportInterface | undefined;
   readonly history: RunHistory;
   readonly budgets: BudgetStore;
   readonly spend: SpendLedger;
@@ -105,10 +107,13 @@ export class CoreServices implements ServicesInterface {
     const vibey = this.locator.locate('vibey', this.settings.raw.cliPath).path;
     this.vibey =
       options.hub !== undefined
-        ? new HubTransport(options.hub.url, this.http, options.hub.key)
+        ? new HubTransport(options.hub.url, this.http, options.hub.key, undefined, undefined, this.clock)
         : vibey === undefined
           ? undefined
-          : new LocalProcessTransport(this.processes, vibey, this.toolEnvironment);
+          : this.settings.workflows
+            ? // `vibey -w` sends to the open folder's GitHub repository, so it runs from there.
+              new WorkflowsTransport(this.processes, vibey, this.toolEnvironment, undefined, { cwd: () => options.workspaceRoots()[0] })
+            : new LocalProcessTransport(this.processes, vibey, this.toolEnvironment);
     const state = this.settings.stateDir;
     this.history = new RunHistory(new JsonlJournal(path.join(state, 'runs.jsonl')), () => this.clock.now());
     this.budgets = new BudgetStore(state, new JsonlJournal(path.join(state, 'budget-journal.jsonl')), this.clock, this.ids, options.actor);

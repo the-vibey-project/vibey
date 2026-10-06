@@ -88,6 +88,14 @@ export interface GateAnswerPlannerInterface {
   checkRaw(text: string): string | undefined;
 }
 
+/** How a `VibeyCli` runs vibey, past the program, its environment and its timeout. */
+export interface VibeyCliOptions {
+  /** Send every call to the repository's GitHub-hosted runners: `vibey --workflows …` (ADR-0085). */
+  readonly workflows?: boolean;
+  /** The folder vibey runs in; `vibey -w` sends to that folder's repository. Undefined: wherever this process is. */
+  readonly cwd?: () => string | undefined;
+}
+
 export interface VibeyCliInterface {
   version(): Promise<string>;
   projects(): Promise<readonly VibeyProject[]>;

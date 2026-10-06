@@ -389,6 +389,17 @@ export class CommandTable {
       example: '/disconnect',
     },
     {
+      id: 'vibey.runOnWorkflows',
+      title: 'Run a vibey command on GitHub',
+      group: 'Connect & look',
+      icon: 'github',
+      slash: 'workflows',
+      usage: '<vibey command line>',
+      description: "Run one vibey command on the repository's GitHub-hosted runners and show what it printed, its exit code and its run.",
+      example: '/workflows status --json',
+      wraps: "vibey --workflows (vibey -w), or the hub's POST /api/v1/workflows/runs",
+    },
+    {
       id: 'vibey.chooseTheme',
       title: 'Choose the theme (Light, Dark or System)',
       group: 'Connect & look',
