@@ -77,8 +77,29 @@ export type HubRefusal =
   | 'invalid'
   | 'too-many'
   | 'unavailable'
+  | 'upstream'
   | 'bad-answer'
   | 'not-on-a-device';
+
+/** What the host may grant a device (hub-api.md, "Who may do what"). */
+export type HubScope = 'view' | 'answer' | 'spend' | 'run' | 'bump' | 'workflows';
+
+/** Where a command sent to the repository's GitHub-hosted runners is (ADR-0085, `vibey -w`). */
+export type WorkflowRunState = 'queued' | 'running' | 'done' | 'failed';
+
+/** `POST /api/v1/workflows/runs` and `GET /api/v1/workflows/runs/{request_id}`. */
+export interface WorkflowRun {
+  readonly request_id: string;
+  readonly state: WorkflowRunState;
+  /** The GitHub run, once known; empty before. */
+  readonly url: string;
+  /** Set once the run is `done`. */
+  readonly exit_code: number | null;
+  readonly stdout: string;
+  readonly stderr: string;
+  /** Why it `failed`, or why the wait stopped. */
+  readonly detail: string;
+}
 
 /** Every call a krypton device makes. The CLI-shaped calls come from `VibeyTransportInterface`. */
 export interface HubClientInterface extends VibeyTransportInterface {
@@ -88,4 +109,8 @@ export interface HubClientInterface extends VibeyTransportInterface {
   lanes(): Promise<readonly HubLane[]>;
   doctor(): Promise<HubDoctor>;
   queue(projectId: string): Promise<readonly HubQueueJob[]>;
+  /** `POST /api/v1/workflows/runs`: a vibey command line, without `vibey` or `-w`, sent to GitHub. */
+  startWorkflowRun(argv: readonly string[]): Promise<WorkflowRun>;
+  /** `GET /api/v1/workflows/runs/{request_id}`. */
+  workflowRun(requestId: string): Promise<WorkflowRun>;
 }
