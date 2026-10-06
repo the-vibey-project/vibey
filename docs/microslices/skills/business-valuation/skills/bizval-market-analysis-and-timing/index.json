@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-5-the-market-research-procedure-the-funnel-4758fe7c63",
+    "purpose": "5 the market research procedure the funnel",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-market-analysis-and-timing/001-5-the-market-research-procedure-the-funnel.md",
+    "requires": [],
+    "links": [
+      "skill-6-indicators-definitions-and-how-each-lies-92989ab880"
+    ]
+  },
+  {
+    "id": "skill-6-indicators-definitions-and-how-each-lies-92989ab880",
+    "purpose": "6 indicators definitions and how each lies",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-market-analysis-and-timing/002-6-indicators-definitions-and-how-each-lies.md",
+    "requires": [
+      "skill-5-the-market-research-procedure-the-funnel-4758fe7c63"
+    ],
+    "links": [
+      "skill-7-what-moves-prices-and-deal-volume-041588cb0b"
+    ]
+  },
+  {
+    "id": "skill-7-what-moves-prices-and-deal-volume-041588cb0b",
+    "purpose": "7 what moves prices and deal volume",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-market-analysis-and-timing/003-7-what-moves-prices-and-deal-volume.md",
+    "requires": [
+      "skill-6-indicators-definitions-and-how-each-lies-92989ab880"
+    ],
+    "links": [
+      "skill-8-segmentation-never-average-across-segments-c107d92e44"
+    ]
+  },
+  {
+    "id": "skill-8-segmentation-never-average-across-segments-c107d92e44",
+    "purpose": "8 segmentation never average across segments",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-market-analysis-and-timing/004-8-segmentation-never-average-across-segments.md",
+    "requires": [
+      "skill-7-what-moves-prices-and-deal-volume-041588cb0b"
+    ],
+    "links": [
+      "skill-9-regimes-tactics-and-timing-humility-08601a3a20"
+    ]
+  },
+  {
+    "id": "skill-9-regimes-tactics-and-timing-humility-08601a3a20",
+    "purpose": "9 regimes tactics and timing humility",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-market-analysis-and-timing/005-9-regimes-tactics-and-timing-humility.md",
+    "requires": [
+      "skill-8-segmentation-never-average-across-segments-c107d92e44"
+    ],
+    "links": [
+      "skill-9a-market-diagnosis-template-one-paragraph-272f4401da"
+    ]
+  },
+  {
+    "id": "skill-9a-market-diagnosis-template-one-paragraph-272f4401da",
+    "purpose": "9a market diagnosis template one paragraph",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-market-analysis-and-timing/006-9a-market-diagnosis-template-one-paragraph.md",
+    "requires": [
+      "skill-9-regimes-tactics-and-timing-humility-08601a3a20"
+    ],
+    "links": []
+  }
+]

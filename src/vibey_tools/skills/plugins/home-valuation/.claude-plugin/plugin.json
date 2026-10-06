@@ -1,0 +1,9 @@
+{
+  "name": "home-valuation",
+  "version": "0.1.0",
+  "description": "Home Valuation and Market Research (buying and selling a house): what value means and who produces each opinion of it (appraisal, CMA, BPO, AVM, tax assessment), the three approaches, the NAR-settlement-era rules and the UAD 3.6 appraisal change, researching a housing market from macro to street with each indicator's definition and failure modes, comparable-sales selection, the adjustment grid, time adjustments, hedonic regression and honest AVM error, the buyer playbook from payment-backward budgeting to the offer ladder and the 30-day timeline, the seller playbook from the net sheet to pricing by market regime and comparing offers on net, diligence, climate and insurance risk, the income approach for rentals and flips, specialty valuations, fraud and fair housing, plus a tested numpy and pandas toolkit. Decision support, not appraisal, legal, tax, lending or investment advice.",
+  "author": {
+    "name": "Adam Matthew Steinberger",
+    "email": "adam@matthewsteinberger.com"
+  }
+}

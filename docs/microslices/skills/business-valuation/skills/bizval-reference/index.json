@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-39-misconceptions-53155871d0",
+    "purpose": "39 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-reference/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-reference/001-39-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-40-what-moved-verified-october-6-2026-9df040b99f"
+    ]
+  },
+  {
+    "id": "skill-40-what-moved-verified-october-6-2026-9df040b99f",
+    "purpose": "40 what moved verified october 6 2026",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-reference/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-reference/002-40-what-moved-verified-october-6-2026.md",
+    "requires": [
+      "skill-39-misconceptions-53155871d0"
+    ],
+    "links": [
+      "skill-41-canon-and-data-sources-3289842821"
+    ]
+  },
+  {
+    "id": "skill-41-canon-and-data-sources-3289842821",
+    "purpose": "41 canon and data sources",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-reference/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-reference/003-41-canon-and-data-sources.md",
+    "requires": [
+      "skill-40-what-moved-verified-october-6-2026-9df040b99f"
+    ],
+    "links": [
+      "skill-42-quick-reference-984daa27bb"
+    ]
+  },
+  {
+    "id": "skill-42-quick-reference-984daa27bb",
+    "purpose": "42 quick reference",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-reference/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-reference/004-42-quick-reference.md",
+    "requires": [
+      "skill-41-canon-and-data-sources-3289842821"
+    ],
+    "links": [
+      "skill-43-method-5be6deffd1"
+    ]
+  },
+  {
+    "id": "skill-43-method-5be6deffd1",
+    "purpose": "43 method",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-reference/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-reference/005-43-method.md",
+    "requires": [
+      "skill-42-quick-reference-984daa27bb"
+    ],
+    "links": []
+  }
+]

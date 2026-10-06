@@ -6,12 +6,12 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 142 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 145 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
         "name": "vibey-skills",
-        "version": "2.22.0"
+        "version": "2.23.0"
       },
       {
         "path": "src/vibey_tools/gh",
@@ -220,6 +220,17 @@
       }
     },
     {
+      "name": "business-valuation",
+      "source": "./src/vibey_tools/skills/plugins/business-valuation",
+      "description": "Company and Non-Profit Valuation, Market Research, Buying and Selling: standards, premises and levels of value, the income, market and asset approaches, the size-segmented deal market and its documents, researching deal markets and multiples and how each indicator misleads, normalizing earnings (SDE, adjusted EBITDA, quality of earnings), a regression of multiples, WACC and DCF, discounts and the EV-to-equity bridge, the buyer playbook (debt capacity, LOI structure, SBA financing, LBO sensitivity, diligence, closing), the seller playbook (exit readiness, process, comparing LOIs on after-tax present value, asset versus stock, QSBS, alternatives), deep diligence and fraud, startups, public companies, 409A, ESOP and disputes, and non-profits treated as their own problem (no owners and no equity price, mergers and affiliations, IRC 4958, Form 990 and ratio analysis, stress tests, impact measurement), plus a tested numpy and pandas toolkit. Decision support, not investment, legal, tax, accounting or valuation-opinion advice.",
+      "version": "0.1.0",
+      "category": "finance",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "cad-3d-printing",
       "source": "./src/vibey_tools/skills/plugins/cad-3d-printing",
       "description": "CAD and 3D Printing: geometry representations and kernels, file formats and what each one loses, code-CAD and scripting including the OpenSCAD versus OCCT trade, mesh processing and repair, the slicing pipeline and G-code, the additive processes and the physics that determines part quality, design for additive manufacturing, tolerances and fits, materials, generative design and lattices, automation pipelines, and scanning and reverse engineering.",
@@ -236,6 +247,17 @@
       "description": "Calculus, Geometry and Algebra: vector spaces and linear maps, matrices and the four fundamental subspaces, determinants, eigenvalues and diagonalization, inner products and orthogonality, the spectral theorem and SVD, matrix factorizations, conditioning and numerical reality, the derivative and integration, series and Taylor approximation, multivariable and vector calculus, differential forms, constrained optimization, differential equations, geometry, manifolds, tensors done properly, Riemannian geometry, and Lie groups and algebras.",
       "version": "0.1.0",
       "category": "mathematics",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "car-valuation",
+      "source": "./src/vibey_tools/skills/plugins/car-valuation",
+      "description": "Car Valuation and Market Research (buying and selling a car): the many meanings of a car's value from MSRP to wholesale and insurance ACV, who produces which number (KBB, Edmunds, J.D. Power, Black Book, Manheim MMR, Hagerty) and how they differ, sales channels and the rules of the game, researching the car market through the Manheim index, transaction prices, days' supply, incentives and loan data, valuing one specific vehicle with comparables, an adjustment grid and a regression cross-check, EVs, classics and branded titles, the buyer playbook from total monthly cost to out-the-door negotiation and F&I products, the seller playbook from payoff and equity to choosing a channel by net cash and a scam-proof sale, pre-purchase inspection, history reports, title brands and fraud, total cost of ownership, lease versus buy and EV versus gas, plus a tested numpy and pandas toolkit. Decision support, not legal, tax, lending, insurance or mechanical advice.",
+      "version": "0.1.0",
+      "category": "finance",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
@@ -687,6 +709,17 @@
       "description": "Graphics and Vision: transforms and projective geometry, rasterization, shading and physically based rendering, ray tracing and the rendering equation, GPU architecture and APIs, real-time techniques, colour and tone mapping, image formation and camera calibration, classical computer vision, multiple view geometry, deep learning for vision, neural rendering where the two fields meet, and performance.",
       "version": "0.1.0",
       "category": "graphics",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "home-valuation",
+      "source": "./src/vibey_tools/skills/plugins/home-valuation",
+      "description": "Home Valuation and Market Research (buying and selling a house): what value means and who produces each opinion of it (appraisal, CMA, BPO, AVM, tax assessment), the three approaches, the NAR-settlement-era rules and the UAD 3.6 appraisal change, researching a housing market from macro to street with each indicator's definition and failure modes, comparable-sales selection, the adjustment grid, time adjustments, hedonic regression and honest AVM error, the buyer playbook from payment-backward budgeting to the offer ladder and the 30-day timeline, the seller playbook from the net sheet to pricing by market regime and comparing offers on net, diligence, climate and insurance risk, the income approach for rentals and flips, specialty valuations, fraud and fair housing, plus a tested numpy and pandas toolkit. Decision support, not appraisal, legal, tax, lending or investment advice.",
+      "version": "0.1.0",
+      "category": "finance",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"

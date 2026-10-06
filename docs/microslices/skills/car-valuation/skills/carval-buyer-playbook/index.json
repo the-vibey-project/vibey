@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-16-define-the-decision-budget-financing-and-total-cost-b85404b265",
+    "purpose": "16 define the decision budget financing and total cost",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-buyer-playbook/001-16-define-the-decision-budget-financing-and-total-cost.md",
+    "requires": [],
+    "links": [
+      "skill-17-search-and-shortlist-82beeff8cf"
+    ]
+  },
+  {
+    "id": "skill-17-search-and-shortlist-82beeff8cf",
+    "purpose": "17 search and shortlist",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-buyer-playbook/002-17-search-and-shortlist.md",
+    "requires": [
+      "skill-16-define-the-decision-budget-financing-and-total-cost-b85404b265"
+    ],
+    "links": [
+      "skill-18-value-the-target-and-build-the-offer-4c3b78076f"
+    ]
+  },
+  {
+    "id": "skill-18-value-the-target-and-build-the-offer-4c3b78076f",
+    "purpose": "18 value the target and build the offer",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-buyer-playbook/003-18-value-the-target-and-build-the-offer.md",
+    "requires": [
+      "skill-17-search-and-shortlist-82beeff8cf"
+    ],
+    "links": [
+      "skill-19-under-contract-f-i-inspection-and-closing-d175b1a228"
+    ]
+  },
+  {
+    "id": "skill-19-under-contract-f-i-inspection-and-closing-d175b1a228",
+    "purpose": "19 under contract f i inspection and closing",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-buyer-playbook/004-19-under-contract-f-i-inspection-and-closing.md",
+    "requires": [
+      "skill-18-value-the-target-and-build-the-offer-4c3b78076f"
+    ],
+    "links": [
+      "skill-20-decision-rules-for-common-buyer-situations-1b9930c7db"
+    ]
+  },
+  {
+    "id": "skill-20-decision-rules-for-common-buyer-situations-1b9930c7db",
+    "purpose": "20 decision rules for common buyer situations",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-buyer-playbook/005-20-decision-rules-for-common-buyer-situations.md",
+    "requires": [
+      "skill-19-under-contract-f-i-inspection-and-closing-d175b1a228"
+    ],
+    "links": [
+      "skill-20a-buyer-checklists-c8e07c54ab"
+    ]
+  },
+  {
+    "id": "skill-20a-buyer-checklists-c8e07c54ab",
+    "purpose": "20a buyer checklists",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-buyer-playbook/006-20a-buyer-checklists.md",
+    "requires": [
+      "skill-20-decision-rules-for-common-buyer-situations-1b9930c7db"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-31-what-value-means-for-a-non-profit-a26ab49705",
+    "purpose": "31 what value means for a non profit",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/001-31-what-value-means-for-a-non-profit.md",
+    "requires": [],
+    "links": [
+      "skill-32-transaction-types-9361925ac8"
+    ]
+  },
+  {
+    "id": "skill-32-transaction-types-9361925ac8",
+    "purpose": "32 transaction types",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/002-32-transaction-types.md",
+    "requires": [
+      "skill-31-what-value-means-for-a-non-profit-a26ab49705"
+    ],
+    "links": [
+      "skill-33-valuation-methods-in-non-profit-transactions-c745605767"
+    ]
+  },
+  {
+    "id": "skill-33-valuation-methods-in-non-profit-transactions-c745605767",
+    "purpose": "33 valuation methods in non profit transactions",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/003-33-valuation-methods-in-non-profit-transactions.md",
+    "requires": [
+      "skill-32-transaction-types-9361925ac8"
+    ],
+    "links": [
+      "skill-34-process-diligence-and-integration-36043bba07"
+    ]
+  },
+  {
+    "id": "skill-34-process-diligence-and-integration-36043bba07",
+    "purpose": "34 process diligence and integration",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/004-34-process-diligence-and-integration.md",
+    "requires": [
+      "skill-33-valuation-methods-in-non-profit-transactions-c745605767"
+    ],
+    "links": [
+      "skill-34a-non-profit-transaction-checklist-b771cb6ed7"
+    ]
+  },
+  {
+    "id": "skill-34a-non-profit-transaction-checklist-b771cb6ed7",
+    "purpose": "34a non profit transaction checklist",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/005-34a-non-profit-transaction-checklist.md",
+    "requires": [
+      "skill-34-process-diligence-and-integration-36043bba07"
+    ],
+    "links": []
+  }
+]

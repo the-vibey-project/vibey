@@ -1,0 +1,9 @@
+{
+  "name": "business-valuation",
+  "version": "0.1.0",
+  "description": "Company and Non-Profit Valuation, Market Research, Buying and Selling: standards, premises and levels of value, the income, market and asset approaches, the size-segmented deal market and its documents, researching deal markets and multiples and how each indicator misleads, normalizing earnings (SDE, adjusted EBITDA, quality of earnings), a regression of multiples, WACC and DCF, discounts and the EV-to-equity bridge, the buyer playbook (debt capacity, LOI structure, SBA financing, LBO sensitivity, diligence, closing), the seller playbook (exit readiness, process, comparing LOIs on after-tax present value, asset versus stock, QSBS, alternatives), deep diligence and fraud, startups, public companies, 409A, ESOP and disputes, and non-profits treated as their own problem (no owners and no equity price, mergers and affiliations, IRC 4958, Form 990 and ratio analysis, stress tests, impact measurement), plus a tested numpy and pandas toolkit. Decision support, not investment, legal, tax, accounting or valuation-opinion advice.",
+  "author": {
+    "name": "Adam Matthew Steinberger",
+    "email": "adam@matthewsteinberger.com"
+  }
+}

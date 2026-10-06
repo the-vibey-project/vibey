@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-31-misconceptions-7ee6d1d7aa",
+    "purpose": "31 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-reference/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-reference/001-31-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-32-what-moved-verified-october-6-2026-2478128f2a"
+    ]
+  },
+  {
+    "id": "skill-32-what-moved-verified-october-6-2026-2478128f2a",
+    "purpose": "32 what moved verified october 6 2026",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-reference/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-reference/002-32-what-moved-verified-october-6-2026.md",
+    "requires": [
+      "skill-31-misconceptions-7ee6d1d7aa"
+    ],
+    "links": [
+      "skill-33-the-canon-and-the-data-sources-76171af397"
+    ]
+  },
+  {
+    "id": "skill-33-the-canon-and-the-data-sources-76171af397",
+    "purpose": "33 the canon and the data sources",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-reference/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-reference/003-33-the-canon-and-the-data-sources.md",
+    "requires": [
+      "skill-32-what-moved-verified-october-6-2026-2478128f2a"
+    ],
+    "links": [
+      "skill-34-quick-reference-cc5b6d3cd9"
+    ]
+  },
+  {
+    "id": "skill-34-quick-reference-cc5b6d3cd9",
+    "purpose": "34 quick reference",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-reference/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-reference/004-34-quick-reference.md",
+    "requires": [
+      "skill-33-the-canon-and-the-data-sources-76171af397"
+    ],
+    "links": [
+      "skill-35-method-a7dc1d8ac6"
+    ]
+  },
+  {
+    "id": "skill-35-method-a7dc1d8ac6",
+    "purpose": "35 method",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-reference/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-reference/005-35-method.md",
+    "requires": [
+      "skill-34-quick-reference-cc5b6d3cd9"
+    ],
+    "links": []
+  }
+]

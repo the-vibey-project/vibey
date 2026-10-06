@@ -1,0 +1,9 @@
+{
+  "name": "car-valuation",
+  "version": "0.1.0",
+  "description": "Car Valuation and Market Research (buying and selling a car): the many meanings of a car's value from MSRP to wholesale and insurance ACV, who produces which number (KBB, Edmunds, J.D. Power, Black Book, Manheim MMR, Hagerty) and how they differ, sales channels and the rules of the game, researching the car market through the Manheim index, transaction prices, days' supply, incentives and loan data, valuing one specific vehicle with comparables, an adjustment grid and a regression cross-check, EVs, classics and branded titles, the buyer playbook from total monthly cost to out-the-door negotiation and F&I products, the seller playbook from payoff and equity to choosing a channel by net cash and a scam-proof sale, pre-purchase inspection, history reports, title brands and fraud, total cost of ownership, lease versus buy and EV versus gas, plus a tested numpy and pandas toolkit. Decision support, not legal, tax, lending, insurance or mechanical advice.",
+  "author": {
+    "name": "Adam Matthew Steinberger",
+    "email": "adam@matthewsteinberger.com"
+  }
+}
