@@ -130,3 +130,86 @@ def test_names_are_the_services_labels_without_resolving_a_path() -> None:
     )
     services = planner.services(SupervisorSettings(), PATHS)
     assert planner.names(SupervisorSettings()) == tuple((s.name, s.label) for s in services)
+
+
+# --- the state sync (ADR-0086) ----------------------------------------------------------
+
+STATE_PATHS = SupervisorPaths(
+    vibey=PATHS.vibey,
+    python=PATHS.python,
+    repo=PATHS.repo,
+    env_file=PATHS.env_file,
+    log_dir=PATHS.log_dir,
+    state_env_file="/home/op/.config/vibey/state-sync.env",
+)
+
+
+def test_names_include_the_state_sync_when_it_is_supervised() -> None:
+    planner = SupervisorPlanner()
+    assert planner.names(SupervisorSettings(state_sync=True)) == (
+        ("worker", "dev.vibey.worker"),
+        ("delivery", "dev.vibey.delivery"),
+        ("state-sync", "dev.vibey.state-sync"),
+    )
+    assert planner.names(SupervisorSettings(delivery=False, state_sync=True)) == (
+        ("worker", "dev.vibey.worker"),
+        ("state-sync", "dev.vibey.state-sync"),
+    )
+    services = planner.services(SupervisorSettings(state_sync=True), STATE_PATHS)
+    assert planner.names(SupervisorSettings(state_sync=True)) == tuple(
+        (s.name, s.label) for s in services
+    )
+
+
+def test_the_state_sync_runs_on_its_own_env_file_every_interval() -> None:
+    settings = SupervisorSettings(
+        state_sync=True,
+        state_sync_interval_seconds=120,
+        state_sync_args=("--no-push",),
+        label_prefix="org.example",
+    )
+    worker, delivery, state_sync = SupervisorPlanner().services(settings, STATE_PATHS)
+    assert worker.argv[:6] == LAUNCH and delivery.argv[:6] == LAUNCH
+    assert state_sync.name == "state-sync"
+    assert state_sync.label == "org.example.state-sync"
+    assert state_sync.argv == (
+        "/opt/vibey/bin/vibey",
+        "supervisor",
+        "exec",
+        "--env-file",
+        "/home/op/.config/vibey/state-sync.env",
+        "--",
+        "/opt/vibey/bin/vibey",
+        "state",
+        "sync",
+        "--every",
+        "120",
+        "--no-push",
+    )
+    assert PATHS.env_file not in state_sync.argv
+    assert state_sync.working_directory == "/srv/git/vibey"
+    assert state_sync.log_path == "/home/op/.local/state/vibey/logs/state-sync.log"
+
+
+def test_the_state_sync_without_the_bridge() -> None:
+    settings = SupervisorSettings(delivery=False, state_sync=True)
+    worker, state_sync = SupervisorPlanner().services(settings, STATE_PATHS)
+    assert worker.name == "worker"
+    assert state_sync.argv[-3:] == ("sync", "--every", "300")
+
+
+def test_a_state_sync_interval_no_loop_could_keep_is_refused() -> None:
+    with pytest.raises(ValueError, match="state_sync_interval_seconds"):
+        SupervisorPlanner().services(
+            SupervisorSettings(state_sync=True, state_sync_interval_seconds=0), STATE_PATHS
+        )
+
+
+def test_an_interval_is_only_checked_for_a_state_sync_that_runs() -> None:
+    settings = SupervisorSettings(state_sync_interval_seconds=0)
+    assert len(SupervisorPlanner().services(settings, PATHS)) == 2
+
+
+def test_a_state_sync_without_its_env_file_is_refused() -> None:
+    with pytest.raises(ValueError, match="state sync's environment file was not resolved"):
+        SupervisorPlanner().services(SupervisorSettings(state_sync=True), PATHS)

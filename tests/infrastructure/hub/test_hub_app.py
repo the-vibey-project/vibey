@@ -371,6 +371,7 @@ def test_no_route_offers_what_the_hub_never_offers() -> None:
         "database_dsn": ("dsn", "database"),
         "migrations": ("migrat",),
         "canon": ("canon", "doctrine"),
+        "state_sync": ("state",),
     }
     assert set(words) == NEVER_FROM_THE_HUB
     app = _app()
@@ -528,6 +529,7 @@ async def test_workflows_alone_never_lets_a_device_do_what_its_other_scopes_do_n
         ["budget", "no-cap"],
         ["-v", "budget", "set", "p", "--usd", "5"],
         ["budget", "cap"],
+        ["state", "sync"],
     ],
 )
 async def test_a_command_reaching_what_the_hub_never_offers_is_refused(argv: list[str]) -> None:

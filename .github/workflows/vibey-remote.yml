@@ -15,6 +15,14 @@ run-name: vibey ${{ inputs.request }}
 # because anyone can read its runs' logs and reports. No engine key, no model and no other secret is
 # here. Only someone with write access to the repository can dispatch a workflow at all.
 #
+# The synced state (ADR-0086): a repository with a `VIBEY_STATE_KEY` secret and no declared
+# database gets its `vibey-state` branch restored into the runner's database before the
+# command, and the run's changes written back by `sync-back`, the one job that may write the
+# repository, through the reusable vibey-state-write.yml. A private repository may always; a
+# public one only when .github/vibey-state.toml declares `public = true`, because anyone can
+# read its runs' logs and reports. This repository declares it (`StateGate`,
+# scripts/vibey_state_action.py).
+#
 # The command line arrives through `env:`, never interpolated into a script, and is run as an
 # argument vector, never through a shell. It is held to the domain's own rules
 # (`vibey.domain.remote_command.RemoteCommand`) before it runs.
@@ -40,6 +48,8 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+    outputs:
+      state: ${{ steps.command.outputs.state }}
     services:
       postgres:
         image: postgres:17
@@ -66,15 +76,20 @@ jobs:
       - name: Install vibey from this checkout
         run: python -m pip install --quiet -e .
       - name: Run the command
+        id: command
         env:
           ARGV: ${{ inputs.argv }}
           REQUEST: ${{ inputs.request }}
           # A declared database is used only when this is true: a public repository's run
-          # logs and artifacts can be read by others.
+          # logs and artifacts can be read by others. The synced state also needs it, or
+          # `public = true` in .github/vibey-state.toml.
           REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
           DECLARED_PG_URL: ${{ secrets.VIBEY_WORKFLOWS_PG_URL }}
           DECLARED_PG_MIGRATE_URL: ${{ secrets.VIBEY_WORKFLOWS_PG_MIGRATE_URL }}
-        run: python scripts/vibey_remote.py run --out "$RUNNER_TEMP/out"
+          # Read-only here (`contents: read`): enough to restore the state, never to write it.
+          STATE_KEY: ${{ secrets.VIBEY_STATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/vibey_remote.py run --out "$RUNNER_TEMP/out" --state-out "$RUNNER_TEMP/state"
       # upload-artifact stores files relative to the paths' deepest common directory, so the
       # caller finds result.json at the artifact's root (tests/meta/test_workflow_artifacts.py).
       - name: Hand the report back
@@ -85,3 +100,29 @@ jobs:
           path: ${{ runner.temp }}/out/
           retention-days: 7
           if-no-files-found: error
+      - name: Hand the sealed state to sync-back
+        if: steps.command.outputs.state == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vibey-state-outgoing
+          path: ${{ runner.temp }}/state/
+          retention-days: 1
+          if-no-files-found: error
+
+  sync-back:
+    name: write the run's state back to the vibey-state branch
+    needs: run
+    if: needs.run.outputs.state == 'true'
+    # The one job that may write the repository, and it runs no dispatched command: only
+    # `vibey state import` and `vibey state sync`, through the reusable write workflow, which
+    # write the vibey-state branch alone.
+    permissions:
+      contents: write
+    concurrency:
+      group: vibey-state-sync-back
+      cancel-in-progress: false
+    uses: ./.github/workflows/vibey-state-write.yml
+    with:
+      artifact: vibey-state-outgoing
+    secrets:
+      VIBEY_STATE_KEY: ${{ secrets.VIBEY_STATE_KEY }}

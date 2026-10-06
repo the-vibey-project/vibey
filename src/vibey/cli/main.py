@@ -53,6 +53,7 @@ from vibey.cli.queue import queue_app
 from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
+from vibey.cli.state import state_app
 from vibey.cli.status import STATUS_PRESENTER
 from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
@@ -121,6 +122,7 @@ app.command("abandon")(abandon_command)
 app.add_typer(ultra_app, name="ultra")
 app.add_typer(driver_app, name="driver")
 app.add_typer(supervisor_app, name="supervisor")
+app.add_typer(state_app, name="state")
 
 
 def _version_callback(value: bool) -> None:

@@ -22,6 +22,7 @@ from typing import Final
 WORKER: Final = "worker"
 DELIVERY: Final = "delivery"
 DELIVERY_SCRIPT: Final = "scripts/triaged_delivery.py"
+STATE_SYNC: Final = "state-sync"
 
 # POSIX shell names: what a process environment can carry and a shell can read back.
 _NAME: Final = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
@@ -45,6 +46,10 @@ class SupervisorSettings:
     worker_args: tuple[str, ...] = ()
     delivery_args: tuple[str, ...] = ()
     required: bool = False
+    state_sync: bool = False
+    state_sync_interval_seconds: int = 300
+    state_sync_env_file: str = ""
+    state_sync_args: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -67,6 +72,7 @@ class SupervisorPaths:
     repo: str
     env_file: str
     log_dir: str
+    state_env_file: str = ""
 
 
 class SupervisorPlanner:
@@ -76,6 +82,8 @@ class SupervisorPlanner:
         """(name, label) of every supervised service: what `status` and `doctor` ask
         the service manager about, without resolving a single path."""
         names = (WORKER, DELIVERY) if settings.delivery else (WORKER,)
+        if settings.state_sync:
+            names = (*names, STATE_SYNC)
         return tuple((name, f"{settings.label_prefix}.{name}") for name in names)
 
     def services(
@@ -83,6 +91,10 @@ class SupervisorPlanner:
     ) -> tuple[SupervisedService, ...]:
         if settings.delivery_interval_seconds < 1:
             raise ValueError("[supervisor] delivery_interval_seconds must be at least 1")
+        if settings.state_sync and settings.state_sync_interval_seconds < 1:
+            raise ValueError("[supervisor] state_sync_interval_seconds must be at least 1")
+        if settings.state_sync and not paths.state_env_file:
+            raise ValueError("the state sync's environment file was not resolved")
         launcher = (paths.vibey, "supervisor", "exec", "--env-file", paths.env_file, "--")
         worker = SupervisedService(
             name=WORKER,
@@ -91,8 +103,39 @@ class SupervisorPlanner:
             working_directory=paths.repo,
             log_path=f"{paths.log_dir}/{WORKER}.log",
         )
+        planned = (worker, *self._delivery(settings, paths, launcher))
+        if not settings.state_sync:
+            return planned
+        # Its own environment file: the sync's DSN may write every table (ADR-0086), so it
+        # is never in the file the worker reads (ADR-0055).
+        state_sync = SupervisedService(
+            name=STATE_SYNC,
+            label=f"{settings.label_prefix}.{STATE_SYNC}",
+            argv=(
+                paths.vibey,
+                "supervisor",
+                "exec",
+                "--env-file",
+                paths.state_env_file,
+                "--",
+                paths.vibey,
+                "state",
+                "sync",
+                "--every",
+                str(settings.state_sync_interval_seconds),
+                *settings.state_sync_args,
+            ),
+            working_directory=paths.repo,
+            log_path=f"{paths.log_dir}/{STATE_SYNC}.log",
+        )
+        return (*planned, state_sync)
+
+    @staticmethod
+    def _delivery(
+        settings: SupervisorSettings, paths: SupervisorPaths, launcher: tuple[str, ...]
+    ) -> tuple[SupervisedService, ...]:
         if not settings.delivery:
-            return (worker,)
+            return ()
         delivery = SupervisedService(
             name=DELIVERY,
             label=f"{settings.label_prefix}.{DELIVERY}",
@@ -109,7 +152,7 @@ class SupervisorPlanner:
             working_directory=paths.repo,
             log_path=f"{paths.log_dir}/{DELIVERY}.log",
         )
-        return worker, delivery
+        return (delivery,)
 
     def under(self, path: str, roots: tuple[str, ...]) -> str:
         """The root `path` lies in or under, or "": the check that keeps a supervised

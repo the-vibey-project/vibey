@@ -24,10 +24,21 @@ PLATFORMS: Final = (LAUNCHD, SYSTEMD)
 ServiceRunner = Callable[[Sequence[str]], tuple[int, str]]
 """Runs a service-manager command: (exit code, stdout). Never a shell."""
 
-_STRINGS: Final = ("log_dir", "env_file", "vibey", "python", "label_prefix")
-_INTEGERS: Final = ("delivery_interval_seconds", "restart_seconds")
-_BOOLEANS: Final = ("delivery", "required")
-_ARGV: Final = ("worker_args", "delivery_args")
+_STRINGS: Final = (
+    "log_dir",
+    "env_file",
+    "vibey",
+    "python",
+    "label_prefix",
+    "state_sync_env_file",
+)
+_INTEGERS: Final = (
+    "delivery_interval_seconds",
+    "restart_seconds",
+    "state_sync_interval_seconds",
+)
+_BOOLEANS: Final = ("delivery", "required", "state_sync")
+_ARGV: Final = ("worker_args", "delivery_args", "state_sync_args")
 _KNOWN: Final = frozenset({*_STRINGS, *_INTEGERS, *_BOOLEANS, *_ARGV})
 
 

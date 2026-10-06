@@ -9,6 +9,7 @@ sources = [
   "tests/**/*.py",
   "scripts/**/*.py",
   ".github/workflows/*.yml",
+  ".github/actions/**/*.yml",
 ]
 
 # This repository lives on GitHub. Since vibey-gh ADR 0002 the forge default is the sovereign

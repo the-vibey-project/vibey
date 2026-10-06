@@ -70,6 +70,19 @@ ENV_TEMPLATE: Final = """\
 # GH_TOKEN=            # the bridge's gh, if it cannot reach your login keychain here
 """
 
+STATE_ENV_NAME: Final = "state-sync.env"
+STATE_ENV_TEMPLATE: Final = """\
+# The environment of `vibey state sync --every N` (ADR-0086), the supervised state sync.
+# Its own file, never the worker's: the sync's database role writes every synced table,
+# more than the application role may (ADR-0055). Keep it private: it was created readable
+# by you alone. Same syntax as supervisor.env.
+#
+# VIBEY_STATE_PG_URL=postgresql://vibey@localhost:5432/vibey
+# VIBEY_STATE_REPOSITORY=OWNER/NAME
+# GH_TOKEN=            # if gh cannot reach your login keychain here
+# VIBEY_STATE_KEY=     # only if the keychain or the key file cannot be read here
+"""
+
 Execute = Callable[[str, list[str], Mapping[str, str]], object]
 
 
@@ -120,11 +133,11 @@ class SupervisorCommand(SupervisorCommandInterface):
 
         Path(paths.log_dir).mkdir(parents=True, exist_ok=True)
         env_file = Path(paths.env_file)
-        created = not env_file.exists()
-        if created:
-            env_file.parent.mkdir(parents=True, exist_ok=True)
-            env_file.write_text(ENV_TEMPLATE, encoding="utf-8")
-            env_file.chmod(0o600)
+        created = self._env_file(env_file, ENV_TEMPLATE)
+        if paths.state_env_file and self._env_file(Path(paths.state_env_file), STATE_ENV_TEMPLATE):
+            typer.echo(
+                f"environment: {paths.state_env_file} (created from the template: fill it in)"
+            )
 
         target = (out.expanduser().resolve() if out is not None else None) or host.unit_dir()
         target.mkdir(parents=True, exist_ok=True)
@@ -154,6 +167,16 @@ class SupervisorCommand(SupervisorCommandInterface):
             typer.echo(f"  {line}")
         return 0
 
+    @staticmethod
+    def _env_file(path: Path, template: str) -> bool:
+        """Create `path` from `template`, readable by its owner alone; whether it was."""
+        if path.exists():
+            return False
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(template, encoding="utf-8")
+        path.chmod(0o600)
+        return True
+
     def _paths(
         self, host: SupervisorHostInterface, settings: SupervisorSettings, repo: Path
     ) -> SupervisorPaths:
@@ -166,11 +189,18 @@ class SupervisorCommand(SupervisorCommandInterface):
             repo=str(repo),
             env_file=self._absolute(settings.env_file or str(host.default_env_file())),
             log_dir=self._absolute(settings.log_dir or str(host.default_log_dir())),
+            state_env_file=self._absolute(
+                settings.state_sync_env_file
+                or str(host.default_env_file().with_name(STATE_ENV_NAME))
+            )
+            if settings.state_sync
+            else "",
         )
         roots = host.volatile_roots()
         for key, value in (
             ("log_dir", paths.log_dir),
             ("env_file", paths.env_file),
+            ("state_sync_env_file", paths.state_env_file or paths.env_file),
             ("vibey", paths.vibey),
             ("python", paths.python),
             ("--repo", paths.repo),

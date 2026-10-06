@@ -216,6 +216,12 @@ from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.secrets import SecretsPort
 from vibey.application.interfaces.siem import SiemPort
 from vibey.application.interfaces.sms import SmsPort
+from vibey.application.interfaces.state_sync import (
+    StateCipher,
+    StateRemote,
+    StateStore,
+    StateSyncServiceInterface,
+)
 from vibey.application.interfaces.system import (
     Clock,
 )
@@ -234,6 +240,10 @@ from vibey.application.interfaces.worker_interface import (
 )
 
 __all__ = [
+    "StateCipher",
+    "StateRemote",
+    "StateStore",
+    "StateSyncServiceInterface",
     "RemoteCommandServiceInterface",
     "RemoteWorkflowForge",
     "DefectGateInterface",

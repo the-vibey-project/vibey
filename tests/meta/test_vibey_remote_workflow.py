@@ -65,3 +65,39 @@ def test_the_command_line_arrives_through_env_and_nothing_can_write() -> None:
         s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/checkout")
     )
     assert checkout["with"]["persist-credentials"] is False
+
+
+def test_only_sync_back_may_write_and_it_runs_no_dispatched_command() -> None:
+    """The synced state (ADR-0086): the run reads the branch with a read-only token; the
+    write-back is its own job, the only one with `contents: write`, and it runs the state
+    commands alone, after the run handed it a sealed export."""
+    jobs = spec()["jobs"]
+    run = next(s for s in jobs["run"]["steps"] if s.get("name") == "Run the command")
+    assert run["env"]["STATE_KEY"] == "${{ secrets.VIBEY_STATE_KEY }}"
+    assert "--state-out" in run["run"]
+    assert jobs["run"]["outputs"]["state"] == "${{ steps.command.outputs.state }}"
+    handed = next(
+        s for s in jobs["run"]["steps"] if s.get("name") == "Hand the sealed state to sync-back"
+    )
+    assert handed["if"] == "steps.command.outputs.state == 'true'"
+
+    back = jobs["sync-back"]
+    assert back["needs"] == "run" and back["if"] == "needs.run.outputs.state == 'true'"
+    assert back["permissions"] == {"contents": "write"}
+    assert back["concurrency"]["cancel-in-progress"] is False
+    # It runs the reusable write workflow, handed the run's artifact by name, and nothing of
+    # the dispatched command's.
+    assert back["uses"] == "./.github/workflows/vibey-state-write.yml"
+    assert back["with"] == {"artifact": handed["with"]["name"]}
+    assert back["secrets"] == {"VIBEY_STATE_KEY": "${{ secrets.VIBEY_STATE_KEY }}"}
+    assert "steps" not in back and "inputs." not in str(back)
+
+
+def test_only_sync_back_holds_contents_write() -> None:
+    """Every other job is read-only: the run job's token can read the branch, never write it."""
+    writers = [
+        name
+        for name, job in spec()["jobs"].items()
+        if "write" in (job.get("permissions") or {}).values()
+    ]
+    assert writers == ["sync-back"]

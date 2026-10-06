@@ -11,7 +11,7 @@ bending a protocol to fit an outcome.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep every weekly measurement and every registered study running without breaking its protocol.
-- **Decision records:** 85, the newest 0085 — `vibey -w`: any vibey command, run on the repository's GitHub-hosted runners.
+- **Decision records:** 86, the newest 0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways.
 - **Lanes it keeps usable:** [Review canary](https://github.com/the-vibey-project/vibey/actions/workflows/review-canary.yml), [Minimum specs](https://github.com/the-vibey-project/vibey/actions/workflows/minimum-specs.yml), [Host health](https://github.com/the-vibey-project/vibey/actions/workflows/host-health.yml), [Autonomy scorecard](https://github.com/the-vibey-project/vibey/actions/workflows/autonomy-scorecard.yml), [Continuation prompts](https://github.com/the-vibey-project/vibey/actions/workflows/continuation-prompts.yml).
 <!-- END GENERATED continuation:state -->
 

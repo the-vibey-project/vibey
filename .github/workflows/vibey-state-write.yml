@@ -1,0 +1,78 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: vibey state (write back)
+
+# The one job that writes the synced state back (ADR-0086), for any workflow that opened it
+# with .github/actions/vibey-state and closed it as a sealed export. The caller keeps its own
+# jobs read-only and calls this one, which alone holds `contents: write`, with the artifact
+# its `close` step named:
+#
+#   write:
+#     needs: work
+#     if: needs.work.outputs.state == 'true'
+#     permissions:
+#       contents: write
+#     uses: ./.github/workflows/vibey-state-write.yml
+#     with:
+#       artifact: ${{ needs.work.outputs.artifact }}
+#     secrets:
+#       VIBEY_STATE_KEY: ${{ secrets.VIBEY_STATE_KEY }}
+#
+# It runs no command of the caller's: only `vibey migrate`, `vibey state import` and
+# `vibey state sync`, which write the vibey-state branch alone. Writers queue on one group
+# and are never cancelled, so no write is lost to a newer one; the sync's compare-and-swap
+# settles the rest.
+on:
+  workflow_call:
+    inputs:
+      artifact:
+        description: "The artifact the caller's close step uploaded the sealed export as"
+        required: true
+        type: string
+    secrets:
+      VIBEY_STATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  write:
+    name: write the state back to the vibey-state branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    concurrency:
+      group: vibey-state-write
+      cancel-in-progress: false
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vibey
+          POSTGRES_PASSWORD: vibey
+          POSTGRES_DB: vibey
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vibey"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Check out vibey
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Take the sealed state from the caller
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
+          path: ${{ runner.temp }}/vibey-state
+      - name: Merge it with the branch and write it back
+        uses: ./.github/actions/vibey-state
+        with:
+          step: write-back
+          key: ${{ secrets.VIBEY_STATE_KEY }}
+          file: ${{ runner.temp }}/vibey-state/state.vibey-export
+          pg-url: postgresql://vibey:vibey@localhost:5432/vibey

@@ -67,6 +67,9 @@ dependencies = [
     "openai==3.14.1",
     # `vibey hub pair`'s client (cli/hub_pair.py)
     "httpx>=0.27",
+    # `vibey state`'s AES-256-GCM seal (ADR-0086), and the hub's TLS certificate
+    # (infrastructure/hub/tls.py), which imported it without declaring it
+    "cryptography>=50.0.0,<51",
     # the test suite's workflow and chart contract checks
     "pyyaml>=6.0",
     # claudeloop's sync-to-async bridge (claudeloop/cli/asyncio.py)

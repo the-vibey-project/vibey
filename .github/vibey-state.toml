@@ -1,0 +1,19 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# Whether a GitHub workflow on this repository may decrypt the synced state (ADR-0086), read by
+# `StateGate` in scripts/vibey_state_action.py: the `vibey-state` composite action
+# (.github/actions/vibey-state), the reusable write job (.github/workflows/vibey-state-write.yml)
+# and `vibey -w` (.github/workflows/vibey-remote.yml).
+#
+# A private repository may always open it, given the `VIBEY_STATE_KEY` secret. A public one may
+# only when this file says `public = true`: absent, or `public = false`, a public repository
+# never decrypts it, which is the default for every other adopter.
+#
+# On a public repository, whatever a workflow prints from the decrypted state -- a log line, a
+# report, an artifact -- is public: anyone can read its runs' logs and artifacts. This
+# repository's operator was told that, and accepted it (2026-10-06).
+#
+# Unknown tables or keys, and a `public` that is not true or false, are refused by name.
+
+[state]
+public = true
