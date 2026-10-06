@@ -61,6 +61,12 @@ content_paths = [
 # VS Code), so a client change is releasable content. Without it a client-only change derived
 # "nothing to release" -- no bump, no Release run, no binaries (found preparing 3.4.0).
 code_paths    = ["src/vibey/", "pyproject.toml", "clients/"]
+# Files that embed the version and are re-derived in the release commit itself. The
+# continuation prompts' state blocks name the version they were rendered at, and 4.1.0's
+# release commit left them at 4.0.0: CI's meta-test failed on that commit and on every
+# pull request after it until someone re-rendered by hand (2026-10-05). stdlib-only, so
+# the promotion job's bare Python runs it.
+regenerate    = [["python", "scripts/continuation_prompts.py", "render"]]
 
 [branches]
 integration = "develop"

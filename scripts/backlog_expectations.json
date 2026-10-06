@@ -1657,5 +1657,8 @@
         }
       ]
     }
-  }
+  },
+  "self_closing_markers": [
+    "<!-- vibey-gh:tracking:"
+  ]
 }

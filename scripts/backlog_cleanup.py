@@ -75,7 +75,14 @@ class Gh:
 
     def open_issues(self) -> list[dict[str, object]]:
         proc = self._run(
-            "issue", "list", "--limit", "1000", "--state", "open", "--json", "number,title,labels"
+            "issue",
+            "list",
+            "--limit",
+            "1000",
+            "--state",
+            "open",
+            "--json",
+            "number,title,labels,body",
         )
         proc.check_returncode()
         return json.loads(proc.stdout or "[]")
@@ -331,6 +338,14 @@ class BacklogCleanup(BacklogCleanupInterface):
         self.entries: dict[str, dict[str, object]] = {
             str(k): v for k, v in issues.items() if isinstance(v, dict)
         }
+        # Machine-filed trackers that close themselves when their condition clears (the
+        # `branch_health` "develop is red" issue). Triaging one by hand is toil that goes
+        # stale the moment it closes, and counting it as debt turned every red develop
+        # into a red backlog lane as well (#1423, 2026-10-05).
+        markers = expectations.get("self_closing_markers", [])
+        self.self_closing: tuple[str, ...] = tuple(
+            str(m) for m in markers if isinstance(markers, list) and m
+        )
 
     def _labels(self, issue: dict[str, object]) -> list[str]:
         labels = issue.get("labels", [])
@@ -338,9 +353,20 @@ class BacklogCleanup(BacklogCleanupInterface):
             return []
         return [str(label.get("name")) for label in labels if isinstance(label, dict)]
 
-    def _row(self, number: int, title: str, labels: list[str]) -> dict[str, object]:
+    def _row(self, number: int, title: str, labels: list[str], body: str = "") -> dict[str, object]:
         entry = self.entries.get(str(number))
         context: dict[str, object] = {"root": REPO}
+        if entry is None and any(marker in body for marker in self.self_closing):
+            return {
+                "number": number,
+                "title": title,
+                "verdict": "SELF-CLOSING",
+                "evidence": "machine-filed tracker; closes itself when its condition clears",
+                "missing": "",
+                "next": "",
+                "act": False,
+                "entry": False,
+            }
         if entry is None:
             if "qwenstorm" in labels:
                 return {
@@ -406,8 +432,9 @@ class BacklogCleanup(BacklogCleanupInterface):
         for issue in self.gh.open_issues():
             number = issue.get("number")
             title = issue.get("title", "")
-            assert isinstance(number, int) and isinstance(title, str)
-            rows.append(self._row(number, title, self._labels(issue)))
+            body = issue.get("body") or ""
+            assert isinstance(number, int) and isinstance(title, str) and isinstance(body, str)
+            rows.append(self._row(number, title, self._labels(issue), body))
         return rows
 
     def _body(self, row: dict[str, object]) -> str:

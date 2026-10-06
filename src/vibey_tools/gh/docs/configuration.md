@@ -18,6 +18,7 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `files` | string list / empty | Version-bearing files updated by `version --apply`. |
 | `content_paths` | string list / empty | Paths whose changes produce a minor bump. |
 | `code_paths` | string list / `["src/"]` | Paths whose changes produce a patch bump. |
+| `regenerate` | list of argv lists / `[]` | Commands run after every release bump to re-derive files that embed the version; what they rewrite joins the release commit, and a failure stops the release. Dev builds skip them. |
 
 ## `[branches]`, `[merge_train]`, and `[install]`
 

@@ -168,3 +168,53 @@ def test_an_older_gh_closes_the_duplicate_as_not_planned() -> None:
         "--reason",
         "not planned",
     )
+
+
+class _ListingGh(FakeGh):
+    """A forge whose open-issue listing is fixed."""
+
+    def __init__(self, issues: list[dict[str, object]]) -> None:
+        super().__init__()
+        self._issues = issues
+
+    def open_issues(self) -> list[dict[str, object]]:
+        return self._issues
+
+
+_TRACKER = {
+    "number": 1423,
+    "title": "develop is red: gates",
+    "labels": [],
+    "body": "<!-- vibey-gh:tracking:red-branch:develop -->\nThe CI run on `develop` is red.",
+}
+_HUMAN = {"number": 1500, "title": "a person's report", "labels": [], "body": "it broke"}
+
+
+def test_a_self_closing_tracker_is_not_triage_debt() -> None:
+    expectations = {"issues": {}, "self_closing_markers": ["<!-- vibey-gh:tracking:"]}
+    loop = bc.BacklogCleanup(_ListingGh([_TRACKER, _HUMAN]), expectations, cutoff="abc")  # type: ignore[arg-type]
+    rows = {r["number"]: r for r in loop.survey()}
+    assert rows[1423]["verdict"] == "SELF-CLOSING"
+    assert rows[1423]["act"] is False
+    assert loop.coverage_gaps(list(rows.values())) == [1500]
+
+
+def test_without_declared_markers_every_unentered_issue_is_debt() -> None:
+    loop = bc.BacklogCleanup(_ListingGh([_TRACKER, _HUMAN]), {"issues": {}}, cutoff="abc")  # type: ignore[arg-type]
+    assert sorted(loop.coverage_gaps(loop.survey())) == [1423, 1500]
+
+
+def test_an_event_marker_is_not_mistaken_for_a_self_closing_tracker() -> None:
+    event = {**_TRACKER, "number": 1501, "body": "<!-- vibey-gh:tracking-event:x -->"}
+    expectations = {"issues": {}, "self_closing_markers": ["<!-- vibey-gh:tracking:"]}
+    loop = bc.BacklogCleanup(_ListingGh([event]), expectations, cutoff="abc")  # type: ignore[arg-type]
+    assert loop.coverage_gaps(loop.survey()) == [1501]
+
+
+def test_an_entry_outranks_the_marker() -> None:
+    expectations = {
+        "issues": {"1423": {"kind": "triaged", "probes": []}},
+        "self_closing_markers": ["<!-- vibey-gh:tracking:"],
+    }
+    loop = bc.BacklogCleanup(_ListingGh([_TRACKER]), expectations, cutoff="abc")  # type: ignore[arg-type]
+    assert loop.survey()[0]["verdict"] != "SELF-CLOSING"
