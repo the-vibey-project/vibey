@@ -136,6 +136,10 @@ kr_hub_path(KrHubRoute route, const char *project_id, const char *id)
         return g_strdup("/api/v1/doctor");
     case KR_HUB_ROUTE_PAIRING_CLAIM:
         return g_strdup("/api/v1/pairing/claim");
+    case KR_HUB_ROUTE_WORKFLOW_RUNS:
+        return g_strdup("/api/v1/workflows/runs");
+    case KR_HUB_ROUTE_WORKFLOW_RUN:
+        return other ? g_strdup_printf("/api/v1/workflows/runs/%s", other) : NULL;
     }
     return NULL;
 }
@@ -144,7 +148,7 @@ gboolean
 kr_hub_route_writes(KrHubRoute route)
 {
     return route == KR_HUB_ROUTE_JOB_BUMP || route == KR_HUB_ROUTE_GATE_ANSWER ||
-           route == KR_HUB_ROUTE_PAIRING_CLAIM;
+           route == KR_HUB_ROUTE_PAIRING_CLAIM || route == KR_HUB_ROUTE_WORKFLOW_RUNS;
 }
 
 gboolean

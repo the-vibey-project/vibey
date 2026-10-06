@@ -16,6 +16,7 @@ executable(
   'main.c',
   'kr-mark.c',
   'kr-window.c',
+  'kr-workflows-page.c',
   resources,
   dependencies: [core_dep, gtk_dep, adw_dep],
   c_args: [

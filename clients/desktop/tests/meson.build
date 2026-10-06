@@ -17,9 +17,10 @@ core_tests = [
   'pairing',
   'settings',
   'state',
+  'workflows',
 ]
 if soup_dep.found()
-  core_tests += 'hub-client'
+  core_tests += ['hub-client', 'workflows-client']
 endif
 
 # The hub client's TLS tests stand up an HTTPS hub on loopback, as `vibey serve` does on a

@@ -217,6 +217,42 @@ kr_pairing_refusal_message(guint status, const char *detail)
     }
 }
 
+const char *
+kr_pairing_scope_description(const char *scope)
+{
+    static const struct {
+        const char *scope;
+        const char *description;
+    } SCOPES[] = {
+        {"view", "See projects, status, gates, budgets, the queue, loops, lanes and doctor"},
+        {"answer", "Answer a gate that is not a spending decision"},
+        {"spend", "Answer a gate whose answer spends money"},
+        {"run", "Start, stop or wind down work"},
+        {"bump", "Move a queued job to the front of its project's queue"},
+        {"workflows", "Run vibey commands on the repository's GitHub-hosted runners"},
+    };
+    for (size_t i = 0; scope != NULL && i < G_N_ELEMENTS(SCOPES); i++) {
+        if (g_str_equal(scope, SCOPES[i].scope))
+            return SCOPES[i].description;
+    }
+    return NULL;
+}
+
+char *
+kr_pairing_scopes_said(const char *const *scopes)
+{
+    if (scopes == NULL || scopes[0] == NULL)
+        return g_strdup("nothing yet");
+    GString *said = g_string_new(NULL);
+    for (const char *const *scope = scopes; *scope != NULL; scope++) {
+        const char *description = kr_pairing_scope_description(*scope);
+        g_string_append_printf(said, "%s%s%s%s", said->len > 0 ? "\n" : "", *scope,
+                               description != NULL ? ": " : "",
+                               description != NULL ? description : "");
+    }
+    return g_string_free(said, FALSE);
+}
+
 /* ---- the key a pairing gives ---------------------------------------------------------- */
 
 void
