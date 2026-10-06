@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-21-decide-to-sell-net-timing-and-taxes-503d0fedd8",
+    "purpose": "21 decide to sell net timing and taxes",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-seller-playbook/001-21-decide-to-sell-net-timing-and-taxes.md",
+    "requires": [],
+    "links": [
+      "skill-22-pricing-strategy-19f77c4af2"
+    ]
+  },
+  {
+    "id": "skill-22-pricing-strategy-19f77c4af2",
+    "purpose": "22 pricing strategy",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-seller-playbook/002-22-pricing-strategy.md",
+    "requires": [
+      "skill-21-decide-to-sell-net-timing-and-taxes-503d0fedd8"
+    ],
+    "links": [
+      "skill-23-prep-and-renovation-roi-17df870c4a"
+    ]
+  },
+  {
+    "id": "skill-23-prep-and-renovation-roi-17df870c4a",
+    "purpose": "23 prep and renovation roi",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-seller-playbook/003-23-prep-and-renovation-roi.md",
+    "requires": [
+      "skill-22-pricing-strategy-19f77c4af2"
+    ],
+    "links": [
+      "skill-24-marketing-offers-and-closing-33ded787d2"
+    ]
+  },
+  {
+    "id": "skill-24-marketing-offers-and-closing-33ded787d2",
+    "purpose": "24 marketing offers and closing",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-seller-playbook/004-24-marketing-offers-and-closing.md",
+    "requires": [
+      "skill-23-prep-and-renovation-roi-17df870c4a"
+    ],
+    "links": [
+      "skill-25-special-seller-situations-4dc106a247"
+    ]
+  },
+  {
+    "id": "skill-25-special-seller-situations-4dc106a247",
+    "purpose": "25 special seller situations",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-seller-playbook/005-25-special-seller-situations.md",
+    "requires": [
+      "skill-24-marketing-offers-and-closing-33ded787d2"
+    ],
+    "links": [
+      "skill-25a-seller-checklists-3ac4e362ae"
+    ]
+  },
+  {
+    "id": "skill-25a-seller-checklists-3ac4e362ae",
+    "purpose": "25a seller checklists",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-seller-playbook/006-25a-seller-checklists.md",
+    "requires": [
+      "skill-25-special-seller-situations-4dc106a247"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-how-to-use-this-reference-router-a89824bc3c",
+    "purpose": "0 how to use this reference router",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-concepts-methods-and-market-structure/001-0-how-to-use-this-reference-router.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-value-means-ea7410edc3"
+    ]
+  },
+  {
+    "id": "skill-1-what-value-means-ea7410edc3",
+    "purpose": "1 what value means",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-concepts-methods-and-market-structure/002-1-what-value-means.md",
+    "requires": [
+      "skill-0-how-to-use-this-reference-router-a89824bc3c"
+    ],
+    "links": [
+      "skill-2-the-three-approaches-and-a-fourth-lens-f75eb98547"
+    ]
+  },
+  {
+    "id": "skill-2-the-three-approaches-and-a-fourth-lens-f75eb98547",
+    "purpose": "2 the three approaches and a fourth lens",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-concepts-methods-and-market-structure/003-2-the-three-approaches-and-a-fourth-lens.md",
+    "requires": [
+      "skill-1-what-value-means-ea7410edc3"
+    ],
+    "links": [
+      "skill-3-who-produces-value-opinions-and-what-each-is-good-for-1f3d1552cc"
+    ]
+  },
+  {
+    "id": "skill-3-who-produces-value-opinions-and-what-each-is-good-for-1f3d1552cc",
+    "purpose": "3 who produces value opinions and what each is good for",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-concepts-methods-and-market-structure/004-3-who-produces-value-opinions-and-what-each-is-good-for.md",
+    "requires": [
+      "skill-2-the-three-approaches-and-a-fourth-lens-f75eb98547"
+    ],
+    "links": [
+      "skill-4-market-structure-and-the-rules-of-the-game-us-oct-2026-c47043821f"
+    ]
+  },
+  {
+    "id": "skill-4-market-structure-and-the-rules-of-the-game-us-oct-2026-c47043821f",
+    "purpose": "4 market structure and the rules of the game us oct 2026",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-concepts-methods-and-market-structure/005-4-market-structure-and-the-rules-of-the-game-us-oct-2026.md",
+    "requires": [
+      "skill-3-who-produces-value-opinions-and-what-each-is-good-for-1f3d1552cc"
+    ],
+    "links": [
+      "skill-4a-checklist-before-you-quote-any-value-d1d256b32c"
+    ]
+  },
+  {
+    "id": "skill-4a-checklist-before-you-quote-any-value-d1d256b32c",
+    "purpose": "4a checklist before you quote any value",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-concepts-methods-and-market-structure/006-4a-checklist-before-you-quote-any-value.md",
+    "requires": [
+      "skill-4-market-structure-and-the-rules-of-the-game-us-oct-2026-c47043821f"
+    ],
+    "links": []
+  }
+]

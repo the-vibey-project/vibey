@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-21-decide-to-sell-equity-timing-and-housekeeping-ae6d9e12b7",
+    "purpose": "21 decide to sell equity timing and housekeeping",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-seller-playbook/001-21-decide-to-sell-equity-timing-and-housekeeping.md",
+    "requires": [],
+    "links": [
+      "skill-22-choosing-the-channel-and-setting-the-price-0cbed304af"
+    ]
+  },
+  {
+    "id": "skill-22-choosing-the-channel-and-setting-the-price-0cbed304af",
+    "purpose": "22 choosing the channel and setting the price",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-seller-playbook/002-22-choosing-the-channel-and-setting-the-price.md",
+    "requires": [
+      "skill-21-decide-to-sell-equity-timing-and-housekeeping-ae6d9e12b7"
+    ],
+    "links": [
+      "skill-23-prep-what-pays-and-what-doesn-t-68545df732"
+    ]
+  },
+  {
+    "id": "skill-23-prep-what-pays-and-what-doesn-t-68545df732",
+    "purpose": "23 prep what pays and what doesn t",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-seller-playbook/003-23-prep-what-pays-and-what-doesn-t.md",
+    "requires": [
+      "skill-22-choosing-the-channel-and-setting-the-price-0cbed304af"
+    ],
+    "links": [
+      "skill-24-the-sale-process-safety-and-paperwork-d568632b0a"
+    ]
+  },
+  {
+    "id": "skill-24-the-sale-process-safety-and-paperwork-d568632b0a",
+    "purpose": "24 the sale process safety and paperwork",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-seller-playbook/004-24-the-sale-process-safety-and-paperwork.md",
+    "requires": [
+      "skill-23-prep-what-pays-and-what-doesn-t-68545df732"
+    ],
+    "links": [
+      "skill-25-special-seller-situations-e164eba32d"
+    ]
+  },
+  {
+    "id": "skill-25-special-seller-situations-e164eba32d",
+    "purpose": "25 special seller situations",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-seller-playbook/005-25-special-seller-situations.md",
+    "requires": [
+      "skill-24-the-sale-process-safety-and-paperwork-d568632b0a"
+    ],
+    "links": [
+      "skill-25a-seller-checklists-793143ee2a"
+    ]
+  },
+  {
+    "id": "skill-25a-seller-checklists-793143ee2a",
+    "purpose": "25a seller checklists",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-seller-playbook/006-25a-seller-checklists.md",
+    "requires": [
+      "skill-25-special-seller-situations-e164eba32d"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-31-misconceptions-5a4747b32c",
+    "purpose": "31 misconceptions",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-reference/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-reference/001-31-misconceptions.md",
+    "requires": [],
+    "links": [
+      "skill-32-what-moved-verified-october-6-2026-469b08c94a"
+    ]
+  },
+  {
+    "id": "skill-32-what-moved-verified-october-6-2026-469b08c94a",
+    "purpose": "32 what moved verified october 6 2026",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-reference/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-reference/002-32-what-moved-verified-october-6-2026.md",
+    "requires": [
+      "skill-31-misconceptions-5a4747b32c"
+    ],
+    "links": [
+      "skill-33-canon-and-data-sources-b0db6b0c4c"
+    ]
+  },
+  {
+    "id": "skill-33-canon-and-data-sources-b0db6b0c4c",
+    "purpose": "33 canon and data sources",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-reference/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-reference/003-33-canon-and-data-sources.md",
+    "requires": [
+      "skill-32-what-moved-verified-october-6-2026-469b08c94a"
+    ],
+    "links": [
+      "skill-34-quick-reference-31c8ef42d5"
+    ]
+  },
+  {
+    "id": "skill-34-quick-reference-31c8ef42d5",
+    "purpose": "34 quick reference",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-reference/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-reference/004-34-quick-reference.md",
+    "requires": [
+      "skill-33-canon-and-data-sources-b0db6b0c4c"
+    ],
+    "links": [
+      "skill-35-method-7be2b4a69f"
+    ]
+  },
+  {
+    "id": "skill-35-method-7be2b4a69f",
+    "purpose": "35 method",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-reference/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-reference/005-35-method.md",
+    "requires": [
+      "skill-34-quick-reference-31c8ef42d5"
+    ],
+    "links": []
+  }
+]

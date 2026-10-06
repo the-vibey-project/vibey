@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-selecting-comparable-cars-b96b3bf475",
+    "purpose": "10 selecting comparable cars",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-valuing-a-specific-vehicle/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-valuing-a-specific-vehicle/001-10-selecting-comparable-cars.md",
+    "requires": [],
+    "links": [
+      "skill-11-the-adjustment-grid-3f81a46a6c"
+    ]
+  },
+  {
+    "id": "skill-11-the-adjustment-grid-3f81a46a6c",
+    "purpose": "11 the adjustment grid",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-valuing-a-specific-vehicle/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-valuing-a-specific-vehicle/002-11-the-adjustment-grid.md",
+    "requires": [
+      "skill-10-selecting-comparable-cars-b96b3bf475"
+    ],
+    "links": [
+      "skill-12-time-season-and-the-asking-to-sale-gap-0a97015647"
+    ]
+  },
+  {
+    "id": "skill-12-time-season-and-the-asking-to-sale-gap-0a97015647",
+    "purpose": "12 time season and the asking to sale gap",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-valuing-a-specific-vehicle/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-valuing-a-specific-vehicle/003-12-time-season-and-the-asking-to-sale-gap.md",
+    "requires": [
+      "skill-11-the-adjustment-grid-3f81a46a6c"
+    ],
+    "links": [
+      "skill-13-statistical-hedonic-cross-check-08977b682c"
+    ]
+  },
+  {
+    "id": "skill-13-statistical-hedonic-cross-check-08977b682c",
+    "purpose": "13 statistical hedonic cross check",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-valuing-a-specific-vehicle/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-valuing-a-specific-vehicle/004-13-statistical-hedonic-cross-check.md",
+    "requires": [
+      "skill-12-time-season-and-the-asking-to-sale-gap-0a97015647"
+    ],
+    "links": [
+      "skill-14-guides-special-vehicle-types-and-collectors-f4d4228a4b"
+    ]
+  },
+  {
+    "id": "skill-14-guides-special-vehicle-types-and-collectors-f4d4228a4b",
+    "purpose": "14 guides special vehicle types and collectors",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-valuing-a-specific-vehicle/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-valuing-a-specific-vehicle/005-14-guides-special-vehicle-types-and-collectors.md",
+    "requires": [
+      "skill-13-statistical-hedonic-cross-check-08977b682c"
+    ],
+    "links": [
+      "skill-15-worked-example-sandbox-verified-and-the-recipe-071ecc3c4e"
+    ]
+  },
+  {
+    "id": "skill-15-worked-example-sandbox-verified-and-the-recipe-071ecc3c4e",
+    "purpose": "15 worked example sandbox verified and the recipe",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-valuing-a-specific-vehicle/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-valuing-a-specific-vehicle/006-15-worked-example-sandbox-verified-and-the-recipe.md",
+    "requires": [
+      "skill-14-guides-special-vehicle-types-and-collectors-f4d4228a4b"
+    ],
+    "links": []
+  }
+]

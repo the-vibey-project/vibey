@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-21-exit-readiness-7caafd3e3c",
+    "purpose": "21 exit readiness",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-seller-playbook/001-21-exit-readiness.md",
+    "requires": [],
+    "links": [
+      "skill-22-valuation-expectations-and-pricing-aa05572b09"
+    ]
+  },
+  {
+    "id": "skill-22-valuation-expectations-and-pricing-aa05572b09",
+    "purpose": "22 valuation expectations and pricing",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-seller-playbook/002-22-valuation-expectations-and-pricing.md",
+    "requires": [
+      "skill-21-exit-readiness-7caafd3e3c"
+    ],
+    "links": [
+      "skill-23-advisors-and-process-00701669f5"
+    ]
+  },
+  {
+    "id": "skill-23-advisors-and-process-00701669f5",
+    "purpose": "23 advisors and process",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-seller-playbook/003-23-advisors-and-process.md",
+    "requires": [
+      "skill-22-valuation-expectations-and-pricing-aa05572b09"
+    ],
+    "links": [
+      "skill-24-structure-and-taxes-stylized-not-tax-advice-1223acc49e"
+    ]
+  },
+  {
+    "id": "skill-24-structure-and-taxes-stylized-not-tax-advice-1223acc49e",
+    "purpose": "24 structure and taxes stylized not tax advice",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-seller-playbook/004-24-structure-and-taxes-stylized-not-tax-advice.md",
+    "requires": [
+      "skill-23-advisors-and-process-00701669f5"
+    ],
+    "links": [
+      "skill-25-alternatives-special-sellers-and-after-the-sale-9d868bc5aa"
+    ]
+  },
+  {
+    "id": "skill-25-alternatives-special-sellers-and-after-the-sale-9d868bc5aa",
+    "purpose": "25 alternatives special sellers and after the sale",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-seller-playbook/005-25-alternatives-special-sellers-and-after-the-sale.md",
+    "requires": [
+      "skill-24-structure-and-taxes-stylized-not-tax-advice-1223acc49e"
+    ],
+    "links": [
+      "skill-25a-seller-checklists-34e4435971"
+    ]
+  },
+  {
+    "id": "skill-25a-seller-checklists-34e4435971",
+    "purpose": "25a seller checklists",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-seller-playbook/006-25a-seller-checklists.md",
+    "requires": [
+      "skill-25-alternatives-special-sellers-and-after-the-sale-9d868bc5aa"
+    ],
+    "links": []
+  }
+]

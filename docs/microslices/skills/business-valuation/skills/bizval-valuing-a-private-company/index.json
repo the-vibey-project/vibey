@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-normalizing-earnings-8a3a60c967",
+    "purpose": "10 normalizing earnings",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-valuing-a-private-company/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-valuing-a-private-company/001-10-normalizing-earnings.md",
+    "requires": [],
+    "links": [
+      "skill-11-market-approach-ee2503b983"
+    ]
+  },
+  {
+    "id": "skill-11-market-approach-ee2503b983",
+    "purpose": "11 market approach",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-valuing-a-private-company/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-valuing-a-private-company/002-11-market-approach.md",
+    "requires": [
+      "skill-10-normalizing-earnings-8a3a60c967"
+    ],
+    "links": [
+      "skill-12-income-approach-3a5fbb17f7"
+    ]
+  },
+  {
+    "id": "skill-12-income-approach-3a5fbb17f7",
+    "purpose": "12 income approach",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-valuing-a-private-company/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-valuing-a-private-company/003-12-income-approach.md",
+    "requires": [
+      "skill-11-market-approach-ee2503b983"
+    ],
+    "links": [
+      "skill-13-asset-approach-a1ab6ad862"
+    ]
+  },
+  {
+    "id": "skill-13-asset-approach-a1ab6ad862",
+    "purpose": "13 asset approach",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-valuing-a-private-company/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-valuing-a-private-company/004-13-asset-approach.md",
+    "requires": [
+      "skill-12-income-approach-3a5fbb17f7"
+    ],
+    "links": [
+      "skill-14-discounts-premiums-and-the-bridge-to-equity-7c4d0c979d"
+    ]
+  },
+  {
+    "id": "skill-14-discounts-premiums-and-the-bridge-to-equity-7c4d0c979d",
+    "purpose": "14 discounts premiums and the bridge to equity",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-valuing-a-private-company/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-valuing-a-private-company/005-14-discounts-premiums-and-the-bridge-to-equity.md",
+    "requires": [
+      "skill-13-asset-approach-a1ab6ad862"
+    ],
+    "links": [
+      "skill-15-reconcile-report-and-verify-0907075343"
+    ]
+  },
+  {
+    "id": "skill-15-reconcile-report-and-verify-0907075343",
+    "purpose": "15 reconcile report and verify",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-valuing-a-private-company/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-valuing-a-private-company/006-15-reconcile-report-and-verify.md",
+    "requires": [
+      "skill-14-discounts-premiums-and-the-bridge-to-equity-7c4d0c979d"
+    ],
+    "links": []
+  }
+]
