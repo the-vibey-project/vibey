@@ -94,6 +94,7 @@ worker finds no stored switch and each local engine sits at its default —
 | `VIBEY_ENGINES_MODE`, `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS`, `VIBEY_ENGINES_PAID_DAILY_CAP` | `vibey worker` (`bootstrap._engine_dispatch`, through `EngineDispatchConfigLoader`), and every whole-`vibey.toml` load | Override [`[engines] mode`, `overflow_after_seconds` and `paid_daily_cap`](#engine-dispatch). Set, they beat the project's stored config; empty counts as unset; a value that is not valid for its key fails building that project's worker. No value of `VIBEY_ENGINES_PAID_DAILY_CAP` means "uncapped". |
 | `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `bootstrap.build_app` (every worker), through the environment overlay | Overrides [`[design.research] on_unavailable`](#designresearch): `gate` or `record_gap`, exactly. Set, it beats `./vibey.toml`; empty counts as unset; any other value fails the start. How an unattended driver (`scripts/triaged_delivery.py --record-research-gaps`) opts a worker in without writing a file. |
 | `VIBEY_WORKFLOWS_REPOSITORY`, `VIBEY_WORKFLOWS_WORKFLOW`, `VIBEY_WORKFLOWS_REF`, `VIBEY_WORKFLOWS_POLL_SECONDS`, `VIBEY_WORKFLOWS_TIMEOUT_SECONDS` | `vibey -w` and the hub's `/api/v1/workflows/runs` routes (`RemoteWorkflowsSettingsLoader`, `infrastructure/workflows/gh_workflows.py`) | Where a command sent to the workflows runs and how long to wait for it (ADR-0085): the repository as `OWNER/NAME` (default: the working directory's git remote), the workflow file (default `vibey-remote.yml`), the branch (default: the repository's default branch), seconds between looks (default `10`) and seconds before giving up waiting (default `3600`). A wait that is not a positive number is refused with exit 2; on the hub it leaves the routes answering 503. |
+| `VIBEY_STATE_REPOSITORY`, `VIBEY_STATE_BRANCH`, `VIBEY_STATE_PATH`, `VIBEY_STATE_PG_URL`, `VIBEY_STATE_KEY`, `VIBEY_STATE_KEY_FILE`, `VIBEY_STATE_CONFLICTS`, `VIBEY_STATE_ATTEMPTS` | `vibey state` (`StateSyncSettingsLoader`, `infrastructure/state/settings.py`) | Where the sealed state lives, which database it syncs, the key, the conflict rules and the retries ([State sync](#state-sync), ADR-0086). |
 
 ### Database roles { #database-roles }
 
@@ -137,6 +138,48 @@ With the Helm chart this is `postgres.appRole` (default `vibey_app`) and, for an
 database, `dsn.existingSecretKey` (the application's DSN) with
 `dsn.existingSecretMigrateKey` (the owner's). `existingSecretMigrateKey` is empty by
 default, which is a single-DSN install.
+
+### State sync { #state-sync }
+
+[`vibey state`](cli.md#vibey-state) keeps this database and a sealed copy of it on a branch
+of the repository the same, in both directions
+([ADR-0086](../architecture/decisions/0086-state-sync.md)). Every setting is an environment
+variable, read by `StateSyncSettingsLoader` (`infrastructure/state/settings.py`). Surrounding
+whitespace is ignored, and an empty value means the default. There is no `vibey.toml` table:
+under the supervisor, set them in [`state_sync_env_file`](#supervisor).
+
+| Variable | Default | Effect |
+|---|---|---|
+| `VIBEY_STATE_REPOSITORY` | empty: the working directory's GitHub repository (`gh repo view`) | The repository whose branch holds the state, as `OWNER/NAME`. Also the macOS keychain account the key is kept under; empty, that account is `default`. |
+| `VIBEY_STATE_BRANCH` | `vibey-state` | The branch the sealed state lives on. It holds one file and nothing else. A name that starts with `-`, or holds `..` or a space, is refused (exit 2). |
+| `VIBEY_STATE_PATH` | `state.vibey` | The file on that branch. |
+| `VIBEY_STATE_PG_URL` | `VIBEY_PG_URL` | The database to sync. The sync writes every synced table and its own watermark, `state_sync`, which the application role is not granted ([database roles](#database-roles)), so give it its own DSN rather than widening the one the worker holds. Neither set: exit 2. |
+| `VIBEY_STATE_KEY` | empty: the keychain, then `VIBEY_STATE_KEY_FILE` | The key itself: 32 bytes as base64url, padding optional. A runner gets it from the repository's `VIBEY_STATE_KEY` secret. |
+| `VIBEY_STATE_KEY_FILE` | `$XDG_CONFIG_HOME/vibey/state.key`, else `~/.config/vibey/state.key` | Where the key is kept when there is no keychain. Refused while its group or others can read it: `chmod 600` it. |
+| `VIBEY_STATE_CONFLICTS` | empty: the declared rules | Overrides for the conflict rule of a row both ends changed differently, as `table=rule,table=rule`. A rule is `newest`, `mine`, `theirs` or `refuse`. An unknown table, an unknown rule, or a rule other than `refuse` on `event`, which is append-only, is refused (exit 2). |
+| `VIBEY_STATE_ATTEMPTS` | `5` | How many times one sync starts again when the database or the branch moved under it. A whole number, at least 1. |
+
+The key is looked for in `VIBEY_STATE_KEY`, then the macOS keychain (service
+`dev.vibey.state`), then `VIBEY_STATE_KEY_FILE`. `vibey state key --new` makes one where it
+would be found first on this machine: the keychain on macOS, the key file elsewhere. It
+refuses while a key exists anywhere, because replacing a key makes every state sealed under
+it unreadable.
+
+The declared rules (`TABLES` in `domain/state_sync.py`) are:
+
+| Rule | Tables |
+|---|---|
+| `newest`, by `updated_at` | `project`, `job`, `triaged_ticket` |
+| `newest`, by `answered_at` | `human_gate` |
+| `mine` | `engine_health`, `rotation_cursor` |
+| `refuse` | `job_dependency`, `work_item`, `open_item`, `handoff`, `artifact`, `budget_ledger` |
+| none: append-only | `event`. Divergence is reported, never resolved. |
+
+`newest` keeps the row with the later time. A missing time counts as the oldest. Equal
+times, a time with an offset against one without, or a row deleted at one end and changed
+at the other are conflicts. `mine` keeps this database's row and `theirs` the branch's,
+deletion included. Any conflict stops the sync, which then writes nothing at either end.
+`schema_migration`, `event_seq` and `state_sync` are never synced.
 
 ### Operational surface environment variable overlay
 
@@ -623,8 +666,8 @@ What `vibey supervisor install` renders, and what `vibey supervisor status` and
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `log_dir` | string | `~/Library/Logs/vibey` (macOS), `$XDG_STATE_HOME/vibey/logs` else `~/.local/state/vibey/logs` (Linux) | Each service appends to `<log_dir>/worker.log` or `delivery.log`. Refused on volatile storage or in a linked worktree. |
-| `env_file` | string | `~/Library/Application Support/vibey/supervisor.env` (macOS), `$XDG_CONFIG_HOME/vibey/supervisor.env` else `~/.config/vibey/supervisor.env` (Linux) | The environment every service starts with, through `vibey supervisor exec`. Created from a commented template (mode 0600) when missing. |
+| `log_dir` | string | `~/Library/Logs/vibey` (macOS), `$XDG_STATE_HOME/vibey/logs` else `~/.local/state/vibey/logs` (Linux) | Each service appends to `<log_dir>/worker.log`, `delivery.log` or `state-sync.log`. Refused on volatile storage or in a linked worktree. |
+| `env_file` | string | `~/Library/Application Support/vibey/supervisor.env` (macOS), `$XDG_CONFIG_HOME/vibey/supervisor.env` else `~/.config/vibey/supervisor.env` (Linux) | The environment the worker and the delivery bridge start with, through `vibey supervisor exec`. Created from a commented template (mode 0600) when missing. The state sync has its own (`state_sync_env_file`). |
 | `vibey` | string | `vibey` on `PATH` | The `vibey` each unit runs. |
 | `python` | string | the interpreter running `vibey supervisor install` | The Python that runs the delivery bridge. |
 | `delivery` | boolean | `true` | `false` supervises the worker alone. |
@@ -632,8 +675,12 @@ What `vibey supervisor install` renders, and what `vibey supervisor status` and
 | `delivery_args` | list of strings | `[]` | Appended to the bridge's command, e.g. `["--answer-design-defaults"]`. |
 | `worker_args` | list of strings | `[]` | Appended to `vibey worker --all-projects`, e.g. `["-j", "2", "--provider", "gptossloop"]`. |
 | `restart_seconds` | integer | `30` | How long after a failed exit the service manager restarts a service (launchd `ThrottleInterval`, systemd `RestartSec`). |
-| `label_prefix` | string | `"dev.vibey"` | Units are `<label_prefix>.worker` and `<label_prefix>.delivery`. |
+| `label_prefix` | string | `"dev.vibey"` | Units are `<label_prefix>.worker` and `<label_prefix>.delivery`, and `<label_prefix>.state-sync` with `state_sync = true`. |
 | `required` | boolean | `false` | `true` turns `vibey doctor`'s `WARN` for a missing or stopped service into a `FAIL`. |
+| `state_sync` | boolean | `false` | `true` adds a third service, `state-sync`, which runs `vibey state sync --every <state_sync_interval_seconds>` ([State sync](#state-sync), ADR-0086). Off unless declared. |
+| `state_sync_interval_seconds` | integer | `300` | Seconds between the service's syncs; at least 1 when `state_sync` is on. |
+| `state_sync_env_file` | string | `state-sync.env` in the directory of `env_file`'s platform default | The state sync's own environment, read by `vibey supervisor exec`: set `VIBEY_STATE_PG_URL` and the other [`VIBEY_STATE_*`](#state-sync) variables here. Created from a commented template (mode 0600) when missing. Never the worker's file: the sync's DSN writes every synced table, more than the application role may (ADR-0055). Refused on volatile storage or in a linked worktree. |
+| `state_sync_args` | list of strings | `[]` | Appended to `vibey state sync --every N`, e.g. `["--no-push"]`. |
 
 ## `[hub]` { #hub }
 

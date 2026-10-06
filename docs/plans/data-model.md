@@ -1006,6 +1006,39 @@ CREATE TABLE budget_ledger (
 );
 ```
 
+### 3.11 `state_sync` — the state sync's watermark
+
+`vibey state sync` keeps this database and a sealed copy of it on the repository's
+`vibey-state` branch the same, both ways
+([ADR-0086](../architecture/decisions/0086-state-sync.md)). The merge is three-way, and its
+base is the commit this database last agreed with. That commit is kept here, one row per
+branch: `remote` is `OWNER/NAME:branch`.
+
+```sql
+-- 0022_state_sync.sql
+CREATE TABLE state_sync (
+    remote       text PRIMARY KEY,
+    base_commit  text NOT NULL CHECK (base_commit ~ '^[0-9a-f]{40}([0-9a-f]{24})?$'),
+    synced_at    timestamptz NOT NULL DEFAULT now()
+);
+```
+
+- **Never synced.** It says where *this* database stands, which no other database shares.
+  It is in `NOT_SYNCED` (`domain/state_sync.py`) with `schema_migration` and `event_seq`,
+  and every other table is in `TABLES`, in the order rows are written.
+- **Never granted to the application role.** It is not in `APP_ROLE_GRANTS`
+  (`infrastructure/db/ledger_guard.py`), so the worker's DSN can neither read nor move it.
+  Only the sync's own DSN (`VIBEY_STATE_PG_URL`) writes it, and that DSN also writes every
+  synced table.
+- **Moves only after what it marks is durable** (sub-doctrine 10.g). The sync records the
+  branch head as the base once the merge is committed here, and the pushed commit once the
+  branch has moved to it. A sync that died in between leaves the older base, and the next
+  one merges again from it. An upsert that would write the same commit is skipped, so
+  `synced_at` is when the base last changed. `base_commit` holds a SHA-1 or SHA-256 commit id.
+- **Dropped by `vibey state forget`**, which deletes the branch's row. The next sync then
+  merges the two ends as a first sync would, against no base. A row whose commit the branch
+  no longer reaches makes the sync refuse until then.
+
 ---
 
 ## 4. Notifications

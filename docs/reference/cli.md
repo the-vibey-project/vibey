@@ -12,7 +12,7 @@ Top-level commands, in `vibey --help` order: `new`, `serve`, `sabbath`,
 `projects`, `gates`, `answer`, `work`, `watch`, `recover`, `status`, `engines`,
 `loops`, `cost`, `install`, `doctor`, `migrate`, `operator`, `worker`, and the
 command groups `design`, `visual`, `deploy`, `ledger`, `queue`, `budget`,
-`ultra`, `driver`, `supervisor`, `hub`.
+`ultra`, `driver`, `supervisor`, `state`, `hub`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -856,14 +856,56 @@ the commands.
 
 | Subcommand | Option | What it does |
 |---|---|---|
-| `supervisor install` | `--repo PATH` (`.`), `--out DIR`, `--platform launchd\|systemd`, `--config PATH` | Writes `<label_prefix>.worker` and `<label_prefix>.delivery` into the service manager's directory (`~/Library/LaunchAgents`, or `$XDG_CONFIG_HOME/systemd/user`), or `--out`. Creates the log directory, and the environment file from a commented template, readable by you alone, when it does not exist (an existing one is kept). Prints the `launchctl bootstrap` or `systemctl --user enable --now` commands that load them. Refuses, exit 78, a log directory, environment file, `vibey`, Python or `--repo` under a directory a reboot empties or inside a linked worktree (10.h), `vibey` not on `PATH`, and a `--repo` with no `scripts/triaged_delivery.py` unless `delivery = false`. `--config` defaults to `<repo>/vibey.toml`. |
+| `supervisor install` | `--repo PATH` (`.`), `--out DIR`, `--platform launchd\|systemd`, `--config PATH` | Writes `<label_prefix>.worker` and `<label_prefix>.delivery` (and `<label_prefix>.state-sync` with `[supervisor] state_sync = true`) into the service manager's directory (`~/Library/LaunchAgents`, or `$XDG_CONFIG_HOME/systemd/user`), or `--out`. Creates the log directory, and the environment file from a commented template, readable by you alone, when it does not exist (an existing one is kept); with `state_sync`, the state sync's own `state-sync.env` the same way. Prints the `launchctl bootstrap` or `systemctl --user enable --now` commands that load them. Refuses, exit 78, a log directory, environment file, `vibey`, Python or `--repo` under a directory a reboot empties or inside a linked worktree (10.h), `vibey` not on `PATH`, and a `--repo` with no `scripts/triaged_delivery.py` unless `delivery = false`. `--config` defaults to `<repo>/vibey.toml`. |
 | `supervisor status` | `--platform launchd\|systemd`, `--config PATH` | One line per service: `running`, `stopped`, `not loaded` or `not installed`, read from the unit file and `launchctl print` / `systemctl --user is-active`. Exit 0 only when every service runs, else 1. `--config` defaults to `./vibey.toml`. |
 | `supervisor exec` | `--env-file PATH` `-- COMMAND...` | What every unit runs. Reads `KEY=VALUE` lines from the file (`#` comments, an optional `export `, one pair of matching quotes removed, nothing expanded; a declared value wins over the inherited one), then replaces itself with COMMAND. Exit 2 with no command, 78 when the file is missing or a line is not a pair (named by line number, never quoted), 127 when COMMAND cannot run. |
 
-`vibey doctor` prints one `supervisor-worker` and one `supervisor-delivery` line: `PASS`
+`vibey doctor` prints one `supervisor-worker` and one `supervisor-delivery` line, and a
+`supervisor-state-sync` line with `state_sync = true`: `PASS`
 when the service runs; `WARN` when it is not installed, not loaded or stopped, naming what
 is missing; `FAIL` instead of `WARN` with `[supervisor] required = true`. An unreadable
 `[supervisor]` table is a `FAIL`.
+
+## `vibey state`
+
+Keeps this database and a sealed copy of it on the repository's `vibey-state` branch the
+same, in both directions
+([ADR-0086](../architecture/decisions/0086-state-sync.md)). The branch holds one file,
+encrypted with AES-256-GCM under the state key, and nothing else. Every setting is a
+`VIBEY_STATE_*` variable ([State sync](configuration.md#state-sync)); the database is
+`VIBEY_STATE_PG_URL`, else `VIBEY_PG_URL`. Bare `vibey state` prints help. Subcommands, in
+`vibey state --help` order: `sync`, `status`, `export`, `import`, `forget`, `key`.
+
+| Subcommand | Option | Default | What it does |
+|---|---|---|---|
+| `state sync` | `--no-push` | off | Merge this database with the branch's head, three-way against the commit it last synced with, and write the result to each end that differs. With `--no-push`, write only here: the branch is read, never written. |
+| | `--every SECONDS` | unset | Sync every this many seconds (a number above 0), for as long as the process lives. Each round's line starts with its UTC time. A failed round is said on stderr and the next one runs. What `[supervisor] state_sync` runs. |
+| `state status` | `--json` | off | What a sync would pull and push. Writes nothing at either end. `--json` prints one object: `state`, `remote`, `commit`, `rows`, `to_pull`, `to_push`, `conflicts`. |
+| `state export` | `--out FILE` | required | Write this database, sealed under the state key, with the commit it last synced with, to FILE (mode 0600, written whole or not at all). For carrying it to an empty database, as the remote-command workflow does. |
+| `state import FILE` | | | Load a sealed export into this database, which must hold no rows in any synced table and have applied the same migrations as the export. Records the export's commit as this database's, so the next `sync` stays three-way. |
+| `state forget` | | | Forget the commit this database last synced with, so the next `sync` merges both ends as a first sync would, against no base. Only for a branch that was rewritten or deleted: the sync refuses until then, and says so. |
+| `state key` | | | Say where the state key is: `VIBEY_STATE_KEY`, the macOS keychain or the key file. Exit 1 when there is none. |
+| | `--new` | off | Make a key and keep it where it would be found first here: the keychain on macOS, the key file elsewhere. Refused while a key exists anywhere: replacing one makes every state sealed under it unreadable. |
+| | `--show` | off | Print the key, and only the key, for another machine's `VIBEY_STATE_KEY` or for a private repository's runners: `vibey state key --show \| gh secret set VIBEY_STATE_KEY`. |
+
+`sync` and `status` print one line: `OWNER/NAME:vibey-state: in sync at <commit>, N row(s)`;
+`synced at <commit>: N row change(s) pulled, pushed; N row(s)`; or, from `status`,
+`N row change(s) to pull, changes here to push; N row(s)`. A row both ends changed
+differently is settled by its table's rule (`newest`, `mine`, `theirs` or `refuse`). A
+conflict no rule settles stops the sync before anything is written: it prints
+`N conflict(s); nothing was changed at either end:` to stderr, then one line per row
+(`table key: reason`), and exits 1. The ledger is never settled by a rule: two ends that
+appended different events at the same `seq` have diverged, and a person decides. Two
+databases that applied different migrations are refused: run `vibey migrate` on the one
+behind. A sync that found the database or the branch moved under it starts again, up to
+`VIBEY_STATE_ATTEMPTS` times. Run twice in a row, the second sync pulls nothing and pushes
+nothing.
+
+Exit codes: 0 done or in sync; 1 a conflict, a refusal (no key, a key that does not open
+the branch, a base the branch no longer reaches) or a failure, each said on stderr; 2 a
+setting that cannot be used. `vibey state` is never offered by the hub, and the hub refuses
+it as a command for the workflows (`RESERVED_COMMANDS`). On the runner the remote-command
+workflow runs it itself, and only for a private repository (ADR-0086).
 
 ## `vibey ledger`
 
@@ -1241,6 +1283,7 @@ Variables read by code under `src/vibey`:
 |---|---|---|
 | `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor`; `migrate` | The application role's PostgreSQL 14+ DSN ([database roles](configuration.md#database-roles)). There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server but does not set this variable for the parent shell. |
 | `VIBEY_PG_MIGRATE_URL` | `migrate` only | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it. |
+| `VIBEY_STATE_PG_URL`, `VIBEY_STATE_KEY` and the other `VIBEY_STATE_*` | `state` only | The database the state sync reads and writes (default `VIBEY_PG_URL`), the state key, and where the sealed state lives; every one in [State sync](configuration.md#state-sync). |
 | `VIBEY_EVIDENCE_DIR` | `work --provider gptossloop`, `worker --provider gptossloop` | Directory of reading material for the gptossloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_GPTOSSLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables gptossloop; any other set value, `0` included, disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] gptossloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, gptossloop is on (ADR-0064). |
 | `VIBEY_OLLAMA_URL` | `work` and `worker` with `--provider gptossloop`; `doctor --sovereign-fit`; `loops`; the worker's local engines | The Ollama server, default `http://127.0.0.1:11434`. Only an `http(s)` URL with a host is accepted. |

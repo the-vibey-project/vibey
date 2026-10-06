@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 85, the newest 0085 — `vibey -w`: any vibey command, run on the repository's GitHub-hosted runners.
+- **Decision records:** 86, the newest 0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt
