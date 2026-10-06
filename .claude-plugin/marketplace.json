@@ -6,12 +6,12 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 145 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 146 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
         "name": "vibey-skills",
-        "version": "2.23.0"
+        "version": "2.24.0"
       },
       {
         "path": "src/vibey_tools/gh",
@@ -335,6 +335,17 @@
       "description": "Computer Peripherals — Design, Building, Standards and Programming: the peripheral stack, USB architecture, USB-C and Power Delivery, Thunderbolt and alternate modes, wireless peripherals, embedded buses, PCIe peripherals, HID, keyboards, mice and pointing devices, displays, audio interfaces, printers and scanners, storage and capture, controllers and haptics, designing a custom peripheral, firmware, PCB and mechanical design, enumeration and debugging, drivers and OS integration, measuring latency, compliance and certification, accessibility, and peripheral security.",
       "version": "0.1.0",
       "category": "hardware",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "content-engineering-pipeline",
+      "source": "./src/vibey_tools/skills/plugins/content-engineering-pipeline",
+      "description": "Content Engineering Pipeline: a sequential fourteen-phase method that turns a vague topic into a falsifiable thesis and carries it through a verified non-fiction book, a novel, a screenplay, an AI-generated hub film with a five-spoke campaign, and distribution. It begins by asking the author to state their own governing postulates — what they hold to be true, the ethic their work serves, and their limits on means — and holds the method's limits on means throughout: no predetermined conclusions, opposing arguments mapped more carefully than supporting ones, every source verified, personal testimony never fabricated, narrative power never in excess of the evidence, and no manufactured urgency, outrage, false social proof or misrepresented content. Thesis development (topic to question to problem to claim, the thick thesis, the five-part problem statement, terrain mapping with a citation-confidence system, the seven-step argument investigation); book assembly and six-pass revision to a Publication Readiness Declaration; novel conversion with architecture before prose; screenplay architecture with the dramatic spine and the fifteen-beat structure; AI film production and the hub-and-spoke curiosity cascade; and Amazon KDP submission, digital deployment and in-person delivery, with vendor, platform and KDP specifics dated as volatile.",
+      "version": "0.1.0",
+      "category": "content",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"

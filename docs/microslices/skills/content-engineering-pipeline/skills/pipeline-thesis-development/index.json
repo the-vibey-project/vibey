@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-content-engineering-pipeline-phases-1-2-and-3-05c928fbdf",
+    "purpose": "content engineering pipeline phases 1 2 and 3",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development/001-content-engineering-pipeline-phases-1-2-and-3.md",
+    "requires": [],
+    "links": [
+      "skill-before-phase-1-state-your-governing-postulates-9b908c2b10"
+    ]
+  },
+  {
+    "id": "skill-before-phase-1-state-your-governing-postulates-9b908c2b10",
+    "purpose": "before phase 1 state your governing postulates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development/002-before-phase-1-state-your-governing-postulates.md",
+    "requires": [
+      "skill-content-engineering-pipeline-phases-1-2-and-3-05c928fbdf"
+    ],
+    "links": [
+      "skill-phase-1-problem-identification-8c77533cef"
+    ]
+  },
+  {
+    "id": "skill-phase-1-problem-identification-8c77533cef",
+    "purpose": "phase 1 problem identification",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development/003-phase-1-problem-identification.md",
+    "requires": [
+      "skill-before-phase-1-state-your-governing-postulates-9b908c2b10"
+    ],
+    "links": [
+      "skill-phase-2-terrain-mapping-70301b3a4f"
+    ]
+  },
+  {
+    "id": "skill-phase-2-terrain-mapping-70301b3a4f",
+    "purpose": "phase 2 terrain mapping",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development/004-phase-2-terrain-mapping.md",
+    "requires": [
+      "skill-phase-1-problem-identification-8c77533cef"
+    ],
+    "links": [
+      "skill-phase-3-argument-investigation-522c8ddb59"
+    ]
+  },
+  {
+    "id": "skill-phase-3-argument-investigation-522c8ddb59",
+    "purpose": "phase 3 argument investigation",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development/005-phase-3-argument-investigation.md",
+    "requires": [
+      "skill-phase-2-terrain-mapping-70301b3a4f"
+    ],
+    "links": [
+      "skill-how-the-three-phases-connect-09e0d409ce"
+    ]
+  },
+  {
+    "id": "skill-how-the-three-phases-connect-09e0d409ce",
+    "purpose": "how the three phases connect",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development/006-how-the-three-phases-connect.md",
+    "requires": [
+      "skill-phase-3-argument-investigation-522c8ddb59"
+    ],
+    "links": [
+      "skill-operating-principles-for-this-skill-711a22faa9"
+    ]
+  },
+  {
+    "id": "skill-operating-principles-for-this-skill-711a22faa9",
+    "purpose": "operating principles for this skill",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development/007-operating-principles-for-this-skill.md",
+    "requires": [
+      "skill-how-the-three-phases-connect-09e0d409ce"
+    ],
+    "links": []
+  }
+]

@@ -21,6 +21,11 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   in the plugin's `scripts/`: `home-valuation` (seven skills: buying and selling a house),
   `car-valuation` (seven: buying and selling a car) and `business-valuation` (nine: company and
   non-profit valuation, buying and selling). vibey-skills 2.23.0; 141 plugins, 768 skills.
+* **skills:** `content-engineering-pipeline` (six skills): a sequential 14-phase method from a
+  falsifiable thesis to a verified book, a novel, a screenplay, an AI-generated hub film with a
+  five-spoke campaign, and distribution. It opens by asking each user to state their own
+  governing postulates, and dates its vendor, platform and KDP specifics as volatile.
+  vibey-skills 2.24.0; 142 plugins, 774 skills.
 
 ## [4.1.0] (2026-10-05)
 
