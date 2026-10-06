@@ -10,7 +10,7 @@
 G_BEGIN_DECLS
 
 /* The places, in sidebar order. Each is also a page name ("projects", "gates", ...). */
-#define KR_WINDOW_PAGES 8
+#define KR_WINDOW_PAGES 9
 extern const char *const kr_window_page_names[KR_WINDOW_PAGES];
 
 GtkWidget *kr_window_new(KrApp *app);

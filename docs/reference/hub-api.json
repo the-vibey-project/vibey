@@ -76,7 +76,8 @@
           "answer",
           "spend",
           "run",
-          "bump"
+          "bump",
+          "workflows"
         ],
         "title": "HubScope",
         "type": "string"
@@ -139,6 +140,26 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkflowRunBody": {
+        "description": "A vibey command line to run on the repository's GitHub-hosted runners (ADR-0085).",
+        "properties": {
+          "argv": {
+            "description": "The command line, without `vibey` or -w: for example [\"status\", \"--json\"].",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Argv",
+            "type": "array"
+          }
+        },
+        "required": [
+          "argv"
+        ],
+        "title": "WorkflowRunBody",
         "type": "object"
       }
     },
@@ -1302,6 +1323,141 @@
         "summary": "One project's phase, queue depth and engine circuits.",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/workflows/runs": {
+      "post": {
+        "operationId": "run_on_workflows_api_v1_workflows_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "502": {
+            "description": "GitHub refused the dispatch."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run a vibey command on the repository's GitHub-hosted runners (vibey -w).",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/api/v1/workflows/runs/{request_id}": {
+      "get": {
+        "description": "A device reads back only a run it started: the request id the hub minted for it is bound to that device. Any other id is answered 404, whether or not such a run exists. The host reads any run.",
+        "operationId": "workflow_run_api_v1_workflows_runs__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "404": {
+            "description": "No run this principal started has that id."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "502": {
+            "description": "GitHub could not be read."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Where a command sent to the workflows is, and its output once it ran.",
+        "tags": [
+          "workflows"
         ]
       }
     },

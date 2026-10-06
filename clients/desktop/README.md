@@ -14,7 +14,8 @@ over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's da
 | Loops and effort | The loops, their engines and the effort ladder, up to ULTRA. |
 | Budgets | What the chosen project has spent this cycle, against its caps. |
 | Doctor | The checks the hub runs itself. |
-| Devices | Hubs found on your network (`_vibey._tcp`) with the certificate each advertises, this computer's hub, the hub this device is paired with, and pairing by the host's 6-digit code or its `vibey-pair://` address. |
+| Run on GitHub | A vibey command run on the repository's GitHub-hosted runners, as `vibey -w` runs it ([ADR-0085](../../docs/architecture/decisions/0085-vibey-on-the-workflows.md)). Type the command as it would follow `vibey -w` (`status --json`; double quotes keep spaces), and krypton sends it through the hub, asks every ten seconds where it is (queued, running, done or failed) for up to an hour, links its GitHub run, and shows its exit code and what it printed, selectable, in monospace. The paired device needs the `workflows` scope, and the scopes of what the command itself does; a hub with the workflows switched off, or a command the hub never runs (`migrate`, `budget set`), is said as such. |
+| Devices | Hubs found on your network (`_vibey._tcp`) with the certificate each advertises, this computer's hub, the hub this device is paired with and each scope it holds, in words, and pairing by the host's 6-digit code or its `vibey-pair://` address. |
 | Settings | Light, Dark or System (the default, which follows your desktop live), notifications and sounds. |
 
 Keyboard: `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
@@ -32,7 +33,8 @@ nothing (SD-01). krypton reaches it only as a device the host has paired, never 
 host's token:
 
 1. On the hub's computer, the host offers a code: `vibey hub pair --scope view` (add the
-   scopes this device may use). It prints a 6-digit code, valid once for two minutes, and
+   scopes this device may use: `--scope workflows` lets it run commands on GitHub from the
+   Run on GitHub page). It prints a 6-digit code, valid once for two minutes, and
    beneath it the pairing address, `vibey-pair://<host>:<port>?fp=<certificate>&code=…`.
 2. In krypton's Devices page, either choose the hub krypton found, compare the certificate
    shown under it with the one `vibey hub pair` printed, and type the 6-digit code; or paste
@@ -101,7 +103,11 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
   - `kr-settings`: themes and channels;
   - `kr-pairing` and `kr-pairing-client`: the pairing code and address, the claim, the
     device's key and where it is kept;
-  - `kr-discovery`, with its Avahi and dns_sd backends.
+  - `kr-discovery`, with its Avahi and dns_sd backends;
+  - `kr-workflows` and `kr-workflows-client`: a command run on the repository's GitHub-hosted
+    runners through the hub (`/api/v1/workflows/runs`): the typed command line in words, the
+    request, the run in each state, every refusal in words, and the poller that follows a run
+    to its end (every 10 s, for up to 60 minutes, cancellable).
 - **`src/app/`: thin GTK views.** They read the state and redraw the slice that changed.
   Colours come from the design tokens (ADR-0066): `design/dist/c/vibey_tokens.h` for the
   mark, and the generated `design/dist/gtk` stylesheets, which libadwaita loads as the

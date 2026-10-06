@@ -19,6 +19,7 @@ from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPol
 from vibey.infrastructure.git.clean_env import CleanGitEnvSubprocessExecutor
 from vibey.infrastructure.notify.desktop import DesktopNotifier
 from vibey.infrastructure.skills_context import VibeySkillsContextCompiler
+from vibey.infrastructure.workflows.gh_workflows import GhCliSubprocessExecutor
 
 _NAME = "VIBEY_PG_MIGRATE_URL"
 
@@ -42,6 +43,7 @@ def test_no_gate_command_git_call_az_call_notifier_or_skills_cli_receives_it(
         "gate": SubprocessGateRunner()._environment,
         "git": CleanGitEnvSubprocessExecutor()._environment,
         "az": AzCliSubprocessExecutor().environment,
+        "gh": GhCliSubprocessExecutor().environment,
         "notifier": DesktopNotifier()._environment,
         "skills": VibeySkillsContextCompiler(
             mode="shadow", index_path=tmp_path / "index"
@@ -60,6 +62,7 @@ def test_no_gate_command_git_call_az_call_notifier_or_skills_cli_receives_it(
         ),
         lambda: SubprocessGateRunner.from_config({"gates": {"env_allow": [_NAME]}}),
         lambda: AzCliSubprocessExecutor(env_allow=(_NAME,)),
+        lambda: GhCliSubprocessExecutor(env_allow=(_NAME,)),
     ],
 )
 def test_no_declaration_can_put_it_back(declare: object) -> None:

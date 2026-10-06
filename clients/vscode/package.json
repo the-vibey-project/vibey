@@ -310,6 +310,12 @@
         "icon": "$(debug-disconnect)"
       },
       {
+        "command": "vibey.runOnWorkflows",
+        "title": "Run a vibey command on GitHub",
+        "category": "krypton",
+        "icon": "$(github)"
+      },
+      {
         "command": "vibey.chooseTheme",
         "title": "Choose the theme (Light, Dark or System)",
         "category": "krypton",
@@ -766,6 +772,12 @@
           "type": "string",
           "default": "",
           "markdownDescription": "The vibey hub (`vibey serve`, ADR-0068) this device is paired with, like `http://studio.local:8765`. Empty: the local `vibey` command line, the default. Set it with **krypton: Connect to vibey on this network**, which also keeps the hub's key in the editor's secret storage, never in settings."
+        },
+        "vibey.workflows": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "markdownDescription": "Run every vibey call on the repository's GitHub workflows, as `vibey --workflows …` (ADR-0085), instead of on this computer. It needs the GitHub CLI (`gh`) installed and logged in, and the open folder's repository to carry `.github/workflows/vibey-remote.yml`. Each call waits for its run, so views are slow to fill. A paired hub (`vibey.hubUrl`) takes precedence. **krypton: Run a vibey command on GitHub** sends a single command either way."
         }
       }
     },
@@ -904,6 +916,10 @@
           {
             "name": "disconnect",
             "description": "Forget the hub's key on this device and go back to the local vibey command line."
+          },
+          {
+            "name": "workflows",
+            "description": "Run one vibey command on the repository's GitHub-hosted runners and show what it printed, its exit code and its run."
           },
           {
             "name": "theme",

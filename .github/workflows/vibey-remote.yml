@@ -1,0 +1,87 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: vibey (remote command)
+run-name: vibey ${{ inputs.request }}
+
+# `vibey -w <command>` (ADR-0085): every krypton interface, through the CLI or the hub, can run a
+# vibey command here, on a GitHub-hosted runner, instead of on the machine it runs on. The
+# caller dispatches this workflow with the command line and a request id; the run carries the
+# id in its name, so the caller finds it again from the id alone; the command's exit code and
+# what it printed come back as the `vibey-result` artifact.
+#
+# The runner starts from nothing: vibey from this checkout, and an empty PostgreSQL migrated
+# for the run, so a command that reads the queue reads an empty one. A PRIVATE repository that
+# wants its commands to reach a real queue declares `VIBEY_WORKFLOWS_PG_URL` (and, for
+# migrations, `VIBEY_WORKFLOWS_PG_MIGRATE_URL`) as secrets; a public one never uses them,
+# because anyone can read its runs' logs and reports. No engine key, no model and no other secret is
+# here. Only someone with write access to the repository can dispatch a workflow at all.
+#
+# The command line arrives through `env:`, never interpolated into a script, and is run as an
+# argument vector, never through a shell. It is held to the domain's own rules
+# (`vibey.domain.remote_command.RemoteCommand`) before it runs.
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: "The request id the caller finds this run by"
+        required: true
+        type: string
+      argv:
+        description: "The command line, as a JSON array of strings, without `vibey` or -w"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: vibey, on a GitHub-hosted runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vibey
+          POSTGRES_PASSWORD: vibey
+          POSTGRES_DB: vibey
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vibey"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Check out vibey
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install vibey from this checkout
+        run: python -m pip install --quiet -e .
+      - name: Run the command
+        env:
+          ARGV: ${{ inputs.argv }}
+          REQUEST: ${{ inputs.request }}
+          # A declared database is used only when this is true: a public repository's run
+          # logs and artifacts can be read by others.
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+          DECLARED_PG_URL: ${{ secrets.VIBEY_WORKFLOWS_PG_URL }}
+          DECLARED_PG_MIGRATE_URL: ${{ secrets.VIBEY_WORKFLOWS_PG_MIGRATE_URL }}
+        run: python scripts/vibey_remote.py run --out "$RUNNER_TEMP/out"
+      # upload-artifact stores files relative to the paths' deepest common directory, so the
+      # caller finds result.json at the artifact's root (tests/meta/test_workflow_artifacts.py).
+      - name: Hand the report back
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vibey-result
+          path: ${{ runner.temp }}/out/
+          retention-days: 7
+          if-no-files-found: error

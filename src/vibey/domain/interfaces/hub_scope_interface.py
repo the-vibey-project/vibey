@@ -28,6 +28,19 @@ class HubScopePolicyInterface(Protocol):
         """True when `capability` is one no scope grants and no route offers."""
         ...
 
+    @staticmethod
+    def command_words(argv: tuple[str, ...]) -> tuple[str, ...]:
+        """A vibey command line's command words, after its leading global options."""
+        ...
+
+    def reserved_command(self, argv: tuple[str, ...]) -> str | None:
+        """The reserved capability a vibey command line reaches, or None."""
+        ...
+
+    def scopes_for_command(self, argv: tuple[str, ...]) -> frozenset[HubScope]:
+        """Every scope a caller must hold to send `argv` to the workflows."""
+        ...
+
     def parse(self, values: frozenset[str]) -> frozenset[HubScope]:
         """The scopes `values` names; `ValueError` for any name this version lacks."""
         ...

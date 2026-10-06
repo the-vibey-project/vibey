@@ -40,6 +40,8 @@ class HubScope(StrEnum):
     """Start, stop or wind down work."""
     BUMP = "bump"
     """Move a queued job to the front of its project's queue."""
+    WORKFLOWS = "workflows"
+    """Run a vibey command on the repository's GitHub-hosted runners (`vibey -w`, ADR-0085)."""
 
 
 class HubAction(StrEnum):
@@ -50,6 +52,7 @@ class HubAction(StrEnum):
     ANSWER_SPEND_GATE = "answer_spend_gate"
     RUN_WORK = "run_work"
     BUMP_JOB = "bump_job"
+    RUN_ON_WORKFLOWS = "run_on_workflows"
 
 
 REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
@@ -58,6 +61,7 @@ REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
     HubAction.ANSWER_SPEND_GATE: HubScope.SPEND,
     HubAction.RUN_WORK: HubScope.RUN,
     HubAction.BUMP_JOB: HubScope.BUMP,
+    HubAction.RUN_ON_WORKFLOWS: HubScope.WORKFLOWS,
 }
 """The one scope each action needs. Total over `HubAction`; a test holds it so."""
 
@@ -72,6 +76,71 @@ NEVER_FROM_THE_HUB: Final[frozenset[str]] = frozenset(
     }
 )
 """Capabilities no scope grants and no hub route offers. They stay on the host."""
+
+RESERVED_COMMANDS: Final[dict[tuple[str, ...], str]] = {
+    ("migrate",): "migrations",
+    ("budget", "set"): "change_caps",
+    ("budget", "clear"): "change_caps",
+    ("budget", "cap"): "change_caps",
+    ("budget", "no-cap"): "no_cap",
+}
+"""The vibey commands that reach a `NEVER_FROM_THE_HUB` capability, by their leading words.
+A command sent to the workflows through the hub (ADR-0085) runs where a repository may have
+declared its real database, so the hub refuses these there exactly as it never routes them
+itself. Paid use, the DSN and the canon have no command: they are declared in files."""
+
+READ_COMMANDS: Final[dict[tuple[str, ...], frozenset[str]]] = {
+    (): frozenset(),  # global options alone: --version, --help
+    ("status",): frozenset({"--json"}),
+    ("projects",): frozenset({"--json"}),
+    ("gates",): frozenset({"--json"}),  # not --remind: it notifies
+    ("engines",): frozenset(),
+    ("loops",): frozenset({"--json"}),
+    ("cost",): frozenset(),
+    # Not --record, --fit-output, --install-postgres, --conformance or --sovereign-fit:
+    # they write, install, or run an engine.
+    ("doctor",): frozenset({"--project", "--engines", "--provider", "--engine", "--cluster"}),
+    ("ledger", "show"): frozenset({"--kind", "--limit", "--phase", "-n"}),
+    ("ledger", "search"): frozenset(
+        {
+            "--actor",
+            "--digest",
+            "--id",
+            "--json",
+            "--kind",
+            "--limit",
+            "--since",
+            "--text",
+            "--until",
+            "-n",
+        }
+    ),
+    ("queue", "list"): frozenset({"--json"}),
+    ("budget", "show"): frozenset({"--all", "--json"}),
+    ("ultra", "status"): frozenset({"--json"}),
+    ("deploy", "status"): frozenset(),
+    ("deploy", "inspect"): frozenset(),
+}
+"""The vibey commands that only read, each with the options that keep it a read. A read
+command that carries any other option -- `gates --remind`, `doctor --record` -- is not
+taken for a read: it needs every scope, so an option added to a command later fails closed."""
+
+COMMAND_ACTIONS: Final[dict[tuple[str, ...], frozenset[HubAction]]] = {
+    **{words: frozenset({HubAction.READ}) for words in READ_COMMANDS},
+    # The command line cannot say whether the gate spends money, so both are needed.
+    ("answer",): frozenset({HubAction.ANSWER_GATE, HubAction.ANSWER_SPEND_GATE}),
+    ("queue", "bump"): frozenset({HubAction.BUMP_JOB}),
+    ("queue", "unbump"): frozenset({HubAction.BUMP_JOB}),
+    ("work",): frozenset({HubAction.RUN_WORK}),
+    ("worker",): frozenset({HubAction.RUN_WORK}),
+    ("ultra", "start"): frozenset({HubAction.RUN_WORK}),
+    ("ultra", "stop"): frozenset({HubAction.RUN_WORK}),
+    ("abandon",): frozenset({HubAction.RUN_WORK}),
+}
+"""What a vibey command sent to the workflows through the hub does, as hub actions. On a
+repository that declares its real database the command acts on it, so the `workflows` scope
+alone must not let a device do what its other scopes do not: the caller needs the scope of
+each action too, and a command not named here needs every scope the hub defines (ADR-0085)."""
 
 SPEND_GATE_KINDS: Final[frozenset[str]] = frozenset(
     {
@@ -105,6 +174,57 @@ class HubScopePolicy:
     def reserved(self, capability: str) -> bool:
         """True when `capability` is one the hub never offers (`NEVER_FROM_THE_HUB`)."""
         return capability in NEVER_FROM_THE_HUB
+
+    @staticmethod
+    def command_words(argv: tuple[str, ...]) -> tuple[str, ...]:
+        """A vibey command line's command, read after its leading global options (whose
+        values are skipped) and up to its first option."""
+        words: list[str] = []
+        skip = False
+        for arg in argv:
+            if skip:
+                skip = False
+            elif arg in ("--log-level", "--log-file"):
+                skip = True
+            elif not arg.startswith("-"):
+                words.append(arg)
+            elif words:
+                break
+        return tuple(words)
+
+    def reserved_command(self, argv: tuple[str, ...]) -> str | None:
+        """The `NEVER_FROM_THE_HUB` capability a vibey command line reaches, or None."""
+        words = self.command_words(argv)
+        for prefix, capability in RESERVED_COMMANDS.items():
+            if words[: len(prefix)] == prefix:
+                return capability
+        return None
+
+    def scopes_for_command(self, argv: tuple[str, ...]) -> frozenset[HubScope]:
+        """Every scope a caller must hold to send `argv` to the workflows: `workflows`, and
+        the scope of each action the command performs; every scope for a command
+        `COMMAND_ACTIONS` does not name. The longest matching prefix decides."""
+        words = self.command_words(argv)
+        matches = [p for p in COMMAND_ACTIONS if words[: len(p)] == p and (p or not words)]
+        if not matches:
+            return frozenset(HubScope)
+        prefix = max(matches, key=len)
+        if prefix in READ_COMMANDS and not self._only_safe_options(argv, READ_COMMANDS[prefix]):
+            return frozenset(HubScope)
+        actions = COMMAND_ACTIONS[prefix]
+        return frozenset({HubScope.WORKFLOWS} | {REQUIRED_SCOPE[a] for a in actions})
+
+    def _only_safe_options(self, argv: tuple[str, ...], safe: frozenset[str]) -> bool:
+        """True when every option after the command is `--help` or one of `safe`. An option's
+        `=value` is set aside; any token that is not exactly a declared option (`-n5`) is
+        not one of them."""
+        words = self.command_words(argv)
+        if not words:
+            return True
+        after = argv[argv.index(words[-1]) + 1 :]
+        return all(
+            arg.split("=", 1)[0] in safe | {"--help"} for arg in after if arg.startswith("-")
+        )
 
     def parse(self, values: frozenset[str]) -> frozenset[HubScope]:
         """The scopes `values` names. An unknown name raises `ValueError`: a grant that

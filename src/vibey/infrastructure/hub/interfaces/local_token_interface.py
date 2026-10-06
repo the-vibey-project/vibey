@@ -21,6 +21,11 @@ class LocalTokenStoreInterface(Protocol):
         """The token, created 0600 on first call; refuses a file others can read."""
         ...
 
+    def run_key(self) -> bytes:
+        """The 32-byte key workflows request ids are minted under, created 0600 on first
+        call; refuses a file others can read, and `ValueError` for one of another length."""
+        ...
+
     def record_serving(self, record: ServingRecord) -> None:
         """Writes where the hub listens."""
         ...

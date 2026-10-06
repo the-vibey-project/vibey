@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 84, the newest 0084 — A rolling nightly of every krypton interface, from the release builders.
+- **Decision records:** 85, the newest 0085 — `vibey -w`: any vibey command, run on the repository's GitHub-hosted runners.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

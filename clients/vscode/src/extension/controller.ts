@@ -22,6 +22,8 @@ export class VibeyController implements VibeyControllerInterface {
   readonly runs = new Map<string, TaskRunInterface>();
   readonly next: NextTask = { attachments: [], plugins: [] };
   readonly output: vscode.OutputChannel;
+  /** What commands sent to the repository's GitHub workflows printed, each with its run and exit code. */
+  readonly workflowsOutput: vscode.OutputChannel;
   private readonly changes = new vscode.EventEmitter<void>();
   readonly onDidChange = this.changes.event;
   private core: CoreServices;
@@ -37,11 +39,13 @@ export class VibeyController implements VibeyControllerInterface {
     private readonly settings: EditorSettings,
   ) {
     this.output = vscode.window.createOutputChannel('krypton');
+    this.workflowsOutput = vscode.window.createOutputChannel('krypton: GitHub workflows');
     this.secrets = context.secrets;
     this.core = this.build();
     void this.loadHubKey();
     context.subscriptions.push(
       this.output,
+      this.workflowsOutput,
       this.changes,
       settings.onChange(() => {
         // Runs already going keep the core they started with; new ones get the new settings.

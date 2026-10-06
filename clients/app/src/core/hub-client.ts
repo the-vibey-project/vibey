@@ -28,9 +28,19 @@ import type {
   HubLane,
   HubQueueJob,
   HubRefusal,
+  HubScope,
+  WorkflowRun,
+  WorkflowRunState,
 } from './interfaces/hub-client-interface';
 
 type Json = Record<string, unknown>;
+type Refusals = Readonly<Record<number, readonly [HubRefusal, string]>>;
+
+/** How one route reads its answer: the status it succeeds with, and its own refusals first. */
+interface SendOptions {
+  readonly accept?: number;
+  readonly refusals?: Refusals;
+}
 
 export class HubError extends Error {
   constructor(
@@ -60,6 +70,32 @@ export class HubClient implements HubClientInterface {
     429: ['too-many', 'Too many requests. Wait a moment and try again.'],
     503: ['unavailable', "The hub is up, but vibey's database does not answer."],
   };
+
+  /** What each scope the host may grant permits (hub-api.md, "Who may do what"). */
+  static readonly SCOPES: Readonly<Record<HubScope, string>> = {
+    view: 'See projects, gates, lanes, budgets and the doctor',
+    answer: 'Answer a gate that does not spend',
+    spend: 'Answer a gate that spends, with answer',
+    run: 'Reserved for starting and stopping work',
+    bump: 'Bump a job to the front of the queue',
+    workflows: "Run vibey commands on the repository's GitHub-hosted runners",
+  };
+
+  /** The workflows routes' own refusals (ADR-0085); the hub's `detail` is added to each. */
+  static readonly WORKFLOW_REFUSALS: Refusals = {
+    403: [
+      'forbidden',
+      'This device may not run that on GitHub. It needs the `workflows` scope and the scopes of what the command does; commands like `migrate` and `budget set` never run from the hub.',
+    ],
+    404: ['not-found', 'The hub knows no such run.'],
+    422: ['invalid', 'The hub refused that command line.'],
+    502: ['upstream', 'GitHub refused the run, or could not be read. Try again in a moment.'],
+    503: ['unavailable', 'This hub does not run commands on GitHub: workflows are not enabled on it.'],
+  };
+
+  /** As `WorkflowRunBody` bounds it in the OpenAPI document. */
+  static readonly MAX_ARGV = 200;
+  static readonly WORKFLOW_STATES: readonly WorkflowRunState[] = ['queued', 'running', 'done', 'failed'];
 
   private sequence = 0;
   private readonly requestIds = new Map<string, string>();
@@ -246,11 +282,37 @@ export class HubClient implements HubClientInterface {
       }));
   }
 
+  async startWorkflowRun(argv: readonly string[]): Promise<WorkflowRun> {
+    if (argv.length < 1 || argv.length > HubClient.MAX_ARGV) {
+      throw new HubError('invalid', `A command line is 1 to ${HubClient.MAX_ARGV} words.`);
+    }
+    const parsed = await this.post('/api/v1/workflows/runs', { argv: [...argv] }, { accept: 202, refusals: HubClient.WORKFLOW_REFUSALS });
+    return HubClient.workflowRunOf(parsed);
+  }
+
+  async workflowRun(requestId: string): Promise<WorkflowRun> {
+    const parsed = await this.send(`/api/v1/workflows/runs/${encodeURIComponent(requestId)}`, { method: 'GET', headers: this.headers() }, { refusals: HubClient.WORKFLOW_REFUSALS });
+    return HubClient.workflowRunOf(parsed);
+  }
+
   /**
    * A `GateAnswer` as the hub takes it: what `vibey answer --raw` takes. `--defaults` is
    * resolved by the command line on the host from the gate's own defaults, so a device cannot
    * send it; it sends pairs instead.
    */
+  /**
+   * A run's link, kept only when it is `https:`. The screen opens it with the system's URL
+   * handler, so a hub that sent `javascript:`, `intent:` or `tel:` must not reach it: anything
+   * else reads as no link at all (security review of ADR-0085).
+   */
+  static httpsUrl(url: string): string {
+    try {
+      return new URL(url).protocol === 'https:' ? url : '';
+    } catch {
+      return '';
+    }
+  }
+
   static answerDocument(answer: GateAnswer): Json {
     switch (answer.mode) {
       case 'verdict':
@@ -302,6 +364,36 @@ export class HubClient implements HubClientInterface {
     };
   }
 
+  private static workflowRunOf(parsed: unknown): WorkflowRun {
+    if (
+      !HubClient.isRecord(parsed) ||
+      typeof parsed.request_id !== 'string' ||
+      !HubClient.WORKFLOW_STATES.includes(parsed.state as WorkflowRunState)
+    ) {
+      throw new HubError('bad-answer', 'The hub did not send a workflows run.');
+    }
+    const text = (value: unknown): string => (typeof value === 'string' ? value : '');
+    return {
+      request_id: parsed.request_id,
+      state: parsed.state as WorkflowRunState,
+      url: HubClient.httpsUrl(text(parsed.url)),
+      exit_code: typeof parsed.exit_code === 'number' ? parsed.exit_code : null,
+      stdout: text(parsed.stdout),
+      stderr: text(parsed.stderr),
+      detail: text(parsed.detail),
+    };
+  }
+
+  /** The `detail` of a refusal's body, when it is a sentence; FastAPI's validation lists are not. */
+  private static refusalDetail(text: string): string {
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      return HubClient.isRecord(parsed) && typeof parsed.detail === 'string' ? parsed.detail.trim() : '';
+    } catch {
+      return '';
+    }
+  }
+
   private hostOnly(action: 'set-cap' | 'clear-cap'): Promise<never> {
     return Promise.reject(new HubError('not-on-a-device', DevicePolicy.HOST_ONLY[action] as string));
   }
@@ -324,20 +416,28 @@ export class HubClient implements HubClientInterface {
     return this.send(path, { method: 'GET', headers: this.headers() });
   }
 
-  private post(path: string, body: unknown): Promise<unknown> {
+  private post(path: string, body: unknown, options: SendOptions = {}): Promise<unknown> {
     const text = JSON.stringify(body);
-    return this.send(path, {
-      method: 'POST',
-      headers: { ...this.headers(), 'Content-Type': 'application/json' },
-      body: text,
-    });
+    return this.send(
+      path,
+      {
+        method: 'POST',
+        headers: { ...this.headers(), 'Content-Type': 'application/json' },
+        body: text,
+      },
+      options,
+    );
   }
 
   private headers(): Record<string, string> {
     return { Authorization: `Bearer ${this.connection.token}`, Accept: 'application/json' };
   }
 
-  private async send(path: string, init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string }): Promise<unknown> {
+  private async send(
+    path: string,
+    init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string },
+    options: SendOptions = {},
+  ): Promise<unknown> {
     let response;
     try {
       response = await this.fetchLike(`${this.connection.baseUrl}${path}`, init);
@@ -345,7 +445,12 @@ export class HubClient implements HubClientInterface {
       throw new HubError('unreachable', `No hub answers at ${this.connection.baseUrl}. Is \`vibey serve\` running, and is this device on the same network?`);
     }
     const text = await response.text();
-    if (response.status !== 200) {
+    if (response.status !== (options.accept ?? 200)) {
+      const own = options.refusals?.[response.status];
+      if (own !== undefined) {
+        const said = HubClient.refusalDetail(text);
+        throw new HubError(own[0], said === '' ? own[1] : `${own[1]} The hub said: ${said}`, response.status);
+      }
       const known = HubClient.REFUSALS[response.status];
       if (known !== undefined) {
         throw new HubError(known[0], known[1], response.status);

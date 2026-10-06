@@ -10,7 +10,8 @@ against no platform types at all ([ADR-0067](../../docs/architecture/decisions/0
 | `run-events` | a run's event stream as a transcript, and its verdict |
 | `commands` | the one command table: every client's palette and slash commands |
 | `vibey-cli` | the `vibey … --json` calls, and the gate-answer planner |
-| `transport` | `VibeyTransportInterface`, with `LocalProcessTransport` and `HubTransport` (the hub's routes, `docs/reference/hub-api.json`), and `HubDiscovery`, which finds a hub and checks a key |
+| `transport` | `VibeyTransportInterface`, with `LocalProcessTransport`, `WorkflowsTransport` (every call as `vibey --workflows …`, ADR-0085) and `HubTransport` (the hub's routes, `docs/reference/hub-api.json`), and `HubDiscovery`, which finds a hub and checks a key; each transport's `runOnWorkflows` sends one command line to the repository's GitHub-hosted runners |
+| `workflows` | `WorkflowsCommandLine`: a command line for the workflows read, checked, and its result read the same from `vibey -w` and from the hub, and `PortableTimer` |
 | `budgets` | the budget rules, the spend ledger and the guard (the file itself stays in each client) |
 | `doctor`, `ollama`, `ollama-lifecycle` | the setup checks and the local model's lifecycle |
 | `cli-support`, `jsonl-parse`, `local-runner`, `volatile-storage-error` | smaller shared pieces |

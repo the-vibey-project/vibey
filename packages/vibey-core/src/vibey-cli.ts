@@ -5,10 +5,12 @@
  * `vibey gates --json`, a project's queue and engines from `vibey status --json`, and an
  * answer goes through `vibey answer` exactly as a person would type it. The vibey on PATH
  * may be an older release without `projects` and `gates`; that is said plainly, with the
- * release that adds them, and nothing falls back to reading the database. Declared by
- * `interfaces/vibey-cli-interface.ts`.
+ * release that adds them, and nothing falls back to reading the database. With `workflows`
+ * set, every call goes through the one choke point (`must`) as `vibey --workflows …`, so it runs
+ * on the repository's GitHub-hosted runners instead (ADR-0085); `runOnWorkflows` sends any one
+ * command line there either way. Declared by `interfaces/vibey-cli-interface.ts`.
  */
-import type { Environment, ProcessRunnerInterface } from './interfaces/process-runner-interface';
+import type { Environment, ProcessRunnerInterface, RunOptions } from './interfaces/process-runner-interface';
 import type {
   AnswerChoice,
   AnswerMode,
@@ -17,34 +19,46 @@ import type {
   VibeyCircuit,
   VibeyBudget,
   VibeyCliInterface,
+  VibeyCliOptions,
   VibeyGate,
   VibeyProject,
   VibeyStatus,
 } from './interfaces/vibey-cli-interface';
+import type { WorkflowsRunOptions, WorkflowsRunResult, WorkflowsRunnerInterface } from './interfaces/workflows-interface';
+import { WorkflowsCommandLine } from './workflows';
 
 export class VibeyCliError extends Error {
   constructor(
     message: string,
-    readonly kind: 'missing-command' | 'failed' | 'bad-output',
+    readonly kind: 'missing-command' | 'failed' | 'bad-output' | 'refused',
   ) {
     super(message);
     this.name = 'VibeyCliError';
   }
 }
 
-export class VibeyCli implements VibeyCliInterface {
+export class VibeyCli implements VibeyCliInterface, WorkflowsRunnerInterface {
   /** The last release without `projects`, `gates`, `loops` and `budget`; 3.0.0 is the first with them. */
   static readonly COMMANDS_AFTER = '2.1.0';
   static readonly COMMANDS_IN = '3.0.0';
   /** How the extension signs a budget change: a label for vibey's record, not an authority. */
   static readonly ACTOR = 'vibey-vscode';
 
+  /** Whether every call runs on the workflows (`vibey --workflows …`) rather than here. */
+  readonly workflows: boolean;
+  private readonly cwd: (() => string | undefined) | undefined;
+  private readonly commandLine = new WorkflowsCommandLine();
+
   constructor(
     private readonly runner: ProcessRunnerInterface,
     private readonly executable: string,
     private readonly environment: Environment,
     private readonly timeoutMs = 60_000,
-  ) {}
+    options: VibeyCliOptions = {},
+  ) {
+    this.workflows = options.workflows === true;
+    this.cwd = options.cwd;
+  }
 
   async version(): Promise<string> {
     return (await this.must(['--version'])).trim();
@@ -181,6 +195,36 @@ export class VibeyCli implements VibeyCliInterface {
     return (await this.must(projectId === undefined ? ['cost'] : ['cost', projectId])).trim();
   }
 
+  /**
+   * `vibey --workflows <argv>`: the command line runs on the repository's GitHub-hosted runners,
+   * and what it printed, its exit code and its run come back. The wait is `vibey -w`'s own; a
+   * poll or timeout given here reaches it as VIBEY_WORKFLOWS_POLL_SECONDS and _TIMEOUT_SECONDS.
+   */
+  async runOnWorkflows(argv: readonly string[], options: WorkflowsRunOptions = {}): Promise<WorkflowsRunResult> {
+    const problem = this.commandLine.check(argv);
+    if (problem !== undefined) {
+      throw new VibeyCliError(problem, 'refused');
+    }
+    const waitMs = options.timeoutMs ?? WorkflowsCommandLine.TIMEOUT_MS;
+    const cwd = options.cwd ?? this.cwd?.();
+    const result = await this.runner.run(this.executable, [WorkflowsCommandLine.FLAG, ...argv], {
+      env: {
+        ...this.environment,
+        ...(options.pollMs === undefined ? {} : { VIBEY_WORKFLOWS_POLL_SECONDS: String(options.pollMs / 1000) }),
+        ...(options.timeoutMs === undefined ? {} : { VIBEY_WORKFLOWS_TIMEOUT_SECONDS: String(options.timeoutMs / 1000) }),
+      },
+      timeoutMs: waitMs + WorkflowsCommandLine.GRACE_MS,
+      ...(cwd === undefined ? {} : { cwd }),
+    });
+    if (result.code !== null) {
+      return this.commandLine.fromProcess(result);
+    }
+    if (result.timedOut) {
+      return this.commandLine.timedOut(this.commandLine.fromProcess(result).url, waitMs);
+    }
+    throw new VibeyCliError(`vibey ${WorkflowsCommandLine.FLAG} ${argv.join(' ')} could not run: ${result.error ?? `signal ${result.signal}`}`, 'failed');
+  }
+
   /** `vibey answer`'s argv for one answer, in the forms docs/reference/cli.md documents. */
   static answerArgs(gateId: string, answer: GateAnswer): string[] {
     switch (answer.mode) {
@@ -202,14 +246,17 @@ export class VibeyCli implements VibeyCliInterface {
     }
   }
 
+  /** The one place every call's argv passes: with `workflows`, each is sent as `vibey --workflows …`. */
   private async must(args: readonly string[], command?: string): Promise<string> {
-    const result = await this.runner.run(this.executable, args, { env: this.environment, timeoutMs: this.timeoutMs });
+    const argv = this.workflows ? [WorkflowsCommandLine.FLAG, ...args] : args;
+    const result = await this.runner.run(this.executable, argv, this.runOptions());
     if (result.code === 0) {
       return result.stdout;
     }
     const said = `${result.stderr}\n${result.stdout}`.trim();
     if (command !== undefined && /No such command/i.test(said)) {
-      const version = await this.runner.run(this.executable, ['--version'], { env: this.environment, timeoutMs: this.timeoutMs });
+      const asked = this.workflows ? [WorkflowsCommandLine.FLAG, '--version'] : ['--version'];
+      const version = await this.runner.run(this.executable, asked, this.runOptions());
       const which = version.code === 0 ? version.stdout.trim() : 'this vibey';
       throw new VibeyCliError(
         `${which} (${this.executable}) has no "vibey ${command}" command. It was added after vibey ${VibeyCli.COMMANDS_AFTER} and ships in vibey ${VibeyCli.COMMANDS_IN}; point the vibey.cliPath setting at a newer vibey.`,
@@ -217,9 +264,14 @@ export class VibeyCli implements VibeyCliInterface {
       );
     }
     throw new VibeyCliError(
-      `vibey ${args.join(' ')} failed: ${said || result.error || `exit ${result.code}`}`,
+      `vibey ${argv.join(' ')} failed: ${said || result.error || `exit ${result.code}`}`,
       'failed',
     );
+  }
+
+  private runOptions(): RunOptions {
+    const cwd = this.cwd?.();
+    return { env: this.environment, timeoutMs: this.timeoutMs, ...(cwd === undefined ? {} : { cwd }) };
   }
 
   static json(text: string, what: string): unknown {

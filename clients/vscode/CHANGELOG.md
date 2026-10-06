@@ -13,6 +13,12 @@ All notable changes to krypton, vibey's extension for VS Code.
 - **The krypton atom is the icon.** The marketplace icon is `media/krypton.png`, 256 px, and
   the activity-bar glyph is `media/krypton.svg`, the same atom in the theme's own colour. Both
   are drawn by `scripts/design/generate.py` from the design tokens, never by hand.
+- **Run a vibey command on GitHub** (`/workflows`, ADR-0085). Any vibey command line runs on
+  the repository's GitHub-hosted runners, through a paired hub (`POST /api/v1/workflows/runs`,
+  looked at every 10 seconds for up to an hour) or the `vibey` command line here as
+  `vibey --workflows …` (needs `gh` logged in). What it printed, its exit code and its run go
+  to the new **krypton: GitHub workflows** output. `vibey.workflows` (off by default) sends
+  every call there when no hub is paired.
 
 ## 0.2.0
 

@@ -44,6 +44,7 @@ from vibey.application.hub.interfaces.hub_service_interface import (
     HubDocument,
     HubServiceInterface,
 )
+from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
 from vibey.bootstrap import AppResources, build_app, database_url
 from vibey.cli.budget import BUDGET_PRESENTER
 from vibey.cli.errors import EXIT_USAGE
@@ -66,7 +67,9 @@ from vibey.domain.hub_binding import HUB_BINDING, UndeclaredExposure
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
 from vibey.domain.interfaces.ledger_query_interface import LedgerSearchResultInterface
 from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
+from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
 from vibey.domain.ledger import LedgerEvent
+from vibey.domain.run_ownership import RunOwnership
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
@@ -262,6 +265,8 @@ class DeferredHubAppFactory:
         ready: Callable[[], Awaitable[bool]],
         live: LedgerAnnouncementsInterface,
         pairing: HubPairingInterface | None = None,
+        workflows: RemoteCommandServiceInterface | None = None,
+        runs: RunOwnershipInterface | None = None,
     ) -> "FastAPI":
         from vibey.infrastructure.hub.app import HUB_APP
 
@@ -272,6 +277,8 @@ class DeferredHubAppFactory:
             ready=ready,
             live=live,
             pairing=pairing,
+            workflows=workflows,
+            runs=runs,
         )
 
 
@@ -341,7 +348,10 @@ class ServeCommand:
         store = LocalTokenStore(settings.state_dir)
         try:
             token = store.token()
-        except PermissionError as exc:
+            # Workflows request ids are minted under this key, so a device reads back only
+            # the runs it started; kept on disk, a restarted hub still recognises them.
+            runs = RunOwnership(store.run_key())
+        except (PermissionError, ValueError) as exc:
             typer.echo(str(exc), err=True)
             raise typer.Exit(1) from exc
         names = self._names.names(bound) | settings.names if settings.lan else frozenset()
@@ -394,6 +404,8 @@ class ServeCommand:
                 ready=probes.ready,
                 live=live,
                 pairing=pairing,
+                workflows=self.workflows(os.environ),
+                runs=runs,
             )
             scheme = "https" if tls is not None else "http"
             typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")
@@ -451,6 +463,19 @@ class ServeCommand:
     @staticmethod
     async def _never_ready() -> bool:
         return False
+
+    @staticmethod
+    def workflows(environ: Mapping[str, str]) -> RemoteCommandServiceInterface | None:
+        """The service the hub's `/workflows/runs` routes drive (ADR-0085), from the same
+        `VIBEY_WORKFLOWS_*` settings `vibey -w` reads. Settings that are not valid leave the
+        routes answering 503 and say why, rather than keeping the hub from serving."""
+        from vibey.cli.workflows import WorkflowsCommand
+
+        try:
+            return WorkflowsCommand.default_service(environ)
+        except ValueError as invalid:
+            typer.echo(f"workflows: off ({invalid})", err=True)
+            return None
 
     @staticmethod
     async def _never_connect() -> None:

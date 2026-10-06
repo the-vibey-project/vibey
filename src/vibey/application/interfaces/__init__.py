@@ -202,6 +202,10 @@ from vibey.application.interfaces.queue_reap import (
     QueueReaperInterface,
     QueueReapStore,
 )
+from vibey.application.interfaces.remote_command import (
+    RemoteCommandServiceInterface,
+    RemoteWorkflowForge,
+)
 from vibey.application.interfaces.research_gaps import ResearchGapRecordsInterface
 from vibey.application.interfaces.review import (
     AutomatedFinding,
@@ -230,6 +234,8 @@ from vibey.application.interfaces.worker_interface import (
 )
 
 __all__ = [
+    "RemoteCommandServiceInterface",
+    "RemoteWorkflowForge",
     "DefectGateInterface",
     "ResearchGapRecordsInterface",
     "DefectTriageInterface",

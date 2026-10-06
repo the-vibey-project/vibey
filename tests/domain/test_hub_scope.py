@@ -59,3 +59,98 @@ def test_a_grant_naming_an_unknown_scope_is_refused() -> None:
     assert HUB_SCOPES.parse(frozenset({"view", "bump"})) == {HubScope.VIEW, HubScope.BUMP}
     with pytest.raises(ValueError):
         HUB_SCOPES.parse(frozenset({"admin"}))
+
+
+@pytest.mark.parametrize(
+    ("argv", "capability"),
+    [
+        (("migrate",), "migrations"),
+        (("budget", "no-cap"), "no_cap"),
+        (("budget", "cap", "p"), "change_caps"),
+        (("-v", "budget", "set", "p", "--usd", "5"), "change_caps"),
+        (("--log-level", "DEBUG", "budget", "clear", "p"), "change_caps"),
+        (("--log-file", "migrate", "status"), None),  # the option's value is no command
+        (("budget", "show"), None),
+        (("status", "--json"), None),
+        (("queue", "bump", "migrate"), None),
+        (("ledger", "--json", "migrate"), None),
+        ((), None),
+    ],
+)
+def test_a_command_line_names_the_reserved_capability_it_reaches(
+    argv: tuple[str, ...], capability: str | None
+) -> None:
+    assert HUB_SCOPES.reserved_command(argv) == capability
+    if capability is not None:
+        assert HUB_SCOPES.reserved(capability)
+
+
+def test_running_on_the_workflows_needs_its_own_scope() -> None:
+    assert HUB_SCOPES.permits(frozenset({HubScope.WORKFLOWS}), HubAction.RUN_ON_WORKFLOWS)
+    assert not HUB_SCOPES.permits(
+        frozenset({HubScope.RUN, HubScope.VIEW}), HubAction.RUN_ON_WORKFLOWS
+    )
+
+
+@pytest.mark.parametrize(
+    ("argv", "needs"),
+    [
+        (("status", "--json"), {"workflows", "view"}),
+        (("--version",), {"workflows", "view"}),
+        (("-v", "ledger", "search", "x"), {"workflows", "view"}),
+        (("answer", "g", "--choice", "1"), {"workflows", "answer", "spend"}),
+        (("queue", "bump", "j"), {"workflows", "bump"}),
+        (("queue", "list"), {"workflows", "view"}),
+        (("ultra", "start"), {"workflows", "run"}),
+        (("new", "demo"), {s.value for s in HubScope}),
+        (("ledger", "export"), {s.value for s in HubScope}),
+        (("queue",), {s.value for s in HubScope}),
+    ],
+)
+def test_a_command_sent_to_the_workflows_needs_the_scopes_of_what_it_does(
+    argv: tuple[str, ...], needs: set[str]
+) -> None:
+    assert {s.value for s in HUB_SCOPES.scopes_for_command(argv)} == needs
+
+
+def test_the_command_words_skip_global_options_and_stop_at_the_first_option() -> None:
+    assert HUB_SCOPES.command_words(("--log-file", "f", "-v", "queue", "bump", "--x", "y")) == (
+        "queue",
+        "bump",
+    )
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("gates", "--remind"),
+        ("gates", "--remind", "--dry-run"),
+        ("doctor", "--record"),
+        ("doctor", "--install-postgres"),
+        ("doctor", "--conformance"),
+        ("doctor", "--fit-output=f.json"),
+        ("ledger", "show", "-n5"),
+        ("status", "--json", "--anything-new"),
+        ("--log-file", "status", "status", "--remind"),
+    ],
+)
+def test_a_read_command_carrying_an_option_that_is_not_a_read_needs_every_scope(
+    argv: tuple[str, ...],
+) -> None:
+    """A read command is matched by its words, but one option can make it write or install:
+    only its declared safe options keep it a read (security review of ADR-0085)."""
+    assert HUB_SCOPES.scopes_for_command(argv) == frozenset(HubScope)
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("gates", "--json"),
+        ("doctor", "--project", "p", "--engines"),
+        ("ledger", "search", "--text=x", "-n", "5"),
+        ("budget", "show", "--all", "--help"),
+        ("-v", "--version"),
+    ],
+)
+def test_a_read_command_with_only_its_safe_options_needs_view(argv: tuple[str, ...]) -> None:
+    assert HUB_SCOPES.scopes_for_command(argv) == frozenset({HubScope.WORKFLOWS, HubScope.VIEW})

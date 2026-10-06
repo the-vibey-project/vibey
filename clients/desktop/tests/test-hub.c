@@ -119,11 +119,17 @@ test_paths(void)
     path_is(KR_HUB_ROUTE_LOOPS, NULL, NULL, "/api/v1/loops");
     path_is(KR_HUB_ROUTE_DOCTOR, NULL, NULL, "/api/v1/doctor");
     path_is(KR_HUB_ROUTE_PAIRING_CLAIM, NULL, NULL, "/api/v1/pairing/claim");
+    path_is(KR_HUB_ROUTE_WORKFLOW_RUNS, NULL, NULL, "/api/v1/workflows/runs");
+    path_is(KR_HUB_ROUTE_WORKFLOW_RUN, NULL, "req-1/../x",
+            "/api/v1/workflows/runs/req-1%2F..%2Fx");
+    path_is(KR_HUB_ROUTE_WORKFLOW_RUN, NULL, NULL, NULL);
     path_is((KrHubRoute) 999, NULL, NULL, NULL);
 
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_GATE_ANSWER));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_JOB_BUMP));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PAIRING_CLAIM));
+    g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_WORKFLOW_RUNS));
+    g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_WORKFLOW_RUN));
     g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_PROJECTS));
 }
 

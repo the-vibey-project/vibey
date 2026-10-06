@@ -48,6 +48,14 @@ export class Screens implements ScreensInterface {
     },
     { route: '/doctor', title: 'Doctor', icon: 'doctor', tab: false, features: ['doctor'], gaps: [] },
     {
+      route: '/workflows',
+      title: 'Run on GitHub',
+      icon: 'workflows',
+      tab: false,
+      features: ['command-palette'],
+      gaps: ['The output arrives when the run ends; it is not streamed while it runs.'],
+    },
+    {
       route: '/pair',
       title: 'Welcome',
       icon: 'atom',

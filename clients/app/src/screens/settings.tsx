@@ -43,6 +43,7 @@ export function SettingsScreen() {
         <Link href="/budgets"><Label>Budgets →</Label></Link>
         <Link href="/devices"><Label>Devices →</Label></Link>
         <Link href="/doctor"><Label>Doctor →</Label></Link>
+        <Link href="/workflows"><Label>Run on GitHub →</Label></Link>
       </Card>
       <Label tone="tertiary">{`Channel: ${channel === 'nightly' ? 'krypton nightly (from develop)' : 'krypton (stable, from main)'}`}</Label>
     </Screen>
