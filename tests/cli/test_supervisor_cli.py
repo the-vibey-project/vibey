@@ -13,7 +13,7 @@ from typer.testing import CliRunner
 import vibey.cli.supervisor as supervisor_module
 from vibey.cli.interfaces.supervisor_interface import SupervisorCommandInterface
 from vibey.cli.main import app
-from vibey.cli.supervisor import ENV_TEMPLATE, SupervisorCommand
+from vibey.cli.supervisor import ENV_TEMPLATE, STATE_ENV_TEMPLATE, SupervisorCommand
 from vibey.infrastructure.supervisor import SupervisorHost
 
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
@@ -258,6 +258,87 @@ def test_install_refuses_a_vibey_inside_a_linked_worktree(
     err = capsys.readouterr().err
     assert f"inside the linked worktree {lane}" in err
     assert "[supervisor] vibey" in err
+
+
+# --- the state sync (ADR-0086) ----------------------------------------------------------
+
+
+def test_install_with_the_state_sync_gives_it_its_own_private_env_file(
+    tmp_path: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (repo / "vibey.toml").write_text(
+        "[supervisor]\nstate_sync = true\nstate_sync_interval_seconds = 60\n"
+    )
+    assert _command(tmp_path).install(platform="launchd", repo=repo, out=None, config=None) == 0
+
+    support = tmp_path / "home" / "Library" / "Application Support" / "vibey"
+    state_env = support / "state-sync.env"
+    assert state_env.read_text() == STATE_ENV_TEMPLATE
+    assert stat.S_IMODE(state_env.stat().st_mode) == 0o600
+    assert (support / "supervisor.env").read_text() == ENV_TEMPLATE
+    agents = tmp_path / "home" / "Library" / "LaunchAgents"
+    assert sorted(p.name for p in agents.iterdir()) == [
+        "dev.vibey.delivery.plist",
+        "dev.vibey.state-sync.plist",
+        "dev.vibey.worker.plist",
+    ]
+    sync = plistlib.loads((agents / "dev.vibey.state-sync.plist").read_bytes())
+    assert sync["ProgramArguments"] == [
+        "/opt/vibey/bin/vibey",
+        "supervisor",
+        "exec",
+        "--env-file",
+        str(state_env),
+        "--",
+        "/opt/vibey/bin/vibey",
+        "state",
+        "sync",
+        "--every",
+        "60",
+    ]
+    out = capsys.readouterr().out
+    assert f"environment: {state_env} (created from the template: fill it in)" in out
+    assert "wrote " + str(agents / "dev.vibey.state-sync.plist") in out
+
+
+def test_install_keeps_a_declared_state_env_file_and_says_nothing_of_it(
+    tmp_path: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state_env = tmp_path / "secrets" / "state.env"
+    state_env.parent.mkdir()
+    state_env.write_text("VIBEY_STATE_PG_URL=postgresql://example\n")
+    (repo / "vibey.toml").write_text(
+        f'[supervisor]\nstate_sync = true\nstate_sync_env_file = "{state_env}"\n'
+    )
+    assert _command(tmp_path).install(platform="systemd", repo=repo, out=None, config=None) == 0
+
+    assert state_env.read_text() == "VIBEY_STATE_PG_URL=postgresql://example\n"
+    units = tmp_path / "home" / ".config" / "systemd" / "user"
+    unit = (units / "dev.vibey.state-sync.service").read_text()
+    assert "--env-file" in unit and str(state_env) in unit
+    assert not (tmp_path / "home" / ".config" / "vibey" / "state-sync.env").exists()
+    out = capsys.readouterr().out
+    assert str(state_env) not in out
+    assert "dev.vibey.state-sync.service" in out
+
+
+def test_install_without_the_state_sync_makes_no_state_env_file(tmp_path: Path, repo: Path) -> None:
+    assert _command(tmp_path).install(platform="launchd", repo=repo, out=None, config=None) == 0
+    support = tmp_path / "home" / "Library" / "Application Support" / "vibey"
+    assert sorted(p.name for p in support.iterdir()) == ["supervisor.env"]
+
+
+def test_install_refuses_a_state_env_file_on_volatile_storage(
+    tmp_path: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (repo / "vibey.toml").write_text(
+        '[supervisor]\nstate_sync = true\nstate_sync_env_file = "/volatile/state.env"\n'
+    )
+    assert _command(tmp_path).install(platform="launchd", repo=repo, out=None, config=None) == 78
+    err = capsys.readouterr().err
+    assert "/volatile/state.env is under /volatile, which a reboot empties" in err
+    assert "[supervisor] state_sync_env_file" in err
+    assert not (tmp_path / "home" / "Library" / "LaunchAgents").exists()
 
 
 # --- status and doctor ------------------------------------------------------------------

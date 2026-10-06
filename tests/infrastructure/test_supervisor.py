@@ -89,6 +89,20 @@ def test_every_key_is_read(tmp_path: Path) -> None:
     )
 
 
+def test_the_state_sync_keys_are_read(tmp_path: Path) -> None:
+    config = tmp_path / "vibey.toml"
+    config.write_text(
+        "[supervisor]\nstate_sync = true\nstate_sync_interval_seconds = 90\n"
+        'state_sync_env_file = "/srv/state.env"\nstate_sync_args = ["--no-push"]\n'
+    )
+    assert SupervisorSettingsLoader().load(config) == SupervisorSettings(
+        state_sync=True,
+        state_sync_interval_seconds=90,
+        state_sync_env_file="/srv/state.env",
+        state_sync_args=("--no-push",),
+    )
+
+
 def test_a_file_without_the_table_is_every_default(tmp_path: Path) -> None:
     config = tmp_path / "vibey.toml"
     config.write_text("[failover]\nenabled = true\n")
@@ -105,6 +119,16 @@ def test_a_file_without_the_table_is_every_default(tmp_path: Path) -> None:
         ("[supervisor]\nlog_dir = 3\n", "log_dir must be a str"),
         ("[supervisor]\nworker_args = '-j 2'\n", "worker_args must be a list of strings"),
         ("[supervisor]\ndelivery_args = [1]\n", "delivery_args must be a list of strings"),
+        ("[supervisor]\nstate_sync = 1\n", "state_sync must be a bool"),
+        (
+            "[supervisor]\nstate_sync_interval_seconds = '60'\n",
+            "state_sync_interval_seconds must be a int",
+        ),
+        ("[supervisor]\nstate_sync_env_file = false\n", "state_sync_env_file must be a str"),
+        (
+            "[supervisor]\nstate_sync_args = '--no-push'\n",
+            "state_sync_args must be a list of strings",
+        ),
     ],
 )
 def test_a_mistyped_setting_is_refused_by_name(tmp_path: Path, body: str, message: str) -> None:
