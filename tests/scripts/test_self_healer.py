@@ -318,7 +318,7 @@ def test_the_cli_guard_reads_the_patch_as_git_applies_it(tmp_path: Path, capsys)
     page = "docs/continuation/zz self-healer test.md"
     assert sh.main(["guard", str(new_file(page)), "--lane", "docs_updater"]) == 0
     assert sh.main(["guard", str(new_file(page))]) == 1  # the self-healer's table: lockfiles
-    assert f"a scripted repair changed {page}" in capsys.readouterr().out
+    assert f"changed {page}, which [self_healer.guard] does not allow" in capsys.readouterr().out
     assert (
         sh.main(["guard", str(new_file("src/zz self healer test.py")), "--lane", "docs_updater"])
         == 1
@@ -327,7 +327,7 @@ def test_the_cli_guard_reads_the_patch_as_git_applies_it(tmp_path: Path, capsys)
     junk = tmp_path / "junk.patch"
     junk.write_text("diff --git a/uv.lock b/uv.lock\n")
     assert sh.main(["guard", str(junk)]) == 1
-    assert "(a patch git cannot apply to HEAD)" in capsys.readouterr().out
+    assert "::error::refused (a patch git cannot apply to HEAD)" in capsys.readouterr().out
 
 
 def test_rerun_writes_what_is_left_for_keep_green(tmp_path: Path, monkeypatch, capsys) -> None:

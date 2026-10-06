@@ -332,9 +332,10 @@ def main(argv: list[str]) -> int:
     # What the patch changes as git applies it, not as a pattern guesses (GitPatchPaths).
     refused = healer.refused(GitPatchPaths(REPO).touched(Path(argv[1])))
     for path in refused:
-        print(
-            f"::error::a scripted repair changed {path}, which [self_healer.guard] does not allow"
-        )
+        if path.startswith("("):  # not a path: the patch itself was refused
+            print(f"::error::refused {path}")
+        else:
+            print(f"::error::a scripted repair changed {path}, which [{lane}.guard] does not allow")
     return 1 if refused else 0
 
 
