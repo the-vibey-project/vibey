@@ -5,7 +5,7 @@ description: "Use when working with the well-established core of cognitive psych
 
 # Psychology, Sociology and Cultural Sciences: Perception, Memory, Learning, Cognition and Bias, and Emotion
 
-> **Part 2 of 5** of the *Psychology, Sociology and Cultural Sciences* reference (plugin `psychology-sociology-cultural-sciences`), covering §4–§8. Sibling skills: `psych-epistemic-situation-and-replication-reform` (§0–§3), `psych-development-personality-social-clinical-and-neurodiversity` (§9–§15), `psych-sociology-institutions-culture-and-the-weird-problem` (§16–§24), `psych-reference` (§25–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 2 of 6** of the *Psychology, Sociology and Cultural Sciences* reference (plugin `psychology-sociology-cultural-sciences`), covering §4–§8. Sibling skills: `psych-epistemic-situation-and-replication-reform` (§0–§3), `psych-development-personality-social-clinical-and-neurodiversity` (§9–§15), `psych-sociology-institutions-culture-and-the-weird-problem` (§16–§24), `psych-reference` (§25–§29), `psych-twice-exceptional-adults` (§30–§42). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The core findings are decades stable. Two areas are live. See §25 → `psych-reference` for where replication reform actually stands, and the social-media-and-adolescent-mental-health dispute presented as the dispute it is.
 

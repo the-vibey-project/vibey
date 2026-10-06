@@ -1,0 +1,178 @@
+[
+  {
+    "id": "skill-1-why-this-works-the-evidence-in-brief-3c2fe3ff1c",
+    "purpose": "1 why this works the evidence in brief",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/001-1-why-this-works-the-evidence-in-brief.md",
+    "requires": [],
+    "links": [
+      "skill-2-how-to-use-the-library-c900e6cd79"
+    ]
+  },
+  {
+    "id": "skill-2-how-to-use-the-library-c900e6cd79",
+    "purpose": "2 how to use the library",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/002-2-how-to-use-the-library.md",
+    "requires": [
+      "skill-1-why-this-works-the-evidence-in-brief-3c2fe3ff1c"
+    ],
+    "links": [
+      "skill-3-stating-your-own-preferences-50b6cf1002"
+    ]
+  },
+  {
+    "id": "skill-3-stating-your-own-preferences-50b6cf1002",
+    "purpose": "3 stating your own preferences",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/003-3-stating-your-own-preferences.md",
+    "requires": [
+      "skill-2-how-to-use-the-library-c900e6cd79"
+    ],
+    "links": [
+      "skill-4-asking-others-about-their-preferences-710ca9af0d"
+    ]
+  },
+  {
+    "id": "skill-4-asking-others-about-their-preferences-710ca9af0d",
+    "purpose": "4 asking others about their preferences",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/004-4-asking-others-about-their-preferences.md",
+    "requires": [
+      "skill-3-stating-your-own-preferences-50b6cf1002"
+    ],
+    "links": [
+      "skill-5-getting-instructions-clear-and-in-writing-8698f535c4"
+    ]
+  },
+  {
+    "id": "skill-5-getting-instructions-clear-and-in-writing-8698f535c4",
+    "purpose": "5 getting instructions clear and in writing",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/005-5-getting-instructions-clear-and-in-writing.md",
+    "requires": [
+      "skill-4-asking-others-about-their-preferences-710ca9af0d"
+    ],
+    "links": [
+      "skill-6-time-focus-and-meetings-2a654f960e"
+    ]
+  },
+  {
+    "id": "skill-6-time-focus-and-meetings-2a654f960e",
+    "purpose": "6 time focus and meetings",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/006-6-time-focus-and-meetings.md",
+    "requires": [
+      "skill-5-getting-instructions-clear-and-in-writing-8698f535c4"
+    ],
+    "links": [
+      "skill-7-boundaries-feedback-disagreement-and-repair-52b589ac0c"
+    ]
+  },
+  {
+    "id": "skill-7-boundaries-feedback-disagreement-and-repair-52b589ac0c",
+    "purpose": "7 boundaries feedback disagreement and repair",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/007-7-boundaries-feedback-disagreement-and-repair.md",
+    "requires": [
+      "skill-6-time-focus-and-meetings-2a654f960e"
+    ],
+    "links": [
+      "skill-8-delivery-deadlines-status-change-and-handoffs-bc598a5000"
+    ]
+  },
+  {
+    "id": "skill-8-delivery-deadlines-status-change-and-handoffs-bc598a5000",
+    "purpose": "8 delivery deadlines status change and handoffs",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/008-8-delivery-deadlines-status-change-and-handoffs.md",
+    "requires": [
+      "skill-7-boundaries-feedback-disagreement-and-repair-52b589ac0c"
+    ],
+    "links": [
+      "skill-9-social-energy-and-capacity-signals-287a075b5b"
+    ]
+  },
+  {
+    "id": "skill-9-social-energy-and-capacity-signals-287a075b5b",
+    "purpose": "9 social energy and capacity signals",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/009-9-social-energy-and-capacity-signals.md",
+    "requires": [
+      "skill-8-delivery-deadlines-status-change-and-handoffs-bc598a5000"
+    ],
+    "links": [
+      "skill-10-the-how-i-work-one-pager-6ae0a46f3b"
+    ]
+  },
+  {
+    "id": "skill-10-the-how-i-work-one-pager-6ae0a46f3b",
+    "purpose": "10 the how i work one pager",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/010-10-the-how-i-work-one-pager.md",
+    "requires": [
+      "skill-9-social-energy-and-capacity-signals-287a075b5b"
+    ],
+    "links": [
+      "skill-11-rolling-it-out-in-stages-0d2ab4b482"
+    ]
+  },
+  {
+    "id": "skill-11-rolling-it-out-in-stages-0d2ab4b482",
+    "purpose": "11 rolling it out in stages",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/011-11-rolling-it-out-in-stages.md",
+    "requires": [
+      "skill-10-the-how-i-work-one-pager-6ae0a46f3b"
+    ],
+    "links": [
+      "skill-12-weekly-burnout-self-check-two-minutes-d5dadd86ec"
+    ]
+  },
+  {
+    "id": "skill-12-weekly-burnout-self-check-two-minutes-d5dadd86ec",
+    "purpose": "12 weekly burnout self check two minutes",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/012-12-weekly-burnout-self-check-two-minutes.md",
+    "requires": [
+      "skill-11-rolling-it-out-in-stages-0d2ab4b482"
+    ],
+    "links": [
+      "skill-13-for-managers-and-colleagues-4e4550b175"
+    ]
+  },
+  {
+    "id": "skill-13-for-managers-and-colleagues-4e4550b175",
+    "purpose": "13 for managers and colleagues",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/013-13-for-managers-and-colleagues.md",
+    "requires": [
+      "skill-12-weekly-burnout-self-check-two-minutes-d5dadd86ec"
+    ],
+    "links": [
+      "skill-14-limits-and-caveats-23200c6704"
+    ]
+  },
+  {
+    "id": "skill-14-limits-and-caveats-23200c6704",
+    "purpose": "14 limits and caveats",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/014-14-limits-and-caveats.md",
+    "requires": [
+      "skill-13-for-managers-and-colleagues-4e4550b175"
+    ],
+    "links": [
+      "skill-15-sources-f4ff577eea"
+    ]
+  },
+  {
+    "id": "skill-15-sources-f4ff577eea",
+    "purpose": "15 sources",
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts/015-15-sources.md",
+    "requires": [
+      "skill-14-limits-and-caveats-23200c6704"
+    ],
+    "links": []
+  }
+]

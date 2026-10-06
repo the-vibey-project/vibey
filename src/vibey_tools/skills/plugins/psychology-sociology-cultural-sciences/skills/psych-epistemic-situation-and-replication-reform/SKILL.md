@@ -5,7 +5,7 @@ description: "Use before relying on any finding from these fields: what the repl
 
 # Psychology, Sociology and Cultural Sciences: The Epistemic Situation, Why These Fields Are Hard, and What Reform Changed
 
-> **Part 1 of 5** of the *Psychology, Sociology and Cultural Sciences* reference (plugin `psychology-sociology-cultural-sciences`), covering §0–§3. Sibling skills: `psych-perception-memory-learning-cognition-and-emotion` (§4–§8), `psych-development-personality-social-clinical-and-neurodiversity` (§9–§15), `psych-sociology-institutions-culture-and-the-weird-problem` (§16–§24), `psych-reference` (§25–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 1 of 6** of the *Psychology, Sociology and Cultural Sciences* reference (plugin `psychology-sociology-cultural-sciences`), covering §0–§3. Sibling skills: `psych-perception-memory-learning-cognition-and-emotion` (§4–§8), `psych-development-personality-social-clinical-and-neurodiversity` (§9–§15), `psych-sociology-institutions-culture-and-the-weird-problem` (§16–§24), `psych-reference` (§25–§29), `psych-twice-exceptional-adults` (§30–§42). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The core findings are decades stable. Two areas are live. See §25 → `psych-reference` for where replication reform actually stands, and the social-media-and-adolescent-mental-health dispute presented as the dispute it is.
 
@@ -67,6 +67,7 @@ description: "Use before relying on any finding from these fields: what the repl
 | Misconceptions | §26 → `psych-reference` |
 | Books | §27 → `psych-reference` |
 | Quick reference | §28 → `psych-reference` |
+| Twice-exceptional (2e) adults | §30–§42 → `psych-twice-exceptional-adults` |
 
 ---
 

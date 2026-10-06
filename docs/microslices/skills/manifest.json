@@ -635,6 +635,11 @@
     "count": 5
   },
   {
+    "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
+    "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion",
+    "count": 14
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction/SKILL.md",
     "output": "docs/microslices/skills/civil-industrial-engineering-for-software-devs/skills/civil-codes-licensure-failure-analysis-and-construction",
     "count": 5
@@ -2450,6 +2455,16 @@
     "count": 12
   },
   {
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-accommodation-and-disclosure/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-accommodation-and-disclosure",
+    "count": 10
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/neurodiversity-at-work/skills/nd-workplace-communication-scripts/SKILL.md",
+    "output": "docs/microslices/skills/neurodiversity-at-work/skills/nd-workplace-communication-scripts",
+    "count": 15
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/newtonian-mechanics/skills/mech-energy-momentum-and-collisions/SKILL.md",
     "output": "docs/microslices/skills/newtonian-mechanics/skills/mech-energy-momentum-and-collisions",
     "count": 2
@@ -2860,6 +2875,11 @@
     "count": 9
   },
   {
+    "source": "src/vibey_tools/skills/plugins/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults/SKILL.md",
+    "output": "docs/microslices/skills/psychology-sociology-cultural-sciences/skills/psych-twice-exceptional-adults",
+    "count": 13
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/quality-engineering/skills/debugging-and-observability/SKILL.md",
     "output": "docs/microslices/skills/quality-engineering/skills/debugging-and-observability",
     "count": 18
@@ -3233,6 +3253,11 @@
     "source": "src/vibey_tools/skills/plugins/security-principles/skills/ai-security-practices/SKILL.md",
     "output": "docs/microslices/skills/security-principles/skills/ai-security-practices",
     "count": 22
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/security-principles/skills/confidential-ai-inference/SKILL.md",
+    "output": "docs/microslices/skills/security-principles/skills/confidential-ai-inference",
+    "count": 16
   },
   {
     "source": "src/vibey_tools/skills/plugins/security-principles/skills/cybersecurity-principles/SKILL.md",

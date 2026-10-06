@@ -31,6 +31,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   the automatic stay, surrendering a house or car, SC exemptions, what is not discharged and what
   to avoid before filing. Dollar figures dated October 2026; a research reference, not legal
   advice. vibey-skills 2.25.0; 143 plugins, 775 skills.
+* **skills:** two new plugins and two new skills in existing ones. `neurodiversity-at-work`
+  (two skills): `nd-workplace-communication-scripts` — low-ambiguity workplace scripts,
+  preference questions, a How I Work one-pager and a weekly burnout self-check — and
+  `nd-accommodation-and-disclosure` — the evidence on disclosure, JAN's accommodation menu, the
+  US ADA process, a staged disclosure ladder, letters and interview accommodations.
+  `christian-pastoral-care` (one skill): `faith-integrated-self-compassion` — an evangelical
+  theology of grace, shame and identity in Christ, spiritual disciplines adapted for
+  neurodivergent believers and the clinical evidence for religiously adapted self-compassion,
+  alongside professional care. `psych-twice-exceptional-adults` joins
+  `psychology-sociology-cultural-sciences` as Part 6 (§30–§42), and `confidential-ai-inference`
+  joins `security-principles`. Educational and pastoral, not medical, legal or clinical advice.
+  vibey-skills 2.26.0; 145 plugins, 780 skills.
 
 ## [4.1.0] (2026-10-05)
 
