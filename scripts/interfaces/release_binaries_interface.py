@@ -67,3 +67,12 @@ class PypiFetcherInterface(Protocol):
         """Every file of that release, written under `out`; raises when one is missing or
         its SHA-256 differs from the digest the index records."""
         ...
+
+
+class NightlyScheduleInterface(Protocol):
+    """Says whether the rolling nightly prerelease is due a rebuild."""
+
+    def due(self, changed: Sequence[str] | None) -> bool:
+        """True when any changed path lies under a declared nightly path, or when there is no
+        nightly yet (`changed` is None: nothing to compare against)."""
+        ...
