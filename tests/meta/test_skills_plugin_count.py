@@ -17,12 +17,17 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CATALOGUE = REPO / "src" / "vibey_tools" / "skills" / ".claude-plugin" / "marketplace.json"
+#: The repository's own marketplace: every skills plugin and vibey-gh's, from one address.
+MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 ADVERTISED = ("README.md", "docs/index.md")
 COUNT = re.compile(r"the (\d+)\s+skills plugins")
+#: `/plugin  # browse all N`: what a reader finds at the repository's marketplace. It said 142
+#: while the marketplace held 146, through two plugin additions, before this checked it.
+BROWSE_ALL = re.compile(r"# browse all (\d+)")
 
 
-def _actual() -> int:
-    return len(json.loads(CATALOGUE.read_text(encoding="utf-8"))["plugins"])
+def _actual(catalogue: Path = CATALOGUE) -> int:
+    return len(json.loads(catalogue.read_text(encoding="utf-8"))["plugins"])
 
 
 @pytest.mark.parametrize("page", ADVERTISED)
@@ -30,3 +35,10 @@ def test_each_page_states_the_skills_plugin_count_the_catalogue_holds(page: str)
     found = COUNT.findall((REPO / page).read_text(encoding="utf-8"))
     assert found, f"{page} no longer says how many skills plugins the marketplace carries"
     assert {int(n) for n in found} == {_actual()}, (page, found, _actual())
+
+
+@pytest.mark.parametrize("page", ADVERTISED)
+def test_each_page_states_the_plugin_count_the_repository_marketplace_holds(page: str) -> None:
+    found = BROWSE_ALL.findall((REPO / page).read_text(encoding="utf-8"))
+    assert found, f"{page} no longer says how many plugins `/plugin` browses"
+    assert {int(n) for n in found} == {_actual(MARKETPLACE)}, (page, found, _actual(MARKETPLACE))
