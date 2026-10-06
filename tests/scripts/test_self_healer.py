@@ -229,10 +229,68 @@ def test_the_declared_settings_are_sound() -> None:
     assert all(isinstance(a, str) for r in config["repair"] for a in r["argv"])
     forge = FakeForge([])
     real = sh.SelfHealer(forge, FakeRunner(), config, Path("/repo"))
-    for allowed in ("docs/continuation/keep-green.md", "uv.lock", "clients/app/package-lock.json"):
+    for allowed in ("uv.lock", "package-lock.json", "clients/app/package-lock.json"):
         assert real.refused([("M", allowed)]) == []
-    for refused in (".github/workflows/ci.yml", "src/vibey/__init__.py", ".vibey-gh.toml"):
+    for refused in (
+        ".github/workflows/ci.yml",
+        "src/vibey/__init__.py",
+        ".vibey-gh.toml",
+        "docs/continuation/keep-green.md",  # the documentation updater's, not this lane's
+    ):
         assert real.refused([("M", refused)]) == [refused]
+
+
+def test_the_documentation_lane_is_the_same_runner_with_its_own_table() -> None:
+    config = sh.settings(Path(__file__).resolve().parents[2], "docs_updater")
+    assert config["prompt"] == "docs"
+    names = [r["name"] for r in config["repair"]]
+    assert names[0].startswith("paper figures")
+    assert any("{integration_sha}" in part for part in config["repair"][0]["argv"])
+    docs = sh.SelfHealer(FakeForge([]), FakeRunner(), config, Path("/repo"))
+    for allowed in (
+        "docs/paper.md",
+        "docs/llms.txt",
+        "README.md",
+        "src/vibey_tools/gh/docs/cli.md",
+    ):
+        assert docs.refused([("M", allowed)]) == []
+    for refused in (
+        "uv.lock",
+        "properdocs.yml",
+        "src/vibey_tools/gh/corpus-index.json",
+        "docs/x.py",
+    ):
+        assert docs.refused([("M", refused)]) == [refused]
+
+
+def test_the_integration_sha_is_resolved_once_and_substituted() -> None:
+    runner = FakeRunner({"git": (0, "abc123\n")})
+    repairs = [
+        {"name": "figures", "argv": ["python", "fig.py", "--rev", "{integration_sha}"]},
+        {"name": "again", "argv": ["python", "x.py", "{integration_sha}"]},
+    ]
+    healer(FakeForge([]), runner, repair=repairs).repair()
+    assert [argv for argv, _ in runner.calls] == [
+        ["git", "rev-parse", "origin/develop"],
+        ["python", "fig.py", "--rev", "abc123"],
+        ["python", "x.py", "abc123"],
+    ]
+
+
+def test_an_unresolvable_integration_sha_fails_that_repair_only() -> None:
+    runner = FakeRunner({"git": (128, "fatal: bad revision")})
+    repairs = [
+        {"name": "figures", "argv": ["python", "fig.py", "--rev", "{integration_sha}"]},
+        {"name": "plain", "argv": ["npm", "x"]},
+    ]
+    results = healer(FakeForge([]), runner, repair=repairs).repair()
+    assert [(r["name"], r["code"]) for r in results] == [("figures", 1), ("plain", 0)]
+    assert "bad revision" in results[0]["tail"]
+
+
+def test_the_cli_reads_another_lanes_table(capsys) -> None:
+    assert sh.main(["setting", "pull_request_branch", "--lane", "docs_updater"]) == 0
+    assert capsys.readouterr().out.strip() == "docs/updater"
 
 
 def test_the_cli_refuses_an_unknown_command(capsys) -> None:
@@ -257,8 +315,14 @@ def test_the_cli_guard_reads_the_patch_as_git_applies_it(tmp_path: Path, capsys)
         )
         return patch
 
-    assert sh.main(["guard", str(new_file("docs/continuation/zz-self-healer-test.md"))]) == 0
-    assert sh.main(["guard", str(new_file("src/zz self healer test.py"))]) == 1
+    page = "docs/continuation/zz self-healer test.md"
+    assert sh.main(["guard", str(new_file(page)), "--lane", "docs_updater"]) == 0
+    assert sh.main(["guard", str(new_file(page))]) == 1  # the self-healer's table: lockfiles
+    assert f"a scripted repair changed {page}" in capsys.readouterr().out
+    assert (
+        sh.main(["guard", str(new_file("src/zz self healer test.py")), "--lane", "docs_updater"])
+        == 1
+    )
     assert "a scripted repair changed src/zz self healer test.py" in capsys.readouterr().out
     junk = tmp_path / "junk.patch"
     junk.write_text("diff --git a/uv.lock b/uv.lock\n")
@@ -311,3 +375,26 @@ def test_the_argv_runner_reports_a_missing_tool_as_a_failed_repair(tmp_path: Pat
 @pytest.mark.parametrize("argv", [["python", "-c", "print('hi')"]])
 def test_the_argv_runner_returns_the_output(tmp_path: Path, argv: list[str]) -> None:
     assert sh.SubprocessArgvRunner().run(argv, tmp_path) == (0, "hi\n")
+
+
+def test_the_forge_filters_the_branch_itself_not_through_the_api(monkeypatch) -> None:
+    """The API's `branch` filter answered with weeks-old runs for some events (2026-10-06)."""
+    seen: list[list[str]] = []
+
+    def fake_run(argv: list[str], **_: Any) -> Any:
+        seen.append(argv)
+        lines = [
+            json.dumps({"id": 1, "head_branch": "develop"}),
+            json.dumps({"id": 2, "head_branch": "feature/x"}),
+        ]
+        return type(
+            "P",
+            (),
+            {"returncode": 0, "stdout": "\n".join(lines), "check_returncode": lambda self: None},
+        )()
+
+    monkeypatch.setattr(sh.subprocess, "run", fake_run)
+    runs = sh.GhRunForge().runs("develop", NOW)
+    assert [r["id"] for r in runs] == [1]
+    assert not any(part.startswith("branch=") for part in seen[0])
+    assert "created=>=2026-10-06T05:17:00Z" in seen[0]

@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 83, the newest 0083 — A daily self-healer and a daily backlog killer, scripted first, on GitHub's CPU runners only.
+- **Decision records:** 83, the newest 0083 — A daily self-healer, backlog killer and documentation updater, scripted first, on GitHub's CPU runners only.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

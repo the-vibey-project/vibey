@@ -8,6 +8,10 @@
     python scripts/self_healer.py lock-advisories   # take the fixed release of each pip-audit finding
     python scripts/self_healer.py setting KEY       # one [self_healer] value, for the workflow
 
+`repair`, `guard` and `setting` take `--lane TABLE` to read another table of the same shape:
+the daily documentation updater is `--lane docs_updater` -- the same runner and the same guard,
+declared repairs and allowed paths of its own, rather than a second copy of either.
+
 What it does, and in what order, is declared in `scripts/daily_lanes.toml` `[self_healer]`.
 Every failure class it repairs here was a real red develop: a generated page left stale by a
 release commit, a new advisory with a fixed release published, a flake that passes on a re-run
@@ -65,8 +69,6 @@ class GhRunForge(RunForgeInterface):
                 "GET",
                 "repos/{owner}/{repo}/actions/runs",
                 "-f",
-                f"branch={branch}",
-                "-f",
                 f"created=>={since.strftime('%Y-%m-%dT%H:%M:%SZ')}",
                 "-f",
                 "per_page=100",
@@ -79,7 +81,10 @@ class GhRunForge(RunForgeInterface):
             check=False,
         )
         proc.check_returncode()
-        return [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
+        # Filtered to the branch here, not by the API's `branch` filter, which answered with
+        # weeks-old runs for some events (2026-10-06): the window bounds the read instead.
+        runs = [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
+        return [run for run in runs if run.get("head_branch") == branch]
 
     def rerun_failed(self, run_id: int) -> bool:
         proc = subprocess.run(
@@ -165,8 +170,23 @@ class SelfHealer(SelfHealerInterface):
 
     def repair(self) -> list[dict[str, Any]]:
         results = []
+        sha = ""
         for spec in self._repairs:
             argv = [str(part) for part in spec["argv"]]
+            if any("{integration_sha}" in part for part in argv):
+                # Resolved, not declared: the tip of the integration branch as this run sees
+                # it, which is always an ancestor of the branch the result merges into.
+                if not sha:
+                    code, out = self._runner.run(
+                        ["git", "rev-parse", f"origin/{self.branch}"], self._root
+                    )
+                    sha = out.strip() if code == 0 else ""
+                if not sha:
+                    results.append(
+                        {"name": spec.get("name", argv[0]), "code": 1, "tail": out[-600:]}
+                    )
+                    continue
+                argv = [part.replace("{integration_sha}", sha) for part in argv]
             code, output = self._runner.run(argv, self._root / str(spec.get("cwd", ".")))
             results.append(
                 {"name": spec.get("name", " ".join(argv)), "code": code, "tail": output[-600:]}
@@ -234,10 +254,11 @@ class AdvisoryLock(AdvisoryLockInterface):
         return code
 
 
-def settings(root: Path) -> dict[str, Any]:
-    """The `[self_healer]` table. Module-level: the CLI's one loader, shared with the tests."""
+def settings(root: Path, lane: str = "self_healer") -> dict[str, Any]:
+    """One lane's table (`[self_healer]` unless named). Module-level: the CLI's one loader,
+    shared with the tests."""
     data = tomllib.loads((root / CONFIG).read_text(encoding="utf-8"))
-    return dict(data["self_healer"])
+    return dict(data[lane])
 
 
 def table(lanes: list[dict[str, Any]], since: datetime, branch: str) -> str:
@@ -263,10 +284,13 @@ def table(lanes: list[dict[str, Any]], since: datetime, branch: str) -> str:
 def main(argv: list[str]) -> int:
     """Entry point. Module-level as every script's is."""
     commands = {"survey", "rerun", "repair", "guard", "lock-advisories", "setting"}
+    lane = "self_healer"
+    if len(argv) >= 2 and argv[-2] == "--lane":
+        lane, argv = argv[-1], argv[:-2]
     if not argv or argv[0] not in commands:
         print(__doc__, file=sys.stderr)
         return 2
-    config = settings(REPO)
+    config = settings(REPO, lane)
     runner = SubprocessArgvRunner()
     if argv[0] == "setting":
         print(config[argv[1]])

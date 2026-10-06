@@ -82,6 +82,7 @@ nav:
       - Release: continuation/release.md
       - Triage: continuation/triage.md
       - Work the backlog: continuation/backlog.md
+      - Keep the documentation true: continuation/docs.md
       - Research and measurement: continuation/research.md
       - Succession: continuation/succession.md
       - Rebuild: continuation/rebuild.md
@@ -182,5 +183,5 @@ nav:
           - "0080 — Continuation prompts, kept current and run on GitHub every week": architecture/decisions/0080-continuation-prompts.md
           - "0081 — vibey's chat, inside GitHub, resilient to the parts around it failing": architecture/decisions/0081-vibey-chat-on-github.md
           - "0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays": architecture/decisions/0082-install-copy-reinstall-and-a-core-that-stays.md
-          - "0083 — A daily self-healer and a daily backlog killer, scripted first, on GitHub's CPU runners only": architecture/decisions/0083-daily-self-healer-and-backlog-killer.md
+          - "0083 — A daily self-healer, backlog killer and documentation updater, scripted first, on GitHub's CPU runners only": architecture/decisions/0083-daily-self-healer-and-backlog-killer.md
   - Research paper: paper.md

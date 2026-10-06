@@ -1,8 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 #
-# The two daily lanes (ADR-0083), both on GitHub-hosted CPU runners only:
+# The three daily lanes (ADR-0083), all on GitHub-hosted CPU runners only:
 #
 #   .github/workflows/self-healer.yml     scripts/self_healer.py
+#   .github/workflows/docs-updater.yml    scripts/self_healer.py --lane docs_updater, scripts/docs_updater.py
 #   .github/workflows/backlog-killer.yml  scripts/backlog_killer.py
 #
 # Each does the deterministic part itself and hands only what is left to an open-weights model,
@@ -31,14 +32,11 @@ max_reruns = 5       # forge mutations per run
 prompt = "keep-green"
 pull_request_branch = "fix/self-healer"
 
-# The scripted repairs, run in order from the repository root (or `cwd`). Each re-derives a
-# file from its source of truth or takes a release that fixes a published advisory. A repair
+# The scripted repairs, run in order from the repository root (or `cwd`). Each takes a release
+# that fixes a published advisory; re-deriving generated documentation is the documentation
+# updater's, below, so the two lanes never open the same change twice. A repair
 # that exits non-zero is reported and the next one still runs; what changed is then checked
 # against `allowed_paths` before any pull request is opened.
-[[self_healer.repair]]
-name = "continuation prompts"
-argv = ["python", "scripts/continuation_prompts.py", "render"]
-
 [[self_healer.repair]]
 name = "npm advisories (repository root workspace)"
 argv = ["npm", "audit", "fix", "--package-lock-only", "--ignore-scripts"]
@@ -56,10 +54,71 @@ argv = ["python", "scripts/self_healer.py", "lock-advisories"]
 # relative path). Anything else in its diff refuses the whole pull request.
 [self_healer.guard]
 allowed_paths = [
-  '^docs/continuation/[^/]+\.md$',
   '^package-lock\.json$',
   '^clients/app/package-lock\.json$',
   '^uv\.lock$',
+]
+
+[docs_updater]
+# The daily documentation updater (.github/workflows/docs-updater.yml): every generated part
+# of the documentation, the research paper and the book is re-derived from its source and
+# lands as ONE pull request; then the published develop book is checked against the newest
+# successful develop release, and the `docs` prompt corrects one stale written statement.
+# Run by `scripts/self_healer.py repair --lane docs_updater`: the same runner and guard.
+branch = "develop"
+prompt = "docs"
+pull_request_branch = "docs/updater"
+# Rebuild the published develop channel (site, book, paper PDF) from the newest successful
+# develop release when its last rebuild failed or never ran. It republishes what was already
+# released, never anything new; false leaves the book to the next release.
+republish_book = true
+# By file: the workflows whose runs say what the develop channel was last built from.
+release_workflow = "vibey-engine.yml"
+surfaces_workflow = "release-surfaces.yml"
+
+# Measured figures (the autonomy scorecard, the minimum specs, host health, the delivery
+# forecast) are measured by their own lanes; these re-render what those lanes recorded, so a
+# page can never sit behind its own record. Generated indexes the documentation deep scan
+# keeps (src/vibey_tools/gh/corpus-index.json) stay its own.
+[[docs_updater.repair]]
+name = "paper figures, re-pinned to today's develop"
+argv = ["python", "scripts/paper_figures.py", "--rev", "{integration_sha}"]
+
+[[docs_updater.repair]]
+name = "autonomy scorecard pages"
+argv = ["python", "scripts/autonomy_scorecard.py", "render"]
+
+[[docs_updater.repair]]
+name = "minimum requirements pages"
+argv = ["python", "scripts/minimum_specs.py", "render"]
+
+[[docs_updater.repair]]
+name = "host health page"
+argv = ["python", "scripts/host_health.py", "render"]
+
+[[docs_updater.repair]]
+name = "downloads table"
+argv = ["python", "scripts/release_binaries.py", "render"]
+
+[[docs_updater.repair]]
+name = "review canary page"
+argv = ["python", "-m", "vibey_gh", "review-canary", "render"]
+
+[[docs_updater.repair]]
+name = "continuation prompts"
+argv = ["python", "scripts/continuation_prompts.py", "render"]
+
+[[docs_updater.repair]]
+name = "the book's llms.txt, from the navigation"
+argv = ["python", "scripts/llms_txt.py"]
+
+[docs_updater.guard]
+allowed_paths = [
+  '^docs/.+\.md$',
+  '^docs/llms\.txt$',
+  '^README\.md$',
+  '^CONTRIBUTING\.md$',
+  '^src/vibey_tools/gh/docs/.+\.md$',
 ]
 
 [backlog_killer]

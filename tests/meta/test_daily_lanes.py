@@ -95,3 +95,37 @@ def test_every_agent_run_records_its_exit_code_under_bash_e() -> None:
                 block = text[text.index(line) :].split("\n", 3)
                 agent = "\n".join(block[:2])
                 assert "|| code=$?" in agent, (name, agent)
+
+
+def test_the_documentation_updaters_generators_run_where_nothing_can_write() -> None:
+    render = spec("docs-updater.yml")["jobs"]["render"]
+    assert render["permissions"] == {"contents": "read"}
+    assert "secrets." not in yaml.safe_dump(render)
+    checkout = step(render, "Check out")
+    assert checkout["with"]["persist-credentials"] is False
+    assert checkout["with"]["fetch-depth"] == 0  # the paper's figures read the whole history
+    assert "--lane docs_updater" in step(render, "Run every declared generator")["run"]
+
+
+def test_the_documentation_updater_guards_its_own_table_before_applying() -> None:
+    act = spec("docs-updater.yml")["jobs"]["act"]
+    run = step(act, "Open one pull request")["run"]
+    assert 'self_healer.py guard "$patch" --lane docs_updater' in run
+    assert run.index("self_healer.py guard") < run.index("git apply --index")
+    assert run.index("self_healer.py setting") < run.index("git apply --index")
+    names = [s.get("name", "") for s in act["steps"]]
+    last = names.index("Open one pull request with the regenerated pages")
+    assert names.index("Rebuild the published develop book if it is behind its release") < last
+    assert names.index("Hand the written pages to the docs prompt") < last
+
+
+def test_the_book_is_only_ever_rebuilt_from_a_release_that_already_succeeded() -> None:
+    book = step(spec("docs-updater.yml")["jobs"]["act"], "Rebuild the published develop book")
+    run = book["run"]
+    assert "docs_updater.py book" in run
+    assert (
+        'gh workflow run release-surfaces.yml --ref develop -f branch=develop -f run_id="$run_id"'
+        in run
+    )
+    assert "${{" not in run  # the run id reaches the shell from the script, never interpolated
+    assert "vibey-engine.yml" not in run  # it never cuts or re-runs a release

@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 83, the newest 0083 — A daily self-healer and a daily backlog killer, scripted first, on GitHub's CPU runners only.
+- **Decision records:** 83, the newest 0083 — A daily self-healer, backlog killer and documentation updater, scripted first, on GitHub's CPU runners only.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt
