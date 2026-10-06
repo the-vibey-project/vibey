@@ -21,6 +21,9 @@ index = "docs/continuation/index.md"
 # Release, succession and rebuild are drills by declaration: acting them out is irreversible
 # or needs a person.
 #
+# `cadence` is "weekly" (the default: in the lane's weekly run) or "daily" (run only when a
+# daily lane names it -- the self-healer, the backlog killer; ADR-0083).
+#
 # `covers` lists the workflow files and agent skills the prompt is responsible for keeping
 # usable. Every workflow under .github/workflows/ and every skill under .claude/skills/ must
 # be covered by at least one prompt, or exempted below with its reason.
@@ -49,13 +52,16 @@ id = "keep-green"
 title = "Keep develop green"
 page = "docs/continuation/keep-green.md"
 mode = "act"
+# Daily: .github/workflows/self-healer.yml runs it whenever its scripted repairs and re-runs
+# leave something red (ADR-0083), so the weekly run does not repeat it.
+cadence = "daily"
 purpose = "Find every failing workflow on the integration branch, fix its cause, and land the fix."
 gather = [
   "for w in .github/workflows/*.yml; do gh run list --workflow \"$(basename \"$w\")\" --branch develop --limit 1 --json workflowName,conclusion,databaseId,createdAt,event --jq '.[] | select(.conclusion==\"failure\") | \"\\(.workflowName) \\(.databaseId) \\(.createdAt) \\(.event)\"'; done",
 ]
 covers = [
   "ci.yml", "branch-health.yml", "ruleset-drift.yml", "repository-profile.yml",
-  "documentation-deep-scan.yml", "vibey-quality-gates",
+  "documentation-deep-scan.yml", "self-healer.yml", "vibey-quality-gates",
 ]
 
 [[prompt]]
@@ -87,6 +93,35 @@ gather = [
   "head -40 docs/estimate.md",
 ]
 covers = ["backlog-cleanup.yml", "delivery-estimate.yml"]
+
+# The daily documentation updater's prompt (ADR-0083): the generators run first, without a
+# model; this corrects one written statement the repository now contradicts.
+[[prompt]]
+id = "docs"
+title = "Keep the documentation true"
+page = "docs/continuation/docs.md"
+mode = "act"
+cadence = "daily"
+purpose = "Find one statement in the documentation, the paper or the book that the repository contradicts, and correct it."
+gather = [
+  "python scripts/paper_evidence.py",
+  "git log --oneline -15 origin/develop -- docs README.md properdocs.yml",
+]
+covers = ["docs-updater.yml"]
+
+# The daily backlog killer's prompt (ADR-0083): run each day for the one issue
+# `scripts/backlog_killer.py pick` chooses, never by the weekly run's whole matrix alone.
+[[prompt]]
+id = "backlog"
+title = "Work the backlog"
+page = "docs/continuation/backlog.md"
+mode = "act"
+cadence = "daily"
+purpose = "Take today's backlog item and land its smallest shippable, tested slice."
+gather = [
+  "python scripts/backlog_killer.py pick",
+]
+covers = ["backlog-killer.yml"]
 
 [[prompt]]
 id = "research"
@@ -161,6 +196,17 @@ allowed_new = [
 # not dispatchable, or moved to a self-hosted runner: it must run on GitHub (#1384).
 [lane]
 workflow = ".github/workflows/continuation-prompts.yml"
+# The lanes that run with nobody watching and must stay on GitHub's own CPU runners: never a
+# self-hosted machine, never a paid GPU runner (ADR-0083). `check` fails if one of them runs
+# a job anywhere `cpu_runners` does not name.
+hosted_cpu_only = [
+  "continuation-prompts.yml", "chat.yml", "self-healer.yml", "backlog-killer.yml",
+  "docs-updater.yml",
+]
+cpu_runners = ["ubuntu-latest", "ubuntu-24.04", "ubuntu-24.04-arm", "ubuntu-22.04"]
+# The lanes that must fire every day on their own, and run by hand: `check` fails if one
+# loses its every-day schedule or its workflow_dispatch.
+daily = ["self-healer.yml", "backlog-killer.yml", "docs-updater.yml"]
 
 # How the lane runs each prompt (#1384): an open-weights model on a GitHub-hosted runner, on
 # CPU. The record measured gpt-oss:20b at 2.8 tokens/s generating and 44.5 tokens/s reading

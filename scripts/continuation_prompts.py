@@ -3,13 +3,13 @@
 
     python scripts/continuation_prompts.py render     # rewrite every generated block
     python scripts/continuation_prompts.py check      # exit 1 on any broken guarantee
-    python scripts/continuation_prompts.py matrix     # the prompts, as JSON, for the lane
+    python scripts/continuation_prompts.py matrix [ID...]  # the prompts (or only those), as JSON
     python scripts/continuation_prompts.py extract ID # one prompt's text
     python scripts/continuation_prompts.py plan ID    # the prompt plus its gathered evidence
     python scripts/continuation_prompts.py models     # the declared model fallback chain
     python scripts/continuation_prompts.py chat MODE REQUEST THREAD   # a chat turn's plan
     python scripts/continuation_prompts.py guard PATCH   # exit 1 if a patch touches a protected path
-    python scripts/continuation_prompts.py defuse FILE   # a reply made safe to post
+    python scripts/continuation_prompts.py defuse FILE [--fenced]   # a reply made safe to post
 
 `check` holds four guarantees on every pull request: every file, glob, `vibey-gh` command and
 ADR a prompt names exists; every workflow and every agent skill is covered by a prompt or
@@ -22,9 +22,11 @@ from __future__ import annotations
 
 import glob
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -37,6 +39,7 @@ try:
         FactSourceInterface,
         PageRendererInterface,
         PatchGuardInterface,
+        PatchPathsInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
         RunReceiptInterface,
@@ -47,6 +50,7 @@ except ImportError:  # run as `python scripts/continuation_prompts.py`
         FactSourceInterface,
         PageRendererInterface,
         PatchGuardInterface,
+        PatchPathsInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
         RunReceiptInterface,
@@ -56,6 +60,7 @@ REPO = Path(__file__).resolve().parents[1]
 SCRIPT = "scripts/continuation_prompts.py"
 DEFAULT_CONFIG = "scripts/continuation_prompts.toml"
 MODES = ("act", "drill", "chat")
+CADENCES = ("weekly", "daily")
 #: GitHub's limit on one comment body, less room for the reply's own frame.
 COMMENT_LIMIT = 60000
 
@@ -71,6 +76,9 @@ class Prompt:
     purpose: str
     covers: tuple[str, ...]
     gather: tuple[str, ...]
+    # "weekly": in the lane's weekly run. "daily": run only when a daily lane names it, so the
+    # weekly run does not repeat what a daily one already did (ADR-0083).
+    cadence: str = "weekly"
 
 
 @dataclass(frozen=True)
@@ -100,6 +108,7 @@ class Settings:
                 purpose=p["purpose"],
                 covers=tuple(p.get("covers", ())),
                 gather=tuple(p.get("gather", ())),
+                cadence=str(p.get("cadence", "weekly")),
             )
             for p in raw["prompt"]
         )
@@ -189,6 +198,11 @@ class RepositoryFacts(FactSourceInterface):
                     "self-hosted" in value
                     for value in re.findall(r"^\s*runs-on:\s*(.+)$", text, re.MULTILINE)
                 ),
+                "runs_on": [
+                    value.strip().strip("'\"")
+                    for value in re.findall(r"^\s*runs-on:\s*(.+)$", text, re.MULTILINE)
+                ],
+                "dispatchable": "workflow_dispatch" in text,
             }
         return lanes
 
@@ -314,10 +328,10 @@ class PageRenderer(PageRendererInterface):
             f"`{SCRIPT}`, do not edit inside these markers.*",
             "",
             {
-                "act": "- **Mode when GitHub runs it weekly:** act — may open a draft pull "
-                "request; never merges, approves, releases or deletes.",
-                "drill": "- **Mode when GitHub runs it weekly:** drill — verifies and reports; "
-                "changes nothing.",
+                "act": f"- **Mode when GitHub runs it {p.cadence}:** act — may open a draft "
+                "pull request; never merges, approves, releases or deletes.",
+                "drill": f"- **Mode when GitHub runs it {p.cadence}:** drill — verifies and "
+                "reports; changes nothing.",
                 "chat": "- **How it runs:** whenever a trusted person writes "
                 f"`{self._settings.chat.get('trigger', '/vibey')}` in an issue or pull request, "
                 "or runs the Chat workflow — it answers; asked to act, it may open a draft pull "
@@ -339,6 +353,43 @@ class PageRenderer(PageRendererInterface):
         return {"state": "\n".join(lines)}
 
 
+class GitPatchPaths(PatchPathsInterface):
+    """What a patch changes, as `git apply` itself reads it.
+
+    The guards once read `diff --git a/X b/Y` headers with a regular expression, which is
+    not the parser that applies the patch: a path with a space never matched, so it was never
+    checked, and a bare `---`/`+++` diff named no path and passed whole (2026-10-06). So the
+    patch is applied, by git, to a scratch index built from HEAD -- the working tree is never
+    touched -- and git lists what that index changed, a rename as its delete and its add. A
+    patch git cannot apply is reported as unreadable (None), and a guard refuses it.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+
+    def touched(self, patch: Path) -> list[tuple[str, str]] | None:
+        with tempfile.TemporaryDirectory() as scratch:
+            env = {**os.environ, "GIT_INDEX_FILE": str(Path(scratch) / "index")}
+            steps = (
+                ["git", "read-tree", "HEAD"],
+                ["git", "apply", "--cached", str(patch.resolve())],
+                ["git", "diff", "--cached", "--name-status", "--no-renames", "-z", "HEAD"],
+            )
+            out = ""
+            for argv in steps:
+                try:
+                    run = subprocess.run(
+                        argv, cwd=self._root, env=env, capture_output=True, text=True, check=False
+                    )
+                except OSError:  # no git, or no such directory: nothing was read
+                    return None
+                if run.returncode:
+                    return None
+                out = run.stdout
+        fields = out.split("\0")
+        return [(fields[i], fields[i + 1]) for i in range(0, len(fields) - 1, 2)]
+
+
 class PatchGuard(PatchGuardInterface):
     """Refuses a patch from an automated run that touches a declared protected path, or adds a
     file outside the declared roots.
@@ -351,22 +402,33 @@ class PatchGuard(PatchGuardInterface):
     new file, so a repository that declares none keeps the old behaviour.
     """
 
-    HEADER = re.compile(r"^diff --git a/(\S+) b/(\S+)$", re.MULTILINE)
-    ADDED = re.compile(r"^diff --git a/\S+ b/(\S+)\nnew file mode ", re.MULTILINE)
+    UNREADABLE = "(a patch git cannot apply to HEAD)"
+    EMPTY = "(a patch that changes no path)"
 
-    def __init__(self, patterns: Sequence[str], allowed_new: Sequence[str] = ()) -> None:
+    def __init__(
+        self,
+        patterns: Sequence[str],
+        allowed_new: Sequence[str] = (),
+        reader: PatchPathsInterface | None = None,
+    ) -> None:
         self._patterns = [re.compile(p) for p in patterns]
         self._allowed_new = [re.compile(p) for p in allowed_new]
+        self._reader: PatchPathsInterface = reader or GitPatchPaths(Path.cwd())
 
-    def refused(self, patch: str) -> Sequence[str]:
-        paths = {path for pair in self.HEADER.findall(patch) for path in pair}
-        protected = {p for p in paths if any(rx.search(p) for rx in self._patterns)}
+    def refused(self, patch: Path) -> Sequence[str]:
+        # Fails closed: what cannot be read, or reads as nothing, is not let through.
+        touched = self._reader.touched(patch)
+        if touched is None:
+            return [self.UNREADABLE]
+        if not touched:
+            return [self.EMPTY]
+        protected = {p for _, p in touched if any(rx.search(p) for rx in self._patterns)}
         stray: set[str] = set()
         if self._allowed_new:
             stray = {
                 p
-                for p in self.ADDED.findall(patch)
-                if not any(rx.search(p) for rx in self._allowed_new)
+                for status, p in touched
+                if status == "A" and not any(rx.search(p) for rx in self._allowed_new)
             }
         return sorted(protected | stray)
 
@@ -435,6 +497,15 @@ class ReplyDefuser(ReplyDefuserInterface):
             text = text[: self._cap] + f"\n\n[... cut at {self._cap} characters of {len(text)} ...]"
         return text
 
+    @staticmethod
+    def fenced(text: str, info: str = "text") -> str:
+        """`text` in a code fence it cannot close: one backtick longer than the longest run
+        of backticks inside it, and never fewer than three (CommonMark). A model that writes
+        ``` cannot step out of the quote and into the page."""
+        longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+        fence = "`" * max(3, longest + 1)
+        return f"{fence}{info}\n{text.rstrip(chr(10))}\n{fence}"
+
 
 class PromptPage:
     """One page's prompt text: the single ```text fence under `## The prompt`."""
@@ -492,6 +563,8 @@ class ContinuationPrompts:
             covered |= set(p.covers)
             if p.mode not in MODES:
                 out.append(f"{p.id}: mode {p.mode!r} is not one of {MODES}")
+            if p.cadence not in CADENCES:
+                out.append(f"{p.id}: cadence {p.cadence!r} is not one of {CADENCES}")
             if p.id in s.drill_only and p.mode != "drill":
                 out.append(f"{p.id}: declared drill-only, but its mode is {p.mode!r}")
             for c in p.covers:
@@ -520,6 +593,42 @@ class ContinuationPrompts:
                 out.append(f"exemption for {item} gives no reason")
         out += self._lane_problems(lanes)
         out += self._chat_problems(lanes)
+        out += self._hosted_cpu_problems(lanes)
+        return out
+
+    def _hosted_cpu_problems(self, lanes: Mapping[str, Mapping[str, Any]]) -> list[str]:
+        """Every lane `[lane] hosted_cpu_only` names exists and runs every job on a runner
+        `[lane] cpu_runners` names: GitHub-hosted, CPU only -- never a self-hosted machine,
+        never a GPU runner someone must pay for. Every lane `[lane] daily` names fires every
+        day on its own and can be run by hand.
+
+        A `runs-on:` that is an expression is resolved only when it is the matrix's declared
+        `[run] runs_on`; any other expression cannot be checked here, so it is refused."""
+        allowed = {str(r) for r in self._settings.lane.get("cpu_runners", ())}
+        run_on = str(self._settings.run.get("runs_on", ""))
+        out: list[str] = []
+        for file in self._settings.lane.get("daily", ()):
+            lane = lanes.get(str(file))
+            if lane is None:
+                out.append(f"{file} is declared daily but does not exist")
+                continue
+            # minute hour day-of-month month day-of-week: every day is `* * *` in the last three.
+            if not any(cron.split()[2:] == ["*", "*", "*"] for cron in lane["crons"]):
+                out.append(f"{file} is declared daily but no schedule of it fires every day")
+            if not lane["dispatchable"]:
+                out.append(f"{file} cannot be run by hand (no workflow_dispatch)")
+        for file in self._settings.lane.get("hosted_cpu_only", ()):
+            lane = lanes.get(str(file))
+            if lane is None:
+                out.append(f"{file} is declared hosted_cpu_only but does not exist")
+                continue
+            for value in lane["runs_on"]:
+                resolved = run_on if value == "${{ matrix.prompt.runs_on }}" else value
+                if resolved not in allowed:
+                    out.append(
+                        f"{file} runs a job on {value!r}, which is not a declared "
+                        "GitHub-hosted CPU runner ([lane] cpu_runners)"
+                    )
         return out
 
     def _lane_problems(self, lanes: Mapping[str, Mapping[str, Any]]) -> list[str]:
@@ -566,9 +675,16 @@ class ContinuationPrompts:
             problems.append(f"{file} must run on GitHub-hosted runners, not a self-hosted one")
         return problems
 
-    def matrix(self) -> list[dict[str, Any]]:
+    def matrix(self, only: Sequence[str] = ()) -> list[dict[str, Any]]:
         """One entry per prompt, carrying the declared run settings, so the lane reads them
-        from the TOML rather than compiling them into the workflow (12.h)."""
+        from the TOML rather than compiling them into the workflow (12.h).
+
+        `only` narrows it to the named prompts -- how a daily lane (the self-healer, the
+        backlog killer) runs one prompt through this lane's guards instead of its own. A
+        name that is no prompt is refused, never silently matched to nothing."""
+        unknown = [name for name in only if name not in {p.id for p in self._settings.prompts}]
+        if unknown:
+            raise KeyError(f"no continuation prompt named {', '.join(map(repr, unknown))}")
         run = self._settings.run
         return [
             {
@@ -583,6 +699,9 @@ class ContinuationPrompts:
             }
             for p in self._settings.prompts
             if p.mode != "chat"  # the chat runs when someone speaks to it, not weekly
+            # Named, a prompt runs whatever its cadence; unnamed, the weekly run takes only
+            # the weekly ones.
+            and (p.id in only if only else p.cadence == "weekly")
         ]
 
     def extract(self, prompt_id: str) -> str:
@@ -717,7 +836,11 @@ class ContinuationCli:
             )
             return 0
         if command == "matrix":
-            print(json.dumps(prompts.matrix()))
+            try:
+                print(json.dumps(prompts.matrix(argv[1:])))
+            except KeyError as unknown:
+                print(f"{SCRIPT}: {unknown.args[0]}", file=sys.stderr)
+                return 2
             return 0
         if command == "models":
             print(" ".join(settings.models()))
@@ -734,9 +857,9 @@ class ContinuationCli:
             if len(argv) != 2:
                 print(f"{SCRIPT}: guard PATCH_FILE", file=sys.stderr)
                 return 2
-            refused = PatchGuard(settings.protected, settings.allowed_new).refused(
-                Path(argv[1]).read_text(encoding="utf-8")
-            )
+            refused = PatchGuard(
+                settings.protected, settings.allowed_new, GitPatchPaths(self._root)
+            ).refused(Path(argv[1]))
             for path in refused:
                 print(f"::error::an automated run may not change {path}")
             return 1 if refused else 0
@@ -752,11 +875,13 @@ class ContinuationCli:
                 print(f"::error::{line}")
             return 1 if problems else 0
         if command == "defuse":
-            if len(argv) != 2:
-                print(f"{SCRIPT}: defuse FILE", file=sys.stderr)
+            if len(argv) not in (2, 3) or argv[2:] not in ([], ["--fenced"]):
+                print(f"{SCRIPT}: defuse FILE [--fenced]", file=sys.stderr)
                 return 2
             trigger = str(settings.chat.get("trigger", "/vibey"))
-            print(ReplyDefuser(trigger).defuse(Path(argv[1]).read_text(encoding="utf-8")))
+            defuser = ReplyDefuser(trigger)
+            text = defuser.defuse(Path(argv[1]).read_text(encoding="utf-8"))
+            print(defuser.fenced(text) if argv[2:] else text)
             return 0
         if len(argv) < 2:
             print(f"{SCRIPT}: {command} needs a prompt id", file=sys.stderr)

@@ -45,12 +45,21 @@ class PageRendererInterface(Protocol):
         ...
 
 
+class PatchPathsInterface(Protocol):
+    """Reads what a patch changes the way the tool that applies it does."""
+
+    def touched(self, patch: Path) -> list[tuple[str, str]] | None:
+        """(status, path) for every path the patch changes -- both sides of a rename -- or
+        None when the patch cannot be applied at all."""
+        ...
+
+
 class PatchGuardInterface(Protocol):
     """Says which paths a patch from an automated run may not touch."""
 
-    def refused(self, patch: str) -> Sequence[str]:
+    def refused(self, patch: Path) -> Sequence[str]:
         """Every path the patch changes that a protected pattern matches, and every file it
-        adds outside the declared `allowed_new` roots."""
+        adds outside the declared `allowed_new` roots. A patch that cannot be read is refused."""
         ...
 
 
@@ -71,4 +80,8 @@ class ReplyDefuserInterface(Protocol):
 
     def defuse(self, text: str) -> str:
         """The text with mentions and chat triggers neutralised, cut loudly to the cap."""
+        ...
+
+    def fenced(self, text: str, info: str = "text") -> str:
+        """`text` inside a code fence that nothing in it can close."""
         ...

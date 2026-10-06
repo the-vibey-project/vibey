@@ -1,0 +1,88 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Backlog killer
+
+# Every day, on GitHub-hosted CPU runners only (ADR-0083): pick one open issue an agent can
+# work today (`scripts/backlog_killer.py pick`, declared in scripts/daily_lanes.toml
+# [backlog_killer]) and run the `backlog` continuation prompt on it, which lands the issue's
+# smallest shippable, tested slice as at most one draft pull request through the continuation
+# lane's own guarded job. Nothing here merges, approves, releases, deletes, closes an issue, or
+# touches a ruleset or a secret (12.d). `scripts/continuation_prompts.py check` fails if this
+# file stops running daily, by hand, or on GitHub's own CPU runners.
+#
+# Five hours after the self-healer, so on a normal day its keep-green run has finished and
+# this one does not wait behind it in the continuation lane's queue.
+on:
+  schedule:
+    - cron: "23 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backlog-killer-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  pick:
+    name: Pick today's backlog item
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      number: ${{ steps.pick.outputs.number }}
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Pick
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          number=$(python scripts/backlog_killer.py pick --number)
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Today's backlog item"
+            echo
+            echo '```text'
+            python scripts/backlog_killer.py pick
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  work:
+    name: Run the backlog prompt on it
+    needs: pick
+    if: needs.pick.outputs.number != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          persist-credentials: false
+      - name: Dispatch the continuation lane for the backlog prompt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ needs.pick.outputs.number }}
+        run: |
+          set -euo pipefail
+          prompt=$(python3 -c "import tomllib; print(tomllib.load(open('scripts/daily_lanes.toml','rb'))['backlog_killer']['prompt'])")
+          gh workflow run continuation-prompts.yml --ref develop -f prompts="$prompt"
+          echo "Dispatched the \`$prompt\` continuation prompt for #$NUMBER." >> "$GITHUB_STEP_SUMMARY"

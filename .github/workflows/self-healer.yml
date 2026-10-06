@@ -1,0 +1,154 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Self-healer
+
+# Every day, on GitHub-hosted CPU runners only (ADR-0083):
+#   1. survey `develop`: the newest run of each workflow in the last day, and which failed;
+#   2. re-run each failed run on the declared allowlist once, failed jobs only -- the flake
+#      that passes on a second try costs nothing more;
+#   3. run the declared scripted repairs (re-render generated pages, take the fixed release
+#      of a published advisory) and open ONE pull request with what they changed, after a
+#      guard refuses any path the repairs may not touch;
+#   4. hand whatever is still red to the `keep-green` continuation prompt, which may open one
+#      draft pull request through the continuation lane's own guarded job.
+# Nothing here merges, approves, releases, deletes, or touches a ruleset or a secret (12.d).
+# What it does is declared in scripts/daily_lanes.toml [self_healer]; `scripts/
+# continuation_prompts.py check` fails if this file stops running daily, by hand, or on
+# GitHub's own CPU runners.
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-healer-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    # Runs the repairs, which run npm and uv over the repository's own manifests: this job
+    # holds no way to write. Its findings and its patch are handed to `act` on a fresh runner.
+    name: Survey develop and run the scripted repairs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Survey the integration branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python scripts/self_healer.py survey "$RUNNER_TEMP/out" >> "$GITHUB_STEP_SUMMARY"
+      - name: Run every scripted repair
+        run: |
+          set -euo pipefail
+          python scripts/self_healer.py repair >> "$GITHUB_STEP_SUMMARY"
+          git add -A
+          git diff --cached --binary > "$RUNNER_TEMP/out/change.patch"
+          git diff --cached --stat
+      # upload-artifact stores files relative to the paths' deepest common directory, so the
+      # download in `act` goes to the same place it came from (tests/meta/test_workflow_artifacts.py).
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-healer
+          path: ${{ runner.temp }}/out/
+          retention-days: 14
+
+  act:
+    name: Re-run flakes, hand the rest to keep-green, open the repair pull request
+    needs: diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Take the survey and the patch
+        uses: actions/download-artifact@v4
+        with:
+          name: self-healer
+          path: ${{ runner.temp }}/out/
+      - name: Check out a clean copy, where no repair ran
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          path: clean
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Re-run each allowlisted flake once
+        working-directory: clean
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 scripts/self_healer.py rerun "$RUNNER_TEMP/out" >> "$GITHUB_STEP_SUMMARY"
+      - name: Hand what is still red to the keep-green prompt
+        working-directory: clean
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          left=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1]))))" "$RUNNER_TEMP/out/remaining.json")
+          if [ "$left" -eq 0 ]; then
+            echo "Nothing left for the keep-green prompt." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          prompt=$(python3 scripts/self_healer.py setting prompt)
+          gh workflow run continuation-prompts.yml --ref develop -f prompts="$prompt"
+          echo "Dispatched the \`$prompt\` continuation prompt for $left failing lane(s)." >> "$GITHUB_STEP_SUMMARY"
+      - name: Open one pull request with the scripted repairs
+        working-directory: clean
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          patch="$RUNNER_TEMP/out/change.patch"
+          if [ ! -s "$patch" ]; then
+            echo "The scripted repairs changed nothing." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Checked, and its settings read, BEFORE the patch is applied: nothing it wrote runs here.
+          python3 scripts/self_healer.py guard "$patch"
+          prefix=$(python3 scripts/self_healer.py setting pull_request_branch)
+          git apply --index "$patch"
+          gh auth setup-git
+          branch="$prefix-$(date -u +%Y-%m-%d)"
+          git switch --force-create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(self-healer): re-derive generated files and take fixed dependency releases" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
+          if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --base develop --head "$branch" \
+              --title "fix(self-healer): re-derive generated files and take fixed dependency releases" \
+              --body "Opened by the daily self-healer (ADR-0083), run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}: the scripted repairs declared in \`scripts/daily_lanes.toml\` changed only the paths \`[self_healer.guard]\` allows, and the patch was applied to a clean checkout on a fresh runner. The run's summary lists each repair and what was red on develop. Its own checks decide whether it lands."
+          fi

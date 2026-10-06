@@ -1,0 +1,158 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The three daily lanes (ADR-0083), all on GitHub-hosted CPU runners only:
+#
+#   .github/workflows/self-healer.yml     scripts/self_healer.py
+#   .github/workflows/docs-updater.yml    scripts/self_healer.py --lane docs_updater, scripts/docs_updater.py
+#   .github/workflows/backlog-killer.yml  scripts/backlog_killer.py
+#
+# Each does the deterministic part itself and hands only what is left to an open-weights model,
+# by running ONE continuation prompt through .github/workflows/continuation-prompts.yml. So the
+# model's patch is applied, as at most one draft pull request, by the same guarded job as every
+# other agent patch (scripts/continuation_prompts.toml [authority]). Neither lane merges,
+# approves, releases, deletes, or touches a ruleset or a secret (sub-doctrine 12.d).
+#
+# Every key here is declared, not compiled in (sub-doctrine 12.c).
+
+[self_healer]
+# The integration branch is surveyed over this window, newest run per workflow file.
+branch = "develop"
+window_hours = 24
+# Only these events speak for the branch itself. A `workflow_dispatch` run on develop is
+# often about something else -- the PR review gate dispatches there for every pull request,
+# and its failures are the gate refusing a pull request, not develop being broken.
+events = ["push", "schedule"]
+# Workflows whose newest failed run is re-run once, failed jobs only, before anything else:
+# the cheapest repair for a flake (a PostgreSQL race, a crash-looping chart dependency).
+# An allowlist, because re-running a release or a promotion is not a repair (12.d).
+rerun_workflows = ["ci.yml", "backlog-cleanup.yml", "branch-health.yml", "host-health.yml"]
+max_attempts = 1     # a run already re-run is a real failure: no second rerun
+max_reruns = 5       # forge mutations per run
+# The continuation prompt that gets whatever the scripted repairs could not reach.
+prompt = "keep-green"
+pull_request_branch = "fix/self-healer"
+
+# The scripted repairs, run in order from the repository root (or `cwd`). Each takes a release
+# that fixes a published advisory; re-deriving generated documentation is the documentation
+# updater's, below, so the two lanes never open the same change twice. A repair
+# that exits non-zero is reported and the next one still runs; what changed is then checked
+# against `allowed_paths` before any pull request is opened.
+[[self_healer.repair]]
+name = "npm advisories (repository root workspace)"
+argv = ["npm", "audit", "fix", "--package-lock-only", "--ignore-scripts"]
+
+[[self_healer.repair]]
+name = "npm advisories (krypton app)"
+cwd = "clients/app"
+argv = ["npm", "audit", "fix", "--package-lock-only", "--ignore-scripts"]
+
+[[self_healer.repair]]
+name = "Python advisories"
+argv = ["python", "scripts/self_healer.py", "lock-advisories"]
+
+# A scripted repair may change only these paths (regular expressions over the repository-
+# relative path). Anything else in its diff refuses the whole pull request.
+[self_healer.guard]
+allowed_paths = [
+  '^package-lock\.json$',
+  '^clients/app/package-lock\.json$',
+  '^uv\.lock$',
+]
+
+[docs_updater]
+# The daily documentation updater (.github/workflows/docs-updater.yml): every generated part
+# of the documentation, the research paper and the book is re-derived from its source and
+# lands as ONE pull request; then the published develop book is checked against the newest
+# successful develop release, and the `docs` prompt corrects one stale written statement.
+# Run by `scripts/self_healer.py repair --lane docs_updater`: the same runner and guard.
+branch = "develop"
+prompt = "docs"
+pull_request_branch = "docs/updater"
+# Rebuild the published develop channel (site, book, paper PDF) from the newest successful
+# develop release when its last rebuild failed or never ran. It republishes what was already
+# released, never anything new; false leaves the book to the next release.
+republish_book = true
+# By file: the workflows whose runs say what the develop channel was last built from.
+release_workflow = "vibey-engine.yml"
+surfaces_workflow = "release-surfaces.yml"
+
+# Measured figures (the autonomy scorecard, the minimum specs, host health, the delivery
+# forecast) are measured by their own lanes; these re-render what those lanes recorded, so a
+# page can never sit behind its own record. Generated indexes the documentation deep scan
+# keeps (src/vibey_tools/gh/corpus-index.json) stay its own.
+[[docs_updater.repair]]
+name = "paper figures, re-pinned to today's develop"
+argv = ["python", "scripts/paper_figures.py", "--rev", "{integration_sha}"]
+
+[[docs_updater.repair]]
+name = "autonomy scorecard pages"
+argv = ["python", "scripts/autonomy_scorecard.py", "render"]
+
+[[docs_updater.repair]]
+name = "minimum requirements pages"
+argv = ["python", "scripts/minimum_specs.py", "render"]
+
+[[docs_updater.repair]]
+name = "host health page"
+argv = ["python", "scripts/host_health.py", "render"]
+
+[[docs_updater.repair]]
+name = "downloads table"
+argv = ["python", "scripts/release_binaries.py", "render"]
+
+[[docs_updater.repair]]
+name = "review canary page"
+argv = ["python", "-m", "vibey_gh", "review-canary", "render"]
+
+[[docs_updater.repair]]
+name = "continuation prompts"
+argv = ["python", "scripts/continuation_prompts.py", "render"]
+
+[[docs_updater.repair]]
+name = "the book's llms.txt, from the navigation"
+argv = ["python", "scripts/llms_txt.py"]
+
+[docs_updater.guard]
+allowed_paths = [
+  '^docs/.+\.md$',
+  '^docs/llms\.txt$',
+  '^README\.md$',
+  '^CONTRIBUTING\.md$',
+  '^src/vibey_tools/gh/docs/.+\.md$',
+]
+
+[backlog_killer]
+# The candidates are ranked, and the day picks one from the first `window` of them, in
+# rotation by date: no attempt ledger to keep, every candidate in the window gets a day, and
+# the lane that dispatches and the agent that works it compute the same pick.
+window = 7
+body_chars = 6000
+prompt = "backlog"
+# Ranked by the first of these an issue carries; an issue with none ranks after all of them.
+priority_labels = [
+  "vibey-gh:priority-critical",
+  "vibey-gh:priority-high",
+  "vibey-gh:priority-medium",
+  "vibey-gh:priority-low",
+]
+# Never picked: work for a person, for a storm lane, or not work at all.
+skip_labels = [
+  "operator",
+  "epic",
+  "qwenstorm",
+  "question",
+  "duplicate",
+  "invalid",
+  "wontfix",
+  "vibey-gh:automation-blocked",
+  "vibey-gh:repair-exhausted",
+  "vibey-gh:repairing",
+]
+# Machine-filed issues report on lanes; the lanes that filed them own them.
+skip_authors = ["app/github-actions", "github-actions[bot]"]
+# Only these authors' issues are ever picked (the forge's `author_association`). Anyone can
+# open an issue on a public repository, and the pick becomes an agent's task whose draft pull
+# request the delegated approver may approve unattended -- so a stranger may not set it.
+trusted_associations = ["OWNER", "MEMBER", "COLLABORATOR"]
+# Operator holds (`never_act`) and self-closing trackers are read from here.
+expectations = "scripts/backlog_expectations.json"

@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 82, the newest 0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays.
+- **Decision records:** 83, the newest 0083 — A daily self-healer, backlog killer and documentation updater, scripted first, on GitHub's CPU runners only.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

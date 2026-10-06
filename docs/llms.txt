@@ -47,6 +47,8 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Keep develop green](https://the-vibey-project.github.io/vibey/main/continuation/keep-green/): The continuation prompt that finds every failing workflow on vibey's integration branch, fixes its cause, and lands the fix as a pull request.
 - [Release](https://the-vibey-project.github.io/vibey/main/continuation/release/): The continuation prompt that derives vibey's next version, promotes develop to main, and verifies every published channel and asset.
 - [Triage](https://the-vibey-project.github.io/vibey/main/continuation/triage/): The continuation prompt that keeps vibey's backlog, issue tracker and living roadmap truthful.
+- [Work the backlog](https://the-vibey-project.github.io/vibey/main/continuation/backlog/): The continuation prompt the daily backlog killer runs: take today's backlog item and land its smallest shippable, tested slice as one draft pull request.
+- [Keep the documentation true](https://the-vibey-project.github.io/vibey/main/continuation/docs/): The continuation prompt the daily documentation updater runs: find one statement in the documentation, the research paper or the book that the repository now contradicts, and correct it.
 - [Research and measurement](https://the-vibey-project.github.io/vibey/main/continuation/research/): The continuation prompt that keeps vibey's weekly measurements and registered studies running without breaking their protocols.
 - [Succession](https://the-vibey-project.github.io/vibey/main/continuation/succession/): The continuation prompt that hands vibey to a new steward — what they must hold, where each thing is declared, and how to verify it, with no secret ever written down.
 - [Rebuild](https://the-vibey-project.github.io/vibey/main/continuation/rebuild/): The continuation prompt that reconstitutes vibey from any surviving copy — a clone, a release's source distribution, or the book — if the forge, the runner or the operator is gone.
@@ -152,6 +154,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0080 — Continuation prompts, kept current and run on GitHub every week](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0080-continuation-prompts/)
 - [0081 — vibey's chat, inside GitHub, resilient to the parts around it failing](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0081-vibey-chat-on-github/)
 - [0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0082-install-copy-reinstall-and-a-core-that-stays/)
+- [0083 — A daily self-healer, backlog killer and documentation updater, scripted first, on GitHub's CPU runners only](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0083-daily-self-healer-and-backlog-killer/)
 
 ## Governance
 

@@ -1,0 +1,151 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Documentation updater
+
+# Every day, on GitHub-hosted CPU runners only (ADR-0083):
+#   1. re-derive every generated part of the documentation, the research paper and the book's
+#      sources -- the paper's figures re-pinned to the day's develop, every measured table
+#      re-rendered from its record, the continuation prompts, the book's llms.txt -- and open
+#      ONE pull request with what moved, after a guard refuses any path outside the docs;
+#   2. check the published develop book, site and paper PDF against the newest successful
+#      develop release, and rebuild them from it when their last rebuild failed or never ran;
+#   3. run the `docs` continuation prompt, which corrects one written statement the
+#      repository now contradicts, as at most one draft pull request.
+# Nothing here merges, approves, cuts a release, deletes, or touches a ruleset or a secret
+# (12.d). What it runs is declared in scripts/daily_lanes.toml [docs_updater];
+# `scripts/continuation_prompts.py check` fails if this file stops running daily, by hand, or
+# on GitHub's own CPU runners. In the evening, so the day's merges are in what it renders and
+# its prompt does not queue behind the self-healer's or the backlog killer's.
+on:
+  schedule:
+    - cron: "7 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-updater-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    # Runs the repository's own generators: this job holds no way to write. Its patch is
+    # handed to `act` on a fresh runner.
+    name: Re-derive every generated page
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          # The paper's figures are recomputed from the whole history at their pin.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install the repository-owned tooling
+        run: python -m pip install --quiet -e src/vibey_tools/gh
+      - name: Run every declared generator
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          python scripts/self_healer.py repair --lane docs_updater >> "$GITHUB_STEP_SUMMARY"
+          git add -A
+          git diff --cached --binary > "$RUNNER_TEMP/out/change.patch"
+          git diff --cached --stat
+      - name: Prove the pages still hold
+        run: |
+          set -euo pipefail
+          python scripts/paper_figures.py --check
+          python scripts/llms_txt.py --check
+          python scripts/continuation_prompts.py check
+      # upload-artifact stores files relative to the paths' deepest common directory, so the
+      # download in `act` goes to the same place it came from (tests/meta/test_workflow_artifacts.py).
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-updater
+          path: ${{ runner.temp }}/out/
+          retention-days: 14
+
+  act:
+    name: Open the refresh pull request, check the book, run the docs prompt
+    needs: render
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Take the patch
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-updater
+          path: ${{ runner.temp }}/out/
+      - name: Check out a clean copy, where no generator ran
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          path: clean
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Rebuild the published develop book if it is behind its release
+        working-directory: clean
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          verdict=$(python3 scripts/docs_updater.py book)
+          python3 -c "import json,sys; print(json.loads(sys.argv[1])['report'])" "$verdict" >> "$GITHUB_STEP_SUMMARY"
+          run_id=$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['rebuild_from'] or '')" "$verdict")
+          if [ -n "$run_id" ]; then
+            gh workflow run release-surfaces.yml --ref develop -f branch=develop -f run_id="$run_id"
+          fi
+      - name: Hand the written pages to the docs prompt
+        working-directory: clean
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          prompt=$(python3 scripts/self_healer.py setting prompt --lane docs_updater)
+          gh workflow run continuation-prompts.yml --ref develop -f prompts="$prompt"
+          echo "Dispatched the \`$prompt\` continuation prompt." >> "$GITHUB_STEP_SUMMARY"
+      - name: Open one pull request with the regenerated pages
+        working-directory: clean
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          patch="$RUNNER_TEMP/out/change.patch"
+          if [ ! -s "$patch" ]; then
+            echo "Every generated page was already current." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Checked, and its settings read, BEFORE the patch is applied: nothing it wrote runs here.
+          python3 scripts/self_healer.py guard "$patch" --lane docs_updater
+          prefix=$(python3 scripts/self_healer.py setting pull_request_branch --lane docs_updater)
+          git apply --index "$patch"
+          gh auth setup-git
+          branch="$prefix-$(date -u +%Y-%m-%d)"
+          git switch --force-create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: re-derive the generated documentation, paper and book sources" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
+          if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --base develop --head "$branch" --label no-changelog \
+              --title "docs: re-derive the generated documentation, paper and book sources" \
+              --body "Opened by the daily documentation updater (ADR-0083), run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}: every generator declared in \`scripts/daily_lanes.toml\` [docs_updater] re-ran on develop (the paper's figures re-pinned to it), the result changed only the paths its guard allows, and it was applied to a clean checkout on a fresh runner. Its own checks decide whether it lands."
+          fi
