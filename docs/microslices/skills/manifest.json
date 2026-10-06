@@ -475,6 +475,51 @@
     "count": 4
   },
   {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-buyer-playbook",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-concepts-standards-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-concepts-standards-and-market-structure",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-diligence-startups-public-and-disputes/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-diligence-startups-public-and-disputes",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-market-analysis-and-timing",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-nonprofit-financial-health-and-impact/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-nonprofit-financial-health-and-impact",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-nonprofit-valuation-and-transactions/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-nonprofit-valuation-and-transactions",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-reference/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-seller-playbook",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-valuing-a-private-company/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-valuing-a-private-company",
+    "count": 6
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/cad-3d-printing/skills/cad-design-tolerances-and-materials/SKILL.md",
     "output": "docs/microslices/skills/cad-3d-printing/skills/cad-design-tolerances-and-materials",
     "count": 3
@@ -528,6 +573,41 @@
     "source": "src/vibey_tools/skills/plugins/calculus-geometry-algebra/skills/math-reference/SKILL.md",
     "output": "docs/microslices/skills/calculus-geometry-algebra/skills/math-reference",
     "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-buyer-playbook",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-concepts-methods-and-market-structure",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-diligence-risk-and-ownership-economics/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-diligence-risk-and-ownership-economics",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-market-analysis-and-timing",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-reference/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-seller-playbook",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-valuing-a-specific-vehicle/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-valuing-a-specific-vehicle",
+    "count": 6
   },
   {
     "source": "src/vibey_tools/skills/plugins/chaos-theory/skills/chaos-detection-control-applications-and-computation/SKILL.md",
@@ -1608,6 +1688,41 @@
     "source": "src/vibey_tools/skills/plugins/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering/SKILL.md",
     "output": "docs/microslices/skills/graphics-and-vision/skills/gfx-transforms-rasterization-and-rendering",
     "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-buyer-playbook",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-comps-adjustments-and-avms/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-comps-adjustments-and-avms",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-concepts-methods-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-concepts-methods-and-market-structure",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-diligence-risk-and-investment/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-diligence-risk-and-investment",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-market-analysis-and-timing",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-reference/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-reference",
+    "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-seller-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-seller-playbook",
+    "count": 6
   },
   {
     "source": "src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work/skills/car-diagnostic-method-obd-tools-and-shop-economics/SKILL.md",

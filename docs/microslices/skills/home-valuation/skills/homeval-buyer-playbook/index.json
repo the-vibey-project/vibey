@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-16-define-the-decision-budget-financing-and-total-cost-5b4fd8b105",
+    "purpose": "16 define the decision budget financing and total cost",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-buyer-playbook/001-16-define-the-decision-budget-financing-and-total-cost.md",
+    "requires": [],
+    "links": [
+      "skill-17-search-and-shortlist-02946a8f73"
+    ]
+  },
+  {
+    "id": "skill-17-search-and-shortlist-02946a8f73",
+    "purpose": "17 search and shortlist",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-buyer-playbook/002-17-search-and-shortlist.md",
+    "requires": [
+      "skill-16-define-the-decision-budget-financing-and-total-cost-5b4fd8b105"
+    ],
+    "links": [
+      "skill-18-value-the-target-and-build-the-offer-8d2662ece0"
+    ]
+  },
+  {
+    "id": "skill-18-value-the-target-and-build-the-offer-8d2662ece0",
+    "purpose": "18 value the target and build the offer",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-buyer-playbook/003-18-value-the-target-and-build-the-offer.md",
+    "requires": [
+      "skill-17-search-and-shortlist-02946a8f73"
+    ],
+    "links": [
+      "skill-19-under-contract-the-due-diligence-timeline-7a1dd26ae0"
+    ]
+  },
+  {
+    "id": "skill-19-under-contract-the-due-diligence-timeline-7a1dd26ae0",
+    "purpose": "19 under contract the due diligence timeline",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-buyer-playbook/004-19-under-contract-the-due-diligence-timeline.md",
+    "requires": [
+      "skill-18-value-the-target-and-build-the-offer-8d2662ece0"
+    ],
+    "links": [
+      "skill-20-decision-rules-for-common-buyer-situations-162aceda78"
+    ]
+  },
+  {
+    "id": "skill-20-decision-rules-for-common-buyer-situations-162aceda78",
+    "purpose": "20 decision rules for common buyer situations",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-buyer-playbook/005-20-decision-rules-for-common-buyer-situations.md",
+    "requires": [
+      "skill-19-under-contract-the-due-diligence-timeline-7a1dd26ae0"
+    ],
+    "links": [
+      "skill-20a-buyer-checklists-a0bd1efc7d"
+    ]
+  },
+  {
+    "id": "skill-20a-buyer-checklists-a0bd1efc7d",
+    "purpose": "20a buyer checklists",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-buyer-playbook/006-20a-buyer-checklists.md",
+    "requires": [
+      "skill-20-decision-rules-for-common-buyer-situations-162aceda78"
+    ],
+    "links": []
+  }
+]

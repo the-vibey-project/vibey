@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-10-selecting-comparable-sales-3f9beb7273",
+    "purpose": "10 selecting comparable sales",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-comps-adjustments-and-avms/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-comps-adjustments-and-avms/001-10-selecting-comparable-sales.md",
+    "requires": [],
+    "links": [
+      "skill-11-the-adjustment-grid-32fe32ede4"
+    ]
+  },
+  {
+    "id": "skill-11-the-adjustment-grid-32fe32ede4",
+    "purpose": "11 the adjustment grid",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-comps-adjustments-and-avms/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-comps-adjustments-and-avms/002-11-the-adjustment-grid.md",
+    "requires": [
+      "skill-10-selecting-comparable-sales-3f9beb7273"
+    ],
+    "links": [
+      "skill-12-market-conditions-time-adjustment-974917e649"
+    ]
+  },
+  {
+    "id": "skill-12-market-conditions-time-adjustment-974917e649",
+    "purpose": "12 market conditions time adjustment",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-comps-adjustments-and-avms/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-comps-adjustments-and-avms/003-12-market-conditions-time-adjustment.md",
+    "requires": [
+      "skill-11-the-adjustment-grid-32fe32ede4"
+    ],
+    "links": [
+      "skill-13-hedonic-regression-cross-check-6b10a51487"
+    ]
+  },
+  {
+    "id": "skill-13-hedonic-regression-cross-check-6b10a51487",
+    "purpose": "13 hedonic regression cross check",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-comps-adjustments-and-avms/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-comps-adjustments-and-avms/004-13-hedonic-regression-cross-check.md",
+    "requires": [
+      "skill-12-market-conditions-time-adjustment-974917e649"
+    ],
+    "links": [
+      "skill-14-avms-zestimate-redfin-estimate-and-friends-e9012a6ff4"
+    ]
+  },
+  {
+    "id": "skill-14-avms-zestimate-redfin-estimate-and-friends-e9012a6ff4",
+    "purpose": "14 avms zestimate redfin estimate and friends",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-comps-adjustments-and-avms/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-comps-adjustments-and-avms/005-14-avms-zestimate-redfin-estimate-and-friends.md",
+    "requires": [
+      "skill-13-hedonic-regression-cross-check-6b10a51487"
+    ],
+    "links": [
+      "skill-15-worked-example-sandbox-verified-and-the-recipe-for-any-house-e63c6e4331"
+    ]
+  },
+  {
+    "id": "skill-15-worked-example-sandbox-verified-and-the-recipe-for-any-house-e63c6e4331",
+    "purpose": "15 worked example sandbox verified and the recipe for any house",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-comps-adjustments-and-avms/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-comps-adjustments-and-avms/006-15-worked-example-sandbox-verified-and-the-recipe-for-any-house.md",
+    "requires": [
+      "skill-14-avms-zestimate-redfin-estimate-and-friends-e9012a6ff4"
+    ],
+    "links": []
+  }
+]

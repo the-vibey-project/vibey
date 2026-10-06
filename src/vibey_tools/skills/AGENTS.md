@@ -4,7 +4,7 @@ Guidance for Codex when working in this repository.
 
 ## What this repo is
 
-This is a **Codex plugin marketplace**: 138 plugins composed of 745 Agent Skills,
+This is a **Codex plugin marketplace**: 141 plugins composed of 768 Agent Skills,
 shipped inside the `vibey-engine` package under the MIT license — `vibey-skills` is a
 workspace tenant, not a separate PyPI project (vibey ADR-0037). The application code is the
 packaging CLI plus the retrieval context engine (`src/vibey_skills/context_engine.py`,

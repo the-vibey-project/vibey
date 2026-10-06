@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-physical-and-legal-due-diligence-62ee53a725",
+    "purpose": "26 physical and legal due diligence",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-diligence-risk-and-investment/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-diligence-risk-and-investment/001-26-physical-and-legal-due-diligence.md",
+    "requires": [],
+    "links": [
+      "skill-27-climate-insurance-and-location-risk-as-valuation-inputs-2ea8f8eeeb"
+    ]
+  },
+  {
+    "id": "skill-27-climate-insurance-and-location-risk-as-valuation-inputs-2ea8f8eeeb",
+    "purpose": "27 climate insurance and location risk as valuation inputs",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-diligence-risk-and-investment/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-diligence-risk-and-investment/002-27-climate-insurance-and-location-risk-as-valuation-inputs.md",
+    "requires": [
+      "skill-26-physical-and-legal-due-diligence-62ee53a725"
+    ],
+    "links": [
+      "skill-28-the-income-approach-and-investment-math-46f0b9bfaf"
+    ]
+  },
+  {
+    "id": "skill-28-the-income-approach-and-investment-math-46f0b9bfaf",
+    "purpose": "28 the income approach and investment math",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-diligence-risk-and-investment/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-diligence-risk-and-investment/003-28-the-income-approach-and-investment-math.md",
+    "requires": [
+      "skill-27-climate-insurance-and-location-risk-as-valuation-inputs-2ea8f8eeeb"
+    ],
+    "links": [
+      "skill-29-specialty-valuation-situations-aba40ce7cd"
+    ]
+  },
+  {
+    "id": "skill-29-specialty-valuation-situations-aba40ce7cd",
+    "purpose": "29 specialty valuation situations",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-diligence-risk-and-investment/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-diligence-risk-and-investment/004-29-specialty-valuation-situations.md",
+    "requires": [
+      "skill-28-the-income-approach-and-investment-math-46f0b9bfaf"
+    ],
+    "links": [
+      "skill-30-fraud-scams-bias-and-ethics-f04fc56bf6"
+    ]
+  },
+  {
+    "id": "skill-30-fraud-scams-bias-and-ethics-f04fc56bf6",
+    "purpose": "30 fraud scams bias and ethics",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-diligence-risk-and-investment/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-diligence-risk-and-investment/005-30-fraud-scams-bias-and-ethics.md",
+    "requires": [
+      "skill-29-specialty-valuation-situations-aba40ce7cd"
+    ],
+    "links": [
+      "skill-30a-deal-stress-template-5-minutes-6c5f398d7c"
+    ]
+  },
+  {
+    "id": "skill-30a-deal-stress-template-5-minutes-6c5f398d7c",
+    "purpose": "30a deal stress template 5 minutes",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-diligence-risk-and-investment/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-diligence-risk-and-investment/006-30a-deal-stress-template-5-minutes.md",
+    "requires": [
+      "skill-30-fraud-scams-bias-and-ethics-f04fc56bf6"
+    ],
+    "links": []
+  }
+]

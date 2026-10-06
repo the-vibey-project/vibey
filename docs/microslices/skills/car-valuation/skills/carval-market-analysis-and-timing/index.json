@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-5-the-market-research-procedure-the-funnel-a74db68079",
+    "purpose": "5 the market research procedure the funnel",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-market-analysis-and-timing/001-5-the-market-research-procedure-the-funnel.md",
+    "requires": [],
+    "links": [
+      "skill-6-indicators-definitions-and-how-each-lies-736ac4d1af"
+    ]
+  },
+  {
+    "id": "skill-6-indicators-definitions-and-how-each-lies-736ac4d1af",
+    "purpose": "6 indicators definitions and how each lies",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-market-analysis-and-timing/002-6-indicators-definitions-and-how-each-lies.md",
+    "requires": [
+      "skill-5-the-market-research-procedure-the-funnel-a74db68079"
+    ],
+    "links": [
+      "skill-7-what-moves-prices-and-how-to-read-the-chain-4a2e62d913"
+    ]
+  },
+  {
+    "id": "skill-7-what-moves-prices-and-how-to-read-the-chain-4a2e62d913",
+    "purpose": "7 what moves prices and how to read the chain",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-market-analysis-and-timing/003-7-what-moves-prices-and-how-to-read-the-chain.md",
+    "requires": [
+      "skill-6-indicators-definitions-and-how-each-lies-736ac4d1af"
+    ],
+    "links": [
+      "skill-8-segmentation-never-average-across-segments-3357f327ff"
+    ]
+  },
+  {
+    "id": "skill-8-segmentation-never-average-across-segments-3357f327ff",
+    "purpose": "8 segmentation never average across segments",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-market-analysis-and-timing/004-8-segmentation-never-average-across-segments.md",
+    "requires": [
+      "skill-7-what-moves-prices-and-how-to-read-the-chain-4a2e62d913"
+    ],
+    "links": [
+      "skill-9-regimes-tactics-and-timing-humility-4adc542735"
+    ]
+  },
+  {
+    "id": "skill-9-regimes-tactics-and-timing-humility-4adc542735",
+    "purpose": "9 regimes tactics and timing humility",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-market-analysis-and-timing/005-9-regimes-tactics-and-timing-humility.md",
+    "requires": [
+      "skill-8-segmentation-never-average-across-segments-3357f327ff"
+    ],
+    "links": [
+      "skill-9a-market-diagnosis-template-fill-in-one-paragraph-aaed0f8f4f"
+    ]
+  },
+  {
+    "id": "skill-9a-market-diagnosis-template-fill-in-one-paragraph-aaed0f8f4f",
+    "purpose": "9a market diagnosis template fill in one paragraph",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-market-analysis-and-timing/006-9a-market-diagnosis-template-fill-in-one-paragraph.md",
+    "requires": [
+      "skill-9-regimes-tactics-and-timing-humility-4adc542735"
+    ],
+    "links": []
+  }
+]
