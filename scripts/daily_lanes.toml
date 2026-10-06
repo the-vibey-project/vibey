@@ -1,0 +1,95 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The two daily lanes (ADR-0083), both on GitHub-hosted CPU runners only:
+#
+#   .github/workflows/self-healer.yml     scripts/self_healer.py
+#   .github/workflows/backlog-killer.yml  scripts/backlog_killer.py
+#
+# Each does the deterministic part itself and hands only what is left to an open-weights model,
+# by running ONE continuation prompt through .github/workflows/continuation-prompts.yml. So the
+# model's patch is applied, as at most one draft pull request, by the same guarded job as every
+# other agent patch (scripts/continuation_prompts.toml [authority]). Neither lane merges,
+# approves, releases, deletes, or touches a ruleset or a secret (sub-doctrine 12.d).
+#
+# Every key here is declared, not compiled in (sub-doctrine 12.c).
+
+[self_healer]
+# The integration branch is surveyed over this window, newest run per workflow file.
+branch = "develop"
+window_hours = 24
+# Only these events speak for the branch itself. A `workflow_dispatch` run on develop is
+# often about something else -- the PR review gate dispatches there for every pull request,
+# and its failures are the gate refusing a pull request, not develop being broken.
+events = ["push", "schedule"]
+# Workflows whose newest failed run is re-run once, failed jobs only, before anything else:
+# the cheapest repair for a flake (a PostgreSQL race, a crash-looping chart dependency).
+# An allowlist, because re-running a release or a promotion is not a repair (12.d).
+rerun_workflows = ["ci.yml", "backlog-cleanup.yml", "branch-health.yml", "host-health.yml"]
+max_attempts = 1     # a run already re-run is a real failure: no second rerun
+max_reruns = 5       # forge mutations per run
+# The continuation prompt that gets whatever the scripted repairs could not reach.
+prompt = "keep-green"
+pull_request_branch = "fix/self-healer"
+
+# The scripted repairs, run in order from the repository root (or `cwd`). Each re-derives a
+# file from its source of truth or takes a release that fixes a published advisory. A repair
+# that exits non-zero is reported and the next one still runs; what changed is then checked
+# against `allowed_paths` before any pull request is opened.
+[[self_healer.repair]]
+name = "continuation prompts"
+argv = ["python", "scripts/continuation_prompts.py", "render"]
+
+[[self_healer.repair]]
+name = "npm advisories (repository root workspace)"
+argv = ["npm", "audit", "fix", "--package-lock-only", "--ignore-scripts"]
+
+[[self_healer.repair]]
+name = "npm advisories (krypton app)"
+cwd = "clients/app"
+argv = ["npm", "audit", "fix", "--package-lock-only", "--ignore-scripts"]
+
+[[self_healer.repair]]
+name = "Python advisories"
+argv = ["python", "scripts/self_healer.py", "lock-advisories"]
+
+# A scripted repair may change only these paths (regular expressions over the repository-
+# relative path). Anything else in its diff refuses the whole pull request.
+[self_healer.guard]
+allowed_paths = [
+  '^docs/continuation/[^/]+\.md$',
+  '^package-lock\.json$',
+  '^clients/app/package-lock\.json$',
+  '^uv\.lock$',
+]
+
+[backlog_killer]
+# The candidates are ranked, and the day picks one from the first `window` of them, in
+# rotation by date: no attempt ledger to keep, every candidate in the window gets a day, and
+# the lane that dispatches and the agent that works it compute the same pick.
+window = 7
+body_chars = 6000
+prompt = "backlog"
+# Ranked by the first of these an issue carries; an issue with none ranks after all of them.
+priority_labels = [
+  "vibey-gh:priority-critical",
+  "vibey-gh:priority-high",
+  "vibey-gh:priority-medium",
+  "vibey-gh:priority-low",
+]
+# Never picked: work for a person, for a storm lane, or not work at all.
+skip_labels = [
+  "operator",
+  "epic",
+  "qwenstorm",
+  "question",
+  "duplicate",
+  "invalid",
+  "wontfix",
+  "vibey-gh:automation-blocked",
+  "vibey-gh:repair-exhausted",
+  "vibey-gh:repairing",
+]
+# Machine-filed issues report on lanes; the lanes that filed them own them.
+skip_authors = ["app/github-actions", "github-actions[bot]"]
+# Operator holds (`never_act`) and self-closing trackers are read from here.
+expectations = "scripts/backlog_expectations.json"

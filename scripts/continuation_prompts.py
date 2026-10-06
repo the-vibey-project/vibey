@@ -3,7 +3,7 @@
 
     python scripts/continuation_prompts.py render     # rewrite every generated block
     python scripts/continuation_prompts.py check      # exit 1 on any broken guarantee
-    python scripts/continuation_prompts.py matrix     # the prompts, as JSON, for the lane
+    python scripts/continuation_prompts.py matrix [ID...]  # the prompts (or only those), as JSON
     python scripts/continuation_prompts.py extract ID # one prompt's text
     python scripts/continuation_prompts.py plan ID    # the prompt plus its gathered evidence
     python scripts/continuation_prompts.py models     # the declared model fallback chain
@@ -56,6 +56,7 @@ REPO = Path(__file__).resolve().parents[1]
 SCRIPT = "scripts/continuation_prompts.py"
 DEFAULT_CONFIG = "scripts/continuation_prompts.toml"
 MODES = ("act", "drill", "chat")
+CADENCES = ("weekly", "daily")
 #: GitHub's limit on one comment body, less room for the reply's own frame.
 COMMENT_LIMIT = 60000
 
@@ -71,6 +72,9 @@ class Prompt:
     purpose: str
     covers: tuple[str, ...]
     gather: tuple[str, ...]
+    # "weekly": in the lane's weekly run. "daily": run only when a daily lane names it, so the
+    # weekly run does not repeat what a daily one already did (ADR-0083).
+    cadence: str = "weekly"
 
 
 @dataclass(frozen=True)
@@ -100,6 +104,7 @@ class Settings:
                 purpose=p["purpose"],
                 covers=tuple(p.get("covers", ())),
                 gather=tuple(p.get("gather", ())),
+                cadence=str(p.get("cadence", "weekly")),
             )
             for p in raw["prompt"]
         )
@@ -189,6 +194,11 @@ class RepositoryFacts(FactSourceInterface):
                     "self-hosted" in value
                     for value in re.findall(r"^\s*runs-on:\s*(.+)$", text, re.MULTILINE)
                 ),
+                "runs_on": [
+                    value.strip().strip("'\"")
+                    for value in re.findall(r"^\s*runs-on:\s*(.+)$", text, re.MULTILINE)
+                ],
+                "dispatchable": "workflow_dispatch" in text,
             }
         return lanes
 
@@ -314,10 +324,10 @@ class PageRenderer(PageRendererInterface):
             f"`{SCRIPT}`, do not edit inside these markers.*",
             "",
             {
-                "act": "- **Mode when GitHub runs it weekly:** act — may open a draft pull "
-                "request; never merges, approves, releases or deletes.",
-                "drill": "- **Mode when GitHub runs it weekly:** drill — verifies and reports; "
-                "changes nothing.",
+                "act": f"- **Mode when GitHub runs it {p.cadence}:** act — may open a draft "
+                "pull request; never merges, approves, releases or deletes.",
+                "drill": f"- **Mode when GitHub runs it {p.cadence}:** drill — verifies and "
+                "reports; changes nothing.",
                 "chat": "- **How it runs:** whenever a trusted person writes "
                 f"`{self._settings.chat.get('trigger', '/vibey')}` in an issue or pull request, "
                 "or runs the Chat workflow — it answers; asked to act, it may open a draft pull "
@@ -492,6 +502,8 @@ class ContinuationPrompts:
             covered |= set(p.covers)
             if p.mode not in MODES:
                 out.append(f"{p.id}: mode {p.mode!r} is not one of {MODES}")
+            if p.cadence not in CADENCES:
+                out.append(f"{p.id}: cadence {p.cadence!r} is not one of {CADENCES}")
             if p.id in s.drill_only and p.mode != "drill":
                 out.append(f"{p.id}: declared drill-only, but its mode is {p.mode!r}")
             for c in p.covers:
@@ -520,6 +532,42 @@ class ContinuationPrompts:
                 out.append(f"exemption for {item} gives no reason")
         out += self._lane_problems(lanes)
         out += self._chat_problems(lanes)
+        out += self._hosted_cpu_problems(lanes)
+        return out
+
+    def _hosted_cpu_problems(self, lanes: Mapping[str, Mapping[str, Any]]) -> list[str]:
+        """Every lane `[lane] hosted_cpu_only` names exists and runs every job on a runner
+        `[lane] cpu_runners` names: GitHub-hosted, CPU only -- never a self-hosted machine,
+        never a GPU runner someone must pay for. Every lane `[lane] daily` names fires every
+        day on its own and can be run by hand.
+
+        A `runs-on:` that is an expression is resolved only when it is the matrix's declared
+        `[run] runs_on`; any other expression cannot be checked here, so it is refused."""
+        allowed = {str(r) for r in self._settings.lane.get("cpu_runners", ())}
+        run_on = str(self._settings.run.get("runs_on", ""))
+        out: list[str] = []
+        for file in self._settings.lane.get("daily", ()):
+            lane = lanes.get(str(file))
+            if lane is None:
+                out.append(f"{file} is declared daily but does not exist")
+                continue
+            # minute hour day-of-month month day-of-week: every day is `* * *` in the last three.
+            if not any(cron.split()[2:] == ["*", "*", "*"] for cron in lane["crons"]):
+                out.append(f"{file} is declared daily but no schedule of it fires every day")
+            if not lane["dispatchable"]:
+                out.append(f"{file} cannot be run by hand (no workflow_dispatch)")
+        for file in self._settings.lane.get("hosted_cpu_only", ()):
+            lane = lanes.get(str(file))
+            if lane is None:
+                out.append(f"{file} is declared hosted_cpu_only but does not exist")
+                continue
+            for value in lane["runs_on"]:
+                resolved = run_on if value == "${{ matrix.prompt.runs_on }}" else value
+                if resolved not in allowed:
+                    out.append(
+                        f"{file} runs a job on {value!r}, which is not a declared "
+                        "GitHub-hosted CPU runner ([lane] cpu_runners)"
+                    )
         return out
 
     def _lane_problems(self, lanes: Mapping[str, Mapping[str, Any]]) -> list[str]:
@@ -566,9 +614,16 @@ class ContinuationPrompts:
             problems.append(f"{file} must run on GitHub-hosted runners, not a self-hosted one")
         return problems
 
-    def matrix(self) -> list[dict[str, Any]]:
+    def matrix(self, only: Sequence[str] = ()) -> list[dict[str, Any]]:
         """One entry per prompt, carrying the declared run settings, so the lane reads them
-        from the TOML rather than compiling them into the workflow (12.h)."""
+        from the TOML rather than compiling them into the workflow (12.h).
+
+        `only` narrows it to the named prompts -- how a daily lane (the self-healer, the
+        backlog killer) runs one prompt through this lane's guards instead of its own. A
+        name that is no prompt is refused, never silently matched to nothing."""
+        unknown = [name for name in only if name not in {p.id for p in self._settings.prompts}]
+        if unknown:
+            raise KeyError(f"no continuation prompt named {', '.join(map(repr, unknown))}")
         run = self._settings.run
         return [
             {
@@ -583,6 +638,9 @@ class ContinuationPrompts:
             }
             for p in self._settings.prompts
             if p.mode != "chat"  # the chat runs when someone speaks to it, not weekly
+            # Named, a prompt runs whatever its cadence; unnamed, the weekly run takes only
+            # the weekly ones.
+            and (p.id in only if only else p.cadence == "weekly")
         ]
 
     def extract(self, prompt_id: str) -> str:
@@ -717,7 +775,11 @@ class ContinuationCli:
             )
             return 0
         if command == "matrix":
-            print(json.dumps(prompts.matrix()))
+            try:
+                print(json.dumps(prompts.matrix(argv[1:])))
+            except KeyError as unknown:
+                print(f"{SCRIPT}: {unknown.args[0]}", file=sys.stderr)
+                return 2
             return 0
         if command == "models":
             print(" ".join(settings.models()))

@@ -557,3 +557,124 @@ def test_the_cli_exports_the_transcript_and_checks_the_receipt(
     (out / "code").write_text("0")
     (out / "agent.log").write_text("report")
     assert cli.run(["receipt", str(out)]) == 0
+
+
+DAILY = """name: Self-healer
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+jobs:
+  a:
+    runs-on: ubuntu-latest
+  b:
+    runs-on: "ubuntu-24.04-arm"
+"""
+
+
+def daily_world(tmp_path: Path) -> Path:
+    """A sound repository with one daily lane, declared daily and hosted-CPU-only."""
+    root = world(tmp_path)
+    (root / ".github/workflows/self-healer.yml").write_text(DAILY)
+    toml = root / "scripts/continuation_prompts.toml"
+    toml.write_text(
+        toml.read_text()
+        .replace('covers = ["ci.yml",', 'covers = ["self-healer.yml", "ci.yml",')
+        .replace(
+            'workflow = ".github/workflows/continuation-prompts.yml"\n',
+            'workflow = ".github/workflows/continuation-prompts.yml"\n'
+            'hosted_cpu_only = ["continuation-prompts.yml", "self-healer.yml"]\n'
+            'cpu_runners = ["ubuntu-latest", "ubuntu-24.04-arm"]\n'
+            'daily = ["self-healer.yml"]\n',
+        )
+    )
+    prompts(root).render()
+    return root
+
+
+def test_a_daily_hosted_cpu_lane_holds(tmp_path: Path) -> None:
+    assert prompts(daily_world(tmp_path)).problems() == []
+
+
+@pytest.mark.parametrize(
+    ("runner", "why"),
+    [
+        ("[self-hosted, linux]", "'[self-hosted, linux]'"),
+        ("ubuntu-24.04-gpu-t4", "'ubuntu-24.04-gpu-t4'"),
+        ("${{ inputs.runner }}", "'${{ inputs.runner }}'"),
+    ],
+)
+def test_a_hosted_cpu_lane_on_any_other_runner_fails(tmp_path: Path, runner: str, why: str) -> None:
+    root = daily_world(tmp_path)
+    (root / ".github/workflows/self-healer.yml").write_text(
+        DAILY.replace("runs-on: ubuntu-latest", f"runs-on: {runner}")
+    )
+    found = prompts(root).problems()
+    assert any(f"self-healer.yml runs a job on {why}" in p and "cpu_runners" in p for p in found), (
+        found
+    )
+
+
+def test_the_matrix_expression_resolves_to_the_declared_run_setting(tmp_path: Path) -> None:
+    root = daily_world(tmp_path)
+    assert prompts(root).problems() == []
+    toml = root / "scripts/continuation_prompts.toml"
+    toml.write_text(
+        toml.read_text().replace('runs_on = "ubuntu-24.04-arm"', 'runs_on = "gpu-l4-runner"')
+    )
+    (root / ".github/workflows/continuation-prompts.yml").write_text(
+        LANE.replace("runs-on: ubuntu-24.04-arm", "runs-on: ${{ matrix.prompt.runs_on }}")
+    )
+    found = prompts(root).problems()
+    assert any(
+        "continuation-prompts.yml runs a job on '${{ matrix.prompt.runs_on }}'" in p for p in found
+    )
+
+
+def test_a_daily_lane_must_fire_every_day_and_by_hand(tmp_path: Path) -> None:
+    root = daily_world(tmp_path)
+    lane = root / ".github/workflows/self-healer.yml"
+    lane.write_text(DAILY.replace('"17 5 * * *"', '"17 5 * * 1"'))
+    assert any("no schedule of it fires every day" in p for p in prompts(root).problems())
+    lane.write_text(DAILY.replace("  workflow_dispatch:\n", ""))
+    assert any("self-healer.yml cannot be run by hand" in p for p in prompts(root).problems())
+    lane.unlink()
+    found = prompts(root).problems()
+    assert any("self-healer.yml is declared daily but does not exist" in p for p in found)
+    assert any("self-healer.yml is declared hosted_cpu_only but does not exist" in p for p in found)
+
+
+def test_the_matrix_narrows_to_named_prompts_and_refuses_unknown_ones(tmp_path: Path) -> None:
+    root = sound(tmp_path)
+    assert [m["id"] for m in prompts(root).matrix(["rebuild"])] == ["rebuild"]
+    with pytest.raises(KeyError, match="no continuation prompt named 'nope'"):
+        prompts(root).matrix(["rebuild", "nope"])
+
+
+def test_a_daily_prompt_leaves_the_weekly_run_but_runs_when_named(tmp_path: Path) -> None:
+    root = sound(tmp_path)
+    toml = root / "scripts/continuation_prompts.toml"
+    toml.write_text(toml.read_text().replace('mode = "act"\n', 'mode = "act"\ncadence = "daily"\n'))
+    prompts(root).render()
+    assert [m["id"] for m in prompts(root).matrix()] == ["rebuild"]
+    assert [m["id"] for m in prompts(root).matrix(["resume"])] == ["resume"]
+    resume = (root / "docs/continuation/resume.md").read_text()
+    assert "**Mode when GitHub runs it daily:** act" in resume
+    assert prompts(root).problems() == []
+
+
+def test_an_undeclared_cadence_fails(tmp_path: Path) -> None:
+    root = sound(tmp_path)
+    toml = root / "scripts/continuation_prompts.toml"
+    toml.write_text(
+        toml.read_text().replace('mode = "act"\n', 'mode = "act"\ncadence = "hourly"\n')
+    )
+    assert any("resume: cadence 'hourly' is not one of" in p for p in prompts(root).problems())
+
+
+def test_the_cli_matrix_refuses_an_unknown_prompt(tmp_path: Path, capsys) -> None:
+    root = sound(tmp_path)
+    assert cp.ContinuationCli(root).run(["matrix", "nope"]) == 2
+    assert "no continuation prompt named 'nope'" in capsys.readouterr().err
+    assert cp.ContinuationCli(root).run(["matrix", "rebuild"]) == 0
+    assert json.loads(capsys.readouterr().out)[0]["id"] == "rebuild"

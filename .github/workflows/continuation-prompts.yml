@@ -14,10 +14,20 @@ name: Continuation prompts
 #      or touches a ruleset or a secret (12.d).
 # `scripts/continuation_prompts.py check` fails on every pull request if this file loses its
 # schedule, its manual dispatch, or moves to a self-hosted runner.
+#
+# The daily lanes (self-healer.yml, backlog-killer.yml; ADR-0083) dispatch it with `prompts`
+# naming one prompt: that run works only that prompt, through the same guarded jobs, and
+# leaves the weekly chores (keep-alive, the page refresh) to the weekly run.
 on:
   schedule:
     - cron: "41 3 * * 1"
   workflow_dispatch:
+    inputs:
+      prompts:
+        description: "Run only these prompts (space-separated ids); empty runs every prompt"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -29,6 +39,7 @@ concurrency:
 jobs:
   keepalive:
     name: Keep every scheduled lane alive
+    if: ${{ !inputs.prompts }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -108,8 +119,18 @@ jobs:
           python scripts/continuation_prompts.py check
       - name: The prompts, for the run
         id: matrix
-        run: echo "matrix=$(python scripts/continuation_prompts.py matrix)" >> "$GITHUB_OUTPUT"
+        env:
+          # Through env:, never interpolated into the script; split into ids on purpose, and
+          # every id must name a declared prompt or `matrix` refuses the run.
+          PROMPTS: ${{ inputs.prompts }}
+        run: |
+          set -euo pipefail
+          # Assigned first: inside `echo "$(...)"` a refused id would not fail the step.
+          # shellcheck disable=SC2086
+          matrix=$(python scripts/continuation_prompts.py matrix $PROMPTS)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
       - name: Open a pull request when the pages moved
+        if: ${{ !inputs.prompts }}
         # The push carries the automation token's identity, so the pull request's own checks
         # run (#1379); a fork without the secret falls back to the Actions token.
         env:
@@ -323,17 +344,31 @@ jobs:
           # One guard for every lane that applies an agent's patch: [authority] protected and
           # allowed_new (no scratch file at the root).
           python3 scripts/continuation_prompts.py guard "$patch"
+          # The agent's own report closes the description -- defused, because it is model
+          # output, and marked unverified, because a person checks it. Built BEFORE the patch
+          # is applied: the patch may change scripts/, and nothing it wrote may run here.
+          body="$RUNNER_TEMP/pr-body.md"
+          {
+            echo "Opened by the continuation lane (sub-doctrine 10.l): the **${{ matrix.prompt.title }}** prompt, run by gptossloop on ${{ matrix.prompt.model }} on a GitHub-hosted CPU runner (run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). The patch was applied to a clean checkout on a fresh runner. A draft: a person reviews it before it is ready."
+            echo
+            echo "### The end of the agent's run (verbatim, unverified)"
+            echo
+            tail -c 6000 "$RUNNER_TEMP/out/agent.log" > "$RUNNER_TEMP/report.txt"
+            echo '```text'
+            python3 scripts/continuation_prompts.py defuse "$RUNNER_TEMP/report.txt"
+            echo '```'
+          } > "$body"
           git apply --index "$patch"
           gh auth setup-git
           branch="continuation/${{ matrix.prompt.id }}-$(date -u +%Y-%m-%d)"
           git switch --force-create "$branch"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore(continuation): ${{ matrix.prompt.id }} — weekly agent run" \
+          git commit -m "chore(continuation): ${{ matrix.prompt.id }} — agent run" \
             -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
           git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
           if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
             gh pr create --draft --base develop --head "$branch" \
-              --title "chore(continuation): ${{ matrix.prompt.title }} — weekly agent run" \
-              --body "Opened by the weekly continuation lane (sub-doctrine 10.l): the **${{ matrix.prompt.title }}** prompt, run by gptossloop on ${{ matrix.prompt.model }} on a GitHub-hosted CPU runner (run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). The patch was applied to a clean checkout on a fresh runner. A draft: a person reviews it before it is ready."
+              --title "chore(continuation): ${{ matrix.prompt.title }} — agent run" \
+              --body-file "$body"
           fi

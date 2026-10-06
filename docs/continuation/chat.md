@@ -43,7 +43,7 @@ minutes, not seconds. It always replies — with an answer, or with the reason i
 
 - **How it runs:** whenever a trusted person writes `/vibey` in an issue or pull request, or runs the Chat workflow — it answers; asked to act, it may open a draft pull request; it never merges, approves, releases or deletes.
 - **What it is for:** Answer a trusted person who writes /vibey in an issue, a pull request or the Actions tab.
-- **Decision records:** 82, the newest 0082 — Install, copy and reinstall in one command; the krypton interfaces uninstall cleanly; the core stays.
+- **Decision records:** 83, the newest 0083 — A daily self-healer and a daily backlog killer, scripted first, on GitHub's CPU runners only.
 - **Lanes it keeps usable:** [Chat](https://github.com/the-vibey-project/vibey/actions/workflows/chat.yml).
 <!-- END GENERATED continuation:state -->
 
