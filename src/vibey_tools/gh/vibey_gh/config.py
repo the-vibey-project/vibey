@@ -12,6 +12,8 @@ Every project-specific decision lives here so the logic beside it can stay gener
     files         = ["src/pkg/__init__.py", "manifest.json"]
     content_paths = ["plugins/"]     # a change here is a MINOR release
     code_paths    = ["src/"]         # a change here alone is a PATCH
+    regenerate    = [["python", "scripts/render.py"]]  # argv run after every bump; what
+                                     # it rewrites joins the release commit
 
     [branches]
     integration = "develop"
@@ -3217,6 +3219,9 @@ class GhConfig:
     version_files: tuple[str, ...] = ()
     content_paths: tuple[str, ...] = ()
     code_paths: tuple[str, ...] = ("src/",)
+    # Commands (argv, never a shell line) that re-derive files embedding the version. Run
+    # after every release bump; whatever they rewrite joins the release commit.
+    version_regenerate: tuple[tuple[str, ...], ...] = ()
     integration_branch: str = "develop"
     release_branch: str = "main"
     owner: str = ""
@@ -3357,6 +3362,27 @@ def _fallback_package(raw: object) -> str:
     if not _DISTRIBUTION_RE.match(value):
         raise ValueError(f"install.fallback_package must be a PEP 508 distribution name: {value!r}")
     return value
+
+
+def _regenerate(raw: object) -> tuple[tuple[str, ...], ...]:
+    """`[version] regenerate`: a list of argv lists, each a non-empty list of strings.
+
+    An argv, not a shell line, because it runs inside the job that holds the push token:
+    nothing in it is interpreted, so a value can never smuggle in a second command.
+    """
+    commands: list[tuple[str, ...]] = []
+    # A bare string is one malformed entry, refused by the same check as any other.
+    for argv in raw if isinstance(raw, (list, tuple)) else [raw]:
+        if (
+            not isinstance(argv, (list, tuple))
+            or not argv
+            or not all(isinstance(part, str) and part for part in argv)
+        ):
+            raise ValueError(
+                f"version.regenerate entries must be non-empty lists of strings: {argv!r}"
+            )
+        commands.append(tuple(argv))
+    return tuple(commands)
 
 
 def _self_source(raw: object) -> str:
@@ -3577,6 +3603,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         version_files=tuple(ver.get("files", ())),
         content_paths=tuple(ver.get("content_paths", ())),
         code_paths=tuple(ver.get("code_paths", ("src/",))),
+        version_regenerate=_regenerate(ver.get("regenerate", ())),
         managed_workflows=(tuple(inst["workflows"]) if "workflows" in inst else None),
         union_merge_paths=tuple(inst.get("union_merge_paths", DEFAULT_UNION_MERGE_PATHS)),
         fallback_package=_fallback_package(inst.get("fallback_package", "vibey-engine")),

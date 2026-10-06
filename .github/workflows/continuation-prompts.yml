@@ -204,9 +204,12 @@ jobs:
         run: |
           set -uo pipefail
           minutes=${{ matrix.prompt.timeout_minutes }}
+          # The runner's own shell is `bash -e`, which `set -uo` does not undo: capture the
+          # exit with `||`, or a failing agent ends the step before its code is recorded and
+          # the report can only say "did not exit 0" (2026-10-05, every prompt).
+          code=0
           timeout "${minutes}m" gptossloop run "$RUNNER_TEMP/plan.md" --cwd . \
-            --max-turns ${{ matrix.prompt.max_turns }} > "$RUNNER_TEMP/agent.log" 2>&1
-          code=$?
+            --max-turns ${{ matrix.prompt.max_turns }} > "$RUNNER_TEMP/agent.log" 2>&1 || code=$?
           echo "code=$code" >> "$GITHUB_OUTPUT"
           {
             echo "## ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }}) — exit $code"

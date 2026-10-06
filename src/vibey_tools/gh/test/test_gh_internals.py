@@ -18,7 +18,7 @@ import pytest
 
 import vibey_gh.pr_automation as pa
 from vibey_gh import fingerprints, install, merge_train, realign, versioning
-from vibey_gh.config import GhConfig, PrAutomationConfig
+from vibey_gh.config import GhConfig, PrAutomationConfig, load_config
 
 
 def git(cwd: Path, *a: str) -> str:
@@ -1589,3 +1589,83 @@ def test_a_staged_bump_over_a_range_that_reaches_no_user_is_kept(repo):
     git("commit", "-qm", "feat!: a break in the docs only")
     decided, why = versioning.decide(cfg, "release-line")
     assert decided is None and "deliberate bump" in why
+
+
+def _regen_repo(tmp_path: Path) -> Path:
+    """A git work tree with a version file and a page that embeds the version."""
+    (tmp_path / "v.py").write_text('__version__ = "1.2.3"\n')
+    (tmp_path / "page.md").write_text("at 1.2.3\n")
+    (tmp_path / "render.py").write_text(
+        "import pathlib, re\n"
+        "v = re.search(r'\"(.+)\"', pathlib.Path('v.py').read_text()).group(1)\n"
+        "pathlib.Path('page.md').write_text(f'at {v}\\n')\n"
+    )
+    for argv in (["init", "-q"], ["add", "-A"]):
+        subprocess.run(["git", *argv], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"],
+        cwd=tmp_path,
+        check=True,
+    )
+    return tmp_path
+
+
+def _regen_cfg(root: Path, *commands: tuple[str, ...]) -> GhConfig:
+    return GhConfig(root=root, version_files=("v.py",), version_regenerate=commands)
+
+
+def test_a_declared_regenerator_rewrites_what_embeds_the_version_into_the_bump(tmp_path):
+    """4.1.0's release commit left the continuation prompts reading 4.0.0 (2026-10-05)."""
+    root = _regen_repo(tmp_path)
+    (root / "notes.txt").write_text("an unrelated edit\n")
+
+    written = versioning.apply_version(_regen_cfg(root, ("python", "render.py")), "1.3.0")
+
+    assert written == ["v.py", "page.md"]
+    assert (root / "page.md").read_text() == "at 1.3.0\n"
+
+
+def test_a_dev_build_does_not_regenerate(tmp_path):
+    root = _regen_repo(tmp_path)
+
+    written = versioning.apply_version(
+        _regen_cfg(root, ("python", "render.py")), "1.3.0.dev4", regenerate=False
+    )
+
+    assert written == ["v.py"]
+    assert (root / "page.md").read_text() == "at 1.2.3\n"
+
+
+def test_a_regenerator_that_fails_stops_the_release(tmp_path):
+    root = _regen_repo(tmp_path)
+    with pytest.raises(RuntimeError, match=r"version\.regenerate .*failed: cannot render"):
+        versioning.apply_version(
+            _regen_cfg(root, ("python", "-c", "raise SystemExit('cannot render')")), "1.3.0"
+        )
+
+
+def test_regenerating_outside_a_work_tree_is_refused(tmp_path):
+    (tmp_path / "v.py").write_text('__version__ = "1.2.3"\n')
+    with pytest.raises(RuntimeError, match="needs a git work tree"):
+        versioning.apply_version(_regen_cfg(tmp_path, ("python", "-c", "pass")), "1.3.0")
+
+
+def test_no_regenerators_touch_nothing_and_need_no_git(tmp_path):
+    (tmp_path / "v.py").write_text('__version__ = "1.2.3"\n')
+    assert versioning.apply_version(_regen_cfg(tmp_path), "1.3.0") == ["v.py"]
+
+
+@pytest.mark.parametrize(
+    "raw", ["python render.py", [[]], [["python", ""]], [["python", 3]], ["python"]]
+)
+def test_regenerate_must_be_a_list_of_argv_lists(tmp_path, raw):
+    (tmp_path / ".vibey-gh.toml").write_text(f"[version]\nregenerate = {json.dumps(raw)}\n")
+    with pytest.raises(ValueError, match="version.regenerate"):
+        load_config(tmp_path)
+
+
+def test_regenerate_is_read_as_argv_tuples(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[version]\nregenerate = [["python", "scripts/render.py", "render"]]\n'
+    )
+    assert load_config(tmp_path).version_regenerate == (("python", "scripts/render.py", "render"),)
