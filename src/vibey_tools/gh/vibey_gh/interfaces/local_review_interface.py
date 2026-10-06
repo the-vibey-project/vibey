@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
+from vibey_gh.interfaces.review_timings_interface import RequestLogInterface
 
 T = TypeVar("T")
 
@@ -189,6 +190,7 @@ class SizedChatInterface(Protocol):
         shown_chars: int,
         deadline: RequestDeadlineInterface | None = None,
         slot: SlotWaitInterface | None = None,
+        log: RequestLogInterface | None = None,
     ) -> dict[str, Any]:
         """Size `payload` from everything it sends, refuse it (`ReviewRefused`) when it
         does not fit the window beside the reserve, send it, and return `answer`'s reading
@@ -201,7 +203,19 @@ class SizedChatInterface(Protocol):
         with `deadline`'s seconds for its size, or `timeout` without one; with `slot`, only
         once the model has come free, and a request that started on a free slot and still
         ran past its deadline is a `ReviewRefused` coded `model_timeout` -- slow on this
-        input, which a retry would not change -- rather than a transport failure."""
+        input, which a retry would not change -- rather than a transport failure.
+
+        With `log`, the call is one attempt there, and the request is one `request` entry:
+        what it sent, its deadline and how that was derived, how long it took, its outcome
+        as a `code`, and Ollama's counters when the model answered. Recording it changes
+        nothing the call decides, raises or returns."""
+
+    @staticmethod
+    def code(error: BaseException) -> str:
+        """Why a request gave no verdict, in `vibey_gh.review_outcome`'s closed vocabulary:
+        a refusal's own code, a transport failure's, `answer_unusable` for an answer that is
+        not a verdict at all, else `unknown`."""
+        ...
 
     def answer(
         self,
@@ -307,6 +321,11 @@ class RequestDeadlineInterface(Protocol):
 
     def explain(self, prompt_tokens: int, output_tokens: int) -> str:
         """The arithmetic behind `seconds`, in words a refusal can carry."""
+        ...
+
+    def basis(self, prompt_tokens: int, output_tokens: int) -> dict[str, Any]:
+        """The figures behind `seconds`, for a record: whether it scaled, the floor, the
+        two declared rates, and the prompt and output tokens it was computed from."""
         ...
 
 

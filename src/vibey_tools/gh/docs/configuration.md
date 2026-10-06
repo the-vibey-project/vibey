@@ -292,7 +292,7 @@ the lane while `trusted_only` is on.
 | `think` | string / empty | The reasoning effort sent to the model as Ollama's `think`: `low`, `medium` or `high`, or empty to send nothing and keep the model's default. Empty by default. On #1090's whole review `low` returned the same verdict in 471 tokens (default: 3,676) and 103s (243s) — one sample, not a fidelity study. |
 | `timeout_seconds` | integer / `600` | The least time one request to the model is given -- one review, or one part of a chunked one. With `prompt_tokens_per_second` and `output_tokens_per_second` set, a larger request gets the deadline its size needs instead; with both `0` this is the whole bound, as it always was. |
 | `prompt_tokens_per_second` | integer / `200` (0–1000000) | How fast the model reads a prompt, **as your host measured it**. With `output_tokens_per_second`, each request's deadline scales with its size: `prompt tokens / prompt_tokens_per_second + reasoning_reserve_tokens / output_tokens_per_second`, never under `timeout_seconds`. Measured on 2026-10-01 on the operator's host (Apple M5, 24 GB, `gpt-oss:20b`, from the llama-server log): a 46,222-token prompt took 145 s to read (319/s) and a 57,227-token one 241 s (237/s) -- the rate falls as the prompt grows -- so the default is rounded down from the slowest. A fixed 600 s could not hold PR #1312's first part: 145 s to read, then 455 s of reasoning, cut off unfinished. Both rates set, or both `0` for the fixed `timeout_seconds`. |
-| `output_tokens_per_second` | integer / `20` (0–1000000) | How fast the model writes its reasoning and answer, as your host measured it: 22.3–22.6 tokens/s on that host at a 46,000-token context, rounded down. The deadline allows the whole `reasoning_reserve_tokens` at this rate, since that is the most a request may write. |
+| `output_tokens_per_second` | integer / `20` (0–1000000) | How fast the model writes its reasoning and answer, as your host measured it: 22.3–22.6 tokens/s on that host at a 46,000-token context, rounded down. The deadline allows the whole `reasoning_reserve_tokens` at this rate, since that is the most a request may write. `vibey-gh review-timings` reports both rates as the model sustained them on the runner that serves it, from the review job's archived outcome records, and suggests values once it has enough observations (below). |
 | `slot_wait_seconds` | integer / `900` (0–3600) | How long a request may wait for the model to come free before it is sent. The model serves one request at a time (`n_slots = 1` in every load the host's Ollama logged) and other clients use it too; a request sent behind another queues inside the runner while its own timeout runs -- on 2026-09-30 a review sat ~10 minutes behind another client's request and was then cut off seconds into its own work, reported as `model_timeout`. So a one-token request for the same model at the same window goes first (through `vibey_gh.slots.OllamaClient`), and the review is sent once it answers. A server that does not answer at all is `model_unreachable`; one that answers but does not come free within this wait is `model_busy`, and both are retried (`retries`). A request that started on a free model and still ran past its deadline is `model_timeout` and is **not** retried: at temperature 0 it would read and reason the same way again (PR #1312's two attempts wrote 9,943 and 10,017 tokens before the same cut-off). 900 is the longest any client of that host was seen to hold the model. `0` sends at once, as before -- and then a timeout is a transport failure, retried, since nothing says the model was free when it began. With `max_chunks` and `retries`, bounds a review's time: at most `max_chunks` requests, each waiting up to this long and then running to its deadline, each retried. |
 | `max_chunks` | integer / `6` (1–64) | The most parts a diff too large for one request is reviewed in. PR #1238's diff (~57,195 tokens) did not fit a 65,536-token window beside its instructions and the reasoning reserve, and every pull request that large went to a human. The diff is split by file and then by hunk -- a hunk with context or removed lines is never cut, and only a hunk that only adds lines is split between lines (`split_added_hunks`, below) -- each file's header repeated before each run of its hunks, and each part is its own request held to every guard above: sized from everything it sends, `truncate: false` and `shift: false`, both check codes echoed, told which part it is. The parts are composed conservatively: a judgment holds only when it is exactly `true` in every part, findings are joined, and a pass needs every part to pass; the verdict records each part under `review_parts` and the head it reviewed as `reviewed_head_sha`, and the composer refuses it for any other head. A part the model cannot answer leaves no verdict at all. A diff that needs more parts than this, or holds one hunk too large for a part alone that cannot be split, is refused with the reason and the gate asks a human. `1` never splits. With `retries`, bounds a review's time: at most this many requests, each waiting up to `slot_wait_seconds` for the model and then running to its deadline (`prompt_tokens_per_second`), each retried. |
 | `split_added_hunks` | boolean / `true` | Whether a hunk that **only adds lines** -- a new file's `@@ -0,0 +1,N @@`, or an insertion into an existing file -- and is too large for one part is split between lines into consecutive pieces rather than refused. The 3.1.0 promotion gave no verdict because `scripts/minimum_specs.py` was new: its 136,308 characters were one hunk, larger than the 100,852 a part could carry, so any pull request that adds a large file went to a human. Each piece is a hunk of its own, with the file's header before it and a synthesized header whose new-side range is the piece's own, so a line number the model cites is real, followed by a label -- `[piece 2 of 3 of one added hunk: new lines 1376-2750 of 1-4000. ...]` -- saying which piece of how many it is and that the file continues in other parts. Each piece is a part like any other: counted against `max_chunks`, held to every guard above, and a pass needs every part, every piece included, to pass at the one head reviewed; `review_parts` names the files each part carries a piece of under `split`. A hunk with a context or removed line is never split, a line is never cut inside (one line too long for a part alone is refused), and pieces past `max_chunks` are refused naming the split file. `false` restores the refusal of any hunk too large for one part. Rendered into `pr-review.yml` as `--split-added-hunks` or `--no-split-added-hunks`. |
@@ -325,6 +325,40 @@ the vocabulary is a malformed record, never a new category. `vibey-gh review-out
 tabulates them by lane, code and verdict, stating the span of runs and when it read them,
 and naming every run whose record is missing, expired or unreadable rather than counting
 it.
+
+The lane's record also says what the review asked of the model, so a deadline can be scaled
+from rates measured where the model actually runs rather than carried over from another
+machine. Fields are only ever added to `vibey-gh.local-review/1`, never renamed or removed:
+beside the fields above it carries `model`, `runner` (the runner's own `RUNNER_ENVIRONMENT`,
+`RUNNER_OS`, `RUNNER_ARCH` and `RUNNER_NAME`, those it set) and `requests`, one entry per
+request attempt in order. Each entry names its `kind` (`request`, or `slot_probe` for the
+one-token request that waits for the model to come free), its `part` `of` the parts and its
+`attempt`, when it started (`at_seconds` into the review) and how long it ran
+(`elapsed_seconds`), and how it ended: `code` from the vocabulary above (`reviewed` once a
+request's answer is read as a verdict; `null` for a probe that answered) and `answered`. A
+request also records the characters it sent and its estimated prompt tokens, its `num_ctx`
+and `num_predict`, how long it waited for the slot, its `deadline_seconds` and the
+`deadline` basis they were computed from (whether it scaled, the floor and both declared
+rates). When the model answered, `ollama` holds its own counters -- `prompt_eval_count`,
+`eval_count`, and `prompt_eval_seconds`, `eval_seconds`, `load_seconds`, `total_seconds`
+(Ollama's nanoseconds as seconds) -- with the `prompt_tokens_per_second` and
+`output_tokens_per_second` they imply, and `done_reason`. Recording changes nothing the
+review decides, prints or exits with. The record is rewritten as each request starts and
+ends, coded `unknown` until the review ends, so a run cancelled or killed mid-request still
+names the request it was waiting on, unfinished.
+
+`vibey-gh review-timings PATH... [--json] [--minimum N] [--by-runner-name]` reads those
+records back -- a file, or a directory of downloaded `pr-review-sovereign-*` artifacts
+searched recursively -- read-only. Per model and runner (environment, OS and architecture;
+each runner name apart with `--by-runner-name`) it reports the requests made and how they
+ended, the median, 10th and 90th percentile (nearest-rank) of the prompt and output tokens a
+second Ollama counted on answered requests, never a slot probe, the requests that timed out
+with their estimated prompt sizes and deadlines, and the declared rates their deadlines were
+scaled at. From at least `--minimum` answered requests (default 5) it suggests
+`--prompt-tokens-per-second` and `--output-tokens-per-second`: the 10th percentile of each
+observed rate, rounded down -- labelled as a suggestion from that many observations, and
+"not enough data" below it. A file that cannot be read, or is not a local-review record, is
+named and skipped, never counted.
 
 It never overrides a judgment the paid lane made: when the local verdict carries the diff
 half, the paid reviewer is not asked that half at all, and when it is held in reserve it is

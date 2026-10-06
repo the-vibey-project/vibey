@@ -256,7 +256,10 @@ in a closed vocabulary (`vibey_gh.review_outcome`): the evaluation leaves a `pr-
 artifact on every run, and the gate a `pr-review-outcome` artifact and the same record in
 its check run's `output.text` -- the lane decision, the verdict, and a code saying why there
 is one or why there is none. `vibey-gh review-outcomes` tabulates those records over the
-last runs, read-only; see [Configuration](configuration.md#pr_automationfallback).
+last runs, read-only; see [Configuration](configuration.md#pr_automationfallback). The
+sovereign job's own artifact, `pr-review-sovereign-*`, keeps the lane's outcome record
+with every request it made of the model and how long each took; `vibey-gh review-timings`
+reads those artifacts back as the rates the model sustained on its runner.
 
 Every `[pr_automation].scan_workflows` entry names a `workflow_run` this aggregation
 waits on, so each one must be a workflow that runs on `pull_request` or
