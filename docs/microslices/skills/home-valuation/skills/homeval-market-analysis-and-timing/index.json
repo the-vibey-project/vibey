@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-5-the-market-research-procedure-the-funnel-bc701e6ac1",
+    "purpose": "5 the market research procedure the funnel",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-market-analysis-and-timing/001-5-the-market-research-procedure-the-funnel.md",
+    "requires": [],
+    "links": [
+      "skill-6-indicators-exact-definitions-and-how-each-one-lies-b4c978d0c8"
+    ]
+  },
+  {
+    "id": "skill-6-indicators-exact-definitions-and-how-each-one-lies-b4c978d0c8",
+    "purpose": "6 indicators exact definitions and how each one lies",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-market-analysis-and-timing/002-6-indicators-exact-definitions-and-how-each-one-lies.md",
+    "requires": [
+      "skill-5-the-market-research-procedure-the-funnel-bc701e6ac1"
+    ],
+    "links": [
+      "skill-7-what-moves-the-marginal-buyer-the-demand-side-ab20dbc11e"
+    ]
+  },
+  {
+    "id": "skill-7-what-moves-the-marginal-buyer-the-demand-side-ab20dbc11e",
+    "purpose": "7 what moves the marginal buyer the demand side",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-market-analysis-and-timing/003-7-what-moves-the-marginal-buyer-the-demand-side.md",
+    "requires": [
+      "skill-6-indicators-exact-definitions-and-how-each-one-lies-b4c978d0c8"
+    ],
+    "links": [
+      "skill-8-segmentation-never-average-across-tiers-2bd3d9cd88"
+    ]
+  },
+  {
+    "id": "skill-8-segmentation-never-average-across-tiers-2bd3d9cd88",
+    "purpose": "8 segmentation never average across tiers",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-market-analysis-and-timing/004-8-segmentation-never-average-across-tiers.md",
+    "requires": [
+      "skill-7-what-moves-the-marginal-buyer-the-demand-side-ab20dbc11e"
+    ],
+    "links": [
+      "skill-9-regimes-tactics-and-timing-humility-f52877f95d"
+    ]
+  },
+  {
+    "id": "skill-9-regimes-tactics-and-timing-humility-f52877f95d",
+    "purpose": "9 regimes tactics and timing humility",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-market-analysis-and-timing/005-9-regimes-tactics-and-timing-humility.md",
+    "requires": [
+      "skill-8-segmentation-never-average-across-tiers-2bd3d9cd88"
+    ],
+    "links": [
+      "skill-9a-market-diagnosis-template-fill-in-one-paragraph-b8e0c0cc9c"
+    ]
+  },
+  {
+    "id": "skill-9a-market-diagnosis-template-fill-in-one-paragraph-b8e0c0cc9c",
+    "purpose": "9a market diagnosis template fill in one paragraph",
+    "source": "src/vibey_tools/skills/plugins/home-valuation/skills/homeval-market-analysis-and-timing/SKILL.md",
+    "output": "docs/microslices/skills/home-valuation/skills/homeval-market-analysis-and-timing/006-9a-market-diagnosis-template-fill-in-one-paragraph.md",
+    "requires": [
+      "skill-9-regimes-tactics-and-timing-humility-f52877f95d"
+    ],
+    "links": []
+  }
+]

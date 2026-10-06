@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-deep-diligence-tests-and-red-flags-2596a763f0",
+    "purpose": "26 deep diligence tests and red flags",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-diligence-startups-public-and-disputes/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-diligence-startups-public-and-disputes/001-26-deep-diligence-tests-and-red-flags.md",
+    "requires": [],
+    "links": [
+      "skill-27-fraud-misrepresentation-and-protections-1d3084acaa"
+    ]
+  },
+  {
+    "id": "skill-27-fraud-misrepresentation-and-protections-1d3084acaa",
+    "purpose": "27 fraud misrepresentation and protections",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-diligence-startups-public-and-disputes/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-diligence-startups-public-and-disputes/002-27-fraud-misrepresentation-and-protections.md",
+    "requires": [
+      "skill-26-deep-diligence-tests-and-red-flags-2596a763f0"
+    ],
+    "links": [
+      "skill-28-venture-backed-startups-a92bbae328"
+    ]
+  },
+  {
+    "id": "skill-28-venture-backed-startups-a92bbae328",
+    "purpose": "28 venture backed startups",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-diligence-startups-public-and-disputes/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-diligence-startups-public-and-disputes/003-28-venture-backed-startups.md",
+    "requires": [
+      "skill-27-fraud-misrepresentation-and-protections-1d3084acaa"
+    ],
+    "links": [
+      "skill-29-public-companies-financial-reporting-and-esops-6c110a98f0"
+    ]
+  },
+  {
+    "id": "skill-29-public-companies-financial-reporting-and-esops-6c110a98f0",
+    "purpose": "29 public companies financial reporting and esops",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-diligence-startups-public-and-disputes/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-diligence-startups-public-and-disputes/004-29-public-companies-financial-reporting-and-esops.md",
+    "requires": [
+      "skill-28-venture-backed-startups-a92bbae328"
+    ],
+    "links": [
+      "skill-30-valuation-in-disputes-and-legal-contexts-7129b93764"
+    ]
+  },
+  {
+    "id": "skill-30-valuation-in-disputes-and-legal-contexts-7129b93764",
+    "purpose": "30 valuation in disputes and legal contexts",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-diligence-startups-public-and-disputes/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-diligence-startups-public-and-disputes/005-30-valuation-in-disputes-and-legal-contexts.md",
+    "requires": [
+      "skill-29-public-companies-financial-reporting-and-esops-6c110a98f0"
+    ],
+    "links": [
+      "skill-30a-diligence-and-dispute-checklist-one-page-1bc1390edf"
+    ]
+  },
+  {
+    "id": "skill-30a-diligence-and-dispute-checklist-one-page-1bc1390edf",
+    "purpose": "30a diligence and dispute checklist one page",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-diligence-startups-public-and-disputes/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-diligence-startups-public-and-disputes/006-30a-diligence-and-dispute-checklist-one-page.md",
+    "requires": [
+      "skill-30-valuation-in-disputes-and-legal-contexts-7129b93764"
+    ],
+    "links": []
+  }
+]

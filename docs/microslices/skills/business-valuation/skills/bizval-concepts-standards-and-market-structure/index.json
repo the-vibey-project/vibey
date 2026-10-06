@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-how-to-use-this-reference-router-44e56199b8",
+    "purpose": "0 how to use this reference router",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-concepts-standards-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-concepts-standards-and-market-structure/001-0-how-to-use-this-reference-router.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-value-means-bc08bb9566"
+    ]
+  },
+  {
+    "id": "skill-1-what-value-means-bc08bb9566",
+    "purpose": "1 what value means",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-concepts-standards-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-concepts-standards-and-market-structure/002-1-what-value-means.md",
+    "requires": [
+      "skill-0-how-to-use-this-reference-router-44e56199b8"
+    ],
+    "links": [
+      "skill-2-the-approaches-f10907c803"
+    ]
+  },
+  {
+    "id": "skill-2-the-approaches-f10907c803",
+    "purpose": "2 the approaches",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-concepts-standards-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-concepts-standards-and-market-structure/003-2-the-approaches.md",
+    "requires": [
+      "skill-1-what-value-means-bc08bb9566"
+    ],
+    "links": [
+      "skill-3-who-values-and-by-what-standards-fb3a12f501"
+    ]
+  },
+  {
+    "id": "skill-3-who-values-and-by-what-standards-fb3a12f501",
+    "purpose": "3 who values and by what standards",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-concepts-standards-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-concepts-standards-and-market-structure/004-3-who-values-and-by-what-standards.md",
+    "requires": [
+      "skill-2-the-approaches-f10907c803"
+    ],
+    "links": [
+      "skill-4-market-structure-us-oct-2026-ed0cecf075"
+    ]
+  },
+  {
+    "id": "skill-4-market-structure-us-oct-2026-ed0cecf075",
+    "purpose": "4 market structure us oct 2026",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-concepts-standards-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-concepts-standards-and-market-structure/005-4-market-structure-us-oct-2026.md",
+    "requires": [
+      "skill-3-who-values-and-by-what-standards-fb3a12f501"
+    ],
+    "links": [
+      "skill-4a-checklist-before-you-quote-any-value-22c8c2de88"
+    ]
+  },
+  {
+    "id": "skill-4a-checklist-before-you-quote-any-value-22c8c2de88",
+    "purpose": "4a checklist before you quote any value",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-concepts-standards-and-market-structure/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-concepts-standards-and-market-structure/006-4a-checklist-before-you-quote-any-value.md",
+    "requires": [
+      "skill-4-market-structure-us-oct-2026-ed0cecf075"
+    ],
+    "links": []
+  }
+]

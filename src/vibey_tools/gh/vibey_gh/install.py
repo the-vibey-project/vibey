@@ -50,6 +50,23 @@ FALLBACK_DISTRIBUTION = "vibey-engine"
 FALLBACK_PLACEHOLDER = "__VIBEY_GH_FALLBACK_PACKAGE__"
 FALLBACK_INSTALL = f"python -m pip install --quiet {FALLBACK_DISTRIBUTION}\n"
 
+#: The promotion template spells its default schedule literally (readable, greppable, and the
+#: shipped YAML a repository that agrees with the default deploys unchanged).
+PROMOTION_SCHEDULE = '  schedule:\n    - cron: "17 8 * * 1"\n'
+
+
+def _promotion_schedules(text: str, schedules: tuple[str, ...]) -> str:
+    """The promotion template's `schedule` block with `[promotion] schedules` in place of
+    the default: one `- cron:` line each, or no block at all for an empty list (the
+    workflow then follows the merge train and a manual dispatch alone).
+
+    Module-level beside `FALLBACK_INSTALL` for the reason `_fallback_install` is: a pure
+    rewrite of one template line, called from the one renderer."""
+    if PROMOTION_SCHEDULE not in text:
+        return text
+    lines = "".join(f'    - cron: "{cron}"\n' for cron in schedules)
+    return text.replace(PROMOTION_SCHEDULE, f"  schedule:\n{lines}" if schedules else "")
+
 
 def _fallback_install(cfg: GhConfig) -> str:
     """The floating fallback install line for `cfg`'s distribution."""
@@ -570,6 +587,7 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     # secret identifier, so this can neither close the expression nor extend the command.
     wanted = wanted.replace("__VIBEY_GH_ANNOUNCE_WEBHOOK_SECRET__", cfg.announce.webhook_secret)
     wanted = wanted.replace("__VIBEY_GH_SELF_SOURCE__", cfg.self_source)
+    wanted = _promotion_schedules(wanted, cfg.promotion_schedules)
     # The workflow templates spell the DEFAULT distribution literally rather than
     # carrying a placeholder, so the shipped YAML stays readable and greppable and the
     # tests that assert on it keep asserting on something. Rewriting the default line to

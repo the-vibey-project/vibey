@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-26-pre-purchase-inspection-history-and-verification-7c3958e0c1",
+    "purpose": "26 pre purchase inspection history and verification",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-diligence-risk-and-ownership-economics/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-diligence-risk-and-ownership-economics/001-26-pre-purchase-inspection-history-and-verification.md",
+    "requires": [],
+    "links": [
+      "skill-27-fraud-and-scam-patterns-f184046b16"
+    ]
+  },
+  {
+    "id": "skill-27-fraud-and-scam-patterns-f184046b16",
+    "purpose": "27 fraud and scam patterns",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-diligence-risk-and-ownership-economics/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-diligence-risk-and-ownership-economics/002-27-fraud-and-scam-patterns.md",
+    "requires": [
+      "skill-26-pre-purchase-inspection-history-and-verification-7c3958e0c1"
+    ],
+    "links": [
+      "skill-28-ownership-economics-67f7c5c5b2"
+    ]
+  },
+  {
+    "id": "skill-28-ownership-economics-67f7c5c5b2",
+    "purpose": "28 ownership economics",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-diligence-risk-and-ownership-economics/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-diligence-risk-and-ownership-economics/003-28-ownership-economics.md",
+    "requires": [
+      "skill-27-fraud-and-scam-patterns-f184046b16"
+    ],
+    "links": [
+      "skill-29-specialty-cases-ee0de2a1ec"
+    ]
+  },
+  {
+    "id": "skill-29-specialty-cases-ee0de2a1ec",
+    "purpose": "29 specialty cases",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-diligence-risk-and-ownership-economics/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-diligence-risk-and-ownership-economics/004-29-specialty-cases.md",
+    "requires": [
+      "skill-28-ownership-economics-67f7c5c5b2"
+    ],
+    "links": [
+      "skill-30-remedies-complaints-and-when-things-go-wrong-2d817db74a"
+    ]
+  },
+  {
+    "id": "skill-30-remedies-complaints-and-when-things-go-wrong-2d817db74a",
+    "purpose": "30 remedies complaints and when things go wrong",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-diligence-risk-and-ownership-economics/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-diligence-risk-and-ownership-economics/005-30-remedies-complaints-and-when-things-go-wrong.md",
+    "requires": [
+      "skill-29-specialty-cases-ee0de2a1ec"
+    ],
+    "links": [
+      "skill-30a-deal-stress-template-5-minutes-2eb3194d71"
+    ]
+  },
+  {
+    "id": "skill-30a-deal-stress-template-5-minutes-2eb3194d71",
+    "purpose": "30a deal stress template 5 minutes",
+    "source": "src/vibey_tools/skills/plugins/car-valuation/skills/carval-diligence-risk-and-ownership-economics/SKILL.md",
+    "output": "docs/microslices/skills/car-valuation/skills/carval-diligence-risk-and-ownership-economics/006-30a-deal-stress-template-5-minutes.md",
+    "requires": [
+      "skill-30-remedies-complaints-and-when-things-go-wrong-2d817db74a"
+    ],
+    "links": []
+  }
+]

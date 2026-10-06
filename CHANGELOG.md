@@ -15,6 +15,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **skills:** three valuation reference packs, each shipping a tested numpy and pandas toolkit
+  in the plugin's `scripts/`: `home-valuation` (seven skills: buying and selling a house),
+  `car-valuation` (seven: buying and selling a car) and `business-valuation` (nine: company and
+  non-profit valuation, buying and selling). vibey-skills 2.23.0; 141 plugins, 768 skills.
+
 ## [4.1.0] (2026-10-05)
 
 ## [4.0.0] (2026-10-03)

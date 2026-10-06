@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-16-thesis-budget-and-affordability-f3306bca05",
+    "purpose": "16 thesis budget and affordability",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-buyer-playbook/001-16-thesis-budget-and-affordability.md",
+    "requires": [],
+    "links": [
+      "skill-17-sourcing-and-screening-db9c2cc561"
+    ]
+  },
+  {
+    "id": "skill-17-sourcing-and-screening-db9c2cc561",
+    "purpose": "17 sourcing and screening",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-buyer-playbook/002-17-sourcing-and-screening.md",
+    "requires": [
+      "skill-16-thesis-budget-and-affordability-f3306bca05"
+    ],
+    "links": [
+      "skill-18-value-offer-and-loi-658c714f8e"
+    ]
+  },
+  {
+    "id": "skill-18-value-offer-and-loi-658c714f8e",
+    "purpose": "18 value offer and loi",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-buyer-playbook/003-18-value-offer-and-loi.md",
+    "requires": [
+      "skill-17-sourcing-and-screening-db9c2cc561"
+    ],
+    "links": [
+      "skill-19-financing-a232d93f5d"
+    ]
+  },
+  {
+    "id": "skill-19-financing-a232d93f5d",
+    "purpose": "19 financing",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-buyer-playbook/004-19-financing.md",
+    "requires": [
+      "skill-18-value-offer-and-loi-658c714f8e"
+    ],
+    "links": [
+      "skill-20-due-diligence-closing-and-transition-1ddbfa058a"
+    ]
+  },
+  {
+    "id": "skill-20-due-diligence-closing-and-transition-1ddbfa058a",
+    "purpose": "20 due diligence closing and transition",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-buyer-playbook/005-20-due-diligence-closing-and-transition.md",
+    "requires": [
+      "skill-19-financing-a232d93f5d"
+    ],
+    "links": [
+      "skill-20a-buyer-checklists-36fa932be3"
+    ]
+  },
+  {
+    "id": "skill-20a-buyer-checklists-36fa932be3",
+    "purpose": "20a buyer checklists",
+    "source": "src/vibey_tools/skills/plugins/business-valuation/skills/bizval-buyer-playbook/SKILL.md",
+    "output": "docs/microslices/skills/business-valuation/skills/bizval-buyer-playbook/006-20a-buyer-checklists.md",
+    "requires": [
+      "skill-20-due-diligence-closing-and-transition-1ddbfa058a"
+    ],
+    "links": []
+  }
+]
