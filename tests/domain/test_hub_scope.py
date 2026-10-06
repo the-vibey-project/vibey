@@ -69,6 +69,8 @@ def test_a_grant_naming_an_unknown_scope_is_refused() -> None:
         (("budget", "cap", "p"), "change_caps"),
         (("-v", "budget", "set", "p", "--usd", "5"), "change_caps"),
         (("--log-level", "DEBUG", "budget", "clear", "p"), "change_caps"),
+        (("state", "sync", "--every", "300"), "state_sync"),
+        (("-v", "state", "key", "--show"), "state_sync"),
         (("--log-file", "migrate", "status"), None),  # the option's value is no command
         (("budget", "show"), None),
         (("status", "--json"), None),

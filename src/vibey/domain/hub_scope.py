@@ -73,6 +73,7 @@ NEVER_FROM_THE_HUB: Final[frozenset[str]] = frozenset(
         "database_dsn",
         "migrations",
         "canon",
+        "state_sync",
     }
 )
 """Capabilities no scope grants and no hub route offers. They stay on the host."""
@@ -83,6 +84,7 @@ RESERVED_COMMANDS: Final[dict[tuple[str, ...], str]] = {
     ("budget", "clear"): "change_caps",
     ("budget", "cap"): "change_caps",
     ("budget", "no-cap"): "no_cap",
+    ("state",): "state_sync",
 }
 """The vibey commands that reach a `NEVER_FROM_THE_HUB` capability, by their leading words.
 A command sent to the workflows through the hub (ADR-0085) runs where a repository may have
