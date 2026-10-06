@@ -800,6 +800,36 @@
     "count": 6
   },
   {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development",
+    "count": 7
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry/SKILL.md",
     "output": "docs/microslices/skills/cooking-cleaning-waste-sciences/skills/foodenv-cleaning-chemistry",
     "count": 5

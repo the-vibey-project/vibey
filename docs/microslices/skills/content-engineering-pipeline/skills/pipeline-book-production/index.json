@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-content-engineering-pipeline-phases-4-and-5-947ba24cb6",
+    "purpose": "content engineering pipeline phases 4 and 5",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/001-content-engineering-pipeline-phases-4-and-5.md",
+    "requires": [],
+    "links": [
+      "skill-your-governing-postulates-2d62bb740b"
+    ]
+  },
+  {
+    "id": "skill-your-governing-postulates-2d62bb740b",
+    "purpose": "your governing postulates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/002-your-governing-postulates.md",
+    "requires": [
+      "skill-content-engineering-pipeline-phases-4-and-5-947ba24cb6"
+    ],
+    "links": [
+      "skill-phase-4-assembly-2f884c370b"
+    ]
+  },
+  {
+    "id": "skill-phase-4-assembly-2f884c370b",
+    "purpose": "phase 4 assembly",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/003-phase-4-assembly.md",
+    "requires": [
+      "skill-your-governing-postulates-2d62bb740b"
+    ],
+    "links": [
+      "skill-phase-5-iteration-revision-6f10bec0aa"
+    ]
+  },
+  {
+    "id": "skill-phase-5-iteration-revision-6f10bec0aa",
+    "purpose": "phase 5 iteration revision",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/004-phase-5-iteration-revision.md",
+    "requires": [
+      "skill-phase-4-assembly-2f884c370b"
+    ],
+    "links": [
+      "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-be622bccaf"
+    ]
+  },
+  {
+    "id": "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-be622bccaf",
+    "purpose": "how phases 4 and 5 connect to the larger pipeline",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/005-how-phases-4-and-5-connect-to-the-larger-pipeline.md",
+    "requires": [
+      "skill-phase-5-iteration-revision-6f10bec0aa"
+    ],
+    "links": [
+      "skill-operating-principles-for-this-skill-bbe3888435"
+    ]
+  },
+  {
+    "id": "skill-operating-principles-for-this-skill-bbe3888435",
+    "purpose": "operating principles for this skill",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/006-operating-principles-for-this-skill.md",
+    "requires": [
+      "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-be622bccaf"
+    ],
+    "links": []
+  }
+]

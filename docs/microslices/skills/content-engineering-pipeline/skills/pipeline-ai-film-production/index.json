@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-overview-what-these-four-phases-accomplish-49c8e87060",
+    "purpose": "overview what these four phases accomplish",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production/001-overview-what-these-four-phases-accomplish.md",
+    "requires": [],
+    "links": [
+      "skill-phase-10-hub-architecture-4ca884051a"
+    ]
+  },
+  {
+    "id": "skill-phase-10-hub-architecture-4ca884051a",
+    "purpose": "phase 10 hub architecture",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production/002-phase-10-hub-architecture.md",
+    "requires": [
+      "skill-overview-what-these-four-phases-accomplish-49c8e87060"
+    ],
+    "links": [
+      "skill-phase-11-hub-draft-f32ce24081"
+    ]
+  },
+  {
+    "id": "skill-phase-11-hub-draft-f32ce24081",
+    "purpose": "phase 11 hub draft",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production/003-phase-11-hub-draft.md",
+    "requires": [
+      "skill-phase-10-hub-architecture-4ca884051a"
+    ],
+    "links": [
+      "skill-phase-12-spoke-architecture-049156b3b8"
+    ]
+  },
+  {
+    "id": "skill-phase-12-spoke-architecture-049156b3b8",
+    "purpose": "phase 12 spoke architecture",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production/004-phase-12-spoke-architecture.md",
+    "requires": [
+      "skill-phase-11-hub-draft-f32ce24081"
+    ],
+    "links": [
+      "skill-phase-13-spoke-drafts-17ed6a9612"
+    ]
+  },
+  {
+    "id": "skill-phase-13-spoke-drafts-17ed6a9612",
+    "purpose": "phase 13 spoke drafts",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production/005-phase-13-spoke-drafts.md",
+    "requires": [
+      "skill-phase-12-spoke-architecture-049156b3b8"
+    ],
+    "links": [
+      "skill-your-governing-postulates-b521fef074"
+    ]
+  },
+  {
+    "id": "skill-your-governing-postulates-b521fef074",
+    "purpose": "your governing postulates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production/006-your-governing-postulates.md",
+    "requires": [
+      "skill-phase-13-spoke-drafts-17ed6a9612"
+    ],
+    "links": [
+      "skill-complete-pipeline-context-413fef05bc"
+    ]
+  },
+  {
+    "id": "skill-complete-pipeline-context-413fef05bc",
+    "purpose": "complete pipeline context",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-ai-film-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-ai-film-production/007-complete-pipeline-context.md",
+    "requires": [
+      "skill-your-governing-postulates-b521fef074"
+    ],
+    "links": []
+  }
+]

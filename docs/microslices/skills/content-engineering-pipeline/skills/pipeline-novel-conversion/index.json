@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-content-engineering-pipeline-phases-6-and-7-62ebf60632",
+    "purpose": "content engineering pipeline phases 6 and 7",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/001-content-engineering-pipeline-phases-6-and-7.md",
+    "requires": [],
+    "links": [
+      "skill-your-governing-postulates-13259e927b"
+    ]
+  },
+  {
+    "id": "skill-your-governing-postulates-13259e927b",
+    "purpose": "your governing postulates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/002-your-governing-postulates.md",
+    "requires": [
+      "skill-content-engineering-pipeline-phases-6-and-7-62ebf60632"
+    ],
+    "links": [
+      "skill-the-conversion-rationale-87a6fb48dc"
+    ]
+  },
+  {
+    "id": "skill-the-conversion-rationale-87a6fb48dc",
+    "purpose": "the conversion rationale",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/003-the-conversion-rationale.md",
+    "requires": [
+      "skill-your-governing-postulates-13259e927b"
+    ],
+    "links": [
+      "skill-phase-6-entry-conditions-b3fdf491be"
+    ]
+  },
+  {
+    "id": "skill-phase-6-entry-conditions-b3fdf491be",
+    "purpose": "phase 6 entry conditions",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/004-phase-6-entry-conditions.md",
+    "requires": [
+      "skill-the-conversion-rationale-87a6fb48dc"
+    ],
+    "links": [
+      "skill-the-four-phase-inputs-b2cb4493e2"
+    ]
+  },
+  {
+    "id": "skill-the-four-phase-inputs-b2cb4493e2",
+    "purpose": "the four phase inputs",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/005-the-four-phase-inputs.md",
+    "requires": [
+      "skill-phase-6-entry-conditions-b3fdf491be"
+    ],
+    "links": [
+      "skill-phase-6-novel-architecture-e86e8e2bcd"
+    ]
+  },
+  {
+    "id": "skill-phase-6-novel-architecture-e86e8e2bcd",
+    "purpose": "phase 6 novel architecture",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/006-phase-6-novel-architecture.md",
+    "requires": [
+      "skill-the-four-phase-inputs-b2cb4493e2"
+    ],
+    "links": [
+      "skill-phase-7-novel-draft-3cbedc270a"
+    ]
+  },
+  {
+    "id": "skill-phase-7-novel-draft-3cbedc270a",
+    "purpose": "phase 7 novel draft",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/007-phase-7-novel-draft.md",
+    "requires": [
+      "skill-phase-6-novel-architecture-e86e8e2bcd"
+    ],
+    "links": [
+      "skill-the-standard-of-chartres-3a1da5f220"
+    ]
+  },
+  {
+    "id": "skill-the-standard-of-chartres-3a1da5f220",
+    "purpose": "the standard of chartres",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/008-the-standard-of-chartres.md",
+    "requires": [
+      "skill-phase-7-novel-draft-3cbedc270a"
+    ],
+    "links": [
+      "skill-operating-principles-for-this-skill-019cc1aed0"
+    ]
+  },
+  {
+    "id": "skill-operating-principles-for-this-skill-019cc1aed0",
+    "purpose": "operating principles for this skill",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-novel-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-novel-conversion/009-operating-principles-for-this-skill.md",
+    "requires": [
+      "skill-the-standard-of-chartres-3a1da5f220"
+    ],
+    "links": []
+  }
+]

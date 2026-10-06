@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-where-phase-8-sits-in-the-pipeline-fd108a43e3",
+    "purpose": "where phase 8 sits in the pipeline",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/001-where-phase-8-sits-in-the-pipeline.md",
+    "requires": [],
+    "links": [
+      "skill-why-this-requires-its-own-architecture-phase-7b9f4544e2"
+    ]
+  },
+  {
+    "id": "skill-why-this-requires-its-own-architecture-phase-7b9f4544e2",
+    "purpose": "why this requires its own architecture phase",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/002-why-this-requires-its-own-architecture-phase.md",
+    "requires": [
+      "skill-where-phase-8-sits-in-the-pipeline-fd108a43e3"
+    ],
+    "links": [
+      "skill-the-three-documents-feeding-phase-8-392e8f84a6"
+    ]
+  },
+  {
+    "id": "skill-the-three-documents-feeding-phase-8-392e8f84a6",
+    "purpose": "the three documents feeding phase 8",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/003-the-three-documents-feeding-phase-8.md",
+    "requires": [
+      "skill-why-this-requires-its-own-architecture-phase-7b9f4544e2"
+    ],
+    "links": [
+      "skill-the-critical-insight-adaptation-vs-transcription-0d841490af"
+    ]
+  },
+  {
+    "id": "skill-the-critical-insight-adaptation-vs-transcription-0d841490af",
+    "purpose": "the critical insight adaptation vs transcription",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/004-the-critical-insight-adaptation-vs-transcription.md",
+    "requires": [
+      "skill-the-three-documents-feeding-phase-8-392e8f84a6"
+    ],
+    "links": [
+      "skill-before-you-design-a-single-scene-92e97eceb8"
+    ]
+  },
+  {
+    "id": "skill-before-you-design-a-single-scene-92e97eceb8",
+    "purpose": "before you design a single scene",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/005-before-you-design-a-single-scene.md",
+    "requires": [
+      "skill-the-critical-insight-adaptation-vs-transcription-0d841490af"
+    ],
+    "links": [
+      "skill-the-novel-to-screenplay-conversion-audit-3a516d853c"
+    ]
+  },
+  {
+    "id": "skill-the-novel-to-screenplay-conversion-audit-3a516d853c",
+    "purpose": "the novel to screenplay conversion audit",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/006-the-novel-to-screenplay-conversion-audit.md",
+    "requires": [
+      "skill-before-you-design-a-single-scene-92e97eceb8"
+    ],
+    "links": [
+      "skill-architecture-documents-required-before-drafting-7642475e22"
+    ]
+  },
+  {
+    "id": "skill-architecture-documents-required-before-drafting-7642475e22",
+    "purpose": "architecture documents required before drafting",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/007-architecture-documents-required-before-drafting.md",
+    "requires": [
+      "skill-the-novel-to-screenplay-conversion-audit-3a516d853c"
+    ],
+    "links": [
+      "skill-phase-8-quality-gate-9799467e0c"
+    ]
+  },
+  {
+    "id": "skill-phase-8-quality-gate-9799467e0c",
+    "purpose": "phase 8 quality gate",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/008-phase-8-quality-gate.md",
+    "requires": [
+      "skill-architecture-documents-required-before-drafting-7642475e22"
+    ],
+    "links": [
+      "skill-file-structure-for-phase-8-070872278c"
+    ]
+  },
+  {
+    "id": "skill-file-structure-for-phase-8-070872278c",
+    "purpose": "file structure for phase 8",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/009-file-structure-for-phase-8.md",
+    "requires": [
+      "skill-phase-8-quality-gate-9799467e0c"
+    ],
+    "links": [
+      "skill-your-governing-postulates-4881d5bf99"
+    ]
+  },
+  {
+    "id": "skill-your-governing-postulates-4881d5bf99",
+    "purpose": "your governing postulates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/010-your-governing-postulates.md",
+    "requires": [
+      "skill-file-structure-for-phase-8-070872278c"
+    ],
+    "links": [
+      "skill-complete-pipeline-context-2628d3af1d"
+    ]
+  },
+  {
+    "id": "skill-complete-pipeline-context-2628d3af1d",
+    "purpose": "complete pipeline context",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-screenplay-conversion/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-screenplay-conversion/011-complete-pipeline-context.md",
+    "requires": [
+      "skill-your-governing-postulates-4881d5bf99"
+    ],
+    "links": []
+  }
+]

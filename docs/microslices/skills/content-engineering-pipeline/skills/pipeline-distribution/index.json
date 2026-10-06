@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-phase-14-entry-requirements-140974bfb4",
+    "purpose": "phase 14 entry requirements",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/001-phase-14-entry-requirements.md",
+    "requires": [],
+    "links": [
+      "skill-governing-postulates-94a494c1d6"
+    ]
+  },
+  {
+    "id": "skill-governing-postulates-94a494c1d6",
+    "purpose": "governing postulates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/002-governing-postulates.md",
+    "requires": [
+      "skill-phase-14-entry-requirements-140974bfb4"
+    ],
+    "links": [
+      "skill-critical-pre-submission-manuscript-gate-e960f470ce"
+    ]
+  },
+  {
+    "id": "skill-critical-pre-submission-manuscript-gate-e960f470ce",
+    "purpose": "critical pre submission manuscript gate",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/003-critical-pre-submission-manuscript-gate.md",
+    "requires": [
+      "skill-governing-postulates-94a494c1d6"
+    ],
+    "links": [
+      "skill-section-1-amazon-kdp-submission-bd9e01aaa7"
+    ]
+  },
+  {
+    "id": "skill-section-1-amazon-kdp-submission-bd9e01aaa7",
+    "purpose": "section 1 amazon kdp submission",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/004-section-1-amazon-kdp-submission.md",
+    "requires": [
+      "skill-critical-pre-submission-manuscript-gate-e960f470ce"
+    ],
+    "links": [
+      "skill-section-2-hub-and-spoke-content-distribution-8e6997cd8a"
+    ]
+  },
+  {
+    "id": "skill-section-2-hub-and-spoke-content-distribution-8e6997cd8a",
+    "purpose": "section 2 hub and spoke content distribution",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/005-section-2-hub-and-spoke-content-distribution.md",
+    "requires": [
+      "skill-section-1-amazon-kdp-submission-bd9e01aaa7"
+    ],
+    "links": [
+      "skill-section-3-in-person-delivery-2530a6e0c9"
+    ]
+  },
+  {
+    "id": "skill-section-3-in-person-delivery-2530a6e0c9",
+    "purpose": "section 3 in person delivery",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/006-section-3-in-person-delivery.md",
+    "requires": [
+      "skill-section-2-hub-and-spoke-content-distribution-8e6997cd8a"
+    ],
+    "links": [
+      "skill-section-4-performance-review-and-iteration-ee9b031881"
+    ]
+  },
+  {
+    "id": "skill-section-4-performance-review-and-iteration-ee9b031881",
+    "purpose": "section 4 performance review and iteration",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/007-section-4-performance-review-and-iteration.md",
+    "requires": [
+      "skill-section-3-in-person-delivery-2530a6e0c9"
+    ],
+    "links": [
+      "skill-phase-14-quality-gates-61500ef8f7"
+    ]
+  },
+  {
+    "id": "skill-phase-14-quality-gates-61500ef8f7",
+    "purpose": "phase 14 quality gates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/008-phase-14-quality-gates.md",
+    "requires": [
+      "skill-section-4-performance-review-and-iteration-ee9b031881"
+    ],
+    "links": [
+      "skill-complete-pipeline-summary-f23c5c74d0"
+    ]
+  },
+  {
+    "id": "skill-complete-pipeline-summary-f23c5c74d0",
+    "purpose": "complete pipeline summary",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-distribution/009-complete-pipeline-summary.md",
+    "requires": [
+      "skill-phase-14-quality-gates-61500ef8f7"
+    ],
+    "links": []
+  }
+]
