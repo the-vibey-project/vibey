@@ -157,22 +157,26 @@ def test_every_repair_runs_in_order_in_its_directory_and_a_failure_does_not_stop
 
 
 def test_a_repair_patch_outside_the_allowed_paths_is_refused() -> None:
-    patch = (
-        "diff --git a/docs/continuation/keep-green.md b/docs/continuation/keep-green.md\n"
-        "--- a/docs/continuation/keep-green.md\n"
-        "diff --git a/uv.lock b/uv.lock\n"
-        "diff --git a/scripts/self_healer.py b/scripts/self_healer.py\n"
-        "diff --git a/docs/continuation/x/nested.md b/docs/continuation/x/nested.md\n"
-    )
-    assert healer(FakeForge([])).refused(patch) == [
+    touched = [
+        ("M", "docs/continuation/keep-green.md"),
+        ("M", "uv.lock"),
+        ("M", "scripts/self_healer.py"),
+        ("A", "docs/continuation/x/nested.md"),
+    ]
+    assert healer(FakeForge([])).refused(touched) == [
         "docs/continuation/x/nested.md",
         "scripts/self_healer.py",
     ]
 
 
 def test_a_rename_is_checked_on_both_sides() -> None:
-    patch = "diff --git a/uv.lock b/.github/workflows/ci.yml\n"
-    assert healer(FakeForge([])).refused(patch) == [".github/workflows/ci.yml"]
+    touched = [("D", "uv.lock"), ("A", ".github/workflows/ci.yml")]
+    assert healer(FakeForge([])).refused(touched) == [".github/workflows/ci.yml"]
+
+
+def test_the_repair_guard_fails_closed() -> None:
+    assert healer(FakeForge([])).refused(None) == ["(a patch git cannot apply to HEAD)"]
+    assert healer(FakeForge([])).refused([]) == ["(a patch that changes no path)"]
 
 
 AUDIT = {
@@ -226,9 +230,9 @@ def test_the_declared_settings_are_sound() -> None:
     forge = FakeForge([])
     real = sh.SelfHealer(forge, FakeRunner(), config, Path("/repo"))
     for allowed in ("docs/continuation/keep-green.md", "uv.lock", "clients/app/package-lock.json"):
-        assert real.refused(f"diff --git a/{allowed} b/{allowed}\n") == []
+        assert real.refused([("M", allowed)]) == []
     for refused in (".github/workflows/ci.yml", "src/vibey/__init__.py", ".vibey-gh.toml"):
-        assert real.refused(f"diff --git a/{refused} b/{refused}\n") == [refused]
+        assert real.refused([("M", refused)]) == [refused]
 
 
 def test_the_cli_refuses_an_unknown_command(capsys) -> None:
@@ -241,13 +245,25 @@ def test_the_cli_reads_one_setting(capsys) -> None:
     assert capsys.readouterr().out.strip() == "fix/self-healer"
 
 
-def test_the_cli_guard_exits_one_on_a_refused_path(tmp_path: Path, capsys) -> None:
-    patch = tmp_path / "p.patch"
-    patch.write_text("diff --git a/src/x.py b/src/x.py\n")
-    assert sh.main(["guard", str(patch)]) == 1
-    assert "a scripted repair changed src/x.py" in capsys.readouterr().out
-    patch.write_text("diff --git a/uv.lock b/uv.lock\n")
-    assert sh.main(["guard", str(patch)]) == 0
+def test_the_cli_guard_reads_the_patch_as_git_applies_it(tmp_path: Path, capsys) -> None:
+    """Against this repository's own HEAD: a new file under an allowed path passes, one
+    anywhere else is refused, and a patch git cannot apply is refused, never waved through."""
+
+    def new_file(path: str) -> Path:
+        patch = tmp_path / "p.patch"
+        patch.write_text(
+            f"diff --git a/{path} b/{path}\nnew file mode 100644\n--- /dev/null\n"
+            f"+++ b/{path}\n@@ -0,0 +1 @@\n+x\n"
+        )
+        return patch
+
+    assert sh.main(["guard", str(new_file("docs/continuation/zz-self-healer-test.md"))]) == 0
+    assert sh.main(["guard", str(new_file("src/zz self healer test.py"))]) == 1
+    assert "a scripted repair changed src/zz self healer test.py" in capsys.readouterr().out
+    junk = tmp_path / "junk.patch"
+    junk.write_text("diff --git a/uv.lock b/uv.lock\n")
+    assert sh.main(["guard", str(junk)]) == 1
+    assert "(a patch git cannot apply to HEAD)" in capsys.readouterr().out
 
 
 def test_rerun_writes_what_is_left_for_keep_green(tmp_path: Path, monkeypatch, capsys) -> None:

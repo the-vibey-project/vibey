@@ -9,7 +9,7 @@
     python scripts/continuation_prompts.py models     # the declared model fallback chain
     python scripts/continuation_prompts.py chat MODE REQUEST THREAD   # a chat turn's plan
     python scripts/continuation_prompts.py guard PATCH   # exit 1 if a patch touches a protected path
-    python scripts/continuation_prompts.py defuse FILE   # a reply made safe to post
+    python scripts/continuation_prompts.py defuse FILE [--fenced]   # a reply made safe to post
 
 `check` holds four guarantees on every pull request: every file, glob, `vibey-gh` command and
 ADR a prompt names exists; every workflow and every agent skill is covered by a prompt or
@@ -22,9 +22,11 @@ from __future__ import annotations
 
 import glob
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -37,6 +39,7 @@ try:
         FactSourceInterface,
         PageRendererInterface,
         PatchGuardInterface,
+        PatchPathsInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
         RunReceiptInterface,
@@ -47,6 +50,7 @@ except ImportError:  # run as `python scripts/continuation_prompts.py`
         FactSourceInterface,
         PageRendererInterface,
         PatchGuardInterface,
+        PatchPathsInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
         RunReceiptInterface,
@@ -349,6 +353,43 @@ class PageRenderer(PageRendererInterface):
         return {"state": "\n".join(lines)}
 
 
+class GitPatchPaths(PatchPathsInterface):
+    """What a patch changes, as `git apply` itself reads it.
+
+    The guards once read `diff --git a/X b/Y` headers with a regular expression, which is
+    not the parser that applies the patch: a path with a space never matched, so it was never
+    checked, and a bare `---`/`+++` diff named no path and passed whole (2026-10-06). So the
+    patch is applied, by git, to a scratch index built from HEAD -- the working tree is never
+    touched -- and git lists what that index changed, a rename as its delete and its add. A
+    patch git cannot apply is reported as unreadable (None), and a guard refuses it.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+
+    def touched(self, patch: Path) -> list[tuple[str, str]] | None:
+        with tempfile.TemporaryDirectory() as scratch:
+            env = {**os.environ, "GIT_INDEX_FILE": str(Path(scratch) / "index")}
+            steps = (
+                ["git", "read-tree", "HEAD"],
+                ["git", "apply", "--cached", str(patch.resolve())],
+                ["git", "diff", "--cached", "--name-status", "--no-renames", "-z", "HEAD"],
+            )
+            out = ""
+            for argv in steps:
+                try:
+                    run = subprocess.run(
+                        argv, cwd=self._root, env=env, capture_output=True, text=True, check=False
+                    )
+                except OSError:  # no git, or no such directory: nothing was read
+                    return None
+                if run.returncode:
+                    return None
+                out = run.stdout
+        fields = out.split("\0")
+        return [(fields[i], fields[i + 1]) for i in range(0, len(fields) - 1, 2)]
+
+
 class PatchGuard(PatchGuardInterface):
     """Refuses a patch from an automated run that touches a declared protected path, or adds a
     file outside the declared roots.
@@ -361,22 +402,33 @@ class PatchGuard(PatchGuardInterface):
     new file, so a repository that declares none keeps the old behaviour.
     """
 
-    HEADER = re.compile(r"^diff --git a/(\S+) b/(\S+)$", re.MULTILINE)
-    ADDED = re.compile(r"^diff --git a/\S+ b/(\S+)\nnew file mode ", re.MULTILINE)
+    UNREADABLE = "(a patch git cannot apply to HEAD)"
+    EMPTY = "(a patch that changes no path)"
 
-    def __init__(self, patterns: Sequence[str], allowed_new: Sequence[str] = ()) -> None:
+    def __init__(
+        self,
+        patterns: Sequence[str],
+        allowed_new: Sequence[str] = (),
+        reader: PatchPathsInterface | None = None,
+    ) -> None:
         self._patterns = [re.compile(p) for p in patterns]
         self._allowed_new = [re.compile(p) for p in allowed_new]
+        self._reader: PatchPathsInterface = reader or GitPatchPaths(Path.cwd())
 
-    def refused(self, patch: str) -> Sequence[str]:
-        paths = {path for pair in self.HEADER.findall(patch) for path in pair}
-        protected = {p for p in paths if any(rx.search(p) for rx in self._patterns)}
+    def refused(self, patch: Path) -> Sequence[str]:
+        # Fails closed: what cannot be read, or reads as nothing, is not let through.
+        touched = self._reader.touched(patch)
+        if touched is None:
+            return [self.UNREADABLE]
+        if not touched:
+            return [self.EMPTY]
+        protected = {p for _, p in touched if any(rx.search(p) for rx in self._patterns)}
         stray: set[str] = set()
         if self._allowed_new:
             stray = {
                 p
-                for p in self.ADDED.findall(patch)
-                if not any(rx.search(p) for rx in self._allowed_new)
+                for status, p in touched
+                if status == "A" and not any(rx.search(p) for rx in self._allowed_new)
             }
         return sorted(protected | stray)
 
@@ -444,6 +496,15 @@ class ReplyDefuser(ReplyDefuserInterface):
         if len(text) > self._cap:
             text = text[: self._cap] + f"\n\n[... cut at {self._cap} characters of {len(text)} ...]"
         return text
+
+    @staticmethod
+    def fenced(text: str, info: str = "text") -> str:
+        """`text` in a code fence it cannot close: one backtick longer than the longest run
+        of backticks inside it, and never fewer than three (CommonMark). A model that writes
+        ``` cannot step out of the quote and into the page."""
+        longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+        fence = "`" * max(3, longest + 1)
+        return f"{fence}{info}\n{text.rstrip(chr(10))}\n{fence}"
 
 
 class PromptPage:
@@ -796,9 +857,9 @@ class ContinuationCli:
             if len(argv) != 2:
                 print(f"{SCRIPT}: guard PATCH_FILE", file=sys.stderr)
                 return 2
-            refused = PatchGuard(settings.protected, settings.allowed_new).refused(
-                Path(argv[1]).read_text(encoding="utf-8")
-            )
+            refused = PatchGuard(
+                settings.protected, settings.allowed_new, GitPatchPaths(self._root)
+            ).refused(Path(argv[1]))
             for path in refused:
                 print(f"::error::an automated run may not change {path}")
             return 1 if refused else 0
@@ -814,11 +875,13 @@ class ContinuationCli:
                 print(f"::error::{line}")
             return 1 if problems else 0
         if command == "defuse":
-            if len(argv) != 2:
-                print(f"{SCRIPT}: defuse FILE", file=sys.stderr)
+            if len(argv) not in (2, 3) or argv[2:] not in ([], ["--fenced"]):
+                print(f"{SCRIPT}: defuse FILE [--fenced]", file=sys.stderr)
                 return 2
             trigger = str(settings.chat.get("trigger", "/vibey"))
-            print(ReplyDefuser(trigger).defuse(Path(argv[1]).read_text(encoding="utf-8")))
+            defuser = ReplyDefuser(trigger)
+            text = defuser.defuse(Path(argv[1]).read_text(encoding="utf-8"))
+            print(defuser.fenced(text) if argv[2:] else text)
             return 0
         if len(argv) < 2:
             print(f"{SCRIPT}: {command} needs a prompt id", file=sys.stderr)

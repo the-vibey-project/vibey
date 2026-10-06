@@ -91,5 +91,9 @@ skip_labels = [
 ]
 # Machine-filed issues report on lanes; the lanes that filed them own them.
 skip_authors = ["app/github-actions", "github-actions[bot]"]
+# Only these authors' issues are ever picked (the forge's `author_association`). Anyone can
+# open an issue on a public repository, and the pick becomes an agent's task whose draft pull
+# request the delegated approver may approve unattended -- so a stranger may not set it.
+trusted_associations = ["OWNER", "MEMBER", "COLLABORATOR"]
 # Operator holds (`never_act`) and self-closing trackers are read from here.
 expectations = "scripts/backlog_expectations.json"

@@ -354,9 +354,9 @@ jobs:
             echo "### The end of the agent's run (verbatim, unverified)"
             echo
             tail -c 6000 "$RUNNER_TEMP/out/agent.log" > "$RUNNER_TEMP/report.txt"
-            echo '```text'
-            python3 scripts/continuation_prompts.py defuse "$RUNNER_TEMP/report.txt"
-            echo '```'
+            # Fenced by a run of backticks no line of it can close: a model that writes ```
+            # cannot step out of the quote and into the description.
+            python3 scripts/continuation_prompts.py defuse "$RUNNER_TEMP/report.txt" --fenced
           } > "$body"
           git apply --index "$patch"
           gh auth setup-git

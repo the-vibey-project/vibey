@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from scripts.continuation_prompts import GitPatchPaths
     from scripts.interfaces.self_healer_interface import (
         AdvisoryLockInterface,
         ArgvRunnerInterface,
@@ -39,6 +40,7 @@ try:
         SelfHealerInterface,
     )
 except ModuleNotFoundError:  # Direct execution keeps the script directory on sys.path.
+    from continuation_prompts import GitPatchPaths  # type: ignore[import-not-found,no-redef]
     from interfaces.self_healer_interface import (  # type: ignore[import-not-found,no-redef]
         AdvisoryLockInterface,
         ArgvRunnerInterface,
@@ -49,7 +51,6 @@ except ModuleNotFoundError:  # Direct execution keeps the script directory on sy
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = "scripts/daily_lanes.toml"
 FAILED = {"failure", "timed_out", "startup_failure"}
-DIFF_PATH = re.compile(r"^diff --git a/(.+?) b/(.+)$", re.MULTILINE)
 
 
 class GhRunForge(RunForgeInterface):
@@ -172,8 +173,14 @@ class SelfHealer(SelfHealerInterface):
             )
         return results
 
-    def refused(self, patch: str) -> list[str]:
-        paths = {path for pair in DIFF_PATH.findall(patch) for path in pair}
+    def refused(self, touched: list[tuple[str, str]] | None) -> list[str]:
+        # Fails closed, as the continuation lane's guard does: what git cannot read, or
+        # reads as changing nothing, is not let through.
+        if touched is None:
+            return ["(a patch git cannot apply to HEAD)"]
+        if not touched:
+            return ["(a patch that changes no path)"]
+        paths = {path for _, path in touched}
         return sorted(p for p in paths if not any(rule.search(p) for rule in self._allowed))
 
 
@@ -298,7 +305,8 @@ def main(argv: list[str]) -> int:
                 print(r["tail"])
                 print("```\n</details>")
         return 0
-    refused = healer.refused(Path(argv[1]).read_text(encoding="utf-8"))
+    # What the patch changes as git applies it, not as a pattern guesses (GitPatchPaths).
+    refused = healer.refused(GitPatchPaths(REPO).touched(Path(argv[1])))
     for path in refused:
         print(
             f"::error::a scripted repair changed {path}, which [self_healer.guard] does not allow"

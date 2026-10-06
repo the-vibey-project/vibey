@@ -46,8 +46,9 @@ class SelfHealerInterface(Protocol):
         """Run every declared repair in order; returns each one's name and exit code."""
         ...
 
-    def refused(self, patch: str) -> list[str]:
-        """The paths a repair patch changes outside the declared allowed paths."""
+    def refused(self, touched: list[tuple[str, str]] | None) -> list[str]:
+        """The paths a repair patch changes outside the declared allowed paths, given what it
+        changes as (status, path); None (unreadable) and nothing are refused outright."""
         ...
 
 

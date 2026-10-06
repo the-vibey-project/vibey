@@ -81,6 +81,7 @@ def test_the_lane_quotes_the_agents_report_before_applying_its_patch() -> None:
     report = spec("continuation-prompts.yml")["jobs"]["report"]
     run = step(report, "Act")["run"]
     assert run.index("continuation_prompts.py defuse") < run.index("git apply --index")
+    assert "--fenced" in run  # model output cannot close its own quote
     assert "--body-file" in run
 
 

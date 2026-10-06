@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -440,15 +441,110 @@ def test_the_model_chain_falls_back_to_the_single_model(tmp_path: Path) -> None:
     assert cp.Settings.load(world(plain)).models() == ["gpt-oss:20b"]
 
 
+class FakePaths:
+    """Answers `touched` from a fixed list, so the guard's rules are tested without git."""
+
+    def __init__(self, touched: list[tuple[str, str]] | None) -> None:
+        self._touched = touched
+
+    def touched(self, patch: Path) -> list[tuple[str, str]] | None:
+        return self._touched
+
+
 def test_the_guard_refuses_any_protected_path_and_passes_the_rest() -> None:
-    guard = cp.PatchGuard(["^\\.github/", "^secret\\.toml$"])
-    patch = (
-        "diff --git a/docs/x.md b/docs/x.md\n+ok\n"
-        "diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n+bad\n"
-        "diff --git a/old.toml b/secret.toml\nrename\n"
+    def guard(touched: list[tuple[str, str]] | None) -> cp.PatchGuard:
+        return cp.PatchGuard(["^\\.github/", "^secret\\.toml$"], reader=FakePaths(touched))
+
+    changed = [
+        ("M", "docs/x.md"),
+        ("M", ".github/workflows/ci.yml"),
+        ("D", "old.toml"),
+        ("A", "secret.toml"),
+    ]
+    assert guard(changed).refused(Path("p")) == [".github/workflows/ci.yml", "secret.toml"]
+    assert guard([("M", "docs/x.md")]).refused(Path("p")) == []
+
+
+def test_the_guard_fails_closed() -> None:
+    unreadable = cp.PatchGuard([], reader=FakePaths(None)).refused(Path("p"))
+    assert unreadable == ["(a patch git cannot apply to HEAD)"]
+    assert cp.PatchGuard([], reader=FakePaths([])).refused(Path("p")) == [
+        "(a patch that changes no path)"
+    ]
+
+
+def git_repo(root: Path) -> Path:
+    """A git work tree with one commit, for patches git itself must read."""
+    import subprocess
+
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    (root / "docs/x.md").write_text("one\n")
+    (root / "old name.toml").write_text("a = 1\n")
+    for argv in (["init", "-q"], ["add", "-A"]):
+        subprocess.run(["git", *argv], cwd=root, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"],
+        cwd=root,
+        check=True,
     )
-    assert guard.refused(patch) == [".github/workflows/ci.yml", "secret.toml"]
-    assert guard.refused("diff --git a/docs/x.md b/docs/x.md\n") == []
+    return root
+
+
+def patch_of(root: Path, change: Any) -> Path:
+    """The patch a change makes to the repository, as the lanes write it; the tree is reset."""
+    import subprocess
+
+    change(root)
+    subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+    diff = subprocess.run(
+        ["git", "diff", "--cached", "--binary", "-M"], cwd=root, check=True, capture_output=True
+    ).stdout
+    subprocess.run(["git", "reset", "-q", "--hard"], cwd=root, check=True)
+    subprocess.run(["git", "clean", "-qfd"], cwd=root, check=True)
+    out = root.parent / f"{root.name}.patch"
+    out.write_bytes(diff)
+    return out
+
+
+def test_git_reads_a_path_with_a_space_that_a_pattern_never_matched(tmp_path: Path) -> None:
+    root = git_repo(tmp_path / "repo")
+
+    def add(r: Path) -> None:
+        (r / ".github/workflows").mkdir(parents=True)
+        (r / ".github/workflows/x y.yml").write_text("on: push\n")
+
+    touched = cp.GitPatchPaths(root).touched(patch_of(root, add))
+    assert touched == [("A", ".github/workflows/x y.yml")]
+    guard = cp.PatchGuard(["^\\.github/"], reader=cp.GitPatchPaths(root))
+    assert guard.refused(patch_of(root, add)) == [".github/workflows/x y.yml"]
+
+
+def test_git_reads_both_sides_of_a_rename(tmp_path: Path) -> None:
+    root = git_repo(tmp_path / "repo")
+
+    def rename(r: Path) -> None:
+        (r / "old name.toml").rename(r / "docs/new.toml")
+
+    touched = cp.GitPatchPaths(root).touched(patch_of(root, rename))
+    assert sorted(touched or []) == [("A", "docs/new.toml"), ("D", "old name.toml")]
+
+
+def test_git_reads_a_bare_unified_diff_that_names_no_header(tmp_path: Path) -> None:
+    root = git_repo(tmp_path / "repo")
+    bare = tmp_path / "bare.patch"
+    bare.write_text("--- a/docs/x.md\n+++ b/docs/x.md\n@@ -1 +1 @@\n-one\n+two\n")
+    assert cp.GitPatchPaths(root).touched(bare) == [("M", "docs/x.md")]
+
+
+def test_a_patch_git_cannot_apply_is_unreadable(tmp_path: Path) -> None:
+    root = git_repo(tmp_path / "repo")
+    junk = tmp_path / "junk.patch"
+    junk.write_text("diff --git a/docs/x.md b/docs/x.md\n+not a hunk\n")
+    assert cp.GitPatchPaths(root).touched(junk) is None
+    stale = tmp_path / "stale.patch"
+    stale.write_text("--- a/docs/x.md\n+++ b/docs/x.md\n@@ -1 +1 @@\n-zero\n+two\n")
+    assert cp.GitPatchPaths(root).touched(stale) is None
+    assert cp.GitPatchPaths(tmp_path / "nowhere").touched(stale) is None
 
 
 def test_a_reply_cannot_mention_anyone_or_trigger_the_chat_and_is_cut_loudly() -> None:
@@ -490,12 +586,22 @@ def test_the_cli_serves_the_chat(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert cli.run(["chat", "answer", str(request), str(thread)]) == 0
     assert "hello" in capsys.readouterr().out
     assert cli.run(["chat", "shout", str(request), str(thread)]) == 2
-    patch = root / "change.patch"
-    patch.write_text("diff --git a/docs/a.md b/docs/a.md\n")
-    assert cli.run(["guard", str(patch)]) == 0
-    patch.write_text("diff --git a/.github/x.yml b/.github/x.yml\n")
-    assert cli.run(["guard", str(patch)]) == 1
+    git_repo(root)
+    capsys.readouterr()
+
+    def doc(r: Path) -> None:
+        (r / "docs/a.md").write_text("new\n")
+
+    def workflow(r: Path) -> None:
+        (r / ".github/x.yml").write_text("on: push\n")
+
+    assert cli.run(["guard", str(patch_of(root, doc))]) == 0
+    assert cli.run(["guard", str(patch_of(root, workflow))]) == 1
     assert "may not change .github/x.yml" in capsys.readouterr().out
+    junk = tmp_path / "junk.patch"
+    junk.write_text("diff --git a/docs/a.md b/docs/a.md\n")
+    assert cli.run(["guard", str(junk)]) == 1
+    assert "(a patch git cannot apply to HEAD)" in capsys.readouterr().out
     assert cli.run(["guard"]) == 2
     reply = root / "reply.md"
     reply.write_text("ping @vibey")
@@ -505,14 +611,14 @@ def test_the_cli_serves_the_chat(tmp_path: Path, capsys: pytest.CaptureFixture[s
 
 
 def test_the_guard_refuses_a_new_file_outside_the_declared_roots() -> None:
-    guard = cp.PatchGuard([], ["^(src|docs)/"])
-    scratch = "diff --git a/pr_list.txt b/pr_list.txt\nnew file mode 100644\n+x\n"
-    kept = "diff --git a/docs/a.md b/docs/a.md\nnew file mode 100644\n+x\n"
-    edit = "diff --git a/pr_list.txt b/pr_list.txt\nindex 1..2 100644\n+x\n"
-    assert guard.refused(scratch) == ["pr_list.txt"]
-    assert guard.refused(kept) == []
-    assert guard.refused(edit) == []
-    assert cp.PatchGuard([], []).refused(scratch) == []
+    def refused(touched: list[tuple[str, str]], allowed: list[str]) -> list[str]:
+        return list(cp.PatchGuard([], allowed, reader=FakePaths(touched)).refused(Path("p")))
+
+    roots = ["^(src|docs)/"]
+    assert refused([("A", "pr_list.txt")], roots) == ["pr_list.txt"]
+    assert refused([("A", "docs/a.md")], roots) == []
+    assert refused([("M", "pr_list.txt")], roots) == []
+    assert refused([("A", "pr_list.txt")], []) == []
 
 
 def test_a_run_is_believed_only_with_an_exit_of_zero_and_a_log(tmp_path: Path) -> None:
@@ -678,3 +784,29 @@ def test_the_cli_matrix_refuses_an_unknown_prompt(tmp_path: Path, capsys) -> Non
     assert "no continuation prompt named 'nope'" in capsys.readouterr().err
     assert cp.ContinuationCli(root).run(["matrix", "rebuild"]) == 0
     assert json.loads(capsys.readouterr().out)[0]["id"] == "rebuild"
+
+
+@pytest.mark.parametrize(
+    ("text", "fence"),
+    [
+        ("plain", "```"),
+        ("one ` tick", "```"),
+        ("```\n## injected heading\n```", "````"),
+        ("````` five", "``````"),
+    ],
+)
+def test_a_fenced_report_cannot_close_its_own_fence(text: str, fence: str) -> None:
+    out = cp.ReplyDefuser("/vibey").fenced(text)
+    assert out.startswith(fence + "text\n") and out.endswith("\n" + fence)
+    inner = out[len(fence) + 5 : -len(fence) - 1]
+    assert inner == text and fence not in inner
+
+
+def test_the_cli_defuses_and_fences(tmp_path: Path, capsys) -> None:
+    root = sound(tmp_path)
+    report = tmp_path / "report.txt"
+    report.write_text("@someone said ```break out```\n")
+    assert cp.ContinuationCli(root).run(["defuse", str(report), "--fenced"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("````text\n@\u200bsomeone") and out.rstrip().endswith("````")
+    assert cp.ContinuationCli(root).run(["defuse", str(report), "--loose"]) == 2
