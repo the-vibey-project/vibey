@@ -12,11 +12,10 @@ pytest collects `test_*` functions, and the rule is about production code.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-import pytest
 
 from scripts import self_healer as sh
 
@@ -372,8 +371,10 @@ def test_the_argv_runner_reports_a_missing_tool_as_a_failed_repair(tmp_path: Pat
     assert code == 127 and output
 
 
-@pytest.mark.parametrize("argv", [["python", "-c", "print('hi')"]])
-def test_the_argv_runner_returns_the_output(tmp_path: Path, argv: list[str]) -> None:
+def test_the_argv_runner_returns_the_output(tmp_path: Path) -> None:
+    # The interpreter running the tests, never a bare `python`: a machine with only
+    # `python3` on PATH failed this for a reason that had nothing to do with the runner.
+    argv = [sys.executable, "-c", "print('hi')"]
     assert sh.SubprocessArgvRunner().run(argv, tmp_path) == (0, "hi\n")
 
 
