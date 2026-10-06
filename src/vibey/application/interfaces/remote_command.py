@@ -34,8 +34,10 @@ class RemoteCommandServiceInterface(Protocol):
     """Sends a vibey command to the workflows, and says what it came to. Stateless: a run is
     found again by its request id alone, so any process, or a hub after a restart, can ask."""
 
-    async def start(self, argv: Sequence[str]) -> RemoteCommand:
-        """Dispatch `argv`; the command, with the request id its run will carry."""
+    async def start(self, argv: Sequence[str], *, request_id: str | None = None) -> RemoteCommand:
+        """Dispatch `argv`; the command, with the request id its run will carry. The caller
+        may name the id (the hub mints one bound to its starter); otherwise a fresh one is
+        made. Either way it is held to `RemoteCommand.REQUEST_ID`."""
         ...
 
     async def poll(self, request_id: str) -> RemoteStatus:

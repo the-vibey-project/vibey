@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from vibey.application.hub.interfaces.hub_service_interface import HubServiceInterface
     from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
+    from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
     from vibey.infrastructure.hub.interfaces.authenticator_interface import (
         HubAuthenticatorInterface,
     )
@@ -39,6 +40,9 @@ class HubAppFactoryInterface(Protocol):
         live: LedgerAnnouncementsInterface,
         pairing: HubPairingInterface | None = None,
         workflows: RemoteCommandServiceInterface | None = None,
+        runs: RunOwnershipInterface | None = None,
     ) -> FastAPI:
-        """The app: Host allowlist, security headers, no CORS, principal before route."""
+        """The app: Host allowlist, security headers, no CORS, principal before route. The
+        workflows routes are offered only with both `workflows` and `runs`, the key their
+        request ids are bound to their starters under."""
         ...

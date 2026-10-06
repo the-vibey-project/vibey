@@ -43,8 +43,9 @@ class RemoteCommandService(RemoteCommandServiceInterface):
         self._poll = poll_seconds
         self._timeout = timeout_seconds
 
-    async def start(self, argv: Sequence[str]) -> RemoteCommand:
-        command = RemoteCommand(tuple(argv), self._new_id())
+    async def start(self, argv: Sequence[str], *, request_id: str | None = None) -> RemoteCommand:
+        chosen = request_id if request_id is not None else self._new_id()
+        command = RemoteCommand(tuple(argv), chosen)
         await self._forge.dispatch(command)
         return command
 

@@ -72,6 +72,21 @@ async def test_start_dispatches_the_command_under_a_fresh_id() -> None:
     assert forge.dispatched == [command]
 
 
+async def test_start_dispatches_under_the_id_the_caller_names() -> None:
+    forge = FakeForge([None])
+    named = "0123456789abcdef01234567-" + "0" * 32
+    command = await service(forge)[0].start(["status"], request_id=named)
+    assert command == RemoteCommand(("status",), named)
+    assert forge.dispatched == [command]
+
+
+async def test_a_named_id_that_is_not_a_request_id_is_refused_before_dispatch() -> None:
+    forge = FakeForge([None])
+    with pytest.raises(RemoteCommandRefused, match="not a request id"):
+        await service(forge)[0].start(["status"], request_id="vibey run; rm")
+    assert forge.dispatched == []
+
+
 async def test_a_refused_command_is_never_dispatched() -> None:
     forge = FakeForge([None])
     with pytest.raises(RemoteCommandRefused):

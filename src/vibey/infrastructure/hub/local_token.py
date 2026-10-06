@@ -10,6 +10,11 @@ it proves the caller is that account, which is exactly who may already run every
 `NEVER_FROM_THE_HUB` names, since no route offers those at all. A device on the network
 never sees it; devices pair instead (ADR-0067).
 
+**The run key.** `<state_dir>/run.key` holds 32 random bytes, created once the same way
+and under the same checks as the token. The hub mints the request ids of the commands it
+sends to the workflows under it, so a device may read back only the runs it started
+(`vibey/domain/run_ownership.py`, ADR-0085). It never leaves the host.
+
 **The runtime file.** `<state_dir>/serving.json` records the address and port a running
 hub is bound to and its process id, so `vibey doctor` can say whether a running hub's
 exposure is declared. It is removed when the hub stops cleanly; a stale one (no such
@@ -19,13 +24,16 @@ process) is reported as stale, never as a running hub.
 import json
 import os
 import secrets
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
 TOKEN_FILE: Final = "token"
+RUN_KEY_FILE: Final = "run.key"
 RUNTIME_FILE: Final = "serving.json"
 TOKEN_BYTES: Final = 32
+RUN_KEY_BYTES: Final = 32
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,19 +60,36 @@ class LocalTokenStore:
         a symlink and checked on the open descriptor: owned by this account and readable
         by no other, or it is refused rather than trusted -- whoever could plant it would
         know the host's key (security review of #1155)."""
+        made = self._secret(TOKEN_FILE, lambda: secrets.token_urlsafe(TOKEN_BYTES).encode())
+        return made.decode().strip()
+
+    def run_key(self) -> bytes:
+        """The key the hub mints workflows request ids under, created (0600) on first call
+        with `RUN_KEY_BYTES` random bytes, under the token's checks. A file of any other
+        length is refused (`ValueError`): a truncated key is not a weaker key to carry on
+        with."""
+        key = self._secret(RUN_KEY_FILE, lambda: secrets.token_bytes(RUN_KEY_BYTES))
+        if len(key) != RUN_KEY_BYTES:
+            raise ValueError(f"{self._dir / RUN_KEY_FILE} is not a {RUN_KEY_BYTES}-byte key")
+        return key
+
+    def _secret(self, name: str, make: Callable[[], bytes]) -> bytes:
+        """The content of the owner-only file `name`, made from `make()` when it does not
+        exist yet. Created exclusively, never through a symlink; read without following one
+        and checked on the open descriptor."""
         self._ensure_dir()
-        path = self._dir / TOKEN_FILE
+        path = self._dir / name
         try:
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         except FileExistsError:
             pass
         else:
-            with os.fdopen(fd, "w") as handle:
-                handle.write(secrets.token_urlsafe(TOKEN_BYTES))
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(make())
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-        with os.fdopen(fd) as handle:
+        with os.fdopen(fd, "rb") as handle:
             self._owned(os.fstat(handle.fileno()), path, 0o077)
-            return handle.read().strip()
+            return handle.read()
 
     def record_serving(self, record: ServingRecord) -> None:
         """Writes the runtime record, replacing any earlier one. The staged file is made

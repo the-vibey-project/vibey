@@ -67,7 +67,9 @@ from vibey.domain.hub_binding import HUB_BINDING, UndeclaredExposure
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
 from vibey.domain.interfaces.ledger_query_interface import LedgerSearchResultInterface
 from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
+from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
 from vibey.domain.ledger import LedgerEvent
+from vibey.domain.run_ownership import RunOwnership
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
@@ -264,6 +266,7 @@ class DeferredHubAppFactory:
         live: LedgerAnnouncementsInterface,
         pairing: HubPairingInterface | None = None,
         workflows: RemoteCommandServiceInterface | None = None,
+        runs: RunOwnershipInterface | None = None,
     ) -> "FastAPI":
         from vibey.infrastructure.hub.app import HUB_APP
 
@@ -275,6 +278,7 @@ class DeferredHubAppFactory:
             live=live,
             pairing=pairing,
             workflows=workflows,
+            runs=runs,
         )
 
 
@@ -344,7 +348,10 @@ class ServeCommand:
         store = LocalTokenStore(settings.state_dir)
         try:
             token = store.token()
-        except PermissionError as exc:
+            # Workflows request ids are minted under this key, so a device reads back only
+            # the runs it started; kept on disk, a restarted hub still recognises them.
+            runs = RunOwnership(store.run_key())
+        except (PermissionError, ValueError) as exc:
             typer.echo(str(exc), err=True)
             raise typer.Exit(1) from exc
         names = self._names.names(bound) | settings.names if settings.lan else frozenset()
@@ -398,6 +405,7 @@ class ServeCommand:
                 live=live,
                 pairing=pairing,
                 workflows=self.workflows(os.environ),
+                runs=runs,
             )
             scheme = "https" if tls is not None else "http"
             typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")

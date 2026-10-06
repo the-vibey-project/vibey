@@ -72,10 +72,25 @@ scopes the host granted it.
 | `spend` | Answering a gate that does (`budget_exhausted`, the `deploy_*` gates), with `answer`. |
 | `run` | Reserved for starting and stopping work; no route uses it yet. |
 | `bump` | Bumping a job -- and only when the project's `[queue.priority] sources` admits `vibey-hub`. |
+| `workflows` | Sending a vibey command to the repository's GitHub-hosted runners, with the scopes of what the command does ([Workflows](#workflows)). |
 
 Nothing is permitted without a scope. And no scope, ever, can declare paid use, lift or
 change a cap, change the database DSN, run migrations or touch the canon: no route offers
 them.
+
+## Workflows
+
+`POST /api/v1/workflows/runs` `{"argv": [...]}` runs a vibey command on the repository's
+GitHub-hosted runners, as `vibey -w` does
+([ADR-0085](../architecture/decisions/0085-vibey-on-the-workflows.md)), and answers 202 with
+the run's `request_id`. `GET /api/v1/workflows/runs/{request_id}` says where it is, and its
+exit code and output once it ran. Both need `workflows`, and the start needs the scopes of
+what the command does as well.
+
+A request id is not a secret: the run carries it in its name on GitHub. So the hub binds each
+id it mints to the principal that asked (a nonce and an HMAC tag under a key in
+`<state_dir>/run.key`). A device reads back only a run it started. Any other id gets 404, as an
+unknown run does, and GitHub is never asked. The host reads any run.
 
 ## Pairing
 
@@ -107,12 +122,12 @@ Every pairing and revocation is written to every project's ledger as `HubDeviceP
 |---|---|
 | 401 | The request proves no principal. Nothing else is said. |
 | 403 | The principal's scopes do not permit it, a device asked to manage pairings, a pairing code was wrong, spent or expired, or the repository does not admit the hub's bump. |
-| 404 | No such project, open gate or paired device. |
+| 404 | No such project, open gate or paired device, or no workflows run this principal started. |
 | 409 | The gate was already answered by another request, or the queue refused the reorder. |
 | 421 | The `Host` header is not one this hub answers (the DNS-rebinding defence). |
 | 422 | The body or a filter is malformed. |
 | 429 | Too many requests (empty body). |
-| 503 | Pairing is not enabled on this hub. |
+| 503 | Pairing, or the workflows routes, are not enabled on this hub. |
 
 Every response carries `Content-Security-Policy: default-src 'none'`, `X-Frame-Options:
 DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and
