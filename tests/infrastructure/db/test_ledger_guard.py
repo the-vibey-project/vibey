@@ -422,11 +422,15 @@ async def test_a_single_role_install_still_migrates_and_is_reported_unguarded(
 async def test_vibey_migrate_reconciles_the_application_role_and_inspects_as_it(
     pg_conn: asyncpg.Connection, database_url: str
 ) -> None:
-    report = await _owner_migration().run(
-        owner_url=database_url,
-        app=DatabaseEndpoints(app_url=ROLES.app_dsn(database_url)),
-        migrations=discover_migrations(MIGRATIONS_DIR),
-    )
+    # `vibey migrate` reconciles the shared application role, which revokes a cluster-wide
+    # parameter privilege: unlocked, it strips the grant `test_finding_8` holds on another
+    # worker between its GRANT and its inspection (PostgreSQL 16, 2026-10-06).
+    async with ClusterParameterAclLock.held():
+        report = await _owner_migration().run(
+            owner_url=database_url,
+            app=DatabaseEndpoints(app_url=ROLES.app_dsn(database_url)),
+            migrations=discover_migrations(MIGRATIONS_DIR),
+        )
 
     assert report.applied == tuple(m.version for m in discover_migrations(MIGRATIONS_DIR))
     assert report.reconciled_role == ROLES.app_role
