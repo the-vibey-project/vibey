@@ -15,6 +15,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [4.2.0] (2026-10-07)
+
 ### Features
 
 * **skills:** three valuation reference packs, each shipping a tested numpy and pandas toolkit
@@ -43,6 +45,95 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `psychology-sociology-cultural-sciences` as Part 6 (§30–§42), and `confidential-ai-inference`
   joins `security-principles`. Educational and pastoral, not medical, legal or clinical advice.
   vibey-skills 2.26.0; 145 plugins, 780 skills.
+* **daily lanes:** the backlog killer runs every 90 minutes instead of once a day, sixteen
+  runs a day from two interleaved three-hourly schedules. Its pick rotates through the ranked
+  window by 90-minute slot rather than by date, so the day's runs no longer all choose the same
+  issue. The interval is `[backlog_killer] interval_minutes` in `scripts/daily_lanes.toml`, and
+  a test fails if the workflow's schedules stop firing once per declared interval (ADR-0083,
+  amended).
+* **skills:** `journal-publishability-criteria`, in the `writing-craft` plugin: what makes
+  an article publishable in an academic journal, from the editor's desk-rejection screen
+  and what reviewers judge to EQUATOR reporting guidelines, ICMJE authorship, COPE
+  originality, generative-AI disclosure, TOP 2025 open-science statements and
+  predatory-journal checks, with a pre-submission checklist. The skill is applied to
+  `docs/paper.md` before every publication of the research paper or an update to it, and
+  the checklist's answers are recorded on the pull request.
+* **paper:** `scripts/paper_publishability.py` judges `docs/paper.md` and `CITATION.cff` against
+  the mechanical half of the `journal-publishability-criteria` skill -- a contribution statement,
+  the abstract's length, the four declarations, an AI disclosure that names its tools and no AI
+  author, a citation record that agrees with the paper, references with a year and a locator, a
+  named evidence cutoff, no pending markers, no self-promotion, located registrations and
+  complete intervals -- with every threshold, heading, phrase and path declared in
+  `scripts/paper_publishability.toml`, and prints the reviewer's rubric for the judgment half
+  beside the rows. `report` prints the evaluation and `check` exits 1 naming each failure and
+  its line. It gates every pull request (`tests/meta/test_paper_publishability.py`) and every
+  publication (`release-surfaces.yml`, as the `[documentation] paper_gate` the repository
+  declares), and the review lane now loads `writing-craft@vibey-skills` and applies the rubric
+  to any change to the paper.
+* **cli:** `vibey state sync` keeps this database and a sealed copy of it on the
+  repository's `vibey-state` branch the same, in both directions. The merge is three-way
+  against the commit last synced, with a declared conflict rule per table, and the ledger
+  is never resolved by a rule. The copy is encrypted with AES-256-GCM, and the branch moves
+  only by compare-and-swap. A second sync straight after a first writes nothing.
+  `vibey state status`, `export`, `import`, `forget` and `key` go with it, configured by
+  `VIBEY_STATE_*`. `[supervisor] state_sync = true` keeps it running with its own
+  environment file. With a `VIBEY_STATE_KEY` secret and no declared database, `vibey -w`
+  restores the state before the command and syncs the run's changes back. The hub never
+  offers it (ADR-0086).
+* **ci:** any GitHub workflow can open the synced state with the composite action
+  `.github/actions/vibey-state` (`open`, then `close`), and write it back through the
+  reusable `.github/workflows/vibey-state-write.yml`, whose one job alone holds
+  `contents: write`. A private repository may always; a public one only when
+  `.github/vibey-state.toml` declares `[state] public = true`, because whatever a workflow
+  prints from the decrypted state is then public. This repository declares it (ADR-0086).
+* **cli:** `vibey -w <command>` (`--workflows`) runs the command on the repository's
+  GitHub-hosted runners through `.github/workflows/vibey-remote.yml`. It prints what the
+  command printed there and exits with its code. The hub offers the same path at
+  `POST /api/v1/workflows/runs` and `GET /api/v1/workflows/runs/{request_id}`, under the new
+  deny-by-default `workflows` scope, and refuses commands that reach what the hub never
+  offers (ADR-0085).
+
+### Bug Fixes
+
+* **docs:** the backlog and documentation continuation pages no longer print their
+  `description:` front matter as text. Each unquoted description held a second colon, which
+  YAML refuses, so the site showed the block instead of reading it. Both are quoted, and
+  `tests/meta/test_docs_front_matter.py` now parses every page's front matter.
+* **docs:** code on the documentation site no longer prints pale text on a pale band. The
+  site paints code blocks dark but kept the light highlight.js theme's token backgrounds, so a
+  block highlight.js read as a diff (lines starting "- ") showed pale pink text on pale pink,
+  as in the self-hosted surfaces topology. Token backgrounds are now transparent everywhere,
+  and that diagram is marked as plain text.
+* **hub:** `GET /api/v1/workflows/runs/{request_id}` no longer hands a run's output to any
+  device that holds the `workflows` scope. The hub now mints each request id bound to the
+  principal that started the run, as a nonce and an HMAC tag under a 32-byte key kept
+  owner-only in its state directory (`run.key`). A device reads back only its own runs. Any
+  other id gets the 404 an unknown run gets, and the forge is never asked. The host still
+  reads any run (ADR-0085).
+
+### Documentation
+
+* **paper:** the convergence loop figure delivers converging work to "Deliver" rather than "to
+  the nucleus", the last trace of the atom metaphor the paper otherwise removed.
+* **paper:** the research paper is restructured after an external review. The ledger
+  invariant (with what the database does and does not enforce), the no-loss handoff gate,
+  the capacity taxonomy and exact-head evaluation with its production counterexample now
+  lead; the onion, the queue, the six-phase gates, the engine environment, the derived
+  priority lane and the reviewer-binding checks follow as supporting mechanisms; the
+  throughput result is stated as a single-slot saturation curve on one machine rather than
+  a regularity; the Biodigitology section and its four figures are removed and
+  Convergence-Driven Development stays only as a scoreboard in a short Discussion; a
+  Comparison with alternatives (a session runner that keeps its transcript as truth, an
+  outbox plus a workflow engine, a CI ruleset plus a human approval) says what differs in
+  kind and that no controlled head-to-head has been run; an executive summary anchors every
+  section, and every section closes in plain words; a Declarations section states data and
+  code availability, the use of generative AI, authorship, funding and competing interests,
+  and reporting guidelines and registrations; and the operational record from 3.0.0 onward
+  moves to an appendix. The family-tree and engine-pool figures no longer draw the engines
+  ADR-0078 retired. The prose falls from about 36,000 words to about 21,000, and the PDF from 55 pages to 38.
+* **paper:** the comparison table and the Linux requirements table fit the page width; both
+  were a few points wider than the text block. The rendered paper now has no line running into
+  the margin.
 
 ## [4.1.0] (2026-10-05)
 

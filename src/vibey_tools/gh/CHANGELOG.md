@@ -1436,6 +1436,36 @@ This file follows Keep a Changelog and semantic versioning conventions.
   the bounded `max_repair_attempts` budget, which a new `pr-automation repair-budget` action
   now checks on the same-run path too. A spent budget or an unappliable patch labels the pull
   request for a person ([#1400](https://github.com/the-vibey-project/vibey/issues/1400)).
+* **documentation:** `[documentation] paper_gate` declares a command that `release-surfaces.yml`
+  runs from the repository root before the paper's figures are rendered and the paper is
+  published, whenever `generate_paper` is on and `docs/paper.md` exists. A gate that fails
+  fails the docs job, so the paper is not published; an empty gate, the default, is said out
+  loud as a notice rather than passed over. The exact-head review prompt now asks the
+  reviewer to apply the reviewer rubric of the `journal-publishability-criteria` skill to any
+  change to `docs/paper.md` and to report each unmet criterion as a finding.
+* **promote:** `[promotion] schedules` declares when the promotion workflow runs on a clock,
+  beside following every successful merge train: for example a monthly release on the 1st
+  (`"17 8 1 * *"`) as well as the weekly backstop. Each entry is checked as a five-field cron.
+  The default is the weekly backstop alone, so a repository that sets nothing renders the
+  same workflow as before.
+* **local-review:** the `--outcome` record now carries the `model`, the `runner` (its
+  `RUNNER_ENVIRONMENT`, `RUNNER_OS`, `RUNNER_ARCH` and `RUNNER_NAME`) and `requests`: one
+  entry per request attempt and per slot probe, with the characters and estimated tokens it
+  sent, its deadline and the rates it was derived from, how long it took, how it ended as a
+  code from the closed vocabulary, and Ollama's own counters and rates when the model
+  answered. The record is kept on disk while a request runs, so a cancelled run still names
+  the request it was waiting on. Fields are only added to `vibey-gh.local-review/1`; nothing
+  the review decides, prints or exits with changes.
+* **review-timings:** `vibey-gh review-timings PATH... [--json]` reads those records (files,
+  or directories of downloaded artifacts) and reports per model and runner the median, p10
+  and p90 prompt and output tokens a second, the requests that timed out and at what prompt
+  sizes, and -- from at least `--minimum` answered requests (default 5) -- suggested
+  `--prompt-tokens-per-second` and `--output-tokens-per-second` (the p10, rounded down).
+  Files that are not local-review records are named and skipped.
+* **version:** `[version] regenerate` declares commands (argv lists, never a shell line) that
+  re-derive files embedding the version. They run after every release bump, and whatever
+  they rewrite joins the release commit, as the lockfile and the pinned workflows already
+  do. A command that fails stops the release. Dev builds skip it. No key, no change.
 
 ### Bug Fixes
 
@@ -1487,6 +1517,16 @@ This file follows Keep a Changelog and semantic versioning conventions.
   `workflow_run: Merge train` trigger never saw the train's runs: from 2026-09-28 every
   promotion to `main` needed a hand dispatch
   ([#1400](https://github.com/the-vibey-project/vibey/issues/1400)).
+* **pr-review:** the open-weights repair step records the agent's exit code even when it is
+  nonzero. The runner's shell is `bash -e`, so the step used to end before `code=$?` ran,
+  and the hand-over could only say that the agent "did not exit 0".
+* **paper:** a fenced code block in the rendered paper wraps inside its column (fvextra's
+  breakable `Verbatim`); `verbatim` never broke a line, so a long line such as the citation's
+  URL ran past the column and was cut off.
+* **paper:** a long repository path in inline code wraps inside its column. A path could
+  break only after a slash, and one ADR file name is wider than a column by itself, so it ran
+  into the margin; a path now also breaks after a hyphen, a dot or an underscore, and an
+  identifier without a slash still never breaks.
 
 ## Historical releases
 
