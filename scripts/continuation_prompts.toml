@@ -109,15 +109,16 @@ gather = [
 ]
 covers = ["docs-updater.yml"]
 
-# The daily backlog killer's prompt (ADR-0083): run each day for the one issue
-# `scripts/backlog_killer.py pick` chooses, never by the weekly run's whole matrix alone.
+# The backlog killer's prompt (ADR-0083): run every `[backlog_killer] interval_minutes` (90)
+# for the one issue `scripts/backlog_killer.py pick` chooses, never by the weekly run's whole
+# matrix alone. `cadence = "daily"` means a scheduled lane names it, not once a day.
 [[prompt]]
 id = "backlog"
 title = "Work the backlog"
 page = "docs/continuation/backlog.md"
 mode = "act"
 cadence = "daily"
-purpose = "Take today's backlog item and land its smallest shippable, tested slice."
+purpose = "Take this run's backlog item and land its smallest shippable, tested slice."
 gather = [
   "python scripts/backlog_killer.py pick",
 ]

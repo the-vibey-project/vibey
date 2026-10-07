@@ -97,6 +97,9 @@ PREAMBLE: tuple[str, ...] = (
     r"\usepgfplotslibrary{fillbetween,statistics,polar,groupplots}",
     r"\usepackage{pifont}",
     r"\usepackage{url}",
+    # A code block wraps inside its column: `verbatim` never breaks a line, so a long line,
+    # a citation's URL say, ran out of a two-column page and was cut off at the margin.
+    r"\usepackage{fvextra}",
     # Keeps a figure with the claim that introduces it.  The paper uses many wide
     # diagrams; without explicit barriers LaTeX may accumulate them at the end.
     r"\usepackage{placeins}",
@@ -178,6 +181,9 @@ PLAIN_WORDS: tuple[str, ...] = (
         r"boxed title style={size=small,arc=2pt,boxrule=0pt,left=5pt,right=5pt,top=1.5pt,bottom=1.5pt}}"
     ),
 )
+
+#: A fenced code block, breakable anywhere so it stays inside its column (fvextra).
+CODE_BLOCK_OPEN = r"\begin{Verbatim}[breaklines=true,breakanywhere=true,fontsize=\footnotesize]"
 
 _SPECIALS = {
     "\\": r"\textbackslash{}",
@@ -395,9 +401,9 @@ def convert(markdown: str) -> _Doc:
             if lang == "latex":
                 doc.body.extend(block)
             else:
-                doc.body.append(r"\begin{verbatim}")
+                doc.body.append(CODE_BLOCK_OPEN)
                 doc.body.extend(block)
-                doc.body.append(r"\end{verbatim}")
+                doc.body.append(r"\end{Verbatim}")
             continue
         if line.startswith("<!--"):
             # An HTML comment is the source's own bookkeeping (generated-block markers,

@@ -12,6 +12,8 @@ pytest collects `test_*` functions, and the rule is about production code.
 
 from __future__ import annotations
 
+import re
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +66,33 @@ def test_the_backlog_killer_picks_read_only_and_only_dispatches() -> None:
     dispatch = step(jobs["work"], "Dispatch")["run"]
     assert "${{" not in dispatch  # the pick reaches the shell through env:, never interpolated
     assert "gh workflow run continuation-prompts.yml" in dispatch
+
+
+def _cron_minutes(cron: str) -> set[int]:
+    """The minutes of the day a daily cron (`M H * * *`) fires at: `H` a value, `a-b/s` or list."""
+    minute, hour, *rest = cron.split()
+    assert rest == ["*", "*", "*"], f"{cron!r} is not a daily schedule"
+    hours: set[int] = set()
+    for part in hour.split(","):
+        span, _, step = part.partition("/")
+        lo, _, hi = span.partition("-")
+        first, last = (0, 23) if span == "*" else (int(lo), int(hi or lo))
+        hours.update(range(first, last + 1, int(step or 1)))
+    return {h * 60 + int(minute) for h in hours}
+
+
+def test_the_backlog_killer_fires_once_per_declared_slot() -> None:
+    """Cron cannot say "every 90 minutes", so the schedule interleaves crons; this holds them to
+    `[backlog_killer] interval_minutes`, which the pick's rotation also reads (12.e)."""
+    settings = tomllib.loads((WORKFLOWS.parents[1] / "scripts" / "daily_lanes.toml").read_text())
+    interval = int(settings["backlog_killer"]["interval_minutes"])
+    text = (WORKFLOWS / "backlog-killer.yml").read_text(encoding="utf-8")
+    crons = re.findall(r'^\s*-\s*cron:\s*"([^"]+)"', text, re.MULTILINE)
+    fires = sorted(set().union(*(_cron_minutes(c) for c in crons)))
+    gaps = {b - a for a, b in zip(fires, fires[1:] + [fires[0] + 24 * 60], strict=True)}
+    assert gaps == {interval}, (
+        f"backlog-killer.yml fires at gaps {sorted(gaps)}, not every {interval}"
+    )
 
 
 def test_the_continuation_lane_takes_a_prompt_list_without_interpolating_it() -> None:

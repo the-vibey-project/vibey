@@ -122,9 +122,12 @@ allowed_paths = [
 ]
 
 [backlog_killer]
-# The candidates are ranked, and the day picks one from the first `window` of them, in
-# rotation by date: no attempt ledger to keep, every candidate in the window gets a day, and
-# the lane that dispatches and the agent that works it compute the same pick.
+# The candidates are ranked, and each run picks one from the first `window` of them, in
+# rotation by run slot: the slot is the UTC time divided into `interval_minutes` intervals,
+# so there is no attempt ledger to keep, every candidate in the window gets a slot, and two
+# computations in the same slot agree. The workflow's schedule fires once per slot; a test
+# (tests/meta/test_daily_lanes.py) fails if its crons stop matching this interval.
+interval_minutes = 90
 window = 7
 body_chars = 6000
 prompt = "backlog"
