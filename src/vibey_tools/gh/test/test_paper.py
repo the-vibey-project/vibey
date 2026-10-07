@@ -742,3 +742,13 @@ def test_the_figures_cli_reports_a_full_inlining(tmp_path, capsys):
     )
     printed = capsys.readouterr().out
     assert "2 of 2 inlined" in printed and "kept as source" not in printed
+
+
+def test_a_long_path_segment_may_break_inside_the_column():
+    """One ADR file name is wider than a column, so a path also breaks inside a segment."""
+    tex = paper.render_paper(
+        "# T\n\n**Abstract.** A.\n\n## S\n\nSee `docs/0056-reaped_by.measure.md` and `snake_case`.\n",
+        author="A",
+    )
+    assert r"\texttt{docs/\allowbreak 0056-\allowbreak reaped\_\allowbreak by.\allowbreak " in tex
+    assert r"\texttt{snake\_case}" in tex  # an identifier without a slash never breaks
