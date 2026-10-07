@@ -2,17 +2,17 @@
 
 This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh forecast` after changes to refresh it.
 
-- Recorded at: `2026-10-06T15:22:39.491933Z`
-- Source fingerprint: `ecfb02193e2efd2d366d2bd01c346b7408b1cfcdfc3eb3485053d70a900aaa41`
+- Recorded at: `2026-10-07T00:42:57.895397Z`
+- Source fingerprint: `5d78cc60903caf7b299c5090ad0ca1af02510bd74a61c63b912446f6160be2c6`
 
 ## Current estimate
 
-- 702 work unit(s) remain; 579 completed
-- time: 43.65–58.50 active day(s) after φ=1
+- 692 work unit(s) remain; 587 completed
+- time: 42.44–57.67 active day(s) after φ=1
 - billing actual: elapsed_seconds=unknown, dollars=unknown, turn_completed_events=unknown, budget_turns=unknown, ledger_events=unknown, phase_transition_events=unknown, capacity_rejections=unknown, handoffs=unknown, tool_invocations=unknown, file_edits=unknown, artifacts_produced=unknown
-- billing planned: elapsed_seconds=3771158.5492227986–5054400.0, dollars=unknown, turn_completed_events=unknown, budget_turns=unknown, ledger_events=unknown, phase_transition_events=unknown, capacity_rejections=unknown, handoffs=unknown, tool_invocations=unknown, file_edits=unknown, artifacts_produced=unknown
-- track record: time={'graded': 0, 'ungraded': 38, 'mean_error': None, 'mean_abs_error': None}; dollars={'graded': 0, 'ungraded': 38, 'mean_error': None, 'mean_abs_error': None}
-- billing track records: elapsed_seconds=0 graded/38 ungraded, dollars=0 graded/38 ungraded, turn_completed_events=0 graded/38 ungraded, budget_turns=0 graded/38 ungraded, ledger_events=0 graded/38 ungraded, phase_transition_events=0 graded/38 ungraded, capacity_rejections=0 graded/38 ungraded, handoffs=0 graded/38 ungraded, tool_invocations=0 graded/38 ungraded, file_edits=0 graded/38 ungraded, artifacts_produced=0 graded/38 ungraded
+- billing planned: elapsed_seconds=3666774.7870528107–4982400.0, dollars=unknown, turn_completed_events=unknown, budget_turns=unknown, ledger_events=unknown, phase_transition_events=unknown, capacity_rejections=unknown, handoffs=unknown, tool_invocations=unknown, file_edits=unknown, artifacts_produced=unknown
+- track record: time={'graded': 0, 'ungraded': 39, 'mean_error': None, 'mean_abs_error': None}; dollars={'graded': 0, 'ungraded': 39, 'mean_error': None, 'mean_abs_error': None}
+- billing track records: elapsed_seconds=0 graded/39 ungraded, dollars=0 graded/39 ungraded, turn_completed_events=0 graded/39 ungraded, budget_turns=0 graded/39 ungraded, ledger_events=0 graded/39 ungraded, phase_transition_events=0 graded/39 ungraded, capacity_rejections=0 graded/39 ungraded, handoffs=0 graded/39 ungraded, tool_invocations=0 graded/39 ungraded, file_edits=0 graded/39 ungraded, artifacts_produced=0 graded/39 ungraded
 - materials measured: 0/18
 - first repair: unknown — no measured material shortfall
 - billing unknowns: dollars, turn_completed_events, budget_turns, ledger_events, phase_transition_events, capacity_rejections, handoffs, tool_invocations, file_edits, artifacts_produced
@@ -24,7 +24,7 @@ This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh f
 {
   "assumptions": [
     "repository=the-vibey-project/vibey",
-    "source_revision=6619da31c52cca0d6f6491c9634f88a852d216b8",
+    "source_revision=c8d8d2ccea2d856dff1da197eadcdbed4149fee3",
     "billing_ledger=.vibey/billing-ledger.jsonl",
     "remaining work is open non-PR issues plus open PRs, weighted by size labels",
     "completed work is merged PRs, weighted by the same size labels",
@@ -78,7 +78,7 @@ This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh f
       "budget_turns": null,
       "capacity_rejections": null,
       "dollars": null,
-      "elapsed_seconds": 5054400.0,
+      "elapsed_seconds": 4982400.0,
       "file_edits": null,
       "handoffs": null,
       "ledger_events": null,
@@ -91,7 +91,7 @@ This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh f
       "budget_turns": null,
       "capacity_rejections": null,
       "dollars": null,
-      "elapsed_seconds": 3771158.5492227986,
+      "elapsed_seconds": 3666774.7870528107,
       "file_edits": null,
       "handoffs": null,
       "ledger_events": null,
@@ -114,29 +114,29 @@ This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh f
   },
   "history": {
     "commits": {
-      "active_days": 43,
-      "mean_per_active_day": 33.74418604651163,
-      "median_per_active_day": 22.0,
-      "total": 1451
+      "active_days": 41,
+      "mean_per_active_day": 35.5609756097561,
+      "median_per_active_day": 25.0,
+      "total": 1458
     },
     "issues": {
-      "open": 700,
-      "open_units": 700.0,
+      "open": 689,
+      "open_units": 689.0,
       "total": 808
     },
     "pull_requests": {
-      "merged": 579,
-      "open": 2,
-      "open_units": 2.0
+      "merged": 587,
+      "open": 3,
+      "open_units": 3.0
     },
     "throughput": {
       "active_merge_days": 36,
-      "mean_units_per_merge_day": 16.083333333333332,
+      "mean_units_per_merge_day": 16.305555555555557,
       "median_units_per_merge_day": 12.0
     },
     "work_units": {
-      "completed": 579.0,
-      "remaining": 702.0
+      "completed": 587.0,
+      "remaining": 692.0
     }
   },
   "materials": [
@@ -270,12 +270,12 @@ This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh f
   "problems": [
     "billing ledger unavailable at .vibey/billing-ledger.jsonl: [Errno 2] No such file or directory: '.vibey/billing-ledger.jsonl'"
   ],
-  "recorded_at": "2026-10-06T15:22:39.491933Z",
+  "recorded_at": "2026-10-07T00:42:57.895397Z",
   "schema": "vibey-delivery-forecast/v1",
-  "source_fingerprint": "ecfb02193e2efd2d366d2bd01c346b7408b1cfcdfc3eb3485053d70a900aaa41",
+  "source_fingerprint": "5d78cc60903caf7b299c5090ad0ca1af02510bd74a61c63b912446f6160be2c6",
   "time": {
-    "days_high": 58.5,
-    "days_low": 43.64766839,
+    "days_high": 57.66666667,
+    "days_low": 42.439523,
     "first_repair": [],
     "phi_product": 1.0
   },
@@ -285,80 +285,80 @@ This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh f
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "budget_turns": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "capacity_rejections": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "dollars": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "elapsed_seconds": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "file_edits": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "handoffs": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "ledger_events": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "phase_transition_events": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "tool_invocations": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       },
       "turn_completed_events": {
         "graded": 0,
         "mean_abs_error": null,
         "mean_error": null,
-        "ungraded": 38
+        "ungraded": 39
       }
     },
     "dollars": {
       "graded": 0,
       "mean_abs_error": null,
       "mean_error": null,
-      "ungraded": 38
+      "ungraded": 39
     },
     "time": {
       "graded": 0,
       "mean_abs_error": null,
       "mean_error": null,
-      "ungraded": 38
+      "ungraded": 39
     }
   }
 }
