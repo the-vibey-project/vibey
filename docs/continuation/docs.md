@@ -1,5 +1,5 @@
 ---
-description: The continuation prompt the daily documentation updater runs: find one statement in the documentation, the research paper or the book that the repository now contradicts, and correct it.
+description: "The continuation prompt the daily documentation updater runs: find one statement in the documentation, the research paper or the book that the repository now contradicts, and correct it."
 ---
 # Keep the documentation true
 
