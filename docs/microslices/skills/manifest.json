@@ -3875,6 +3875,11 @@
     "count": 8
   },
   {
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria",
+    "count": 11
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/writing-craft/skills/legal-brief-writing/SKILL.md",
     "output": "docs/microslices/skills/writing-craft/skills/legal-brief-writing",
     "count": 12

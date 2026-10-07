@@ -469,7 +469,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | Document | What's in it |
 |---|---|
 | [Architecture map](docs/project.mmd) | Comprehensive Mermaid diagram: every layer, the six phases, the ledger/handoff data flow, the security boundary, and the release channels |
-| [Research paper](https://the-vibey-project.github.io/vibey/main/paper/) · [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) | *Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over a Pool of Coding Agents* — the ledger invariant, queue semantics and gate soundness, the engine family, the exact-head release calculus, and a measured production-rate regularity with its falsification conditions: the family's one paper |
+| [Research paper](https://the-vibey-project.github.io/vibey/main/paper/) · [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) | *Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over a Pool of Coding Agents* — the ledger invariant and what the database enforces, the no-loss handoff gate, the capacity taxonomy, the exact-head release calculus with its production counterexample, and a single-slot saturation curve measured on one machine, with what the records do not show: the family's one paper |
 | [The book](https://the-vibey-project.github.io/vibey/main/book.pdf) · [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) · [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html) | Every page of the documentation site, in reading order, as one downloadable book |
 | [What do you want to do?](docs/guides/outcomes/index.md) | Six outcome guides — local-only agents, spending caps, a tamper-evident record, review before merge, deployment without stored cloud secrets, regulated environments — each with commands, evidence and limits |
 | [CLI reference](docs/reference/cli.md) | Every command, subcommand, flag, and default |
@@ -480,6 +480,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Host optimization](docs/runbooks/host-optimization.md) | The host's measured memory and SSD-write budget, and its declared, gated and reversible tuning plan in three classes |
 | [How vibey survives a crashed agent](docs/case-studies/how-vibey-survives-a-crashed-agent.md) | A case study: the problem, the fixes that fail, the lease-and-ledger design, the chaos test that checks it, and what it costs |
 | [Convergence-Driven Development](docs/guides/convergence-driven-development.md) | The CDD loop above SDD and TDD, convergence/divergence checks at four scopes, the atom model, and delivery evidence |
+| [The biological philosophy](docs/guides/biological-philosophy.md) | The atom, molecule, organism and ecology lens behind CDD, its evidence table, and Biodigitology, which the research paper does not rely on |
 | [Kubernetes guide](docs/guides/kubernetes.md) | Container, Helm chart, KEDA autoscaling, and its own troubleshooting section |
 | [Greeter live-demo runbook](docs/guides/greeter-live-demo.md) | A full paid run, end to end, with the zero-touch contracts |
 | [What gets published](docs/guides/ledger-publication.md) | What `vibey ledger export` publishes of a ledger, what it withholds, and how it counts both |

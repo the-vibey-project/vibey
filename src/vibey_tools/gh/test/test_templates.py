@@ -3693,3 +3693,42 @@ def test_the_channel_restore_only_treats_an_explicit_404_as_absence(
     assert (not (tmp_path / "pages" / "main").exists()) is expect_removed
     if expect_exit:
         assert "refusing to replace it with an empty directory" in result.stdout
+
+
+def test_release_surfaces_runs_the_declared_paper_gate_before_rendering_the_paper(tmp_path: Path):
+    """`[documentation] paper_gate`: the paper is published only after the command an adopter
+    declares has passed, and it runs before the figures step so nothing is rendered from a
+    paper the gate refused. Nothing is hard-coded: an adopter declaring no gate renders an
+    empty one, and the step says so rather than passing silently."""
+    text = (WORKFLOWS / "release-surfaces.yml").read_text(encoding="utf-8")
+    assert "gate=__VIBEY_GH_DOC_PAPER_GATE__" in text
+    default = render_workflow(WORKFLOWS / "release-surfaces.yml", GhConfig(root=tmp_path))
+    assert "__VIBEY_GH" not in default and "gate=''" in default
+    cfg = GhConfig(
+        root=tmp_path,
+        documentation=DocumentationConfig(
+            generate_paper=True, paper_gate="python scripts/paper_publishability.py check"
+        ),
+    )
+    rendered = render_workflow(WORKFLOWS / "release-surfaces.yml", cfg)
+    assert "gate='python scripts/paper_publishability.py check'" in rendered
+    steps = yaml.safe_load(rendered)["jobs"]["docs"]["steps"]
+    names = [step.get("name") for step in steps]
+    gate = names.index("Check the paper's publishability")
+    assert names[gate + 1] == "Render the paper's figures for the site and the book"
+    script = steps[gate]["run"]
+    assert 'if [ "true" != "true" ] || [ ! -f docs/paper.md ]' in script
+    assert 'eval "$gate"' in script and "no gate declared" in script
+
+
+def test_a_paper_gate_is_read_from_the_config_and_must_be_one_line(tmp_path: Path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[documentation]\npaper_gate = "python scripts/paper_publishability.py check"\n',
+        encoding="utf-8",
+    )
+    declared = load_config(tmp_path).documentation.paper_gate
+    assert declared == "python scripts/paper_publishability.py check"
+    (tmp_path / ".vibey-gh.toml").write_text("", encoding="utf-8")
+    assert load_config(tmp_path).documentation.paper_gate == ""
+    with pytest.raises(ValueError, match="paper_gate must be one line"):
+        DocumentationConfig(paper_gate="one\ntwo")

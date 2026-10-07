@@ -542,6 +542,7 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         "__VIBEY_GH_DOC_AUTHOR_AFFILIATION__", shlex.quote(docs.author_affiliation)
     )
     wanted = wanted.replace("__VIBEY_GH_DOC_AUTHOR_URL__", shlex.quote(docs.author_url))
+    wanted = wanted.replace("__VIBEY_GH_DOC_PAPER_GATE__", shlex.quote(docs.paper_gate))
     wanted = wanted.replace("__VIBEY_GH_DOC_FUNDING_BITCOIN__", docs.funding_bitcoin)
     wanted = wanted.replace("__VIBEY_GH_DOC_FUNDING_MONERO__", docs.funding_monero)
     wanted = wanted.replace("__VIBEY_GH_DOC_FUNDING_ETHEREUM__", docs.funding_ethereum)

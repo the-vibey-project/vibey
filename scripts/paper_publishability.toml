@@ -1,0 +1,156 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/paper_publishability.py (ADR-0051: configuration is
+# declared in TOML, never written into a source file). Every threshold, heading, phrase
+# list and path the mechanical publishability checks apply is here, so an adopter with a
+# different paper, a different citation record or a different venue changes this file and
+# not the script. The criteria themselves are the `journal-publishability-criteria` skill
+# (src/vibey_tools/skills/plugins/writing-craft); the section each check cites is in the
+# script, beside the check.
+
+[paper_publishability]
+# The paper's Markdown source and the citation record the checks read, repository-relative.
+paper = "docs/paper.md"
+citation = "CITATION.cff"
+
+# --- contribution-statement, abstract-length (criteria §1: the editor's first screen)
+# The paragraph that opens with this marker is the abstract.
+abstract_marker = "**Abstract.**"
+# At most this many words in the abstract, the marker excluded.
+abstract_max_words = 350
+# The abstract states its contribution with one of these phrases (matched ignoring case).
+contribution_phrases = [
+  "we present",
+  "this paper presents",
+  "we contribute",
+  "our contribution",
+  "the contribution of this paper",
+]
+# The section that must also name the contribution, and the word it must contain.
+introduction_heading = "## Introduction"
+contribution_word = "contribution"
+
+# --- declarations, ai-disclosure-names-tools (criteria §4: ethics and integrity; §5: TOP)
+# The declarations section sits before the references, and carries these `### `
+# subsections, each at least `declaration_min_words` words long.
+declarations_heading = "## Declarations"
+references_heading = "## References"
+declaration_sections = [
+  "Data and code availability",
+  "Use of generative AI",
+  "Authorship, funding and competing interests",
+  "Reporting guidelines and registrations",
+]
+declaration_min_words = 25
+# The subsection that discloses generative AI names at least one of these tools and says
+# the author remains responsible (any word containing `responsibility_stem`).
+ai_disclosure_section = "Use of generative AI"
+ai_tools = ["Claude", "Codex", "GPT-OSS", "Qwen", "ChatGPT", "Gemini", "Copilot"]
+responsibility_stem = "responsib"
+
+# --- no-ai-author, citation-title-matches (criteria §4: no AI author; the record agrees
+# with the paper)
+# The citation record's authors are read from these key paths; a name containing any
+# `ai_tools` entry fails. The preferred citation's title must equal the paper's title.
+citation_author_paths = ["authors", "preferred-citation.authors"]
+citation_title_path = "preferred-citation.title"
+
+# --- references-well-formed (criteria §1: package problems; the pre-submission checklist's
+# reference style)
+# Every `- ` entry under `references_heading` carries a year matching this pattern and one
+# locator: a string from `reference_locators`, or a venue or publisher word.
+reference_year_pattern = "\\b(?:19|20)\\d{2}\\b"
+reference_locators = ["doi:", "http", "arXiv"]
+reference_venue_words = [
+  "Proceedings",
+  "Journal",
+  "Transactions",
+  "Communications",
+  "Symposium",
+  "Conference",
+  "Workshop",
+  "Press",
+  "Bookshelf",
+  "Addison-Wesley",
+  "Springer",
+  "Elsevier",
+  "Wiley",
+  "documentation",
+  "Docs",
+  "PEP",
+  "RFC",
+  "Technical Report",
+]
+
+# --- cutoff-named (criteria §5: verifiability; sub-doctrine 10.f: claims name their cutoff)
+# The paragraph that opens with this marker names the evidence cutoff with this word.
+artifacts_marker = "*Artifacts.*"
+cutoff_word = "cutoff"
+
+# --- no-pending-markers (sub-doctrine 12.e: a placeholder for a pending input never ships)
+pending_marker = "TODO("
+
+# --- no-self-promotion (criteria §1: novelty is shown, not asserted; matched ignoring case)
+self_promotion_phrases = [
+  "world's first",
+  "first ever",
+  "unprecedented",
+  "revolutionary",
+  "paradigm shift",
+  "groundbreaking",
+]
+
+# --- registrations-located (criteria §4: trial registration; §5: registrations as outputs)
+# Every paragraph containing `registration_word` also names one of these paths.
+registration_word = "preregist"
+registration_paths = ["research/large-diff-review/experiments/"]
+
+# --- intervals-complete (criteria §2: report the estimate and its interval together)
+# Every sentence containing one of these markers carries at least `interval_min_numbers`
+# decimal numbers: both bounds of the interval.
+interval_markers = ["95%", "Wilson"]
+interval_min_numbers = 2
+# A sentence ends at one of `.!?` followed by whitespace and an opening character.
+sentence_boundary = "(?<=[.!?])\\s+(?=[A-Z\"'(\\[*`])"
+
+# --- recommended (criteria §4: ORCID; §7: credibility signals): reported, never failing
+orcid_key = "orcid"
+identifier_keys = ["doi", "identifiers"]
+
+# --- the reviewer's rubric: judgment, printed beside the mechanical rows and never
+# pass/fail. A reviewer, human or the review lane, applies it to any change to the paper
+# and reports each unmet criterion as a finding.
+[[paper_publishability.reviewer]]
+id = "scope-and-novelty"
+section = "1"
+criterion = "Scope and novelty are stated outright and can be judged from the abstract, introduction and conclusion alone, which is all a desk editor reads."
+
+[[paper_publishability.reviewer]]
+id = "methodological-soundness"
+section = "2"
+criterion = "The design fits each question asked, the method is described well enough to criticise, and the rationale for it is given."
+
+[[paper_publishability.reviewer]]
+id = "claims-carried-by-evidence"
+section = "2"
+criterion = "Every conclusion is one the reported evidence can carry; what the evidence does not cover is said, not implied."
+
+[[paper_publishability.reviewer]]
+id = "estimates-and-null-results"
+section = "2"
+criterion = "Each estimate is reported with its interval and effect size, nothing hangs on a threshold alone, and null results are reported."
+
+[[paper_publishability.reviewer]]
+id = "reproducible-methods"
+section = "5"
+criterion = "The methods, data, code and materials are described reproducibly, and the paper says where each is or that it is not available."
+
+[[paper_publishability.reviewer]]
+id = "text-recycling-cited"
+section = "4"
+criterion = "Text reused from the repository's own documentation, decision records or earlier papers is cited as such."
+
+[[paper_publishability.reviewer]]
+id = "length-for-venue"
+section = "1"
+criterion = "The paper's overall length and its abstract fit the venue it is written for."

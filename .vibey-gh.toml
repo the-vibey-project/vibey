@@ -345,6 +345,9 @@ plugins = [
   "security-principles@vibey-skills",
   "engineering-process@vibey-skills",
   "software-architecture@vibey-skills",
+  # The journal-publishability-criteria skill: its reviewer rubric is applied to any
+  # change to docs/paper.md, and each unmet criterion is reported as a finding.
+  "writing-craft@vibey-skills",
 ]
 # This repository's real PR-triggered workflows. The default set names "Docs", which
 # nothing here answers to -- a gate waiting on a scan that can never complete never posts.
@@ -562,6 +565,11 @@ require_roadmap = false
 # The doctrine's end results, published on the docs site itself.
 generate_book = true
 generate_paper = true
+# The paper is published only after this gate passes: the mechanical half of the
+# journal-publishability-criteria skill (writing-craft, vibey-skills), run by
+# release-surfaces.yml before the paper's figures are rendered. CI's meta-test
+# (tests/meta/test_paper_publishability.py) is the first line; this is the backstop.
+paper_gate = "python scripts/paper_publishability.py check"
 
 # The full documentation contract is a separate project; off until it is satisfied.
 enabled = false

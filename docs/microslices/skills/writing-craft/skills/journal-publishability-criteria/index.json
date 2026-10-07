@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-how-this-repository-applies-the-criteria-to-its-research-paper-27c7c8e2e6",
+    "purpose": "how this repository applies the criteria to its research paper",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/001-how-this-repository-applies-the-criteria-to-its-research-paper.md",
+    "requires": [],
+    "links": [
+      "skill-1-the-editor-s-first-screen-desk-rejection-5a2ebc8108"
+    ]
+  },
+  {
+    "id": "skill-1-the-editor-s-first-screen-desk-rejection-5a2ebc8108",
+    "purpose": "1 the editor s first screen desk rejection",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/002-1-the-editor-s-first-screen-desk-rejection.md",
+    "requires": [
+      "skill-how-this-repository-applies-the-criteria-to-its-research-paper-27c7c8e2e6"
+    ],
+    "links": [
+      "skill-2-what-reviewers-judge-01545aa956"
+    ]
+  },
+  {
+    "id": "skill-2-what-reviewers-judge-01545aa956",
+    "purpose": "2 what reviewers judge",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/003-2-what-reviewers-judge.md",
+    "requires": [
+      "skill-1-the-editor-s-first-screen-desk-rejection-5a2ebc8108"
+    ],
+    "links": [
+      "skill-3-reporting-guidelines-4a0dd706e2"
+    ]
+  },
+  {
+    "id": "skill-3-reporting-guidelines-4a0dd706e2",
+    "purpose": "3 reporting guidelines",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/004-3-reporting-guidelines.md",
+    "requires": [
+      "skill-2-what-reviewers-judge-01545aa956"
+    ],
+    "links": [
+      "skill-4-ethics-and-integrity-non-negotiable-gates-a5f134a187"
+    ]
+  },
+  {
+    "id": "skill-4-ethics-and-integrity-non-negotiable-gates-a5f134a187",
+    "purpose": "4 ethics and integrity non negotiable gates",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/005-4-ethics-and-integrity-non-negotiable-gates.md",
+    "requires": [
+      "skill-3-reporting-guidelines-4a0dd706e2"
+    ],
+    "links": [
+      "skill-5-transparency-and-open-science-f70c06b9ab"
+    ]
+  },
+  {
+    "id": "skill-5-transparency-and-open-science-f70c06b9ab",
+    "purpose": "5 transparency and open science",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/006-5-transparency-and-open-science.md",
+    "requires": [
+      "skill-4-ethics-and-integrity-non-negotiable-gates-a5f134a187"
+    ],
+    "links": [
+      "skill-6-choosing-a-legitimate-journal-46acd6999f"
+    ]
+  },
+  {
+    "id": "skill-6-choosing-a-legitimate-journal-46acd6999f",
+    "purpose": "6 choosing a legitimate journal",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/007-6-choosing-a-legitimate-journal.md",
+    "requires": [
+      "skill-5-transparency-and-open-science-f70c06b9ab"
+    ],
+    "links": [
+      "skill-7-if-you-re-submitting-without-an-institution-da512a5600"
+    ]
+  },
+  {
+    "id": "skill-7-if-you-re-submitting-without-an-institution-da512a5600",
+    "purpose": "7 if you re submitting without an institution",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/008-7-if-you-re-submitting-without-an-institution.md",
+    "requires": [
+      "skill-6-choosing-a-legitimate-journal-46acd6999f"
+    ],
+    "links": [
+      "skill-pre-submission-checklist-5172b05934"
+    ]
+  },
+  {
+    "id": "skill-pre-submission-checklist-5172b05934",
+    "purpose": "pre submission checklist",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/009-pre-submission-checklist.md",
+    "requires": [
+      "skill-7-if-you-re-submitting-without-an-institution-da512a5600"
+    ],
+    "links": [
+      "skill-caveats-on-these-sources-16ea421198"
+    ]
+  },
+  {
+    "id": "skill-caveats-on-these-sources-16ea421198",
+    "purpose": "caveats on these sources",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/010-caveats-on-these-sources.md",
+    "requires": [
+      "skill-pre-submission-checklist-5172b05934"
+    ],
+    "links": [
+      "skill-sources-cea2570306"
+    ]
+  },
+  {
+    "id": "skill-sources-cea2570306",
+    "purpose": "sources",
+    "source": "src/vibey_tools/skills/plugins/writing-craft/skills/journal-publishability-criteria/SKILL.md",
+    "output": "docs/microslices/skills/writing-craft/skills/journal-publishability-criteria/011-sources.md",
+    "requires": [
+      "skill-caveats-on-these-sources-16ea421198"
+    ],
+    "links": []
+  }
+]

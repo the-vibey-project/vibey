@@ -57,6 +57,7 @@ nav:
       - Greeter live demo: guides/greeter-live-demo.md
       - Local models on Ollama: guides/local-models-ollama.md
       - Convergence-Driven Development: guides/convergence-driven-development.md
+      - The biological philosophy: guides/biological-philosophy.md
       - What gets published: guides/ledger-publication.md
       - Continuous delivery estimate: guides/delivery-estimate.md
       - Self-hosted sovereign surfaces: guides/self-hosted-surfaces.md

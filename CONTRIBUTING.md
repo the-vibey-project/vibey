@@ -256,7 +256,7 @@ should read in that changelog, bullet included and no heading:
 ```
 
 The release commit folds every fragment in under its heading and deletes it
-(`vibey-gh promote`; `uv run vibey-gh changelog assemble` previews the fold). The
+(`vibey-gh promote` runs it; `uv run vibey-gh changelog assemble` performs the same fold by hand, editing both changelogs and deleting the fragments, so it is not a preview). The
 `Changelog fragment` check refuses a pull request that changes shipped code
 (`[changelog] require_for`) without a fragment, adds a malformed one, or edits an
 unreleased section directly. Label it `no-changelog` when no reader of the

@@ -261,6 +261,13 @@ content:
   publishing workflow's site-wide sentence.
 - **Paper:** `docs/paper.md` is the source for both the HTML page (`/paper/`) and
   `paper.pdf`.
+  Every update to the paper passes `python scripts/paper_publishability.py check`
+  before it lands and before it is published: `tests/meta/test_paper_publishability.py`
+  runs it on every pull request, and `release-surfaces.yml` runs it again, as the
+  `[documentation] paper_gate` declared in `.vibey-gh.toml`, before the paper's figures
+  are rendered. The criteria it checks, and the reviewer's rubric for what no script can
+  judge, are the `journal-publishability-criteria` skill in vibey-skills' `writing-craft`
+  plugin.
 - **Book:** generated from the built channel site by `vibey-gh book`; there is no
   separate book source. A page added to the site is in the next book.
 - **Agent surfaces:** every skill exists in four trees — `.claude/skills/`,

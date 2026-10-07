@@ -55,27 +55,29 @@ def test_all_empirical_figures_present_in_paper() -> None:
 
 
 def test_every_figure_of_the_atlas_is_present_and_numbered_in_order() -> None:
-    """The paper's visual atlas: thirty drawn figures and fifteen computed ones, in the
+    """The paper's visual atlas: 25 drawn figures and fifteen computed ones, in the
     order the PDF numbers them, with every `[Fig. N]` reference carrying that number."""
     text = PAPER.read_text(encoding="utf-8")
     expected_labels = (
-        "fig:family-tree",
+        "fig:delivery-pipeline",
         "fig:layer-map",
         "fig:ledger-handoff",
-        "fig:six-phase-machine",
-        "fig:cdd-orbits",
-        "fig:cdd-loop",
-        "fig:digital-atom",
-        "fig:software-molecule",
-        "fig:digital-hierarchy",
-        "fig:web-ecology",
-        "fig:qwen-cdd",
+        "fig:record-effect",
         "fig:capacity-taxonomy",
-        "fig:engine-pool",
+        "fig:capacity-precedence",
         "fig:evaluation-automaton",
         "fig:exact-head",
         "fig:trust-separation",
-        "fig:record-effect",
+        "fig:exact-head-lifecycle",
+        "fig:queue-state",
+        "fig:six-phase-machine",
+        "fig:authority-map",
+        "fig:family-tree",
+        "fig:process-reaping",
+        "fig:environment-boundary",
+        "fig:probe-lifecycle",
+        "fig:engine-pool",
+        "fig:microslice-contract",
         "fig:stress-rate",
         "fig:stress-cumulative",
         "fig:qwen-runs",
@@ -94,15 +96,8 @@ def test_every_figure_of_the_atlas_is_present_and_numbered_in_order() -> None:
         "fig:completion-band",
         "fig:forecast",
         "fig:governance-time",
-        "fig:delivery-pipeline",
-        "fig:queue-state",
-        "fig:authority-map",
-        "fig:process-reaping",
-        "fig:capacity-precedence",
-        "fig:probe-lifecycle",
-        "fig:environment-boundary",
-        "fig:exact-head-lifecycle",
-        "fig:microslice-contract",
+        "fig:cdd-loop",
+        "fig:qwen-cdd",
         "fig:publication-ladder",
     )
     positions = [text.index(rf"\label{{{label}}}") for label in expected_labels]

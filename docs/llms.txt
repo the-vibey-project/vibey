@@ -8,7 +8,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 
 - [Home](https://the-vibey-project.github.io/vibey/main/): The documentation home — what vibey is, who it is for, what makes it different, how to try it, and how to contribute in your first hour.
 - [Current estimate](https://the-vibey-project.github.io/vibey/main/estimate/): This page is a generated, append-only-ledger-backed forecast.
-- [Research paper](https://the-vibey-project.github.io/vibey/main/paper/): A single autonomous coding session is not autonomous software delivery: sessions lose context across crashes, exhaust one vendor's capacity mid-task, and carry no structure for the human decisions delivery legally and…
+- [Research paper](https://the-vibey-project.github.io/vibey/main/paper/): A single autonomous coding session is not autonomous software delivery: it loses its state when it crashes, it dies when one vendor's quota is exhausted mid-task, and it has no place where a person is required to decide.
 
 ## Guides
 
@@ -19,6 +19,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Greeter live demo](https://the-vibey-project.github.io/vibey/main/guides/greeter-live-demo/): This runbook drives one small project ("a CLI greeter") end to end on real *loop binaries: DESIGN through the interactive interview, BUILD on engine-selected sessions, REVIEW with real automated gates, and DONE(local).
 - [Local models on Ollama](https://the-vibey-project.github.io/vibey/main/guides/local-models-ollama/): Sub-doctrine 8.a makes the sovereign path the preferred way to run vibey, not the fallback.
 - [Convergence-Driven Development](https://the-vibey-project.github.io/vibey/main/guides/convergence-driven-development/): Convergence-Driven Development (CDD) is the delivery loop above Specification-Driven Development (SDD) and Test-Driven Development (TDD).
+- [The biological philosophy](https://the-vibey-project.github.io/vibey/main/guides/biological-philosophy/): Vibey's development loop, Convergence-Driven Development (CDD), measures delivery as a scoreboard: work converges, stays neutral or diverges, and divergence needs a bounded path back.
 - [What gets published](https://the-vibey-project.github.io/vibey/main/guides/ledger-publication/): vibey ledger export never publishes your ledger.
 - [Continuous delivery estimate](https://the-vibey-project.github.io/vibey/main/guides/delivery-estimate/): vibey-gh forecast maintains the current delivery estimate from real repository history.
 - [Self-hosted sovereign surfaces](https://the-vibey-project.github.io/vibey/main/guides/self-hosted-surfaces/): vibey orchestrates software delivery end-to-end on sovereign defaults: every operational dependency — issue tracking, documentation, secrets, files, email, SMS, messaging, configuration store, caching, message bus…

@@ -126,7 +126,7 @@ the GitHub bridge, the Azure deployment stages and the Kubernetes operator.
 
 - [Local models on Ollama](../local-models-ollama.md): the full recipe, a second local
   engine, and capacity fits.
-- [The sovereign driver and local fit](../../paper.md#the-sovereign-driver-and-local-fit),
+- [The sovereign driver and measured fit](../../paper.md#the-sovereign-driver-and-measured-fit),
   in the research paper.
 
 ## Improve this guide

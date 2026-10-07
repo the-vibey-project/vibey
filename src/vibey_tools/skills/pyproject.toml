@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "vibey-skills"
 dynamic = ["version"]
-description = "Agent Skills for vibe engineering — 780 evidence-grounded practitioner references as a Claude Code plugin marketplace"
+description = "Agent Skills for vibe engineering — 781 evidence-grounded practitioner references as a Claude Code plugin marketplace"
 readme = "README.md"
 requires-python = ">=3.12"
 
@@ -98,7 +98,7 @@ vibe-skills = "vibey_skills.cli:deprecated_alias_main"
 # otherwise be implicit rather than recorded for this tenant.
 #
 # `include` is the other half, and it is not decoration. Without it ruff discovers Markdown
-# and format-checks the Python fences inside all 780 SKILL.md -- files that are the product,
+# and format-checks the Python fences inside all 781 SKILL.md -- files that are the product,
 # verified byte-for-byte against the documents they were split from.
 [tool.ruff]
 line-length = 100
@@ -119,7 +119,7 @@ packages = ["src/vibey_skills"]
 
 # The plugins tree must stay at the repo root — Claude Code requires
 # .claude-plugin/marketplace.json there with `source: ./plugins/<name>`. Rather than
-# duplicating 780 skill files into src/, the wheel maps the root tree in at build time,
+# duplicating 781 skill files into src/, the wheel maps the root tree in at build time,
 # so there is exactly one source of truth on disk.
 [tool.hatch.build.targets.wheel.force-include]
 "plugins" = "vibey_skills/plugins"

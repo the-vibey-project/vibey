@@ -1023,7 +1023,9 @@ jobs:
 
             When trusted=${{ needs.evaluate.outputs.trusted }} is false, additionally
             review correctness, security, data-loss risk, architecture boundaries, test
-            quality, and maintainability. Use the installed skills. Post precise inline
+            quality, and maintainability. Use the installed skills. When the diff touches
+            docs/paper.md, apply the reviewer rubric of the journal-publishability-criteria
+            skill and report each unmet criterion as a finding. Post precise inline
             comments for actionable findings. Return pass=true only when every required
             boolean is true and there are zero actionable findings. Do not approve, merge,
             push, edit, or resolve comments.

@@ -2713,6 +2713,14 @@ class DocumentationConfig:
     generate_json_ld: bool = True
     generate_book: bool = False
     generate_paper: bool = False
+    # A command that judges the paper before the release surfaces render and publish it,
+    # run from the repository root when `generate_paper` is on and `docs/paper.md` exists
+    # (the vibey repository's is `python scripts/paper_publishability.py check`, the
+    # mechanical half of its journal-publishability-criteria skill). A gate that fails
+    # fails the docs job, so the paper is not published. Empty declares no gate, which the
+    # workflow says out loud rather than passing over. One line: it is rendered into a
+    # workflow step.
+    paper_gate: str = ""
     # Render LaTeX on the published site: `$...$`/`$$...$$` math (protected from Markdown by
     # pymdownx.arithmatex) and ```latex theorem-like environments, typeset by a pinned,
     # checksummed MathJax served from the site itself rather than a CDN. Off by default,
@@ -2796,6 +2804,8 @@ class DocumentationConfig:
     funding_label: str = "Support this work"
 
     def __post_init__(self) -> None:
+        if "\n" in self.paper_gate or "\r" in self.paper_gate:
+            raise ValueError("documentation.paper_gate must be one line")
         for key in ("governance_source", "corpus_index"):
             value = getattr(self, key)
             if value and (
@@ -3819,6 +3829,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             generate_json_ld=documentation.get("generate_json_ld", True),
             generate_book=documentation.get("generate_book", False),
             generate_paper=documentation.get("generate_paper", False),
+            paper_gate=documentation.get("paper_gate", ""),
             math=documentation.get("math", False),
             bottom_nav=documentation.get("bottom_nav", True),
             author_name=documentation.get("author_name", "Adam Matthew Steinberger"),

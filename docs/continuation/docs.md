@@ -48,6 +48,7 @@ integration branch. Assume you remember nothing.
    the sentence what it was measured over and when.
 5. Run `python scripts/continuation_prompts.py check` and the documentation tests
    (`pytest -q tests/meta`), and keep every change under docs/, README.md or CONTRIBUTING.md.
+   If you touched docs/paper.md, also run `python scripts/paper_publishability.py check`: it must exit 0, and each FAIL row names the line to fix.
 6. End with your report; the lane quotes the end of your run in the pull request's
    description. Quote the statement before and after, and the evidence. If nothing you
    checked was wrong, say what you checked, so the next run looks elsewhere.

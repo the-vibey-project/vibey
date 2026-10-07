@@ -876,6 +876,7 @@ jobs:
             security-principles@vibey-skills
             engineering-process@vibey-skills
             software-architecture@vibey-skills
+            writing-craft@vibey-skills
           # The review schemas are rendered, not written here: `vibey-gh install` fills both
           # `--json-schema` placeholders below from `ReviewContract.json_schema()` in
           # vibey_gh/review_contract.py, the same table that splits the review into the half
@@ -1026,7 +1027,9 @@ jobs:
 
             When trusted=${{ needs.evaluate.outputs.trusted }} is false, additionally
             review correctness, security, data-loss risk, architecture boundaries, test
-            quality, and maintainability. Use the installed skills. Post precise inline
+            quality, and maintainability. Use the installed skills. When the diff touches
+            docs/paper.md, apply the reviewer rubric of the journal-publishability-criteria
+            skill and report each unmet criterion as a finding. Post precise inline
             comments for actionable findings. Return pass=true only when every required
             boolean is true and there are zero actionable findings. Do not approve, merge,
             push, edit, or resolve comments.
@@ -1402,6 +1405,7 @@ jobs:
             security-principles@vibey-skills
             engineering-process@vibey-skills
             software-architecture@vibey-skills
+            writing-craft@vibey-skills
           claude_args: |
             --model claude-sonnet-5
             --max-turns 120
@@ -2031,6 +2035,7 @@ jobs:
             security-principles@vibey-skills
             engineering-process@vibey-skills
             software-architecture@vibey-skills
+            writing-craft@vibey-skills
           claude_args: |
             --model claude-sonnet-5
             --max-turns 80

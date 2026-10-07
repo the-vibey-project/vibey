@@ -90,12 +90,7 @@ def test_the_paper_is_not_one_of_several() -> None:
 def test_the_paper_carries_the_reproducible_visual_atlas() -> None:
     text = PAPER.read_text(encoding="utf-8")
     expected_labels = (
-        "fig:cdd-orbits",
         "fig:cdd-loop",
-        "fig:digital-atom",
-        "fig:software-molecule",
-        "fig:digital-hierarchy",
-        "fig:web-ecology",
         "fig:six-phase-machine",
         "fig:ledger-handoff",
         "fig:engine-pool",

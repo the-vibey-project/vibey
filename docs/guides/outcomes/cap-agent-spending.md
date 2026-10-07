@@ -97,7 +97,7 @@ The move carries a handoff brief that must pass a no-loss check first
 | Spend is summed from the ledger, not estimated | [`[budget]`](../../reference/configuration.md#budget) |
 | A tripped cap parks a gate that can grant more | [ADR-0024](../../architecture/decisions/0024-every-bounded-ladder-parks-with-a-grant.md) |
 | Local engines first, paid only when none is eligible | [ADR-0038](../../architecture/decisions/0038-local-engines-are-preferred-first.md) |
-| Credits and rate limits are different types | [`capacity.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/domain/capacity.py); [Windows versus credits](../../paper.md#windows-versus-credits) in the paper |
+| Credits and rate limits are different types | [`capacity.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/domain/capacity.py); [Capacity verdicts](../../paper.md#capacity-verdicts) in the paper |
 
 ## Limits
 
@@ -118,7 +118,7 @@ The move carries a handoff brief that must pass a no-loss check first
 
 ## Go deeper
 
-- [Budgets and engine selection](../../paper.md#budgets-and-engine-selection), in the
+- [Budgets and selection](../../paper.md#budgets-and-selection), in the
   research paper.
 - [Run AI coding agents entirely on your own hardware](run-agents-on-your-own-hardware.md),
   for the zero-cost path.

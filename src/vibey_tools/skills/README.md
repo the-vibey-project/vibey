@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **145 Claude Code plugins. 780 Agent Skills.** Long-form, source-cited practitioner
+> **145 Claude Code plugins. 781 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 780 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 781 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -251,7 +251,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [wellbeing-purpose-and-drive](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/wellbeing-purpose-and-drive) | 0.1.0 | social-sciences | 6 | Hedonic & eudaimonic traditions, measurement problems, adaptation & the set point, what the money research shows, the replication problem, what actually holds up, relationships as the strongest correlate, sleep, movement & the physical substrate, time & attention, self-determination theory, intrinsic motivation & reward undermining, goal-setting evidence, habits & realistic formation times, willpower & the ego-depletion collapse, flow, procrastination as emotion regulation, how meaning & happiness come apart, sources of meaning, work, vocation & calling, post-traumatic growth honestly, finitude, intervention effect sizes, burnout's structural causes, self-compassion, the limits, the industry critique |
 | [wireless-technologies-and-rf-engineering](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering) | 0.1.0 | wireless | 6 | Why wireless is hard, propagation & the link budget, modulation & multiple access, antenna gain, pattern & matching, spectrum & duty-cycle limits, Wi-Fi generations, channel planning & roaming, Bluetooth profiles, BLE GATT, advertising & connection intervals, NFC & RFID, Thread, Zigbee & Matter, LoRa & LPWAN, LTE-M & NB-IoT, UWB ranging, choosing a radio, antenna integration & ground planes, regulatory & carrier certification, low-power duty-cycle arithmetic, provisioning & onboarding, RF debugging, wireless security, coexistence, positioning & sensing |
 | [working-with-wood-and-metal](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/working-with-wood-and-metal) | 0.1.0 | crafts | 5 | Wood vs metal compared, shop safety, reading wood — grain, figure & moisture, stock preparation, layout & marking, hand tools, sharpening, machines, the table saw & kickback, joinery technique, glue-ups & clamping, wood finishing, shop alloys, speeds, feeds & workholding, marking out, cutting metal, drilling & tapping, lathe & mill work, welding processes, brazing & soldering, forming & forging, heat treatment, metal finishing, fasteners & fits, calipers & micrometers, dust & welding fume control |
-| [writing-craft](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/writing-craft) | 0.1.0 | content | 5 | White papers, prose mechanics, technical prose, narrative, legal briefs |
+| [writing-craft](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/writing-craft) | 0.2.0 | content | 6 | White papers, prose mechanics, technical prose, narrative, legal briefs, journal publishability criteria |
 
 Browse every skill's full text under [`plugins/`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins); the skills reference pages are
 generated from that tree at docs-build time by `docs/gen_reference.py`.
