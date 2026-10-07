@@ -51,8 +51,8 @@ and 4.1.0 releases it reads `CHANGELOG.md` at that revision. The visual atlas ho
 figures: twenty-five drawn from the model as deterministic TikZ in this source, and
 fifteen computed from tracked repository records, so the PDF, its labels and its diagrams
 are reviewable and reproducible rather than screenshots detached from the system. An
-executive summary follows, and every section from the Introduction to the Appendix opens
-by naming the item of that summary it carries and closes with a box headed
+executive summary follows, naming the section that carries each claim. Every section
+from the Introduction to the Appendix closes with a box headed
 *In plain words* that restates it for a reader who is not a specialist; the boxes add
 nothing the formal text does not say, and a specialist may skip them.
 
@@ -60,26 +60,25 @@ nothing the formal text does not say, and a specialist may skip them.
 
 ## Executive summary
 
-Each item below names the section that carries it, and each section opens by naming
-its item, so a reader can go from the claim to its evidence and back.
+Each item names the section that carries it.
 
-- **E1, Introduction.** A coding session is not a delivery system: it loses its state on a crash, dies with one vendor's quota, and has no place where a person must decide. The paper's three contributions are the ledger invariant with what the database does and does not enforce, the no-loss handoff gate, and exact-head evaluation with its production counterexample, with the capacity taxonomy beside them; everything else is a supporting mechanism or a measurement.
-- **E2, The ledger invariant.** All delivery state is a pure function of an append-only ledger, so a crash is a replay and a handoff is a scheduling event. The invariant was a convention of the application until 3.0.0; the database now refuses updates, deletes and truncation of the ledger, and still cannot stop the application role from forging provenance.
-- **E3, The no-loss handoff gate.** A handoff between engines is admitted only by a pure, model-free predicate over the brief and the ledger. A failing handoff is retried, escalated to the full transcript, or parked for a person, never a silent partial.
-- **E4, Capacity verdicts.** A rate window may carry a deadline; exhausted credits never acquire one, which the type, a property test and a database constraint each enforce. A capacity verdict outranks a completion claim, in the orchestrator and inside every runner.
-- **E5, Exact-head evaluation and the release calculus.** Every automated verdict is a claim about one exact commit and speaks for no other; the review and repair loop terminates in a bounded number of repairs; a production trace shows a budget guard that ran before the freshness test and escalated a head that no longer existed. The local reviewer is bound to what it read, caught 18 of 25 small planted defects (Wilson 95% interval 0.524 to 0.857) and blocked none of 14 clean changes, and its failures on large diffs are under a preregistered study (`research/large-diff-review/experiments/`) with production unchanged.
-- **E6, Queue semantics.** Work is claimed with `FOR UPDATE SKIP LOCKED` under renewable leases; execution is at least once and the acknowledgement is fenced so exactly one commit lands per job; a priority lane is derived from the record, never remembered, and never admits past a gate.
-- **E7, The six-phase machine.** Four human gates, each a parked job plus a recorded verdict; silence never decides unless a project has declared, kind by kind, that a deployment gate may resolve to its stored default; an operator can abandon a project from any phase.
-- **E8, The engine family.** One bounded, never-blocking core under every runner; an environment assembled from an allow-list, never copied from the worker; a sovereign local driver with a measured fit; local engines chosen first by smooth weighted round robin, paid engines as the fallback.
-- **E9, Deterministic retrieval and fail-closed bootstrap.** Lexical retrieval a reviewer can replay, and a bootstrap layer that appends before it acts.
-- **E10, What the records measure.** A single-slot saturation curve on one 24 GB machine: 0.99 to 2.00 generations per minute from offered concurrency 2 through 32, leaving the band at 64 and 96 and collapsing at 128. A local pilot; a storm ledger whose audit adversarial verifiers refuted in 16 of 18 leading claims; host benchmarks and weekly minimum requirements; the repository's own history; an autonomy scan that found only BUILD running without a person and forty merges made through the ruleset bypass; and a completion-time prediction that holds inside the band only, with what would falsify it and what it does not cover.
-- **E11, Comparison with alternatives.** How ledger-mediated orchestration differs in kind from a session runner that keeps its transcript as truth, from an outbox plus a workflow engine, and from a CI ruleset plus a human approval; and that no controlled head-to-head has been run.
-- **E12, Discussion.** Convergence-Driven Development kept as a scoreboard, and the claim that governance is the scarce input narrowed to this project's record.
-- **E13, Validation.** The property, chaos and live levels at which the model is checked, and how the paper's own figures are reproduced.
-- **E14, Related work.** Where the ledger, the gate and the calculus sit beside schedulers, event sourcing, agent frameworks, workflow engines and platform automation.
-- **E15, Conclusion.** The ledger, not the session, at the centre; and what remains to be measured.
-- **E16, Declarations.** Where the data and code are, how generative AI was used, who the author is and under what funding and interests, and which reporting guidelines and registrations apply.
-- **E17, Appendix.** The operational record from 3.0.0 to 4.1.0, for an operator of this repository.
+- **Introduction.** A coding session is not a delivery system: it loses its state on a crash, dies with one vendor's quota, and has no place where a person must decide. The paper's three contributions are the ledger invariant with what the database does and does not enforce, the no-loss handoff gate, and exact-head evaluation with its production counterexample, with the capacity taxonomy beside them; everything else is a supporting mechanism or a measurement.
+- **The ledger invariant.** All delivery state is a pure function of an append-only ledger, so a crash is a replay and a handoff is a scheduling event. The invariant was a convention of the application until 3.0.0; the database now refuses updates, deletes and truncation of the ledger, and still cannot stop the application role from forging provenance.
+- **The no-loss handoff gate.** A handoff between engines is admitted only by a pure, model-free predicate over the brief and the ledger. A failing handoff is retried, escalated to the full transcript, or parked for a person, never a silent partial.
+- **Capacity verdicts.** A rate window may carry a deadline; exhausted credits never acquire one, which the type, a property test and a database constraint each enforce. A capacity verdict outranks a completion claim, in the orchestrator and inside every runner.
+- **Exact-head evaluation and the release calculus.** Every automated verdict is a claim about one exact commit and speaks for no other; the review and repair loop terminates in a bounded number of repairs; a production trace shows a budget guard that ran before the freshness test and escalated a head that no longer existed. The local reviewer is bound to what it read, caught 18 of 25 small planted defects (Wilson 95% interval 0.524 to 0.857) and blocked none of 14 clean changes, and its failures on large diffs are under a preregistered study (`research/large-diff-review/experiments/`) with production unchanged.
+- **Queue semantics.** Work is claimed with `FOR UPDATE SKIP LOCKED` under renewable leases; execution is at least once and the acknowledgement is fenced so exactly one commit lands per job; a priority lane is derived from the record, never remembered, and never admits past a gate.
+- **The six-phase machine.** Four human gates, each a parked job plus a recorded verdict; silence never decides unless a project has declared, kind by kind, that a deployment gate may resolve to its stored default; an operator can abandon a project from any phase.
+- **The engine family.** One bounded, never-blocking core under every runner; an environment assembled from an allow-list, never copied from the worker; a sovereign local driver with a measured fit; local engines chosen first by smooth weighted round robin, paid engines as the fallback.
+- **Deterministic retrieval and fail-closed bootstrap.** Lexical retrieval a reviewer can replay, and a bootstrap layer that appends before it acts.
+- **What the records measure.** A single-slot saturation curve on one 24 GB machine: 0.99 to 2.00 generations per minute from offered concurrency 2 through 32, leaving the band at 64 and 96 and collapsing at 128. A local pilot; a storm ledger whose audit adversarial verifiers refuted in 16 of 18 leading claims; host benchmarks and weekly minimum requirements; the repository's own history; an autonomy scan that found only BUILD running without a person and forty merges made through the ruleset bypass; and a completion-time prediction that holds inside the band only, with what would falsify it and what it does not cover.
+- **Comparison with alternatives.** How ledger-mediated orchestration differs in kind from a session runner that keeps its transcript as truth, from an outbox plus a workflow engine, and from a CI ruleset plus a human approval; and that no controlled head-to-head has been run.
+- **Discussion.** Convergence-Driven Development kept as a scoreboard, and the claim that governance is the scarce input narrowed to this project's record.
+- **Validation.** The property, chaos and live levels at which the model is checked, and how the paper's own figures are reproduced.
+- **Related work.** Where the ledger, the gate and the calculus sit beside schedulers, event sourcing, agent frameworks, workflow engines and platform automation.
+- **Conclusion.** The ledger, not the session, at the centre; and what remains to be measured.
+- **Declarations.** Where the data and code are, how generative AI was used, who the author is and under what funding and interests, and which reporting guidelines and registrations apply.
+- **Appendix.** The operational record from 3.0.0 to 4.1.0, for an operator of this repository.
 
 ```latex
 \begin{plainwords}[The paper in plain words]
@@ -88,8 +87,6 @@ Computers can now write computer programs. But one robot programmer working alon
 ```
 
 ## Introduction
-
-*Executive summary, item E1.*
 
 Let an *engine* be an autonomous coding session runner over one vendor's model, and
 let $E = \{e_1, \dots, e_m\}$ be a pool of such engines with independent failure and
@@ -228,8 +225,6 @@ Think of a team of robot helpers, each from a different company. Any of them can
 ```
 
 ## The ledger invariant
-
-*Executive summary, item E2.*
 
 ```latex
 \begin{invariant}[Write-ahead intent]
@@ -482,10 +477,6 @@ The ledger is a diary written in pen. You can add a page but never tear one out;
 
 ## The no-loss handoff gate
 
-*Executive summary, item E3.*
-
-<!-- anchor: E3 -->
-
 A handoff from engine $e_i$ to engine $e_j$ carries a *brief* $\beta$: objective,
 constraints, done and remaining work, open questions, decisions, assumptions, findings,
 artifacts, and a reference $\rho$ to the ledger range it summarises. The brief is
@@ -535,13 +526,6 @@ before the local run starts; the handback is allowed only after a successful pro
 the exhausted engine is recorded, and its return brief is gated the same way; nothing
 starts on a failed gate.
 
-Item E3 of the executive summary is the claim of this section: a handoff is admitted
-only by a pure, model-free predicate over the brief and the ledger, and a failing
-handoff is retried, escalated to the full transcript, or parked for a person, never a
-silent partial. The section also names a place, the file-based range in
-full-transcript mode, where the implementation leans on the successor rather than on
-the predicate.
-
 ```latex
 \begin{plainwords}
 When one helper hands a job to another, it writes a short note: what the job is, what is done, what is left, and which questions are still open. Before the new helper may start, a strict checker compares the note with the diary. If the note forgot an open question, the checker says no and asks for a better note, up to three times. After that it tells the new helper to read the whole diary instead. If even that fails, a person is asked. Nothing is ever quietly lost.
@@ -549,8 +533,6 @@ When one helper hands a job to another, it writes a short note: what the job is,
 ```
 
 ## Capacity verdicts
-
-*Executive summary, item E4.*
 
 Every answer an engine returns is sorted into a capacity value before its completion
 claim is read. The discrimination the family is built around separates a *window*, a
@@ -710,8 +692,6 @@ level up, before any stage of the work is marked done.
 ```
 
 ## Exact-head evaluation and the release calculus
-
-*Executive summary, item E5.*
 
 The orchestrator's output is a pull request, and what happens to it is governed by
 `vibey-gh`. Let a pull request's evolution be the finite sequence of *heads*
@@ -1085,8 +1065,6 @@ A pull request is rewritten over time, and a grade belongs to one draft, never a
 
 ## Queue semantics
 
-*Executive summary, item E6.*
-
 Work items form a relation $Q$ in PostgreSQL. Workers claim with
 
 ```latex
@@ -1227,10 +1205,8 @@ Jobs wait in a line in a database. A helper takes the front job with a timer and
 
 ## The six-phase machine
 
-*Executive summary, item E7.*
-
-A human gate is a parked job plus a recorded row, never a thread waiting on input; that
-is item E7 of the *Executive summary*, and this section is its evidence. The machine is
+A human gate is a parked job plus a recorded row, never a thread waiting on input. The
+machine is
 
 $$\Sigma = \langle D, B, R, D_d, D_e, D_r \rangle$$
 
@@ -1414,8 +1390,6 @@ Every job takes six steps: plan it, build it, check it, and, only if the person 
 ```
 
 ## The engine family
-
-*Executive summary, item E8.*
 
 ADR-0078 (4.0.0, 2026-10-03) retired `cursorloop` and `agyloop`; a configuration that
 still names either is refused, and [Fig. 14](#fig:family-tree) is redrawn without them.
@@ -1763,12 +1737,6 @@ Bus, repeat run (msg/s) & 33.6749 & 251.2280 & 412.2460\\
 \end{table}
 ```
 
-Item E8 of the executive summary is this section's claim, one clause per subsection: a
-bounded, never-blocking core under every runner; an environment assembled from an
-allow-list, never copied; a sovereign driver with a measured fit; local engines first by
-smooth weighted round robin, paid engines as fallback; the dispatch timings lie outside
-it.
-
 ```latex
 \begin{plainwords}
 A runner lets one robot helper work by itself. Every run has limits on turns, money and time; the runners never wait for a person to type, and a helper that runs too long is stopped, all of it, before its timeout is written down. Each helper is handed only the keys its job needs, never the whole key ring, though a helper running as the same computer user could still go looking, and we say so. Local helpers are tried first and a fair rotation shares the work. We also timed three ways of handing out work on one laptop: two local jobs side by side beat one after another, but those are one afternoon's numbers from one machine.
@@ -1776,8 +1744,6 @@ A runner lets one robot helper work by itself. Every run has limits on turns, mo
 ```
 
 ## Deterministic retrieval and fail-closed bootstrap
-
-*Executive summary, item E9.*
 
 Two further components apply the ledger's rule, append before acting and fail closed,
 at other scales.
@@ -1866,11 +1832,7 @@ system reads. It is not built yet.
 
 ## What the records measure
 
-*Executive summary, item E10.*
-
-This section carries item E10 of the *Executive summary*. Its first three subsections
-hold the single-slot saturation curve on one 24 GB machine, the local pilot, and the
-storm ledger with its audit; the rest of E10 follows them. Every measurement we
+Every measurement we
 recompute here is read from one project's tracked records at a named cutoff: the
 sovereignty stress record of 2026-08-30, a controlled escalation of the local review
 lane; the local Qwen pilot record of 2026-09-20; and the QwenStorm 3.0.0 evidence
@@ -1980,7 +1942,7 @@ The completion-time prediction of *Time to completion and what modulates it* tak
 zero-shortfall rate from this band and holds inside the band, for this workload, only.
 The curve is not evidence about another host, model or task class, and not evidence
 that governance rather than the model is the scarce input in general. The host's own
-memory budget, measured in *Host benchmarks, context headroom and minimum requirements*,
+memory budget, measured in *Host benchmarks and context headroom*,
 confounds every timing here. One correction: the `vibey-gh` tenant paper once reported
 this experiment as 61 generations at a success rate of 1.00 with throughput held to
 $1.4 \pm 0.25$ per minute; neither survives comparison with the record, and that paper
@@ -2545,7 +2507,7 @@ conclusions were wrong.
 \end{plainwords}
 ```
 
-### Host benchmarks, context headroom and minimum requirements
+### Host benchmarks and context headroom
 
 On 2026-09-22 the same ten-turn session was replayed against five server
 configurations on the one 24 GB Apple M5 host that every timing in this section comes
@@ -2628,73 +2590,14 @@ window chosen covers every recorded turn with a third again as headroom and wire
 ```
 <!-- END GENERATED figure:host-context -->
 
-The minimum requirements are measured weekly, and the table is regenerated from a
-record that keeps *measured*, *declared* and *derived* figures apart and marks a
-figure it could not re-measure stale, with its date. At our cutoff, 2026-10-02, the
-weekly workflow had never run: every figure comes from three seed passes on one host
-on 2026-09-29 and 2026-09-30, and every row is a dated measurement, not a statement
-about this revision.
-
-<!-- BEGIN GENERATED specs:minimum-requirements — regenerated by scripts/minimum_specs.py -->
-```latex
-\begin{table*}[t]
-\centering\footnotesize
-\begin{tabular}{@{}p{1.3in}p{2.3in}p{2.0in}p{0.9in}@{}}
-\textbf{Requirement} & \textbf{Minimum} & \textbf{Recommended} & \textbf{Basis}\\
-\hline
-Memory, Apple Silicon (unified) & 24 GB (stale since 2026-09-30: derived from stale input(s): ram.minimum\_need\_gib) (needs 20.29 GiB (stale since 2026-09-30: derived from stale input(s): ram.model\_process.ctx32768)) & 32 GB (stale since 2026-09-30: derived from stale input(s): ram.recommended\_need\_gib) (needs 27.45 GiB (stale since 2026-09-30: derived from stale input(s): ram.model\_process.ctx131072)) & derived, stale\\
-Memory, 16 GB Mac & insufficient (stale since 2026-09-30: derived from stale input(s): ram.design\_only\_need\_gib): DESIGN alone needs 19.63 GiB (stale since 2026-09-30: derived from stale input(s): ram.model\_process.ctx8192); the GPU part is -6,344.0 MiB (stale since 2026-09-30: derived from stale input(s): bench.gpt-oss:20b.ctx8192.device\_mib, gpu.metal\_limit\_16gb\_mib) over its limit at 8,192 & - & derived, stale\\
-GPU memory for gpt-oss:20b & 12,339 MiB (stale since 2026-09-30: no accounting line in the log) at 8,192; 12,974 MiB (stale since 2026-09-30: no accounting line in the log) at 32,768 & discrete GPU: 16 GB (stale since 2026-09-30: derived from stale input(s): bench.gpt-oss:20b.ctx32768.device\_mib) card (not verified on CUDA) & measured, stale; derived, stale\\
-Model throughput at 24k depth & 10 tok/s generation, 100 tok/s prompt (worst BUILD turn 512 s of 900 s) & 25 / 500 tok/s (worst turn 143 s); measured here 18.1 tok/s (stale since 2026-10-02: Ollama failed at depth, num\_ctx 32768: timed out) / 379 tok/s (stale since 2026-10-02: Ollama failed at depth, num\_ctx 32768: timed out) & derived; measured, stale\\
-CPU only (no GPU) & DESIGN call 373 s (fits: yes); worst BUILD turn 4,814 s (fits: no) & use a GPU; CPU only measured 4.2 tok/s generation, 7.1 tok/s prompt & derived; measured\\
-Free disk & 20 GB (stale since 2026-09-30: derived from stale input(s): disk.minimum\_need\_gb) (needs 17.2 GB (stale since 2026-09-30: derived from stale input(s): disk.ollama\_app\_bytes)) & 50 GB (stale since 2026-09-30: derived from stale input(s): disk.recommended\_need\_gb) (needs 44.6 GB (stale since 2026-09-30: derived from stale input(s): disk.minimum\_need\_gb)) & derived, stale\\
-Python & 3.12 (declared $\geq$3.12) & works on 3.12, 3.13, 3.14 & derived; declared\\
-PostgreSQL & 14 (checked on connect) & measured on 14.24: 21 migrations applied & declared; measured\\
-Ollama with gpt-oss:20b (sovereign default) & required unless a paid engine is set up; measured on 0.35.1 & - & measured\\
-Model download, gpt-oss:20b & 13.79 GB & qwen3:14b 9.28 GB (opt-in) & measured\\
-Install download, vibey-engine & 135.9 MB & with {[}hub{]} 137.5 MB; krypton-app 137.5 MB & measured\\
-Internet at runtime (sovereign path) & none & - & measured\\
-\end{tabular}
-\caption{Minimum and recommended requirements for the sovereign default (vibey, gpt-oss:20b on Ollama and PostgreSQL on one host), as the weekly measurement last recorded them. Measured on GitHub-hosted ubuntu-24.04-arm, Mac17,2 $\cdot$ Apple M5 $\cdot$ 24 GiB $\cdot$ macOS 26.6.2 (25G83), aarch64 $\cdot$ unknown chip $\cdot$ 23 GiB $\cdot$ Ubuntu 24.04.4 LTS, figures dated 2026-09-29 to 2026-10-05 (UTC); record \texttt{docs/architecture/evidence/minimum-specs.json}. A stale figure is the last good value, marked with the date it was last measured.}
-\label{tab:minimum-requirements}
-\end{table*}
-```
-<!-- END GENERATED specs:minimum-requirements -->
-
-At the seed, memory was the binding constraint, set by the context rather than the
-model file; with vibey, PostgreSQL and the operating system the host needs 24 GB at
-minimum and 32 GB recommended. A 16 GB Mac cannot run the sovereign default, a verdict
-that is derived, since no 16 GB machine was measured. And a GPU is not optional for
-BUILD: on the CPU alone, at about 4 tokens per second, a DESIGN call fits the 900 s
-timeout and the worst BUILD turn does not. Linux is measured as a matrix of
-distributions and architectures, each in its own container image.
-
-<!-- BEGIN GENERATED specs:linux-requirements — regenerated by scripts/minimum_specs.py -->
-```latex
-\begin{table*}[t]
-\centering\footnotesize
-\begin{tabular}{@{}p{1.2in}p{0.55in}p{0.65in}p{0.8in}p{0.8in}p{0.9in}p{1.5in}@{}}
-\textbf{Distribution} & \textbf{Arch} & \textbf{Run} & \textbf{Cores min / rec} & \textbf{Disk min / rec} & \textbf{PostgreSQL} & \textbf{glibc}\\
-\hline
-Ubuntu 24.04 LTS & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 16 ($\geq$ 14: yes) & 2.39 (wheels need 2.34: yes)\\
-Ubuntu 24.04 LTS & aarch64 & native & unreachable (stale) / 5 (stale) & 20 GB / 50 GB & 16 ($\geq$ 14: yes) & 2.39 (wheels need 2.34: yes)\\
-Ubuntu 26.04 LTS & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 18 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
-Ubuntu 26.04 LTS & aarch64 & native & unreachable (stale) / 5 (stale) & 20 GB / 50 GB & 18 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
-Arch Linux & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 18.6 ($\geq$ 14: yes) & 2.44 (wheels need 2.34: yes)\\
-Arch Linux & aarch64 & not run & unreachable (stale) / 5 (stale) & - & - & -\\
-Fedora (current release) & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 18.6 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
-Fedora (current release) & aarch64 & native & unreachable (stale) / 5 (stale) & 20 GB / 50 GB & 18.6 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
-\end{tabular}
-\caption{The Linux matrix: each supported distribution on each architecture, measured in the distribution's own container image. Memory is the same for every cell, 24 GB (stale) minimum and 32 GB (stale) recommended, from the least-squares line $M(c) = M_0 + kc$ fitted to the measured model memory ($M_0$ = 15,679 MiB (stale), $k$ = 33.02 (stale) KiB/token, $R^2$ = 0.999421 (stale)) with a declared headroom factor. Cores come from Amdahl's law fitted per architecture: the minimum reaches the minimum generation rate, the recommended is the knee where $dT/dn$ falls to a declared threshold. An emulated cell's sizes and versions stand; its timings are refused. Measured on GitHub-hosted ubuntu-24.04-arm, Mac17,2 $\cdot$ Apple M5 $\cdot$ 24 GiB $\cdot$ macOS 26.6.2 (25G83), aarch64 $\cdot$ unknown chip $\cdot$ 23 GiB $\cdot$ Ubuntu 24.04.4 LTS, archlinux:latest (linux/amd64, native) on GitHub-hosted ubuntu-24.04, fedora:latest (linux/amd64, native) on GitHub-hosted ubuntu-24.04, fedora:latest (linux/arm64, native) on GitHub-hosted ubuntu-24.04-arm, ubuntu:24.04 (linux/amd64, native) on GitHub-hosted ubuntu-24.04, ubuntu:24.04 (linux/arm64, native) on GitHub-hosted ubuntu-24.04-arm, ubuntu:26.04 (linux/amd64, native) on GitHub-hosted ubuntu-24.04, ubuntu:26.04 (linux/arm64, native) on GitHub-hosted ubuntu-24.04-arm, figures dated 2026-09-29 to 2026-10-05 (UTC).}
-\label{tab:linux-requirements}
-\end{table*}
-```
-<!-- END GENERATED specs:linux-requirements -->
-
-Most of what the method promises is not yet in the table: no native runner has run a
-cell, the x86_64 cells ran under emulation, where the installer crashed, and no Linux
-memory, core count or ledger growth has been measured. What stands is that every cell
-that ran packages a Python, a PostgreSQL and desktop libraries that meet the floors.
+The minimum requirements follow from the same host. Memory was the binding constraint,
+set by the context rather than the model file: with vibey, PostgreSQL and the operating
+system the host needs 24 GB at minimum and 32 GB recommended, and a GPU is not optional
+for BUILD, since on the CPU alone the worst BUILD turn does not fit the 900 s timeout.
+These are seed measurements from 2026-09-29 and 2026-09-30; the weekly workflow that
+would refresh them had not run at our cutoff, so every figure is stale since its seed.
+The full tables are in the appendix, and the record is
+`docs/architecture/evidence/minimum-specs.json`.
 
 The host's health record held two points at our cutoff, too few for a trend; memory
 sat exactly at the 24 GB minimum, and swap in use was 0.60 and then 0.68 of memory,
@@ -3259,8 +3162,6 @@ wrong.
 
 ## Comparison with alternatives
 
-*Executive summary, item E11.*
-
 A reader who grants every invariant can still ask whether the machine does more than
 its parts. We compare it with three alternatives on five axes: a session runner whose
 transcript is its source of truth, as Claude Code and Codex CLI are (the engines of
@@ -3351,10 +3252,6 @@ We set our system beside three familiar things: a coding assistant whose chat is
 ```
 
 ## Discussion
-
-*Executive summary, item E12.*
-
-This section carries item E12 of the *Executive summary*.
 
 ### Convergence-Driven Development as a scoreboard
 
@@ -3567,10 +3464,7 @@ merges ran ahead of reviews, the reviews still had to be done, only later.
 
 ## Validation
 
-*Executive summary, item E13.*
-
-This section carries E13 of the executive summary: how the model is checked at three
-levels, and how the paper's own figures are reproduced. At the *property* level, the
+The model is checked at three levels, and the paper's own figures are reproduced. At the *property* level, the
 gate, the phase guards and the selector are pure functions under a 100% branch-coverage
 floor per architectural layer, with property tests on the selector and the credits type.
 At the *chaos* level, concurrent workers process a job set against a real PostgreSQL
@@ -3669,27 +3563,50 @@ We check the system three ways. Tests walk every branch of the important code. A
 
 ## Related work
 
-*Executive summary, item E14.*
-
-This section carries item E14 of the *Executive summary*: where the ledger, the gate
-and the calculus sit beside schedulers, event sourcing, agent frameworks, workflow
-engines and platform automation.
-
 Queue-based job schedulers built on `SKIP LOCKED` provide claims, leases and retries
 but no delivery semantics. The ledger here is event sourcing in Fowler's and Helland's
 sense applied above the queue, with the write-ahead discipline of ARIES and the lease
-bound of Gray and Cheriton. The transactional outbox pattern (Richardson) and the
-durable workflow engines Temporal and Cadence also derive state from a durable record;
-they differ in having no admission predicate for a handoff, no taxonomy of capacity
-verdicts and no gate whose silence is never a verdict, which is the line
-*Comparison with alternatives* draws against alternative (b).
+bound of Gray and Cheriton. Selection reuses nginx's smooth weighted round robin and
+the circuit breaker pattern as Nygard describes it.
 
-Agent frameworks such as SWE-agent and AutoGen provide sessions and tool loops but
-bind state to one vendor's context window. Session runners such as Claude Code and
-Codex CLI keep the transcript as their state; here a transcript is copied in as an
-attachment that events reference, evidence rather than state, so the session is
-disposable and the ledger is not. Selection reuses nginx's smooth weighted round
-robin and the circuit breaker pattern as Nygard describes it.
+*Session runners and agent frameworks.* SWE-agent drives one model through a
+thought, action and observation loop and saves each run as a trajectory file. During
+the run its state is the model's context; the trajectory is a record to inspect, not a
+state another model resumes from. Session runners such as Claude Code and Codex CLI go
+further: they persist each session's transcript on disk and can resume it by session
+id. When a long session fills the context window, older turns are replaced by a
+summary that the model itself writes. AutoGen coordinates several agents in
+conversation, and the conversation is again the state. In all of them the unit that
+survives is a transcript in one vendor's shape. Moving the work to another vendor's
+model, or past a context limit, passes through a summary that no procedure checks.
+Here a transcript is copied in as an attachment that events reference. It is evidence
+rather than state, so the session is disposable and the ledger is not.
+
+*Durable workflow engines.* Temporal, and Cadence before it, persist an event history
+for every workflow execution. When a worker dies, another worker replays that history
+through deterministic workflow code and rebuilds the workflow's state exactly.
+Activities run at least once under retry policies and timeouts, and signals and timers
+let a workflow wait for a person. For crash recovery this is the guarantee the lease
+and the ledger replay give here, and a team already running Temporal would get it from
+Temporal. The transactional outbox pattern (Richardson) gives the matching guarantee for
+messages; this family's own job dispatch is designed around one, though it is not yet wired. What these engines
+record about a step is that it completed and what it returned. If the step is a coding
+agent, the returned value is opaque to the engine. Replay restores the fact that the
+agent finished and the payload it handed on, but nothing checks that the payload kept
+every question the agent had opened. Capacity is opaque as well: a rate window and
+exhausted credits are both failed activities. They are retried under whatever policy
+the author wrote, unless the author declared one error type non-retryable.
+
+*The property the gate adds.* Neither family admits a handoff between two
+nondeterministic workers on a checked condition. The no-loss predicate of
+*The no-loss handoff gate* does. It computes without a model the ids opened and not
+closed in the summarised ledger range, for questions, decisions, assumptions, findings
+and artifacts. The brief is admitted only if it carries every one of them, together
+with the range's recomputed digest. "The successor knows what the predecessor knew" thus
+becomes a set inclusion a reviewer can re-run, instead of a property of a model's
+summary. It is one predicate, and a workflow engine could host it as a step. We claim
+the predicate and its placement at every engine boundary, not the durable record
+beneath it, which *Comparison with alternatives* sets out row by row.
 
 Platform-native automation, merge queues and required checks, enforces revision-bound
 *checks* but leaves verdict freshness to its consumers. A ruleset that also requires
@@ -3723,10 +3640,7 @@ Other people have built pieces of this before: queues that hand out jobs, notebo
 
 ## Conclusion
 
-*Executive summary, item E15.*
-
-This section carries item E15 of the executive summary, the thesis and what remains to
-be measured. Putting the ledger, not the session, at the centre makes autonomous
+Putting the ledger, not the session, at the centre makes autonomous
 delivery survivable and auditable: engines become fungible, crashes become replays, and
 human authority is a structural property of the state machine rather than a
 prompt-engineering hope. The same discipline, binding every claim to the state it
@@ -3762,8 +3676,6 @@ Put the notebook, not the robot, at the centre. Then any robot can be swapped ou
 ```
 
 ## Declarations
-
-*Executive summary, item E16.*
 
 ### Data and code availability
 
@@ -3869,10 +3781,78 @@ PDF.
 
 ## Appendix. The operational record from 3.0.0 to 4.1.0
 
-*Executive summary, item E17.*
+The operator's record by release, each fact with its pull request, issue, ADR or
+migration.
 
-This appendix carries item E17 of the executive summary: the operator's record by
-release, each fact with its pull request, issue, ADR or migration.
+### Minimum system requirements
+
+The minimum requirements are measured weekly, and the table is regenerated from a
+record that keeps *measured*, *declared* and *derived* figures apart and marks a
+figure it could not re-measure stale, with its date. At our cutoff, 2026-10-02, the
+weekly workflow had never run: every figure comes from three seed passes on one host
+on 2026-09-29 and 2026-09-30, and every row is a dated measurement, not a statement
+about this revision.
+
+<!-- BEGIN GENERATED specs:minimum-requirements — regenerated by scripts/minimum_specs.py -->
+```latex
+\begin{table*}[t]
+\centering\footnotesize
+\begin{tabular}{@{}p{1.3in}p{2.3in}p{2.0in}p{0.9in}@{}}
+\textbf{Requirement} & \textbf{Minimum} & \textbf{Recommended} & \textbf{Basis}\\
+\hline
+Memory, Apple Silicon (unified) & 24 GB (stale since 2026-09-30: derived from stale input(s): ram.minimum\_need\_gib) (needs 20.29 GiB (stale since 2026-09-30: derived from stale input(s): ram.model\_process.ctx32768)) & 32 GB (stale since 2026-09-30: derived from stale input(s): ram.recommended\_need\_gib) (needs 27.45 GiB (stale since 2026-09-30: derived from stale input(s): ram.model\_process.ctx131072)) & derived, stale\\
+Memory, 16 GB Mac & insufficient (stale since 2026-09-30: derived from stale input(s): ram.design\_only\_need\_gib): DESIGN alone needs 19.63 GiB (stale since 2026-09-30: derived from stale input(s): ram.model\_process.ctx8192); the GPU part is -6,344.0 MiB (stale since 2026-09-30: derived from stale input(s): bench.gpt-oss:20b.ctx8192.device\_mib, gpu.metal\_limit\_16gb\_mib) over its limit at 8,192 & - & derived, stale\\
+GPU memory for gpt-oss:20b & 12,339 MiB (stale since 2026-09-30: no accounting line in the log) at 8,192; 12,974 MiB (stale since 2026-09-30: no accounting line in the log) at 32,768 & discrete GPU: 16 GB (stale since 2026-09-30: derived from stale input(s): bench.gpt-oss:20b.ctx32768.device\_mib) card (not verified on CUDA) & measured, stale; derived, stale\\
+Model throughput at 24k depth & 10 tok/s generation, 100 tok/s prompt (worst BUILD turn 512 s of 900 s) & 25 / 500 tok/s (worst turn 143 s); measured here 18.1 tok/s (stale since 2026-10-02: Ollama failed at depth, num\_ctx 32768: timed out) / 379 tok/s (stale since 2026-10-02: Ollama failed at depth, num\_ctx 32768: timed out) & derived; measured, stale\\
+CPU only (no GPU) & DESIGN call 373 s (fits: yes); worst BUILD turn 4,814 s (fits: no) & use a GPU; CPU only measured 4.2 tok/s generation, 7.1 tok/s prompt & derived; measured\\
+Free disk & 20 GB (stale since 2026-09-30: derived from stale input(s): disk.minimum\_need\_gb) (needs 17.2 GB (stale since 2026-09-30: derived from stale input(s): disk.ollama\_app\_bytes)) & 50 GB (stale since 2026-09-30: derived from stale input(s): disk.recommended\_need\_gb) (needs 44.6 GB (stale since 2026-09-30: derived from stale input(s): disk.minimum\_need\_gb)) & derived, stale\\
+Python & 3.12 (declared $\geq$3.12) & works on 3.12, 3.13, 3.14 & derived; declared\\
+PostgreSQL & 14 (checked on connect) & measured on 14.24: 21 migrations applied & declared; measured\\
+Ollama with gpt-oss:20b (sovereign default) & required unless a paid engine is set up; measured on 0.35.1 & - & measured\\
+Model download, gpt-oss:20b & 13.79 GB & qwen3:14b 9.28 GB (opt-in) & measured\\
+Install download, vibey-engine & 135.9 MB & with {[}hub{]} 137.5 MB; krypton-app 137.5 MB & measured\\
+Internet at runtime (sovereign path) & none & - & measured\\
+\end{tabular}
+\caption{Minimum and recommended requirements for the sovereign default (vibey, gpt-oss:20b on Ollama and PostgreSQL on one host), as the weekly measurement last recorded them. Measured on GitHub-hosted ubuntu-24.04-arm, Mac17,2 $\cdot$ Apple M5 $\cdot$ 24 GiB $\cdot$ macOS 26.6.2 (25G83), aarch64 $\cdot$ unknown chip $\cdot$ 23 GiB $\cdot$ Ubuntu 24.04.4 LTS, figures dated 2026-09-29 to 2026-10-05 (UTC); record \texttt{docs/architecture/evidence/minimum-specs.json}. A stale figure is the last good value, marked with the date it was last measured.}
+\label{tab:minimum-requirements}
+\end{table*}
+```
+<!-- END GENERATED specs:minimum-requirements -->
+
+At the seed, memory was the binding constraint, set by the context rather than the
+model file; with vibey, PostgreSQL and the operating system the host needs 24 GB at
+minimum and 32 GB recommended. A 16 GB Mac cannot run the sovereign default, a verdict
+that is derived, since no 16 GB machine was measured. And a GPU is not optional for
+BUILD: on the CPU alone, at about 4 tokens per second, a DESIGN call fits the 900 s
+timeout and the worst BUILD turn does not. Linux is measured as a matrix of
+distributions and architectures, each in its own container image.
+
+<!-- BEGIN GENERATED specs:linux-requirements — regenerated by scripts/minimum_specs.py -->
+```latex
+\begin{table*}[t]
+\centering\footnotesize
+\begin{tabular}{@{}p{1.2in}p{0.55in}p{0.65in}p{0.8in}p{0.8in}p{0.9in}p{1.5in}@{}}
+\textbf{Distribution} & \textbf{Arch} & \textbf{Run} & \textbf{Cores min / rec} & \textbf{Disk min / rec} & \textbf{PostgreSQL} & \textbf{glibc}\\
+\hline
+Ubuntu 24.04 LTS & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 16 ($\geq$ 14: yes) & 2.39 (wheels need 2.34: yes)\\
+Ubuntu 24.04 LTS & aarch64 & native & unreachable (stale) / 5 (stale) & 20 GB / 50 GB & 16 ($\geq$ 14: yes) & 2.39 (wheels need 2.34: yes)\\
+Ubuntu 26.04 LTS & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 18 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
+Ubuntu 26.04 LTS & aarch64 & native & unreachable (stale) / 5 (stale) & 20 GB / 50 GB & 18 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
+Arch Linux & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 18.6 ($\geq$ 14: yes) & 2.44 (wheels need 2.34: yes)\\
+Arch Linux & aarch64 & not run & unreachable (stale) / 5 (stale) & - & - & -\\
+Fedora (current release) & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 18.6 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
+Fedora (current release) & aarch64 & native & unreachable (stale) / 5 (stale) & 20 GB / 50 GB & 18.6 ($\geq$ 14: yes) & 2.43 (wheels need 2.34: yes)\\
+\end{tabular}
+\caption{The Linux matrix: each supported distribution on each architecture, measured in the distribution's own container image. Memory is the same for every cell, 24 GB (stale) minimum and 32 GB (stale) recommended, from the least-squares line $M(c) = M_0 + kc$ fitted to the measured model memory ($M_0$ = 15,679 MiB (stale), $k$ = 33.02 (stale) KiB/token, $R^2$ = 0.999421 (stale)) with a declared headroom factor. Cores come from Amdahl's law fitted per architecture: the minimum reaches the minimum generation rate, the recommended is the knee where $dT/dn$ falls to a declared threshold. An emulated cell's sizes and versions stand; its timings are refused. Measured on GitHub-hosted ubuntu-24.04-arm, Mac17,2 $\cdot$ Apple M5 $\cdot$ 24 GiB $\cdot$ macOS 26.6.2 (25G83), aarch64 $\cdot$ unknown chip $\cdot$ 23 GiB $\cdot$ Ubuntu 24.04.4 LTS, archlinux:latest (linux/amd64, native) on GitHub-hosted ubuntu-24.04, fedora:latest (linux/amd64, native) on GitHub-hosted ubuntu-24.04, fedora:latest (linux/arm64, native) on GitHub-hosted ubuntu-24.04-arm, ubuntu:24.04 (linux/amd64, native) on GitHub-hosted ubuntu-24.04, ubuntu:24.04 (linux/arm64, native) on GitHub-hosted ubuntu-24.04-arm, ubuntu:26.04 (linux/amd64, native) on GitHub-hosted ubuntu-24.04, ubuntu:26.04 (linux/arm64, native) on GitHub-hosted ubuntu-24.04-arm, figures dated 2026-09-29 to 2026-10-05 (UTC).}
+\label{tab:linux-requirements}
+\end{table*}
+```
+<!-- END GENERATED specs:linux-requirements -->
+
+Most of what the method promises is not yet in the table: no native runner has run a
+cell, the x86_64 cells ran under emulation, where the installer crashed, and no Linux
+memory, core count or ledger growth has been measured. What stands is that every cell
+that ran packages a Python, a PostgreSQL and desktop libraries that meet the floors.
 
 ### 3.0.0
 
