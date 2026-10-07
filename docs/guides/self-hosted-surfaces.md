@@ -15,7 +15,7 @@ observed by the vibey kopf operator via `VibeySurface` custom resources.
 In an all-defaults deployment (`surfaces.enabled: true`), the chart provisions
 the following in-cluster topology:
 
-```
+```text
                       +-------------------+
                       |   vibey worker    |
                       +---------+---------+

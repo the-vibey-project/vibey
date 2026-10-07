@@ -315,6 +315,11 @@ pre code,
 [class*="hljs-"],
 .highlight span {
   color: {{hex:theme.dark.syntax.text}};
+  /* A token's background is the white-page theme's too: github's `.hljs-deletion` is pale
+   * pink and `.hljs-addition` pale green, so an unlabelled fence highlight.js guessed was a
+   * diff (lines starting "- ") printed pale text on a pale band. The block's own dark
+   * background is the only one a token may sit on. */
+  background: transparent;
 }
 
 .hljs-string,
