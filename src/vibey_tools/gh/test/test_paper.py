@@ -96,7 +96,9 @@ def test_structures_render_as_their_latex_counterparts():
     assert r"\begin{itemize}" in tex and r"\item first item" in tex
     assert r"\begin{tabular}{ll}" in tex and r"col\_a & col\_b" in tex
     assert r"\begin{theorem}Raw LaTeX passes.\end{theorem}" in tex
-    assert r"\begin{verbatim}" in tex and 'print("verbatim")' in tex
+    assert paper.CODE_BLOCK_OPEN in tex and 'print("verbatim")' in tex
+    assert r"\end{Verbatim}" in tex and r"\usepackage{fvextra}" in tex
+    assert "breaklines=true" in paper.CODE_BLOCK_OPEN  # a long line wraps in its column
 
 
 def test_references_become_thebibliography():

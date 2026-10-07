@@ -3297,7 +3297,7 @@ nothing about the one around it.
   \node[vibeygate,minimum width=1.7cm,minimum height=.9cm] (gate) at (12.25,0)
     {\textbf{Classify}\\trajectory};
   \node[vibeycore,font=\sffamily\scriptsize,minimum width=2.8cm] (deliver) at (16.1,0)
-    {\textbf{Deliver to nucleus}\\commit, review,\\publish evidence};
+    {\textbf{Deliver}\\commit, review,\\publish evidence};
   \coordinate (lanehead) at (1.15,.78);
   \begin{scope}[on background layer]
     \node[vibeylane,fit=(ground)(formulate)(synth)(test)(gate)(lanehead)] (lane) {};
@@ -3336,7 +3336,7 @@ nothing about the one around it.
   \node[font=\sffamily\scriptsize,text=vibeygray,align=left,anchor=north east] at (deliver.east |- 0,-2.55)
     {$\Delta d$: change in the unresolved-work\\distance over the iteration};
 \end{tikzpicture}
-\caption{Each pass reads the tracked repository, turns criteria into tests, builds the smallest slice, runs the tests and classifies its trajectory. Converging work is delivered to the nucleus. Neutral or slightly divergent work continues only with a written bound and reconvergence step. Unbounded divergence is discarded and work resumes from the last sound state; activity alone is never evidence.}
+\caption{Each pass reads the tracked repository, turns criteria into tests, builds the smallest slice, runs the tests and classifies its trajectory. Converging work is delivered: committed, reviewed and published with its evidence. Neutral or slightly divergent work continues only with a written bound and reconvergence step. Unbounded divergence is discarded and work resumes from the last sound state; activity alone is never evidence.}
 \label{fig:cdd-loop}
 \end{figure*}
 ```

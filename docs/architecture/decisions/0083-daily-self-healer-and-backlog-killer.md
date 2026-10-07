@@ -93,3 +93,13 @@ not exist. The model is the last resort, not the first.
   failed. On 2026-10-06 that was a TestPyPI outage, which it reports but does not repair.
 - What the self-healer cannot repair is still reported, in its run summary, and through
   `keep-green`'s report, never as fixed (10.f).
+
+## Amendment, 2026-10-07: the backlog killer runs every 90 minutes
+
+At the operator's request the backlog killer runs once per `[backlog_killer] interval_minutes`
+slot, 90 minutes by default, rather than once a day: two interleaved three-hourly crons, sixteen
+runs a day. Its pick rotates through the window by slot instead of by date, so every run in a day
+no longer picks the same issue, and `tests/meta/test_daily_lanes.py` fails if the crons stop
+firing once per declared interval. Everything else in this record stands: it still runs only on
+GitHub's CPU runners, still lands at most one draft pull request per run through the
+continuation lane's guards, and still merges, approves and closes nothing.

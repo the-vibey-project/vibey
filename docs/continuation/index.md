@@ -31,7 +31,7 @@ does not. Nothing it runs can merge, approve, release, delete, or touch a rulese
 | [Release](release.md) | drill | Derive the version, promote develop to main, and verify every channel and every asset. |
 | [Triage](triage.md) | act | Keep the backlog, the tracker and the roadmap truthful. |
 | [Keep the documentation true](docs.md) | act | Find one statement in the documentation, the paper or the book that the repository contradicts, and correct it. |
-| [Work the backlog](backlog.md) | act | Take today's backlog item and land its smallest shippable, tested slice. |
+| [Work the backlog](backlog.md) | act | Take this run's backlog item and land its smallest shippable, tested slice. |
 | [Research and measurement](research.md) | act | Keep every weekly measurement and every registered study running without breaking its protocol. |
 | [Succession](succession.md) | drill | Hand the project to a new steward: what they must hold, where it is declared, and how to verify it. |
 | [Rebuild](rebuild.md) | drill | Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone. |
