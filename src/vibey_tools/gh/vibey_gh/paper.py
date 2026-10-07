@@ -218,13 +218,25 @@ _INLINE = [
 _CODE_SPAN = re.compile(r"`([^`]+)`")
 
 
+#: Where a path in a code span may break, after escaping: its slashes, and inside a segment
+#: its hyphens, dots and underscores.
+_PATH_BREAKS = ("/", "-", ".", r"\_")
+
+
 def _breakable(code: str) -> str:
-    """A path in a code span may break after its slashes; an identifier never breaks.
+    """A path in a code span may break inside the column; an identifier never breaks.
 
     Courier does not hyphenate, so a repository path set in one piece runs into the
-    margin of a two-column page. Breaking only after `/` keeps every path segment whole.
+    margin of a two-column page. Breaking after `/` alone was not enough: one segment,
+    an ADR's file name such as `0056-everything-a-queue-guards-is-reaped-by-measurement.md`,
+    is wider than the column by itself. So a path may also break after a hyphen, a dot
+    or an underscore, never in the middle of a word and never by inserting a hyphen.
     """
-    return code.replace("/", "/\\allowbreak ") if "/" in code else code
+    if "/" not in code:
+        return code
+    for mark in _PATH_BREAKS:
+        code = code.replace(mark, mark + "\\allowbreak ")
+    return code
 
 
 def _inline(text: str) -> str:

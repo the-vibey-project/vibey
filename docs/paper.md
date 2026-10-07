@@ -3173,7 +3173,7 @@ integration branch. The table sets the four side by side.
 ```latex
 \begin{table*}[t]
 \centering\footnotesize
-\begin{tabular}{@{}p{0.95in}p{1.45in}p{1.4in}p{1.45in}p{1.6in}@{}}
+\begin{tabular}{@{}p{0.85in}p{1.35in}p{1.3in}p{1.35in}p{1.5in}@{}}
 \textbf{Axis} & \textbf{(a) Session runner} & \textbf{(b) Outbox and workflow engine} & \textbf{(c) Ruleset and approval} & \textbf{Ledger-mediated}\\
 Source of truth & the vendor's transcript, read by no other vendor & a durable record the engine replays & the repository and the forge's record & the append-only ledger; transcripts are attachments\\
 Survives a crash & the run directory; resume by session id & replay of the durable record & the pull request and its check runs & the lease: at most $L$ of delay, no lost item, no double commit\\
@@ -3831,7 +3831,7 @@ distributions and architectures, each in its own container image.
 ```latex
 \begin{table*}[t]
 \centering\footnotesize
-\begin{tabular}{@{}p{1.2in}p{0.55in}p{0.65in}p{0.8in}p{0.8in}p{0.9in}p{1.5in}@{}}
+\begin{tabular}{@{}p{1.2in}p{0.55in}p{0.65in}p{0.8in}p{0.8in}p{0.9in}p{1.2in}@{}}
 \textbf{Distribution} & \textbf{Arch} & \textbf{Run} & \textbf{Cores min / rec} & \textbf{Disk min / rec} & \textbf{PostgreSQL} & \textbf{glibc}\\
 \hline
 Ubuntu 24.04 LTS & x86\_64 & native & not measured / not measured & 20 GB / 50 GB & 16 ($\geq$ 14: yes) & 2.39 (wheels need 2.34: yes)\\

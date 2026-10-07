@@ -4715,7 +4715,7 @@ class PaperRenderer(RequirementsRendererInterface):
             "```latex",
             r"\begin{table*}[t]",
             r"\centering\footnotesize",
-            r"\begin{tabular}{@{}p{1.2in}p{0.55in}p{0.65in}p{0.8in}p{0.8in}p{0.9in}p{1.5in}@{}}",
+            r"\begin{tabular}{@{}p{1.2in}p{0.55in}p{0.65in}p{0.8in}p{0.8in}p{0.9in}p{1.2in}@{}}",
             r"\textbf{Distribution} & \textbf{Arch} & \textbf{Run} & \textbf{Cores min / rec} & "
             r"\textbf{Disk min / rec} & \textbf{PostgreSQL} & \textbf{glibc}\\",
             r"\hline",
