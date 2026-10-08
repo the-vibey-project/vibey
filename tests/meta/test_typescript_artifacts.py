@@ -111,3 +111,36 @@ def test_no_workflow_writes_inline_javascript() -> None:
                     if "read_text()" not in following:
                         offenders.append(f"{path.relative_to(REPO)}:{at + 1}")
     assert not offenders, f"inline JavaScript written in a workflow: {offenders}"
+
+
+def test_no_inlined_asset_can_end_its_own_script_element() -> None:
+    """An asset inlined into a page must not spell out markup, comments included.
+
+    The release workflow inlines `analytics.js` and `consent.js` into every published page.
+    The HTML parser ends an inline script at the first closing script tag it meets, even inside
+    a JavaScript comment, and prints the rest of the file as visible text at the top of the
+    page. That happened once (a comment that showed an example tag), so this test reads the
+    workflow, finds each asset it inlines, and refuses the markup that causes it.
+    """
+    import re
+
+    template = REPO / "src/vibey_tools/gh/vibey_gh/templates/workflows/release-surfaces.yml"
+    lines = template.read_text(encoding="utf-8").splitlines()
+    inlined: set[str] = set()
+    for at, line in enumerate(lines):
+        if re.search(r"<script(?![^>]*(?:\bsrc=|ld\+json))[^>]*>", line):
+            inlined.update(
+                re.findall(r'\(assets / "([\w.-]+\.js)"\)', "\n".join(lines[at : at + 4]))
+            )
+    assert {"analytics.js", "consent.js"} <= inlined, (
+        f"expected the workflow to inline both, found {inlined}"
+    )
+    assets = REPO / "src/vibey_tools/gh/docs/javascripts"
+    forbidden = re.compile(r"</script|<script|<!--", re.IGNORECASE)
+    offenders = [
+        f"{name}:{n}: {text.strip()[:70]}"
+        for name in sorted(inlined)
+        for n, text in enumerate((assets / name).read_text(encoding="utf-8").splitlines(), start=1)
+        if forbidden.search(text)
+    ]
+    assert not offenders, f"markup inside an inlined script would end it early: {offenders}"
