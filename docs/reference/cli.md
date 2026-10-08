@@ -912,7 +912,8 @@ workflow runs it itself, and only for a private repository (ADR-0086).
 ## `vibey ledger`
 
 Bare `vibey ledger` prints help. Subcommands, in `vibey ledger --help` order:
-`search`, `export`, `site`, `show`.
+`search`, `export`, `site`, `show`. What `export` and `site` produce can be browsed in the
+[ledger explorer](../explorer/index.md).
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|

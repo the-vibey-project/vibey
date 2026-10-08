@@ -1,0 +1,41 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "11c7b44b326ae4e1669662c3c25360aac61dd8aca855c4dc8fad93bb07cf6674",
+    "event_id": "5045cc33-fd3b-53ae-a9bd-63f5947d1e2c",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "ae81ffc2146e6e06f3bc99d37a500dbc5ec7f2c0e13dd4bdcc28332387935d3f",
+    "event_id": "eb4cc93f-8211-5364-b6ac-fe4a75413401",
+    "seq": 6
+  },
+  "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+  "record": {
+    "causation_id": "c6918b07-a538-5bbb-8228-0f12e1f40322",
+    "correlation_id": "c6fd9b76-effa-5faa-9633-b9121ce573b2",
+    "cycle": 1,
+    "digest": "b95b56cb6e762f4b1da14e71cdc564e423cd89a63ff07c7d4510e197728f598f",
+    "engine_id": "gptossloop",
+    "event_id": "cac3b689-2866-53ff-9287-c2f7bf377c94",
+    "job_id": null,
+    "kind": "ArtifactProduced",
+    "payload": {
+      "artifact_id": "art-1",
+      "artifact_type": "source",
+      "cycle": 1,
+      "title": "Shift list page"
+    },
+    "phase": "build",
+    "produced_at": "2026-01-12T10:10:00+00:00",
+    "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+    "provenance": "trusted",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

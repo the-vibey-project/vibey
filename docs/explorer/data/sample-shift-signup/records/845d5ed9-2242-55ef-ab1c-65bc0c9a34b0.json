@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "261620aee6c2dcda219208bc06c592102ad17fdff66010f396842fa02500c4d6",
+    "event_id": "f2c7cd7d-f05e-590b-b10d-bea2e0b87932",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "fa1052f7951fc0cf97af1c0b6c194cc0eac5faf15cb0d522ce8bf3ccfe6aa8bc",
+    "event_id": "4ff1b37c-5c14-54c6-bafd-1aac67a484cd",
+    "seq": 2
+  },
+  "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+  "record": {
+    "causation_id": "4ff1b37c-5c14-54c6-bafd-1aac67a484cd",
+    "correlation_id": "c6fd9b76-effa-5faa-9633-b9121ce573b2",
+    "cycle": 1,
+    "digest": "bf124b34f511429d09687d50e494f174a9817aad624ec055e16e930f9aaaf59b",
+    "engine_id": null,
+    "event_id": "845d5ed9-2242-55ef-ab1c-65bc0c9a34b0",
+    "job_id": null,
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Yes, up to 24 hours before. Notes are in [path], questions to [email].",
+      "item_id": "item-1",
+      "question_id": "q1"
+    },
+    "phase": "design",
+    "produced_at": "2026-01-12T09:21:00+00:00",
+    "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+    "provenance": "trusted",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 1,
+    "fields": 0,
+    "paths": 1
+  }
+}

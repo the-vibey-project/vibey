@@ -1,0 +1,338 @@
+// Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+// The task panel's page. Everything it shows came from a model, a tool or vibey, so it is
+// rendered with textContent only: nothing here ever parses a string as HTML.
+// TypeScript is the only authored form (sub-doctrine 9.f); scripts/typescript_artifacts.py
+// compiles this file to media/panel.js, the script the webview loads.
+
+// The one function VS Code puts on a webview's window.
+declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
+
+(() => {
+  // ---- the messages the extension host sends (src/extension/panel.ts) -------------------
+  interface SlashCommand {
+    name: string;
+    usage: string;
+    description: string;
+  }
+  type PanelItem =
+    | { id: number; kind: "assistant"; text: string }
+    | { id: number; kind: "tool-call"; name: string; detail?: string }
+    | { id: number; kind: "tool-result"; ok: boolean; detail: string }
+    | { id: number; kind: "turn"; detail: string }
+    | { id: number; kind: "follow-up"; text: string }
+    | { id: number; kind: "notice"; text: string; level?: string };
+  type PanelPatch = { op: "add"; item: PanelItem } | { op: "append"; id: number; text: string };
+  interface StatusFields {
+    status: string;
+    forceAfterMs?: number;
+    finishedActions?: boolean;
+    takesFollowUps?: boolean;
+  }
+  type HostMessage =
+    | ({ type: "init"; title: string; slash: SlashCommand[]; canPasteImage: boolean; items: PanelItem[] } & StatusFields)
+    | { type: "items"; items: PanelItem[] }
+    | { type: "patch"; patch: PanelPatch }
+    | ({ type: "status" } & StatusFields)
+    | { type: "note"; level: string; text: string }
+    | { type: "look"; theme?: string; surface?: string; ultra?: boolean; unlimited?: boolean };
+
+  const vscode = acquireVsCodeApi();
+  const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
+  const itemsBox = $("items");
+  const input = $<HTMLTextAreaElement>("input");
+  const completions = $("completions");
+  const statusLine = $("status");
+  const title = $("title");
+  const banner = $("banner");
+  const effortPill = $("effort");
+  const composer = $("composer");
+  const buttons = {
+    start: $<HTMLButtonElement>("start"),
+    stop: $<HTMLButtonElement>("stop"),
+    force: $<HTMLButtonElement>("force"),
+    review: $<HTMLButtonElement>("review"),
+    apply: $<HTMLButtonElement>("apply"),
+    discard: $<HTMLButtonElement>("discard"),
+  };
+  const finishedButtons = [buttons.review, buttons.apply, buttons.discard];
+  const shown = new Map<number, HTMLElement>();
+  let slash: SlashCommand[] = [];
+  let canPasteImage = false;
+  let forceTimer = 0;
+  let status = "idle";
+  let takesFollowUps = false;
+  let chosen = -1;
+
+  const WORDS: Readonly<Record<string, string>> = {
+    idle: "Describe a task to start.",
+    queued: "Waiting its turn for the model.",
+    preparing: "Making its copy of the folder.",
+    waiting: "Waiting for the model.",
+    running: "Running. Type to tell it something; it reads it at its next turn.",
+    stopping: "Stopping: the model finishes the turn it is on.",
+    finishing: "Finishing: committing the work on its branch.",
+    finished: "Finished.",
+    lane: "Watching a lane started elsewhere (read-only).",
+  };
+
+  const line = (kind: string, text: string, extra?: string): HTMLElement => {
+    const element = document.createElement(kind === "assistant" ? "pre" : "div");
+    element.className = `item ${kind}${extra ? ` ${extra}` : ""}`;
+    element.textContent = text;
+    return element;
+  };
+
+  const render = (item: PanelItem): HTMLElement => {
+    switch (item.kind) {
+      case "assistant":
+        return line("assistant", item.text);
+      case "tool-call": {
+        const element = line("tool-call", "");
+        const name = document.createElement("span");
+        name.className = "name";
+        name.textContent = item.name;
+        element.append(name, document.createTextNode(item.detail ? ` ${item.detail}` : ""));
+        return element;
+      }
+      case "tool-result":
+        return line("tool-result", `${item.ok ? "✓" : "✗"} ${item.detail}`, item.ok ? "" : "failed");
+      case "turn":
+        return line("turn", item.detail);
+      case "follow-up":
+        return line("follow-up", `You: ${item.text}`);
+      case "notice":
+        return line("notice", item.text, item.level);
+      default:
+        // The host may be newer than this page: say so, rather than drop the item.
+        return line("notice", `An item this page does not know: ${String((item as { kind: unknown }).kind)}`, "warn");
+    }
+  };
+
+  const add = (item: PanelItem): void => {
+    const element = render(item);
+    shown.set(item.id, element);
+    itemsBox.append(element);
+  };
+
+  const follow = (): (() => void) => {
+    const near = itemsBox.scrollHeight - itemsBox.scrollTop - itemsBox.clientHeight < 80;
+    return () => {
+      if (near) {
+        itemsBox.scrollTop = itemsBox.scrollHeight;
+      }
+    };
+  };
+
+  const replaceItems = (items: PanelItem[]): void => {
+    const scroll = follow();
+    shown.clear();
+    itemsBox.replaceChildren();
+    for (const item of items) {
+      add(item);
+    }
+    scroll();
+  };
+
+  const patch = (change: PanelPatch): void => {
+    const scroll = follow();
+    if (change.op === "add") {
+      add(change.item);
+    } else {
+      const element = shown.get(change.id);
+      if (element) {
+        element.textContent += change.text;
+      }
+    }
+    scroll();
+  };
+
+  const note = (level: string, text: string): void => {
+    const scroll = follow();
+    itemsBox.append(line("notice", text, level));
+    scroll();
+  };
+
+  const setStatus = (next: string, forceAfterMs?: number, finishedActions?: boolean, followUps?: boolean): void => {
+    status = next;
+    takesFollowUps = followUps === true;
+    statusLine.textContent = WORDS[next] || next;
+    statusLine.dataset["state"] = next;
+    const active = ["queued", "preparing", "waiting", "running", "stopping", "finishing"].includes(next);
+    // The atom's electrons and the state's dot move only while work is really running.
+    document.body.dataset["live"] = String(["preparing", "waiting", "running", "finishing", "lane"].includes(next));
+    buttons.start.hidden = active || next === "lane";
+    buttons.stop.hidden = !active || next === "finishing";
+    buttons.stop.disabled = next === "stopping";
+    buttons.stop.textContent = next === "stopping" ? "Stopping…" : "Stop";
+    for (const button of finishedButtons) {
+      button.hidden = !finishedActions;
+    }
+    window.clearTimeout(forceTimer);
+    buttons.force.hidden = true;
+    if (next === "stopping" && typeof forceAfterMs === "number") {
+      // Force stop is a separate act, offered only once the graceful stop has had its fair time.
+      forceTimer = window.setTimeout(() => {
+        buttons.force.hidden = status !== "stopping";
+      }, forceAfterMs);
+    }
+    composer.hidden = next === "lane";
+    // An engine that ignores follow-ups gets no prompt box while it runs: typing would go nowhere.
+    const closed = active && next !== "queued" && !takesFollowUps;
+    input.disabled = closed;
+    input.placeholder = closed
+      ? "This engine does not take follow-ups while it runs. Stop is below."
+      : next === "running"
+        ? "Tell the running task something (Enter sends; Shift+Enter starts a new line), or type / for commands."
+        : "Describe a task, or type / for commands. Enter sends; Shift+Enter starts a new line.";
+  };
+
+  const matches = (): SlashCommand[] => {
+    const typed = input.value;
+    if (!typed.startsWith("/") || /\s/.test(typed)) {
+      return [];
+    }
+    const partial = typed.slice(1).toLowerCase();
+    return slash.filter((command) => command.name.startsWith(partial)).slice(0, 12);
+  };
+
+  const complete = (command: SlashCommand): void => {
+    input.value = `/${command.name} `;
+    completions.hidden = true;
+    input.focus();
+  };
+
+  const showCompletions = (): void => {
+    const found = matches();
+    completions.replaceChildren();
+    completions.hidden = found.length === 0;
+    chosen = found.length === 0 ? -1 : Math.min(Math.max(chosen, 0), found.length - 1);
+    found.forEach((command, index) => {
+      const option = document.createElement("li");
+      option.setAttribute("role", "option");
+      option.className = index === chosen ? "chosen" : "";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = `/${command.name}${command.usage ? ` ${command.usage}` : ""}`;
+      const description = document.createElement("span");
+      description.className = "description";
+      description.textContent = command.description;
+      option.append(name, description);
+      option.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        complete(command);
+      });
+      completions.append(option);
+    });
+  };
+
+  const send = (): void => {
+    const text = input.value.trim();
+    if (!text) {
+      return;
+    }
+    vscode.postMessage({ type: "send", text });
+    input.value = "";
+    completions.hidden = true;
+  };
+
+  input.addEventListener("keydown", (event) => {
+    // A key that ends an input method's composition belongs to the composition, not to us.
+    if (event.isComposing || event.keyCode === 229) {
+      return;
+    }
+    const found = completions.hidden ? [] : matches();
+    if (found.length > 0 && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+      event.preventDefault();
+      chosen = (chosen + (event.key === "ArrowDown" ? 1 : found.length - 1)) % found.length;
+      showCompletions();
+      return;
+    }
+    const pick = found[Math.max(chosen, 0)];
+    if (pick && event.key === "Tab") {
+      event.preventDefault();
+      complete(pick);
+      return;
+    }
+    if (event.key === "Escape") {
+      completions.hidden = true;
+      return;
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      send();
+    }
+  });
+  input.addEventListener("input", showCompletions);
+  input.addEventListener("blur", () => {
+    completions.hidden = true;
+  });
+
+  const press = (command: string): (() => void) => () => vscode.postMessage({ type: "button", command });
+  buttons.start.addEventListener("click", send);
+  buttons.stop.addEventListener("click", press("vibey.stopRun"));
+  buttons.force.addEventListener("click", press("vibey.forceStopRun"));
+  buttons.review.addEventListener("click", press("vibey.reviewRun"));
+  buttons.apply.addEventListener("click", press("vibey.applyRun"));
+  buttons.discard.addEventListener("click", press("vibey.discardRun"));
+  $("endNoCap").addEventListener("click", press("vibey.endNoCap"));
+
+  /** Light, Dark or System, resolved by the extension; ULTRA and UNLIMITED SPEND are never hidden. */
+  const look = (message: Extract<HostMessage, { type: "look" }>): void => {
+    const root = document.documentElement;
+    root.dataset["theme"] = message.theme === "light" ? "light" : "dark";
+    root.dataset["surface"] = message.surface === "krypton" ? "krypton" : "editor";
+    document.body.dataset["ultra"] = String(message.ultra === true);
+    effortPill.hidden = message.ultra !== true;
+    banner.hidden = message.unlimited !== true;
+  };
+
+  document.addEventListener("paste", (event) => {
+    if (!canPasteImage || !event.clipboardData) {
+      return;
+    }
+    for (const entry of event.clipboardData.items) {
+      if (entry.kind === "file" && entry.type.startsWith("image/")) {
+        const file = entry.getAsFile();
+        if (!file) {
+          continue;
+        }
+        event.preventDefault();
+        const reader = new FileReader();
+        reader.onload = () => vscode.postMessage({ type: "pasteImage", dataUrl: String(reader.result) });
+        reader.readAsDataURL(file);
+        return;
+      }
+    }
+  });
+
+  window.addEventListener("message", (event: MessageEvent<HostMessage>) => {
+    const message = event.data;
+    switch (message.type) {
+      case "init":
+        title.textContent = message.title;
+        slash = message.slash;
+        canPasteImage = message.canPasteImage;
+        replaceItems(message.items);
+        setStatus(message.status, message.forceAfterMs, message.finishedActions, message.takesFollowUps);
+        input.focus();
+        break;
+      case "items":
+        replaceItems(message.items);
+        break;
+      case "patch":
+        patch(message.patch);
+        break;
+      case "status":
+        setStatus(message.status, message.forceAfterMs, message.finishedActions, message.takesFollowUps);
+        break;
+      case "note":
+        note(message.level, message.text);
+        break;
+      case "look":
+        look(message);
+        break;
+    }
+  });
+
+  vscode.postMessage({ type: "ready" });
+})();

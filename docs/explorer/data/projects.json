@@ -1,0 +1,9 @@
+{
+  "projects": [
+    {
+      "id": "sample-shift-signup",
+      "label": "Sample: a volunteer shift sign-up (invented)",
+      "sample": true
+    }
+  ]
+}

@@ -43,7 +43,7 @@ minutes, not seconds. It always replies — with an answer, or with the reason i
 
 - **How it runs:** whenever a trusted person writes `/vibey` in an issue or pull request, or runs the Chat workflow — it answers; asked to act, it may open a draft pull request; it never merges, approves, releases or deletes.
 - **What it is for:** Answer a trusted person who writes /vibey in an issue, a pull request or the Actions tab.
-- **Decision records:** 87, the newest 0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry.
+- **Decision records:** 88, the newest 0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated.
 - **Lanes it keeps usable:** [Chat](https://github.com/the-vibey-project/vibey/actions/workflows/chat.yml), [vibey (remote command)](https://github.com/the-vibey-project/vibey/actions/workflows/vibey-remote.yml), [vibey state (write back)](https://github.com/the-vibey-project/vibey/actions/workflows/vibey-state-write.yml).
 <!-- END GENERATED continuation:state -->
 

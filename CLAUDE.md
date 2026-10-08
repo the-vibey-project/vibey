@@ -127,6 +127,12 @@ small identified slices, explicit links, measured budgets, and no silent truncat
   `src/<pkg>/services/interfaces/github_service_interface.py`. Interfaces
   declare; they never consume. New and changed code from 2026-09-15; the
   existing tree converges module by module. ADR-0016; sub-doctrine 9.b.
+- **TypeScript, never JavaScript.** Every line of JavaScript this project writes is
+  written in TypeScript — no exemption for configuration, scripts, tests or a file a tool
+  insists on reading as `.js`. A `.js` that must exist is an artifact: compiled by `tsc`
+  from a named `.ts`, banner-marked, declared in `scripts/typescript_artifacts.toml` and
+  recompiled in CI (`tests/meta/test_typescript_artifacts.py`). Regenerate with
+  `python3 scripts/typescript_artifacts.py`. ADR-0088; sub-doctrine 9.f.
 - **The handoff no-loss gate is not negotiable.** A handoff that fails the
   gate is a retry, an escalation to full-transcript mode, or a human gate —
   never a silent partial.
@@ -298,7 +304,7 @@ own and the repository root's — have no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (87 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (88 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

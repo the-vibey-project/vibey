@@ -5,6 +5,9 @@
 phase moves, with local paths and email addresses taken out — and it counts, by
 reason, everything it left out. Nothing is dropped without a number saying so.
 
+**See what a published ledger looks like first:** the [ledger explorer](../explorer/index.md)
+reads exactly what this page describes, and shows what was left out beside what was kept.
+
 This page is for the operator deciding whether to publish a project's ledger. The
 commands themselves are in the [CLI reference](../reference/cli.md#vibey-ledger).
 The rule this serves is [sub-doctrine 7.a, the searchable ledger](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/doctrines.md):

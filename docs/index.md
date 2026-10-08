@@ -37,10 +37,12 @@ clients; and industry. Each audience is meant to have its own demo; the non-prof
 **What makes it different** — each claim links to what proves it:
 
 - **A crash loses no job.** Jobs are held under expiring leases and reclaimed when a worker dies. A [chaos test](https://github.com/the-vibey-project/vibey/blob/develop/tests/infrastructure/db/test_chaos.py) runs 8 workers through 500 jobs, abandoning each claim with probability 0.2, and passes only if no job is lost or committed twice — [the case study](case-studies/how-vibey-survives-a-crashed-agent.md) tells how.
-- **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/domain/ledger_chain.py)).
+- **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/domain/ledger_chain.py)). **See one for yourself in the [ledger explorer](explorer/index.md)**: a public, searchable view of a real project's ledger, where your browser checks each record's digest.
 - **Local first, paid by choice.** The default engine runs GPT-OSS 20B on your own machine through Ollama ([ADR-0064](architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)); a paid engine runs only when no local one can ([ADR-0038](architecture/decisions/0038-local-engines-are-preferred-first.md)).
 - **You decide what matters.** Design, review and deployment wait for your recorded answer, and a waiting question parks its job instead of blocking a worker ([ADR-0009](architecture/decisions/0009-human-gates-are-parked-jobs.md)).
-- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](https://github.com/the-vibey-project/vibey/tree/develop/docs/architecture/decisions/) (87 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](https://github.com/the-vibey-project/vibey/blob/develop/.github/workflows/vibey-engine.yml)).
+- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](https://github.com/the-vibey-project/vibey/tree/develop/docs/architecture/decisions/) (88 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](https://github.com/the-vibey-project/vibey/blob/develop/.github/workflows/vibey-engine.yml)).
+
+**See a real ledger** — no install, no account: [open the ledger explorer](explorer/index.md), search every public decision, finding and phase change of a real project, and check each record yourself.
 
 **Try it** — Python 3.12+ and PostgreSQL 14+, on macOS or Linux:
 
@@ -481,7 +483,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (87 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (88 ADRs) |
 
 ## Status
 

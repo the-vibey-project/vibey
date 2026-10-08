@@ -1,11 +1,9 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-// Copies the built @vibey/core into out/node_modules/@vibey/core, where Node finds it from
-// out/extension/extension.js and out/cli.js. The .vsix is packaged with --no-dependencies, so
-// this copy is how the shared core travels inside it: the extension still installs nothing at
-// runtime (ADR-0059), and the core is the same build the unit suite tested (ADR-0067).
-'use strict';
-const fs = require('node:fs');
-const path = require('node:path');
+// Copies the built @vibey/core into out/node_modules, so the packaged extension carries it
+// (ADR-0067). Compiled by `tsc -p tsconfig.tools.json`; run by `npm run compile` after the
+// core is built.
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 const source = path.join(__dirname, '..', '..', '..', 'packages', 'vibey-core');
 const target = path.join(__dirname, '..', 'out', 'node_modules', '@vibey', 'core');

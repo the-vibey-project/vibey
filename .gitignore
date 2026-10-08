@@ -40,3 +40,7 @@ packages/*/node_modules/
 packages/*/dist/
 packages/*/coverage/
 clients/*/coverage/
+
+# Compiled beside their TypeScript by tsc -p tsconfig.tools.json (sub-doctrine 9.f): never authored, never tracked.
+clients/vscode/scripts/*.js
+clients/vscode/test/smoke/*.js

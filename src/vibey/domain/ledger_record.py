@@ -15,15 +15,14 @@ malformed id or a time without a zone is refused with the field's name, never gu
 
 from collections.abc import Callable, Mapping
 from datetime import datetime
-from enum import StrEnum
 from typing import Final
 from uuid import UUID
 
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import ENGINE_ID_PARSER
 from vibey.domain.errors import VibeyError
 from vibey.domain.interfaces.ledger_record_interface import LedgerRecordCodecInterface
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance
-from vibey.domain.phase import Phase
+from vibey.domain.ledger import EVENT_KIND_PARSER, PROVENANCE_PARSER, LedgerEvent
+from vibey.domain.phase import PHASE_PARSER
 
 RECORD_FIELDS: Final = frozenset(
     {
@@ -93,18 +92,18 @@ class LedgerRecordCodec:
             event_id=self._uuid(fields, "event_id"),
             project_id=self._uuid(fields, "project_id"),
             cycle=self._integer(fields, "cycle"),
-            phase=self._member(fields, "phase", Phase),
+            phase=self._stored(fields, "phase", PHASE_PARSER.parse),
             seq=self._integer(fields, "seq"),
-            kind=self._member(fields, "kind", EventKind),
+            kind=self._stored(fields, "kind", EVENT_KIND_PARSER.parse),
             engine_id=self._optional(
-                fields, "engine_id", lambda key: self._member(fields, key, EngineId)
+                fields, "engine_id", lambda key: self._stored(fields, key, ENGINE_ID_PARSER.parse)
             ),
             job_id=self._optional(fields, "job_id", lambda key: self._uuid(fields, key)),
             causation_id=self._optional(
                 fields, "causation_id", lambda key: self._uuid(fields, key)
             ),
             correlation_id=self._uuid(fields, "correlation_id"),
-            provenance=self._member(fields, "provenance", Provenance),
+            provenance=self._stored(fields, "provenance", PROVENANCE_PARSER.parse),
             produced_at=self._instant(fields, "produced_at"),
             payload=dict(payload),
             digest=self._text(fields, "digest"),
@@ -132,12 +131,14 @@ class LedgerRecordCodec:
         except ValueError as exc:
             raise InvalidLedgerRecord(f"{key!r} is not a UUID: {text!r}") from exc
 
-    def _member[E: StrEnum](self, fields: Mapping[str, object], key: str, enum: type[E]) -> E:
-        text = self._text(fields, key)
-        try:
-            return enum(text)
-        except ValueError as exc:
-            raise InvalidLedgerRecord(f"{key!r} has no member {text!r}") from exc
+    def _stored[T](self, fields: Mapping[str, object], key: str, parse: Callable[[str], T]) -> T:
+        """A closed vocabulary's value, kept whole when this vibey has no member for it.
+
+        A later release retires members (ADR-0078 retired `agyloop`), and the ledger it
+        left behind is real: refusing it would make the oldest history the one thing the
+        explorer cannot show. The value must still be text; a number is refused.
+        """
+        return parse(self._text(fields, key))
 
     @staticmethod
     def _optional[T](fields: Mapping[str, object], key: str, read: Callable[[str], T]) -> T | None:

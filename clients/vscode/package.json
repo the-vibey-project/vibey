@@ -1074,11 +1074,11 @@
     ]
   },
   "scripts": {
-    "compile": "npm run core && tsc -p tsconfig.json && node scripts/sync-manifest.js && node scripts/vendor-core.js",
-    "typecheck": "npm run core && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "compile": "npm run core && tsc -p tsconfig.json && tsc -p tsconfig.tools.json && node scripts/sync-manifest.js && node scripts/vendor-core.js",
+    "typecheck": "npm run core && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tools.json --noEmit && tsc -p tsconfig.test.json",
     "test": "npm run core && vitest run",
     "coverage": "npm run core && vitest run --coverage",
-    "smoke": "node test/smoke/run.js",
+    "smoke": "tsc -p tsconfig.tools.json && node test/smoke/run.js",
     "package": "vsce package",
     "core": "npm run build --prefix ../../packages/vibey-core"
   },

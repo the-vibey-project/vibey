@@ -15,19 +15,6 @@
       "src/vibey_tools/gh/.github/vibey-gh/release/vibey.css"
     ]
   },
-  "script": {
-    "source": "design/web/channel.js",
-    "targets": [
-      "docs/javascripts/channel.js",
-      "src/vibey_tools/gh/docs/javascripts/channel.js",
-      "src/vibey_tools/bootstrap/docs/javascripts/channel.js",
-      "src/vibey_runners/claude/docs/javascripts/channel.js",
-      "src/vibey_runners/codex/docs/javascripts/channel.js",
-      "src/vibey_runners/qwen/docs/javascripts/channel.js",
-      ".github/vibey-gh/release/channel.js",
-      "src/vibey_tools/gh/.github/vibey-gh/release/channel.js"
-    ]
-  },
   "token_sheet_copies": {
     "$description": "Places that ship the generated token sheet (design/dist/css/tokens.css) inside a package that cannot reach design/ at run time: the VS Code extension's webviews load it from their own media folder.",
     "targets": [

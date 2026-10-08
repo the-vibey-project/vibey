@@ -1,0 +1,297 @@
+// Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+// LaTeX on the documentation site. Loaded before MathJax only when `[documentation] math`
+// is on; release-surfaces serves a pinned, checksummed MathJax from the site itself, so a
+// reader's browser never fetches a third-party CDN to read an equation (doctrines 8.a, 10.a).
+// TypeScript is the only authored form (sub-doctrine 9.f); scripts/typescript_artifacts.py
+// compiles this file to the `math.js` the sites load.
+//
+// Two kinds of LaTeX reach a page:
+// 1. Inline `$...$` and display `$$...$$` math. pymdownx.arithmatex protects it from the
+//    Markdown pass and wraps it in `.arithmatex` elements; MathJax typesets only those.
+// 2. ```latex fences, which the research paper uses for theorem-like environments that a
+//    TeX engine renders natively. A browser cannot, so they are turned into styled blocks
+//    here — `\begin{invariant}[Name] ... \end{invariant}` becomes "Invariant (Name). ..."
+//    with its math typeset — a `verbatim` environment becomes a code block, and a `table`
+//    or `table*` with a `tabular` becomes an HTML table with its caption. A fence may hold
+//    several environments in a row (a theorem and its proof); each is converted in turn,
+//    and only when every one of them is understood. Anything else is left as the LaTeX
+//    source it is, never guessed at.
+
+// What this script sets before MathJax loads, and the one call it makes on the loaded library.
+interface MathJaxSettings {
+  tex: { inlineMath: string[][]; displayMath: string[][]; processEscapes: boolean; processEnvironments: boolean };
+  options: { ignoreHtmlClass: string; processHtmlClass: string };
+  svg: { fontCache: string };
+  startup: { pageReady: () => unknown };
+}
+interface MathJaxLoaded {
+  startup: { defaultPageReady: () => unknown };
+}
+interface Window {
+  MathJax: MathJaxSettings | MathJaxLoaded;
+}
+
+(() => {
+  // One `\begin{name}[title]...\end{name}` run of a fence.
+  interface Environment {
+    name: string;
+    title: string | undefined;
+    body: string;
+    source: string;
+  }
+
+  const ENVIRONMENTS: Readonly<Record<string, string>> = {
+    invariant: "Invariant",
+    theorem: "Theorem",
+    lemma: "Lemma",
+    definition: "Definition",
+    proposition: "Proposition",
+    corollary: "Corollary",
+    proof: "Proof",
+    plainwords: "In plain words",
+  };
+
+  const MATH_ENVIRONMENTS: readonly string[] = [
+    "equation", "equation*",
+    "align", "align*",
+    "gather", "gather*",
+    "multline", "multline*",
+    "eqnarray", "eqnarray*",
+    "alignat", "alignat*"
+  ];
+
+  const HTML_ESCAPES: Readonly<Record<string, string>> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c] ?? c);
+
+  // TeX's text ligatures, applied only to prose, never inside math: `---` is an em dash,
+  // `--` an en dash, `~` a non-breaking space.
+  const texProse = (text: string): string =>
+    escapeHtml(text).replace(/---/g, "—").replace(/--/g, "–").replace(/~/g, " ");
+
+  // `$...$` inside a converted environment becomes `\(...\)`, which MathJax typesets.
+  const inlineMath = (text: string): string =>
+    text
+      .split(/(\$[^$]+\$)/)
+      .map((part, i) =>
+        i % 2 === 1
+          ? `<span class="arithmatex">\\(${escapeHtml(part.slice(1, -1))}\\)</span>`
+          : texProse(part),
+      )
+      .join("");
+
+  // One level of braces inside a command's argument: `\textbf{a {[}b{]}}` is read whole.
+  const ARG = "((?:[^{}]|\\{[^{}]*\\})*)";
+
+  // Text-mode TeX in a table cell or caption: font commands become their HTML, `{[}`/`{]}`
+  // (brackets shielded from an optional-argument parse) become brackets, escaped specials
+  // become themselves, and `$...$` is handed to MathJax. Applied after HTML escaping of
+  // everything that is not math, so no cell can inject markup.
+  const texText = (text: string): string =>
+    text
+      .split(/(\$[^$]+\$)/)
+      .map((part, i) => {
+        if (i % 2 === 1) {
+          return `<span class="arithmatex">\\(${escapeHtml(part.slice(1, -1))}\\)</span>`;
+        }
+        let html = texProse(
+          part.replace(/\{\[\}/g, "[").replace(/\{\]\}/g, "]").replace(/\\([%&_#$])/g, "$1"),
+        );
+        const wrap = (command: string, open: string, close: string): void => {
+          html = html.replace(new RegExp(`\\\\${command}\\{${ARG}\\}`, "g"), `${open}$1${close}`);
+        };
+        wrap("textbf", "<strong>", "</strong>");
+        wrap("texttt", "<code>", "</code>");
+        wrap("emph", "<em>", "</em>");
+        wrap("textit", "<em>", "</em>");
+        return html;
+      })
+      .join("");
+
+  const ALIGNMENT: Readonly<Record<string, string>> = { l: "left", c: "center", r: "right" };
+
+  // Column alignment from a tabular spec: `@{}` inserts are dropped, `l`/`c`/`r` align,
+  // and a `p{width}` column is a left-aligned paragraph column.
+  const columnAlignments = (spec: string): Array<string | undefined> =>
+    spec
+      .replace(/@\{[^}]*\}/g, "")
+      .replace(/[pmb]\{[^}]*\}/g, "l")
+      .replace(/[^lcr]/g, "")
+      .split("")
+      .map((c) => ALIGNMENT[c]);
+
+  const RULES = /\\(?:hline|toprule|midrule|bottomrule)\b/g;
+
+  // How many of each numbered environment have been shown so far on this page.
+  const counters: Record<string, number> = {};
+  const next = (name: string): number => {
+    counters[name] = (counters[name] ?? 0) + 1;
+    return counters[name];
+  };
+
+  const convertTable = (name: string, source: string): HTMLElement | null => {
+    const tabular = source.match(/\\begin\{tabular\}\{((?:[^{}]|\{[^{}]*\})*)\}([\s\S]*?)\\end\{tabular\}/);
+    if (!tabular) {
+      return null;
+    }
+    const align = columnAlignments(tabular[1] ?? "");
+    const rows = (tabular[2] ?? "")
+      .split(/\\\\/)
+      .map((row) => row.replace(RULES, "").trim())
+      .filter((row) => row.length > 0)
+      .map((row) => row.split(/(?<!\\)&/).map((cell) => cell.trim()));
+    const first = rows[0];
+    if (first === undefined) {
+      return null;
+    }
+    // A first row whose every cell is bold is the header, as the paper writes its tables.
+    const header = first.every((cell) => /^\\textbf\{[\s\S]*\}$/.test(cell));
+    const cellHtml = (tag: "th" | "td", cell: string, index: number): string => {
+      const alignment = align[index];
+      const style = alignment && alignment !== "left" ? ` style="text-align:${alignment}"` : "";
+      const body = tag === "th" ? cell.replace(/^\\textbf\{([\s\S]*)\}$/, "$1") : cell;
+      return `<${tag}${style}>${texText(body)}</${tag}>`;
+    };
+    const rowHtml = (tag: "th" | "td", row: string[]): string => `<tr>${row.map((cell, i) => cellHtml(tag, cell, i)).join("")}</tr>`;
+    const captionMatch = source.match(new RegExp(`\\\\caption\\{${ARG}\\}`));
+    const number = next("table");
+    const block = document.createElement("div");
+    block.className = `latex-env latex-table${name === "table*" ? " latex-table-wide" : ""}`;
+    const caption = captionMatch ? ` ${texText((captionMatch[1] ?? "").replace(/\s+/g, " "))}` : "";
+    block.innerHTML =
+      `<table><caption><strong>Table ${number}.</strong>${caption}</caption>` +
+      (header ? `<thead>${rowHtml("th", first)}</thead>` : "") +
+      `<tbody>${rows.slice(header ? 1 : 0).map((row) => rowHtml("td", row)).join("")}</tbody></table>`;
+    return block;
+  };
+
+  // The top-level environments of a fence, in order: `\begin{name}[title]...\end{name}`
+  // runs, with nothing but whitespace between them. Null when anything else is there.
+  const environments = (source: string): Environment[] | null => {
+    const found: Environment[] = [];
+    const pattern = /\\begin\{([\w*]+)\}(?:\[([^\]]*)\])?([\s\S]*?)\\end\{\1\}/g;
+    let end = 0;
+    for (let match = pattern.exec(source); match; match = pattern.exec(source)) {
+      if (source.slice(end, match.index).trim() !== "") {
+        return null;
+      }
+      found.push({ name: match[1] ?? "", title: match[2], body: match[3] ?? "", source: match[0] });
+      end = pattern.lastIndex;
+    }
+    return found.length > 0 && source.slice(end).trim() === "" ? found : null;
+  };
+
+  const convertOne = ({ name, title, body, source }: Environment): HTMLElement | null => {
+    if (name === "verbatim") {
+      const pre = document.createElement("pre");
+      const inner = document.createElement("code");
+      inner.textContent = body.trim();
+      pre.append(inner);
+      return pre;
+    }
+    if (name === "table" || name === "table*") {
+      return convertTable(name, source);
+    }
+    const label = ENVIRONMENTS[name];
+    if (label !== undefined) {
+      const number = next(name);
+      const block = document.createElement("div");
+      block.className = `latex-env latex-${name}`;
+      // A proof's optional argument replaces its label ("Proof sketch."), as in LaTeX;
+      // every other environment is numbered and shows its argument as a title.
+      let heading: string;
+      if (name === "proof") {
+        heading = `<strong>${title ? inlineMath(title) : label}.</strong> `;
+      } else {
+        heading = `<strong>${label} ${number}${title ? ` (${inlineMath(title)})` : ""}.</strong> `;
+      }
+      const paragraphs = body.trim().split(/\n\s*\n/).map((p) => inlineMath(p.replace(/\s+/g, " ")));
+      block.innerHTML = `<p>${heading}${paragraphs.join("</p><p>")}</p>`;
+      return block;
+    }
+    if (MATH_ENVIRONMENTS.includes(name)) {
+      const block = document.createElement("div");
+      block.className = "arithmatex";
+      // Escaped: the browser decodes `&amp;` back to `&` before MathJax reads the text,
+      // so alignment still works, and nothing in the source can become markup.
+      block.innerHTML = `\\[ ${escapeHtml(source)} \\]`;
+      return block;
+    }
+    if (name === "figure" || name === "figure*") {
+      // A figure the build rendered arrives as an inline <figure> already; one that
+      // reaches the browser as TeX was not rendered, and a page of TikZ source helps
+      // nobody. Show the caption, and say where the drawing itself can be seen.
+      const captionMatch = source.match(/\\caption\{((?:[^{}]|\{[^{}]*\})*)\}/);
+      const block = document.createElement("figure");
+      block.className = "paper-figure paper-figure-unrendered";
+      const number = next("figure");
+      const caption = captionMatch ? inlineMath((captionMatch[1] ?? "").replace(/\s+/g, " ")) : "";
+      block.innerHTML =
+        `<figcaption><strong>Figure ${number}.</strong> ${caption} ` +
+        `<em>(This figure is drawn in the PDF edition of the paper.)</em></figcaption>`;
+      return block;
+    }
+    return null;
+  };
+
+  const convert = (code: Element): HTMLElement | null => {
+    const source = (code.textContent ?? "").trim();
+    const parts = environments(source);
+    if (!parts) {
+      return null;
+    }
+    const blocks = parts.map(convertOne);
+    const converted = blocks.filter((block): block is HTMLElement => block !== null);
+    if (converted.length !== blocks.length) {
+      return null;
+    }
+    const [only] = converted;
+    if (converted.length === 1 && only) {
+      return only;
+    }
+    const group = document.createElement("div");
+    group.className = "latex-group";
+    group.append(...converted);
+    return group;
+  };
+
+  const convertLatexFences = (): void => {
+    // ProperDocs/MkDocs versions have emitted both a class on <code> and a class on
+    // <pre>. Match both forms, and run independently of MathJax so a slow or blocked
+    // typesetter cannot leave the theorem source looking like a code listing.
+    document.querySelectorAll(
+      "pre > code.language-latex, pre > code.latex, pre.language-latex > code, pre.latex > code",
+    ).forEach((code) => {
+      const replacement = convert(code);
+      if (replacement) {
+        code.parentElement?.replaceWith(replacement);
+      }
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", convertLatexFences, { once: true });
+  } else {
+    convertLatexFences();
+  }
+
+  window.MathJax = {
+    tex: {
+      inlineMath: [["\\(", "\\)"]],
+      displayMath: [["\\[", "\\]"]],
+      processEscapes: false,
+      processEnvironments: true,
+    },
+    options: {
+      ignoreHtmlClass: ".*|",
+      processHtmlClass: "arithmatex",
+    },
+    svg: { fontCache: "global" },
+    startup: {
+      pageReady: () => {
+        convertLatexFences();
+        // By now MathJax has replaced this settings object with the library itself.
+        return (window.MathJax as MathJaxLoaded).startup.defaultPageReady();
+      },
+    },
+  };
+})();

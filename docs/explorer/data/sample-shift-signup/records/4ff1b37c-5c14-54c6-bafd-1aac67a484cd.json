@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "bf124b34f511429d09687d50e494f174a9817aad624ec055e16e930f9aaaf59b",
+    "event_id": "845d5ed9-2242-55ef-ab1c-65bc0c9a34b0",
+    "seq": 3
+  },
+  "previous": null,
+  "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+  "record": {
+    "causation_id": "6703e41c-a980-50eb-bb22-aad4d93b10f2",
+    "correlation_id": "c6fd9b76-effa-5faa-9633-b9121ce573b2",
+    "cycle": 1,
+    "digest": "fa1052f7951fc0cf97af1c0b6c194cc0eac5faf15cb0d522ce8bf3ccfe6aa8bc",
+    "engine_id": null,
+    "event_id": "4ff1b37c-5c14-54c6-bafd-1aac67a484cd",
+    "job_id": null,
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes, up to 24 hours before it starts",
+      "item_id": "item-1",
+      "question_id": "q1",
+      "stage": "design",
+      "text": "Should a volunteer be able to cancel a shift they signed up for?"
+    },
+    "phase": "design",
+    "produced_at": "2026-01-12T09:14:00+00:00",
+    "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+    "provenance": "trusted",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

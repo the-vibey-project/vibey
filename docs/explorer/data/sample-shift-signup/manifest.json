@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "4cfe9bc32edd91f83e6cf5a2a7f31d28a3b70db81c47bd39247da6c74b29fd6e",
+    "head_seq": 18,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "9a20186cc5dd825496d59276e65c4bc9d0b4e8dc22de0137ff1a64c775dd2ee6",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "sample-shift-signup",
+    "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002"
+  },
+  "published": {
+    "first_seq": 2,
+    "last_seq": 18,
+    "records": 11
+  },
+  "seq_range": {
+    "events": 18,
+    "first": 1,
+    "last": 18
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "7 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 4,
+      "kind_not_allowlisted": 2,
+      "untrusted_provenance": 1
+    },
+    "credentials": 0,
+    "emails": 1,
+    "events": 7,
+    "fields": 0,
+    "paths": 1
+  }
+}

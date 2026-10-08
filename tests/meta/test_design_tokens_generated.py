@@ -181,7 +181,7 @@ def test_every_docs_site_reads_one_stylesheet_and_offers_three_themes() -> None:
     assert "@media (prefers-color-scheme: dark)" in css
     assert ':root[data-theme="dark"]' in css and ':root[data-theme="light"]' in css
     assert "prefers-reduced-motion" in css
-    script = (REPO / config["script"]["targets"][0]).read_text(encoding="utf-8")
+    script = (REPO / "docs/javascripts/channel.js").read_text(encoding="utf-8")
     assert 'THEME_MODES = ["light", "dark", "system"]' in script
     assert "localStorage" in script and 'addEventListener("change"' in script
 

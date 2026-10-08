@@ -109,6 +109,21 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
+      # TypeScript is the only authored JavaScript (sub-doctrine 9.f): the committed `.js` the
+      # sites and Expo need is compiled from it, and tests/meta/test_typescript_artifacts.py
+      # recompiles it here. With no compiler that test fails in CI rather than skipping.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install the TypeScript compiler
+        run: npm ci
+
+      - name: Gate 0a - committed JavaScript is generated from TypeScript
+        run: python3 scripts/typescript_artifacts.py --check
+
       - name: Gate 0 - governance corpus index
         run: uv run vibey-gh corpus-index --check
 

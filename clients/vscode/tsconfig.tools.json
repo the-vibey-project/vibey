@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": ".",
+    "types": ["node", "vscode"]
+  },
+  "include": ["scripts/*.ts", "test/smoke/*.ts"],
+  "exclude": ["node_modules", "out"]
+}

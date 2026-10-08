@@ -7,6 +7,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 ## Start here
 
 - [Home](https://the-vibey-project.github.io/vibey/main/): The documentation home — what vibey is, who it is for, what makes it different, how to try it, and how to contribute in your first hour.
+- [Ledger explorer](https://the-vibey-project.github.io/vibey/main/explorer/): Look inside a vibey project's ledger in your browser, block-explorer style. Search every public decision, question, finding and phase change, read it in plain words, check its digest yourself, and see exactly what was…
 - [Current estimate](https://the-vibey-project.github.io/vibey/main/estimate/): This page is a generated, append-only-ledger-backed forecast.
 - [Research paper](https://the-vibey-project.github.io/vibey/main/paper/): A single autonomous coding session is not autonomous software delivery: it loses its state when it crashes, it dies when one vendor's quota is exhausted mid-task, and it has no place where a person is required to decide.
 
@@ -164,6 +165,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0085 — vibey -w: any vibey command, run on the repository's GitHub-hosted runners](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0085-vibey-on-the-workflows/)
 - [0086 — vibey state: the whole database, sealed on a branch, kept in sync both ways](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0086-state-sync/)
 - [0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0087-the-six-audiences-in-order/)
+- [0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0088-typescript-never-javascript/)
 
 ## Governance
 

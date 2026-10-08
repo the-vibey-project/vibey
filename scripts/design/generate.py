@@ -27,7 +27,6 @@ from interfaces.design_interface import DesignGeneratorInterface  # noqa: E402
 
 from design.emitters import (  # noqa: E402
     CHeader,
-    CopiedAsset,
     CssTokens,
     GtkCss,
     PaperPalette,
@@ -61,7 +60,6 @@ class DesignGenerator(DesignGeneratorInterface):
         out.update(
             SharedStylesheet(self.tokens, self.config["stylesheet"], mark).outputs_for(self.repo)
         )
-        out.update(CopiedAsset(self.config["script"], "//").outputs_for(self.repo))
         for emitter in (
             CssTokens(self.tokens),
             TypeScriptTokens(self.tokens),

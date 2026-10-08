@@ -1,0 +1,220 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+  "records": [
+    {
+      "actor": "vibey",
+      "digest": "fa1052f7951fc0cf97af1c0b6c194cc0eac5faf15cb0d522ce8bf3ccfe6aa8bc",
+      "id": "4ff1b37c-5c14-54c6-bafd-1aac67a484cd",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 2,
+      "time": "2026-01-12T09:14:00+00:00",
+      "tokens": [
+        "24",
+        "able",
+        "be",
+        "before",
+        "cancel",
+        "design",
+        "for",
+        "hours",
+        "it",
+        "item",
+        "q1",
+        "shift",
+        "should",
+        "signed",
+        "starts",
+        "they",
+        "to",
+        "up",
+        "volunteer",
+        "yes"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "bf124b34f511429d09687d50e494f174a9817aad624ec055e16e930f9aaaf59b",
+      "id": "845d5ed9-2242-55ef-ab1c-65bc0c9a34b0",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 3,
+      "time": "2026-01-12T09:21:00+00:00",
+      "tokens": [
+        "24",
+        "are",
+        "before",
+        "email",
+        "hours",
+        "in",
+        "item",
+        "notes",
+        "path",
+        "q1",
+        "questions",
+        "to",
+        "up",
+        "yes"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "261620aee6c2dcda219208bc06c592102ad17fdff66010f396842fa02500c4d6",
+      "id": "f2c7cd7d-f05e-590b-b10d-bea2e0b87932",
+      "kind": "AssumptionStated",
+      "phase": "design",
+      "seq": 4,
+      "time": "2026-01-12T09:28:00+00:00",
+      "tokens": [
+        "a1",
+        "and",
+        "are",
+        "hours",
+        "item",
+        "never",
+        "overlap",
+        "q1",
+        "shifts",
+        "whole"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "269945063a17b1ff80042f12e7df41a91309c24db77bfe4ff0dc0c7d7851724b",
+      "id": "5e471cbd-8a2e-511b-88b0-c962c2c1ae01",
+      "kind": "DecisionRecorded",
+      "phase": "design",
+      "seq": 5,
+      "time": "2026-01-12T09:35:00+00:00",
+      "tokens": [
+        "build",
+        "concurrent",
+        "d1",
+        "first",
+        "for",
+        "in",
+        "no",
+        "one",
+        "postgres",
+        "release",
+        "server",
+        "shifts",
+        "small",
+        "spreadsheet",
+        "sqlite",
+        "storage",
+        "store",
+        "team",
+        "the",
+        "writers"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "ae81ffc2146e6e06f3bc99d37a500dbc5ec7f2c0e13dd4bdcc28332387935d3f",
+      "id": "eb4cc93f-8211-5364-b6ac-fe4a75413401",
+      "kind": "PhaseTransitioned",
+      "phase": "design",
+      "seq": 6,
+      "time": "2026-01-12T09:42:00+00:00",
+      "tokens": [
+        "build",
+        "design",
+        "spec_accepted"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "b95b56cb6e762f4b1da14e71cdc564e423cd89a63ff07c7d4510e197728f598f",
+      "id": "cac3b689-2866-53ff-9287-c2f7bf377c94",
+      "kind": "ArtifactProduced",
+      "phase": "build",
+      "seq": 10,
+      "time": "2026-01-12T10:10:00+00:00",
+      "tokens": [
+        "art",
+        "list",
+        "page",
+        "shift",
+        "source"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "11c7b44b326ae4e1669662c3c25360aac61dd8aca855c4dc8fad93bb07cf6674",
+      "id": "5045cc33-fd3b-53ae-a9bd-63f5947d1e2c",
+      "kind": "FindingRaised",
+      "phase": "review",
+      "seq": 11,
+      "time": "2026-01-12T10:17:00+00:00",
+      "tokens": [
+        "books",
+        "cancelling",
+        "f1",
+        "for",
+        "medium",
+        "nobody",
+        "shift",
+        "the",
+        "twice"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "c31ee2775096d26aa5641820dd27e6244b3c2eefd051e067e1f4713b2ebb3023",
+      "id": "c1ba4be4-df4a-5070-803c-9f0bbbb9518a",
+      "kind": "PhaseTransitioned",
+      "phase": "review",
+      "seq": 12,
+      "time": "2026-01-12T10:24:00+00:00",
+      "tokens": [
+        "build",
+        "findings_open",
+        "review"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "cf067452c595fef6d148734707fb51278f87c8bdab4c9fe7128fc81ad980a772",
+      "id": "d608c3e6-c4bb-5235-a156-18facd5adac9",
+      "kind": "FindingResolved",
+      "phase": "review",
+      "seq": 15,
+      "time": "2026-01-12T10:45:00+00:00",
+      "tokens": [
+        "added",
+        "cancel",
+        "f1",
+        "idempotent",
+        "is",
+        "now",
+        "test"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "ad26db9960e15bfb15bef26b4c691259ead1c517e1237c5f2042b438e03f8df4",
+      "id": "92a61947-eb55-52e3-8af3-f857a4e9bc1f",
+      "kind": "VerdictRendered",
+      "phase": "review",
+      "seq": 17,
+      "time": "2026-01-12T10:59:00+00:00",
+      "tokens": []
+    },
+    {
+      "actor": "vibey",
+      "digest": "f17e816dae5a700bf6b267307e0c577aef7ecadf0108ae990386467147d11382",
+      "id": "83ca720c-5b13-5377-8ce4-e5f1f0124af2",
+      "kind": "PhaseTransitioned",
+      "phase": "review",
+      "seq": 18,
+      "time": "2026-01-12T11:06:00+00:00",
+      "tokens": [
+        "done",
+        "review",
+        "verdict_complete"
+      ]
+    }
+  ]
+}

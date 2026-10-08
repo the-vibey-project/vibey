@@ -1,23 +1,41 @@
+// Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+// The documentation sites' channel script: theme switch, release channel, provenance and the
+// links to the paper, the book and the governance corpus. TypeScript is the only authored form
+// (sub-doctrine 9.f); scripts/typescript_artifacts.py compiles it to the `channel.js` every
+// site loads. The double-underscore strings below are placeholders the release workflow fills in on
+// the compiled text, so they stay plain string literals.
 (() => {
-  "use strict";
+  type ThemeMode = "light" | "dark" | "system";
+
+  // The `surfaces` object release-surfaces substitutes: which downloadable forms this deploy
+  // actually produced. Every field is optional because an older workflow may not know it.
+  interface DocSurfaces {
+    paper_pdf?: boolean;
+    paper_html?: boolean;
+    book_pdf?: boolean;
+    book_epub?: boolean;
+    book_print?: boolean;
+    governance?: unknown;
+  }
 
   // Theme: Light, Dark or System. System is the default: it follows the operating system and
   // switches live when the OS does. A choice persists per device. The stylesheet does the
   // colouring from `data-theme` on <html>; Bootstrap's own components follow `data-bs-theme`.
   const THEME_KEY = "vibey.theme";
-  const THEME_MODES = ["light", "dark", "system"];
+  const THEME_MODES: readonly ThemeMode[] = ["light", "dark", "system"];
+  const isThemeMode = (value: string | null): value is ThemeMode => THEME_MODES.some((mode) => mode === value);
   const root = document.documentElement;
   const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-  const readThemeMode = () => {
+  const readThemeMode = (): ThemeMode => {
     try {
       const stored = window.localStorage.getItem(THEME_KEY);
-      return THEME_MODES.includes(stored) ? stored : "system";
+      return isThemeMode(stored) ? stored : "system";
     } catch {
       return "system";
     }
   };
-  let themeMode = readThemeMode();
-  const applyTheme = () => {
+  let themeMode: ThemeMode = readThemeMode();
+  const applyTheme = (): void => {
     const dark = themeMode === "dark" || (themeMode === "system" && systemDark.matches);
     if (themeMode === "system") {
       delete root.dataset.theme;
@@ -29,17 +47,18 @@
     } else {
       document.documentElement.dataset.bsTheme = "light";
     }
-    document.querySelectorAll(".theme-switch button").forEach((button) => {
+    document.querySelectorAll<HTMLButtonElement>(".theme-switch button").forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.mode === themeMode));
     });
   };
   applyTheme();
   systemDark.addEventListener("change", () => themeMode === "system" && applyTheme());
-  const themeIcons = {
+  const themeIcons: Record<ThemeMode, string> = {
     light: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     dark: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
     system: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   };
+  const themeLabels: Record<ThemeMode, string> = { light: "Light", dark: "Dark", system: "System" };
   const themeNav = document.querySelector("#navbar-collapse .ms-md-auto") || document.querySelector("#navbar-collapse .navbar-nav");
   if (themeNav) {
     const item = document.createElement("li");
@@ -50,7 +69,7 @@
     group.setAttribute("aria-label", "Colour theme");
     for (const mode of THEME_MODES) {
       const button = document.createElement("button");
-      const label = { light: "Light", dark: "Dark", system: "System" }[mode];
+      const label = themeLabels[mode];
       button.type = "button";
       button.dataset.mode = mode;
       button.title = label;
@@ -87,14 +106,18 @@
   const primaryNav = document.querySelector("#navbar-collapse .navbar-nav");
   if (primaryNav) {
     const pagesRoot = "__PAGES_ROOT__";
-    primaryNav.querySelectorAll("a.nav-link").forEach((link) => {
-      if (link.textContent.trim() === "Home") {
+    primaryNav.querySelectorAll<HTMLAnchorElement>("a.nav-link").forEach((link) => {
+      if ((link.textContent ?? "").trim() === "Home") {
         link.href = pagesRoot;
       } else {
         link.closest("li")?.remove();
       }
     });
-    for (const [label, target] of [["__PRODUCTION_LABEL__", "main"], ["__PREVIEW_LABEL__", "develop"]]) {
+    const channels: ReadonlyArray<readonly [string, string]> = [
+      ["__PRODUCTION_LABEL__", "main"],
+      ["__PREVIEW_LABEL__", "develop"],
+    ];
+    for (const [label, target] of channels) {
       const item = document.createElement("li");
       item.className = "nav-item";
       const link = document.createElement("a");
@@ -104,13 +127,13 @@
       item.append(link);
       primaryNav.append(item);
     }
-    document.querySelectorAll("[data-release-target]").forEach((link) => {
-      link.href = `${pagesRoot}${link.dataset.releaseTarget}/`;
+    document.querySelectorAll<HTMLAnchorElement>("[data-release-target]").forEach((link) => {
+      link.href = `${pagesRoot}${link.dataset.releaseTarget ?? ""}/`;
     });
   }
 
-  const editLink = [...document.querySelectorAll("a.nav-link")].find((link) =>
-    link.textContent.includes("Edit on GitHub"),
+  const editLink = [...document.querySelectorAll<HTMLAnchorElement>("a.nav-link")].find((link) =>
+    (link.textContent ?? "").includes("Edit on GitHub"),
   );
   if (editLink) {
     editLink.href = editLink.href.replace("/edit/main/", `/edit/${channel}/`);
@@ -136,10 +159,10 @@
   // THIS deploy is substituted below from file presence in the built site, never from
   // configuration, so a link is never rendered to something that was not produced. An
   // unsubstituted placeholder (an older workflow) degrades to "nothing to show".
-  const surfacesRaw = '__DOC_SURFACES__';
-  const surfaces = surfacesRaw.startsWith("{") ? JSON.parse(surfacesRaw) : {};
+  const surfacesRaw: string = '__DOC_SURFACES__';
+  const surfaces: DocSurfaces = surfacesRaw.startsWith("{") ? (JSON.parse(surfacesRaw) as DocSurfaces) : {};
   const channelRoot = `__PAGES_ROOT__${channel}/`;
-  const surfaceLinks = (items) =>
+  const surfaceLinks = (items: ReadonlyArray<readonly [boolean | undefined, string, string]>): string =>
     items
       .filter(([present]) => present)
       .map(([, label, file]) => `<a href="${channelRoot}${file}">${label}</a>`)
@@ -150,7 +173,7 @@
   ]);
   // The governance corpus (sub-doctrine 7.b), in the order of authority, linked only for the
   // pages this deploy actually published.
-  const governanceNames = {
+  const governanceNames: Readonly<Record<string, string>> = {
     constitution: "Constitution",
     doctrines: "Doctrines",
     commandments: "Commandments",
@@ -159,11 +182,11 @@
   const governanceOrder = ["constitution", "doctrines", "commandments", "bill-of-rights"];
   // Slugs come from repository file names: only plain ones are linked, the URL component is
   // encoded and the label escaped, so a name can never inject markup into a page.
-  const publishedGovernance = (Array.isArray(surfaces.governance) ? surfaces.governance : []).filter(
-    (slug) => typeof slug === "string" && /^[a-z0-9][a-z0-9-]*$/.test(slug),
+  const publishedGovernance = (Array.isArray(surfaces.governance) ? (surfaces.governance as unknown[]) : []).filter(
+    (slug): slug is string => typeof slug === "string" && /^[a-z0-9][a-z0-9-]*$/.test(slug),
   );
-  const escapeText = (text) =>
-    String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const escapes: Readonly<Record<string, string>> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  const escapeText = (text: string): string => String(text).replace(/[&<>"']/g, (c) => escapes[c] ?? c);
   const governancePages = [
     ...governanceOrder.filter((slug) => publishedGovernance.includes(slug)),
     ...publishedGovernance.filter((slug) => !governanceOrder.includes(slug)).sort(),
@@ -187,11 +210,12 @@
       : surfaces.book_epub
         ? "book.epub"
         : "book-print.html";
-    for (const [label, present, file] of [
-      ["Governance", governancePages.length > 0, `governance/${encodeURIComponent(governancePages[0] || "")}/`],
+    const entries: ReadonlyArray<readonly [string, boolean, string]> = [
+      ["Governance", governancePages.length > 0, `governance/${encodeURIComponent(governancePages[0] ?? "")}/`],
       ["Paper", Boolean(paperLinks), surfaces.paper_html ? "paper/" : "paper.pdf"],
       ["Book", Boolean(bookLinks), bookTarget],
-    ]) {
+    ];
+    for (const [label, present, file] of entries) {
       if (!present) continue;
       const item = document.createElement("li");
       item.className = "nav-item";
@@ -202,6 +226,27 @@
       item.append(link);
       primaryNav.append(item);
     }
+  }
+
+  // The ledger explorer, one click from every page: second in the navigation, after Home. This
+  // script is shared by every documentation site, and only some have an explorer, so the link
+  // is added when the page answers at its address on this deploy, never assumed (the same rule
+  // as the paper and the book above, by observation instead of by substitution).
+  if (primaryNav) {
+    const explorerUrl = `${channelRoot}explorer/`;
+    fetch(explorerUrl, { method: "HEAD" })
+      .then((response) => {
+        if (!response.ok) return;
+        const item = document.createElement("li");
+        item.className = "nav-item";
+        const link = document.createElement("a");
+        link.className = `nav-link surface-link${window.location.pathname.includes("/explorer/") ? " active" : ""}`;
+        link.href = explorerUrl;
+        link.textContent = "Ledger explorer";
+        item.append(link);
+        primaryNav.firstElementChild?.after(item);
+      })
+      .catch(() => undefined);
   }
 
   // And on every page's footer, beside the provenance line, every format that exists.

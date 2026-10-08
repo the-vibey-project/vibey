@@ -219,22 +219,6 @@ class SharedStylesheet(EmitterInterface):
         return {Path(target): data for target in self._config["targets"]}
 
 
-class CopiedAsset(EmitterInterface):
-    """One authored file written verbatim (behind a banner) to every place a site reads it."""
-
-    def __init__(self, config: dict[str, Any], comment: str) -> None:
-        self._config = config
-        self._comment = comment
-
-    def outputs_for(self, repo: Path) -> dict[Path, bytes]:
-        body = (repo / self._config["source"]).read_text(encoding="utf-8")
-        data = (Header.line(self._comment, self._config["source"]) + body).encode()
-        return {Path(target): data for target in self._config["targets"]}
-
-    def outputs(self) -> dict[Path, bytes]:
-        raise NotImplementedError("CopiedAsset needs the repository root; use outputs_for")
-
-
 class TypeScriptTokens(EmitterInterface):
     """`design/dist/ts/tokens.ts`: typed, framework-free, for @vibey/core, React Native and webviews."""
 

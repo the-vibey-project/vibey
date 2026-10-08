@@ -1,0 +1,41 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "269945063a17b1ff80042f12e7df41a91309c24db77bfe4ff0dc0c7d7851724b",
+    "event_id": "5e471cbd-8a2e-511b-88b0-c962c2c1ae01",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "bf124b34f511429d09687d50e494f174a9817aad624ec055e16e930f9aaaf59b",
+    "event_id": "845d5ed9-2242-55ef-ab1c-65bc0c9a34b0",
+    "seq": 3
+  },
+  "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+  "record": {
+    "causation_id": "845d5ed9-2242-55ef-ab1c-65bc0c9a34b0",
+    "correlation_id": "c6fd9b76-effa-5faa-9633-b9121ce573b2",
+    "cycle": 1,
+    "digest": "261620aee6c2dcda219208bc06c592102ad17fdff66010f396842fa02500c4d6",
+    "engine_id": null,
+    "event_id": "f2c7cd7d-f05e-590b-b10d-bea2e0b87932",
+    "job_id": null,
+    "kind": "AssumptionStated",
+    "payload": {
+      "assumption_id": "a1",
+      "item_id": "item-1",
+      "question": "q1",
+      "text": "Shifts are whole hours and never overlap."
+    },
+    "phase": "design",
+    "produced_at": "2026-01-12T09:28:00+00:00",
+    "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+    "provenance": "trusted",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

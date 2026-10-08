@@ -1,0 +1,47 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ae81ffc2146e6e06f3bc99d37a500dbc5ec7f2c0e13dd4bdcc28332387935d3f",
+    "event_id": "eb4cc93f-8211-5364-b6ac-fe4a75413401",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "261620aee6c2dcda219208bc06c592102ad17fdff66010f396842fa02500c4d6",
+    "event_id": "f2c7cd7d-f05e-590b-b10d-bea2e0b87932",
+    "seq": 4
+  },
+  "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+  "record": {
+    "causation_id": "f2c7cd7d-f05e-590b-b10d-bea2e0b87932",
+    "correlation_id": "c6fd9b76-effa-5faa-9633-b9121ce573b2",
+    "cycle": 1,
+    "digest": "269945063a17b1ff80042f12e7df41a91309c24db77bfe4ff0dc0c7d7851724b",
+    "engine_id": null,
+    "event_id": "5e471cbd-8a2e-511b-88b0-c962c2c1ae01",
+    "job_id": null,
+    "kind": "DecisionRecorded",
+    "payload": {
+      "alternatives": [
+        "postgres",
+        "a spreadsheet"
+      ],
+      "choice": "sqlite",
+      "decision": "Store shifts in SQLite for the first release",
+      "decision_id": "d1",
+      "next_phase": "build",
+      "rationale": "One small team, one server, no concurrent writers.",
+      "title": "Storage"
+    },
+    "phase": "design",
+    "produced_at": "2026-01-12T09:35:00+00:00",
+    "project_id": "1cd552da-d514-5ef6-87fc-ea7e80cad002",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

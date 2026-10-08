@@ -77,6 +77,10 @@ procedures live in `.agent/rules/`
   (`services/x.py` → `services/interfaces/x_interface.py`). Module-level
   functions are last resort with a written reason. Interfaces declare, never
   consume. New and changed code from 2026-09-15. ADR-0016; sub-doctrine 9.b.
+- TypeScript, never JavaScript: no JavaScript is written by hand, with no
+  exemption for config, scripts or tests. A `.js` that must exist is compiled by
+  `tsc` from a named `.ts` and declared in `scripts/typescript_artifacts.toml`
+  (`python3 scripts/typescript_artifacts.py`). ADR-0088; sub-doctrine 9.f.
 - Capacity rejection outranks a completion claim.
 - No-loss handoff gate is not negotiable. Failed gate → retry, escalation to
   full-transcript mode, or human gate — never silent partial.
@@ -213,7 +217,7 @@ own and the repository root's — have no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (87 ADRs: 0001–0087) |
+| ADRs | `docs/architecture/decisions/` (88 ADRs: 0001–0087) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

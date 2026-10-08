@@ -1,13 +1,29 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-// Runs inside VS Code's extension host (run.js starts it): the extension activates, registers
+// Runs inside VS Code's extension host (run.ts starts it): the extension activates, registers
 // every command of its one command table, contributes its views, and the commands that need
 // no answer from a person run without throwing, whether or not Ollama and vibey are here.
-'use strict';
-const assert = require('node:assert');
-const path = require('node:path');
-const vscode = require('vscode');
+import * as assert from 'node:assert';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as vscode from 'vscode';
+import { CommandTable } from '@vibey/core';
 
-async function check(name, body) {
+interface Manifest {
+  publisher: string;
+  name: string;
+  displayName: string;
+  contributes: {
+    views: { vibey: Array<{ id: string }> };
+    walkthroughs: Array<{ id: string; steps: Array<{ media: { markdown: string } }> }>;
+  };
+}
+
+/** What the extension's `activate` returns: the ids of the commands it handles. */
+interface ExtensionApi {
+  commands: Iterable<string>;
+}
+
+async function check(name: string, body: () => unknown): Promise<void> {
   try {
     await body();
     console.log(`  ok   ${name}`);
@@ -17,13 +33,14 @@ async function check(name, body) {
   }
 }
 
-exports.run = async function run() {
-  // First act: tell run.js the suite started, so a failure from here on is never retried.
-  if (process.env.VIBEY_SMOKE_STARTED) require('node:fs').writeFileSync(process.env.VIBEY_SMOKE_STARTED, '');
+export async function run(): Promise<void> {
+  // First act: tell run.ts the suite started, so a failure from here on is never retried.
+  const marker = process.env['VIBEY_SMOKE_STARTED'];
+  if (marker) fs.writeFileSync(marker, '');
   const root = path.resolve(__dirname, '..', '..');
-  const manifest = require(path.join(root, 'package.json'));
-  const table = require('@vibey/core').CommandTable.ALL.map((spec) => spec.id);
-  const extension = vscode.extensions.getExtension(`${manifest.publisher}.${manifest.name}`);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as Manifest;
+  const table = CommandTable.ALL.map((spec) => spec.id);
+  const extension = vscode.extensions.getExtension<ExtensionApi>(`${manifest.publisher}.${manifest.name}`);
 
   await check('the extension is installed and activates', async () => {
     assert.ok(extension, 'the extension is present');
@@ -48,9 +65,9 @@ exports.run = async function run() {
 
   await check('it is krypton, with a first-run walkthrough whose every page is there', async () => {
     assert.strictEqual(manifest.displayName, 'krypton');
-    const [tour] = manifest.contributes.walkthroughs;
+    const tour = manifest.contributes.walkthroughs[0];
+    assert.ok(tour, 'the manifest declares a walkthrough');
     assert.strictEqual(tour.id, 'krypton.firstRun');
-    const fs = require('node:fs');
     for (const step of tour.steps) {
       assert.ok(fs.existsSync(path.join(root, step.media.markdown)), `${step.media.markdown} is missing`);
     }
@@ -60,4 +77,4 @@ exports.run = async function run() {
   for (const id of ['vibey.refresh', 'vibey.showLoops', 'vibey.doctor', 'vibey.showLanes', 'vibey.showProjects', 'vibey.showGates', 'vibey.showBudgets', 'vibey.endNoCap', 'vibey.disconnectHub']) {
     await check(`${id} runs`, () => vscode.commands.executeCommand(id));
   }
-};
+}

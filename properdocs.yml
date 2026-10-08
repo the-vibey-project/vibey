@@ -22,8 +22,10 @@ theme:
 
 extra_css:
   - stylesheets/vibey.css
+  - stylesheets/explorer.css
 extra_javascript:
   - javascripts/channel.js
+  - javascripts/explorer.js
 
 plugins:
   - search
@@ -49,6 +51,7 @@ validation:
 
 nav:
   - Home: index.md
+  - Ledger explorer: explorer/index.md
   - Guides:
       - Install, copy, reinstall, uninstall: guides/install.md
       - Downloads: guides/downloads.md
@@ -191,4 +194,5 @@ nav:
           - "0085 — `vibey -w`: any vibey command, run on the repository's GitHub-hosted runners": architecture/decisions/0085-vibey-on-the-workflows.md
           - "0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways": architecture/decisions/0086-state-sync.md
           - "0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry": architecture/decisions/0087-the-six-audiences-in-order.md
+          - "0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated": architecture/decisions/0088-typescript-never-javascript.md
   - Research paper: paper.md

@@ -1,0 +1,65 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/typescript_artifacts.py (ADR-0051: configuration is
+# declared in TOML, never written into a source file; ADR-0088: JavaScript is not authored).
+#
+# TypeScript is the only authored form (sub-doctrine 9.f). A browser, a Metro bundler and a
+# Babel run cannot execute a `.ts` file, so each of those needs a `.js` at a fixed path. This
+# file lists every such path, and the TypeScript it is compiled from. Nothing else in the
+# repository may be a tracked `.js`; tests/meta/test_typescript_artifacts.py fails on one.
+#
+# module = "script"   a classic browser script (no imports); lib ES2022 + DOM.
+# module = "commonjs" a Node config file the tool `require`s; lib ES2022 + @types/node.
+
+[typescript]
+# The compiler, as installed by `npm ci` at the repository root.
+compiler = "node_modules/.bin/tsc"
+
+# The documentation sites' channel script (theme switch, release channel, provenance). The
+# release workflow substitutes its __PLACEHOLDER__ strings on the compiled text.
+[[artifact]]
+source = "design/web/channel.ts"
+module = "script"
+targets = [
+  "docs/javascripts/channel.js",
+  "src/vibey_tools/gh/docs/javascripts/channel.js",
+  "src/vibey_tools/bootstrap/docs/javascripts/channel.js",
+  "src/vibey_runners/claude/docs/javascripts/channel.js",
+  "src/vibey_runners/codex/docs/javascripts/channel.js",
+  "src/vibey_runners/qwen/docs/javascripts/channel.js",
+  ".github/vibey-gh/release/channel.js",
+  "src/vibey_tools/gh/.github/vibey-gh/release/channel.js",
+]
+
+# LaTeX on the documentation site (vibey-gh's managed release asset and its packaged copy).
+[[artifact]]
+source = "src/vibey_tools/gh/web/math.ts"
+module = "script"
+targets = [
+  "src/vibey_tools/gh/docs/javascripts/math.js",
+  ".github/vibey-gh/release/math.js",
+  "src/vibey_tools/gh/.github/vibey-gh/release/math.js",
+]
+
+# The ledger explorer (docs/explorer/).
+[[artifact]]
+source = "docs-src/explorer.ts"
+module = "script"
+targets = ["docs/javascripts/explorer.js"]
+
+# The VS Code task panel's webview page, loaded from the extension's media folder.
+[[artifact]]
+source = "clients/vscode/webview/panel.ts"
+module = "script"
+targets = ["clients/vscode/media/panel.js"]
+
+# The krypton app's Babel and Metro configuration, which Expo reads as `.js`.
+[[artifact]]
+source = "clients/app/tooling/babel.config.ts"
+module = "commonjs"
+targets = ["clients/app/babel.config.js"]
+
+[[artifact]]
+source = "clients/app/tooling/metro.config.ts"
+module = "commonjs"
+targets = ["clients/app/metro.config.js"]

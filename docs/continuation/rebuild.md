@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 87, the newest 0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry.
+- **Decision records:** 88, the newest 0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

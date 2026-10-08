@@ -115,7 +115,8 @@ python3 scripts/design/generate.py --rasters  # ...and every PNG, in about a min
 | Output | For |
 |---|---|
 | `design/dist/css/tokens.css` | Any web surface: custom properties and the three theme modes |
-| `docs/stylesheets/vibey.css` and every docs site's copy, with `channel.js` | The documentation sites, from `design/web/`; the targets are in `design/design.json` |
+| `docs/stylesheets/vibey.css` and every docs site's copy | The documentation sites, from `design/web/vibey.css`; the targets are in `design/design.json` |
+| `docs/javascripts/channel.js` and every docs site's copy | Compiled from `design/web/channel.ts` by `scripts/typescript_artifacts.py` (sub-doctrine 9.f); the targets are in `scripts/typescript_artifacts.toml` |
 | `design/dist/ts/tokens.ts` | `@vibey/core`, the React Native app, webviews |
 | `design/dist/gtk/vibey.css`, `vibey-dark.css` | The desktop app's libadwaita styles |
 | `design/dist/c/vibey_tokens.h` | `libvibeydesktop` |

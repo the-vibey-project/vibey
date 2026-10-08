@@ -6,16 +6,23 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import EngineId, UnrecognizedEngineId
 from vibey.domain.interfaces import LedgerRecordCodecInterface
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
+from vibey.domain.ledger import (
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    UnrecognizedEventKind,
+    UnrecognizedProvenance,
+    digest_event,
+)
 from vibey.domain.ledger_record import (
     LEDGER_RECORDS,
     RECORD_FIELDS,
     InvalidLedgerRecord,
     LedgerRecordCodec,
 )
-from vibey.domain.phase import Phase
+from vibey.domain.phase import Phase, UnrecognizedPhase
 
 PROJECT = UUID("6f1c2a0e-0000-4000-8000-000000000002")
 
@@ -100,8 +107,8 @@ def test_an_unknown_field_is_named() -> None:
         ({"cycle": "2"}, "'cycle' must be an integer, not str"),
         ({"event_id": "not-a-uuid"}, "'event_id' is not a UUID"),
         ({"job_id": "nope"}, "'job_id' is not a UUID"),
-        ({"phase": "sideways"}, "'phase' has no member 'sideways'"),
-        ({"engine_id": "hal9000"}, "'engine_id' has no member 'hal9000'"),
+        ({"phase": 3}, "'phase' must be a string, not int"),
+        ({"engine_id": 9}, "'engine_id' must be a string, not int"),
         ({"produced_at": "yesterday"}, "'produced_at' is not an ISO-8601 time"),
         ({"produced_at": "2026-09-18T12:00:00"}, "'produced_at' has no zone"),
     ],
@@ -111,6 +118,17 @@ def test_a_mistyped_or_unreadable_field_is_refused(
 ) -> None:
     with pytest.raises(InvalidLedgerRecord, match=message):
         LEDGER_RECORDS.from_fields(_fields(**changes))
+
+
+def test_a_retired_or_newer_value_is_kept_whole_and_written_back_unchanged() -> None:
+    """ADR-0078 retired `agyloop`; the ledger it left behind is real and must stay readable."""
+    fields = _fields(phase="sideways", engine_id="agyloop", kind="FutureKind", provenance="alien")
+    read = LEDGER_RECORDS.from_fields(fields)
+    assert isinstance(read.phase, UnrecognizedPhase) and read.phase.value == "sideways"
+    assert isinstance(read.engine_id, UnrecognizedEngineId) and read.engine_id.value == "agyloop"
+    assert isinstance(read.kind, UnrecognizedEventKind) and read.kind.value == "FutureKind"
+    assert isinstance(read.provenance, UnrecognizedProvenance) and read.provenance.value == "alien"
+    assert LEDGER_RECORDS.to_fields(read) == fields
 
 
 def test_a_utc_time_reads_back_aware() -> None:

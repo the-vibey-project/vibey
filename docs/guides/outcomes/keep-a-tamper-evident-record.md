@@ -8,6 +8,10 @@ description: vibey appends every decision, question, answer, handoff and cost to
 PostgreSQL ledger that its application role cannot rewrite, and each export walks a SHA-256
 chain over every event to show an edit.
 
+**See it rather than read about it:** the [ledger explorer](../../explorer/index.md) opens a
+real project's public ledger, checks each record's digest in your browser, and shows the hash
+chain head that covers every event, withheld ones included.
+
 When an agent's work is questioned later — by a reviewer, a customer or an auditor — a chat
 transcript is weak evidence: it lives in one vendor's session, and anyone with access can
 change it. vibey keeps its own record instead. Each fact is a row in an append-only table
