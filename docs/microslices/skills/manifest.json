@@ -935,6 +935,36 @@
     "count": 6
   },
   {
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-collection-law-and-bankruptcy/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-collection-law-and-bankruptcy",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs",
+    "count": 11
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps",
+    "count": 9
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources",
+    "count": 4
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/design-patterns/skills/patterns-architectural/SKILL.md",
     "output": "docs/microslices/skills/design-patterns/skills/patterns-architectural",
     "count": 2
@@ -2653,6 +2683,41 @@
     "source": "src/vibey_tools/skills/plugins/package-manager-development/skills/package-manager-versioning-and-resolution/SKILL.md",
     "output": "docs/microslices/skills/package-manager-development/skills/package-manager-versioning-and-resolution",
     "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-budgets-deadlines-scams-and-free-help/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-budgets-deadlines-scams-and-free-help",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-copyrights/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-copyrights",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-open-questions-and-glossary/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-open-questions-and-glossary",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-overview-and-decision-map/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-overview-and-decision-map",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-ownership-open-source-and-enforcement/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-ownership-open-source-and-enforcement",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-patents/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-patents",
+    "count": 1
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-trademarks/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-trademarks",
+    "count": 1
   },
   {
     "source": "src/vibey_tools/skills/plugins/pedagogy-and-the-study-of-learning/skills/pedagogy-explicit-instruction-worked-examples-and-feedback/SKILL.md",

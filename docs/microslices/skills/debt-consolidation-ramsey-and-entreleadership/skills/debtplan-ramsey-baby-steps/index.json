@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-part-2-dave-ramsey-s-7-baby-steps-33216a1bd4",
+    "purpose": "part 2 dave ramsey s 7 baby steps",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/001-part-2-dave-ramsey-s-7-baby-steps.md",
+    "requires": [],
+    "links": [
+      "skill-the-seven-steps-as-currently-published-are-a-fixed-sequence-with-few-exceptions-2ec2150b4e"
+    ]
+  },
+  {
+    "id": "skill-the-seven-steps-as-currently-published-are-a-fixed-sequence-with-few-exceptions-2ec2150b4e",
+    "purpose": "the seven steps as currently published are a fixed sequence with few exceptions",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/002-the-seven-steps-as-currently-published-are-a-fixed-sequence-with-few-exceptions.md",
+    "requires": [
+      "skill-part-2-dave-ramsey-s-7-baby-steps-33216a1bd4"
+    ],
+    "links": [
+      "skill-step-1-is-still-1-000-and-the-page-defends-that-figure-openly-40a9675844"
+    ]
+  },
+  {
+    "id": "skill-step-1-is-still-1-000-and-the-page-defends-that-figure-openly-40a9675844",
+    "purpose": "step 1 is still 1 000 and the page defends that figure openly",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/003-step-1-is-still-1-000-and-the-page-defends-that-figure-openly.md",
+    "requires": [
+      "skill-the-seven-steps-as-currently-published-are-a-fixed-sequence-with-few-exceptions-2ec2150b4e"
+    ],
+    "links": [
+      "skill-step-2-the-snowball-is-smallest-to-largest-and-tax-debt-jumps-the-line-0b115979cb"
+    ]
+  },
+  {
+    "id": "skill-step-2-the-snowball-is-smallest-to-largest-and-tax-debt-jumps-the-line-0b115979cb",
+    "purpose": "step 2 the snowball is smallest to largest and tax debt jumps the line",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/004-step-2-the-snowball-is-smallest-to-largest-and-tax-debt-jumps-the-line.md",
+    "requires": [
+      "skill-step-1-is-still-1-000-and-the-page-defends-that-figure-openly-40a9675844"
+    ],
+    "links": [
+      "skill-when-income-stops-ramsey-s-pages-say-to-protect-the-four-walls-and-slow-the-plan-e03d4c7674"
+    ]
+  },
+  {
+    "id": "skill-when-income-stops-ramsey-s-pages-say-to-protect-the-four-walls-and-slow-the-plan-e03d4c7674",
+    "purpose": "when income stops ramsey s pages say to protect the four walls and slow the plan",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/005-when-income-stops-ramsey-s-pages-say-to-protect-the-four-walls-and-slow-the-plan.md",
+    "requires": [
+      "skill-step-2-the-snowball-is-smallest-to-largest-and-tax-debt-jumps-the-line-0b115979cb"
+    ],
+    "links": [
+      "skill-steps-3-through-7-are-less-contested-with-one-major-exception-9a99453f5c"
+    ]
+  },
+  {
+    "id": "skill-steps-3-through-7-are-less-contested-with-one-major-exception-9a99453f5c",
+    "purpose": "steps 3 through 7 are less contested with one major exception",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/006-steps-3-through-7-are-less-contested-with-one-major-exception.md",
+    "requires": [
+      "skill-when-income-stops-ramsey-s-pages-say-to-protect-the-four-walls-and-slow-the-plan-e03d4c7674"
+    ],
+    "links": [
+      "skill-the-evidence-strong-on-behavior-weak-on-investment-math-6379bc0501"
+    ]
+  },
+  {
+    "id": "skill-the-evidence-strong-on-behavior-weak-on-investment-math-6379bc0501",
+    "purpose": "the evidence strong on behavior weak on investment math",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/007-the-evidence-strong-on-behavior-weak-on-investment-math.md",
+    "requires": [
+      "skill-steps-3-through-7-are-less-contested-with-one-major-exception-9a99453f5c"
+    ],
+    "links": [
+      "skill-controversies-allegations-and-procedural-rulings-not-findings-5738449684"
+    ]
+  },
+  {
+    "id": "skill-controversies-allegations-and-procedural-rulings-not-findings-5738449684",
+    "purpose": "controversies allegations and procedural rulings not findings",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/008-controversies-allegations-and-procedural-rulings-not-findings.md",
+    "requires": [
+      "skill-the-evidence-strong-on-behavior-weak-on-investment-math-6379bc0501"
+    ],
+    "links": [
+      "skill-the-paid-ecosystem-with-prices-as-retrieved-f86ef876c2"
+    ]
+  },
+  {
+    "id": "skill-the-paid-ecosystem-with-prices-as-retrieved-f86ef876c2",
+    "purpose": "the paid ecosystem with prices as retrieved",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-ramsey-baby-steps/009-the-paid-ecosystem-with-prices-as-retrieved.md",
+    "requires": [
+      "skill-controversies-allegations-and-procedural-rulings-not-findings-5738449684"
+    ],
+    "links": []
+  }
+]

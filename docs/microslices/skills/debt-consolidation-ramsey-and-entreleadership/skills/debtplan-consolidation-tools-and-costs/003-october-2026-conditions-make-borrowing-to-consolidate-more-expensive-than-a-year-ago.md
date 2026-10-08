@@ -1,0 +1,13 @@
+---
+id: skill-october-2026-conditions-make-borrowing-to-consolidate-more-expensive-than-a-year-ago-f3e75962a8
+purpose: october 2026 conditions make borrowing to consolidate more expensive than a year ago
+source: src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md
+requires: ["skill-five-different-tools-share-one-name-and-only-two-reduce-what-you-owe-e8a9abcae5"]
+links: ["skill-balance-transfer-cards-cheap-if-you-pay-off-inside-the-window-a-rate-reset-if-you-do-not-d3696613eb"]
+---
+
+## October 2026 conditions make borrowing to consolidate more expensive than a year ago
+
+The Federal Open Market Committee raised its target range 25 basis points to **3.75% to 4.00% on September 16, 2026**, by a 12-0 vote, saying inflation "remains elevated" ([Federal Reserve press release](https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm); [Federal Reserve open market page](https://www.federalreserve.gov/monetarypolicy/openmarket.htm)). That is a hike, not the cut many households expected after the 2024 to 2025 easing, and it was confirmed on two Federal Reserve pages. Variable-rate products (credit cards, HELOCs) follow policy rates, and new loan and balance-transfer pricing tends to follow as well. The Fed's G.19 release shows the average credit card rate was **20.94% on all accounts and 22.15% on accounts assessed interest in the second quarter of 2026**, while the commercial bank 24-month personal loan rate was 11.86% ([Federal Reserve G.19](https://www.federalreserve.gov/releases/g19/20260908/g19.pdf)). Revolving credit stood at $1,354.4 billion, growing at a 4.9% annualized pace.
+
+The New York Fed reports total household debt of **$18.771 trillion in Q2 2026**, with credit card balances of $1.263 trillion, HELOC balances of $459 billion, and student loans of $1.651 trillion. About 4.7% of debt was in some stage of delinquency, and the flow into serious delinquency (90 or more days) was 6.97% for credit cards, 3.00% for auto, 1.52% for mortgages (up from 1.29% a year earlier), and 1.15% for HELOCs ([NY Fed, August 11, 2026](https://www.newyorkfed.org/newsevents/news/research/2026/20260811)). The student loan figure of 7.83% is distorted by the re-reporting of defaulted loans. Mortgage rates rose too: Freddie Mac's 30-year fixed average was **7.28% the week of October 1, 2026, versus 6.34% a year earlier** ([Freddie Mac](https://www.freddiemac.com/pmms)). The research did not retrieve inflation, unemployment, or forecast data, so the broader macro backdrop is not characterized here.

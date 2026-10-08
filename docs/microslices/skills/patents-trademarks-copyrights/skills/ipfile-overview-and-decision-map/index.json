@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-executive-summary-fd6c438451",
+    "purpose": "executive summary",
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-overview-and-decision-map/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-overview-and-decision-map/001-executive-summary.md",
+    "requires": [],
+    "links": [
+      "skill-decision-map-one-page-39f2864e65"
+    ]
+  },
+  {
+    "id": "skill-decision-map-one-page-39f2864e65",
+    "purpose": "decision map one page",
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-overview-and-decision-map/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-overview-and-decision-map/002-decision-map-one-page.md",
+    "requires": [
+      "skill-executive-summary-fd6c438451"
+    ],
+    "links": []
+  }
+]

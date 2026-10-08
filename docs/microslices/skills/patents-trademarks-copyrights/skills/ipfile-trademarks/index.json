@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-part-1-trademarks-clearance-through-maintenance-ffd27daed5",
+    "purpose": "part 1 trademarks clearance through maintenance",
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-trademarks/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-trademarks/001-part-1-trademarks-clearance-through-maintenance.md",
+    "requires": [],
+    "links": []
+  }
+]

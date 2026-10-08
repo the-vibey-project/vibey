@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-executive-summary-abf5956098",
+    "purpose": "executive summary",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/001-executive-summary.md",
+    "requires": [],
+    "links": [
+      "skill-part-4-connecting-the-three-consolidation-ramsey-s-method-and-bankruptcy-44d3c0e083"
+    ]
+  },
+  {
+    "id": "skill-part-4-connecting-the-three-consolidation-ramsey-s-method-and-bankruptcy-44d3c0e083",
+    "purpose": "part 4 connecting the three consolidation ramsey s method and bankruptcy",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/002-part-4-connecting-the-three-consolidation-ramsey-s-method-and-bankruptcy.md",
+    "requires": [
+      "skill-executive-summary-abf5956098"
+    ],
+    "links": [
+      "skill-the-three-paths-solve-different-problems-754ca22490"
+    ]
+  },
+  {
+    "id": "skill-the-three-paths-solve-different-problems-754ca22490",
+    "purpose": "the three paths solve different problems",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/003-the-three-paths-solve-different-problems.md",
+    "requires": [
+      "skill-part-4-connecting-the-three-consolidation-ramsey-s-method-and-bankruptcy-44d3c0e083"
+    ],
+    "links": [
+      "skill-what-ramsey-s-approach-gets-right-and-where-reduced-income-changes-the-math-baba6703c0"
+    ]
+  },
+  {
+    "id": "skill-what-ramsey-s-approach-gets-right-and-where-reduced-income-changes-the-math-baba6703c0",
+    "purpose": "what ramsey s approach gets right and where reduced income changes the math",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/004-what-ramsey-s-approach-gets-right-and-where-reduced-income-changes-the-math.md",
+    "requires": [
+      "skill-the-three-paths-solve-different-problems-754ca22490"
+    ],
+    "links": [
+      "skill-a-decision-framework-built-from-the-evidence-d5fbc8cc61"
+    ]
+  },
+  {
+    "id": "skill-a-decision-framework-built-from-the-evidence-d5fbc8cc61",
+    "purpose": "a decision framework built from the evidence",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/005-a-decision-framework-built-from-the-evidence.md",
+    "requires": [
+      "skill-what-ramsey-s-approach-gets-right-and-where-reduced-income-changes-the-math-baba6703c0"
+    ],
+    "links": [
+      "skill-questions-to-ask-each-professional-4c47a6cbbe"
+    ]
+  },
+  {
+    "id": "skill-questions-to-ask-each-professional-4c47a6cbbe",
+    "purpose": "questions to ask each professional",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/006-questions-to-ask-each-professional.md",
+    "requires": [
+      "skill-a-decision-framework-built-from-the-evidence-d5fbc8cc61"
+    ],
+    "links": [
+      "skill-how-the-business-side-part-3-ties-back-to-the-debt-decision-cf918a7036"
+    ]
+  },
+  {
+    "id": "skill-how-the-business-side-part-3-ties-back-to-the-debt-decision-cf918a7036",
+    "purpose": "how the business side part 3 ties back to the debt decision",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-overview-and-decision-framework/007-how-the-business-side-part-3-ties-back-to-the-debt-decision.md",
+    "requires": [
+      "skill-questions-to-ask-each-professional-4c47a6cbbe"
+    ],
+    "links": []
+  }
+]

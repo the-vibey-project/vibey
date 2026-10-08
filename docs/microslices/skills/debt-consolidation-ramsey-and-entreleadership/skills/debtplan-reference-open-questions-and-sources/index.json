@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-open-questions-and-unverified-items-bf4c1f5f15",
+    "purpose": "open questions and unverified items",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/001-open-questions-and-unverified-items.md",
+    "requires": [],
+    "links": [
+      "skill-glossary-9c31b0e353"
+    ]
+  },
+  {
+    "id": "skill-glossary-9c31b0e353",
+    "purpose": "glossary",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/002-glossary.md",
+    "requires": [
+      "skill-open-questions-and-unverified-items-bf4c1f5f15"
+    ],
+    "links": [
+      "skill-conclusion-e246659345"
+    ]
+  },
+  {
+    "id": "skill-conclusion-e246659345",
+    "purpose": "conclusion",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/003-conclusion.md",
+    "requires": [
+      "skill-glossary-9c31b0e353"
+    ],
+    "links": [
+      "skill-sources-472c0ecbea"
+    ]
+  },
+  {
+    "id": "skill-sources-472c0ecbea",
+    "purpose": "sources",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-reference-open-questions-and-sources/004-sources.md",
+    "requires": [
+      "skill-conclusion-e246659345"
+    ],
+    "links": []
+  }
+]
