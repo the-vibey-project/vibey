@@ -28,6 +28,10 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Host optimization](https://the-vibey-project.github.io/vibey/main/runbooks/host-optimization/): How the machine vibey runs on is kept healthy and fitted to its workload, with every change declared in the repository, applied under a gate, measured week after week, and reversible.
 - [Triaged delivery bridge](https://the-vibey-project.github.io/vibey/main/runbooks/triaged-delivery/): scripts/triaged_delivery.py takes triaged GitHub issues (vibey-gh:triaged) into Vibey one at a time: it dispatches a project for the issue, drives the normal worker, and publishes the finished project as a pull request.…
 
+## Demos, by audience
+
+- [For a non-profit](https://the-vibey-project.github.io/vibey/main/guides/demos/non-profit/): A walk-through for a small non-profit team that builds a volunteer shift sign-up tool on a local model with a spending brake, answers the questions only people can, and ends with a record a board can read.
+
 ## What do you want to do?
 
 - [Overview](https://the-vibey-project.github.io/vibey/main/guides/outcomes/): Six short guides, each answering one question people bring to AI coding agents, with the commands, the evidence behind every claim, and the limits.

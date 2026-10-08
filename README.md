@@ -23,11 +23,12 @@ the work, and only interrupting you when a decision is truly yours.
 Claude Code, Codex or a local model, want finished, reviewed work rather than one session at a
 time, and may build vibey with us; non-profits and other small mission-driven teams, who can
 [cap what agents spend](docs/guides/outcomes/cap-agent-spending.md) and
-[run them on their own hardware](docs/guides/outcomes/run-agents-on-your-own-hardware.md); universities and
+[run them on their own hardware](docs/guides/outcomes/run-agents-on-your-own-hardware.md)
+([the non-profit demo](docs/guides/demos/non-profit.md)); universities and
 academia, who can study and cite a working design for durable, auditable agent orchestration
 ([the paper](https://the-vibey-project.github.io/vibey/main/paper/)); governments and their militaries, who can
 [keep a record that cannot be quietly rewritten](docs/guides/outcomes/keep-a-tamper-evident-record.md); freelance
-clients; and industry. Each audience is meant to have its own demo; none is written yet.
+clients; and industry. Each audience is meant to have its own demo; the non-profit one is written, and the other five are not yet.
 
 **What makes it different** — each claim links to what proves it:
 
