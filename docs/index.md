@@ -23,10 +23,15 @@ team of those agents from your first description to deployed software, the
 way a project manager runs a team — asking you questions up front, checking
 the work, and only interrupting you when a decision is truly yours.
 
-**Who it is for:** developers who already use Claude Code, Codex or a local model
-and want finished, reviewed work rather than one session at a time; people who run it for
-a team on their own hardware or on Kubernetes; and anyone who wants to study or extend a
-working design for durable, auditable agent orchestration.
+**Who it is for**, in this order ([ADR-0087](architecture/decisions/0087-the-six-audiences-in-order.md)): open-source developers who already use
+Claude Code, Codex or a local model, want finished, reviewed work rather than one session at a
+time, and may build vibey with us; non-profits and other small mission-driven teams, who can
+[cap what agents spend](guides/outcomes/cap-agent-spending.md) and
+[run them on their own hardware](guides/outcomes/run-agents-on-your-own-hardware.md); universities and
+academia, who can study and cite a working design for durable, auditable agent orchestration
+([the paper](https://the-vibey-project.github.io/vibey/main/paper/)); governments and their militaries, who can
+[keep a record that cannot be quietly rewritten](guides/outcomes/keep-a-tamper-evident-record.md); freelance
+clients; and industry. Each audience is meant to have its own demo; none is written yet.
 
 **What makes it different** — each claim links to what proves it:
 

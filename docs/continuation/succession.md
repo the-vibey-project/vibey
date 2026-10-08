@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 86, the newest 0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways.
+- **Decision records:** 87, the newest 0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

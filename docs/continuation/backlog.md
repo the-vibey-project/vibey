@@ -11,7 +11,7 @@ smallest slice that ships on its own: tested, reviewed, and honest about what is
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Take this run's backlog item and land its smallest shippable, tested slice.
-- **Decision records:** 86, the newest 0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways.
+- **Decision records:** 87, the newest 0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry.
 - **Lanes it keeps usable:** [Backlog killer](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-killer.yml).
 <!-- END GENERATED continuation:state -->
 
