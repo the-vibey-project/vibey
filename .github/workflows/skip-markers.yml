@@ -66,7 +66,7 @@ jobs:
             echo "this repository provides the tooling — installing from source"
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey-engine==4.2.0"
+            python -m pip install --quiet "vibey-engine==4.3.0"
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       # Read as data: nothing from this checkout is installed or executed.
