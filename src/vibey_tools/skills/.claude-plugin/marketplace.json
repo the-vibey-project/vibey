@@ -5,8 +5,8 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Agent Skills for vibe engineering \u2014 145 plugins and 781 evidence-grounded practitioner skills spanning security (including confidential AI inference), compliance, cloud infrastructure (including a comparative AWS/GCP/Azure deep dive), IT infrastructure and governance, identity automation, DNS and naming, communication technologies, DevSecOps, Linux server administration, AI/ML, data engineering, web scraping, reporting and dashboards, geospatial software, logistics and optimization, frontend, mobile, desktop, smart TV, game development, UI/UX design, VR and AR, graphics and computer vision, media engineering, social platforms, systems programming (assembly, OS and kernel, languages, browsers, package managers), computer hardware including an ARM deep dive, data centres, peripherals, microarchitecture and memory systems, semiconductors and chip manufacturing, digital logic and firmware, embedded and IoT, maker hardware, electronics, radio and wireless, power engineering, automotive and robotics, rail engineering, civil and industrial engineering, thermodynamics and fluid mechanics, refrigeration and the cold chain, CAD and additive manufacturing, mechanical engineering and manufacturing, construction and civil structures, roads, bridges and public infrastructure, maritime engineering, mining, oil and gas, wood and metal shop craft, blockchain, quantum computing, quantum cryptography and nanotechnology, algorithms and theory of computation, mathematics, scientific computing and signal processing, physics, electromagnetism, chemistry and plastics, earth science, aerospace, rocketry, flight software and space exploration, the life sciences, drug discovery software, medicine and pharmacology, agriculture and livestock, food and sanitation science, the social sciences including twice-exceptional adults, neurodiversity at work, political science and governance, public speaking and community organising, negotiation and conflict resolution, Christian ministry spanning evangelism, apologetics, preaching, teaching and church planting, Christian pastoral care and faith-integrated self-compassion, the Bible's languages, translation, textual criticism, archaeology and history, wellbeing and motivation, military science and national defence, physical security, self-defense and firearms law, art and music theory, storytelling and comedy craft, textile and furniture crafts, pedagogy and learning science, exercise science, nutrition science, survival skills, travel planning, business and commercial law, economics, accounting and tax, home, car and company valuation, consumer bankruptcy, fundraising, trading mechanics, investment strategy, banking and payment networks, design patterns, developer tooling for editors, IDEs and the GitHub and Jira workflow layer, low-code platforms, penetration testing, cryptography, software architecture, quality engineering, engineering process, technical writing, a fourteen-phase content engineering pipeline from thesis to book, novel, screenplay, AI film and distribution, and the scheduled currency research that keeps the dated claims in all of it honest.",
-    "version": "2.27.0"
+    "description": "Agent Skills for vibe engineering \u2014 147 plugins and 794 evidence-grounded practitioner skills spanning security (including confidential AI inference), compliance, cloud infrastructure (including a comparative AWS/GCP/Azure deep dive), IT infrastructure and governance, identity automation, DNS and naming, communication technologies, DevSecOps, Linux server administration, AI/ML, data engineering, web scraping, reporting and dashboards, geospatial software, logistics and optimization, frontend, mobile, desktop, smart TV, game development, UI/UX design, VR and AR, graphics and computer vision, media engineering, social platforms, systems programming (assembly, OS and kernel, languages, browsers, package managers), computer hardware including an ARM deep dive, data centres, peripherals, microarchitecture and memory systems, semiconductors and chip manufacturing, digital logic and firmware, embedded and IoT, maker hardware, electronics, radio and wireless, power engineering, automotive and robotics, rail engineering, civil and industrial engineering, thermodynamics and fluid mechanics, refrigeration and the cold chain, CAD and additive manufacturing, mechanical engineering and manufacturing, construction and civil structures, roads, bridges and public infrastructure, maritime engineering, mining, oil and gas, wood and metal shop craft, blockchain, quantum computing, quantum cryptography and nanotechnology, algorithms and theory of computation, mathematics, scientific computing and signal processing, physics, electromagnetism, chemistry and plastics, earth science, aerospace, rocketry, flight software and space exploration, the life sciences, drug discovery software, medicine and pharmacology, agriculture and livestock, food and sanitation science, the social sciences including twice-exceptional adults, neurodiversity at work, political science and governance, public speaking and community organising, negotiation and conflict resolution, Christian ministry spanning evangelism, apologetics, preaching, teaching and church planting, Christian pastoral care and faith-integrated self-compassion, the Bible's languages, translation, textual criticism, archaeology and history, wellbeing and motivation, military science and national defence, physical security, self-defense and firearms law, art and music theory, storytelling and comedy craft, textile and furniture crafts, pedagogy and learning science, exercise science, nutrition science, survival skills, travel planning, business and commercial law, economics, accounting and tax, home, car and company valuation, consumer bankruptcy, fundraising, trading mechanics, investment strategy, banking and payment networks, design patterns, developer tooling for editors, IDEs and the GitHub and Jira workflow layer, low-code platforms, penetration testing, cryptography, software architecture, quality engineering, engineering process, technical writing, a fourteen-phase content engineering pipeline from thesis to book, novel, screenplay, AI film and distribution, and the scheduled currency research that keeps the dated claims in all of it honest.",
+    "version": "2.28.0"
   },
   "plugins": [
     {
@@ -265,7 +265,7 @@
     {
       "name": "christian-pastoral-care",
       "source": "./plugins/christian-pastoral-care",
-      "description": "Christian Pastoral Care: faith-integrated self-compassion — an evangelical theology of grace, shame and identity in Christ, spiritual disciplines adapted for neurodivergent believers, and the clinical evidence for religiously adapted self-compassion, alongside professional care. Pastoral and educational, not therapy.",
+      "description": "Christian Pastoral Care: faith-integrated self-compassion \u2014 an evangelical theology of grace, shame and identity in Christ, spiritual disciplines adapted for neurodivergent believers, and the clinical evidence for religiously adapted self-compassion, alongside professional care. Pastoral and educational, not therapy.",
       "version": "0.1.0",
       "category": "religion",
       "author": {
@@ -342,7 +342,7 @@
     {
       "name": "consumer-bankruptcy",
       "source": "./plugins/consumer-bankruptcy",
-      "description": "Consumer Bankruptcy: Chapter 7 in South Carolina — the means test and its six-month look-back, costs and fee waivers, how attorneys are paid, the timeline and the automatic stay, surrendering a house or car, disclosure, SC exemptions, what is not discharged, what to avoid before filing, credit effects and alternatives. A research reference, not legal advice.",
+      "description": "Consumer Bankruptcy: Chapter 7 in South Carolina \u2014 the means test and its six-month look-back, costs and fee waivers, how attorneys are paid, the timeline and the automatic stay, surrendering a house or car, disclosure, SC exemptions, what is not discharged, what to avoid before filing, credit effects and alternatives. A research reference, not legal advice.",
       "version": "0.1.0",
       "category": "finance",
       "author": {
@@ -400,6 +400,17 @@
       "description": "Currency Research: auditing an evidence-grounded reference for staleness \u2014 the durability tiers, deciding whether a finding warrants an edit at all, web search and source-quality practice, dating a claim, the fabrication failure mode, editing a SKILL.md without disturbing its structure or cross-references, and opening the weekly pull request.",
       "version": "0.1.0",
       "category": "research",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "debt-consolidation-ramsey-and-entreleadership",
+      "source": "./plugins/debt-consolidation-ramsey-and-entreleadership",
+      "description": "Debt Consolidation, Ramsey's Baby Steps and Bankruptcy for South Carolina in October 2026: the five tools that share the name consolidation and which two reduce what you owe, balance transfers, personal loans and term math, secured and retirement-funded options, nonprofit debt management plans, settlement, student, medical and tax debt, credit-score effects, South Carolina collection law, Chapter 7 and Chapter 13, Dave Ramsey's 7 Baby Steps and the evidence for and against them, EntreLeadership and solo-LLC mechanics, a decision framework and the questions to ask each professional. General information, not legal, tax or financial advice.",
+      "version": "0.1.0",
+      "category": "finance",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
@@ -1110,6 +1121,17 @@
       }
     },
     {
+      "name": "patents-trademarks-copyrights",
+      "source": "./plugins/patents-trademarks-copyrights",
+      "description": "Patents, Trademarks and Copyrights: filing and maintaining US IP for software in October 2026, which right protects what and what to file first (the name and the code, with the patent as a deliberate decision), trademark clearance, application, office actions and maintenance, the copyright Registration Portal, software deposits, group options, DMCA and the CCB, patent documentation, search, provisional and utility filing, the Section 101 reality check and the disclosure trap, ownership and assignments, open source and AI-assisted code, trade secrets, enforcement costs, budgets, deadlines, scams, free help, and what could not be verified. General information, not legal advice.",
+      "version": "0.1.0",
+      "category": "business",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "pedagogy-and-the-study-of-learning",
       "source": "./plugins/pedagogy-and-the-study-of-learning",
       "description": "Pedagogy and the Study of Learning and Teaching: the reliability gradient in education research, memory architecture, cognitive load theory, the robust effects of spacing, retrieval and interleaving, prior knowledge and expertise, motivation, metacognition and the illusion of fluency, explicit instruction versus discovery, worked examples, explaining and modelling, questioning, feedback, assessment, reading and mathematics instruction, curriculum and sequencing, classroom practice, differentiation, higher education, adult learning, educational technology, how to read education research, zombie ideas, and teacher expertise.",
@@ -1189,7 +1211,7 @@
     {
       "name": "psychology-sociology-cultural-sciences",
       "source": "./plugins/psychology-sociology-cultural-sciences",
-      "description": "Psychology, Sociology and Cultural Sciences: the epistemic situation after the replication crisis and how to read a claim in these fields, why they are hard, what reform changed, perception and attention, memory, learning and conditioning, cognition, reasoning and bias, emotion, development, personality, motivation, social psychology, clinical psychology and what the evidence says actually works, intelligence, neurodiversity, sociological thinking and the theory traditions, stratification and mobility, networks, institutions and organizations, deviance and social control, religion and secularization, culture and anthropology, the WEIRD problem, and twice-exceptional adults — giftedness with autism or ADHD, masking and missed diagnosis, overexcitabilities, perfectionism and burnout, each claim labelled by evidence strength.",
+      "description": "Psychology, Sociology and Cultural Sciences: the epistemic situation after the replication crisis and how to read a claim in these fields, why they are hard, what reform changed, perception and attention, memory, learning and conditioning, cognition, reasoning and bias, emotion, development, personality, motivation, social psychology, clinical psychology and what the evidence says actually works, intelligence, neurodiversity, sociological thinking and the theory traditions, stratification and mobility, networks, institutions and organizations, deviance and social control, religion and secularization, culture and anthropology, the WEIRD problem, and twice-exceptional adults \u2014 giftedness with autism or ADHD, masking and missed diagnosis, overexcitabilities, perfectionism and burnout, each claim labelled by evidence strength.",
       "version": "0.2.0",
       "category": "social-sciences",
       "author": {
@@ -1332,7 +1354,7 @@
     {
       "name": "security-principles",
       "source": "./plugins/security-principles",
-      "description": "Security Principles: cybersecurity first principles, threat modeling playbook, AI-era security field guide, AI safety and secure development practices for Python and TypeScript/Next.js, and confidential AI inference — TEEs, GPU confidential computing, remote attestation, Oblivious HTTP and transparency logs.",
+      "description": "Security Principles: cybersecurity first principles, threat modeling playbook, AI-era security field guide, AI safety and secure development practices for Python and TypeScript/Next.js, and confidential AI inference \u2014 TEEs, GPU confidential computing, remote attestation, Oblivious HTTP and transparency logs.",
       "version": "0.3.0",
       "category": "security",
       "author": {

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-part-3-patents-documentation-search-provisional-nonprovisional-prosecution-maintenance-c45f6badf8",
+    "purpose": "part 3 patents documentation search provisional nonprovisional prosecution maintenance",
+    "source": "src/vibey_tools/skills/plugins/patents-trademarks-copyrights/skills/ipfile-patents/SKILL.md",
+    "output": "docs/microslices/skills/patents-trademarks-copyrights/skills/ipfile-patents/001-part-3-patents-documentation-search-provisional-nonprovisional-prosecution-maintenance.md",
+    "requires": [],
+    "links": []
+  }
+]

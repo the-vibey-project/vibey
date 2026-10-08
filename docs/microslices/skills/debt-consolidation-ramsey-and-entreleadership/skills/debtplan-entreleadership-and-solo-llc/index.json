@@ -1,0 +1,106 @@
+[
+  {
+    "id": "skill-part-3-entreleadership-87e859a15f",
+    "purpose": "part 3 entreleadership",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/001-part-3-entreleadership.md",
+    "requires": [],
+    "links": [
+      "skill-what-it-is-a-2011-book-a-brand-and-a-business-arm-of-ramsey-solutions-c58c48cde0"
+    ]
+  },
+  {
+    "id": "skill-what-it-is-a-2011-book-a-brand-and-a-business-arm-of-ramsey-solutions-c58c48cde0",
+    "purpose": "what it is a 2011 book a brand and a business arm of ramsey solutions",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/002-what-it-is-a-2011-book-a-brand-and-a-business-arm-of-ramsey-solutions.md",
+    "requires": [
+      "skill-part-3-entreleadership-87e859a15f"
+    ],
+    "links": [
+      "skill-the-15-chapters-verified-against-multiple-tables-of-contents-eb20623727"
+    ]
+  },
+  {
+    "id": "skill-the-15-chapters-verified-against-multiple-tables-of-contents-eb20623727",
+    "purpose": "the 15 chapters verified against multiple tables of contents",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/003-the-15-chapters-verified-against-multiple-tables-of-contents.md",
+    "requires": [
+      "skill-what-it-is-a-2011-book-a-brand-and-a-business-arm-of-ramsey-solutions-c58c48cde0"
+    ],
+    "links": [
+      "skill-two-live-frameworks-five-stages-and-six-drivers-42315e6a46"
+    ]
+  },
+  {
+    "id": "skill-two-live-frameworks-five-stages-and-six-drivers-42315e6a46",
+    "purpose": "two live frameworks five stages and six drivers",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/004-two-live-frameworks-five-stages-and-six-drivers.md",
+    "requires": [
+      "skill-the-15-chapters-verified-against-multiple-tables-of-contents-eb20623727"
+    ],
+    "links": [
+      "skill-business-money-rules-ramsey-s-baby-steps-logic-ported-to-a-company-e96dc228fd"
+    ]
+  },
+  {
+    "id": "skill-business-money-rules-ramsey-s-baby-steps-logic-ported-to-a-company-e96dc228fd",
+    "purpose": "business money rules ramsey s baby steps logic ported to a company",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/005-business-money-rules-ramsey-s-baby-steps-logic-ported-to-a-company.md",
+    "requires": [
+      "skill-two-live-frameworks-five-stages-and-six-drivers-42315e6a46"
+    ],
+    "links": [
+      "skill-offerings-and-prices-published-dates-mostly-unpublished-prices-f329661c8d"
+    ]
+  },
+  {
+    "id": "skill-offerings-and-prices-published-dates-mostly-unpublished-prices-f329661c8d",
+    "purpose": "offerings and prices published dates mostly unpublished prices",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/006-offerings-and-prices-published-dates-mostly-unpublished-prices.md",
+    "requires": [
+      "skill-business-money-rules-ramsey-s-baby-steps-logic-ported-to-a-company-e96dc228fd"
+    ],
+    "links": [
+      "skill-what-the-evidence-says-about-the-no-debt-rule-1b6eb5854a"
+    ]
+  },
+  {
+    "id": "skill-what-the-evidence-says-about-the-no-debt-rule-1b6eb5854a",
+    "purpose": "what the evidence says about the no debt rule",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/007-what-the-evidence-says-about-the-no-debt-rule.md",
+    "requires": [
+      "skill-offerings-and-prices-published-dates-mostly-unpublished-prices-f329661c8d"
+    ],
+    "links": [
+      "skill-how-entreleadership-compares-with-other-frameworks-aab6b75ef6"
+    ]
+  },
+  {
+    "id": "skill-how-entreleadership-compares-with-other-frameworks-aab6b75ef6",
+    "purpose": "how entreleadership compares with other frameworks",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/008-how-entreleadership-compares-with-other-frameworks.md",
+    "requires": [
+      "skill-what-the-evidence-says-about-the-no-debt-rule-1b6eb5854a"
+    ],
+    "links": [
+      "skill-solo-llc-mechanics-taxes-unemployment-rules-and-what-scales-down-7047160695"
+    ]
+  },
+  {
+    "id": "skill-solo-llc-mechanics-taxes-unemployment-rules-and-what-scales-down-7047160695",
+    "purpose": "solo llc mechanics taxes unemployment rules and what scales down",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-entreleadership-and-solo-llc/009-solo-llc-mechanics-taxes-unemployment-rules-and-what-scales-down.md",
+    "requires": [
+      "skill-how-entreleadership-compares-with-other-frameworks-aab6b75ef6"
+    ],
+    "links": []
+  }
+]

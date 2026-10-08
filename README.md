@@ -187,13 +187,13 @@ packets to BUILD prompts. Missing tools, timeouts, low-confidence retrieval, and
 insufficient budgets all fall back to the original prompt. The feature is off by
 default, and wind-down prompts are never modified (ADR-0031).
 
-The same tree is a Claude Code plugin marketplace — every plugin in the family, the 145
+The same tree is a Claude Code plugin marketplace — every plugin in the family, the 147
 skills plugins and vibey-gh's four, from one address and nothing else:
 
 ```text
 /plugin marketplace add the-vibey-project/vibey
 /plugin install security-principles@vibey
-/plugin                                    # browse all 149
+/plugin                                    # browse all 151
 ```
 
 The root manifest is rendered from the workspace members by `vibey-gh marketplace` and

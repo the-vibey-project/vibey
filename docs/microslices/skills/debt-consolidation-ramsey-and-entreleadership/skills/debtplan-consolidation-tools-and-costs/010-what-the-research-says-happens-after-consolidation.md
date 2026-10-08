@@ -1,0 +1,13 @@
+---
+id: skill-what-the-research-says-happens-after-consolidation-48eefaa90f
+purpose: what the research says happens after consolidation
+source: src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md
+requires: ["skill-student-loans-medical-debt-and-tax-debt-follow-their-own-rules-7ee5bf2c78"]
+links: ["skill-credit-scores-modest-dents-from-consolidation-long-shadows-from-default-d30d54febd"]
+---
+
+## What the research says happens after consolidation
+
+The strongest evidence is mixed rather than damning. Di Maggio and Yao analyzed 3.79 million fintech loans to 1.88 million borrowers and found that borrowers who used the loans to pay down card debt "often ran their cards up again within months"; scores first improved then fell, and about a year later more than 5% were likely to default, roughly 25% higher risk than similar bank borrowers ([HBS Working Knowledge](https://www.library.hbs.edu/working-knowledge/the-dark-side-of-fintech-borrowing); [NBER WP 28021](https://www.nber.org/system/files/working_papers/w28021/w28021.pdf)). By contrast, Dore and Mach (Prosper marketplace borrowers, about three-quarters consolidating) found utilization fell to 44% versus 56% for non-borrowers, scores were about 13 points higher at application and 6.6 points higher four quarters later, total debt was about 27% higher at application and 13% higher twelve quarters later, and delinquency was *lower* by about 1.1 to 1.8 percentage points ([Fed FEDS 2019-022](https://www.federalreserve.gov/econres/feds/files/2019022pap.pdf)). The two samples differ by platform, years, and benchmark, so the honest reading is divergent findings, not consensus. Both agree on one mechanism: freed credit gets used again. Gathergood and coauthors found people split repayments in proportion to balances rather than targeting the highest-rate card ([AER 2019](https://www.aeaweb.org/doi/10.1257/aer.20180288)), and the 2009 CARD Act cut borrowing costs by an annualized 1.7% of balances ([NBER 19484](https://www.nber.org/papers/w19484)). No verified study gives a headline "percent who re-accumulate" figure.
+
+**Consolidation fits** when income covers the new payment with margin, the all-in APR (fees included) is clearly below the blended current rate, the term is not stretched so far that total interest rises, the spending gap is closed, and the new debt stays unsecured. It fits poorly when income is unstable or falling, when the debt is already mostly unaffordable, or when the only approvable loans are high-APR or secured by a home or car (this is a synthesis, not a sourced rule).

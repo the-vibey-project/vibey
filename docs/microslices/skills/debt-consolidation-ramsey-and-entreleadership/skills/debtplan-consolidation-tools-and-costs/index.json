@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-part-1-debt-consolidation-620af75781",
+    "purpose": "part 1 debt consolidation",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/001-part-1-debt-consolidation.md",
+    "requires": [],
+    "links": [
+      "skill-five-different-tools-share-one-name-and-only-two-reduce-what-you-owe-e8a9abcae5"
+    ]
+  },
+  {
+    "id": "skill-five-different-tools-share-one-name-and-only-two-reduce-what-you-owe-e8a9abcae5",
+    "purpose": "five different tools share one name and only two reduce what you owe",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/002-five-different-tools-share-one-name-and-only-two-reduce-what-you-owe.md",
+    "requires": [
+      "skill-part-1-debt-consolidation-620af75781"
+    ],
+    "links": [
+      "skill-october-2026-conditions-make-borrowing-to-consolidate-more-expensive-than-a-year-ago-f3e75962a8"
+    ]
+  },
+  {
+    "id": "skill-october-2026-conditions-make-borrowing-to-consolidate-more-expensive-than-a-year-ago-f3e75962a8",
+    "purpose": "october 2026 conditions make borrowing to consolidate more expensive than a year ago",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/003-october-2026-conditions-make-borrowing-to-consolidate-more-expensive-than-a-year-ago.md",
+    "requires": [
+      "skill-five-different-tools-share-one-name-and-only-two-reduce-what-you-owe-e8a9abcae5"
+    ],
+    "links": [
+      "skill-balance-transfer-cards-cheap-if-you-pay-off-inside-the-window-a-rate-reset-if-you-do-not-d3696613eb"
+    ]
+  },
+  {
+    "id": "skill-balance-transfer-cards-cheap-if-you-pay-off-inside-the-window-a-rate-reset-if-you-do-not-d3696613eb",
+    "purpose": "balance transfer cards cheap if you pay off inside the window a rate reset if you do not",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/004-balance-transfer-cards-cheap-if-you-pay-off-inside-the-window-a-rate-reset-if-you-do-not.md",
+    "requires": [
+      "skill-october-2026-conditions-make-borrowing-to-consolidate-more-expensive-than-a-year-ago-f3e75962a8"
+    ],
+    "links": [
+      "skill-personal-loans-the-term-matters-as-much-as-the-rate-2f3ba212be"
+    ]
+  },
+  {
+    "id": "skill-personal-loans-the-term-matters-as-much-as-the-rate-2f3ba212be",
+    "purpose": "personal loans the term matters as much as the rate",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/005-personal-loans-the-term-matters-as-much-as-the-rate.md",
+    "requires": [
+      "skill-balance-transfer-cards-cheap-if-you-pay-off-inside-the-window-a-rate-reset-if-you-do-not-d3696613eb"
+    ],
+    "links": [
+      "skill-secured-and-retirement-funded-options-trade-a-lower-rate-for-a-worse-failure-mode-f3c2614665"
+    ]
+  },
+  {
+    "id": "skill-secured-and-retirement-funded-options-trade-a-lower-rate-for-a-worse-failure-mode-f3c2614665",
+    "purpose": "secured and retirement funded options trade a lower rate for a worse failure mode",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/006-secured-and-retirement-funded-options-trade-a-lower-rate-for-a-worse-failure-mode.md",
+    "requires": [
+      "skill-personal-loans-the-term-matters-as-much-as-the-rate-2f3ba212be"
+    ],
+    "links": [
+      "skill-nonprofit-debt-management-plans-real-rate-relief-with-south-carolina-price-caps-cdc0296c36"
+    ]
+  },
+  {
+    "id": "skill-nonprofit-debt-management-plans-real-rate-relief-with-south-carolina-price-caps-cdc0296c36",
+    "purpose": "nonprofit debt management plans real rate relief with south carolina price caps",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/007-nonprofit-debt-management-plans-real-rate-relief-with-south-carolina-price-caps.md",
+    "requires": [
+      "skill-secured-and-retirement-funded-options-trade-a-lower-rate-for-a-worse-failure-mode-f3c2614665"
+    ],
+    "links": [
+      "skill-debt-settlement-legal-fee-rules-heavy-collateral-damage-and-a-tax-bill-9fdfac7550"
+    ]
+  },
+  {
+    "id": "skill-debt-settlement-legal-fee-rules-heavy-collateral-damage-and-a-tax-bill-9fdfac7550",
+    "purpose": "debt settlement legal fee rules heavy collateral damage and a tax bill",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/008-debt-settlement-legal-fee-rules-heavy-collateral-damage-and-a-tax-bill.md",
+    "requires": [
+      "skill-nonprofit-debt-management-plans-real-rate-relief-with-south-carolina-price-caps-cdc0296c36"
+    ],
+    "links": [
+      "skill-student-loans-medical-debt-and-tax-debt-follow-their-own-rules-7ee5bf2c78"
+    ]
+  },
+  {
+    "id": "skill-student-loans-medical-debt-and-tax-debt-follow-their-own-rules-7ee5bf2c78",
+    "purpose": "student loans medical debt and tax debt follow their own rules",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/009-student-loans-medical-debt-and-tax-debt-follow-their-own-rules.md",
+    "requires": [
+      "skill-debt-settlement-legal-fee-rules-heavy-collateral-damage-and-a-tax-bill-9fdfac7550"
+    ],
+    "links": [
+      "skill-what-the-research-says-happens-after-consolidation-48eefaa90f"
+    ]
+  },
+  {
+    "id": "skill-what-the-research-says-happens-after-consolidation-48eefaa90f",
+    "purpose": "what the research says happens after consolidation",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/010-what-the-research-says-happens-after-consolidation.md",
+    "requires": [
+      "skill-student-loans-medical-debt-and-tax-debt-follow-their-own-rules-7ee5bf2c78"
+    ],
+    "links": [
+      "skill-credit-scores-modest-dents-from-consolidation-long-shadows-from-default-d30d54febd"
+    ]
+  },
+  {
+    "id": "skill-credit-scores-modest-dents-from-consolidation-long-shadows-from-default-d30d54febd",
+    "purpose": "credit scores modest dents from consolidation long shadows from default",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-consolidation-tools-and-costs/011-credit-scores-modest-dents-from-consolidation-long-shadows-from-default.md",
+    "requires": [
+      "skill-what-the-research-says-happens-after-consolidation-48eefaa90f"
+    ],
+    "links": []
+  }
+]

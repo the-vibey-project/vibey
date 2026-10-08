@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-south-carolina-collection-law-decides-how-much-leverage-creditors-actually-have-eb5cca512d",
+    "purpose": "south carolina collection law decides how much leverage creditors actually have",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-collection-law-and-bankruptcy/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-collection-law-and-bankruptcy/001-south-carolina-collection-law-decides-how-much-leverage-creditors-actually-have.md",
+    "requires": [],
+    "links": [
+      "skill-chapter-7-and-chapter-13-the-other-end-of-the-spectrum-f442c67fa4"
+    ]
+  },
+  {
+    "id": "skill-chapter-7-and-chapter-13-the-other-end-of-the-spectrum-f442c67fa4",
+    "purpose": "chapter 7 and chapter 13 the other end of the spectrum",
+    "source": "src/vibey_tools/skills/plugins/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-collection-law-and-bankruptcy/SKILL.md",
+    "output": "docs/microslices/skills/debt-consolidation-ramsey-and-entreleadership/skills/debtplan-collection-law-and-bankruptcy/002-chapter-7-and-chapter-13-the-other-end-of-the-spectrum.md",
+    "requires": [
+      "skill-south-carolina-collection-law-decides-how-much-leverage-creditors-actually-have-eb5cca512d"
+    ],
+    "links": []
+  }
+]
