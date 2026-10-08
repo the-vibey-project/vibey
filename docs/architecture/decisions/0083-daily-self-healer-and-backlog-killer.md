@@ -103,3 +103,13 @@ no longer picks the same issue, and `tests/meta/test_daily_lanes.py` fails if th
 firing once per declared interval. Everything else in this record stands: it still runs only on
 GitHub's CPU runners, still lands at most one draft pull request per run through the
 continuation lane's guards, and still merges, approves and closes nothing.
+
+## Amendment, 2026-10-08: the backlog killer runs every 20 minutes
+
+At the operator's request `[backlog_killer] interval_minutes` is 20, not 90: one `*/20`-shaped
+cron (`3,23,43 * * * *`) replaces the two interleaved three-hourly crons, seventy-two runs a
+day. The pick's slot arithmetic is unchanged, so the rotation simply turns faster through the
+same `window`. The workflow's concurrency group queues at most one waiting run, so a run
+longer than 20 minutes skips slots rather than stacking them. `tests/meta/test_daily_lanes.py`
+now parses minute lists and steps, and still fails if the crons stop firing once per declared
+interval. Every guard in this record and in the 2026-10-07 amendment stands.

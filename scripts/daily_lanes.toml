@@ -127,7 +127,7 @@ allowed_paths = [
 # so there is no attempt ledger to keep, every candidate in the window gets a slot, and two
 # computations in the same slot agree. The workflow's schedule fires once per slot; a test
 # (tests/meta/test_daily_lanes.py) fails if its crons stop matching this interval.
-interval_minutes = 90
+interval_minutes = 20
 window = 7
 body_chars = 6000
 prompt = "backlog"

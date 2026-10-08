@@ -68,22 +68,29 @@ def test_the_backlog_killer_picks_read_only_and_only_dispatches() -> None:
     assert "gh workflow run continuation-prompts.yml" in dispatch
 
 
-def _cron_minutes(cron: str) -> set[int]:
-    """The minutes of the day a daily cron (`M H * * *`) fires at: `H` a value, `a-b/s` or list."""
-    minute, hour, *rest = cron.split()
-    assert rest == ["*", "*", "*"], f"{cron!r} is not a daily schedule"
-    hours: set[int] = set()
-    for part in hour.split(","):
+def _field_values(field: str, low: int, high: int) -> set[int]:
+    """The values a cron field (`*`, `v`, `a-b`, `*/s`, `a-b/s`, or a comma list) selects."""
+    values: set[int] = set()
+    for part in field.split(","):
         span, _, step = part.partition("/")
         lo, _, hi = span.partition("-")
-        first, last = (0, 23) if span == "*" else (int(lo), int(hi or lo))
-        hours.update(range(first, last + 1, int(step or 1)))
-    return {h * 60 + int(minute) for h in hours}
+        first, last = (low, high) if span == "*" else (int(lo), int(hi or lo))
+        values.update(range(first, last + 1, int(step or 1)))
+    return values
+
+
+def _cron_minutes(cron: str) -> set[int]:
+    """The minutes of the day a cron (`M H * * *`) fires at; `M` and `H` may each be a value,
+    a range, a step or a list, so `3,23,43 * * * *` and `23 0-21/3 * * *` both parse."""
+    minute, hour, *rest = cron.split()
+    assert rest == ["*", "*", "*"], f"{cron!r} is not a daily schedule"
+    minutes = _field_values(minute, 0, 59)
+    return {h * 60 + m for h in _field_values(hour, 0, 23) for m in minutes}
 
 
 def test_the_backlog_killer_fires_once_per_declared_slot() -> None:
-    """Cron cannot say "every 90 minutes", so the schedule interleaves crons; this holds them to
-    `[backlog_killer] interval_minutes`, which the pick's rotation also reads (12.e)."""
+    """Cron cannot say "every 90 minutes", so a schedule can drift from the interval the pick
+    rotates by; this holds the crons to `[backlog_killer] interval_minutes` (12.e)."""
     settings = tomllib.loads((WORKFLOWS.parents[1] / "scripts" / "daily_lanes.toml").read_text())
     interval = int(settings["backlog_killer"]["interval_minutes"])
     text = (WORKFLOWS / "backlog-killer.yml").read_text(encoding="utf-8")

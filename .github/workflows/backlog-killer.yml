@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: Backlog killer
 
-# Every 90 minutes, on GitHub-hosted CPU runners only (ADR-0083): pick one open issue an
+# Every 20 minutes, on GitHub-hosted CPU runners only (ADR-0083): pick one open issue an
 # agent can work now (`scripts/backlog_killer.py pick`, declared in scripts/daily_lanes.toml
 # [backlog_killer]) and run the `backlog` continuation prompt on it, which lands the issue's
 # smallest shippable, tested slice as at most one draft pull request through the continuation
@@ -9,14 +9,14 @@ name: Backlog killer
 # touches a ruleset or a secret (12.d). `scripts/continuation_prompts.py check` fails if this
 # file stops running daily, by hand, or on GitHub's own CPU runners.
 #
-# Once per `[backlog_killer] interval_minutes` slot (90): cron cannot say "every 90 minutes",
-# so two three-hourly schedules interleave, 00:23, 01:53, 03:23 ... 22:53 UTC, sixteen runs a
-# day. tests/meta/test_daily_lanes.py fails if these stop firing once per declared interval.
-# A run that finds the lane busy waits in this workflow's own concurrency group.
+# Once per `[backlog_killer] interval_minutes` slot (20): one `*/20` cron, at :03, :23 and :43
+# UTC, seventy-two runs a day (the off-the-hour minutes dodge GitHub's top-of-hour queue).
+# tests/meta/test_daily_lanes.py fails if the schedule stops firing once per declared interval.
+# A run that finds the lane busy waits in this workflow's own concurrency group, and GitHub
+# keeps only the newest waiting run, so a long agent run skips slots rather than piling them up.
 on:
   schedule:
-    - cron: "23 0-21/3 * * *"
-    - cron: "53 1-22/3 * * *"
+    - cron: "3,23,43 * * * *"
   workflow_dispatch:
 
 permissions:
