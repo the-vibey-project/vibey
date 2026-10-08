@@ -188,4 +188,5 @@ nav:
           - "0084 — A rolling nightly of every krypton interface, from the release builders": architecture/decisions/0084-krypton-nightly.md
           - "0085 — `vibey -w`: any vibey command, run on the repository's GitHub-hosted runners": architecture/decisions/0085-vibey-on-the-workflows.md
           - "0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways": architecture/decisions/0086-state-sync.md
+          - "0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry": architecture/decisions/0087-the-six-audiences-in-order.md
   - Research paper: paper.md

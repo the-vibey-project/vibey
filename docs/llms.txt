@@ -159,6 +159,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0084 — A rolling nightly of every krypton interface, from the release builders](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0084-krypton-nightly/)
 - [0085 — vibey -w: any vibey command, run on the repository's GitHub-hosted runners](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0085-vibey-on-the-workflows/)
 - [0086 — vibey state: the whole database, sealed on a branch, kept in sync both ways](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0086-state-sync/)
+- [0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0087-the-six-audiences-in-order/)
 
 ## Governance
 
